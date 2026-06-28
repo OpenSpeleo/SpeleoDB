@@ -22,7 +22,7 @@
             
             <!-- Close Button -->
             <button @click="showModal = false" 
-                    class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-slate-800/50"
+                    class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-srgb-slate-800-50"
                     aria-label="Close modal">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -37,11 +37,11 @@
                         <img src="{% static 'media/logo_webview.png' %}" alt="SpeleoDB" class="h-16 sm:h-20">
                     </div>
                     
-                    <h2 class="text-xl lg:text-3xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 mb-4">
+                    <h2 class="text-xl lg:text-3xl md:text-3xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 mb-4">
                         Explore as One, Survey as Many
                     </h2>
                     
-                    <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                    <p class="text-base sm:text-lg text-slate-300 max-w-2xl center-x leading-relaxed sm:leading-[1.5]">
                         A collaborative platform for cave survey data management, built by cave divers for the entire speleological community.
                     </p>
                 </div>
@@ -50,9 +50,9 @@
                 <div class="grid sm:grid-cols-2 gap-4 mb-8">
                     
                     <!-- Feature 1 -->
-                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
-                        <div class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
+                    <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
+                        <div class="flex items-start flow-x-3">
+                            <div class="shrink-0">
                                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                 </svg>
@@ -65,9 +65,9 @@
                     </div>
                     
                     <!-- Feature 2 -->
-                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
-                        <div class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
+                    <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
+                        <div class="flex items-start flow-x-3">
+                            <div class="shrink-0">
                                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 </svg>
@@ -85,9 +85,9 @@
                     </div>
                     
                     <!-- Feature 3 -->
-                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
-                        <div class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
+                    <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
+                        <div class="flex items-start flow-x-3">
+                            <div class="shrink-0">
                                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
                                 </svg>
@@ -100,9 +100,9 @@
                     </div>
                     
                     <!-- Feature 4 -->
-                    <div class="feature-card bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50">
-                        <div class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
+                    <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
+                        <div class="flex items-start flow-x-3">
+                            <div class="shrink-0">
                                 <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
                                 </svg>
@@ -117,8 +117,8 @@
                 </div>
                 
                 <!-- Mission Statement -->
-                <div class="bg-gradient-to-br from-purple-900/30 to-slate-800/30 rounded-2xl p-6 border border-purple-500/20 mb-8">
-                    <p class="text-sm sm:text-base text-slate-200 text-center leading-relaxed">
+                <div class="bg-linear-to-br/srgb from-srgb-purple-900-30 to-srgb-slate-800-30 rounded-2xl p-6 border border-srgb-purple-500-20 mb-8">
+                    <p class="text-sm sm:text-base text-slate-200 text-center leading-relaxed sm:leading-[1.5]">
                         <span class="font-semibold text-purple-300">SpeleoDB</span> is developed by the 
                         <span class="font-semibold">Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/">USAH Institute</a>)</span>, 
                         a US-registered 501c3 non-profit. We're building the future of cave surveying with 
@@ -133,7 +133,7 @@
 
                     <a href="{% url 'account_signup' %}" 
                        target="_blank"
-                       class="btn text-slate-900 bg-gradient-to-r from-white/80 via-white to-white/80 hover:bg-white w-full sm:w-auto px-8 py-3 transition duration-150 ease-in-out group shadow-lg hover:shadow-xl"
+                       class="btn text-slate-900 gradient-srgb-to-r gradient-from-srgb-white-80 gradient-via-srgb-white gradient-to-srgb-white-80 hover:bg-white w-full sm:w-auto px-8 py-3 transition duration-150 ease-in-out group shadow-lg hover:shadow-xl"
                        style="width: 100%;">
                         <span class="flex items-center justify-center">
                             Create Free Account
@@ -224,4 +224,3 @@
     }
 </style>
 {% endif %}
-

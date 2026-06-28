@@ -46,7 +46,7 @@ export const StationResources = {
             // Build HTML
             container.innerHTML = Utils.safeHtml`
                 <div class="tab-content active">
-                    <div class="space-y-6 p-6">
+                    <div class="flow-y-6 p-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Resources for ${station?.name || 'Station'}</h3>
                             ${Utils.raw(hasWriteAccess ? `
@@ -66,13 +66,13 @@ export const StationResources = {
                         ` : `
                             <div class="text-center py-12">
                                 ${window.currentStationIsNew ? `
-                                    <div class="bg-blue-500/20 border border-blue-500/50 rounded-lg p-6 mb-6 max-w-md mx-auto">
+                                    <div class="bg-srgb-blue-500-20 border border-srgb-blue-500-50 rounded-lg p-6 mb-6 max-w-md center-x">
                                         <span class="text-3xl mb-3 block">🎊</span>
                                         <h4 class="text-blue-200 font-semibold mb-2">Station Ready for Resources!</h4>
                                         <p class="text-blue-100 text-sm">Your station has been created. Now you can start adding resources to document this location.</p>
                                     </div>
                                 ` : ''}
-                                <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                                 <h3 class="text-white text-lg font-medium mb-2">No Resources Yet</h3>
@@ -114,16 +114,16 @@ export const StationResources = {
         const isDemoStation = resource.is_demo || (resource.id && String(resource.id).startsWith('demo-'));
 
         return `
-            <div class="resource-card p-5 bg-slate-800/20 border border-slate-600/50 rounded-lg hover:bg-slate-700/30 transition-colors">
+            <div class="resource-card p-5 bg-srgb-slate-800-20 border border-srgb-slate-600-50 rounded-lg hover:bg-srgb-slate-700-30 transition-colors">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <h4 class="text-white font-medium">${Utils.escapeHtml(resource.title || 'Untitled')}
                             ${isDemoStation ? '<span class="demo-badge">DEMO</span>' : ''}
                         </h4>
-                        <span class="px-2 py-1 bg-sky-500 text-white text-xs rounded mt-1 inline-block">${Utils.escapeHtml(resource.resource_type)}</span>
+                        <span class="px-2 py-1 bg-sky-500 text-white text-xs rounded-sm mt-1 inline-block">${Utils.escapeHtml(resource.resource_type)}</span>
                     </div>
                     ${hasWriteAccess ? `
-                        <div class="flex space-x-1">
+                        <div class="flex flow-x-1">
                             <button class="edit-resource-btn text-slate-400 hover:text-white" data-resource-id="${resource.id}" title="Edit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -195,7 +195,7 @@ export const StationResources = {
 
             case 'note':
                 return resource.text_content ?
-                    `<div class="text-slate-300 text-sm bg-slate-900 p-3 rounded cursor-pointer hover:bg-slate-800 transition-colors note-preview" 
+                    `<div class="text-slate-300 text-sm bg-slate-900 p-3 rounded-sm cursor-pointer hover:bg-slate-800 transition-colors note-preview"
                          data-note-title="${Utils.escapeHtml(resource.title)}"
                          data-note-content="${Utils.escapeHtml(resource.text_content)}"
                          data-note-description="${Utils.escapeHtml(resource.description || '')}"
@@ -221,9 +221,9 @@ export const StationResources = {
                         <div class="resource-preview">
                             <a href="${Utils.sanitizeUrl(resource.file)}" target="_blank" class="block relative group">
                                 <img src="${Utils.sanitizeUrl(resource.miniature)}" alt="${Utils.escapeHtml(resource.title)}" 
-                                     class="w-full h-40 object-contain bg-slate-900 rounded"
+                                     class="w-full h-40 object-contain bg-slate-900 rounded-sm"
                                      loading="lazy">
-                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div class="absolute inset-0 bg-srgb-black-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     <span class="text-white text-sm font-medium">Open Document</span>
                                 </div>
                             </a>
@@ -308,22 +308,22 @@ export const StationResources = {
 
         container.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
-                <div class="space-y-6 p-6">
+                <div class="flow-y-6 p-6">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-semibold text-white">Add Resource to ${station?.name || 'Station'}</h3>
                     </div>
 
-                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div class="bg-srgb-blue-500-10 border border-srgb-blue-500-30 rounded-lg p-4">
                         <h4 class="text-blue-300 font-semibold mb-2">💡 Tips</h4>
-                        <ul class="text-blue-200 text-sm space-y-1">
+                        <ul class="text-blue-200 text-sm flow-y-1">
                             <li>• Photos and videos help document visual features</li>
                             <li>• Notes can capture detailed observations</li>
                             <li>• All resources are automatically associated with this station</li>
                         </ul>
                     </div>
 
-                    <div class="bg-slate-700/70 p-6 rounded-xl border border-slate-600/50">
-                        <form id="resource-form" enctype="multipart/form-data" class="space-y-4">
+                    <div class="bg-srgb-slate-700-70 p-6 rounded-xl border border-srgb-slate-600-50">
+                        <form id="resource-form" enctype="multipart/form-data" class="flow-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Resource Type <span class="text-red-400">*</span></label>
@@ -348,7 +348,7 @@ export const StationResources = {
 
                             <div id="file-input-container" class="file-upload-area">
                                 <div class="text-center">
-                                    <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                     </svg>
                                     <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
@@ -417,14 +417,14 @@ export const StationResources = {
         });
         fileContainer.addEventListener('dragover', (e) => {
             e.preventDefault();
-            fileContainer.classList.add('border-sky-500', 'bg-sky-500/10');
+            fileContainer.classList.add('border-sky-500', 'bg-srgb-sky-500-10');
         });
         fileContainer.addEventListener('dragleave', () => {
-            fileContainer.classList.remove('border-sky-500', 'bg-sky-500/10');
+            fileContainer.classList.remove('border-sky-500', 'bg-srgb-sky-500-10');
         });
         fileContainer.addEventListener('drop', (e) => {
             e.preventDefault();
-            fileContainer.classList.remove('border-sky-500', 'bg-sky-500/10');
+            fileContainer.classList.remove('border-sky-500', 'bg-srgb-sky-500-10');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
@@ -478,11 +478,11 @@ export const StationResources = {
             }
 
             textDiv.innerHTML = Utils.safeHtml`
-                <svg class="w-12 h-12 text-green-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-12 h-12 text-green-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
                 <p class="text-green-400 font-medium text-sm mb-1">File Selected</p>
-                <p class="text-slate-300 text-sm truncate max-w-xs mx-auto">${file.name}</p>
+                <p class="text-slate-300 text-sm truncate max-w-xs center-x">${file.name}</p>
                 <p class="text-slate-400 text-xs">${fileSize}</p>
                 <p class="text-sky-400 text-xs mt-2 cursor-pointer hover:underline" id="change-file-link">Click to change file</p>
             `;
@@ -557,13 +557,13 @@ export const StationResources = {
 
         container.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
-                <div class="space-y-6 p-6">
+                <div class="flow-y-6 p-6">
                     <div class="flex items-center justify-between">
                         <h3 class="text-xl font-semibold text-white">Edit Resource</h3>
                     </div>
 
-                    <div class="bg-slate-700/70 p-6 rounded-xl border border-slate-600/50">
-                        <form id="resource-edit-form" enctype="multipart/form-data" class="space-y-4">
+                    <div class="bg-srgb-slate-700-70 p-6 rounded-xl border border-srgb-slate-600-50">
+                        <form id="resource-edit-form" enctype="multipart/form-data" class="flow-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-slate-300 text-sm font-medium mb-2">Resource Type</label>
@@ -586,7 +586,7 @@ export const StationResources = {
                             ${Utils.raw(['photo', 'video', 'document'].includes(resource.resource_type) ? `
                                 <div id="edit-file-container" class="file-upload-area">
                                     <div class="text-center">
-                                        <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                         </svg>
                                         <p class="text-slate-300 text-sm mb-2">Click to upload new file (optional)</p>
@@ -700,12 +700,12 @@ export const StationResources = {
 
         const modal = document.createElement('div');
         modal.id = 'resource-delete-modal';
-        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/80';
+        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-srgb-black-80';
         modal.style.cssText = 'z-index: 9999; pointer-events: auto;';
         modal.innerHTML = Utils.safeHtml`
-            <div class="bg-slate-800 rounded-xl border border-red-500/30 p-6 max-w-md w-full" data-modal-content>
+            <div class="bg-slate-800 rounded-xl border border-srgb-red-500-30 p-6 max-w-md w-full" data-modal-content>
                 <div class="text-center mb-6">
-                    <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div class="w-16 h-16 bg-srgb-red-500-20 rounded-full flex items-center justify-center center-x mb-4">
                         <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
@@ -715,7 +715,7 @@ export const StationResources = {
                 </div>
 
                 ${Utils.raw(resource ? `
-                    <div class="bg-slate-700/50 rounded-lg p-4 mb-6 space-y-2 text-sm">
+                    <div class="bg-srgb-slate-700-50 rounded-lg p-4 mb-6 flow-y-2 text-sm">
                         <div class="flex justify-between">
                             <span class="text-slate-400">Type:</span>
                             <span class="text-white">${this.getResourceTypeLabel(resource.resource_type)}</span>
@@ -809,7 +809,7 @@ export const StationResources = {
 
         const lightbox = document.createElement('div');
         lightbox.id = 'photo-lightbox';
-        lightbox.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/95';
+        lightbox.className = 'fixed inset-0 flex items-center justify-center p-4 bg-srgb-black-95';
         lightbox.style.cssText = 'z-index: 200;';
         lightbox.innerHTML = Utils.safeHtml`
             <div class="relative max-w-5xl max-h-full" data-lightbox-container>
@@ -831,7 +831,7 @@ export const StationResources = {
                         </svg>
                     </button>
                 </div>
-                <div class="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded">${title}</div>
+                <div class="absolute bottom-4 left-4 text-white text-sm bg-srgb-black-50 px-3 py-1 rounded-sm">${title}</div>
             </div>
         `;
 
@@ -913,7 +913,7 @@ export const StationResources = {
 
         const modal = document.createElement('div');
         modal.id = 'video-modal';
-        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/95';
+        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-srgb-black-95';
         modal.style.cssText = 'z-index: 200;';
         modal.innerHTML = Utils.safeHtml`
             <div class="relative" data-video-container style="max-width: 90vw; max-height: 90vh;">
@@ -928,7 +928,7 @@ export const StationResources = {
                         </svg>
                     </button>
                 </div>
-                <div class="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded">${title || 'Video'}</div>
+                <div class="absolute bottom-4 left-4 text-white text-sm bg-srgb-black-50 px-3 py-1 rounded-sm">${title || 'Video'}</div>
             </div>
         `;
 
@@ -982,7 +982,7 @@ export const StationResources = {
 
         const modal = document.createElement('div');
         modal.id = 'note-viewer-modal';
-        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-black/80';
+        modal.className = 'fixed inset-0 flex items-center justify-center p-4 bg-srgb-black-80';
         modal.style.cssText = 'z-index: 200;';
         modal.innerHTML = Utils.safeHtml`
             <div class="bg-slate-800 rounded-xl border border-slate-600 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
@@ -1001,7 +1001,7 @@ export const StationResources = {
                         </svg>
                     </button>
                 </div>
-                <div class="p-6 overflow-y-auto flex-1 bg-slate-900/50">
+                <div class="p-6 overflow-y-auto flex-1 bg-srgb-slate-900-50">
                     <div class="prose prose-invert max-w-none">
                         ${Utils.raw(this.formatNoteContent(noteData.content))}
                     </div>
@@ -1134,6 +1134,5 @@ export const StationResources = {
         return parts[parts.length - 1] || 'File';
     }
 };
-
 
 

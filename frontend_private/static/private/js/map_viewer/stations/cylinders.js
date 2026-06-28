@@ -79,13 +79,13 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
     fleetCylindersCache = {};
 
     container.innerHTML = `
-        <div class="space-y-4">
+        <div class="flow-y-4">
             <div id="cylinder-install-loading" class="text-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-400 mx-auto mb-3"></div>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-400 center-x mb-3"></div>
                 <p class="text-slate-400">Loading available cylinders...</p>
             </div>
             
-            <div id="cylinder-install-form" class="hidden space-y-4">
+            <div id="cylinder-install-form" class="hidden flow-y-4">
                 <!-- Hidden coordinates and project -->
                 <input type="hidden" id="install-latitude" value="${Number(coordinates[1]).toFixed(7)}">
                 <input type="hidden" id="install-longitude" value="${Number(coordinates[0]).toFixed(7)}">
@@ -184,7 +184,7 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
             </div>
             
             <div id="cylinder-no-fleets" class="hidden text-center py-8">
-                <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-16 h-16 center-x text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
                     </path>
@@ -472,27 +472,27 @@ function renderCylinderDetails(install) {
 
     const isInstalled = install.status === 'installed';
     const statusColors = {
-        'installed': 'bg-emerald-500/20 text-emerald-400',
-        'retrieved': 'bg-sky-500/20 text-sky-400',
-        'lost': 'bg-rose-500/20 text-rose-400',
-        'abandoned': 'bg-amber-500/20 text-amber-400'
+        'installed': 'bg-srgb-emerald-500-20 text-emerald-400',
+        'retrieved': 'bg-srgb-sky-500-20 text-sky-400',
+        'lost': 'bg-srgb-rose-500-20 text-rose-400',
+        'abandoned': 'bg-srgb-amber-500-20 text-amber-400'
     };
 
     container.innerHTML = `
-        <div class="space-y-5">
+        <div class="flow-y-5">
             <!-- Header -->
             <div class="flex items-center">
                 <div>
                     <h3 class="text-lg font-semibold text-white">${Utils.escapeHtml(install.cylinder_name) || 'Unnamed Cylinder'}</h3>
                     <p class="text-slate-400 text-sm">${Utils.escapeHtml(install.location_name) || 'Unknown location'}</p>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${statusColors[install.status] || 'bg-slate-500/20 text-slate-400'}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium mt-1 ${statusColors[install.status] || 'bg-srgb-slate-500-20 text-slate-400'}">
                         ${Utils.escapeHtml(install.status?.toUpperCase() || 'UNKNOWN')}
                     </span>
                 </div>
             </div>
 
             <!-- Sub-tabs for cylinder details -->
-            <div class="flex space-x-2 border-b border-slate-600">
+            <div class="flex flow-x-2 border-b border-slate-600">
                 <button class="cylinder-subtab px-4 py-2 text-sm font-medium text-sky-400 border-b-2 border-sky-400"
                     data-subtab="info" onclick="window.CylinderInstalls.switchTab('info', '${Utils.escapeHtml(install.id)}')">
                     Cylinder Info
@@ -550,9 +550,9 @@ function renderCylinderInfoTab(install) {
     return `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Cylinder Info -->
-            <div class="bg-slate-700/50 rounded-lg p-4">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-4">
                 <h4 class="text-sm font-medium text-slate-400 mb-3">Cylinder Information</h4>
-                <div class="space-y-2">
+                <div class="flow-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Name:</span>
                         <span class="text-white">${Utils.escapeHtml(install.cylinder_name) || 'N/A'}</span>
@@ -569,9 +569,9 @@ function renderCylinderInfoTab(install) {
             </div>
 
             <!-- Location Info -->
-            <div class="bg-slate-700/50 rounded-lg p-4">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-4">
                 <h4 class="text-sm font-medium text-slate-400 mb-3">Installation Details</h4>
-                <div class="space-y-2">
+                <div class="flow-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Project:</span>
                         <span class="text-white">${Utils.escapeHtml(install.project_name) || 'N/A'}</span>
@@ -594,9 +594,9 @@ function renderCylinderInfoTab(install) {
             </div>
 
             <!-- Coordinates -->
-            <div class="bg-slate-700/50 rounded-lg p-4">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-4">
                 <h4 class="text-sm font-medium text-slate-400 mb-3">Coordinates</h4>
-                <div class="space-y-2">
+                <div class="flow-y-2">
                     <div class="flex justify-between">
                         <span class="text-slate-400">Latitude:</span>
                         <span class="text-white font-mono">${Utils.escapeHtml(install.latitude)}</span>
@@ -610,7 +610,7 @@ function renderCylinderInfoTab(install) {
 
             <!-- Notes -->
             ${install.notes ? `
-            <div class="bg-slate-700/50 rounded-lg p-4">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-4">
                 <h4 class="text-sm font-medium text-slate-400 mb-3">Notes</h4>
                 <p class="text-white text-sm">${Utils.escapeHtml(install.notes)}</p>
             </div>
@@ -652,7 +652,7 @@ async function renderPressureChecksTab(installId, contentEl) {
         const checks = Array.isArray(response) ? response : [];
 
         contentEl.innerHTML = `
-            <div class="space-y-4">
+            <div class="flow-y-4">
                 <!-- Add new check button -->
                 <div class="flex justify-between items-center">
                     <h4 class="text-lg font-medium text-white">Pressure Check History</h4>
@@ -666,8 +666,8 @@ async function renderPressureChecksTab(installId, contentEl) {
                 </div>
 
                 ${checks.length === 0 ? `
-                    <div class="text-center py-8 bg-slate-700/30 rounded-lg">
-                        <svg class="w-12 h-12 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="text-center py-8 bg-srgb-slate-700-30 rounded-lg">
+                        <svg class="w-12 h-12 center-x text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
                             </path>
@@ -677,7 +677,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                 ` : `
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead class="bg-slate-700/50">
+                            <thead class="bg-srgb-slate-700-50">
                                 <tr>
                                     <th class="px-4 py-2 text-left text-slate-300">Date</th>
                                     <th class="px-4 py-2 text-left text-slate-300">Pressure</th>
@@ -686,7 +686,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                     <th class="px-4 py-2 text-right text-slate-300">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-700">
+                            <tbody class="row-divide-y row-divide-slate-700">
                                 ${checks.map(check => {
                                     const unit = check.unit_system === 'imperial' ? 'PSI' : 'BAR';
                                     // Use check_date if available, fallback to creation_date
@@ -698,7 +698,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                     const safeNotes = Utils.escapeHtml(check.notes) || '-';
                                     const safeCheckId = Utils.escapeHtml(check.id);
                                     return `
-                                        <tr class="hover:bg-slate-700/30">
+                                        <tr class="hover:bg-srgb-slate-700-30">
                                             <td class="px-4 py-3 text-white">${checkDate}</td>
                                             <td class="px-4 py-3 text-white font-mono">${check.pressure} ${unit}</td>
                                             <td class="px-4 py-3 text-slate-400">${safeUser}</td>
@@ -751,7 +751,7 @@ function showAddPressureCheck(installId) {
     const today = new Date().toISOString().split('T')[0];
 
     contentEl.innerHTML = `
-        <div class="bg-slate-700/50 rounded-lg p-6 space-y-4">
+        <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">
             <h4 class="text-lg font-medium text-white">Record Pressure Check</h4>
             
             <div class="grid grid-cols-3 gap-4">
@@ -869,7 +869,7 @@ async function editPressureCheck(installId, checkId) {
         const checkDateValue = check.check_date || new Date().toISOString().split('T')[0];
 
         contentEl.innerHTML = `
-            <div class="bg-slate-700/50 rounded-lg p-6 space-y-4">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">
                 <h4 class="text-lg font-medium text-white">Edit Pressure Check</h4>
                 
                 <div class="grid grid-cols-3 gap-4">
@@ -1010,7 +1010,7 @@ function showStatusConfirmModal(installId, status, config) {
     
     const content = `
         <div class="text-center">
-            <div class="w-16 h-16 rounded-full ${config.iconBg} flex items-center justify-center mx-auto mb-4">
+            <div class="w-16 h-16 rounded-full ${config.iconBg} flex items-center justify-center center-x mb-4">
                 <svg class="w-10 h-10 ${config.iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     ${config.iconPath}
                 </svg>
@@ -1082,7 +1082,7 @@ function markAsRetrieved(installId) {
         title: 'Mark as Retrieved?',
         message: 'This cylinder will be marked as successfully retrieved from the cave.',
         warning: null,
-        iconBg: 'bg-emerald-900/30',
+        iconBg: 'bg-srgb-emerald-900-30',
         iconColor: 'text-emerald-400',
         iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>',
         buttonClass: 'bg-emerald-500 hover:bg-emerald-600',
@@ -1099,7 +1099,7 @@ function markAsAbandoned(installId) {
         title: 'Mark as Abandoned?',
         message: 'This cylinder will remain in the cave but will no longer be actively monitored.',
         warning: '⚠️ The cylinder location will still be visible for reference.',
-        iconBg: 'bg-slate-700/50',
+        iconBg: 'bg-srgb-slate-700-50',
         iconColor: 'text-slate-400',
         iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>',
         buttonClass: 'bg-slate-500 hover:bg-slate-600',
@@ -1116,7 +1116,7 @@ function markAsLost(installId) {
         title: 'Mark as Lost?',
         message: 'This indicates the cylinder cannot be located and may not be recoverable.',
         warning: '⚠️ This should only be used when the cylinder truly cannot be found.',
-        iconBg: 'bg-amber-900/30',
+        iconBg: 'bg-srgb-amber-900-30',
         iconColor: 'text-amber-400',
         iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>',
         buttonClass: 'bg-amber-500 hover:bg-amber-600',

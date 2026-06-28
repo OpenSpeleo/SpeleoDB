@@ -11,10 +11,10 @@ from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory
 
-AMBER_BORDER = "border-amber-500/60"
-SLATE_BORDER = "border-slate-500/50"
-SKY_BORDER = "border-sky-500/60"
-EMERALD_BORDER = "border-emerald-500/60"
+AMBER_BORDER = "border-srgb-amber-500-60"
+SLATE_BORDER = "border-srgb-slate-500-50"
+SKY_BORDER = "border-srgb-sky-500-60"
+EMERALD_BORDER = "border-srgb-emerald-500-60"
 
 EDITION_NOT_ENABLED_TEXT = "Project edition is not enabled."
 ENABLE_EDITION_LINK_TEXT = "Enable Project Edition"
@@ -23,7 +23,7 @@ EDITED_BY_TEXT = "Currently being edited by"
 EDITION_ENABLED_TEXT = "Project edition is enabled."
 UPLOAD_LINK_TEXT = "Upload new Revision"
 EDITING_BADGE = "Editing"
-READONLY_BADGE_MARKUP = 'class="shrink-0 rounded-full bg-sky-500/20'
+READONLY_BADGE_MARKUP = 'class="shrink-0 rounded-full bg-srgb-sky-500-20'
 
 AMBER_BANNER_LINK_CLASS = "text-amber-400 underline"
 EMERALD_BANNER_LINK_CLASS = "text-emerald-400 underline"

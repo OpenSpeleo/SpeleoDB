@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -205,9 +206,9 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
         )
 
     def test_view_with_project_id_and_gitsha(self) -> None:
-        self.execute_test(
-            "project_revision_explorer",
-            {
+        url = reverse(
+            "private:project_revision_explorer",
+            kwargs={
                 "project_id": self.project.id,
                 "hexsha": hashlib.sha1(
                     str(random.random()).encode("utf-8"),
@@ -215,6 +216,51 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
                 ).hexdigest(),
             },
         )
+
+        self.client.force_login(self.user)
+        response = self.client.get(url)
+
+        assert isinstance(response, HttpResponse), type(response)
+        assert response.status_code == status.HTTP_200_OK
+        assert response["Content-Type"].startswith("text/html"), response[
+            "Content-Type"
+        ]
+
+        content = response.content.decode()
+        action_class_values = re.findall(
+            r'<a class="([^"]*\bgit_btn\b[^"]*)"',
+            content,
+        )
+        expected_action_classes = {
+            "btn",
+            "git_btn",
+            "grow-0",
+            "cursor-pointer",
+            "rounded-full",
+            "bg-linear-to-b/srgb",
+            "from-white",
+            "to-gray-100",
+        }
+        expected_action_count: int = 2
+
+        assert len(action_class_values) == expected_action_count
+        for class_value in action_class_values:
+            assert expected_action_classes <= set(class_value.split())
+
+        assert (
+            re.search(
+                r"\.git_btn\s*\{[^}]*background(?:-image)?\s*:",
+                content,
+            )
+            is None
+        )
+
+        generated_css_position = content.index("private/css/style.css")
+        custom_css_position = content.index("private/css/custom.css")
+        inline_git_css_position = content.index(
+            "/* Mobile responsive styles for git file browser */"
+        )
+        assert generated_css_position < custom_css_position < inline_git_css_position
 
 
 class SensorFleetViewsTest(BaseTestCase):
@@ -601,7 +647,7 @@ class LandmarkCollectionViewsTest(BaseTestCase):
         content = response.content.decode()
         assert response.status_code == status.HTTP_200_OK
         assert "permissions-cards" in content
-        assert "permissions-table bg-slate-800 shadow-lg rounded-sm" in content
+        assert "permissions-table bg-slate-800 shadow-lg rounded-xs" in content
         assert "Grant Access" in content
         assert "btn bg-slate-700 hover:bg-slate-600 text-slate-200" not in content
         assert "Remove" not in content

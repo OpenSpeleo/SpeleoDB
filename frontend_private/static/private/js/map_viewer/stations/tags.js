@@ -58,7 +58,7 @@ export const StationTags = {
         const currentTagId = station.tag ? station.tag.id : null;
 
         const html = `
-            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" id="tag-selector-overlay" style="z-index: 100;">
+            <div class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs flex items-center justify-center p-4" id="tag-selector-overlay" style="z-index: 100;">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h3 class="text-lg font-semibold text-white">${station.tag ? 'Change Station Tag' : 'Add Tag to Station'}</h3>
@@ -70,7 +70,7 @@ export const StationTags = {
                     </div>
                     <div class="p-6 max-h-96 overflow-y-auto">
                         ${State.userTags.length > 0 ? `
-                            <div class="space-y-2">
+                            <div class="flow-y-2">
                                 ${State.userTags.map(tag => `
                                     <button onclick="window.setStationTag('${stationId}', '${tag.id}')"
                                             class="w-full text-left px-4 py-2 rounded-lg ${currentTagId === tag.id ? 'bg-sky-600' : 'bg-slate-700'} hover:bg-slate-600 transition-colors flex items-center justify-between">
@@ -82,7 +82,7 @@ export const StationTags = {
                             ${currentTagId ? `
                                 <div class="mt-4 pt-4 border-t border-slate-600">
                                     <button onclick="window.removeStationTag('${stationId}')" 
-                                            class="w-full px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors text-sm">
+                                            class="w-full px-4 py-2 rounded-lg bg-srgb-red-500-20 hover:bg-srgb-red-500-30 text-red-300 transition-colors text-sm">
                                         Remove Tag from Station
                                     </button>
                                 </div>
@@ -120,7 +120,7 @@ export const StationTags = {
         }
 
         const html = `
-            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" id="tag-creation-overlay" style="z-index: 100;">
+            <div class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs flex items-center justify-center p-4" id="tag-creation-overlay" style="z-index: 100;">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h2 class="text-xl font-semibold text-white">Create New Tag</h2>
@@ -130,11 +130,11 @@ export const StationTags = {
                             </svg>
                         </button>
                     </div>
-                    <div class="p-6 space-y-4">
+                    <div class="p-6 flow-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
                             <input type="text" id="new-tag-name" 
-                                   class="w-full bg-slate-700 text-white rounded-lg p-2 border border-slate-600 focus:border-sky-500 focus:outline-none" 
+                                   class="w-full bg-slate-700 text-white rounded-lg p-2 border border-slate-600 focus:border-sky-500 focus:outline-hidden"
                                    placeholder="e.g., Active, Completed, High Priority">
                         </div>
                         <div>
@@ -159,7 +159,7 @@ export const StationTags = {
                                 <input type="color" id="new-tag-custom-color" 
                                        value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}"
                                        onchange="window.useCustomColorForNewTag()"
-                                       class="h-10 w-20 rounded cursor-pointer border border-slate-600"
+                                       class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"
                                        title="Pick custom color">
                             </div>
                         </div>
@@ -359,4 +359,3 @@ window.useCustomColorForNewTag = () => StationTags.useCustomColorForNewTag();
 window.createNewTag = () => StationTags.createNewTag();
 window.setStationTag = (stationId, tagId) => StationTags.setStationTag(stationId, tagId);
 window.removeStationTag = (stationId) => StationTags.removeStationTag(stationId);
-

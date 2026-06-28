@@ -19,7 +19,7 @@ export const ProjectPanel = {
     render: function() {
         if (!document.getElementById('project-panel')) {
             const panelHtml = `
-            <div id="project-panel" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px;">
+            <div id="project-panel" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px;">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
                     <h3 class="text-white font-semibold text-sm">Active Projects</h3>
                     <button id="panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize">
@@ -28,12 +28,12 @@ export const ProjectPanel = {
                         </svg>
                     </button>
                 </div>
-                <div id="project-list" class="space-y-1 overflow-y-auto custom-scrollbar" style="max-height: 400px;">
+                <div id="project-list" class="flow-y-1 overflow-y-auto custom-scrollbar" style="max-height: 400px;">
                 </div>
             </div>
             
-            <div id="project-panel-minimized" class="absolute top-4 left-4 bg-slate-800/95 backdrop-blur-sm border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: none;">
-                <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center space-x-2" title="Expand">
+            <div id="project-panel-minimized" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: none;">
+                <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center flow-x-2" title="Expand">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
@@ -272,14 +272,14 @@ export const ProjectPanel = {
         const color = this.getProjectColor(project.id);
 
         const item = document.createElement('div');
-        item.className = 'project-button flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 p-2 rounded cursor-pointer transition-all duration-200';
+        item.className = 'project-button flex items-center justify-between bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
         if (!effectiveVisible) item.classList.add('opacity-50');
         item.dataset.projectId = project.id;
         item.dataset.color = color;
 
         item.innerHTML = Utils.safeHtml`
             <div class="flex items-center gap-2 overflow-hidden flex-1">
-                <div class="project-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${Utils.raw(Utils.safeCssColor(effectiveVisible ? color : DEFAULTS.COLORS.FALLBACK))}"></div>
+                <div class="project-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(Utils.safeCssColor(effectiveVisible ? color : DEFAULTS.COLORS.FALLBACK))}"></div>
                 <span class="text-slate-200 text-sm font-medium truncate select-none">${project.name}</span>
             </div>
             <label class="toggle-switch m-0 scale-75 origin-right">

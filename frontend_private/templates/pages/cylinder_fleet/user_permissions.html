@@ -87,7 +87,7 @@
 {% csrf_token %}
 
 <div class="grow">
-    <div class="p-6 space-y-6">
+    <div class="p-6 flow-y-6">
 
         <!-- Page header -->
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
@@ -180,7 +180,7 @@
         </div>
 
         <!-- Desktop Table View -->
-        <div class="permissions-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="permissions-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
 
             <div>
 
@@ -189,7 +189,7 @@
                     <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
                         <thead
-                            class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                            class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                     <div class="font-semibold text-center">#</div>
@@ -209,7 +209,7 @@
                             </tr>
                         </thead>
                         <!-- Table body -->
-                        <tbody class="text-sm divide-y divide-slate-200 divide-slate-700">
+                        <tbody class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
                             {% for permission in permissions %}
                             <!-- Row -->
                             <tr>

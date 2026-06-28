@@ -70,7 +70,7 @@
             }
 
             /* Keep only user dropdown visible, make it prominent */
-            header .flex.items-center.space-x-3 {
+            header .flex.items-center.flow-x-3 {
                 gap: 8px;
             }
 
@@ -178,7 +178,7 @@
         <div class="min-w-fit">
             <!-- Sidebar backdrop (mobile only) -->
             <div
-                class="fixed inset-0 bg-slate-900 bg-opacity-30 z-40 lg:hidden lg:z-auto transition-opacity duration-200"
+                class="fixed inset-0 bg-srgb-slate-900-30 z-40 lg:hidden lg:z-auto transition-opacity duration-200"
                 :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'"
                 aria-hidden="true"
                 x-cloak
@@ -187,7 +187,7 @@
             <!-- Sidebar -->
             <div
                 id="sidebar"
-                class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:!w-64 shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
+                class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:w-64! shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
                 @click.outside="sidebarOpen = false"
                 @keydown.escape.window="sidebarOpen = false"
@@ -210,7 +210,7 @@
                 </div>
 
                 <!-- Links -->
-                <div class="space-y-8">
+                <div class="flow-y-8">
                     <!-- Pages group -->
                     <div>
                         <h3 class="text-xs uppercase text-slate-500 font-semibold pl-3">
@@ -220,11 +220,11 @@
                             <!-- User Dashboard -->
                             {% if request.url_name == 'user_dashboard' %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -243,11 +243,11 @@
                             <!-- Profile -->
                             {% if request.url_name|is_in_list:"user_profile,user_password,user_authtoken,user_preferences,user_feedback" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_profile' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_profile' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -265,11 +265,11 @@
                             <!-- My Teams -->
                             {% if request.url_name|is_in_list:"teams,team_new,team_details,team_memberships,team_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:teams' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:teams' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -287,11 +287,11 @@
                             <!-- My GPS Tracks -->
                             {% if request.url_name|is_in_list:"gps_tracks" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -316,11 +316,11 @@
                             <!-- My Survey Projects -->
                             {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone,project_git_instructions" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:projects' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:projects' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -340,11 +340,11 @@
                             <!-- Tools -->
                             {% if 'tool-' in request.url_name %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -364,11 +364,11 @@
                             <!-- GIS Cylinders -->
                             {% if request.url_name|is_in_list:"cylinder_fleets,cylinder_fleet_new,cylinder_fleet_details,cylinder_fleet_danger_zone,cylinder_fleet_user_permissions,cylinder_fleet_history,cylinder_fleet_watchlist" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:cylinder_fleets' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:cylinder_fleets' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -399,11 +399,11 @@
                             <!-- GIS Experiments -->
                             {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:experiments' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:experiments' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -429,11 +429,11 @@
                             <!-- GIS Landmark Collections -->
                             {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -450,11 +450,11 @@
                             <!-- GIS Sensors -->
                             {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -481,11 +481,11 @@
                             <!-- Station Tag Editor -->
                             {% if request.url_name == 'station_tags' %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:station_tags' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:station_tags' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -503,11 +503,11 @@
                             <!-- GIS Surface Monitoring -->
                             {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions,surface_network_gis_integration,surface_network_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:surface_networks' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:surface_networks' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -526,11 +526,11 @@
                             <!-- GIS Views -->
                             {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_views' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_views' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -548,11 +548,11 @@
                             <!-- Survey Map -->
                             {% if request.url_name == 'map_viewer' %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:map_viewer' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:map_viewer' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -577,11 +577,11 @@
                             <!-- Feedback -->
                             {% if request.url_name == 'user_feedback' %}
                             {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 bg-slate-900">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_feedback' %}">
                             {% else %}
                             {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_feedback' %}">
                             {% endif %}
                                     <div class="flex items-center justify-between">
@@ -601,7 +601,7 @@
                             <hr class="mt-5 mb-5 lg:hidden" style="border-color: rgb(255 255 255 / 40%);">
                             
                             <!-- Home (mobile only) -->
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'home' %}">
                                     <div class="flex items-center">
                                         <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
@@ -615,7 +615,7 @@
 
                             {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
                             <!-- API Schema (mobile only) -->
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-schema' %}">
                                     <div class="flex items-center">
                                         <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
@@ -628,7 +628,7 @@
                             </li>
 
                             <!-- API Docs (mobile only) -->
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-docs' %}" target="_blank">
                                     <div class="flex items-center">
                                         <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
@@ -643,7 +643,7 @@
 
                             {% if user.is_staff or user.is_superuser %}
                             <!-- Admin Panel (mobile only) -->
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
                                 <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'admin:index' %}">
                                     <div class="flex items-center">
                                         <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
@@ -658,7 +658,7 @@
 
                             {% if request.impersonator %}
                             <!-- Stop Debug Mode (mobile only, if hijacked) -->
-                            <li class="px-3 py-2 rounded-sm mb-0.5 last:mb-0 lg:hidden">
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
                                 <form action="{% url 'hijack:release' %}" method="POST" style="margin: 0;">
                                     {% csrf_token %}
                                     <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}">
@@ -709,7 +709,7 @@
                         </div>
 
                         <!-- Header: Right side -->
-                        <div class="flex items-center space-x-3">
+                        <div class="flex items-center flow-x-3">
 
                             <!-- Home button (desktop only) -->
                             <div class="relative hidden lg:inline-flex">
@@ -814,7 +814,7 @@
                                     </div>
                                 </button>
                                 <div
-                                    class="origin-top-right z-10 absolute top-full right-0 min-w-44 bg-slate-800 border border-slate-200 border-slate-700 py-1.5 rounded shadow-lg overflow-hidden mt-1"
+                                    class="origin-top-right z-10 absolute top-full right-0 min-w-44 bg-slate-800 border border-slate-200 border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1"
                                     @click.outside="open = false"
                                     @keydown.escape.window="open = false"
                                     x-show="open"
@@ -847,7 +847,7 @@
             </header>
 
             <main class="grow">
-                <div class="px-4 sm:px-6 lg:px-8 py-8 sm:py-0 w-full max-w-9xl mx-auto">
+                <div class="px-4 sm:px-6 lg:px-8 py-8 sm:py-0 w-full max-w-9xl center-x">
 
                     {% block content %}{% endblock content %}
 

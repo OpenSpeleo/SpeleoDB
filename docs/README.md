@@ -63,6 +63,9 @@ Unlike product docs, these files prioritize:
 - `node-tooling.md`
   - root npm workspace constraints, Node runtime compatibility, install-script
     approval policy, and verification commands
+- `tailwind-v4.md`
+  - Tailwind 4 build ownership, v3 visual-compatibility layer, source and
+    variant contracts, browser floor, and parity-verification requirements
 
 ### Coding Rules
 

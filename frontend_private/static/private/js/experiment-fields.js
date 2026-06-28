@@ -27,7 +27,7 @@
 
     function createTag(text, container) {
         const tag = $(`
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+            <span class="inline-flex items-center gap-1 px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
                 <span class="tag-text">${escapeHtml(text)}</span>
                 <button type="button" class="remove-tag hover:text-rose-400 transition-colors">
                     <svg class="w-3 h-3 fill-current" viewBox="0 0 16 16">
@@ -47,7 +47,7 @@
             <div class="bg-slate-700 rounded-lg p-4 border border-slate-600 field-item" data-field-id="${fieldId}">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <!-- Drag Handle -->
-                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
                         </svg>

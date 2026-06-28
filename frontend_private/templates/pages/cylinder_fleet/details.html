@@ -11,7 +11,7 @@
             {% csrf_token %}
 
             <!-- Panel body -->
-            <div class="p-6 space-y-6">
+            <div class="p-6 flow-y-6">
                 <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
 
                 <!-- Fleet Name & Description -->
@@ -25,7 +25,7 @@
                         </div>
                     </div>
 
-                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                         <div class="w-full">
                             <label class="block text-sm font-medium mb-1" for="description">Description:</label>
                             <textarea id="description" name="description"
@@ -71,8 +71,8 @@
                         {% include 'snippets/cylinder_table.html' with cylinders=cylinders table_id='cylinders_table' show_actions=True has_write_access=has_write_access show_count=True %}
                         {% else %}
                         <div
-                            class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3"
+                            class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 center-x text-slate-600 mb-3"
                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -117,7 +117,7 @@
 
     <!-- Add/Edit Cylinder Modal -->
     <div id="cylinder_modal"
-        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4"
         style="display: none;">
         <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
             <!-- Modal header -->
@@ -134,7 +134,7 @@
             </div>
 
             <!-- Modal body -->
-            <div class="px-6 py-4 space-y-6">
+            <div class="px-6 py-4 flow-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Cylinder Name -->
                     <div>
@@ -298,7 +298,7 @@
 
     <!-- Delete Cylinder Confirmation Modal -->
     <div id="delete_cylinder_modal"
-        class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4"
+        class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4"
         style="display: none;">
         <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
             <!-- Modal header -->
@@ -318,8 +318,8 @@
             <div class="px-6 py-4">
                 <input type="hidden" id="delete_cylinder_id" value="">
 
-                <div class="flex items-start space-x-4">
-                    <div class="flex-shrink-0">
+                <div class="flex items-start flow-x-4">
+                    <div class="shrink-0">
                         <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">

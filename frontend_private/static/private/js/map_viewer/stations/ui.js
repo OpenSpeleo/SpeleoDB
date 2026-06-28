@@ -73,7 +73,7 @@ export const StationUI = {
         if (totalStations === 0) {
             html += `
                 <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
@@ -108,7 +108,7 @@ export const StationUI = {
                             ${Utils.escapeHtml(projectName)}
                             <span class="ml-2 text-sm text-slate-400 font-normal">(${projectStations.length} station${projectStations.length !== 1 ? 's' : ''})</span>
                         </h4>
-                        <div class="space-y-2">
+                        <div class="flow-y-2">
                 `;
 
                 projectStations.forEach(station => {
@@ -117,21 +117,21 @@ export const StationUI = {
 
                     // Station type badge
                     const typeLabels = {
-                        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-                        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
-                        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' },
-                        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-stone-500/20 text-stone-300 border-stone-500/30' }
+                        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
+                        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
+                        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
+                        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
+                        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-3.5 h-3.5 align-middle">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
                     };
                     const stationType = station.type;
                     const typeInfo = typeLabels[stationType];
-                    const typeBadge = `<span class="text-xs px-1.5 py-0.5 rounded border ${typeInfo.color}">${typeInfo.icon}</span>`;
+                    const typeBadge = `<span class="text-xs px-1.5 py-0.5 rounded-sm border ${typeInfo.color}">${typeInfo.icon}</span>`;
 
                     html += `
-                        <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3 flex-1 cursor-pointer" data-station-id="${station.id}" data-project-id="${projectId}">
-                                    <div class="w-3 h-3 rounded-full border-2 border-white shadow-md flex-shrink-0" style="background: ${markerColor};"></div>
+                                <div class="flex items-center flow-x-3 flex-1 cursor-pointer" data-station-id="${station.id}" data-project-id="${projectId}">
+                                    <div class="w-3 h-3 rounded-full border-2 border-white shadow-md shrink-0" style="background: ${markerColor};"></div>
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 flex-wrap">
                                             ${typeBadge}
@@ -148,8 +148,8 @@ export const StationUI = {
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center space-x-2">
-                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all go-to-station-btn" 
+                                <div class="flex items-center flow-x-2">
+                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded-sm transition-all go-to-station-btn"
                                             data-station-id="${station.id}"
                                             data-lat="${Number(station.latitude)}"
                                             data-lon="${Number(station.longitude)}"
@@ -238,8 +238,8 @@ export const StationUI = {
         const typeInfo = typeLabels[stationType];
 
         const formHtml = `
-            <form id="create-station-form" class="space-y-4">
-                <div class="flex items-center gap-3 mb-4 p-3 bg-slate-700/50 rounded-lg border border-slate-600/50">
+            <form id="create-station-form" class="flow-y-4">
+                <div class="flex items-center gap-3 mb-4 p-3 bg-srgb-slate-700-50 rounded-lg border border-srgb-slate-600-50">
                     <span class="text-2xl">${typeInfo.icon}</span>
                     <div>
                         <div class="text-white font-medium">${typeInfo.label}</div>
@@ -254,7 +254,7 @@ export const StationUI = {
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                     <textarea id="station-description" rows="3" class="form-input form-textarea" placeholder="Description"></textarea>
                 </div>
-                <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="text-green-400">🧲</span>
                         <span>Snapped to: ${Utils.escapeHtml(snap.lineName || 'Survey Line')} (${Utils.escapeHtml(snap.pointType)} point)</span>
@@ -302,7 +302,7 @@ export const StationUI = {
     showDragConfirmModal(snapResult, onConfirm, onCancel) {
         const content = `
             <p class="text-slate-300 mb-4">Move station to new location?</p>
-            ${snapResult ? `<div class="bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-full text-xs inline-block border border-emerald-500/30">Snapped to line</div>` : ''}
+            ${snapResult ? `<div class="bg-srgb-emerald-900-30 text-emerald-400 px-3 py-1 rounded-full text-xs inline-block border border-srgb-emerald-500-30">Snapped to line</div>` : ''}
         `;
 
         const footer = `

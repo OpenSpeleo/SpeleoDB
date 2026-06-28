@@ -178,7 +178,7 @@ export const LandmarkUI = {
         if (totalLandmarks === 0) {
             html += `
                 <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
@@ -187,7 +187,7 @@ export const LandmarkUI = {
                 </div>
             `;
         } else {
-            html += `<div class="space-y-2">`;
+            html += `<div class="flow-y-2">`;
 
             collectionGroups.forEach(group => {
                 const groupColor = Utils.safeCssColor(group.color);
@@ -200,10 +200,10 @@ export const LandmarkUI = {
                     const markerStrokeColor = markerColor.toLowerCase() === '#ffffff' ? '#0f172a' : '#ffffff';
                     const accessLabel = landmark.can_write === true ? 'Writable' : 'Read only';
                     return Utils.safeHtml`
-                        <div class="bg-slate-700/50 p-3 hover:bg-slate-700 transition-colors group border-t border-slate-700 first:border-t-0">
+                        <div class="bg-srgb-slate-700-50 p-3 hover:bg-slate-700 transition-colors group border-t border-slate-700 first:border-t-0">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3 flex-1 cursor-pointer landmark-item" data-landmark-id="${landmark.id}">
-                                    <div class="w-4 h-5 flex-shrink-0">
+                                <div class="flex items-center flow-x-3 flex-1 cursor-pointer landmark-item" data-landmark-id="${landmark.id}">
+                                    <div class="w-4 h-5 shrink-0">
                                         ${Utils.raw(`
                                             <svg viewBox="0 0 24 32" fill="none">
                                                 <path d="M12 14 L12 30" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>
@@ -222,8 +222,8 @@ export const LandmarkUI = {
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center space-x-2">
-                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all go-to-landmark-btn"
+                                <div class="flex items-center flow-x-2">
+                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded-sm transition-all go-to-landmark-btn"
                                             data-landmark-id="${landmark.id}"
                                             data-lat="${Number(landmark.latitude)}"
                                             data-lon="${Number(landmark.longitude)}"
@@ -245,8 +245,8 @@ export const LandmarkUI = {
                 }).join('');
 
                 html += Utils.safeHtml`
-                    <details class="landmark-collection-group bg-slate-800/60 rounded-lg border border-slate-700 overflow-hidden" data-collection-id="${group.id}">
-                        <summary class="cursor-pointer list-none px-4 py-3 hover:bg-slate-700/60 transition-colors" title="Expand or collapse collection group">
+                    <details class="landmark-collection-group bg-srgb-slate-800-60 rounded-lg border border-slate-700 overflow-hidden" data-collection-id="${group.id}">
+                        <summary class="cursor-pointer list-none px-4 py-3 hover:bg-srgb-slate-700-60 transition-colors" title="Expand or collapse collection group">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center min-w-0">
                                     <svg class="landmark-collection-toggle-icon w-4 h-4 text-slate-400 shrink-0 mr-2 transition-transform duration-150" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,12 +321,12 @@ export const LandmarkUI = {
         const collectionLabel = this.getLandmarkCollectionLabel(landmark);
 
         const content = landmark ? Utils.safeHtml`
-            <div class="space-y-4">
+            <div class="flow-y-4">
                 <div>
                     <h3 class="text-lg font-semibold text-white mb-2">${landmark.name}</h3>
                     ${Utils.raw(landmark.description ? Utils.safeHtml`<p class="text-slate-300">${landmark.description}</p>` : '<p class="text-slate-400 italic">No description</p>')}
                 </div>
-                <div class="bg-slate-700/50 rounded-lg p-4 space-y-2">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2">
                     <p class="text-slate-300"><strong>Coordinates:</strong> ${Number(landmark.latitude).toFixed(7)}, ${Number(landmark.longitude).toFixed(7)}</p>
                     <p class="text-slate-300"><strong>Collection:</strong> ${collectionLabel}</p>
                     <p class="text-slate-300"><strong>Created:</strong> ${landmark.creation_date ? new Date(landmark.creation_date).toLocaleDateString() : 'Unknown'}</p>
@@ -365,7 +365,7 @@ export const LandmarkUI = {
 
     openCreateModal(coordinates) {
         const formHtml = `
-            <form id="create-landmark-form" class="space-y-4">
+            <form id="create-landmark-form" class="flow-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
                     <input type="text" id="landmark-name" required class="form-input" placeholder="Enter name">
@@ -375,7 +375,7 @@ export const LandmarkUI = {
                     <textarea id="landmark-description" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
                 ${this.getCollectionSelectHtml('landmark-collection')}
-                <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-3 text-sm text-slate-300">
                     Location: ${Number(coordinates[1]).toFixed(7)}, ${Number(coordinates[0]).toFixed(7)}
                 </div>
             </form>`;
@@ -414,7 +414,7 @@ export const LandmarkUI = {
 
     openCreateModalManual() {
         const formHtml = `
-            <form id="create-landmark-manual-form" class="space-y-4">
+            <form id="create-landmark-manual-form" class="flow-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
                     <input type="text" id="landmark-name-manual" required class="form-input" placeholder="Enter landmark name">
@@ -434,7 +434,7 @@ export const LandmarkUI = {
                         <input type="number" id="landmark-longitude-manual" required step="any" min="-180" max="180" class="form-input" placeholder="Longitude (-180 to 180)">
                     </div>
                 </div>
-                <div id="landmark-coord-error" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+                <div id="landmark-coord-error" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
             </form>`;
 
         const footer = `
@@ -513,7 +513,7 @@ export const LandmarkUI = {
         }
 
         const formHtml = Utils.safeHtml`
-            <form id="edit-landmark-form" class="space-y-4">
+            <form id="edit-landmark-form" class="flow-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
                     <input type="text" id="edit-landmark-name" required value="${landmark.name}" class="form-input">
@@ -533,7 +533,7 @@ export const LandmarkUI = {
                         <input type="number" id="edit-landmark-longitude" step="any" min="-180" max="180" value="${Number(landmark.longitude).toFixed(7)}" class="form-input" placeholder="Longitude">
                     </div>
                 </div>
-                <div id="edit-landmark-error" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+                <div id="edit-landmark-error" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
             </form>`;
 
         const footer = `
@@ -615,7 +615,7 @@ export const LandmarkUI = {
                 <p class="text-slate-300 mb-2">Are you sure you want to delete this Landmark?</p>
                 <p class="text-white font-semibold text-lg">${landmark.name}</p>
             </div>
-            <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+            <div class="bg-srgb-red-900-20 border border-srgb-red-500-30 rounded-lg p-4">
                 <p class="text-red-200 text-sm"><strong>Warning:</strong> This action cannot be undone.</p>
             </div>`;
 

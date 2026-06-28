@@ -103,7 +103,7 @@ function formatBytes(bytes) {
 export function createProgressBarHTML(id = 'upload-progress') {
     return `
         <div id="${id}-container" class="hidden mt-4">
-            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+            <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-slate-600-50">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm text-slate-300 flex items-center gap-2">
                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -115,7 +115,7 @@ export function createProgressBarHTML(id = 'upload-progress') {
                     <span id="${id}-percent" class="text-sm font-medium text-white">0%</span>
                 </div>
                 <div class="w-full bg-slate-600 rounded-full h-2.5 overflow-hidden">
-                    <div id="${id}-bar" class="bg-gradient-to-r from-blue-500 to-cyan-400 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                    <div id="${id}-bar" class="bg-linear-to-r/srgb from-blue-500 to-cyan-400 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
                 </div>
                 <div class="flex items-center justify-between mt-2">
                     <span id="${id}-size" class="text-xs text-slate-400">0 B / 0 B</span>

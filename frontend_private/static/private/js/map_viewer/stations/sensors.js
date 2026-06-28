@@ -158,7 +158,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
 
     container.innerHTML = `
         <div class="tab-content active">
-            <div class="space-y-6">
+            <div class="flow-y-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-semibold text-white">Sensor Management</h3>
                     ${hasWriteAccess ? `
@@ -172,7 +172,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                 </div>
 
                 <!-- Sub-tabs -->
-                <div class="flex space-x-2 border-b border-slate-600">
+                <div class="flex flow-x-2 border-b border-slate-600">
                     <button
                         class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors text-slate-400 hover:text-slate-300"
                         onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')"
@@ -230,41 +230,41 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                 ${installs.length > 0 ? `
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm sensor-history-table">
-                            <thead class="bg-slate-800/50 text-slate-300 text-left">
+                            <thead class="bg-srgb-slate-800-50 text-slate-300 text-left">
                                 <tr>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('sensor_name')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('sensor_name')">
                                         <div class="flex items-center gap-1">
                                             Sensor Name
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('sensor_fleet_name')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('sensor_fleet_name')">
                                         <div class="flex items-center gap-1">
                                             Fleet Name
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('status')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('status')">
                                         <div class="flex items-center gap-1">
                                             State
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('install_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('install_date')">
                                         <div class="flex items-center gap-1">
                                             Install Date
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
                                     <th class="px-4 py-3 font-medium">Install User</th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('uninstall_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('uninstall_date')">
                                         <div class="flex items-center gap-1">
                                             Retrieval Date
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
                                         </div>
                                     </th>
                                     <th class="px-4 py-3 font-medium">Retrieval User</th>
-                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-slate-700/50" onclick="window.StationSensors.sortHistory('modified_date')">
+                                    <th class="px-4 py-3 font-medium cursor-pointer hover:bg-srgb-slate-700-50" onclick="window.StationSensors.sortHistory('modified_date')">
                                         <div class="flex items-center gap-1">
                                             Modified
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 8l5-5 5 5H5z"></path></svg>
@@ -272,9 +272,9 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-700" id="sensor-history-tbody">
+                            <tbody class="row-divide-y row-divide-slate-700" id="sensor-history-tbody">
                                 ${installs.map((install, index) => `
-                                    <tr class="hover:bg-slate-800/30 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}">
+                                    <tr class="hover:bg-srgb-slate-800-30 ${index % 2 === 0 ? 'bg-srgb-slate-900-20' : ''}">
                                         <td class="px-4 py-3 text-white font-medium">${Utils.escapeHtml(install.sensor_name || 'Unknown')}</td>
                                         <td class="px-4 py-3 text-slate-300">${Utils.escapeHtml(install.sensor_fleet_name || 'Unknown')}</td>
                                         <td class="px-4 py-3">
@@ -297,7 +297,7 @@ async function renderSensorHistoryTable(installs, stationId, projectId, currentF
                     </div>
                 ` : `
                     <div class="text-center py-12">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                         <h3 class="text-white text-lg font-medium mb-2">No History Available</h3>
@@ -341,7 +341,7 @@ export const StationSensors = {
 
             container.innerHTML = `
                 <div class="tab-content active">
-                    <div class="space-y-6">
+                    <div class="flow-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Sensor Management</h3>
                             ${hasWriteAccess ? `
@@ -355,7 +355,7 @@ export const StationSensors = {
                         </div>
 
                         <!-- Sub-tabs -->
-                        <div class="flex space-x-2 border-b border-slate-600">
+                        <div class="flex flow-x-2 border-b border-slate-600">
                             <button
                                 class="sensor-subtab px-4 py-2 text-sm font-medium transition-colors ${subtab === 'current' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-slate-300'}"
                                 onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}', 'current')"
@@ -373,9 +373,9 @@ export const StationSensors = {
                         <!-- Current Installs Content -->
                         <div id="sensor-subtab-content">
                             ${installs.length > 0 ? `
-                                <div class="space-y-4">
+                                <div class="flow-y-4">
                                     ${installs.map(install => `
-                                        <div class="bg-slate-800/20 border border-slate-600/50 rounded-lg p-5 hover:bg-slate-700/30 transition-colors">
+                                        <div class="bg-srgb-slate-800-20 border border-srgb-slate-600-50 rounded-lg p-5 hover:bg-srgb-slate-700-30 transition-colors">
                                             <div class="flex justify-between items-start mb-3">
                                                 <div class="flex-1">
                                                     <h4 class="text-white font-medium text-lg">${Utils.escapeHtml(install.sensor_name || 'Unknown Sensor')}</h4>
@@ -410,7 +410,7 @@ export const StationSensors = {
                                             </div>
 
                                             ${hasWriteAccess ? `
-                                                <div class="flex gap-2 mt-4 pt-4 border-t border-slate-600/50">
+                                                <div class="flex gap-2 mt-4 pt-4 border-t border-srgb-slate-600-50">
                                                     ${canChangeSensorInstallStatus(install) ? `
                                                         <button onclick="window.StationSensors.loadEditForm('${install.id}', '${stationId}', '${projectId}')"
                                                             class="btn-secondary text-sm flex-1">
@@ -440,7 +440,7 @@ export const StationSensors = {
                                 </div>
                             ` : `
                                 <div class="text-center py-12">
-                                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                                     </svg>
                                     <h3 class="text-white text-lg font-medium mb-2">No Sensors Currently Installed</h3>
@@ -470,7 +470,7 @@ export const StationSensors = {
             <div class="tab-content active">
                 <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                         </svg>
                         <h3 class="text-white text-lg font-medium mb-2">No Sensors Installed</h3>
@@ -689,7 +689,7 @@ export const StationSensors = {
                 container.innerHTML = `
                     <div class="tab-content active">
                         <div class="text-center py-12">
-                            <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                             </svg>
                             <h3 class="text-white text-lg font-medium mb-2">No Sensor Fleets Available</h3>
@@ -735,7 +735,7 @@ export const StationSensors = {
 
             container.innerHTML = `
                 <div class="tab-content active">
-                    <div class="space-y-6">
+                    <div class="flow-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Install Sensor</h3>
                             <button onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary text-sm">
@@ -743,7 +743,7 @@ export const StationSensors = {
                             </button>
                         </div>
 
-                        <form id="install-sensor-form" class="space-y-6">
+                        <form id="install-sensor-form" class="flow-y-6">
                             <div>
                                 <label class="form-label">Sensor Fleet *</label>
                                 <select id="sensor-fleet-select"
@@ -997,7 +997,7 @@ export const StationSensors = {
 
             container.innerHTML = `
                 <div class="tab-content active">
-                    <div class="space-y-6">
+                    <div class="flow-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xl font-semibold text-white">Edit Sensor Installation</h3>
                             <button onclick="window.StationSensors.loadCurrentInstalls('${stationId}', '${projectId}')" class="btn-secondary text-sm">
@@ -1005,7 +1005,7 @@ export const StationSensors = {
                             </button>
                         </div>
 
-                        <form id="install-sensor-form" class="space-y-6">
+                        <form id="install-sensor-form" class="flow-y-6">
                             <div>
                                 <label class="form-label">Sensor Fleet *</label>
                                 <select id="sensor-fleet-select"
@@ -1094,10 +1094,10 @@ export const StationSensors = {
 
         container.innerHTML = `
             <div class="tab-content active">
-                <div class="space-y-6">
+                <div class="flow-y-6">
                     <h3 class="text-xl font-semibold text-white">Mark Sensor as Retrieved</h3>
 
-                    <form id="retrieve-sensor-form" class="space-y-6">
+                    <form id="retrieve-sensor-form" class="flow-y-6">
                         <div>
                             <label class="form-label">Retrieval Date *</label>
                             <input type="date" id="retrieval-date" class="form-input" value="${today}" required>
@@ -1185,7 +1185,7 @@ export const StationSensors = {
 
         // Create modal
         const modalHtml = `
-            <div id="sensor-status-change-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="sensor-status-change-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6 border-b border-slate-600">
                         <div class="flex items-center justify-between">
@@ -1204,7 +1204,7 @@ export const StationSensors = {
                     </div>
                     <div class="p-6">
                         <p class="text-slate-300 mb-4">${config.message}</p>
-                        <div class="bg-slate-700/50 rounded-lg p-3 mb-4">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-3 mb-4">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Sensor:</span>
                                 <span class="text-white">${Utils.escapeHtml(sensorName)}</span>
@@ -1214,7 +1214,7 @@ export const StationSensors = {
                                 <span class="text-white">${config.label}</span>
                             </div>
                         </div>
-                        <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6">
+                        <div class="bg-srgb-amber-500-10 border border-srgb-amber-500-30 rounded-lg p-3 mb-6">
                             <p class="text-amber-400 text-sm font-medium">⚠️ This action cannot be undone</p>
                             <p class="text-amber-300 text-xs mt-1">${config.warning}</p>
                         </div>

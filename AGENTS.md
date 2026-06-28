@@ -91,8 +91,27 @@ The repository now uses a single Node workspace at the repo root.
   - `package.json`
   - `package-lock.json`
 - Do not re-introduce nested `package.json` files for frontend tooling.
-- Tailwind configs stay in `tailwind_css/static_src/src/**/tailwind.config.js`,
-  but all scripts run from root.
+- Tailwind entrypoints are `tailwind_css/public/style.css` and
+  `tailwind_css/private/style.css`; their adjacent `tailwind.config.js` files
+  retain theme extensions and plugin registration only. All scripts run from
+  root.
+- Tailwind source ownership is CSS-first. Each entrypoint must keep
+  `@import 'tailwindcss' source(none)`, an adjacent `@config`, and explicit
+  stylesheet-relative `@source` directives. Do not add config `content`
+  arrays, automatic detection, or CLI `-c` flags.
+- Shared product tokens, browser defaults, and compiler-facing utilities live
+  in `tailwind_css/shared/design-system.css`. Use durable semantic names such
+  as `srgb-*`, `flow-*`, and `row-divide-*`; production CSS must not expose a
+  migration-version prefix. Build-specific dark, hover, group-hover, and
+  sidebar variants stay in the owning CSS entrypoint; feature selectors and
+  project variables stay in their owning application stylesheet. Do not
+  introduce application/runtime coupling to Tailwind's private `--tw-*`
+  variables.
+- Generated CSS and JavaScript bundles are ignored artifacts, not evidence.
+  Tailwind watch mode can retain a deleted candidate, so stop the watcher and
+  run `npm run build` (or clean and rebuild every output required by the route)
+  before browser verification. Confirm that the running application serves
+  that clean output.
 
 ### Root JS commands
 

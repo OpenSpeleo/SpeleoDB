@@ -229,7 +229,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -387,7 +387,7 @@
         </div>
 
         <!-- Desktop Table View -->
-        <div class="projects-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="projects-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
 
             <div>
 
@@ -430,7 +430,7 @@
                         </thead>
                         <!-- Table body: grouped by country -->
                         {% for country_name, country_projects in projects_by_country.items %}
-                        <tbody class="country-group text-sm divide-y divide-slate-200 divide-slate-700" data-country-code="{{ country_projects.0.project.country.code }}">
+                        <tbody class="country-group text-sm row-divide-y row-divide-slate-200 row-divide-slate-700" data-country-code="{{ country_projects.0.project.country.code }}">
                             <tr class="country-group-header">
                                 <td colspan="10">
                                     <div class="country-group-header-inner" role="button" tabindex="0">
@@ -445,7 +445,7 @@
                             </tr>
                             {% for proj_data in country_projects %}
                                 <tr class="country-group-row">
-                                    <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-13">
+                                    <td class="px-2 first:pl-5 last:pr-5 py-3">
                                         <div class="text-center">
                                             <span class="font-medium text-slate-100">{{ proj_data.project.name }}</span>
                                         </div>

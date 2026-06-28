@@ -3,7 +3,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -18,7 +18,7 @@
         </div>
 
         <!-- Sensor Fleet Details -->
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
                 <div class="grow">
 
@@ -27,7 +27,7 @@
                         {% csrf_token %}
 
                         <!-- Panel body -->
-                        <div class="p-6 space-y-6">
+                        <div class="p-6 flow-y-6">
 
                             <!-- Fleet Name & Description -->
                             <section>
@@ -40,7 +40,7 @@
                                     </div>
                                 </div>
 
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="description">Description:</label>
                                         <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4" placeholder="Optional description of the sensor fleet"></textarea>
@@ -55,7 +55,7 @@
                                     <p class="text-sm text-slate-400 mb-4">You can add sensors now or after creating the fleet.</p>
                                     
                                     <!-- Sensors Container -->
-                                    <div id="sensors_container" class="space-y-3 mb-4">
+                                    <div id="sensors_container" class="flow-y-3 mb-4">
                                         <!-- Dynamic sensors will be added here -->
                                     </div>
 
@@ -108,7 +108,7 @@
         $('#add_sensor_btn').click(function () {
             sensorIdCounter++;
             const sensorHtml = `
-                <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600 sensor-item" data-sensor-id="${sensorIdCounter}">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-slate-600 sensor-item" data-sensor-id="${sensorIdCounter}">
                     <div class="flex flex-col sm:flex-row sm:items-start gap-3">
                         <div class="flex-1">
                             <label class="block text-xs font-medium text-slate-400 mb-1">Sensor Name <span class="text-rose-600">*</span></label>

@@ -75,7 +75,7 @@ function renderCollectionField({ id, collections, selectedId, lockedCollection }
         return Utils.safeHtml`
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Collection</label>
-                <div class="flex items-center gap-2 bg-slate-700/40 border border-slate-600 rounded px-3 py-2 text-slate-200 text-sm">
+                <div class="flex items-center gap-2 bg-srgb-slate-700-40 border border-slate-600 rounded-sm px-3 py-2 text-slate-200 text-sm">
                     <span class="inline-block w-3 h-3 rounded-full border border-slate-500 shrink-0" style="background-color: ${Utils.raw(swatch)}"></span>
                     <span class="truncate">${getCollectionLabel(lockedCollection)}</span>
                 </div>
@@ -226,7 +226,7 @@ export function renderLandmarkFormHtml({
     const selectedCollectionId = isEdit ? landmark?.collection : null;
 
     return Utils.safeHtml`
-        <form id="${formId}" class="space-y-4" novalidate>
+        <form id="${formId}" class="flow-y-4" novalidate>
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
                 <input type="text" id="${formId}-name" required value="${name}" class="form-input" placeholder="Landmark name">
@@ -251,7 +251,7 @@ export function renderLandmarkFormHtml({
                     <input type="number" id="${formId}-longitude" required step="any" min="-180" max="180" value="${lon}" class="form-input" placeholder="Longitude">
                 </div>
             </div>
-            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
         </form>`;
 }
 
@@ -396,10 +396,10 @@ export function openLandmarkDeleteModal({ landmark, onSuccess = null } = {}) {
             <p class="text-slate-300 mb-2">Are you sure you want to delete this landmark?</p>
             <p class="text-white font-semibold text-lg">${landmark.name}</p>
         </div>
-        <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+        <div class="bg-srgb-red-900-20 border border-srgb-red-500-30 rounded-lg p-4">
             <p class="text-red-200 text-sm"><strong>Warning:</strong> This action cannot be undone.</p>
         </div>
-        <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg mt-3"></div>`;
+        <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg mt-3"></div>`;
 
     const footer = Utils.safeHtml`
         <button data-close-modal="${modalId}" class="btn-secondary">Cancel</button>
@@ -435,7 +435,7 @@ function renderSelectedLandmarksList(landmarks) {
         ? Utils.safeHtml`<li class="text-slate-400 italic">... and ${String(overflow)} more</li>`
         : '';
     return Utils.safeHtml`
-        <ul class="list-disc pl-5 text-sm text-slate-300 space-y-0.5 max-h-40 overflow-y-auto">
+        <ul class="list-disc pl-5 text-sm text-slate-300 flow-y-0.5 max-h-40 overflow-y-auto">
             ${Utils.raw(items)}
             ${Utils.raw(overflowHtml)}
         </ul>`;
@@ -461,7 +461,7 @@ export function openLandmarkBulkTransferModal({
 
     const targetSelectorHtml = writableTargets.length === 0
         ? Utils.safeHtml`
-            <div class="bg-slate-700/40 border border-slate-600 rounded p-3 text-sm text-slate-300">
+            <div class="bg-srgb-slate-700-40 border border-slate-600 rounded-sm p-3 text-sm text-slate-300">
                 You don't have WRITE access to any other landmark collection.
                 <a href="${Urls['private:landmark_collection_new']()}" class="text-indigo-400 hover:underline ml-1">Create a new collection</a>
                 to enable transfers.
@@ -475,7 +475,7 @@ export function openLandmarkBulkTransferModal({
     const count = landmarks.length;
 
     const content = Utils.safeHtml`
-        <div class="space-y-4">
+        <div class="flow-y-4">
             <div class="text-sm text-slate-300">
                 From <span class="font-semibold text-white">${sourceName}</span>
             </div>
@@ -487,7 +487,7 @@ export function openLandmarkBulkTransferModal({
                 <label class="block text-sm font-medium text-slate-300 mb-2">Move them to:</label>
                 ${Utils.raw(targetSelectorHtml)}
             </div>
-            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
         </div>`;
 
     const submitDisabled = writableTargets.length === 0 ? 'disabled' : '';
@@ -541,13 +541,13 @@ export function openLandmarkBulkDeleteModal({
     const count = landmarks.length;
 
     const content = Utils.safeHtml`
-        <div class="space-y-4">
+        <div class="flow-y-4">
             <div class="text-sm text-slate-300">You're about to permanently delete ${String(count)} landmark${count === 1 ? '' : 's'} from this collection.</div>
             ${Utils.raw(renderSelectedLandmarksList(landmarks))}
-            <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+            <div class="bg-srgb-red-900-20 border border-srgb-red-500-30 rounded-lg p-4">
                 <p class="text-red-200 text-sm"><strong>Warning:</strong> This action cannot be undone.</p>
             </div>
-            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-red-500/10 rounded-lg"></div>
+            <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
         </div>`;
 
     const footer = Utils.safeHtml`

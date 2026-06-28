@@ -8,8 +8,8 @@
 
         <!-- Radial gradient -->
         <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none -z-10 w-[1200px] h-[1200px]" aria-hidden="true">
-            <div class="absolute inset-0 translate-z-0 bg-purple-500/40 rounded-full blur-3xl"></div>
-            <div class="absolute inset-[20%] translate-z-0 bg-purple-400/50 rounded-full blur-2xl"></div>
+            <div class="absolute inset-0 translate-z-0 bg-srgb-purple-500-40 rounded-full blur-3xl"></div>
+            <div class="absolute inset-[20%] translate-z-0 bg-srgb-purple-400-50 rounded-full blur-2xl"></div>
         </div>
 
         <!-- Particles animation -->
@@ -22,18 +22,18 @@
             <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
         </div>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="max-w-6xl center-x px-4 sm:px-6">
             <div class="pt-32 pb-10 md:pt-40">
 
                 <!-- Hero content -->
                 <div class="text-center">
-                    <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-purple-50 pb-3">
+                    <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent-static bg-linear-to-r/srgb from-purple-300 to-purple-50 pb-3">
                         Meet Our Community
                     </div>
-                    <h1 class="h1 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-6">
+                    <h1 class="h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-6">
                         The people driving SpeleoDB forward
                     </h1>
-                    <p class="text-lg text-slate-400 max-w-3xl mx-auto">
+                    <p class="text-lg text-slate-400 max-w-3xl center-x">
                         Our organization brings together passionate individuals from diverse backgrounds, united by a shared vision to revolutionize cave survey and exploration data management.
                     </p>
                 </div>
@@ -51,20 +51,20 @@
         <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
             <!-- Centered purple gradient -->
             <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1000px]">
-                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-purple-500/40 via-purple-500/25 to-purple-600/15 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-linear-to-b/srgb from-srgb-purple-500-40 via-srgb-purple-500-25 to-srgb-purple-600-15 rounded-full blur-3xl"></div>
             </div>
             <!-- Accent glow -->
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
-                <div class="absolute inset-0 translate-z-0 bg-purple-600/30 rounded-full blur-2xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-srgb-purple-600-30 rounded-full blur-2xl"></div>
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="max-w-6xl center-x px-4 sm:px-6">
             <div class="py-12 md:py-20">
 
                 <!-- Section header -->
-                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
-                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Board of Directors</h2>
+                <div class="max-w-3xl center-x text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Board of Directors</h2>
                     <p class="text-lg text-slate-200">
                         Our Board provides strategic guidance and ensures the organization stays true<br>
                         to its mission of advancing cave exploration and data management.
@@ -72,17 +72,17 @@
                 </div>
 
                 <!-- Team members grid with dynamic layout -->
-                <div class="grid {{ board_members|length|get_grid_class }} gap-6 lg:gap-8 max-w-5xl mx-auto">
+                <div class="grid {{ board_members|length|get_grid_class }} gap-6 lg:gap-8 max-w-5xl center-x">
                     
                     {% for person in board_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                    <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
-                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                            <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
-                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                            <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
                                 <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
@@ -92,7 +92,7 @@
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                            <div class="flex items-center flow-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
                                 <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <span class="underline">{{ person.link_name }}</span>
                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,20 +119,20 @@
         <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
             <!-- Centered gradient -->
             <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
-                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-linear-to-b/srgb from-srgb-indigo-500-40 via-srgb-purple-500-30 to-srgb-purple-600-20 rounded-full blur-3xl"></div>
             </div>
             <!-- Purple overlay -->
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
-                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-srgb-purple-500-30 rounded-full blur-2xl"></div>
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="max-w-6xl center-x px-4 sm:px-6">
             <div class="pt-32 pb-12 md:pt-40 md:pb-20">
 
                 <!-- Section header -->
-                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
-                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Technical Steering Committee</h2>
+                <div class="max-w-3xl center-x text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Technical Steering Committee</h2>
                     <p class="text-lg text-slate-200">
                         The technical minds behind SpeleoDB's architecture, ensuring our platform remains cutting-edge, secure, and community-driven.
                     </p>
@@ -142,14 +142,14 @@
                 <div class="grid {{ technical_members|length|get_grid_class }} gap-6 lg:gap-8">
                     
                     {% for person in technical_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                    <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
-                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                            <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
-                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                            <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
                                 <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
@@ -159,7 +159,7 @@
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                            <div class="flex items-center flow-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
                                 <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <span class="underline">{{ person.link_name }}</span>
                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,20 +186,20 @@
         <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
             <!-- Centered gradient -->
             <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
-                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-linear-to-b/srgb from-srgb-indigo-500-40 via-srgb-purple-500-30 to-srgb-purple-600-20 rounded-full blur-3xl"></div>
             </div>
             <!-- Purple overlay -->
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
-                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-srgb-purple-500-30 rounded-full blur-2xl"></div>
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="max-w-6xl center-x px-4 sm:px-6">
             <div class="py-12 md:py-20">
 
                 <!-- Section header -->
-                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
-                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Explorer Advisory Board</h2>
+                <div class="max-w-3xl center-x text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Explorer Advisory Board</h2>
                     <p class="text-lg text-slate-200">
                         Experienced cave explorers and surveyors who provide real-world insights to ensure our platform meets the community's needs.
                     </p>
@@ -209,14 +209,14 @@
                 <div class="grid {{ explorer_members|length|get_grid_class }} gap-6 lg:gap-8">
                     
                     {% for person in explorer_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                    <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
-                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                            <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
-                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                            <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
                                 <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
@@ -226,7 +226,7 @@
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                            <div class="flex items-center flow-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
                                 <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <span class="underline">{{ person.link_name }}</span>
                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,20 +253,20 @@
         <div class="absolute inset-0 pointer-events-none -z-10" aria-hidden="true">
             <!-- Centered gradient -->
             <div class="absolute -top-48 left-1/2 -translate-x-1/2 w-[1400px] h-[1100px]">
-                <div class="absolute inset-0 translate-z-0 bg-gradient-to-b from-indigo-500/40 via-purple-500/30 to-purple-600/20 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-linear-to-b/srgb from-srgb-indigo-500-40 via-srgb-purple-500-30 to-srgb-purple-600-20 rounded-full blur-3xl"></div>
             </div>
             <!-- Purple overlay -->
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px]">
-                <div class="absolute inset-0 translate-z-0 bg-purple-500/30 rounded-full blur-2xl"></div>
+                <div class="absolute inset-0 translate-z-0 bg-srgb-purple-500-30 rounded-full blur-2xl"></div>
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="max-w-6xl center-x px-4 sm:px-6">
             <div class="py-12 md:py-20">
 
                 <!-- Section header -->
-                <div class="max-w-3xl mx-auto text-center pb-12 md:pb-16">
-                    <h2 class="h2 bg-clip-text text-transparent bg-gradient-to-r from-slate-200/60 via-slate-200 to-slate-200/60 pb-4">Scientific Advisory Board</h2>
+                <div class="max-w-3xl center-x text-center pb-12 md:pb-16">
+                    <h2 class="h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Scientific Advisory Board</h2>
                     <p class="text-lg text-slate-200">
                         Researchers & Scientific Experts guiding the integration of science-focused features into our platform to enhance cave exploration and data analysis.
                     </p>
@@ -276,14 +276,14 @@
                 <div class="grid {{ scientific_members|length|get_grid_class }} gap-6 lg:gap-8">
                     
                     {% for person in scientific_members %}
-                    <div class="relative bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
+                    <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
-                            <img class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300" 
+                            <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
                                  src="{{ person.get_photo_url }}" 
                                  alt="{{ person.full_name }}" />
                             {% else %}
-                            <div class="w-24 h-24 rounded-full mb-4 ring-4 ring-slate-700 group-hover:ring-purple-500/50 transition-all duration-300 bg-slate-700 flex items-center justify-center">
+                            <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
                                 <span class="text-2xl font-bold">{{ person.full_name|first }}</span>
                             </div>
                             {% endif %}
@@ -293,7 +293,7 @@
                                 {{ person.description|linebreaksbr }}
                             </p>
                             {% if person.has_link %}
-                            <div class="flex items-center space-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
+                            <div class="flex items-center flow-x-1 text-sm text-sky-300 hover:text-sky-500 transition-colors">
                                 <a href="{{ person.link_target }}" target="_blank" rel="noopener">
                                     <span class="underline">{{ person.link_name }}</span>
                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,4 +314,4 @@
 
     {% include "pages/call_to_action.html" %}
 
-{% endblock %} 
+{% endblock %}

@@ -34,7 +34,7 @@ describe('Modal', () => {
         it('omits footer section when footer is null', () => {
             const html = Modal.base('m1', 'Title', 'Content', null);
 
-            expect(html).not.toContain('justify-end space-x-3');
+            expect(html).not.toContain('justify-end flow-x-3');
         });
 
         it('uses custom maxWidth when provided', () => {

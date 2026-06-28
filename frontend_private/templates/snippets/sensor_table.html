@@ -11,9 +11,9 @@ Parameters:
 {% endcomment %}
 
 {% if sensors %}
-<div class="bg-slate-900/20 rounded-lg border border-slate-700 overflow-hidden">
+<div class="bg-srgb-slate-900-20 rounded-lg border border-slate-700 overflow-hidden">
     <table id="{{ table_id|default:'sensors_table' }}" class="table-auto w-full">
-        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
+        <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-40">
             <tr>
                 <th class="px-4 py-3 text-left">Sensor Name</th>
                 <th class="px-4 py-3 text-center">Status</th>
@@ -27,7 +27,7 @@ Parameters:
                 {% endif %}
             </tr>
         </thead>
-        <tbody class="text-sm divide-y divide-slate-700" id="{{ table_id|default:'sensors_table' }}_body">
+        <tbody class="text-sm row-divide-y row-divide-slate-700" id="{{ table_id|default:'sensors_table' }}_body">
             {% for sensor in sensors %}
             <tr class="sensor-row" data-sensor-id="{{ sensor.id }}">
                 <td class="px-4 py-3">
@@ -37,22 +37,22 @@ Parameters:
                 <td class="px-4 py-3 text-center">
                     {% if sensor.status == "functional" %}
                     <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-srgb-emerald-500-20 text-emerald-300 border border-srgb-emerald-500-30">
                         ✓ Functional
                     </span>
                     {% elif sensor.status == "broken" %}
                     <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-srgb-rose-500-20 text-rose-300 border border-srgb-rose-500-30">
                         ✗ Broken
                     </span>
                     {% elif sensor.status == "lost" %}
                     <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-srgb-amber-500-20 text-amber-300 border border-srgb-amber-500-30">
                         ⚠ Lost
                     </span>
                     {% elif sensor.status == "abandoned" %}
                     <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-srgb-amber-500-20 text-amber-300 border border-srgb-amber-500-30">
                         ⊘ Abandoned
                     </span>
                     {% endif %}
@@ -80,13 +80,13 @@ Parameters:
                 <td class="px-4 py-3">
                     <div class="flex items-center justify-center gap-2">
                         <button type="button"
-                            class="toggle-sensor-btn text-xs px-2 py-1 rounded {% if sensor.status == 'functional' %}bg-rose-500/20 hover:bg-rose-500/30 text-rose-300{% else %}bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300{% endif %} w-28"
+                            class="toggle-sensor-btn text-xs px-2 py-1 rounded-sm {% if sensor.status == 'functional' %}bg-srgb-rose-500-20 hover:bg-srgb-rose-500-30 text-rose-300{% else %}bg-srgb-emerald-500-20 hover:bg-srgb-emerald-500-30 text-emerald-300{% endif %} w-28"
                             data-sensor-id="{{ sensor.id }}"
                             data-status="{{ sensor.status }}">
                             {% if sensor.status == "functional" %}Mark Broken{% else %}Mark Functional{% endif %}
                         </button>
                         <button type="button"
-                            class="edit-sensor-btn text-xs px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300"
+                            class="edit-sensor-btn text-xs px-2 py-1 rounded-sm bg-srgb-indigo-500-20 hover:bg-srgb-indigo-500-30 text-indigo-300"
                             data-sensor-id="{{ sensor.id }}"
                             data-sensor-name="{{ sensor.name }}"
                             data-sensor-notes="{{ sensor.notes }}"
@@ -94,7 +94,7 @@ Parameters:
                             Edit
                         </button>
                         <button type="button"
-                            class="delete-sensor-btn text-xs px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
+                            class="delete-sensor-btn text-xs px-2 py-1 rounded-sm bg-srgb-rose-500-20 hover:bg-srgb-rose-500-30 text-rose-300"
                             data-sensor-id="{{ sensor.id }}">
                             Delete
                         </button>
@@ -113,8 +113,8 @@ Parameters:
 {% endif %}
 {% else %}
 <div
-    class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3"
+    class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 center-x text-slate-600 mb-3"
         fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

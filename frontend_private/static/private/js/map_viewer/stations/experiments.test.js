@@ -868,6 +868,25 @@ describe('StationExperiments', () => {
         expect(errorEl.classList.contains('hidden')).toBe(false);
     });
 
+    it('validates non-select fields when they lose focus', async () => {
+        await renderStation();
+        await selectExperiment();
+
+        container.querySelector('#add-experiment-row-btn').click();
+
+        await vi.waitFor(() => {
+            expect(document.getElementById('experiment-record-modal')).toBeTruthy();
+        });
+
+        const measurementInput = document.getElementById(`field-${measurementFieldUuid}`);
+        measurementInput.dispatchEvent(new FocusEvent('blur'));
+
+        const errorEl = document.getElementById(`field-${measurementFieldUuid}-error`);
+        expect(errorEl.textContent).toContain('required');
+        expect(errorEl.classList.contains('hidden')).toBe(false);
+        expect(measurementInput.classList.contains('border-red-500')).toBe(true);
+    });
+
     it('prefills boolean and select inputs from the row in edit mode', async () => {
         const boolFieldUuid = 'cccccccc-1111-2222-3333-444444444444';
         const selectFieldUuid = 'dddddddd-1111-2222-3333-444444444444';

@@ -100,7 +100,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         {% csrf_token %}
 
@@ -137,7 +137,7 @@
             <div id="tracks-cards-container" class="p-4">
                 <!-- Loading state -->
                 <div class="text-center py-12 text-slate-400">
-                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
                     <p>Loading GPS tracks...</p>
@@ -146,13 +146,13 @@
         </div>
 
         <!-- Desktop Table View -->
-        <div class="tracks-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="tracks-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
             <div>
                 <!-- Table -->
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3 w-12">
                                     <div class="font-semibold text-center">#</div>
@@ -169,11 +169,11 @@
                             </tr>
                         </thead>
                         <!-- Table body -->
-                        <tbody id="tracks-table-body" class="text-sm divide-y divide-slate-200 divide-slate-700">
+                        <tbody id="tracks-table-body" class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
                             <!-- Loading state -->
                             <tr>
                                 <td colspan="4" class="px-2 py-8 text-center text-slate-400">
-                                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                     </svg>
                                     <p>Loading GPS tracks...</p>
@@ -189,7 +189,7 @@
 </main>
 
 <!-- Edit GPS Track Modal -->
-<div id="edit-track-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+<div id="edit-track-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
         <!-- Modal header -->
         <div class="px-6 py-4 border-b border-slate-700">
@@ -207,7 +207,7 @@
         <form id="edit-track-form">
             <input type="hidden" id="edit-track-id" name="track_id" value="">
             
-            <div class="px-6 py-4 space-y-4">
+            <div class="px-6 py-4 flow-y-4">
                 <!-- Track Name -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-track-name">
@@ -225,7 +225,7 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Track Color</label>
                     <div class="flex items-center gap-3 mb-2">
-                        <div id="edit-track-color-preview" class="w-8 h-8 rounded border-2 border-slate-500 shrink-0"></div>
+                        <div id="edit-track-color-preview" class="w-8 h-8 rounded-sm border-2 border-slate-500 shrink-0"></div>
                         <button type="button" id="edit-track-color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
                             <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
                         </button>
@@ -233,7 +233,7 @@
                         <input type="hidden" name="color" id="edit-track-color-value" value="">
                         <div class="flex items-stretch">
                             <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
-                            <input type="text" id="edit-track-color-hex" value="" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-none" spellcheck="false">
+                            <input type="text" id="edit-track-color-hex" value="" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-hidden" spellcheck="false">
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -259,7 +259,7 @@
 </div>
 
 <!-- Delete GPS Track Confirmation Modal -->
-<div id="delete-track-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+<div id="delete-track-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
         <!-- Modal header -->
         <div class="px-6 py-4 border-b border-slate-700">
@@ -277,8 +277,8 @@
         <div class="px-6 py-4">
             <input type="hidden" id="delete-track-id" value="">
             
-            <div class="flex items-start space-x-4">
-                <div class="flex-shrink-0">
+            <div class="flex items-start flow-x-4">
+                <div class="shrink-0">
                     <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
@@ -346,7 +346,7 @@ $(document).ready(function() {
 
         if (allTracks.length === 0) {
             const emptyStateHtml = `
-                <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-16 h-16 center-x mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                 </svg>
                 <p class="text-lg font-medium">No GPS tracks yet</p>
@@ -500,7 +500,7 @@ $(document).ready(function() {
         },
         openDeleteModalForEntity: function (track) {
             $('#delete-track-info').html(
-                '<div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">' +
+                '<div class="flex items-center gap-2 bg-srgb-slate-700-50 rounded-lg p-3">' +
                 '  <div class="track-icon">' +
                 '    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                 '      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>' +

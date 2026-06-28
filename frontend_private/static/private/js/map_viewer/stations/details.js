@@ -22,11 +22,11 @@ let activeTab = 'details';
 // Helper to get station type label and icon
 function getStationTypeInfo(subsurfaceType) {
     const typeLabels = {
-        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-4 h-4 align-middle inline">`, color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
-        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-slate-500/20 text-slate-200 border-slate-400/30' },
-        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-4 h-4 align-middle inline">`, color: 'bg-stone-500/20 text-stone-300 border-stone-500/30' }
+        'sensor': { label: 'Sensor', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.sensor}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-orange-500-20 text-orange-300 border-srgb-orange-500-30' },
+        'biology': { label: 'Biology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.biology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-cyan-500-20 text-cyan-300 border-srgb-cyan-500-30' },
+        'artifact': { label: 'Artifact', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.artifact}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-amber-500-20 text-amber-300 border-srgb-amber-500-30' },
+        'bone': { label: 'Bones', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.bone}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-slate-500-20 text-slate-200 border-srgb-slate-400-30' },
+        'geology': { label: 'Geology', icon: `<img src="${window.MAPVIEWER_CONTEXT.icons.geology}" class="w-4 h-4 align-middle inline">`, color: 'bg-srgb-stone-500-20 text-stone-300 border-srgb-stone-500-30' }
     };
     return typeLabels[subsurfaceType];
 }
@@ -275,7 +275,7 @@ export const StationDetails = {
             <div class="tab-content active">
                 <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
@@ -291,23 +291,23 @@ export const StationDetails = {
         const content = document.getElementById('station-modal-content');
         content.innerHTML = `
             <div class="tab-content active">
-                <div class="space-y-8">
-                    <div class="bg-slate-700/70 rounded-xl border border-slate-600/50 overflow-hidden">
-                        <div class="bg-slate-800/30 p-6">
+                <div class="flow-y-8">
+                    <div class="bg-srgb-slate-700-70 rounded-xl border border-srgb-slate-600-50 overflow-hidden">
+                        <div class="bg-srgb-slate-800-30 p-6">
                             <!-- Title skeleton -->
-                            <div class="h-8 w-48 bg-slate-600/50 rounded animate-pulse"></div>
+                            <div class="h-8 w-48 bg-srgb-slate-600-50 rounded-sm animate-pulse"></div>
                             <!-- Buttons skeleton -->
                             <div class="grid grid-cols-2 gap-3 mt-4">
-                                <div class="h-10 bg-slate-600/50 rounded animate-pulse"></div>
-                                <div class="h-10 bg-slate-600/50 rounded animate-pulse"></div>
+                                <div class="h-10 bg-srgb-slate-600-50 rounded-sm animate-pulse"></div>
+                                <div class="h-10 bg-srgb-slate-600-50 rounded-sm animate-pulse"></div>
                             </div>
                         </div>
 
-                        <div class="p-8 space-y-6">
+                        <div class="p-8 flow-y-6">
                             <!-- Loading spinner -->
                             <div class="flex items-center justify-center py-8">
                                 <div class="text-center">
-                                    <div class="loading-spinner mx-auto mb-4"></div>
+                                    <div class="loading-spinner center-x mb-4"></div>
                                     <p class="text-slate-400">Loading station details...</p>
                                 </div>
                             </div>
@@ -324,7 +324,7 @@ export const StationDetails = {
             <div class="tab-content active">
                 <div class="flex items-center justify-center min-h-[300px]">
                     <div class="text-center">
-                        <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
                         <h3 class="text-white text-lg font-medium mb-2">${title}</h3>
@@ -421,7 +421,7 @@ export const StationDetails = {
 
         if (!isSurfaceStation && station.type) {
             const typeInfo = getStationTypeInfo(station.type);
-            typeBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-medium border ${typeInfo.color}">${typeInfo.icon} ${typeInfo.label}</span>`;
+            typeBadge = `<span class="ml-2 px-2 py-0.5 rounded-sm text-xs font-medium border ${typeInfo.color}">${typeInfo.icon} ${typeInfo.label}</span>`;
         }
 
         modalTitle.innerHTML = Utils.safeHtml`${Utils.raw(stationTypeLabel)}: ${station.name}${Utils.raw(typeBadge)}${Utils.raw(isDemoStation ? ' <span class="demo-badge">DEMO</span>' : '')}`;
@@ -457,7 +457,7 @@ export const StationDetails = {
         if (!isSurfaceStation && station.type) {
             const typeInfo = getStationTypeInfo(station.type);
             stationTypeSection = `
-                <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600/50 mb-4">
+                <div class="bg-srgb-slate-700-50 p-4 rounded-lg border border-srgb-slate-600-50 mb-4">
                     <h4 class="text-white font-semibold mb-2 flex items-center">
                         <span class="mr-2">${typeInfo.icon}</span>
                         Station Type
@@ -473,7 +473,7 @@ export const StationDetails = {
         }
 
         const snapInfo = `
-            <div class="mt-3 bg-slate-700/50 p-3 rounded-lg border border-slate-500/30">
+            <div class="mt-3 bg-srgb-slate-700-50 p-3 rounded-lg border border-srgb-slate-500-30">
                 <strong class="text-slate-300">📍 Station Location:</strong>
                 <div class="text-sm text-slate-200 mt-1">
                     <div>GPS Location: <span class="font-mono text-slate-300">${Number(station.latitude).toFixed(7)}, ${Number(station.longitude).toFixed(7)}</span></div>
@@ -485,9 +485,9 @@ export const StationDetails = {
 
         modalContent.innerHTML = Utils.safeHtml`
             <div class="tab-content active">
-                <div class="space-y-8">
-                    <div class="bg-slate-700/70 rounded-xl border border-slate-600/50 overflow-hidden">
-                        <div class="bg-slate-800/30 p-6">
+                <div class="flow-y-8">
+                    <div class="bg-srgb-slate-700-70 rounded-xl border border-srgb-slate-600-50 overflow-hidden">
+                        <div class="bg-srgb-slate-800-30 p-6">
                             <h3 class="text-2xl font-bold text-white">${station.name}</h3>
                             <div class="grid grid-cols-2 gap-3 mt-4">
                                 <button ${Utils.raw(hasWriteAccess ? 'id="edit-station-btn"' : '')} class="btn-secondary text-sm w-full ${Utils.raw(hasWriteAccess ? '' : 'opacity-50 cursor-not-allowed')}" ${Utils.raw(hasWriteAccess ? '' : 'disabled')}>✏️ Edit</button>
@@ -495,13 +495,13 @@ export const StationDetails = {
                             </div>
                         </div>
 
-                        <div class="p-8 space-y-6">
+                        <div class="p-8 flow-y-6">
                             ${Utils.raw(stationTypeSection)}
-                            ${Utils.raw(station.description ? Utils.safeHtml`<p class="text-slate-300 text-lg leading-relaxed bg-slate-800/30 p-4 rounded-lg border">${station.description}</p>` : '')}
+                            ${Utils.raw(station.description ? Utils.safeHtml`<p class="text-slate-300 text-lg leading-relaxed bg-srgb-slate-800-30 p-4 rounded-lg border">${station.description}</p>` : '')}
 
                             <!-- Tag Section -->
                             ${Utils.raw(hasWriteAccess ? Utils.safeHtml`
-                            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
+                            <div class="bg-srgb-slate-800-30 p-4 rounded-lg border border-srgb-slate-600-50">
                                 <div class="flex items-center justify-between mb-3">
                                     <h4 class="text-white font-semibold flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,7 +523,7 @@ export const StationDetails = {
                                 </div>
                             </div>
                             ` : (station.tag && station.tag.name && station.tag.color) ? Utils.safeHtml`
-                            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-600/50">
+                            <div class="bg-srgb-slate-800-30 p-4 rounded-lg border border-srgb-slate-600-50">
                                 <h4 class="text-white font-semibold mb-3 flex items-center">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
@@ -573,16 +573,16 @@ export const StationDetails = {
 
         modalContent.innerHTML = Utils.safeHtml`
             <div class="tab-content active p-6">
-                <form id="edit-station-form" class="space-y-6">
+                <form id="edit-station-form" class="flow-y-6">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Station Name *</label>
                         <input type="text" id="edit-station-name" value="${station.name}" required
-                               class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-none">
+                               class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-hidden">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
                         <textarea id="edit-station-description" rows="4"
-                                  class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-none resize-none">${station.description || ''}</textarea>
+                                  class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-hidden resize-none">${station.description || ''}</textarea>
 
                     </div>
                     <div class="flex gap-3 justify-end pt-4 border-t border-slate-600">
@@ -650,8 +650,8 @@ export const StationDetails = {
 
             modalContent.innerHTML = Utils.safeHtml`
                 <div class="tab-content active p-6">
-                    <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
-                        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-srgb-red-900-20 border border-srgb-red-500-30 rounded-lg p-6 text-center">
+                        <svg class="w-16 h-16 text-red-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
                         <h3 class="text-xl font-bold text-white mb-2">Delete ${Utils.raw(stationTypeLabel)}?</h3>
@@ -699,11 +699,11 @@ export const StationDetails = {
         const stationTypeLabel = isSurfaceStation ? 'Surface Station' : 'Station';
 
         const modalHtml = Utils.safeHtml`
-            <div id="station-delete-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="station-delete-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
-                            <div class="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center">
+                            <div class="w-16 h-16 rounded-full bg-srgb-red-900-30 flex items-center justify-center">
                                 <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                 </svg>

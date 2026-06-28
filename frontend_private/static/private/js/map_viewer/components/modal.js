@@ -1,7 +1,7 @@
 export const Modal = {
     base(id, title, content, footer = null, maxWidth = 'max-w-2xl') {
         return `
-            <div id="${id}" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="${id}" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full ${maxWidth} flex flex-col max-h-[90vh]">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
                         <h2 class="text-xl font-semibold text-white">${title}</h2>
@@ -15,7 +15,7 @@ export const Modal = {
                     </div>
 
                     ${footer ? `
-                    <div class="flex justify-end space-x-3 p-6 pt-0 mt-auto shrink-0">
+                    <div class="flex justify-end flow-x-3 p-6 pt-0 mt-auto shrink-0">
                         ${footer}
                     </div>` : ''}
                 </div>

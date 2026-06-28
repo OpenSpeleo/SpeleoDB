@@ -5,11 +5,11 @@
 <div class="grow">
 
     <!-- Panel body -->
-    <div class="p-6 space-y-6">
+    <div class="p-6 flow-y-6">
         <div class="flex flex-col items-center justify-center">
             <!-- Icon -->
             <div class="mb-6">
-                <svg class="w-24 h-24 mx-auto text-slate-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <svg class="w-24 h-24 center-x text-slate-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                 </svg>
             </div>
@@ -38,7 +38,7 @@
                         <code id="map-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
                             {{ request.scheme }}://{{ request.get_host }}{% url 'gis_view_map' gis_token=gis_view.gis_token %}
                         </code>
-                        <div class="flex gap-2 md:flex-shrink-0">
+                        <div class="flex gap-2 md:shrink-0">
                             <button 
                                 id="copy-map-btn"
                                 type="button"
@@ -100,19 +100,19 @@
             
             <!-- Warning -->
             <div class="w-full mb-6">
-                <div class="bg-orange-900/30 border border-orange-600/50 rounded-lg p-4">
+                <div class="bg-srgb-orange-900-30 border border-srgb-orange-600-50 rounded-lg p-4">
                     <div class="flex flex-col gap-3">
                         <div class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-orange-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
-                                <p class="text-sm text-orange-300/90 mb-3">
+                                <p class="text-sm text-srgb-orange-300-90 mb-3">
                                     Both links above use a secure token that grants access to all projects in this view. 
                                     Treat these links like a password — only share them with trusted parties.
                                 </p>
-                                <p class="text-sm text-orange-300/90">
+                                <p class="text-sm text-srgb-orange-300-90">
                                     If a link was compromised or shared unintentionally, refresh the token below to invalidate all existing links and generate new ones.
                                 </p>
                             </div>
@@ -123,7 +123,7 @@
                             <button 
                                 type="submit"
                                 name="_refresh_token"
-                                class="w-full md:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                                class="w-full md:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg focus:outline-hidden focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                             >
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

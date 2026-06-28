@@ -17,7 +17,7 @@ export const Notification = {
         const el = document.createElement('div');
         const bgColor = type === 'error' ? 'bg-red-500' : (type === 'success' ? 'bg-emerald-500' : 'bg-slate-700');
         
-        el.className = `${bgColor} text-white px-4 py-3 rounded shadow-lg transform transition-all duration-300 translate-y-full opacity-0 flex items-center`;
+        el.className = `${bgColor} text-white px-4 py-3 rounded-sm shadow-lg transform transition-all duration-300 translate-y-full opacity-0 flex items-center`;
 
         const iconSpan = document.createElement('span');
         iconSpan.className = 'mr-2';

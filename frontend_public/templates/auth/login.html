@@ -18,7 +18,7 @@
 
     {% csrf_token %}
 
-    <div class="space-y-4">
+    <div class="flow-y-4">
         <div>
             <label class="block text-sm text-slate-300 font-medium mb-1" for="email">Email</label>
             <input id="email" name="email" class="form-input w-full" type="email" required />
@@ -32,7 +32,7 @@
         </div>
     </div>
     <div class="mt-6">
-        <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-sm group" id="btn_submit" type="submit">
+        <button class="btn text-sm text-white bg-purple-500 hover:bg-purple-600 w-full shadow-xs group" id="btn_submit" type="submit">
             Sign In <span class="tracking-normal text-purple-300 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
         </button>
     </div>

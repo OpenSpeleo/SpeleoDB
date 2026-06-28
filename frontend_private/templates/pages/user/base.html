@@ -50,8 +50,8 @@
     
     /* Ensure all parents allow overflow on mobile */
     @media (max-width: 768px) {
-        .bg-slate-800.shadow-lg.rounded-sm,
-        .bg-slate-800.shadow-lg.rounded-sm > div,
+        .bg-slate-800.shadow-lg.rounded-xs,
+        .bg-slate-800.shadow-lg.rounded-xs > div,
         .flex.flex-col.md\:flex-row {
             overflow: visible !important;
         }
@@ -127,7 +127,7 @@
             align-items: flex-start !important;
         }
 
-        .sm\:space-x-4 > * {
+        .sm\:flow-x-4 > * {
             margin-left: 0 !important;
         }
 
@@ -141,7 +141,7 @@
         }
 
         /* Reduce padding on panels */
-        .bg-slate-800.shadow-lg.rounded-sm .p-6 {
+        .bg-slate-800.shadow-lg.rounded-xs .p-6 {
             padding: 1rem !important;
         }
     }
@@ -150,7 +150,7 @@
 
 {% block content %}
 <!-- Welcome banner -->
-<div class="relative bg-indigo-200 bg-indigo-500 p-4 sm:p-6 rounded-sm overflow-hidden mb-8">
+<div class="relative bg-indigo-200 bg-indigo-500 p-4 sm:p-6 rounded-xs overflow-hidden mb-8">
 
     <!-- Background illustration -->
     <div class="absolute right-0 top-0 -mt-4 mr-16 pointer-events-none hidden xl:block" aria-hidden="true">
@@ -202,7 +202,7 @@
 
 </div>
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto -mt-8">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x -mt-8">
 
         <!-- Page header -->
         <div class="mb-8">
@@ -212,7 +212,7 @@
 
         </div>
 
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
 
                 <!-- Mobile Dropdown Menu -->
@@ -309,14 +309,14 @@
                 </div>
 
                 <!-- Desktop Sidebar -->
-                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 space-y-3">
+                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
                     <!-- Group 1 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Account Settings</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <!-- Accont Info -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_profile' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_profile' %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_profile' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_profile' %}">
                                     {% if request.url_name == 'user_profile' %}
                                         <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="2.25 2.25 19.5 19.51">
                                     {% else %}
@@ -338,7 +338,7 @@
                             </li>
                             <!-- Password Management -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_password' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_password' %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_password' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_password' %}">
                                     {% if request.url_name == 'user_password' %}
                                         <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="2.25 2.25 19.5 19.50">
                                     {% else %}
@@ -368,7 +368,7 @@
                             </li>
                             <!-- Auth Token -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_authtoken' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_authtoken' %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_authtoken' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_authtoken' %}">
                                     {% if request.url_name == 'user_authtoken' %}
                                         <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2" viewBox="2.25 2.25 19.5 19.5">
                                     {% else %}
@@ -389,7 +389,7 @@
                             </li>
                             <!-- Accont Preferences -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_preferences' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_preferences' %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_preferences' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_preferences' %}">
                                     {% if request.url_name == 'user_preferences' %}
                                     <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2" viewBox="3.25 3.25 17.5 17.5">
                                 {% else %}
@@ -422,7 +422,7 @@
                         <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'user_feedback' %}bg-indigo-500/30{% endif %}" href="{% url 'private:user_feedback' %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_feedback' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_feedback' %}">
                                     {% if request.url_name == 'user_feedback' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}

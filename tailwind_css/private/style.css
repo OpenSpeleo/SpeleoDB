@@ -1,73 +1,176 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=fallback');
+@import 'tailwindcss' source(none);
 
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
+@config "./tailwind.config.js";
 
-/* Additional styles */
-@import 'additional-styles/utility-patterns.css';
-@import 'additional-styles/flatpickr.css';
+@import '../shared/design-system.css';
+@import './additional-styles/utility-patterns.css' layer(components);
+@import './additional-styles/flatpickr.css' layer(components);
 
-@import 'tailwindcss/utilities';
+@source "../../frontend_private/templates/**/*.html";
+@source "../../frontend_public/templates/footer.html";
+@source "../../frontend_private/static/private/js/*.js";
+@source "../../frontend_private/static/private/js/map_viewer/**/*.js";
+@source "../../speleodb/surveys/templatetags/project_types.py";
 
-/* See Alpine.js: https://github.com/alpinejs/alpine#x-cloak */
-[x-cloak=""] {
-    display: none;
+@custom-variant dark (&:is(.dark *));
+@custom-variant hover (&:hover);
+@custom-variant group-hover (.group:hover &);
+@custom-variant sidebar-expanded (.sidebar-expanded &);
+
+@theme {
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.01);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
 }
 
-@media screen and (max-width: theme('screens.lg')) {
-    [x-cloak="lg"] {
-        display: none;
+@layer base {
+    .form-input::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+    }
+
+    .form-input::-webkit-date-and-time-value {
+        min-height: 1.5em;
+        text-align: inherit;
+    }
+
+    .form-input::-webkit-datetime-edit {
+        display: inline-flex;
+    }
+
+    .form-input::-webkit-datetime-edit,
+    .form-input::-webkit-datetime-edit-day-field,
+    .form-input::-webkit-datetime-edit-hour-field,
+    .form-input::-webkit-datetime-edit-meridiem-field,
+    .form-input::-webkit-datetime-edit-millisecond-field,
+    .form-input::-webkit-datetime-edit-minute-field,
+    .form-input::-webkit-datetime-edit-month-field,
+    .form-input::-webkit-datetime-edit-second-field,
+    .form-input::-webkit-datetime-edit-year-field {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    @supports (-webkit-appearance: -apple-pay-button) {
+        input[type='date'],
+        input[type='datetime-local'],
+        input[type='month'],
+        input[type='time'],
+        input[type='week'] {
+            font-variant-numeric: tabular-nums;
+        }
     }
 }
 
-:root {
-    --border-width-thin: 1px;
-    --border-width-medium: 2px;
-    --border-width-thick: 4px;
-    --border-opacity-subtle: 0.3;
-    --border-opacity-medium: 0.5;
-    --border-opacity-full: 1;
+@layer utilities {
+    /* See Alpine.js: https://github.com/alpinejs/alpine#x-cloak */
+    [x-cloak=""] {
+        display: none;
+    }
+
+    @media screen and (max-width: theme(--breakpoint-lg)) {
+        [x-cloak="lg"] {
+            display: none;
+        }
+    }
+
+    :root {
+        --border-width-thin: 1px;
+        --border-width-medium: 2px;
+        --border-width-thick: 4px;
+        --border-opacity-subtle: 0.3;
+        --border-opacity-medium: 0.5;
+        --border-opacity-full: 1;
+    }
+
+    /* Permission level color code. */
+    .bg-pastel-orange {
+        color: white;
+        background-color: rgb(255 140 23);
+    }
+
+    .bg-pastel-navy {
+        color: white;
+        background-color: rgb(62 71 114);
+    }
+
+    .bg-pastel-beige {
+        color: #1e1e1e;
+        background-color: rgb(241 214 162);
+    }
+
+    .bg-pastel-grey {
+        color: #1e1e1e;
+        background-color: rgb(238 238 238);
+    }
+
+    .bg-pastel-purple {
+        color: white;
+        background-color: rgb(120 71 175);
+    }
+
+    /* Compound dark/state form styles beat one-off utilities in the v3 cascade. */
+    :is(.form-input, .form-textarea, .form-multiselect, .form-select, .form-checkbox, .form-radio):is(.dark *) {
+        background-color: var(--color-srgb-slate-900-30);
+    }
+
+    :is(.form-input, .form-textarea, .form-multiselect, .form-select):is(.dark *) {
+        border-color: var(--color-slate-700);
+        color: var(--color-slate-100);
+    }
+
+    :is(.form-input, .form-textarea, .form-multiselect, .form-select):is(.dark *):hover,
+    :is(.form-input, .form-textarea, .form-multiselect, .form-select):is(.dark *):focus {
+        border-color: var(--color-slate-600);
+    }
+
+    :is(.form-input, .form-textarea):is(.dark *)::placeholder {
+        color: var(--color-slate-500);
+    }
+
+    :is(.form-checkbox, .form-radio):is(.dark *) {
+        border-color: var(--color-slate-700);
+    }
+
+    :is(.form-checkbox, .form-radio):is(.dark *):focus {
+        border-color: var(--color-srgb-indigo-500-50);
+    }
+
+    :is(.form-input, .form-textarea, .form-multiselect, .form-select, .form-checkbox, .form-radio):is(.dark *):disabled {
+        border-color: var(--color-slate-700);
+        background-color: var(--color-srgb-slate-700-30);
+    }
+
+    :is(.form-checkbox, .form-radio):is(.dark *):checked {
+        border-color: transparent;
+    }
+
+    /* Stateful switch selectors retain v3 specificity over label utilities. */
+    .form-switch input[type="checkbox"]:checked + label {
+        background-color: var(--color-indigo-500);
+    }
+
+    .form-switch input[type="checkbox"]:checked + label > span:first-child {
+        left: 22px;
+    }
+
+    .form-switch input[type="checkbox"]:disabled + label {
+        cursor: not-allowed;
+        border: 1px solid var(--color-slate-200);
+        background-color: var(--color-slate-100);
+    }
+
+    .form-switch input[type="checkbox"]:disabled + label:is(.dark *) {
+        border-color: var(--color-slate-700);
+        background-color: var(--color-srgb-slate-700-20);
+    }
+
+    .form-switch input[type="checkbox"]:disabled + label > span:first-child {
+        background-color: var(--color-slate-400);
+    }
+
+    .form-switch input[type="checkbox"]:disabled + label > span:first-child:is(.dark *) {
+        background-color: var(--color-slate-600);
+    }
 }
-
-/* ------------------- Permission Level Color Code ---------------------- */
-
-/* Admin & Team Leader*/
-
-.bg-pastel-orange {
-    --tw-bg-opacity: 1;
-    color: white;
-    background-color: rgb(255 140 23 / var(--tw-bg-opacity));
-}
-
-/* Read and Write */
-
-.bg-pastel-navy {
-    --tw-bg-opacity: 1;
-    color: white;
-    background-color: rgb(62 71 114 / var(--tw-bg-opacity));
-}
-
-/* Read Only */
-
-.bg-pastel-beige {
-    --tw-bg-opacity: 1;
-    color: #1e1e1e;
-    background-color: rgb(241 214 162 / var(--tw-bg-opacity));
-}
-
-/* Web Viewer */
-
-.bg-pastel-grey {
-    --tw-bg-opacity: 1;
-    color: #1e1e1e;
-    background-color: rgb(238 238 238 / var(--tw-bg-opacity));
-}
-
-/* Team Member */
-.bg-pastel-purple {
-    --tw-bg-opacity: 1;
-    color: white;
-    background-color: rgb(120 71 175 / var(--tw-bg-opacity));
-}
-
-/* ---------------------------------------------------------------------- */

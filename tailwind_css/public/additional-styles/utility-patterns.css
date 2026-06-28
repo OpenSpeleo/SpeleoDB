@@ -19,7 +19,7 @@
     @apply text-lg font-extrabold;
 }
 
-@screen md {
+@media (width >= theme(--breakpoint-md)) {
     .h1 {
         @apply text-6xl;
     }
@@ -37,6 +37,7 @@
 .btn,
 .btn-sm {
     @apply text-sm font-medium inline-flex items-center justify-center border border-transparent rounded-full transition duration-150 ease-in-out;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
 }
 
 .btn {
@@ -69,7 +70,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .form-multiselect,
 .form-select,
 .form-checkbox {
-    @apply rounded;
+    @apply rounded-sm;
 }
 
 .form-input,
@@ -90,7 +91,7 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .form-checkbox,
 .form-radio {
-    @apply text-purple-600 rounded-sm;
+    @apply text-purple-600 rounded-xs;
 }
 
 /* Chrome, Safari and Opera */

@@ -14,7 +14,7 @@ export const ExplorationLeadUI = {
      */
     showCreateModal(coordinates, lineName, projectId) {
         const formHtml = `
-            <form id="create-lead-form" class="space-y-4">
+            <form id="create-lead-form" class="flow-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description *</label>
                     <textarea id="lead-description" rows="4" required
@@ -25,7 +25,7 @@ export const ExplorationLeadUI = {
                         up or down, big or small passage, sidemount or backmount access, water flow, etc.
                     </p>
                 </div>
-                <div class="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
                         <img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-4 h-4">
                         <span>Location: ${Utils.escapeHtml(lineName)}</span>
@@ -114,9 +114,9 @@ export const ExplorationLeadUI = {
         const hasAdminAccess = access.delete;
 
         const content = `
-            <div class="space-y-4">
+            <div class="flow-y-4">
                 <!-- Location info -->
-                <div class="bg-slate-700/50 rounded-lg p-4">
+                <div class="bg-srgb-slate-700-50 rounded-lg p-4">
                     <div class="flex items-center gap-2 mb-2">
                         <img src="${window.MAPVIEWER_CONTEXT.icons.explorationLead}" class="w-6 h-6">
                         <span class="text-white font-medium">Exploration Lead</span>
@@ -229,7 +229,7 @@ export const ExplorationLeadUI = {
 
         const content = `
             <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                <div class="w-16 h-16 rounded-full bg-srgb-red-900-30 flex items-center justify-center center-x mb-4">
                     <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>

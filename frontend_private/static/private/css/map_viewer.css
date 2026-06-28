@@ -508,8 +508,7 @@ input[type="number"] {
 }
 
 .ring-amber-500 {
-    --tw-ring-color: #f59e0b;
-    box-shadow: 0 0 0 2px var(--tw-ring-color);
+    box-shadow: 0 0 0 2px #f59e0b;
 }
 
 .form-input::placeholder {
@@ -1636,7 +1635,7 @@ select.form-input:focus {
     flex-direction: column;
 }
 
-.import-modal-container>.flex-shrink-0,
+.import-modal-container>.shrink-0,
 .import-modal-container>div:first-child,
 .import-modal-container>div:nth-child(2) {
     flex-shrink: 0;

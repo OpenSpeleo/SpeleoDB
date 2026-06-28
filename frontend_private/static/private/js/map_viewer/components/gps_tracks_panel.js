@@ -22,7 +22,7 @@ export const GPSTracksPanel = {
         // Create Panel Container if not exists
         if (!document.getElementById('gps-tracks-panel')) {
             const panelHtml = `
-            <div id="gps-tracks-panel" class="absolute bg-slate-800/95 backdrop-blur-sm border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px; display: none;">
+            <div id="gps-tracks-panel" class="absolute bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px; display: none;">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,13 +36,13 @@ export const GPSTracksPanel = {
                         </svg>
                     </button>
                 </div>
-                <div id="gps-tracks-list" class="space-y-2 overflow-y-auto custom-scrollbar" style="max-height: 300px;">
+                <div id="gps-tracks-list" class="flow-y-2 overflow-y-auto custom-scrollbar" style="max-height: 300px;">
                     <!-- GPS track items will be inserted here -->
                 </div>
             </div>
             
-            <div id="gps-tracks-panel-minimized" class="absolute bg-slate-800/95 backdrop-blur-sm border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: block;">
-                <button id="gps-panel-expand" class="text-white hover:text-cyan-400 transition-colors flex items-center space-x-2" title="Expand GPS Tracks">
+            <div id="gps-tracks-panel-minimized" class="absolute bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: block;">
+                <button id="gps-panel-expand" class="text-white hover:text-cyan-400 transition-colors flex items-center flow-x-2" title="Expand GPS Tracks">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
@@ -191,7 +191,7 @@ export const GPSTracksPanel = {
             const color = this.getTrackColor(track.id);
             
             const item = document.createElement('div');
-            item.className = 'gps-track-button flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 p-2 rounded cursor-pointer transition-all duration-200';
+            item.className = 'gps-track-button flex items-center justify-between bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
             if (!isVisible) item.classList.add('opacity-50');
             item.dataset.trackId = track.id;
             item.dataset.trackUrl = track.file;
@@ -205,7 +205,7 @@ export const GPSTracksPanel = {
             
             item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center gap-2 overflow-hidden flex-1">
-                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${Utils.raw(Utils.safeCssColor(isVisible ? color : DEFAULTS.COLORS.FALLBACK))}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
+                    <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(Utils.safeCssColor(isVisible ? color : DEFAULTS.COLORS.FALLBACK))}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
                     <span class="text-slate-200 text-sm font-medium truncate select-none" title="${track.name}">${displayName}</span>
                 </div>
                 <div class="flex items-center gap-2">

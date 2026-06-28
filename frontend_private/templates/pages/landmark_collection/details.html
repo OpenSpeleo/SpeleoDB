@@ -137,20 +137,20 @@
     <form id="landmark_collection_details_form" autocomplete="off">
         <fieldset {% if not has_write_access %}disabled{% endif %}>
             {% csrf_token %}
-            <div class="p-6 space-y-8">
+            <div class="p-6 flow-y-8">
                 <h2 class="text-2xl text-slate-100 font-bold">Collection Settings</h2>
 
-                <div class="space-y-6">
+                <div class="flow-y-6">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" for="name">Collection Name <span class="text-rose-500">*</span></label>
                         <input id="name" name="name" type="text" value="{{ collection.name }}"
-                               class="block w-full rounded-lg bg-slate-900/40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition" />
+                               class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" for="description">Description</label>
                         <textarea id="description" name="description" rows="4"
-                                  class="block w-full rounded-lg bg-slate-900/40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition resize-y">{% if collection.description %}{{ collection.description }}{% endif %}</textarea>
+                                  class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition resize-y">{% if collection.description %}{{ collection.description }}{% endif %}</textarea>
                     </div>
 
                     <div>
@@ -168,7 +168,7 @@
                                 <div class="flex items-stretch">
                                     <span class="inline-flex items-center px-2.5 text-sm font-mono text-slate-400 bg-slate-700 border border-r-0 border-slate-600 rounded-l-lg select-none">#</span>
                                     <input type="text" id="color-hex-input" value="{{ collection.color|cut:'#' }}" maxlength="6"
-                                           class="w-[5rem] text-sm text-slate-200 font-mono bg-slate-900/40 border border-slate-600 rounded-r-lg px-2.5 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition"
+                                           class="w-[5rem] text-sm text-slate-200 font-mono bg-srgb-slate-900-40 border border-slate-600 rounded-r-lg px-2.5 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition"
                                            spellcheck="false" {% if not has_write_access %}disabled{% endif %}>
                                 </div>
                             </div>
@@ -188,12 +188,12 @@
             <footer>
                 <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-700">
                     <a href="{% url 'private:landmark_collections' %}"
-                       class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 hover:text-white transition shadow-sm">
+                       class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 hover:text-white transition shadow-xs">
                         Cancel
                     </a>
                     {% if has_write_access %}
                     <button id="btn_submit"
-                            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-indigo-400/30 bg-indigo-500 text-white hover:bg-indigo-600 transition shadow-sm">
+                            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-srgb-indigo-400-30 bg-indigo-500 text-white hover:bg-indigo-600 transition shadow-xs">
                         Save Changes
                     </button>
                     {% endif %}
@@ -214,11 +214,11 @@
                 </button>
                 {% endif %}
                 <a href="{% url 'api:v2:landmark-collection-landmarks-export-excel' collection_id=collection.id %}"
-                    class="btn-sm bg-green-500/80 hover:bg-green-500 text-white border border-green-600/50">
+                    class="btn-sm bg-srgb-green-500-80 hover:bg-green-500 text-white border border-srgb-green-600-50">
                     Export Excel
                 </a>
                 <a href="{% url 'api:v2:landmark-collection-landmarks-export-gpx' collection_id=collection.id %}"
-                    class="btn-sm bg-cyan-500/80 hover:bg-cyan-500 text-white border border-cyan-600/50">
+                    class="btn-sm bg-srgb-cyan-500-80 hover:bg-cyan-500 text-white border border-srgb-cyan-600-50">
                     Export GPX
                 </a>
             </div>
@@ -228,9 +228,9 @@
         {% if has_write_access %}
         <p id="landmarks-selection-hint" class="text-sm text-slate-300 -mt-2 mb-3">Select landmarks to batch transfer or delete</p>
         {% endif %}
-        <div class="bg-slate-900/20 rounded-lg border border-slate-700 overflow-hidden">
+        <div class="bg-srgb-slate-900-20 rounded-lg border border-slate-700 overflow-hidden">
             <table id="collection_landmarks_table" class="table-auto w-full">
-                <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/40">
+                <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-40">
                     <tr>
                         {% if has_write_access %}
                         <th class="px-3 py-3 w-10"><input type="checkbox" id="collection_landmarks_table_select_all" title="Select all"></th>
@@ -242,9 +242,9 @@
                         <th class="px-4 py-3 text-center w-28">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="text-sm divide-y divide-slate-700" id="collection_landmarks_table_body">
+                <tbody class="text-sm row-divide-y row-divide-slate-700" id="collection_landmarks_table_body">
                     {% for landmark in landmarks %}
-                    <tr class="landmark-row hover:bg-slate-700/30 transition-colors" data-landmark-id="{{ landmark.id }}">
+                    <tr class="landmark-row hover:bg-srgb-slate-700-30 transition-colors" data-landmark-id="{{ landmark.id }}">
                         {% if has_write_access %}
                         <td class="px-3 py-3 text-center">
                             <input type="checkbox" class="landmark-row-select" data-landmark-id="{{ landmark.id }}">
@@ -301,7 +301,7 @@
         {% if has_write_access %}
         {# Floating batch action bar -- slides up when items are selected #}
         <div id="landmarks-bulk-action-bar" hidden
-             class="flex items-center justify-between gap-4 mt-4 px-4 py-3 bg-slate-700/90 backdrop-blur border border-slate-600 rounded-lg shadow-xl">
+             class="flex items-center justify-between gap-4 mt-4 px-4 py-3 bg-srgb-slate-700-90 backdrop-blur-sm border border-slate-600 rounded-lg shadow-xl">
             <div class="flex items-center gap-2 text-sm text-slate-200">
                 <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-bold" id="landmarks-selection-count">0</span>
                 <span>selected</span>
@@ -311,7 +311,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                     Transfer
                 </button>
-                <button id="landmarks-bulk-delete-btn" class="btn-sm bg-red-500/80 hover:bg-red-500 text-white flex items-center gap-1.5" title="Delete selected landmarks">
+                <button id="landmarks-bulk-delete-btn" class="btn-sm bg-srgb-red-500-80 hover:bg-red-500 text-white flex items-center gap-1.5" title="Delete selected landmarks">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     Delete
                 </button>
@@ -324,8 +324,8 @@
 
         {% else %}
         {# Empty state #}
-        <div class="text-center py-12 bg-slate-900/20 rounded-lg border-2 border-dashed border-slate-700">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 center-x text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
             </svg>

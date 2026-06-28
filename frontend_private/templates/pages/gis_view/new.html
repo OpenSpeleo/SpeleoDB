@@ -3,7 +3,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -18,7 +18,7 @@
         </div>
 
         <!-- GIS View Form -->
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
                 <div class="grow">
 
@@ -27,7 +27,7 @@
                         {% csrf_token %}
 
                         <!-- Panel body -->
-                        <div class="p-6 space-y-6">
+                        <div class="p-6 flow-y-6">
 
                             <!-- Basic Information -->
                             <section>
@@ -62,7 +62,7 @@
                                             <div class="form-switch">
                                                 <input type="checkbox" id="allow_precise_zoom" name="allow_precise_zoom" class="sr-only" />
                                                 <label class="bg-slate-600" for="allow_precise_zoom">
-                                                    <span class="bg-white shadow-sm" aria-hidden="true"></span>
+                                                    <span class="bg-white shadow-xs" aria-hidden="true"></span>
                                                     <span class="sr-only">Allow Precise Zoom</span>
                                                 </label>
                                             </div>
@@ -88,7 +88,7 @@
                                             </button>
                                         </div>
                                         
-                                        <div id="projects_container" class="space-y-3">
+                                        <div id="projects_container" class="flow-y-3">
                                             <!-- Project rows will be added here dynamically -->
                                         </div>
 

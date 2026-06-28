@@ -202,20 +202,20 @@ export const Utils = {
     },
 
     /**
-     * Show loading overlay (full-screen with blur backdrop)
+     * Show loading overlay (full-screen with blurred backdrop)
      * @param {string} message - Loading message to display
      * @returns {HTMLElement} - The overlay element (pass to hideLoadingOverlay to remove)
      */
     showLoadingOverlay: function(message) {
         const overlay = document.createElement('div');
         overlay.id = 'station-loading-overlay';
-        overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center';
+        overlay.className = 'fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center';
 
         const inner = document.createElement('div');
         inner.className = 'bg-slate-800 rounded-xl p-6 text-center';
 
         const spinner = document.createElement('div');
-        spinner.className = 'loading-spinner mx-auto mb-4';
+        spinner.className = 'loading-spinner center-x mb-4';
 
         const msgEl = document.createElement('p');
         msgEl.className = 'text-slate-300';

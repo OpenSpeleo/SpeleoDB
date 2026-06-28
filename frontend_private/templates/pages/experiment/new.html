@@ -9,7 +9,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -24,7 +24,7 @@
         </div>
 
         <!-- Experiment Details -->
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
                 <div class="grow">
 
@@ -33,7 +33,7 @@
                         {% csrf_token %}
 
                         <!-- Panel body -->
-                        <div class="p-6 space-y-6">
+                        <div class="p-6 flow-y-6">
 
                             <!-- Experiment Name -->
                             <section>
@@ -66,7 +66,7 @@
 
                             <!-- Description -->
                             <section>
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="description">Description:</label>
                                         <textarea id="description" name="description" class="form-textarea  max-w-full w-full focus:border-slate-300" rows="4"></textarea>
@@ -81,16 +81,16 @@
                                     <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Define the fields that will be tracked for each station in this experiment.</p>
                                     
                                     <!-- All Fields Container (Sortable) -->
-                                    <div id="all_fields_container" class="space-y-3 mb-6">
+                                    <div id="all_fields_container" class="flow-y-3 mb-6">
                                         <h4 class="text-sm font-medium text-slate-300 mb-3">All Fields 
                                             <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Mandatory fields in amber)</span>
                                         </h4>
                                         
                                         <!-- Measurement Date (Mandatory) -->
-                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 mandatory-field-item" data-field-name="Measurement Date" data-field-type="date" data-field-required="true">
+                                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 mandatory-field-item" data-field-name="Measurement Date" data-field-type="date" data-field-required="true">
                                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <!-- Drag Handle -->
-                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
                                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
                                                     </svg>
@@ -116,10 +116,10 @@
                                         </div>
 
                                         <!-- Submitter Email (Mandatory) -->
-                                        <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 mandatory-field-item" data-field-name="Submitter Email" data-field-type="text" data-field-required="true">
+                                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 mandatory-field-item" data-field-name="Submitter Email" data-field-type="text" data-field-required="true">
                                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <!-- Drag Handle -->
-                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                                <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
                                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
                                                     </svg>

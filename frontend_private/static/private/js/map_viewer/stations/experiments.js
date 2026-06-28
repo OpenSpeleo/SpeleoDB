@@ -417,13 +417,13 @@ function getApiErrorMessage(error, fallbackMessage) {
 
 function renderStateCard({ title, message, actionHtml = '', tone = 'default', iconSvg }) {
     const cardClasses = tone === 'error'
-        ? 'bg-red-900/20 border border-red-600/50'
-        : 'bg-slate-800/30 border border-slate-600/50';
+        ? 'bg-srgb-red-900-20 border border-srgb-red-600-50'
+        : 'bg-srgb-slate-800-30 border border-srgb-slate-600-50';
     const iconClasses = tone === 'error' ? 'text-red-400' : 'text-slate-400';
 
     return `
         <div class="text-center py-12 rounded-lg ${cardClasses}">
-            <svg class="w-16 h-16 ${iconClasses} mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-16 h-16 ${iconClasses} center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${iconSvg}
             </svg>
             <h3 class="text-white text-lg font-medium mb-2">${Utils.escapeHtml(title)}</h3>
@@ -587,7 +587,7 @@ function renderReadOnlyExperimentNotice() {
     }
     return `
         <div data-experiment-readonly-notice
-             class="mb-4 rounded-lg border border-slate-600/50 bg-slate-800/40 px-4 py-3 text-sm text-slate-300">
+             class="mb-4 rounded-lg border border-srgb-slate-600-50 bg-srgb-slate-800-40 px-4 py-3 text-sm text-slate-300">
             <span class="font-semibold text-slate-200">Read-only access.</span>
             You can view records on this experiment but not add or edit them.
             Contact an experiment admin to request write access.
@@ -635,7 +635,7 @@ function renderExperimentTable(experiment) {
     return readOnlyNotice + `
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/50 border-b border-slate-600">
+                <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-50 border-b border-slate-600">
                     <tr>
                         ${sortedFields.map(field => `
                             <th class="px-4 py-3 whitespace-nowrap text-center">
@@ -646,12 +646,12 @@ function renderExperimentTable(experiment) {
                         ${experimentsState.experimentAccess.write ? '<th class="px-4 py-3 whitespace-nowrap text-center">Actions</th>' : ''}
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700">
+                <tbody class="row-divide-y row-divide-slate-700">
                     ${experimentsState.experimentDataRows.map(row => {
         const rowData = row.data || {};
 
         return `
-                        <tr class="hover:bg-slate-700/30 transition-colors">
+                        <tr class="hover:bg-srgb-slate-700-30 transition-colors">
                             ${sortedFields.map(field => `
                                 <td class="px-4 py-3 text-slate-300 text-center">
                                     ${renderFieldDisplayValue(field, rowData[field.id])}
@@ -687,7 +687,7 @@ function renderExperimentsContent() {
         });
     } else {
         contentBody = `
-            <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-4">
+            <div class="bg-srgb-slate-800-30 rounded-lg border border-srgb-slate-600-50 p-4">
                 <label class="block text-sm font-medium text-slate-300 mb-2">Select Experiment</label>
                 <select id="experiment-selector" class="bg-slate-700 text-white rounded-lg p-2 w-full focus:ring-2 focus:ring-sky-500 focus:border-transparent">
                     <option value="">-- Choose an experiment --</option>
@@ -697,7 +697,7 @@ function renderExperimentsContent() {
             </div>
             ${selectedExperiment
         ? `
-                <div class="bg-slate-800/30 rounded-lg border border-slate-600/50 p-6">
+                <div class="bg-srgb-slate-800-30 rounded-lg border border-srgb-slate-600-50 p-6">
                     <h4 class="text-lg font-semibold text-white mb-4">Data Records</h4>
                     ${renderExperimentTable(selectedExperiment)}
                 </div>
@@ -712,7 +712,7 @@ function renderExperimentsContent() {
 
     return `
         <div class="tab-content active">
-            <div class="space-y-6">
+            <div class="flow-y-6">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <h3 class="text-xl font-semibold text-white">Scientific Experiments</h3>
                     ${headerAction}
@@ -726,7 +726,7 @@ function renderExperimentsContent() {
 function renderLoadError(error) {
     return `
         <div class="tab-content active">
-            <div class="space-y-6">
+            <div class="flow-y-6">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xl font-semibold text-white">Scientific Experiments</h3>
                 </div>
@@ -1021,7 +1021,7 @@ function buildRecordModalHtml({ mode, experiment, fields, row }) {
     const fieldInputs = fields.map(field => renderFieldInput(field, row?.data?.[field.id])).join('');
 
     return `
-        <div id="${RECORD_MODAL_ID}" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div id="${RECORD_MODAL_ID}" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 <div class="p-6 border-b border-slate-600">
                     <div class="flex items-center justify-between">
@@ -1036,7 +1036,7 @@ function buildRecordModalHtml({ mode, experiment, fields, row }) {
                     </div>
                     <p class="text-slate-400 text-sm mt-2">${Utils.escapeHtml(experiment.name)}</p>
                 </div>
-                <form id="experiment-row-form" class="p-6 space-y-6" data-record-mode="${Utils.escapeHtml(mode)}">
+                <form id="experiment-row-form" class="p-6 flow-y-6" data-record-mode="${Utils.escapeHtml(mode)}">
                     ${fieldInputs}
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-600">
                         <button type="button" data-modal-close="record" class="btn-secondary">Cancel</button>
@@ -1174,10 +1174,10 @@ async function openRecordModal({ mode, stationId, experimentId, rowId = null }) 
 
 function buildDeleteModalHtml(rowId) {
     return `
-        <div id="${DELETE_MODAL_ID}" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div id="${DELETE_MODAL_ID}" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                 <div class="p-6">
-                    <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-500/10 rounded-full">
+                    <div class="flex items-center justify-center w-12 h-12 center-x mb-4 bg-srgb-red-500-10 rounded-full">
                         <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>

@@ -53,8 +53,8 @@
     
     /* Ensure all parents allow overflow on mobile */
     @media (max-width: 768px) {
-        .bg-slate-800.shadow-lg.rounded-sm,
-        .bg-slate-800.shadow-lg.rounded-sm > div,
+        .bg-slate-800.shadow-lg.rounded-xs,
+        .bg-slate-800.shadow-lg.rounded-xs > div,
         .flex.flex-col.md\:flex-row {
             overflow: visible !important;
         }
@@ -131,7 +131,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -146,7 +146,7 @@
         </div>
 
         <!-- Cylinder Fleet Details -->
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
 
                 <!-- Mobile Dropdown Menu -->
@@ -278,7 +278,7 @@
                 </div>
 
                 <!-- Desktop Sidebar -->
-                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 space-y-3">
+                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
                     <!-- Group 1 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
@@ -286,7 +286,7 @@
 
                             <!-- Fleet Details -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_details' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_details' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_details' %}
                                         <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
                                     {% else %}
@@ -315,7 +315,7 @@
 
                             <!-- User Permissions -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_user_permissions' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_user_permissions' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_user_permissions' %}
                                         <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
                                     {% else %}
@@ -346,7 +346,7 @@
 
                             <!-- Cylinders Watchlist -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_watchlist' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_watchlist' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_watchlist' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="1.5 2.17 21 18.33" fill="none" stroke-width="2">
                                     {% else %}
@@ -368,7 +368,7 @@
 
                             <!-- Needs Hydro Test -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_hydro' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_hydro' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_needs_hydro' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                     {% else %}
@@ -390,7 +390,7 @@
 
                             <!-- Needs Visual Inspection -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_visual' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_visual' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_needs_visual' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                     {% else %}
@@ -412,7 +412,7 @@
 
                             <!-- Cylinder Activity History -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_history' %}bg-indigo-500/30{% endif %}" href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_history' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_history' %}
                                         <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="2.55 2.41 18.95 19" stroke-width="2" fill="none">
                                     {% else %}
@@ -443,7 +443,7 @@
 
                             <!-- Danger Zone -->
                             <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded whitespace-nowrap {% if request.url_name == 'cylinder_fleet_danger_zone' %}bg-rose-500/30{% endif %}" href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_danger_zone' %}bg-srgb-rose-500-30{% endif %}" href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}">
                                     {% if request.url_name == 'cylinder_fleet_danger_zone' %}
                                         <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
                                     {% else %}

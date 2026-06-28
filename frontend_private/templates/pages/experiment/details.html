@@ -11,7 +11,7 @@
         {% csrf_token %}
 
         <!-- Panel body -->
-        <div class="p-6 space-y-6">
+        <div class="p-6 flow-y-6">
             <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings: {{ has_write_access }}</h2>
 
             <!-- Experiment Name -->
@@ -43,7 +43,7 @@
 
             <!-- Description -->
             <section>
-                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                     <div class="w-full">
                         <label class="block text-sm font-medium mb-1" for="description">Description:</label>
                         <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{% if experiment.description %}{{ experiment.description }}{% endif %}</textarea>
@@ -58,7 +58,7 @@
                     <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Existing fields cannot be modified, but you can add new ones.</p>
                     
                     <!-- All Fields Container (Sortable) -->
-                    <div id="all_fields_container" class="space-y-3 mb-6">
+                    <div id="all_fields_container" class="flow-y-3 mb-6">
                         {% if experiment_fields_with_json %}
                         <h4 class="text-sm font-medium text-slate-300 mb-3">Existing Fields 
                             <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Name editable • Type & Required immutable)</span>
@@ -66,14 +66,14 @@
                         
                         {% for field_id, field_data in experiment_fields_with_json.items %}
                         {% if field_id in mandatory_field_uuids %}
-                            <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-amber-600 border-opacity-50 existing-field-item" 
+                            <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 existing-field-item"
                                  data-field-id="{{ field_id }}"
                                  data-field-type="{{ field_data.type }}"
                                  data-field-required="{{ field_data.required|lower }}"
                                  {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
                                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                                     <!-- Drag Handle -->
-                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
                                         </svg>
@@ -111,7 +111,7 @@
                                     </label>
                                     <div class="flex flex-wrap gap-2">
                                         {% for option in field_data.options %}
-                                        <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                        <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
                                             {{ option }}
                                         </span>
                                         {% endfor %}
@@ -120,14 +120,14 @@
                                 {% endif %}
                             </div>
                         {% else %}
-                            <div class="bg-slate-700 bg-opacity-50 rounded-lg p-4 border border-slate-600 existing-field-item" 
+                            <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-slate-600 existing-field-item"
                                  data-field-id="{{ field_id }}"
                                  data-field-type="{{ field_data.type }}"
                                  data-field-required="{{ field_data.required|lower }}"
                                  {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
                                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                                     <!-- Drag Handle -->
-                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 flex-shrink-0" title="Drag to reorder">
+                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
                                         </svg>
@@ -165,7 +165,7 @@
                                     </label>
                                     <div class="flex flex-wrap gap-2">
                                         {% for option in field_data.options %}
-                                        <span class="inline-flex items-center px-3 py-1 bg-indigo-500 bg-opacity-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                        <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
                                             {{ option }}
                                         </span>
                                         {% endfor %}

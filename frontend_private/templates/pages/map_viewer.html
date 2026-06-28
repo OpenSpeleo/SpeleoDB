@@ -19,7 +19,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -89,9 +89,9 @@
             </div>
         </div>
         <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700 relative flex flex-col" style="min-height: 600px;">
+        <div class="bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700 relative flex flex-col" style="min-height: 600px;">
             <!-- Map Container -->
-            <div id='map' class="w-full rounded-sm relative" style="flex-grow: 1; height: 100%; width: 100%;"></div>
+            <div id='map' class="w-full rounded-xs relative" style="flex-grow: 1; height: 100%; width: 100%;"></div>
 
 
             <!-- Loading Overlay -->
@@ -103,13 +103,13 @@
             </div>
             
             <!-- Station Manager Modal -->
-            <div id="station-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+            <div id="station-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
                             <h2 class="text-xl font-semibold text-white">SubSurface Survey Stations</h2>
-                            <button id="station-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                            <button id="station-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -127,18 +127,18 @@
             </div>
             
             <!-- Surface Station Manager Modal -->
-            <div id="surface-station-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+            <div id="surface-station-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
                             <div class="flex items-center">
                                 <svg class="w-6 h-6 text-emerald-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                                 </svg>
                                 <h2 class="text-xl font-semibold text-white">Surface Station Manager</h2>
                             </div>
-                            <button id="surface-station-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                            <button id="surface-station-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -156,13 +156,13 @@
             </div>
             
             <!-- Landmark Manager Modal -->
-            <div id="landmark-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+            <div id="landmark-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
                             <h2 class="text-xl font-semibold text-white">Landmark Manager</h2>
-                            <button id="landmark-manager-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                            <button id="landmark-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -182,11 +182,11 @@
             <!-- Station Details Modal -->
 
         
-            <div id="station-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-12 overflow-y-auto">
+            <div id="station-modal" class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-12 overflow-y-auto">
                 <div id="station-modal-container" class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
                     <div class="flex flex-col">
                         <!-- Modal Header -->
-                        <div id="station-modal-header" class="flex items-start justify-between p-6 border-b border-slate-600 flex-shrink-0">
+                        <div id="station-modal-header" class="flex items-start justify-between p-6 border-b border-slate-600 shrink-0">
                             <div class="flex-1">
                                 <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
                                 <div class="mt-3">
@@ -208,7 +208,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button id="station-modal-close" class="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                            <button id="station-modal-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -230,10 +230,10 @@
 </main>
 
 <!-- Cylinder Install/Details Modal -->
-<div id="cylinder-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div id="cylinder-modal" class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl max-h-[85vh] flex flex-col">
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-slate-600 flex-shrink-0">
+        <div class="flex items-center justify-between p-4 border-b border-slate-600 shrink-0">
             <h2 id="cylinder-modal-title" class="text-xl font-semibold text-white flex items-center gap-3">
                 <img id="cylinder-modal-icon" class="w-6 h-6" crossorigin="anonymous">
                 Safety Cylinder

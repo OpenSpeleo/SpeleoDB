@@ -51,7 +51,7 @@ export const StationLogs = {
                 </div>
             ` : `
                 <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     <h3 class="text-white text-lg font-medium mb-2">No Journal Entries Yet</h3>
@@ -61,7 +61,7 @@ export const StationLogs = {
 
             container.innerHTML = `
                 <div class="tab-content active">
-                    <div class="space-y-4 p-6">
+                    <div class="flow-y-4 p-6">
                         <div class="flex items-center justify-end">
                             ${hasWriteAccess ? `
                                 <button id="new-log-entry-btn" class="btn-primary w-full sm:w-auto">
@@ -208,7 +208,7 @@ export const StationLogs = {
 
     openCreateModal(stationId) {
         const html = `
-            <div id="log-entry-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+            <div id="log-entry-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h3 class="text-lg font-semibold text-white">New Journal Entry</h3>
@@ -219,7 +219,7 @@ export const StationLogs = {
                         </button>
                     </div>
                     <div class="flex-1 p-6">
-                        <form id="log-entry-form" class="space-y-4">
+                        <form id="log-entry-form" class="flow-y-4">
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
                                 <input id="log-title" type="text" class="form-input" placeholder="Concise scientific title..." required>
@@ -232,7 +232,7 @@ export const StationLogs = {
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Attachment (optional)</label>
                                 <div id="log-file-container" class="file-upload-area cursor-pointer">
                                     <div class="text-center" id="log-file-placeholder">
-                                        <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                         </svg>
                                         <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
@@ -342,7 +342,7 @@ export const StationLogs = {
 
     openEditModal(logId, logData) {
         const html = `
-            <div id="log-edit-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+            <div id="log-edit-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-4 overflow-y-auto">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600">
                         <h3 class="text-lg font-semibold text-white">Edit Journal Entry</h3>
@@ -353,7 +353,7 @@ export const StationLogs = {
                         </button>
                     </div>
                     <div class="flex-1 p-6">
-                        <form id="log-edit-form" class="space-y-4">
+                        <form id="log-edit-form" class="flow-y-4">
                             <div>
                                 <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
                                 <input id="edit-log-title" type="text" class="form-input" value="${Utils.escapeHtml(logData.title)}" required>
@@ -417,11 +417,11 @@ export const StationLogs = {
 
     openDeleteConfirm(logId, title) {
         const html = `
-            <div id="log-delete-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="log-delete-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
-                            <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <div class="w-12 h-12 rounded-full bg-srgb-red-500-20 flex items-center justify-center">
                                 <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -466,7 +466,7 @@ export const StationLogs = {
         const placeholder = container.querySelector('#log-file-placeholder');
         if (placeholder) {
             placeholder.innerHTML = Utils.safeHtml`
-                <svg class="w-8 h-8 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-emerald-400 center-x mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <p class="text-emerald-300 text-sm font-medium">${file.name}</p>

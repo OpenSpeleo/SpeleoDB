@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const landmarkName = landmark?.name || 'Landmark';
 
         const modalHtml = `
-            <div id="landmark-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="landmark-drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
@@ -811,7 +811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             Move "${Utils.escapeHtml(landmarkName)}" to this location?
                         </p>
                         
-                        <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Landmark Name:</span>
                                 <span class="text-white">${Utils.escapeHtml(landmarkName)}</span>
@@ -886,7 +886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             : 'place at the exact GPS coordinates';
 
         const modalHtml = `
-            <div id="drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             Move "${Utils.escapeHtml(stationName)}" to this location and ${actionText}?
                         </p>
                         
-                        <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Station Name:</span>
                                 <span class="text-white">${Utils.escapeHtml(stationName)}</span>
@@ -1002,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const finalCoords = snapResult.coordinates;
 
         const modalHtml = `
-            <div id="marker-drag-confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div id="marker-drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             Move this ${typeLabel.toLowerCase()} to the new location?
                         </p>
                         
-                        <div class="bg-slate-700/50 rounded-lg p-4 space-y-2 mb-6">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Type:</span>
                                 <span class="text-white">${typeIcon} ${typeLabel}</span>

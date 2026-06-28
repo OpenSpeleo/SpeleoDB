@@ -72,7 +72,7 @@ export const SurfaceStationUI = {
         if (totalStations === 0) {
             html += `
                 <div class="text-center py-12">
-                    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
@@ -112,7 +112,7 @@ export const SurfaceStationUI = {
                             ${Utils.escapeHtml(networkName)}
                             <span class="ml-2 text-sm text-slate-400 font-normal">(${networkStations.length} station${networkStations.length !== 1 ? 's' : ''})</span>
                         </h4>
-                        <div class="space-y-2">
+                        <div class="flow-y-2">
                 `;
 
                 networkStations.forEach(station => {
@@ -120,10 +120,10 @@ export const SurfaceStationUI = {
                     const markerColor = Utils.safeCssColor((station.tag && station.tag.color) ? station.tag.color : '#fb923c');
 
                     html += `
-                        <div class="bg-slate-700/50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-3 hover:bg-slate-700 transition-colors group">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3 flex-1 cursor-pointer" data-station-id="${station.id}" data-network-id="${networkId}">
-                                    <div class="w-3 h-3 flex-shrink-0 border-2 border-white shadow-md" style="background: ${markerColor}; transform: rotate(45deg);"></div>
+                                <div class="flex items-center flow-x-3 flex-1 cursor-pointer" data-station-id="${station.id}" data-network-id="${networkId}">
+                                    <div class="w-3 h-3 shrink-0 border-2 border-white shadow-md" style="background: ${markerColor}; transform: rotate(45deg);"></div>
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <h5 class="text-white font-medium">${Utils.escapeHtml(station.name)}</h5>
@@ -138,8 +138,8 @@ export const SurfaceStationUI = {
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center space-x-2">
-                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-all go-to-station-btn" 
+                                <div class="flex items-center flow-x-2">
+                                    <button class="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded-sm transition-all go-to-station-btn"
                                             data-station-id="${station.id}"
                                             data-lat="${Number(station.latitude)}"
                                             data-lon="${Number(station.longitude)}"
@@ -240,10 +240,10 @@ export const SurfaceStationUI = {
         }).join('');
 
         const formHtml = `
-            <form id="create-surface-station-form" class="space-y-4">
+            <form id="create-surface-station-form" class="flow-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Monitoring Network *</label>
-                    <select id="surface-station-network" required class="form-select w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-emerald-500 focus:outline-none" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e&quot;); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25rem 1.25rem; padding-right: 2.5rem;">
+                    <select id="surface-station-network" required class="form-select w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-emerald-500 focus:outline-hidden" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e&quot;); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25rem 1.25rem; padding-right: 2.5rem;">
                         <option value="">Select a network...</option>
                         ${networkOptionsHtml}
                     </select>
@@ -331,4 +331,3 @@ export const SurfaceStationUI = {
         });
     }
 };
-

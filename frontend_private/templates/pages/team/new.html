@@ -8,7 +8,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         <!-- Page header -->
         <div class="sm:flex sm:justify-between sm:items-center mb-8">
@@ -23,7 +23,7 @@
         </div>
 
         <!-- Team Details -->
-        <div class="bg-slate-800 shadow-lg rounded-sm mb-8">
+        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
             <div class="flex flex-col md:flex-row md:-mr-px">
                 <div class="grow">
 
@@ -32,11 +32,11 @@
                         {% csrf_token %}
 
                         <!-- Panel body -->
-                        <div class="p-6 space-y-6">
+                        <div class="p-6 flow-y-6">
 
                             <!-- Team Name -->
                             <section>
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="name">Team Name:<span class="text-rose-600"> *</span></label>
                                         <input id="name" name="name" class="form-input w-full" type="text" />
@@ -46,7 +46,7 @@
 
                             <!-- Description -->
                             <section>
-                                <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                                     <div class="w-full">
                                         <label class="block text-sm font-medium mb-1" for="description">Description:<span class="text-rose-600"> *</span></label>
                                         <textarea id="description" name="description" class="form-textarea w-full focus:border-slate-300" rows="4"></textarea>
@@ -59,7 +59,7 @@
                                 <div class="mt-5">
                                     <div class="w-full max-w-full">
                                         <label class="block text-sm font-medium mb-1" for="country">Country:<span class="text-rose-600"> *</span></label>
-                                        <select id="country" name="country" class="form-select w-full text-base" style="max-width: 100%;">
+                                        <select id="country" name="country" class="form-select w-full text-base leading-6" style="max-width: 100%;">
                                             <option disabled selected value>Select an option...</option>
                                         {% get_countries as countries %}
                                         {% for country in countries %}

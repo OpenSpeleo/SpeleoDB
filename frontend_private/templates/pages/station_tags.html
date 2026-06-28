@@ -122,7 +122,7 @@
 
 {% block content %}
 <main class="grow">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
 
         {% csrf_token %}
 
@@ -158,7 +158,7 @@
             <div id="tags-cards-container" class="p-4">
                 <!-- Loading state -->
                 <div class="text-center py-12 text-slate-400">
-                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
                     <p>Loading tags...</p>
@@ -167,13 +167,13 @@
         </div>
 
         <!-- Desktop Table View -->
-        <div class="tags-table bg-slate-800 shadow-lg rounded-sm border border-slate-200 border-slate-700">
+        <div class="tags-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
             <div>
                 <!-- Table -->
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full text-slate-300">
                         <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900/20 border-t border-b border-slate-700">
+                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
                             <tr>
                                 <th class="px-2 first:pl-5 last:pr-5 py-3">
                                     <div class="font-semibold text-center">#</div>
@@ -195,11 +195,11 @@
                             </tr>
                         </thead>
                         <!-- Table body -->
-                        <tbody id="tags-table-body" class="text-sm divide-y divide-slate-200 divide-slate-700">
+                        <tbody id="tags-table-body" class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
                             <!-- Loading state -->
                             <tr>
                                 <td colspan="6" class="px-2 py-8 text-center text-slate-400">
-                                    <svg class="w-12 h-12 mx-auto mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                     </svg>
                                     <p>Loading tags...</p>
@@ -215,7 +215,7 @@
 </main>
 
 <!-- Edit/Create Tag Modal -->
-<div id="edit-tag-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+<div id="edit-tag-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
         <!-- Modal header -->
         <div class="px-6 py-4 border-b border-slate-700">
@@ -233,7 +233,7 @@
         <form id="edit-tag-form">
             <input type="hidden" id="edit-tag-id" name="tag_id" value="">
             
-            <div class="px-6 py-4 space-y-4">
+            <div class="px-6 py-4 flow-y-4">
                 <!-- Tag Name -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-tag-name">
@@ -260,7 +260,7 @@
                             <input type="color" id="custom-color-input" 
                                    value="#ef4444"
                                    onchange="useCustomColor()"
-                                   class="h-10 w-20 rounded cursor-pointer border border-slate-600"
+                                   class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"
                                    title="Pick custom color">
                         </div>
                     </div>
@@ -280,7 +280,7 @@
 </div>
 
 <!-- Delete Tag Confirmation Modal -->
-<div id="delete-tag-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+<div id="delete-tag-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
     <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
         <!-- Modal header -->
         <div class="px-6 py-4 border-b border-slate-700">
@@ -298,8 +298,8 @@
         <div class="px-6 py-4">
             <input type="hidden" id="delete-tag-id" value="">
             
-            <div class="flex items-start space-x-4">
-                <div class="flex-shrink-0">
+            <div class="flex items-start flow-x-4">
+                <div class="shrink-0">
                     <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
@@ -360,7 +360,7 @@ $(document).ready(function() {
             tableBody.html(`
                 <tr>
                     <td colspan="6" class="px-2 py-8 text-center text-slate-400">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 center-x mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
                         <p class="text-lg font-medium">No tags yet</p>
@@ -370,7 +370,7 @@ $(document).ready(function() {
             `);
             cardsContainer.html(`
                 <div class="text-center py-12 text-slate-400">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 center-x mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                     </svg>
                     <p class="text-lg font-medium">No tags yet</p>
@@ -588,7 +588,7 @@ $(document).ready(function() {
         },
         openDeleteModalForEntity: function (tag) {
             $('#delete-tag-info').html(
-                '<div class="flex items-center gap-2 bg-slate-700/50 rounded-lg p-3">' +
+                '<div class="flex items-center gap-2 bg-srgb-slate-700-50 rounded-lg p-3">' +
                 '  <span class="color-swatch" style="background-color: ' + safeCssColor(tag.color) + '"></span>' +
                 '  <span class="text-slate-100 font-medium">' + escapeHtml(tag.name) + '</span>' +
                 '</div>'

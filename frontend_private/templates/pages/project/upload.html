@@ -5,13 +5,13 @@
 {% block right_panel %}
     <div class="grow">
         <!-- Panel body -->
-        <div class="p-6 space-y-6">
+        <div class="p-6 flow-y-6">
             <h2 class="text-2xl text-slate-100 font-bold mb-5">Upload a New Project Revision</h2>
             <form id="file_upload_form" autocomplete="off">
                 {% csrf_token %}
                 <!-- Project Name -->
                 <section>
-                    <div class="sm:flex sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-5">
+                    <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                         <div class="w-full">
                             <label class="block text-sm font-semibold text-slate-100 mb-2" for="message">
                               Revision Title <span class="text-rose-600 text-lg">*</span>
@@ -33,7 +33,7 @@
                         </div>
                         <input id="artifact" name="artifact" type="file" class="hidden" multiple />
                         <div id="dropzone"
-                              class="rounded border-dashed text-center min-h-28 border border-slate-700 bg-slate-700/30 cursor-pointer relative">
+                              class="rounded-sm border-dashed text-center min-h-28 border border-slate-700 bg-srgb-slate-700-30 cursor-pointer relative">
                             <div class="text-center">
                                 <span id="icon_waiting_for_file">
                                     <svg xmlns="http://www.w3.org/2000/svg"
@@ -90,21 +90,21 @@
         $('#dropzone').on('dragover', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            $(this).removeClass('border-slate-700 bg-slate-700/30');
-            $(this).addClass('border-amber-500/50 bg-amber-400/10');
+            $(this).removeClass('border-slate-700 bg-srgb-slate-700-30');
+            $(this).addClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
         });
         
         $('#dropzone').on('dragleave', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            $(this).removeClass('border-amber-500/50 bg-amber-400/10');
-            $(this).addClass('border-slate-700 bg-slate-700/30');
+            $(this).removeClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
+            $(this).addClass('border-slate-700 bg-srgb-slate-700-30');
         });
         
         $('#dropzone').on('drop', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            $(this).removeClass('border-amber-500/50 bg-amber-400/10');
+            $(this).removeClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
             let newFiles = Array.from(e.originalEvent.dataTransfer.files);
             handleFiles(newFiles);
         });
@@ -151,11 +151,11 @@
             filesArray = filesArray.concat(newFiles);
         
             // If it was done with drag & drop
-            $('#dropzone').removeClass('border-amber-500/50 bg-amber-400/10');
+            $('#dropzone').removeClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
         
             // If it was done with filepicker
-            $('#dropzone').removeClass('hover bg-slate-700/30 border-slate-700');
-            $('#dropzone').addClass('bg-emerald-500/10 border-emerald-300');
+            $('#dropzone').removeClass('hover bg-srgb-slate-700-30 border-slate-700');
+            $('#dropzone').addClass('bg-srgb-emerald-500-10 border-emerald-300');
         
             $("#icon_waiting_for_file").hide();
             $('#dropzone').addClass('dropped');
@@ -166,8 +166,8 @@
         function updateFileList() {
             if (filesArray.length === 0) {
                 // Reset to initial state
-                $('#dropzone').removeClass('bg-emerald-500/10 border-emerald-300 dropped');
-                $('#dropzone').addClass('bg-slate-700/30 border-slate-700');
+                $('#dropzone').removeClass('bg-srgb-emerald-500-10 border-emerald-300 dropped');
+                $('#dropzone').addClass('bg-srgb-slate-700-30 border-slate-700');
                 $("#icon_waiting_for_file").show();
                 $('#dropzone label').html('Please upload up to {{ limit_number_files }} files, each under {{ limit_individual_filesize }} Mb [Total under {{ limit_total_filesize }} Mb].');
             } else {
