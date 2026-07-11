@@ -58,13 +58,13 @@ problem was purely scheduling/parallelism, not logic.
 
 - `npm run test:js` (44 files, 906 tests passed)
 - `npm run lint:js` (clean)
-- esbuild bundle verification for both `main.js` and `gis_view_main.js`
-  (built to a temp path; `dist/` is gitignored and produced at deploy time).
+- esbuild bundle verification for both `main.js` and `gis_view_main.js` (built
+  to a temp path; `dist/` is gitignored and produced at deploy time).
 
 ## Environment note
 
 The local `node_modules` shipped Linux-platform native binaries for `rolldown`
-(vitest) and `esbuild`. `npm install` restored the correct darwin-arm64
-binding for rolldown; the darwin esbuild binary was installed separately for
-local bundle verification. No tracked files (`package.json` /
-`package-lock.json`) were changed by this.
+(vitest) and `esbuild`. `npm install` restored the correct darwin-arm64 binding
+for rolldown; the darwin esbuild binary was installed separately for local
+bundle verification. No tracked files (`package.json` / `package-lock.json`)
+were changed by this.

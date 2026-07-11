@@ -2,9 +2,9 @@
 
 Do not assume a main-thread `fetch` wrapper proves Mapbox raster tiles are
 checked. Tile requests may happen through Mapbox workers or image-loading paths.
-Do not model known missing tile image hashes as a per-provider opt-in unless
-the product explicitly asks for that; SpeleoDB's missing tile hash list is
-global and applies to every configured raster tile source.
+Do not model known missing tile image hashes as a per-provider opt-in unless the
+product explicitly asks for that; SpeleoDB's missing tile hash list is global
+and applies to every configured raster tile source.
 
 Do not point a Mapbox raster source at a custom scheme unless the exact runtime
 loaded by the templates exposes and accepts that protocol API. The Mapbox CDN

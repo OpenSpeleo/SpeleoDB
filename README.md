@@ -9,19 +9,25 @@ License: Apache Software License 2.0
 
 ## Settings
 
-Moved to [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).
+Moved to
+[settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).
 
 ## Basic Commands
 
 ### Setting Up Your Users
 
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
+- To create a **normal user account**, just go to Sign Up and fill out the form.
+  Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your
+  console to see a simulated email verification message. Copy the link into your
+  browser. Now the user's email should be verified and ready to go.
 
 - To create a **superuser account**, use this command:
 
       $ python manage.py createsuperuser
 
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
+For convenience, you can keep your normal user logged in on Chrome and your
+superuser logged in on Firefox (or similar), so that you can see how the site
+behaves for both kinds of users.
 
 ### Type checks
 
@@ -31,7 +37,8 @@ Running type checks with mypy:
 
 ### Test coverage
 
-To run the tests, check your test coverage, and generate an HTML coverage report:
+To run the tests, check your test coverage, and generate an HTML coverage
+report:
 
     $ coverage run -m pytest
     $ coverage html
@@ -43,7 +50,8 @@ To run the tests, check your test coverage, and generate an HTML coverage report
 
 ### Live reloading and Sass CSS compilation
 
-Moved to [Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html#sass-compilation-live-reloading).
+Moved to
+[Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html#sass-compilation-live-reloading).
 
 ### Celery
 
@@ -56,16 +64,22 @@ cd speleodb
 celery -A config.celery_app worker -l info
 ```
 
-Please note: For Celery's import magic to work, it is important _where_ the celery commands are run. If you are in the same folder with _manage.py_, you should be right.
+Please note: For Celery's import magic to work, it is important _where_ the
+celery commands are run. If you are in the same folder with _manage.py_, you
+should be right.
 
-To run [periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html), you'll need to start the celery beat scheduler service. You can start it as a standalone process:
+To run
+[periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html),
+you'll need to start the celery beat scheduler service. You can start it as a
+standalone process:
 
 ```bash
 cd speleodb
 celery -A config.celery_app beat
 ```
 
-or you can embed the beat service inside a worker with the `-B` option (not recommended for production use):
+or you can embed the beat service inside a worker with the `-B` option (not
+recommended for production use):
 
 ```bash
 cd speleodb
@@ -78,4 +92,5 @@ The following details how to deploy this application.
 
 ### Docker
 
-See detailed [cookiecutter-django Docker documentation](http://cookiecutter-django.readthedocs.io/en/latest/deployment-with-docker.html).
+See detailed
+[cookiecutter-django Docker documentation](http://cookiecutter-django.readthedocs.io/en/latest/deployment-with-docker.html).

@@ -3,10 +3,12 @@
 ## Plan
 
 - [x] Confirm current user model, admin, and private menu gates.
-- [x] Add `has_api_doc_access` to the custom user model with a default of `False`.
+- [x] Add `has_api_doc_access` to the custom user model with a default of
+      `False`.
 - [x] Add the users migration for the new field.
 - [x] Expose the field in Django admin permissions, list display, and filters.
-- [x] Update private menu API Docs/API Schema visibility to include staff, admin, or explicit API docs access.
+- [x] Update private menu API Docs/API Schema visibility to include staff,
+      admin, or explicit API docs access.
 - [x] Add regression tests for admin exposure and private menu visibility.
 - [x] Document the feature intent and boundaries under `docs/`.
 - [x] Record verification commands and results.

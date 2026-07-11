@@ -2,20 +2,18 @@
 
 ## Context
 
-`MAP_SOURCES` in
-`frontend_private/static/private/js/map_viewer/config.js` is a frozen, ordered
-registry. Its order is not cosmetic:
+`MAP_SOURCES` in `frontend_private/static/private/js/map_viewer/config.js` is a
+frozen, ordered registry. Its order is not cosmetic:
 
 - It is the order rendered in the in-map Map Source selector.
 - It drives the tokenless default. `MapSources.getFirstUsableSource()` /
-  `getCurrentMapSourceId('')` return the **first** entry whose token
-  requirement is satisfied. With no Mapbox token, the first non-token source
-  wins.
+  `getCurrentMapSourceId('')` return the **first** entry whose token requirement
+  is satisfied. With no Mapbox token, the first non-token source wins.
 
 ## What went wrong
 
-The registry was reordered (ESRI Satellite moved ahead of the hillshade
-sources) without updating `sources.test.js`. Two tests then failed:
+The registry was reordered (ESRI Satellite moved ahead of the hillshade sources)
+without updating `sources.test.js`. Two tests then failed:
 
 - the tokenless default expectation, and
 - the `getAvailableMapSources('')` order array.

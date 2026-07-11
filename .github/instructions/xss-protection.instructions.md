@@ -4,9 +4,9 @@ applyTo: "**/*.{js,html}"
 
 # XSS Protection -- innerHTML Escaping
 
-Any `.innerHTML` assignment, jQuery `.html()` call, or `insertAdjacentHTML`
-that interpolates user-supplied data MUST escape that data. Flag violations
-as **security** issues.
+Any `.innerHTML` assignment, jQuery `.html()` call, or `insertAdjacentHTML` that
+interpolates user-supplied data MUST escape that data. Flag violations as
+**security** issues.
 
 ## Required pattern
 
@@ -26,7 +26,7 @@ html += `<h5>${Utils.escapeHtml(station.name)}</h5>`;
 el.textContent = station.name;
 
 // GOOD -- jQuery .text() is always safe
-$('#error').text(errorMsg);
+$("#error").text(errorMsg);
 ```
 
 ## What to flag
@@ -39,11 +39,11 @@ el.innerHTML = `<h3>${station.name}</h3>`;
 el.innerHTML = `<span style="color: ${tag.color}">${tag.name}</span>`;
 
 // BAD -- concatenation without escaping user values
-html += `<td>${value}</td>`;  // value could be user-supplied
+html += `<td>${value}</td>`; // value could be user-supplied
 
 // BAD -- jQuery .html() with user/API data
-$('#error').html(errorMsg);
-$('#modal').html(`<p>${data.message}</p>`);
+$("#error").html(errorMsg);
+$("#modal").html(`<p>${data.message}</p>`);
 
 // BAD -- Utils.raw() wrapping a string with unescaped user data inside
 el.innerHTML = Utils.safeHtml`${Utils.raw(`<span>${parentName}</span>`)}`;
@@ -85,9 +85,8 @@ landmark.description, track.name, log.title, log.notes, log.created_by,
 log.attachment, resource.title, resource.description, resource.created_by,
 resource.file, resource.miniature, resource.text_content, experiment.name,
 experiment.description, field.name, error.message, file.name, displayName,
-projectName, networkName, noteData.title, noteData.author,
-noteData.description, item.label, item.subtitle, message, parentName,
-snapResult.lineName, snapResult.pointType, sensorName, sensor_name,
-sensor_fleet_name, install_user, uninstall_user, lineName, lead.createdBy,
-lead.description, errorMsg, completenessValidation.errorMessage,
-titleCaseText, data.responseJSON fields
+projectName, networkName, noteData.title, noteData.author, noteData.description,
+item.label, item.subtitle, message, parentName, snapResult.lineName,
+snapResult.pointType, sensorName, sensor_name, sensor_fleet_name, install_user,
+uninstall_user, lineName, lead.createdBy, lead.description, errorMsg,
+completenessValidation.errorMessage, titleCaseText, data.responseJSON fields

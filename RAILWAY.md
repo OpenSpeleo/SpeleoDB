@@ -25,7 +25,6 @@ DJANGO_HIJACK_URL="$(openssl rand -base64 4096 | tr -dc 'A-HJ-NP-Za-km-z2-9' | h
 DJANGO_ADMIN_URL="$(openssl rand -base64 4096 | tr -dc 'A-HJ-NP-Za-km-z2-9' | head -c 32)"
 ```
 
-
 #### DEPLOY DEBUG Commands
 
 A. Install `railpack`
@@ -60,6 +59,7 @@ railpack prepare --plan-out out.json .
 ```
 
 Verify
+
 ```bash
   ↳ Using config file `railpack.json`
   ↳ Using provider Python from config
@@ -81,4 +81,5 @@ Verify
     $ python manage.py migrate && gunicorn backend.wsgi:application
 ```
 
-The file `railpack.json` is generated using `railpack prepare --plan-out out.json .` to "inspect the default configuration".
+The file `railpack.json` is generated using
+`railpack prepare --plan-out out.json .` to "inspect the default configuration".

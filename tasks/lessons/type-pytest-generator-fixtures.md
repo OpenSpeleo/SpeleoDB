@@ -1,8 +1,8 @@
 # Type pytest generator fixtures and heterogeneous mappings explicitly
 
-Pytest fixtures containing `yield` are generator functions even when they do
-not yield a value to the test. Annotate them as `Generator[None, None, None]`,
-not `None`.
+Pytest fixtures containing `yield` are generator functions even when they do not
+yield a value to the test. Annotate them as `Generator[None, None, None]`, not
+`None`.
 
 For JSON-shaped fixture dictionaries with heterogeneous nested values, add an
 explicit nested mapping type (or a `TypedDict`) before iterating over values.

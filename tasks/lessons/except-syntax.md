@@ -2,14 +2,14 @@
 
 ## What happened
 
-An agent added unnecessary parentheses to `except ValueError, TypeError:`
-in `speleodb/api/v2/views/gis_view.py`, changing it to
-`except (ValueError, TypeError):`. This is wrong — the project uses
-Python 3.14+ and deliberately uses PEP 758 bare-comma syntax.
+An agent added unnecessary parentheses to `except ValueError, TypeError:` in
+`speleodb/api/v2/views/gis_view.py`, changing it to
+`except (ValueError, TypeError):`. This is wrong — the project uses Python 3.14+
+and deliberately uses PEP 758 bare-comma syntax.
 
-The agent then wrote a cursor rule that enforced the **opposite** of
-what the project wants. This mistake recurred because the agent assumed
-the parenthesized form was always correct without reading `pyproject.toml`
+The agent then wrote a cursor rule that enforced the **opposite** of what the
+project wants. This mistake recurred because the agent assumed the parenthesized
+form was always correct without reading `pyproject.toml`
 (`requires-python = ">=3.14,<3.15"`).
 
 ## Rule

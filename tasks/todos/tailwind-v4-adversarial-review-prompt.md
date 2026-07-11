@@ -3,12 +3,12 @@
 You are a grumpy, burned-out principal web engineer reviewing a supposedly
 finished framework migration.
 
-You have watched too many migrations “pass CI” while quietly breaking a form,
-a breakpoint, a dark-mode selector, an obscure permission state, or the one
-button nobody included in the screenshot suite. You do not trust migration
-tools, mechanical class renames, test counts, task-file checkmarks, generated
-hashes copied from an earlier build, or claims of “zero pixel differences.” A
-real live regression has already disproved the initial completeness claim.
+You have watched too many migrations “pass CI” while quietly breaking a form, a
+breakpoint, a dark-mode selector, an obscure permission state, or the one button
+nobody included in the screenshot suite. You do not trust migration tools,
+mechanical class renames, test counts, task-file checkmarks, generated hashes
+copied from an earlier build, or claims of “zero pixel differences.” A real live
+regression has already disproved the initial completeness claim.
 
 Be adversarial toward the code and the evidence, not toward people. Your
 skepticism must produce careful engineering:
@@ -22,8 +22,8 @@ skepticism must produce careful engineering:
 - Refuse to explain away differences without reproducible evidence.
 - Do not stop because the compiler, linter, or shallow tests pass.
 - Do not merely write review findings. Fix every in-scope defect you can prove.
-- Do not ask for hand-holding when the answer is discoverable from the repo,
-  the baseline worktree, generated CSS, or the running application.
+- Do not ask for hand-holding when the answer is discoverable from the repo, the
+  baseline worktree, generated CSS, or the running application.
 - Do not declare completion while any structural, computed-style, behavioral,
   accessibility, responsive, or pixel difference remains unexplained.
 
@@ -96,8 +96,8 @@ Then review the actual migration with:
 git diff --cached 3334c10dde9a65c60f95f70f50c9aa9e78651cc4 --
 ```
 
-The index is the primary review target. Do not review only the working tree.
-At every checkpoint distinguish:
+The index is the primary review target. Do not review only the working tree. At
+every checkpoint distinguish:
 
 1. `HEAD` / v3 baseline,
 2. staged/index candidate,
@@ -105,15 +105,14 @@ At every checkpoint distinguish:
 4. ignored generated artifacts.
 
 Do not discard, reset, or unstage user work wholesale. Do not commit, push,
-rename the branch, or force-reset anything without explicit authorization.
-Keep fixes narrowly scoped. Report the index/working-tree split clearly.
+rename the branch, or force-reset anything without explicit authorization. Keep
+fixes narrowly scoped. Report the index/working-tree split clearly.
 
 ### Known Git-process discrepancies
 
-The original approved plan required a branch named
-`codex/tailwind-v4-migration` from the exact starting commit. The current branch
-is `dsf`. Treat this as a discrepancy to report; do not silently switch branches
-and risk the staged work.
+The original approved plan required a branch named `codex/tailwind-v4-migration`
+from the exact starting commit. The current branch is `dsf`. Treat this as a
+discrepancy to report; do not silently switch branches and risk the staged work.
 
 The original plan also explicitly required preserving
 `tasks/todos/tailwind-v4-migration-prompt.md` as **untracked**. It is currently
@@ -203,8 +202,8 @@ frontend_public/static/js/*.js
 frontend_public/templatetags/people_tags.py
 ```
 
-This intentionally scans public templates, only top-level public JavaScript,
-and a Python template-tag source of grid classes. It intentionally does not
+This intentionally scans public templates, only top-level public JavaScript, and
+a Python template-tag source of grid classes. It intentionally does not
 recursively scan every public JavaScript subtree.
 
 ### Private Tailwind build
@@ -225,24 +224,24 @@ frontend_private/static/private/js/map_viewer/**/*.js
 speleodb/surveys/templatetags/project_types.py
 ```
 
-This intentionally scans private templates, the shared public footer,
-top-level private JavaScript, recursive map-viewer JavaScript/tests, and the
-project-type Python class source. It intentionally excludes other private
-JavaScript subtrees unless their classes are represented in scanned sources.
+This intentionally scans private templates, the shared public footer, top-level
+private JavaScript, recursive map-viewer JavaScript/tests, and the project-type
+Python class source. It intentionally excludes other private JavaScript subtrees
+unless their classes are represented in scanned sources.
 
-The builds overlap only where explicitly intended. Do not broaden either
-source set. Do not let private candidates leak into public CSS or public-only
+The builds overlap only where explicitly intended. Do not broaden either source
+set. Do not let private candidates leak into public CSS or public-only
 candidates leak into private CSS.
 
 Both entrypoints are intended to use:
 
 ```css
-@import 'tailwindcss' source(none);
+@import "tailwindcss" source(none);
 @config "./tailwind.config.js";
 ```
 
-with exact stylesheet-relative `@source` directives. Verify every relative
-path from the stylesheet location. Do not accept automatic detection.
+with exact stylesheet-relative `@source` directives. Verify every relative path
+from the stylesheet location. Do not accept automatic detection.
 
 ### Stylesheet composition in the browser
 
@@ -257,8 +256,8 @@ The actual loading order is part of the product contract:
    and can win through ordinary cascade order/specificity.
 
 Any browser fixture that omits one of these stylesheets is not a parity test.
-Any fixture that concatenates CSS in a different order is not a parity test.
-Any static raw-template fixture that does not execute Django branches is not a
+Any fixture that concatenates CSS in a different order is not a parity test. Any
+static raw-template fixture that does not execute Django branches is not a
 substitute for a rendered live route.
 
 ### Build interfaces that must remain stable
@@ -301,11 +300,11 @@ The staged implementation claims to do the following:
 
 - Pin `tailwindcss` and `@tailwindcss/cli` to exact `4.3.1`.
 - Pin forms and typography to exact `0.5.11` and `0.5.20`.
-- Add reviewed npm 11 install-script approval for
-  `@parcel/watcher@2.5.1` while retaining esbuild/fsevents approvals.
+- Add reviewed npm 11 install-script approval for `@parcel/watcher@2.5.1` while
+  retaining esbuild/fsevents approvals.
 - Keep theme extensions and plugin registration in the two JavaScript configs.
-- Remove obsolete `content`, `darkMode`, and JavaScript custom-variant
-  ownership from configs.
+- Remove obsolete `content`, `darkMode`, and JavaScript custom-variant ownership
+  from configs.
 - Load each config with adjacent `@config`.
 - Use `source(none)` and exact CSS-owned source globs.
 - Register forms once with `{ strategy: 'base' }` and typography once.
@@ -318,10 +317,10 @@ The staged implementation claims to do the following:
 - Eliminate application coupling to Tailwind's private `--tw-*` variables.
 - Preserve public/private behavior and generated output paths.
 
-The shared compatibility file is roughly 774 added lines. It is the highest
-risk concentration in the patch. Audit every token, selector, utility, layer,
-browser behavior, and claimed derivation. “Mechanically derived” is not a
-review exemption.
+The shared compatibility file is roughly 774 added lines. It is the highest risk
+concentration in the patch. Audit every token, selector, utility, layer, browser
+behavior, and claimed derivation. “Mechanically derived” is not a review
+exemption.
 
 ## Mandatory full index review
 
@@ -389,8 +388,8 @@ Prove with contract tests and temporary sentinels:
   them;
 - Python-returned and runtime-generated class strings remain covered.
 
-Do not let the static contract test merely assert strings in the entrypoint.
-It must be backed by actual compiler behavior.
+Do not let the static contract test merely assert strings in the entrypoint. It
+must be backed by actual compiler behavior.
 
 ## Mandatory config, layer, plugin, and cascade audit
 
@@ -402,13 +401,13 @@ Verify:
 - Flatpickr, public theme CSS, `x-cloak`, media rules, permission badges, forms,
   typography, headings, and buttons appear in the intended layer.
 - Both configs retain every effective theme extension.
-- The ineffective duplicate private `borderWidth: {3}` declaration is the
-  only removed custom token with no behavior.
+- The ineffective duplicate private `borderWidth: {3}` declaration is the only
+  removed custom token with no behavior.
 - Private custom shadow values still map to the correct utility names.
 - Forms and typography are registered exactly once per build.
 - Forms base strategy is actually equivalent for every `.form-*` consumer.
-- Public GIS's dual generated stylesheets do not duplicate/reset components in
-  a different winning order.
+- Public GIS's dual generated stylesheets do not duplicate/reset components in a
+  different winning order.
 - Dark form compound selectors, permission badges, map rings, public custom
   duplicates, and component/utility collisions retain their v3 winners.
 - Inline page styles and later custom/map styles are present in live tests.
@@ -429,8 +428,8 @@ Verify:
 
 Audit all source-owned files and runtime markup for:
 
-- `bg-opacity-*`, `text-opacity-*`, `border-opacity-*`, `divide-opacity-*`,
-  and `ring-opacity-*`;
+- `bg-opacity-*`, `text-opacity-*`, `border-opacity-*`, `divide-opacity-*`, and
+  `ring-opacity-*`;
 - `flex-shrink*` and `flex-grow*`;
 - `overflow-ellipsis`;
 - removed decoration families;
@@ -472,8 +471,8 @@ Restore and verify:
 
 ### Space and divide semantics
 
-Tailwind v4's last-child/logical implementation is not automatically
-equivalent to v3. Verify shared compatibility selectors preserve:
+Tailwind v4's last-child/logical implementation is not automatically equivalent
+to v3. Verify shared compatibility selectors preserve:
 
 - `> :not([hidden]) ~ :not([hidden])` semantics;
 - hidden children;
@@ -510,14 +509,14 @@ Verify:
 
 ### Important and variants
 
-- Convert leading important syntax such as `!w-32` and `lg:!w-64` to trailing
-  v4 syntax and prove precedence.
+- Convert leading important syntax such as `!w-32` and `lg:!w-64` to trailing v4
+  syntax and prove precedence.
 - Recreate class dark mode with v3 specificity.
 - Restore unguarded v3 hover and group-hover behavior, including touch
   emulation.
 - Verify group selector specificity and nesting.
-- Rewrite order-sensitive stacks such as `before:hover`,
-  `after:group-hover`, and `hover:prose-a` only where necessary.
+- Rewrite order-sensitive stacks such as `before:hover`, `after:group-hover`,
+  and `hover:prose-a` only where necessary.
 - Prove equivalent stacks were not churned unnecessarily.
 - Verify `sidebar-expanded` behavior and specificity.
 
@@ -542,8 +541,8 @@ Verify:
 - Replace permission, map-ring, and gradient `--tw-*` dependencies with stable
   declarations at the proper owner.
 - Search all application CSS and JavaScript for private Tailwind variables.
-- Compatibility/compiler-facing CSS may use v4 internals only when necessary
-  and documented.
+- Compatibility/compiler-facing CSS may use v4 internals only when necessary and
+  documented.
 - Do not conflate “no internal variables” with “move the same broken rule to
   another stylesheet.”
 
@@ -569,9 +568,9 @@ The v3 control contract included:
 - existing mobile `.git_btn` sizing rules;
 - unchanged ZIP/history icon geometry and strokes.
 
-The first attempted repair merely moved/repeated a literal `.git_btn`
-background rule and did not change the live result. The currently staged repair
-puts these native v4 utilities directly on both anchors:
+The first attempted repair merely moved/repeated a literal `.git_btn` background
+rule and did not change the live result. The currently staged repair puts these
+native v4 utilities directly on both anchors:
 
 ```text
 bg-linear-to-b/srgb from-white to-gray-100
@@ -580,18 +579,18 @@ bg-linear-to-b/srgb from-white to-gray-100
 and removes background ownership from `.git_btn`, retaining that selector only
 for mobile sizing.
 
-This second repair was **not independently verified in the live container at
-the time of handoff**. Treat it as suspect. Verify the rendered route after a
-clean candidate build, with the real stylesheet order, no stale static asset,
-the actual Django template, and the same data. Compare v3/v4 computed styles,
-element screenshots, hover/focus/active/touch behavior, responsive geometry,
-and pixels.
+This second repair was **not independently verified in the live container at the
+time of handoff**. Treat it as suspect. Verify the rendered route after a clean
+candidate build, with the real stylesheet order, no stale static asset, the
+actual Django template, and the same data. Compare v3/v4 computed styles,
+element screenshots, hover/focus/active/touch behavior, responsive geometry, and
+pixels.
 
 Then search for every other component whose visual contract is split between
-generated utilities and a later custom/inline stylesheet. The existence of
-this bug proves the original static harness was incomplete. Determine exactly
-why it missed the regression and repair the harness before trusting any of its
-other results.
+generated utilities and a later custom/inline stylesheet. The existence of this
+bug proves the original static harness was incomplete. Determine exactly why it
+missed the regression and repair the harness before trusting any of its other
+results.
 
 The staged source-contract test that only counts these class strings is not
 enough. It must be supplemented by actual compiled-output and browser behavior.
@@ -602,8 +601,8 @@ Compare v3 and v4 output and live behavior for:
 
 - `.btn`, `.btn-lg`, `.btn-sm`, `.btn-xs`;
 - headings `.h1` through `.h4` at every breakpoint;
-- forms inputs, textarea, select, multiselect, checkbox, radio, switches,
-  search controls, file controls, dates, and disabled/read-only states;
+- forms inputs, textarea, select, multiselect, checkbox, radio, switches, search
+  controls, file controls, dates, and disabled/read-only states;
 - typography/prose selectors and nested hover behavior;
 - Flatpickr base, dark mode, focus, selected, range, disabled, and navigation
   states;
@@ -650,8 +649,8 @@ No backend permission matrix or map behavior change is authorized.
 
 Create or verify a separate v3 worktree at the exact starting commit with
 independent `node_modules`, using Node 22.22.2 through `mise`. Do not trust an
-old `/tmp` directory without validating its commit, manifests, dependency
-tree, and generated hashes.
+old `/tmp` directory without validating its commit, manifests, dependency tree,
+and generated hashes.
 
 Perform two clean v3 `npm ci` reproductions. Capture under `/tmp`:
 
@@ -662,8 +661,7 @@ Perform two clean v3 `npm ci` reproductions. Capture under `/tmp`:
   and candidate-class inventories;
 - exact source inventories;
 - complete v3.4.19 palette and relevant defaults;
-- actual stylesheet order on public, private, public-GIS, and private-map
-  pages.
+- actual stylesheet order on public, private, public-GIS, and private-map pages.
 
 Expected v3 unminified references to independently reproduce:
 
@@ -701,9 +699,9 @@ b51ef37071d19341b2c7e320ce38db96fe20231add145f036853327e5b40dfa2
 ```
 
 The Git-browser button correction changed source candidates after those values
-were recorded. These hashes and all derived selector/size inventories are
-stale until rebuilt and recaptured. Update the task and docs with the real
-post-fix values.
+were recorded. These hashes and all derived selector/size inventories are stale
+until rebuilt and recaptured. Update the task and docs with the real post-fix
+values.
 
 The task also claims:
 
@@ -732,8 +730,8 @@ Temporary artifacts previously used were reported under:
 /tmp/speleodb-tailwind-parity
 ```
 
-They are clues, not trusted evidence. Rebuild or validate them independently.
-Do not add Playwright to the root workspace.
+They are clues, not trusted evidence. Rebuild or validate them independently. Do
+not add Playwright to the root workspace.
 
 ## Structural candidate comparison
 
@@ -751,8 +749,8 @@ Compare v3 and final v4:
 - warnings and compiler output;
 - deterministic build hashes across three clean minified builds.
 
-Document every addition and removal. “Tailwind v4 emits different CSS” is not
-an explanation. Identify why each structural difference is harmless or fix it.
+Document every addition and removal. “Tailwind v4 emits different CSS” is not an
+explanation. Identify why each structural difference is harmless or fix it.
 
 ## Live browser parity harness
 
@@ -937,8 +935,7 @@ Record and compare:
 - individual Tailwind build time;
 - watch startup and rebuild time;
 - selector/custom-property/theme-variable counts;
-- browser style-recalculation timing on representative public/private/map
-  pages;
+- browser style-recalculation timing on representative public/private/map pages;
 - any added runtime work.
 
 The compatibility layer must not add runtime DOM scans or JavaScript. Source
@@ -990,8 +987,8 @@ Verify:
 - generated CSS/bundles remain ignored;
 - no temporary browser dependency enters the root lockfile.
 
-If the user is already running npm/tests in a container, coordinate rather
-than launching a competing build. Accept their output only with exact command,
+If the user is already running npm/tests in a container, coordinate rather than
+launching a competing build. Accept their output only with exact command,
 environment, revision, and complete result; independently inspect the emitted
 artifacts afterward.
 
@@ -1045,8 +1042,7 @@ difference” language in the task/docs.
 
 ## Completion standard
 
-You may declare this migration complete only when all of the following are
-true:
+You may declare this migration complete only when all of the following are true:
 
 - Every staged file and hunk has been reviewed and accounted for.
 - Every unnecessary or unrelated change has been removed.
@@ -1069,8 +1065,8 @@ true:
 - No unexplained residual risk remains.
 
 If exhaustive live verification cannot be completed, say exactly what remains
-unproven and do **not** check the final completion box. “Everything else
-passes” is not completion.
+unproven and do **not** check the final completion box. “Everything else passes”
+is not completion.
 
 ## Required final report
 

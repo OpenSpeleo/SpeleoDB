@@ -14,8 +14,8 @@ invalidated the old candidate hashes, generated-output inventories, timings,
 test totals, browser totals, and zero-difference claims. Evidence-bearing work
 has been reopened below and is tracked in
 `tasks/todos/tailwind-v4-adversarial-review.md`. Only independently reproduced
-checkmarks and metrics have been restored; the exhaustive live-matrix items
-and final completion remain open.
+checkmarks and metrics have been restored; the exhaustive live-matrix items and
+final completion remain open.
 
 The later delivery consolidation is tracked in
 `tasks/todos/tailwind-single-bundle-consolidation.md`. It supersedes the
@@ -26,44 +26,44 @@ reference.
 ## Repository Setup and Baseline
 
 - [ ] Create `codex/tailwind-v4-migration` from starting commit
-  `3334c10dde9a65c60f95f70f50c9aa9e78651cc4`. The current branch is `dsf`;
-  retain it during review and report the approved-plan mismatch.
+      `3334c10dde9a65c60f95f70f50c9aa9e78651cc4`. The current branch is `dsf`;
+      retain it during review and report the approved-plan mismatch.
 - [x] Preserve the pre-existing untracked
-  `tasks/todos/tailwind-v4-migration-prompt.md`.
+      `tasks/todos/tailwind-v4-migration-prompt.md`.
 - [x] Read `AGENTS.md`, `docs/coding-rules.md`, `docs/node-tooling.md`, and the
-  relevant UI/frontend lessons.
-- [x] Create a separate v3 worktree with independent `node_modules` under
-  `/tmp` using Node 22 through `mise`.
+      relevant UI/frontend lessons.
+- [x] Create a separate v3 worktree with independent `node_modules` under `/tmp`
+      using Node 22 through `mise`.
 - [x] Reproduce and independently validate the v3 baseline twice from clean
-  `npm ci` installs.
+      `npm ci` installs.
 - [x] Capture unminified/minified CSS, hashes, sizes, line counts, timings,
-  warnings, selectors, at-rules, custom properties, keyframes, plugin output,
-  source inventories, and the complete v3.4.19 palette under `/tmp`.
+      warnings, selectors, at-rules, custom properties, keyframes, plugin
+      output, source inventories, and the complete v3.4.19 palette under `/tmp`.
 - [x] Record independently regenerated baseline hashes and inventories in the
-  adversarial review. Previous values and `/tmp` artifacts are clues only.
+      adversarial review. Previous values and `/tmp` artifacts are clues only.
 - [x] Capture effective stylesheet order for public, private, public GIS, and
-  private map pages.
+      private map pages.
 - [x] Run `npx @tailwindcss/upgrade@4.3.1` only after the baseline exists and
-  review every resulting change.
+      review every resulting change.
 
 ## Build and Configuration
 
 - [x] Pin `tailwindcss` and `@tailwindcss/cli` to 4.3.1 without unrelated
-  dependency upgrades.
+      dependency upgrades.
 - [x] Update all six Tailwind production/watch/pre-commit commands and remove
-  legacy `-c` flags while keeping script names and output paths stable.
+      legacy `-c` flags while keeping script names and output paths stable.
 - [x] Consolidate theme extensions and plugins into CSS-native shared and
-  entrypoint-owned declarations; remove JavaScript configs and `@config`.
+      entrypoint-owned declarations; remove JavaScript configs and `@config`.
 - [x] Disable automatic source detection with `source(none)`.
 - [x] Register the exact public source set with stylesheet-relative `@source`
-  directives.
+      directives.
 - [x] Register the exact private source set with stylesheet-relative `@source`
-  directives.
+      directives.
 - [x] Remove obsolete config `content` arrays and keep plugins registered once.
 - [x] Remove the ineffective duplicate private `borderWidth: {3}` declaration
-  without introducing a `border-3` utility.
+      without introducing a `border-3` utility.
 - [x] Preserve font imports, Flatpickr, public theme CSS, `x-cloak`, permission
-  badges, and component-before-utility precedence with explicit layers.
+      badges, and component-before-utility precedence with explicit layers.
 
 ## Tailwind v4 Compatibility Audit
 
@@ -71,88 +71,88 @@ Every item in this section requires fresh adversarial evidence, even where the
 implementation is already present.
 
 - [x] **CLI package split:** build, watch, and pre-commit commands all use the
-  v4 CLI package.
+      v4 CLI package.
 - [x] **Imports/layers:** verify theme, base, components, utilities, and
-  post-utility overrides preserve v3 cascade winners.
+      post-utility overrides preserve v3 cascade winners.
 - [x] **Source detection:** prove included, excluded, and public/private
-  cross-build source boundaries with contract tests and sentinel builds.
+      cross-build source boundaries with contract tests and sentinel builds.
 - [x] **Legacy config:** preserve all effective theme values, plugins, custom
-  animations, breakpoints, shadows, widths, spacing, z-index, and outlines.
+      animations, breakpoints, shadows, widths, spacing, z-index, and outlines.
 - [x] **Removed utilities:** migrate opacity families, `flex-shrink-*`,
-  `flex-grow-*`, ellipsis, and decoration utilities in templates and runtime
-  markup.
-- [x] **Renamed utilities:** migrate shadow, drop-shadow, blur,
-  backdrop-blur, radius, and outline names by computed value.
+      `flex-grow-*`, ellipsis, and decoration utilities in templates and runtime
+      markup.
+- [x] **Renamed utilities:** migrate shadow, drop-shadow, blur, backdrop-blur,
+      radius, and outline names by computed value.
 - [x] **Default borders:** restore v3 gray-200 bare border/divide behavior.
 - [x] **Default rings:** restore v3 3px blue-500 bare ring behavior without
-  disturbing explicit rings, offsets, forms, or map overrides.
+      disturbing explicit rings, offsets, forms, or map overrides.
 - [x] **Preflight:** preserve placeholders, button cursors, dialog centering,
-  hidden behavior, forms, and file-selector normalization.
+      hidden behavior, forms, and file-selector normalization.
 - [x] **Space/divide:** preserve v3 sibling/hidden-child/reverse selector
-  behavior rather than accepting v4 last-child semantics.
+      behavior rather than accepting v4 last-child semantics.
 - [x] **Gradients:** use v4 linear-gradient names with sRGB interpolation,
-  preserve stop behavior, and express the git-browser action surface with
-  native v4 gradient utilities.
+      preserve stop behavior, and express the git-browser action surface with
+      native v4 gradient utilities.
 - [x] **Palette:** derive and apply the complete v3 RGB palette centrally,
-  including indirect forms/typography/Preflight usage.
-- [x] **`theme()` usage:** migrate processed CSS/arbitrary utilities to v4
-  theme variables while preserving the observed welcome-modal inline fallback.
+      including indirect forms/typography/Preflight usage.
+- [x] **`theme()` usage:** migrate processed CSS/arbitrary utilities to v4 theme
+      variables while preserving the observed welcome-modal inline fallback.
 - [x] **Important syntax:** migrate leading important modifiers to trailing
-  syntax and verify precedence.
+      syntax and verify precedence.
 - [x] **Hover:** restore unguarded v3 hover and group-hover behavior and
-  specificity, including touch emulation.
+      specificity, including touch emulation.
 - [x] **Variant order:** reverse only order-sensitive stacked variants.
 - [x] **Transforms:** remove handwritten v3 transform-variable coupling and
-  prevent static/animated transforms from composing twice.
-- [x] **Transitions:** verify outline-color and individual transform
-  transition behavior.
+      prevent static/animated transforms from composing twice.
+- [x] **Transitions:** verify outline-color and individual transform transition
+      behavior.
 - [x] **Arbitrary values:** audit variables, underscores, commas, opacity,
-  masks, borders, grids, and gradients.
+      masks, borders, grids, and gradients.
 - [x] **Plugins/components:** compare forms, typography, `.btn*`, headings,
-  Flatpickr, and prose output.
+      Flatpickr, and prose output.
 - [x] **Native cascade:** verify representative component/utility, dark-form,
-  permission, map-ring, custom-CSS, and public-GIS collisions.
+      permission, map-ring, custom-CSS, and public-GIS collisions.
 - [x] **Handwritten CSS:** remove/replace dependencies on v3 `--tw-*`
-  implementation variables.
+      implementation variables.
 
 ## Automated and Structural Verification
 
 - [x] Add compiler-backed regression tests for exact source directives,
-  `source(none)`,
-  versions, scripts, plugin ownership, and absence of migrated legacy patterns.
+      `source(none)`, versions, scripts, plugin ownership, and absence of
+      migrated legacy patterns.
 - [x] Compare v3/v4 selectors, at-rules, media queries, keyframes, plugin
-  selectors, custom properties, and candidate-class inventories.
+      selectors, custom properties, and candidate-class inventories.
 - [x] Explain every relevant addition/removal rather than accepting raw diffs.
 - [x] Build each minified stylesheet three times from a clean process and
-  require stable candidate
-  hashes.
+      require stable candidate hashes.
 - [x] Record public/private build sizes, full-build and watch-rebuild timings,
-  selector/theme-variable counts, and representative style-recalculation time.
+      selector/theme-variable counts, and representative style-recalculation
+      time.
 
 ## Browser Parity
 
 - [x] Replace the synthetic `page.setContent` harness with a temporary pinned
-  `@playwright/test@1.61.1` live-route harness outside the root workspace.
+      `@playwright/test@1.61.1` live-route harness outside the root workspace.
 - [x] Run baseline and candidate applications from separate worktrees, ports,
-  and deterministic cloned databases.
+      and deterministic cloned databases.
 - [ ] Reuse identical Inter fonts and stub external map/tile/live API traffic.
-- [ ] Freeze timestamps, randomness, AOS timing, transitions, canvas motion,
-  and loading races for static captures; wait for `document.fonts.ready`.
+- [ ] Freeze timestamps, randomness, AOS timing, transitions, canvas motion, and
+      loading races for static captures; wait for `document.fonts.ready`.
 - [ ] Compare relevant computed styles for every element and pseudo-element.
 - [ ] Require exact pixel equality, with only proven nondeterministic canvas
-  regions masked and documented.
+      regions masked and documented.
 - [ ] Run deterministic animation captures at start, midpoint, and endpoint.
 - [ ] Cover all specified public page families and public GIS composition.
 - [ ] Cover all specified private page/entity/tool/map families.
 - [ ] Cover anonymous, authenticated, staff, read-only, read/write, admin,
-  team-leader, web-viewer, and denied/disabled roles where applicable.
+      team-leader, web-viewer, and denied/disabled roles where applicable.
 - [ ] Cover default, hover, touch, focus, active, checked, invalid, disabled,
-  read-only, open/closed, expanded/collapsed, loading, success/error, and
-  selected/unselected states where applicable.
-- [ ] Cover breakpoint -1/exact/+1 widths, representative device sizes, and
-  DPR 1/2 where available.
+      read-only, open/closed, expanded/collapsed, loading, success/error, and
+      selected/unselected states where applicable.
+- [ ] Cover breakpoint -1/exact/+1 widths, representative device sizes, and DPR
+      1/2 where available.
 - [ ] Run pinned Chromium/Firefox/WebKit and smoke-test installed
-  Chrome/Firefox/Safari where automation permits.
+      Chrome/Firefox/Safari where automation permits.
 
 ## Repository, Install, Watcher, and Deployment Gates
 
@@ -172,9 +172,9 @@ implementation is already present.
 - [x] Clean `npm ci` plus build/lint/tests under configured Node 22.
 - [x] Clean `npm ci` plus build/lint/tests under CI-compatible Node 24.
 - [x] `npm approve-scripts --allow-scripts-pending` reports no unreviewed
-  install scripts.
+      install scripts.
 - [x] `npm run dev` starts all watchers, rebuilds isolated public/private
-  sentinels without leakage, and terminates cleanly.
+      sentinels without leakage, and terminates cleanly.
 - [x] Exercise the Docker Node 22 development path.
 - [x] Exercise Railway's non-destructive `npm ci && npm run build` contract.
 
@@ -182,14 +182,14 @@ implementation is already present.
 
 - [x] Update `docs/node-tooling.md`.
 - [x] Add and index `docs/tailwind-v4.md` covering architecture, compatibility,
-  verification, performance, browser requirements, and shim removal.
+      verification, performance, browser requirements, and shim removal.
 - [x] Update `AGENTS.md` for the CSS-owned source/variant contract.
 - [x] Do not commit generated CSS/bundles or add Playwright to the root
-  workspace.
+      workspace.
 - [x] Add a lesson only if a real correction or reusable failure occurs.
 - [x] Complete the review below with regenerated evidence and residual risk.
 - [ ] Declare completion only with zero unexplained structural, computed-style,
-  behavioral, or pixel differences.
+      behavioral, or pixel differences.
 
 ## Review
 
@@ -204,10 +204,10 @@ implementation is already present.
   source set, and the single neutral build/watch/pre-commit interface are the
   current implementation contract.
 - `tailwind_css/shared/design-system.css` owns shared product tokens, browser
-  normalization, and semantic compiler-facing utilities.
-  Build-specific variants stay in their CSS entrypoint; feature selectors and
-  stable project variables stay in their application stylesheet. Application
-  code must not couple to Tailwind's private `--tw-*` variables.
+  normalization, and semantic compiler-facing utilities. Build-specific variants
+  stay in their CSS entrypoint; feature selectors and stable project variables
+  stay in their application stylesheet. Application code must not couple to
+  Tailwind's private `--tw-*` variables.
 - The public GIS cascade is unified Tailwind, public custom, private custom,
   shared modal, map-viewer CSS, then Mapbox GL CSS. The private map cascade is
   unified Tailwind, private custom, base inline responsive CSS, Mapbox GL CSS,
@@ -224,38 +224,36 @@ been deleted. The old harness did concatenate custom CSS, so omission of
 `custom.css` is not a proven cause. Synthetic rendering, hard-coded markup, and
 stale watcher output are the demonstrated evidence failures.
 
-Final browser evidence must follow a stopped watcher and clean production
-build, prove the exact asset served by separate baseline/candidate Django
-servers, and navigate real routes using deterministic database and role
-fixtures. The manifest must fail on skipped cases, DOM misalignment,
-unexplained computed-style differences, or deterministic pixel differences.
+Final browser evidence must follow a stopped watcher and clean production build,
+prove the exact asset served by separate baseline/candidate Django servers, and
+navigate real routes using deterministic database and role fixtures. The
+manifest must fail on skipped cases, DOM misalignment, unexplained
+computed-style differences, or deterministic pixel differences.
 
 ### Regenerated adversarial evidence
 
-- Two clean v3 Node 22 builds reproduced public unminified `7daf1d31…`
-  (88,382 bytes/4,246 lines), private unminified `f58cd60b…`
-  (116,935/5,786), public minified `927f57af…` (68,420), and private minified
-  `5e7a0fd4…` (92,824).
-- After CSS-native consolidation, three clean candidate builds reproduced
-  public minified `6e4b5ec0…` (86,562 bytes) and private `a026197f…`
-  (110,774). Candidate unminified output is public `f46eb314…`
-  (109,921/3,853) and private `5a5b81df…` (137,320/4,926). Removing the one
-  intentional minified `:root{color-scheme:dark}` rule makes both outputs
-  byte-identical to the pre-consolidation artifacts. A timed full build took
-  1.83 seconds.
-- Structural counts are public selectors 767→693, at-rules 14→84, media
-  8→8, keyframes 4→4, custom properties 99→203; private 1,041→949,
-  12→86, 8→8, 3→3, and 109→338.
-- The focused real Git route passed 360 exact-pixel captures: two anchors,
-  three pinned engines, widths 360/767/768/769/1440, DPR 1/2, and six states.
-  Served asset hashes were verified, no masks were used, and the only computed
+- Two clean v3 Node 22 builds reproduced public unminified `7daf1d31…` (88,382
+  bytes/4,246 lines), private unminified `f58cd60b…` (116,935/5,786), public
+  minified `927f57af…` (68,420), and private minified `5e7a0fd4…` (92,824).
+- After CSS-native consolidation, three clean candidate builds reproduced public
+  minified `6e4b5ec0…` (86,562 bytes) and private `a026197f…` (110,774).
+  Candidate unminified output is public `f46eb314…` (109,921/3,853) and private
+  `5a5b81df…` (137,320/4,926). Removing the one intentional minified
+  `:root{color-scheme:dark}` rule makes both outputs byte-identical to the
+  pre-consolidation artifacts. A timed full build took 1.83 seconds.
+- Structural counts are public selectors 767→693, at-rules 14→84, media 8→8,
+  keyframes 4→4, custom properties 99→203; private 1,041→949, 12→86, 8→8, 3→3,
+  and 109→338.
+- The focused real Git route passed 360 exact-pixel captures: two anchors, three
+  pinned engines, widths 360/767/768/769/1440, DPR 1/2, and six states. Served
+  asset hashes were verified, no masks were used, and the only computed
   normalizations were equivalent gradient endpoint and transition-set
   serialization.
 - Node 22/24 clean install/build/lint and 921-test runs pass; the final Node 22
   semantic-naming run passes 922 tests. npm 11 reports no unreviewed scripts.
-  Full pytest passes with 3,821 passed/154 skipped. npm
-  pre-commit, full prek, template validation, watcher startup/termination,
-  Docker builds, and Railway's full isolated predeploy sequence pass.
+  Full pytest passes with 3,821 passed/154 skipped. npm pre-commit, full prek,
+  template validation, watcher startup/termination, Docker builds, and Railway's
+  full isolated predeploy sequence pass.
 - Tailwind's active watcher retains deleted candidates under both v3 and v4;
   clean builds remove them. The final browser assets were rebuilt after all
   watcher checks.
@@ -267,32 +265,32 @@ unexplained computed-style differences, or deterministic pixel differences.
 
 Everything below this heading records the original migration handoff. Its
 hashes, sizes, counts, timings, checkmarks, browser totals, and zero-difference
-language are retained only to show what the adversarial review must reproduce
-or falsify. None is current evidence and none may be copied into the final
-result without a fresh run against the repaired, clean-built candidate.
+language are retained only to show what the adversarial review must reproduce or
+falsify. None is current evidence and none may be copied into the final result
+without a fresh run against the repaired, clean-built candidate.
 
 #### Result and versions
 
-The repository now uses exact `tailwindcss@4.3.1` and
-`@tailwindcss/cli@4.3.1`. Forms and typography remain pinned at `0.5.11` and
-`0.5.20`. `@parcel/watcher@2.5.1` was reviewed and added to the npm 11
-`allowScripts` list; the final approval audit reports no unreviewed scripts.
-No generated stylesheet/bundle or Playwright dependency is tracked.
+The repository now uses exact `tailwindcss@4.3.1` and `@tailwindcss/cli@4.3.1`.
+Forms and typography remain pinned at `0.5.11` and `0.5.20`.
+`@parcel/watcher@2.5.1` was reviewed and added to the npm 11 `allowScripts`
+list; the final approval audit reports no unreviewed scripts. No generated
+stylesheet/bundle or Playwright dependency is tracked.
 
-The branch starts at the requested
-`3334c10dde9a65c60f95f70f50c9aa9e78651cc4`. The preserved prompt remains
-untracked. The v3 worktree is `/tmp/speleodb-tailwind-v3-3334c10`; baseline
-artifacts are in `/tmp/speleodb-tailwind-baseline`, candidate inventories are
-in `/tmp/speleodb-tailwind-candidate`, and the temporary browser harness is in
+The branch starts at the requested `3334c10dde9a65c60f95f70f50c9aa9e78651cc4`.
+The preserved prompt remains untracked. The v3 worktree is
+`/tmp/speleodb-tailwind-v3-3334c10`; baseline artifacts are in
+`/tmp/speleodb-tailwind-baseline`, candidate inventories are in
+`/tmp/speleodb-tailwind-candidate`, and the temporary browser harness is in
 `/tmp/speleodb-tailwind-parity`.
 
 The exact upgrade CLI was run from a clean committed disposable v3 copy after
 baseline capture. Its proposed output deleted the public JavaScript config,
 moved that config into CSS, retained the private config, used unrestricted
-source discovery, and did not address visual compatibility. The later
-CSS-native consolidation removed both configs only after proving that the
-unminified public/private outputs remained byte-identical apart from the
-intentional dark color-scheme declaration.
+source discovery, and did not address visual compatibility. The later CSS-native
+consolidation removed both configs only after proving that the unminified
+public/private outputs remained byte-identical apart from the intentional dark
+color-scheme declaration.
 
 #### Architecture and migration
 
@@ -309,11 +307,11 @@ border/ring behavior, Preflight differences, v3 space/divide sibling selectors,
 gradient/grid helpers, exact ring stacks, form SVGs, and transform/transition
 compatibility. Handwritten permission, map-ring, and gradient rules no longer
 couple to v3 implementation variables. The git-browser action surface is owned
-directly by native v4 gradient utilities. Runtime and template
-candidates were migrated mechanically for opacity, grow/shrink, ellipsis,
-decoration, gradients, important syntax, variant order, renamed effects, and
-arbitrary theme values. The v3-invalid `max-w-13` candidate was removed rather
-than silently accepting its new v4 meaning.
+directly by native v4 gradient utilities. Runtime and template candidates were
+migrated mechanically for opacity, grow/shrink, ellipsis, decoration, gradients,
+important syntax, variant order, renamed effects, and arbitrary theme values.
+The v3-invalid `max-w-13` candidate was removed rather than silently accepting
+its new v4 meaning.
 
 Actual stylesheet order was confirmed as public Tailwind/custom; private
 Tailwind/custom; public GIS public Tailwind/custom then private Tailwind/custom,
@@ -324,10 +322,12 @@ map viewer.
 
 Two clean v3.4.19 reproductions were byte-identical. References:
 
-- public unminified `7daf1d31f6ebe3c959e5b774c3b14213d49fa59b5f79b22f1f3fce02afa3a1da`,
-  88,382 bytes/4,246 lines; minified `927f57af…`, 68,420 bytes;
-- private unminified `f58cd60b449f37e6cae22a0dd1735ef1f8993f512bb7bed6c76108bb658c6f20`,
-  116,935 bytes/5,786 lines; minified `5e7a0fd…`, 92,824 bytes.
+- public unminified
+  `7daf1d31f6ebe3c959e5b774c3b14213d49fa59b5f79b22f1f3fce02afa3a1da`, 88,382
+  bytes/4,246 lines; minified `927f57af…`, 68,420 bytes;
+- private unminified
+  `f58cd60b449f37e6cae22a0dd1735ef1f8993f512bb7bed6c76108bb658c6f20`, 116,935
+  bytes/5,786 lines; minified `5e7a0fd…`, 92,824 bytes.
 
 Final v4 minified builds were stable across three runs:
 
@@ -339,9 +339,9 @@ Final v4 minified builds were stable across three runs:
 The final unminified public output is 108,799 bytes/3,829 lines and private is
 134,841 bytes/4,893 lines. CSS-tree inventory counts are public 767→692 unique
 rule selectors and 99→203 custom properties; private 1,041→946 selectors and
-109→338 custom properties. Both retain eight media-query boundaries and the
-same keyframe sets (public four, private three). Selector removals are the
-audited legacy candidates and v3 selector serialization; additions are their
+109→338 custom properties. Both retain eight media-query boundaries and the same
+keyframe sets (public four, private three). Selector removals are the audited
+legacy candidates and v3 selector serialization; additions are their
 v4/native-nesting or `v3-` compatibility forms. At-rule growth (14→84 public,
 12→86 private) is explained by v4 layers, supports guards, and registered
 properties.
@@ -349,9 +349,9 @@ properties.
 The full root build took 2.42 seconds. Initial Tailwind watch builds took
 114/122 ms; sentinel rebuilds took 11 ms public and 5–13 ms private. A
 representative Chromium style-recalculation probe over 40 forced passes measured
-11→12 ms for 190 public nodes and 12.5→17.1 ms for 202 private nodes (about
-0.43 ms per private pass). The increase is the compatibility theme/property
-surface; no runtime JavaScript or DOM scan was added.
+11→12 ms for 190 public nodes and 12.5→17.1 ms for 202 private nodes (about 0.43
+ms per private pass). The increase is the compatibility theme/property surface;
+no runtime JavaScript or DOM scan was added.
 
 #### Browser parity
 
@@ -394,15 +394,15 @@ gradient text rasterization, orange alpha serialization, checked form SVG
 antialiasing, and switch state selectors losing v3 specificity across layers.
 
 After the initial handoff, live application review found that the project git
-browser's “Download as ZIP” and “History” actions had lost their button
-surface. The v3 surface was a white-to-gray-100 downward gradient. Retaining
-that appearance behind the legacy `.git_btn` selector—even after moving the
-selector between stylesheets—did not restore the live result. The two controls
-now declare `bg-linear-to-b/srgb from-white to-gray-100` directly, and
-`.git_btn` is retained only by the existing mobile sizing rules. A source
-contract covers both controls and rejects a reintroduced background-owning
-`.git_btn` rule. Per the user's request, the final container build/test and live
-confirmation for this correction are pending their run.
+browser's “Download as ZIP” and “History” actions had lost their button surface.
+The v3 surface was a white-to-gray-100 downward gradient. Retaining that
+appearance behind the legacy `.git_btn` selector—even after moving the selector
+between stylesheets—did not restore the live result. The two controls now
+declare `bg-linear-to-b/srgb from-white to-gray-100` directly, and `.git_btn` is
+retained only by the existing mobile sizing rules. A source contract covers both
+controls and rejects a reintroduced background-owning `.git_btn` rule. Per the
+user's request, the final container build/test and live confirmation for this
+correction are pending their run.
 
 The raw-template harness excludes `pages/teams.html`: unexecuted Django branches
 split a class attribute across template tags and cannot form a valid standalone

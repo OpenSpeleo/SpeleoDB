@@ -10,5 +10,5 @@ For export/download endpoints:
 - Add `@extend_schema` on the file-returning method.
 - Declare the real content type with `OpenApiTypes.BINARY`, for example
   `{(200, "application/gpx+xml"): OpenApiTypes.BINARY}`.
-- Run `speleodb/users/tests/test_swagger.py::test_api_schema_no_warnings`
-  before considering schema-facing API work done.
+- Run `speleodb/users/tests/test_swagger.py::test_api_schema_no_warnings` before
+  considering schema-facing API work done.

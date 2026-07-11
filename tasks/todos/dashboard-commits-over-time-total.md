@@ -10,16 +10,15 @@
 
 ## Review
 
-The dashboard total/user split was correct, but the test fixture was
-date-flaky: the two non-user "current month" commits used `now - 2 days`,
-which belongs to the previous month when the suite runs on day 2 of a month.
+The dashboard total/user split was correct, but the test fixture was date-flaky:
+the two non-user "current month" commits used `now - 2 days`, which belongs to
+the previous month when the suite runs on day 2 of a month.
 
-While making the fixture deterministic, the API exposed a timezone boundary
-bug: a commit at `YYYY-MM-01T00:00Z` grouped into the previous month under
-Django's `America/New_York` timezone while response labels were generated
-from raw UTC `timezone.now()`. The fix makes the 12-month window and labels
-use `timezone.localtime()` consistently and keys aggregation results by
-`YYYY-MM`.
+While making the fixture deterministic, the API exposed a timezone boundary bug:
+a commit at `YYYY-MM-01T00:00Z` grouped into the previous month under Django's
+`America/New_York` timezone while response labels were generated from raw UTC
+`timezone.now()`. The fix makes the 12-month window and labels use
+`timezone.localtime()` consistently and keys aggregation results by `YYYY-MM`.
 
 Verification:
 

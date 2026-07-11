@@ -1,7 +1,7 @@
 # Lesson: Never place executable statements between import groups
 
-**Date:** 2026-02-26
-**Trigger:** ruff E402 errors in `speleodb/gis/models/view.py`
+**Date:** 2026-02-26 **Trigger:** ruff E402 errors in
+`speleodb/gis/models/view.py`
 
 ## The mistake
 
@@ -37,9 +37,8 @@ logger = logging.getLogger(__name__)   # <-- after ALL imports
 ## Rule
 
 Module-level assignments (`logger`, compiled regexes, constants derived from
-imports) go **after all import blocks**, including `if TYPE_CHECKING`. The
-only things allowed between `from __future__` and the last import are other
-imports.
+imports) go **after all import blocks**, including `if TYPE_CHECKING`. The only
+things allowed between `from __future__` and the last import are other imports.
 
 ## Self-check
 

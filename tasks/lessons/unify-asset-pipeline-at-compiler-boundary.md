@@ -3,9 +3,9 @@
 ## Correction
 
 Combining public/private Tailwind configuration or emitted CSS does not unify
-frontend tooling while separate JavaScript compilers, watchers, generated
-paths, and template loading mechanics remain. “Unified” must be evaluated at
-the dependency-graph and deployment boundary, not by counting stylesheets.
+frontend tooling while separate JavaScript compilers, watchers, generated paths,
+and template loading mechanics remain. “Unified” must be evaluated at the
+dependency-graph and deployment boundary, not by counting stylesheets.
 
 ## Rule
 

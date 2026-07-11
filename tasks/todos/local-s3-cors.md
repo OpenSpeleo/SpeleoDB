@@ -5,7 +5,8 @@
 - [x] Harden `create_s3_local_buckets` for local-only, idempotent provisioning.
 - [x] Make local and test presigned URL signing explicitly deterministic.
 - [x] Align and pin the RustFS version used by Compose and CI.
-- [x] Replace recurring automatic initialization with an explicit, profile-gated setup job.
+- [x] Replace recurring automatic initialization with an explicit, profile-gated
+      setup job.
 - [x] Exercise the real provisioning command during CI setup.
 
 ## Tests
@@ -13,17 +14,19 @@
 - [x] Add management-command unit coverage for success and failure paths.
 - [x] Verify local/test presigned URLs use Signature Version 4.
 - [x] Add a live RustFS browser-CORS regression test.
-- [x] Run focused tests, full backend tests, lint, type checks, and Compose validation.
+- [x] Run focused tests, full backend tests, lint, type checks, and Compose
+      validation.
 
 ## Documentation
 
-- [x] Document local object-storage ownership, bootstrap, diagnostics, and production boundaries.
+- [x] Document local object-storage ownership, bootstrap, diagnostics, and
+      production boundaries.
 - [x] Add the new document to the agent documentation index.
 
 ## Review
 
-- Correction: canonical bucket names must stay explicit and the initializer
-  must not be a normal application startup dependency.
+- Correction: canonical bucket names must stay explicit and the initializer must
+  not be a normal application startup dependency.
 - Reworked the target commit without carrying its unrelated editor setting.
 - Confirmed the previously running floating local image was RustFS alpha.83;
   pinned local and CI environments to beta.8 and repaired existing buckets
