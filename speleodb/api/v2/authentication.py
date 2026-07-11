@@ -98,7 +98,7 @@ class BearerScheme(OpenApiAuthenticationExtension):  # type: ignore[no-untyped-c
     priority = -1
 
     def get_security_definition(self, auto_schema: Any) -> dict[str, Any]:
-        return build_bearer_security_scheme_object(  # type: ignore[no-any-return, no-untyped-call]
+        return build_bearer_security_scheme_object(
             header_name="Authorization",
             token_prefix=self.target.keyword,
         )

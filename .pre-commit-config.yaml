@@ -28,7 +28,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.15.21
     hooks:
       # Linter
       - id: ruff
@@ -39,7 +39,7 @@ repos:
         exclude: ^speleodb/api/v2/tests/artifacts/
 
   - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.39.4
+    rev: v1.40.4
     hooks:
       - id: djlint-reformat-django
       - id: djlint-django
@@ -69,7 +69,7 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.11.25
+    rev: 0.11.28
     hooks:
       - id: uv-lock
         args: [ "--check" ]
@@ -85,7 +85,7 @@ repos:
         args: [ "-iii", "-ll" ]
 
   - repo: https://github.com/pysentry/pysentry-pre-commit
-    rev: v0.4.6
+    rev: v0.4.7
     hooks:
       - id: pysentry
         args:
