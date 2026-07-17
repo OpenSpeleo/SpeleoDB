@@ -9,7 +9,7 @@ export const Modal = {
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
-                    
+
                     <div class="p-6 overflow-y-auto">
                         ${content}
                     </div>
@@ -26,7 +26,7 @@ export const Modal = {
     open(id, html, onOpen = null) {
         this.close(id);
         document.body.insertAdjacentHTML('beforeend', html);
-        
+
         // Attach standard close handlers to ALL elements with data-close-modal
         const closeBtns = document.querySelectorAll(`[data-close-modal="${id}"]`);
         closeBtns.forEach(btn => {
@@ -40,7 +40,7 @@ export const Modal = {
             }
         };
         document.addEventListener('keydown', escHandler);
-        
+
         if (onOpen) setTimeout(onOpen, 50);
     },
 
@@ -49,8 +49,3 @@ export const Modal = {
         if (el) el.remove();
     }
 };
-
-
-
-
-

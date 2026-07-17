@@ -17,7 +17,7 @@ export const State = {
     activeDepthDomain: null, // Merged depth domain for currently visible projects
     projectBounds: new Map(), // Track bounds for each project for auto-zoom and fly-to
     networkBounds: new Map(), // Track bounds for each network for auto-zoom and fly-to
-    
+
     // Local-only markers (not yet persisted to API)
     explorationLeads: new Map(), // Track exploration lead markers by ID
 
@@ -61,4 +61,3 @@ export const State = {
         this.gpsTrackBounds = new Map();
     }
 };
-

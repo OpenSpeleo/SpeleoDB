@@ -23,13 +23,13 @@ export async function init(context) {
 
                         // === Build Mobile List Item ===
                         var $mobileItem = $('<div class="revision-item"></div>');
-                        
+
                         // Header with ID and actions
                         var $header = $('<div class="revision-header"></div>');
                         $header.append($('<div class="revision-id"></div>').text(commit.id.slice(0, 8)));
-                        
+
                         var $actions = $('<div class="revision-actions"></div>');
-                        
+
                         // Download dropdown for mobile
                         if (commit.formats && commit.formats.length > 0) {
                             var $downloadBtn = $('<div class="relative inline-flex" x-data="{ open: false }"><button class="text-indigo-400 hover:text-indigo-300" @click="open = !open"><svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12 16l-4-4h3V4h2v8h3l-4 4zm-6 2h12v2H6v-2z"/></svg></button><div class="origin-top-right z-10 absolute top-full right-0 min-w-36 bg-slate-800 border border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1" @click.outside="open = false" x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-cloak><ul></ul></div></div>');
@@ -42,18 +42,18 @@ export async function init(context) {
                             });
                             $actions.append($downloadBtn);
                         }
-                        
+
                         // Explorer link
                         var $explorerLink = $('<a class="text-indigo-400 hover:text-indigo-300"><svg class="w-6 h-6 stroke-current" stroke-width="1.5" fill="none" viewBox="2.25 3.25 19.5 18.5"><path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2" /></svg></a>');
                         $explorerLink.attr('href', sanitizeUrl(commit.url));
                         $actions.append($explorerLink);
-                        
+
                         $header.append($actions);
                         $mobileItem.append($header);
-                        
+
                         // Message
                         $mobileItem.append($('<div class="revision-message"></div>').text(commit.message));
-                        
+
                         // Meta info
                         var $meta = $('<div class="revision-meta"></div>');
                         var $author = $('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span></span></div>');
@@ -62,7 +62,7 @@ export async function init(context) {
                         $date.find('span').text(commit.authored_date);
                         $meta.append($author, $date);
                         $mobileItem.append($meta);
-                        
+
                         // Append to mobile container
                         $('#mobile-revision-container').append($mobileItem);
 
@@ -110,7 +110,7 @@ export async function init(context) {
                                 .find('a')
                                 .attr("href", sanitizeUrl(dl_format_data.download_url))
                                 .text(dl_format_data.name);
-                    
+
                             // Append the modified clone to the <ul>
                             $row.find('#format-download-container').append($download_link);
                         });

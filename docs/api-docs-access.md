@@ -2,9 +2,9 @@
 
 ## Intent
 
-SpeleoDB exposes API documentation and the generated schema as useful
-developer references. Staff and admin users should continue seeing those links,
-and selected non-staff users can now be granted the same private-menu visibility
+SpeleoDB exposes API documentation and the generated schema as useful developer
+references. Staff and admin users should continue seeing those links, and
+selected non-staff users can now be granted the same private-menu visibility
 without receiving Django admin access.
 
 ## Access Flag
@@ -28,8 +28,8 @@ This applies to both mobile sidebar links and desktop header links.
 
 ## Boundaries
 
-This flag only controls private-menu visibility for API Docs and API Schema.
-It does not grant Django admin access, staff status, superuser status, or
+This flag only controls private-menu visibility for API Docs and API Schema. It
+does not grant Django admin access, staff status, superuser status, or
 additional API permissions. Direct endpoint authorization remains owned by the
 existing API docs and schema views.
 

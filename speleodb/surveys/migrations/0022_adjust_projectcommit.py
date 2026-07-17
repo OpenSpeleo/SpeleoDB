@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
             model_name='projectcommit',
             old_name='datetime',
             new_name='authored_date',
-        ),        
+        ),
         migrations.AlterField(
             model_name='projectcommit',
             name='authored_date',
@@ -42,5 +42,5 @@ class Migration(migrations.Migration):
             model_name='projectcommit',
             index=models.Index(fields=['project', 'authored_date'], name='surveys_pro_project_aeece0_idx'),
         ),
-       
+
     ]

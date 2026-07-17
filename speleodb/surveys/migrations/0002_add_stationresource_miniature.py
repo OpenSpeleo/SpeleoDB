@@ -11,42 +11,42 @@ logger = logging.getLogger(__name__)
 def populate_miniatures(apps, schema_editor):
     """Generate miniatures for existing resources."""
     StationResource = apps.get_model('surveys', 'StationResource')
-    
+
     # Import processors at runtime to avoid import issues
     from speleodb.utils.image_processing import ImageProcessor
     from speleodb.utils.video_processing import VideoProcessor
     from speleodb.utils.document_processing import DocumentProcessor
     from pathlib import Path
-    
+
     photo_count = 0
     video_count = 0
     document_count = 0
     error_count = 0
-    
+
     for resource in StationResource.objects.all():
         try:
             if resource.resource_type == 'photo' and resource.file and not resource.miniature:
                 # Generate photo miniature
                 resource.file.open('rb')
                 miniature_content = ImageProcessor.create_miniature(resource.file)
-                
+
                 original_name = Path(resource.file.name).stem
                 miniature_name = f"{original_name}_thumb.jpg"
-                
+
                 resource.miniature.save(miniature_name, miniature_content, save=True)
                 photo_count += 1
-                
+
             elif resource.resource_type == 'video' and resource.file and not resource.miniature:
                 # Generate video thumbnail
                 resource.file.open('rb')
                 miniature_content = VideoProcessor.extract_thumbnail(resource.file)
-                
+
                 original_name = Path(resource.file.name).stem
                 miniature_name = f"{original_name}_thumb.jpg"
-                
+
                 resource.miniature.save(miniature_name, miniature_content, save=True)
                 video_count += 1
-                
+
             elif resource.resource_type == 'document' and resource.file and not resource.miniature:
                 # Generate document preview
                 resource.file.open('rb')
@@ -54,17 +54,17 @@ def populate_miniatures(apps, schema_editor):
                     resource.file,
                     filename=resource.file.name
                 )
-                
+
                 original_name = Path(resource.file.name).stem
                 miniature_name = f"{original_name}_thumb.jpg"
-                
+
                 resource.miniature.save(miniature_name, miniature_content, save=True)
                 document_count += 1
-                
+
         except Exception as e:
             logger.error(f"Failed to generate miniature for resource {resource.id}: {e}")
             error_count += 1
-    
+
     logger.info(
         f"Migration complete: {photo_count} photos, {video_count} videos, "
         f"{document_count} documents processed. {error_count} errors."
@@ -74,7 +74,7 @@ def populate_miniatures(apps, schema_editor):
 def reverse_miniatures(apps, schema_editor):
     """Remove all miniatures (reverse migration)."""
     StationResource = apps.get_model('surveys', 'StationResource')
-    
+
     count = 0
     for resource in StationResource.objects.filter(miniature__isnull=False):
         try:
@@ -84,7 +84,7 @@ def reverse_miniatures(apps, schema_editor):
             count += 1
         except Exception as e:
             logger.error(f"Failed to remove miniature for resource {resource.id}: {e}")
-    
+
     logger.info(f"Removed {count} miniatures")
 
 

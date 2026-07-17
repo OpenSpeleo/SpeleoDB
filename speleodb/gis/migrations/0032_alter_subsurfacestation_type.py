@@ -25,8 +25,8 @@ class Migration(migrations.Migration):
             model_name='subsurfacestation',
             name='type',
             field=models.CharField(
-                choices=[('artifact', 'Artifact'), ('biology', 'Biology'), ('bone', 'Bone'), ('geology', 'Geology'), ('science', 'Science'), ('sensor', 'Sensor')], 
-                help_text='Type of SubSurfaceStation', 
+                choices=[('artifact', 'Artifact'), ('biology', 'Biology'), ('bone', 'Bone'), ('geology', 'Geology'), ('science', 'Science'), ('sensor', 'Sensor')],
+                help_text='Type of SubSurfaceStation',
                 max_length=10
             ),
         ),
@@ -40,8 +40,8 @@ class Migration(migrations.Migration):
             model_name='subsurfacestation',
             name='type',
             field=models.CharField(
-                choices=[('artifact', 'Artifact'), ('biology', 'Biology'), ('bone', 'Bone'), ('geology', 'Geology'), ('sensor', 'Sensor')], 
-                help_text='Type of SubSurfaceStation', 
+                choices=[('artifact', 'Artifact'), ('biology', 'Biology'), ('bone', 'Bone'), ('geology', 'Geology'), ('sensor', 'Sensor')],
+                help_text='Type of SubSurfaceStation',
                 max_length=10
             ),
         ),

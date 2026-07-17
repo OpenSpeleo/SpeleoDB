@@ -1,7 +1,7 @@
 Unknown Cave
 SURVEY NAME: OldMainLine
 SURVEY DATE: 9 30 2010  COMMENT:
-SURVEY TEAM: 
+SURVEY TEAM:
 John Doe
 DECLINATION:   -5.07  FORMAT: DDDWLRUDLAaDdNF  CORRECTIONS:  0.00 0.00 0.00  CORRECTIONS2:  0.00 0.00
 
@@ -46,5 +46,5 @@ DECLINATION:   -5.07  FORMAT: DDDWLRUDLAaDdNF  CORRECTIONS:  0.00 0.00 0.00  COR
           OldMain11I           OldMain11J     5.00    92.00     0.00     1.00     2.00     0.00     3.00
           OldMain11J           OldMain11K    10.00   202.00    17.46     2.00     2.00     0.00    -9.90
           OldMain11K           OldMain11L     5.00   202.00     0.00     5.00     3.00     3.00     5.00  FAKE
-
+
 

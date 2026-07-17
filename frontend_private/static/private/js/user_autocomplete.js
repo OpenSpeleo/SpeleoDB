@@ -96,4 +96,3 @@ export function attachUserAutocomplete($input, $suggestions, autocompleteUrl) {
         }
     });
 }
-

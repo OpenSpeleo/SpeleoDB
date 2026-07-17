@@ -8,11 +8,11 @@ def shift_permission_levels_up(apps, schema_editor):
     """Shift all existing permission levels up by 1 to make room for WEB_VIEWER at 0."""
     UserPermission = apps.get_model('surveys', 'UserPermission')
     TeamPermission = apps.get_model('surveys', 'TeamPermission')
-    
+
     # Shift UserPermission levels (do in reverse order to avoid conflicts)
     for level in [2, 1, 0]:  # ADMIN, READ_AND_WRITE, READ_ONLY
         UserPermission.objects.filter(level=level).update(level=level + 1)
-    
+
     # Shift TeamPermission levels (do in reverse order to avoid conflicts)
     for level in [1, 0]:  # READ_AND_WRITE, READ_ONLY (no ADMIN for teams)
         TeamPermission.objects.filter(level=level).update(level=level + 1)
@@ -22,11 +22,11 @@ def shift_permission_levels_down(apps, schema_editor):
     """Reverse migration: shift all permission levels down by 1."""
     UserPermission = apps.get_model('surveys', 'UserPermission')
     TeamPermission = apps.get_model('surveys', 'TeamPermission')
-    
+
     # Shift UserPermission levels (do in forward order to avoid conflicts)
     for level in [1, 2, 3]:  # READ_ONLY, READ_AND_WRITE, ADMIN
         UserPermission.objects.filter(level=level).update(level=level - 1)
-    
+
     # Shift TeamPermission levels (do in forward order to avoid conflicts)
     for level in [1, 2]:  # READ_ONLY, READ_AND_WRITE
         TeamPermission.objects.filter(level=level).update(level=level - 1)

@@ -3,11 +3,11 @@
         .tags-table {
             display: none;
         }
-        
+
         .tags-cards {
             display: block;
         }
-        
+
         .tag-card {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
             border: 1px solid rgba(100, 116, 139, 0.3);
@@ -16,12 +16,12 @@
             margin-bottom: 16px;
             transition: all 0.3s ease;
         }
-        
+
         .tag-card:hover {
             border-color: rgba(99, 102, 241, 0.5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        
+
         .tag-card-header {
             display: flex;
             justify-content: space-between;
@@ -30,37 +30,37 @@
             padding-bottom: 12px;
             border-bottom: 1px solid rgba(100, 116, 139, 0.3);
         }
-        
+
         .tag-card-title {
             flex: 1;
             margin-right: 12px;
         }
-        
+
         .tag-card-actions {
             display: flex;
             gap: 8px;
             flex-shrink: 0;
         }
-        
+
         .tag-card-body {
             display: grid;
             gap: 10px;
         }
-        
+
         .tag-card-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
         }
-        
+
         .tag-card-label {
             font-size: 13px;
             color: #94a3b8;
             font-weight: 500;
             flex-shrink: 0;
         }
-        
+
         .tag-card-value {
             font-size: 15px;
             color: #cbd5e1;
@@ -68,12 +68,12 @@
             text-align: right;
         }
     }
-    
+
     @media (min-width: 769px) {
         .tags-table {
             display: block;
         }
-        
+
         .tags-cards {
             display: none;
         }

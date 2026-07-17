@@ -1,6 +1,6 @@
 /**
  * Cylinder Installation Management Module
- * 
+ *
  * Handles cylinder installs at geographic locations including:
  * - Listing available fleets and cylinders
  * - Installing cylinders at locations
@@ -42,7 +42,7 @@ function formatGasMix(o2Percentage, hePercentage) {
 function openCylinderModal(title = 'Safety Cylinder') {
     const modal = document.getElementById('cylinder-modal');
     const titleEl = document.getElementById('cylinder-modal-title');
-    
+
     if (modal) {
         modal.classList.remove('hidden');
     }
@@ -85,65 +85,65 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-400 center-x mb-3"></div>
                 <p class="text-slate-400">Loading available cylinders...</p>
             </div>
-            
+
             <div id="cylinder-install-form" class="hidden flow-y-4">
                 <!-- Hidden coordinates and project -->
                 <input type="hidden" id="install-latitude" value="${Number(coordinates[1]).toFixed(7)}">
                 <input type="hidden" id="install-longitude" value="${Number(coordinates[0]).toFixed(7)}">
                 <input type="hidden" id="install-project-id" value="${projectId || ''}">
-                
+
                 <!-- Fleet Selection -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Cylinder Fleet <span class="text-rose-500">*</span>
                     </label>
-                    <select id="cylinder-fleet-select" 
+                    <select id="cylinder-fleet-select"
                         class="form-select w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                         <option value="">Select a fleet...</option>
                     </select>
                 </div>
-                
+
                 <!-- Cylinder Selection -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Cylinder <span class="text-rose-500">*</span>
                     </label>
-                    <select id="cylinder-select" 
+                    <select id="cylinder-select"
                         class="form-select w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                         disabled>
                         <option value="">Select a fleet first...</option>
                     </select>
                     <p id="cylinder-info" class="text-xs text-slate-500 mt-1"></p>
                 </div>
-                
+
                 <!-- Location Name -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Location Name <span class="text-rose-500">*</span>
                     </label>
-                    <input type="text" id="install-location-name" 
+                    <input type="text" id="install-location-name"
                         value="${Utils.escapeHtml(locationName)}"
                         class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                         placeholder="e.g., Wakulla Spring Cave - Station A1">
                 </div>
-                
+
                 <!-- Install Date -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Install Date <span class="text-rose-500">*</span>
                     </label>
-                    <input type="date" id="install-date" 
+                    <input type="date" id="install-date"
                         value="${new Date().toISOString().split('T')[0]}"
                         class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                 </div>
-                
+
                 <!-- Distance from Entry (optional) -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">
                             Distance from Entry
                         </label>
-                        <input type="number" id="install-distance" 
+                        <input type="number" id="install-distance"
                             min="0" step="1"
                             class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                             placeholder="Optional">
@@ -152,14 +152,14 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                         <label class="block text-sm font-medium text-slate-300 mb-2">
                             Unit
                         </label>
-                        <select id="install-unit-system" 
+                        <select id="install-unit-system"
                             class="form-select w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                             <option value="metric">Meters</option>
                             <option value="imperial">Feet</option>
                         </select>
                     </div>
                 </div>
-                
+
                 <!-- Notes (optional) -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
@@ -169,7 +169,7 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                         class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                         placeholder="Optional notes..."></textarea>
                 </div>
-                
+
                 <!-- Action Buttons -->
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
                     <button type="button" ${Utils.mapActionAttributes('cylinder.closeModal')}
@@ -183,16 +183,16 @@ async function showInstallModal(coordinates, locationName = '', projectId = null
                     </button>
                 </div>
             </div>
-            
+
             <div id="cylinder-no-fleets" class="hidden text-center py-8">
                 <svg class="w-16 h-16 center-x text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
                     </path>
                 </svg>
                 <p class="text-slate-400 text-lg mb-2">No Cylinder Fleets Available</p>
                 <p class="text-slate-500 text-sm">You need access to at least one cylinder fleet to install cylinders.</p>
-                <a href="/private/cylinder-fleets/" 
+                <a href="/private/cylinder-fleets/"
                     class="inline-block mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
                     Manage Cylinder Fleets
                 </a>
@@ -246,7 +246,7 @@ async function loadFleets() {
             if (fleetSelectHandler) {
                 fleetSelect.removeEventListener('change', fleetSelectHandler);
             }
-            
+
             // Add change handler
             fleetSelectHandler = (e) => {
                 loadFleetCylinders(e.target.value);
@@ -269,7 +269,7 @@ async function loadFleets() {
 async function loadFleetCylinders(fleetId) {
     const cylinderSelect = document.getElementById('cylinder-select');
     const cylinderInfo = document.getElementById('cylinder-info');
-    
+
     if (!fleetId) {
         if (cylinderSelect) {
             cylinderSelect.innerHTML = '<option value="">Select a fleet first...</option>';
@@ -293,9 +293,9 @@ async function loadFleetCylinders(fleetId) {
         }
 
         const cylinders = fleetCylindersCache[fleetId];
-        
+
         // Filter to only show available (not installed) cylinders
-        const availableCylinders = cylinders.filter(c => 
+        const availableCylinders = cylinders.filter(c =>
             !c.active_installs || c.active_installs.length === 0
         );
 
@@ -308,7 +308,7 @@ async function loadFleetCylinders(fleetId) {
                     availableCylinders.map(cyl => {
                         const gasInfo = formatGasMix(cyl.o2_percentage, cyl.he_percentage);
                         const pressureUnit = cyl.unit_system === 'imperial' ? 'PSI' : 'BAR';
-                        return `<option value="${cyl.id}" 
+                        return `<option value="${cyl.id}"
                             data-o2="${cyl.o2_percentage}"
                             data-he="${cyl.he_percentage}"
                             data-pressure="${cyl.pressure}"
@@ -358,12 +358,12 @@ async function loadFleetCylinders(fleetId) {
 async function handleInstall() {
     const hiddenProjectId = document.getElementById('install-project-id')?.value;
     let projectId = hiddenProjectId || pendingInstallProjectId;
-    
+
     // Guard against invalid project IDs (string "null" or "undefined")
     if (!projectId || projectId === 'null' || projectId === 'undefined') {
         projectId = null;
     }
-    
+
     const cylinderId = document.getElementById('cylinder-select')?.value;
     const locationName = document.getElementById('install-location-name')?.value?.trim();
     const latitude = document.getElementById('install-latitude')?.value;
@@ -668,7 +668,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                 ${checks.length === 0 ? `
                     <div class="text-center py-8 bg-srgb-slate-700-30 rounded-lg">
                         <svg class="w-12 h-12 center-x text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
                             </path>
                         </svg>
@@ -690,7 +690,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                 ${checks.map(check => {
                                     const unit = check.unit_system === 'imperial' ? 'PSI' : 'BAR';
                                     // Use check_date if available, fallback to creation_date
-                                    const checkDate = check.check_date 
+                                    const checkDate = check.check_date
                                         ? new Date(check.check_date).toLocaleDateString()
                                         : new Date(check.creation_date).toLocaleDateString();
                                     // Escape user-controlled fields to prevent XSS
@@ -706,7 +706,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                                 <button ${Utils.mapActionAttributes('cylinder.editPressureCheck', installId, check.id)}
                                                     class="text-sky-400 hover:text-sky-300 mr-2" title="Edit">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
                                                         </path>
                                                     </svg>
@@ -714,7 +714,7 @@ async function renderPressureChecksTab(installId, contentEl) {
                                                 <button ${Utils.mapActionAttributes('cylinder.deletePressureCheck', installId, check.id)}
                                                     class="text-rose-400 hover:text-rose-300" title="Delete">
                                                     <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                                                         </path>
                                                     </svg>
@@ -752,7 +752,7 @@ function showAddPressureCheck(installId) {
     contentEl.innerHTML = `
         <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">
             <h4 class="text-lg font-medium text-white">Record Pressure Check</h4>
-            
+
             <div class="grid grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
@@ -773,21 +773,21 @@ function showAddPressureCheck(installId) {
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Unit <span class="text-rose-500">*</span>
                     </label>
-                    <select id="new-check-unit" 
+                    <select id="new-check-unit"
                         class="form-select w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                         <option value="imperial">PSI</option>
                         <option value="metric">BAR</option>
                     </select>
                 </div>
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                 <textarea id="new-check-notes" rows="1"
                     class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                     placeholder="Optional notes..."></textarea>
             </div>
-            
+
             <div class="flex justify-end gap-3">
                 <button type="button" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', installId)}
                     class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
@@ -868,7 +868,7 @@ async function editPressureCheck(installId, checkId) {
         contentEl.innerHTML = `
             <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">
                 <h4 class="text-lg font-medium text-white">Edit Pressure Check</h4>
-                
+
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">
@@ -890,21 +890,21 @@ async function editPressureCheck(installId, checkId) {
                         <label class="block text-sm font-medium text-slate-300 mb-2">
                             Unit <span class="text-rose-500">*</span>
                         </label>
-                        <select id="edit-check-unit" 
+                        <select id="edit-check-unit"
                             class="form-select w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                             <option value="imperial" ${check.unit_system === 'imperial' ? 'selected' : ''}>PSI</option>
                             <option value="metric" ${check.unit_system === 'metric' ? 'selected' : ''}>BAR</option>
                         </select>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                     <textarea id="edit-check-notes" rows="1"
                         class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
                         placeholder="Optional notes...">${Utils.escapeHtml(check.notes || '')}</textarea>
                 </div>
-                
+
                 <div class="flex justify-end gap-3">
                     <button type="button" ${Utils.mapActionAttributes('cylinder.switchTab', 'pressure', installId)}
                         class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors">
@@ -1004,7 +1004,7 @@ async function deletePressureCheck(installId, checkId) {
  */
 function showStatusConfirmModal(installId, status, config) {
     const modalId = 'cylinder-status-confirm-modal';
-    
+
     const content = `
         <div class="text-center">
             <div class="w-16 h-16 rounded-full ${config.iconBg} flex items-center justify-center center-x mb-4">
@@ -1034,14 +1034,14 @@ function showStatusConfirmModal(installId, status, config) {
     `;
 
     const html = Modal.base(modalId, 'Confirm Status Change', content, footer, 'max-w-md');
-    
+
     Modal.open(modalId, html, () => {
         const confirmBtn = document.getElementById('confirm-status-change-btn');
         if (confirmBtn) {
             confirmBtn.onclick = async () => {
                 const btnText = document.getElementById('status-btn-text');
                 const btnLoading = document.getElementById('status-btn-loading');
-                
+
                 // Show loading state
                 if (btnText) btnText.classList.add('hidden');
                 if (btnLoading) btnLoading.classList.remove('hidden');
@@ -1060,7 +1060,7 @@ function showStatusConfirmModal(installId, status, config) {
                 } catch (error) {
                     console.error('Failed to update cylinder:', error);
                     Utils.showNotification('error', error.message || 'Failed to update cylinder');
-                    
+
                     // Reset button state
                     if (btnText) btnText.classList.remove('hidden');
                     if (btnLoading) btnLoading.classList.add('hidden');
@@ -1162,7 +1162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) {
         closeBtn.addEventListener('click', closeCylinderModal);
     }
-    
+
     // Also close on backdrop click
     const modal = document.getElementById('cylinder-modal');
     if (modal) {

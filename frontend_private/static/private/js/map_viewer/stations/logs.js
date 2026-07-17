@@ -15,7 +15,7 @@ export const StationLogs = {
         // Check both subsurface and surface stations
         const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
         const isSurfaceStation = station?.network || station?.station_type === 'surface';
-        
+
         console.log('📝 StationLogs.render:', {
             stationId,
             station: station ? { id: station.id, network: station.network, project: station.project, station_type: station.station_type } : null,
@@ -23,14 +23,14 @@ export const StationLogs = {
             inAllStations: State.allStations.has(stationId),
             inAllSurfaceStations: State.allSurfaceStations.has(stationId)
         });
-        
+
         currentProjectId = station?.project;
         currentNetworkId = station?.network;
-        
+
         const stationAccess = Config.getStationAccess(station);
         const hasWriteAccess = stationAccess.write;
         const hasAdminAccess = stationAccess.delete;
-        
+
         console.log('📝 StationLogs permissions:', { hasWriteAccess, hasAdminAccess, currentNetworkId, currentProjectId });
 
         // Show loading overlay
@@ -258,7 +258,7 @@ export const StationLogs = {
         `;
 
         document.body.insertAdjacentHTML('beforeend', html);
-        
+
         const modal = document.getElementById('log-entry-modal');
         const form = document.getElementById('log-entry-form');
         const fileContainer = document.getElementById('log-file-container');
@@ -301,7 +301,7 @@ export const StationLogs = {
             const formData = new FormData();
             formData.append('title', document.getElementById('log-title').value.trim());
             formData.append('notes', document.getElementById('log-notes').value.trim());
-            
+
             const hasFile = fileInput.files.length > 0;
             if (hasFile) {
                 formData.append('attachment', fileInput.files[0]);
@@ -312,7 +312,7 @@ export const StationLogs = {
                 if (hasFile) {
                     const uploadController = new UploadProgressController('log-upload');
                     buttonsContainer.classList.add('hidden');
-                    
+
                     await uploadController.upload(
                         Urls['api:v2:station-logs'](stationId),
                         formData,
@@ -321,10 +321,10 @@ export const StationLogs = {
                 } else {
                     await API.createStationLog(stationId, formData);
                 }
-                
+
                 Utils.showNotification('success', 'Journal entry created successfully');
                 modal.remove();
-                
+
                 // Refresh the logs tab
                 this.render(stationId, document.getElementById('station-modal-content'));
             } catch (error) {
@@ -378,7 +378,7 @@ export const StationLogs = {
         `;
 
         document.body.insertAdjacentHTML('beforeend', html);
-        
+
         const modal = document.getElementById('log-edit-modal');
         const form = document.getElementById('log-edit-form');
 
@@ -401,7 +401,7 @@ export const StationLogs = {
                 await API.updateStationLog(logId, formData);
                 Utils.showNotification('success', 'Journal entry updated');
                 modal.remove();
-                
+
                 // Refresh the logs tab
                 this.render(currentStationId, document.getElementById('station-modal-content'));
             } catch (error) {
@@ -441,7 +441,7 @@ export const StationLogs = {
         `;
 
         document.body.insertAdjacentHTML('beforeend', html);
-        
+
         const modal = document.getElementById('log-delete-modal');
 
         document.getElementById('cancel-delete-btn').onclick = () => modal.remove();
@@ -452,7 +452,7 @@ export const StationLogs = {
                 await API.deleteStationLog(logId);
                 Utils.showNotification('success', 'Journal entry deleted');
                 modal.remove();
-                
+
                 // Refresh the logs tab
                 this.render(currentStationId, document.getElementById('station-modal-content'));
             } catch (error) {

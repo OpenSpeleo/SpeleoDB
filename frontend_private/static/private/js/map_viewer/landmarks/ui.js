@@ -487,10 +487,10 @@ export const LandmarkUI = {
                         longitude: lon
                     });
                     Utils.showNotification('success', 'Landmark created!');
-                    
+
                     // Close the modal first so user can see the map
                     Modal.close('create-landmark-manual-modal');
-                    
+
                     // Fly to the newly created landmark
                     goToLandmark(landmark.id, lat, lon);
                 } catch (err) {
@@ -544,7 +544,7 @@ export const LandmarkUI = {
             document.getElementById('edit-landmark-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const errorEl = document.getElementById('edit-landmark-error');
-                
+
                 const name = document.getElementById('edit-landmark-name').value.trim();
                 const description = document.getElementById('edit-landmark-description').value.trim();
                 const latStr = document.getElementById('edit-landmark-latitude').value;
@@ -584,11 +584,11 @@ export const LandmarkUI = {
                         longitude: lon
                     });
                     Utils.showNotification('success', 'Landmark updated');
-                    
+
                     // Close modals first so user can see the map
                     Modal.close('edit-landmark-modal');
                     Modal.close('landmark-details-modal');
-                    
+
                     // Fly to the landmark's (potentially new) location
                     goToLandmark(landmarkId, lat, lon);
                 } catch (err) {

@@ -3,11 +3,11 @@
         .mutex-table {
             display: none;
         }
-        
+
         .mutex-timeline {
             display: block;
         }
-        
+
         .timeline-item {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
             border-left: 4px solid #475569;
@@ -17,52 +17,52 @@
             transition: all 0.3s ease;
             position: relative;
         }
-        
+
         .timeline-item.active {
             border-left-color: #f59e0b;
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
         }
-        
+
         .timeline-item:hover {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        
+
         .timeline-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
         }
-        
+
         .timeline-user {
             font-size: 16px;
             font-weight: 600;
             color: #e2e8f0;
             margin-bottom: 4px;
         }
-        
+
         .timeline-action {
             flex-shrink: 0;
         }
-        
+
         .timeline-dates {
             display: grid;
             gap: 8px;
             font-size: 13px;
             color: #94a3b8;
         }
-        
+
         .timeline-date-row {
             display: flex;
             gap: 8px;
         }
-        
+
         .timeline-date-label {
             font-weight: 500;
             color: #cbd5e1;
             min-width: 80px;
         }
-        
+
         .timeline-footer {
             margin-top: 12px;
             padding-top: 12px;
@@ -70,12 +70,12 @@
             font-size: 13px;
             color: #94a3b8;
         }
-        
+
         .timeline-footer-label {
             font-weight: 500;
             color: #cbd5e1;
         }
-        
+
         .active-badge {
             display: inline-block;
             background: #f59e0b;
@@ -88,12 +88,12 @@
             letter-spacing: 0.5px;
         }
     }
-    
+
     @media (min-width: 769px) {
         .mutex-table {
             display: block;
         }
-        
+
         .mutex-timeline {
             display: none;
         }

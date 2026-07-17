@@ -17,21 +17,21 @@ export function init(context) {
         // Tab switching with form reset
         $('.tab-button').on('click', function() {
             const targetTab = $(this).data('tab');
-            
+
             // Don't reset if clicking same tab
             if (targetTab === currentTab) return;
-            
+
             // Switch active tab button
             $('.tab-button').removeClass('active');
             $(this).addClass('active');
-            
+
             // Switch active tab content
             $('.tab-content').removeClass('active');
             $(`#tab-${targetTab}`).addClass('active');
-            
+
             // Reset form fields (except file)
             resetFormFields();
-            
+
             currentTab = targetTab;
             $statusEl.text('Tab changed - form reset').css({ 'color': '#94a3b8', 'font-weight': 'normal' });
         });
@@ -43,18 +43,18 @@ export function init(context) {
             $('#lengthScaling').val('100').removeClass('invalid');
             $('#compassOffset').val('0').prop('disabled', false).removeClass('invalid');
             $('#depthOffset').val('0').removeClass('invalid');
-            
+
             // Reset toggles
             $('#fixDmpSwitch').prop('checked', false);
             $('#fixDmpNoLabel').addClass('active');
             $('#fixDmpYesLabel').removeClass('active');
-            
+
             $('#depthUnitSwitch').prop('checked', true);
             depthOffsetUnit = 'feet';
             $('#metersLabel').removeClass('active');
             $('#feetLabel').addClass('active');
             $('#depthUnitSuffix').text('ft');
-            
+
             $('#reverseDirectionSwitch').prop('checked', false);
             $('#reverseOffLabel').addClass('active');
             $('#reverseOnLabel').removeClass('active');
@@ -90,7 +90,7 @@ export function init(context) {
         // Reverse azimuth toggle - sets compass offset to 180 and disables field
         $('#reverseDirectionSwitch').on('change', function() {
             const $compassOffset = $('#compassOffset');
-            
+
             if (this.checked) {
                 // Store current value if not already 180
                 if ($compassOffset.val() !== '180') {
@@ -178,7 +178,7 @@ export function init(context) {
                 $('#lengthScaling').addClass('invalid');
                 return;
             }
-            
+
             // Convert percentage to float (100% = 1.0)
             const lengthScaling = lengthScalingPercent / 100;
 
@@ -207,13 +207,13 @@ export function init(context) {
             // Create FormData and append the file and adjustment parameters
             const formData = new FormData();
             formData.append('file', selectedFile);
-            
+
             // Add all parameters as JSON
             const fixDmp = $('#fixDmpSwitch').is(':checked');
             // Check both date fields (only one will have a value due to tab resets)
             const surveyDate = $('#surveyDateUncorrupt').val() || $('#surveyDate').val() || null;
             const reverseDirection = $('#reverseDirectionSwitch').is(':checked');
-            
+
             formData.append('data', JSON.stringify({
                 fix_dmp: fixDmp,
                 survey_date: surveyDate,
@@ -246,7 +246,7 @@ export function init(context) {
                     a.click();
                     window.URL.revokeObjectURL(a.href);
                     a.remove();
-                    
+
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
                     $statusEl.text('Download successful!')
@@ -255,7 +255,7 @@ export function init(context) {
                 error: function(xhr, status, error) {
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
-                    
+
                     let errorMessage = error;
                     if (xhr.responseJSON && xhr.responseJSON.error) {
                         errorMessage = xhr.responseJSON.error;
@@ -269,7 +269,7 @@ export function init(context) {
                             errorMessage = xhr.responseText.substring(0, 200);
                         }
                     }
-                    
+
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
                     $statusEl.text('Error occurred. See details.')

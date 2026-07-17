@@ -98,11 +98,11 @@ export const Utils = {
         const now = new Date();
         const diffTime = date - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         let colorClass = 'text-emerald-400';
         if (diffDays < 0) colorClass = 'text-red-400';
         else if (diffDays < 7) colorClass = 'text-amber-400';
-        
+
         return `<span class="${colorClass}">${date.toLocaleDateString()} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
     },
 

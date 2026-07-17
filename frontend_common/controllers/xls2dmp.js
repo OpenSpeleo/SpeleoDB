@@ -12,10 +12,10 @@ export function init(context) {
                 }
             });
         });
-        
+
         const today = new Date().toISOString().split('T')[0];
         $('#surveyDate').attr('max', today);
-        
+
         let currentUnit = 'feet';
         $('#unitSwitch').on('change', function() {
             if (this.checked) {
@@ -189,7 +189,7 @@ export function init(context) {
             $.ajax({
                 url: context.endpoint,
                 method: "POST",
-                data: JSON.stringify({ 
+                data: JSON.stringify({
                     shots: rows,
                     survey_date: surveyDate,
                     unit: currentUnit,
@@ -211,7 +211,7 @@ export function init(context) {
                     a.click();
                     window.URL.revokeObjectURL(a.href);
                     a.remove();
-                    
+
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
                     $('#status').text('Download successful!')
@@ -220,7 +220,7 @@ export function init(context) {
                 error: function(xhr, status, error) {
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
-                    
+
                     let errorMessage = error;
                     if (xhr.responseJSON && xhr.responseJSON.error) {
                         errorMessage = xhr.responseJSON.error;
@@ -234,7 +234,7 @@ export function init(context) {
                             errorMessage = xhr.responseText.substring(0, 200);
                         }
                     }
-                    
+
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
                     $('#status').text('Error occurred. See details.')

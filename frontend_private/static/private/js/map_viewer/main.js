@@ -786,7 +786,7 @@ export async function initPrivateMapViewer() {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
                                  style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
                                 📍
                             </div>
@@ -795,7 +795,7 @@ export async function initPrivateMapViewer() {
                         <p class="text-slate-300 text-center mb-6">
                             Move "${Utils.escapeHtml(landmarkName)}" to this location?
                         </p>
-                        
+
                         <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Landmark Name:</span>
@@ -806,7 +806,7 @@ export async function initPrivateMapViewer() {
                                 <span class="text-white font-mono">${Number(newCoords[1]).toFixed(7)}, ${Number(newCoords[0]).toFixed(7)}</span>
                             </div>
                         </div>
-                        
+
                         <div class="flex gap-3">
                             <button id="landmark-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
                                 Cancel
@@ -875,7 +875,7 @@ export async function initPrivateMapViewer() {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
                                  style="background: linear-gradient(135deg, ${snapResult.snapped ? '#10b981, #059669' : '#f59e0b, #d97706'});">
                                 ${snapResult.snapped ? '🧲' : '📍'}
                             </div>
@@ -884,7 +884,7 @@ export async function initPrivateMapViewer() {
                         <p class="text-slate-300 text-center mb-6">
                             Move "${Utils.escapeHtml(stationName)}" to this location and ${actionText}?
                         </p>
-                        
+
                         <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Station Name:</span>
@@ -914,7 +914,7 @@ export async function initPrivateMapViewer() {
                                 </div>
                             `}
                         </div>
-                        
+
                         <div class="flex gap-3">
                             <button id="drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
                                 Cancel
@@ -991,7 +991,7 @@ export async function initPrivateMapViewer() {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
                     <div class="p-6">
                         <div class="flex items-center justify-center mb-4">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
                                  style="background: linear-gradient(135deg, ${snapResult.snapped ? '#10b981, #059669' : '#f59e0b, #d97706'});">
                                 ${snapResult.snapped ? '🧲' : '📍'}
                             </div>
@@ -1000,7 +1000,7 @@ export async function initPrivateMapViewer() {
                         <p class="text-slate-300 text-center mb-6">
                             Move this ${typeLabel.toLowerCase()} to the new location?
                         </p>
-                        
+
                         <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-slate-400">Type:</span>
@@ -1022,7 +1022,7 @@ export async function initPrivateMapViewer() {
                                 </div>
                             `}
                         </div>
-                        
+
                         <div class="flex gap-3">
                             <button id="marker-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
                                 Cancel

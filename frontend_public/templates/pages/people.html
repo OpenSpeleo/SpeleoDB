@@ -73,13 +73,13 @@
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ board_members|length|get_grid_class }} gap-6 lg:gap-8 max-w-5xl center-x">
-                    
+
                     {% for person in board_members %}
                     <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
-                                 src="{{ person.get_photo_url }}" 
+                                 src="{{ person.get_photo_url }}"
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
@@ -140,13 +140,13 @@
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ technical_members|length|get_grid_class }} gap-6 lg:gap-8">
-                    
+
                     {% for person in technical_members %}
                     <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
-                                 src="{{ person.get_photo_url }}" 
+                                 src="{{ person.get_photo_url }}"
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
@@ -207,13 +207,13 @@
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ explorer_members|length|get_grid_class }} gap-6 lg:gap-8">
-                    
+
                     {% for person in explorer_members %}
                     <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
-                                 src="{{ person.get_photo_url }}" 
+                                 src="{{ person.get_photo_url }}"
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">
@@ -274,13 +274,13 @@
 
                 <!-- Team members grid with dynamic layout -->
                 <div class="grid {{ scientific_members|length|get_grid_class }} gap-6 lg:gap-8">
-                    
+
                     {% for person in scientific_members %}
                     <div class="relative bg-srgb-slate-800-50 backdrop-blur-xs rounded-2xl p-6 border border-srgb-slate-700-50 hover:border-srgb-purple-500-50 transition-all duration-300 group {% if forloop.counter|should_apply_offset:board_members %}{{ board_members|last_row_offset_class }}{% endif %}">
                         <div class="flex flex-col text-slate-300 items-center text-center">
                             {% if person.photo %}
                             <img class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300"
-                                 src="{{ person.get_photo_url }}" 
+                                 src="{{ person.get_photo_url }}"
                                  alt="{{ person.full_name }}" />
                             {% else %}
                             <div class="w-24 h-24 rounded-full mb-4 ring-srgb-slate-700-4 group-hover:ring-srgb-purple-500-50-4 transition-all duration-300 bg-slate-700 flex items-center justify-center">

@@ -3,53 +3,53 @@
 
 {% if not request.user.is_authenticated %}
 <!-- Welcome Modal for Non-Authenticated Users -->
-<div x-data="{ showModal: true }" 
-     x-show="showModal" 
+<div x-data="{ showModal: true }"
+     x-show="showModal"
      x-cloak
      class="fixed inset-0 z-10 flex items-center justify-center p-4 welcome-modal-backdrop"
      style="display: none;"
      @keydown.escape.window="showModal = false">
-    
+
     <!-- Modal Container -->
     <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto welcome-modal">
-        
+
         <!-- Background glow effects -->
         <div class="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none" aria-hidden="true">
             <div class="absolute w-96 h-96 bg-purple-500 rounded-full blur-[120px] opacity-30 pulse-glow"></div>
         </div>
-        
+
         <!-- Modal Content -->
         <div class="relative bg-slate-900 rounded-3xl border border-slate-200 modal-gradient-border shadow-2xl">
-            
+
             <!-- Close Button -->
-            <button @click="showModal = false" 
+            <button @click="showModal = false"
                     class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-srgb-slate-800-50"
                     aria-label="Close modal">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
-            
+
             <div class="p-6">
-                
+
                 <!-- Logo and Header -->
                 <div class="text-center mb-8">
                     <div class="inline-flex items-center justify-center mb-6">
                         <img src="{% static 'media/logo_webview.png' %}" alt="SpeleoDB" class="h-16 sm:h-20">
                     </div>
-                    
+
                     <h2 class="text-xl lg:text-3xl md:text-3xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 mb-4">
                         Explore as One, Survey as Many
                     </h2>
-                    
+
                     <p class="text-base sm:text-lg text-slate-300 max-w-2xl center-x leading-relaxed sm:leading-[1.5]">
                         A collaborative platform for cave survey data management, built by cave divers for the entire speleological community.
                     </p>
                 </div>
-                
+
                 <!-- Features Grid -->
                 <div class="grid sm:grid-cols-2 gap-4 mb-8">
-                    
+
                     <!-- Feature 1 -->
                     <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
                         <div class="flex items-start flow-x-3">
@@ -64,7 +64,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Feature 2 -->
                     <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
                         <div class="flex items-start flow-x-3">
@@ -76,15 +76,15 @@
                             <div>
                                 <h3 class="text-sm sm:text-base font-semibold text-slate-100 mb-1">Team Collaboration</h3>
                                 <p class="text-xs sm:text-sm text-slate-400">
-                                    Work together seamlessly with direct integration inside <a href="https://www.arianesline.com/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Ariane's line</a>, 
-                                    <a href="https://fountainware.com/compass/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Compass</a> and any GIS software 
-                                    (e.g. <a href="https://www.esri.com/en-us/arcgis/geospatial-platform/overview" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">ESRI / ArcGIS</a>, 
-                                    <a href="https://qgis.org/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">QGIS</a>, etc.). 
+                                    Work together seamlessly with direct integration inside <a href="https://www.arianesline.com/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Ariane's line</a>,
+                                    <a href="https://fountainware.com/compass/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">Compass</a> and any GIS software
+                                    (e.g. <a href="https://www.esri.com/en-us/arcgis/geospatial-platform/overview" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">ESRI / ArcGIS</a>,
+                                    <a href="https://qgis.org/" target="_blank" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-150">QGIS</a>, etc.).
                                 </p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Feature 3 -->
                     <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
                         <div class="flex items-start flow-x-3">
@@ -99,7 +99,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Feature 4 -->
                     <div class="feature-card bg-srgb-slate-800-50 rounded-2xl p-5 border border-srgb-slate-700-50">
                         <div class="flex items-start flow-x-3">
@@ -114,25 +114,25 @@
                             </div>
                         </div>
                     </div>
-                    
+
                 </div>
-                
+
                 <!-- Mission Statement -->
                 <div class="bg-linear-to-br/srgb from-srgb-purple-900-30 to-srgb-slate-800-30 rounded-2xl p-6 border border-srgb-purple-500-20 mb-8">
                     <p class="text-sm sm:text-base text-slate-200 text-center leading-relaxed sm:leading-[1.5]">
-                        <span class="font-semibold text-purple-300">SpeleoDB</span> is developed by the 
-                        <span class="font-semibold">Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/">USAH Institute</a>)</span>, 
-                        a US-registered 501c3 non-profit. We're building the future of cave surveying with 
-                        <span class="font-semibold text-purple-300">transparency</span>, 
-                        <span class="font-semibold text-purple-300">collaboration</span>, and 
+                        <span class="font-semibold text-purple-300">SpeleoDB</span> is developed by the
+                        <span class="font-semibold">Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/">USAH Institute</a>)</span>,
+                        a US-registered 501c3 non-profit. We're building the future of cave surveying with
+                        <span class="font-semibold text-purple-300">transparency</span>,
+                        <span class="font-semibold text-purple-300">collaboration</span>, and
                         <span class="font-semibold text-purple-300">data privacy</span> at the core.
                     </p>
                 </div>
-                
+
                 <!-- Call to Action Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
 
-                    <a href="{% url 'account_signup' %}" 
+                    <a href="{% url 'account_signup' %}"
                        target="_blank"
                        class="btn text-slate-900 gradient-srgb-to-r gradient-from-srgb-white-80 gradient-via-srgb-white gradient-to-srgb-white-80 hover:bg-white w-full sm:w-auto px-8 py-3 transition duration-150 ease-in-out group shadow-lg hover:shadow-xl"
                        style="width: 100%;">
@@ -143,24 +143,24 @@
                             </svg>
                         </span>
                     </a>
-                    
-                    <button @click="showModal = false" 
+
+                    <button @click="showModal = false"
                             class="btn bg-slate-800 hover:bg-slate-700 text-slate-200 w-full sm:w-auto px-8 py-3 border border-slate-700 transition duration-150 ease-in-out"
                             style="width: 100%;">
                         Continue Exploring
                     </button>
                 </div>
-                
+
                 <!-- Additional Info -->
                 <div class="mt-6 text-center">
                     <p class="text-xs sm:text-sm text-slate-500">
-                        Already have an account? 
+                        Already have an account?
                         <a href="{% url 'account_login' %}" class="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-150">
                             Sign in here
                         </a>
                     </p>
                 </div>
-                
+
             </div>
         </div>
     </div>

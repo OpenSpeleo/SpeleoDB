@@ -3,19 +3,19 @@
 ## Plan
 
 - [x] Rename `build_all_project_geojsons` to `build_project_geojsons` without a
-  compatibility alias.
+      compatibility alias.
 - [x] Require exactly one of `--all` or `--project <project_uuid>`.
 - [x] Preserve `--project_type` for batch mode and `--force_recompute` for both
-  modes.
+      modes.
 - [x] Add project-only `--fresh` behavior with fail-safe local-copy removal.
 - [x] Preserve batch failure isolation and make targeted repository failures
-  return a nonzero command result.
-- [x] Rename and expand command tests for CLI validation, selection, fresh clone,
-  recomputation, and failure handling.
+      return a nonzero command result.
+- [x] Rename and expand command tests for CLI validation, selection, fresh
+      clone, recomputation, and failure handling.
 - [x] Document the command contract, lifecycle, performance, and verification
-  strategy under `docs/`.
+      strategy under `docs/`.
 - [x] Run focused tests, linting, type checking, command help, the full backend
-  suite, and `git diff --check`.
+      suite, and `git diff --check`.
 
 ## Review
 
@@ -25,8 +25,8 @@ Implemented:
   without an alias.
 - Added required `--all` / `--project <uuid>` selection with validation for
   incompatible flags, missing projects, and excluded projects.
-- Preserved batch `--project_type` filtering and both-mode
-  `--force_recompute` behavior.
+- Preserved batch `--project_type` filtering and both-mode `--force_recompute`
+  behavior.
 - Added project-only `--fresh` handling that removes the working copy before
   repository access, tolerates a missing directory, and surfaces other removal
   failures.

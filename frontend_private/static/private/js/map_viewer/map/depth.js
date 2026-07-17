@@ -144,7 +144,3 @@ export function mergeDepthDomains(domains) {
     if (!hasDepth) return null;
     return { min: 0, max: Math.max(0, max) };
 }
-
-
-
-

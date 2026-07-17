@@ -76,8 +76,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='sensorinstall',
             constraint=models.UniqueConstraint(
-                condition=models.Q(('status', 'installed')), 
-                fields=('sensor',), 
+                condition=models.Q(('status', 'installed')),
+                fields=('sensor',),
                 name='gis_sensorinstall_installed_per_sensor_unique'
             ),
         ),

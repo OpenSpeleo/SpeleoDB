@@ -208,4 +208,3 @@ export const DepthLegend = {
         this.hideDepthCursor();
     }
 };
-

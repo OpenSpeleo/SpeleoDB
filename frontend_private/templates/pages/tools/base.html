@@ -25,8 +25,8 @@
                 <!-- Mobile Dropdown Menu -->
                 <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
                     <div class="relative">
-                        <button 
-                            @click="open = !open" 
+                        <button
+                            @click="open = !open"
                             :class="open ? 'open' : ''"
                             class="tools-dropdown-trigger">
                             <span>Tools</span>
@@ -34,9 +34,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
-                        <div 
-                            x-show="open" 
+
+                        <div
+                            x-show="open"
                             @click.outside="open = false"
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 -translate-y-2"
@@ -46,12 +46,12 @@
                             x-transition:leave-end="opacity-0 -translate-y-2"
                             class="tools-dropdown-menu"
                             x-cloak>
-                            
+
                             <!-- All Tools Section -->
                             <div class="tools-dropdown-section">
                                 <div class="tools-dropdown-section-title">Ariane Tools</div>
-                                <a href="{% url 'private:tool-xls2dmp' %}" 
-                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2dmp' %}active{% endif %}" 
+                                <a href="{% url 'private:tool-xls2dmp' %}"
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2dmp' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
                                         <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
@@ -60,10 +60,10 @@
                                     </svg>
                                     <span>Excel to Ariane DMP</span>
                                 </a>
-                                
+
                                 <div class="tools-dropdown-section-title" style="margin-top: 12px;">Compass Tools</div>
-                                <a href="{% url 'private:tool-xls2compass' %}" 
-                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2compass' %}active{% endif %}" 
+                                <a href="{% url 'private:tool-xls2compass' %}"
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-xls2compass' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
                                         <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
@@ -72,10 +72,10 @@
                                     </svg>
                                     <span>Excel to Compass</span>
                                 </a>
-                                
+
                                 <div class="tools-dropdown-section-title" style="margin-top: 12px;">Mnemo Tools</div>
-                                <a href="{% url 'private:tool-dmp2json' %}" 
-                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp2json' %}active{% endif %}" 
+                                <a href="{% url 'private:tool-dmp2json' %}"
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp2json' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="3.45 3.5 17.05 17.05">
                                         <path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"></path>
@@ -84,8 +84,8 @@
                                     </svg>
                                     <span>Mnemo DMP to JSON</span>
                                 </a>
-                                <a href="{% url 'private:tool-dmp-doctor' %}" 
-                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp-doctor' %}active{% endif %}" 
+                                <a href="{% url 'private:tool-dmp-doctor' %}"
+                                   class="tools-dropdown-item {% if request.url_name == 'tool-dmp-doctor' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="2.5 2.5 20 19">
                                         <path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"></path>

@@ -63,10 +63,10 @@ class Migration(migrations.Migration):
                         'verbose_name_plural': 'Points of Interest',
                         'ordering': ['name'],
                         'indexes': [
-                            models.Index(fields=['latitude', 'longitude'], name='surveys_poi_latitud_22d2b1_idx'), 
-                            models.Index(fields=['name'], name='surveys_poi_name_59f0fd_idx'), 
+                            models.Index(fields=['latitude', 'longitude'], name='surveys_poi_latitud_22d2b1_idx'),
+                            models.Index(fields=['name'], name='surveys_poi_name_59f0fd_idx'),
                             models.Index(fields=['creation_date'], name='surveys_poi_creatio_9acde1_idx'),
-                            models.Index(fields=['user'], name='surveys_poi_user_id_4185ea_idx'), 
+                            models.Index(fields=['user'], name='surveys_poi_user_id_4185ea_idx'),
                         ],
                     },
                 ),

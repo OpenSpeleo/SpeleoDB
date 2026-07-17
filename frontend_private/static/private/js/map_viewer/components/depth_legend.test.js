@@ -80,4 +80,3 @@ describe('DepthLegend', () => {
         expect(label.textContent).toBe('40.0 ft');
     });
 });
-

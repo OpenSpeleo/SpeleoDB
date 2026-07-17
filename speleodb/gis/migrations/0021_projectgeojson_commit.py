@@ -7,7 +7,7 @@ from django.db import migrations, models
 def forward_commit_propagation(apps, schema_editor):
     ProjectCommit = apps.get_model('surveys', 'ProjectCommit')
     ProjectGeoJSON = apps.get_model('gis', 'ProjectGeoJSON')
-    
+
     for project in ProjectGeoJSON.objects.all():
         project.commit = ProjectCommit.objects.get(id=project.commit_sha)
         project.save()
@@ -15,7 +15,7 @@ def forward_commit_propagation(apps, schema_editor):
 
 def backward_commit_propagation(apps, schema_editor):
     ProjectGeoJSON = apps.get_model('gis', 'ProjectGeoJSON')
-    
+
     for project in ProjectGeoJSON.objects.all():
         project.commit_sha = project.commit.id
         project.commit_message = project.commit.message
@@ -38,10 +38,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='projectgeojson',
             name='commit',
-            field=models.OneToOneField( 
-                editable=False, 
-                on_delete=django.db.models.deletion.CASCADE, 
-                related_name='geojson', 
+            field=models.OneToOneField(
+                editable=False,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='geojson',
                 to='surveys.projectcommit',
                 null=True
             ),
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         # Copy the information transformed in the old fields
         # =====================================================================
         migrations.RunPython(
-            forward_commit_propagation, 
+            forward_commit_propagation,
             migrations.RunPython.noop
         ),
 
@@ -61,9 +61,9 @@ class Migration(migrations.Migration):
             model_name='projectgeojson',
             name='commit',
             field=models.OneToOneField(
-                editable=False, 
-                on_delete=django.db.models.deletion.CASCADE, 
-                related_name='geojson', 
+                editable=False,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='geojson',
                 to='surveys.projectcommit'
             ),
         ),
@@ -125,7 +125,7 @@ class Migration(migrations.Migration):
                 null=True
             ),
         ),
-        
+
         migrations.RunPython(migrations.RunPython.noop, backward_commit_propagation),
 
         # Remove Fields
@@ -168,11 +168,11 @@ class Migration(migrations.Migration):
             model_name='projectgeojson',
             name='commit',
             field=models.OneToOneField(
-                editable=False, 
-                on_delete=django.db.models.deletion.CASCADE, 
-                primary_key=True, 
-                related_name='geojson', 
-                serialize=False, 
+                editable=False,
+                on_delete=django.db.models.deletion.CASCADE,
+                primary_key=True,
+                related_name='geojson',
+                serialize=False,
                 to='surveys.projectcommit'
             ),
         ),

@@ -22,15 +22,15 @@
     {% if debug %}
     <link rel="stylesheet" href="{% static 'css/vendors/aos.css' %}">
     {% else %}
-    <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/aos/3.0.0-beta.6/aos.css" 
-        integrity="sha512-hoGlO+71fSG6lgS60I4bKvsFVB+bAnrVFDYlwSXoyNLppDcoupwJB7KbWq/63iACKn3gcgK9jMXd+T+YDeVrGQ==" 
-        crossorigin="anonymous" 
-        referrerpolicy="no-referrer" 
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/aos/3.0.0-beta.6/aos.css"
+        integrity="sha512-hoGlO+71fSG6lgS60I4bKvsFVB+bAnrVFDYlwSXoyNLppDcoupwJB7KbWq/63iACKn3gcgK9jMXd+T+YDeVrGQ=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
     />
     {% endif %}
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@800&amp;display=fallback" rel="stylesheet">
     {% vite_styles 'style-app' 'style-public-shell' %}
     {% vite_preload 'app' 'controller-public-shell' %}
@@ -167,10 +167,10 @@
                                     <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5" href="{% url 'admin:index' %}">Admin Panel</a>
                                 </li>
                                 {% endif %}
-                                
+
                                 <!-- Divider -->
                                 <li class="border-t border-slate-700 my-4"></li>
-                                
+
                                 <!-- Authentication Links -->
                                 {% if request.user.is_authenticated %}
                                 <li>
@@ -214,22 +214,22 @@
     <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     <script src="{% static 'js/vendors/aos.js' %}"></script>
     {% else %}
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" 
-        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js" 
-        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js"
+        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
-    <script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" 
-        integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw==" 
-        crossorigin="anonymous" 
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"
+        integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw=="
+        crossorigin="anonymous"
         referrerpolicy="no-referrer">
     </script>
     {% endif %}

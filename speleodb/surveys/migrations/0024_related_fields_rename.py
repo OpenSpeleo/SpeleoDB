@@ -23,11 +23,11 @@ class Migration(migrations.Migration):
             model_name='projectmutex',
             name='closing_user',
             field=models.ForeignKey(
-                blank=True, 
-                default=None, 
-                null=True, 
-                on_delete=django.db.models.deletion.RESTRICT, 
-                related_name='closing_mutexes', 
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.RESTRICT,
+                related_name='closing_mutexes',
                 to=settings.AUTH_USER_MODEL
             ),
         ),
@@ -45,8 +45,8 @@ class Migration(migrations.Migration):
             model_name='teamprojectpermission',
             name='project',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, 
-                related_name='_team_permissions', 
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='_team_permissions',
                 to='surveys.project'
             ),
         ),
@@ -54,8 +54,8 @@ class Migration(migrations.Migration):
             model_name='teamprojectpermission',
             name='target',
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, 
-                related_name='project_permissions', 
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='project_permissions',
                 to='users.surveyteam'
             ),
         ),

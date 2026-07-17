@@ -133,7 +133,7 @@ fetch /api/v2/gis-ogc/view/{gisToken}/geojson
 The startup sequence used to be a chain of blocking `await`s: the three
 independent startup API calls (`/projects/`, `/surface-networks/`,
 `/gps-tracks/`) ran one after another, the Mapbox map was only initialized
-*after* all three resolved, and the all-projects GeoJSON metadata fetch only
+_after_ all three resolved, and the all-projects GeoJSON metadata fetch only
 started once the map `load` event fired. None of those steps actually depend on
 each other, so the critical path was dominated by latency that could overlap.
 
@@ -145,7 +145,7 @@ was pure preamble).
 
 The entrypoints (`map_viewer/main.js` and `gis_view_main.js`) now schedule
 independent work concurrently. **No application logic changed** — same
-functions, same end state, same final layer z-order. Only *when* requests are
+functions, same end state, same final layer z-order. Only _when_ requests are
 issued changed.
 
 ```mermaid
@@ -183,12 +183,14 @@ Private viewer (`main.js`):
   `configReady = Promise.all([...])` rather than three sequential `await`s.
 - **GeoJSON metadata is prefetched.** `loadGeoJSONMetadata()` starts during init
   (`metadataReady`) instead of inside the `map.on('load')` handler. Its caching
-  is unchanged, so the source-change reload path still reuses the resolved value.
+  is unchanged, so the source-change reload path still reuses the resolved
+  value.
 - **`loadMapData` awaits readiness, then overlaps.** It `await`s `configReady`
   before reading `Config.projects`, downloads marker images and the metadata
-  concurrently (`Promise.all([loadMarkerImages(), metadataReady])`), and runs the
-  previously-serial layer phases (project/station, surface stations, landmarks,
-  exploration leads, cylinder installs, GPS tracks) as one `Promise.all`.
+  concurrently (`Promise.all([loadMarkerImages(), metadataReady])`), and runs
+  the previously-serial layer phases (project/station, surface stations,
+  landmarks, exploration leads, cylinder installs, GPS tracks) as one
+  `Promise.all`.
 
 Public viewer (`gis_view_main.js`):
 
@@ -201,9 +203,9 @@ Public viewer (`gis_view_main.js`):
 ### Invariants preserved
 
 - **Single authoritative reorder.** Because the layer phases now run
-  concurrently, exactly one `Layers.reorderLayers()` runs after the `Promise.all`
-  to fix final z-order. The internal reorder calls inside individual phases
-  remain harmless.
+  concurrently, exactly one `Layers.reorderLayers()` runs after the
+  `Promise.all` to fix final z-order. The internal reorder calls inside
+  individual phases remain harmless.
 - **Markers ready before layers.** `loadMarkerImages()` still completes before
   any symbol layer is added (it is awaited before the layer `Promise.all`).
 - **Cached project metadata on reload.** `configReady` / `metadataReady` /
@@ -252,13 +254,13 @@ User Action (UI)
 
 ### Subsurface Station CRUD
 
-| Action | API Method | Endpoint | Refresh Event |
-|---|---|---|---|
-| Create | `POST` | `/api/v2/projects/{projectId}/stations/` | `speleo:refresh-stations` |
-| Read | `GET` | `/api/v2/stations/{stationId}/` | — |
-| Update | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
-| Delete | `DELETE` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
-| Move (drag) | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-stations` |
+| Action      | API Method | Endpoint                                 | Refresh Event             |
+| ----------- | ---------- | ---------------------------------------- | ------------------------- |
+| Create      | `POST`     | `/api/v2/projects/{projectId}/stations/` | `speleo:refresh-stations` |
+| Read        | `GET`      | `/api/v2/stations/{stationId}/`          | —                         |
+| Update      | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
+| Delete      | `DELETE`   | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
+| Move (drag) | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
 
 Move flow includes magnetic snap: `Geometry.findNearestSnapPointWithinRadius()`
 checks cached snap points within `MAGNETIC_SNAP_RADIUS` (default 10m). If
@@ -266,37 +268,37 @@ snapped, coordinates are adjusted to the nearest survey line vertex.
 
 ### Surface Station CRUD
 
-| Action | API Method | Endpoint | Refresh Event |
-|---|---|---|---|
-| Create | `POST` | `/api/v2/networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
-| Update | `PATCH` | `/api/v2/stations/{stationId}/` | `speleo:refresh-surface-stations` |
-| Delete | `DELETE` | `/api/v2/stations/{stationId}/` | `speleo:refresh-surface-stations` |
+| Action | API Method | Endpoint                                 | Refresh Event                     |
+| ------ | ---------- | ---------------------------------------- | --------------------------------- |
+| Create | `POST`     | `/api/v2/networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
+| Update | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-surface-stations` |
+| Delete | `DELETE`   | `/api/v2/stations/{stationId}/`          | `speleo:refresh-surface-stations` |
 
 ### Landmark CRUD
 
-| Action | API Method | Endpoint | Refresh Event |
-|---|---|---|---|
-| Create | `POST` | `/api/v2/landmarks/` | `speleo:refresh-landmarks` |
-| Update | `PATCH` | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
-| Delete | `DELETE` | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
-| Move (drag) | `PATCH` via `LandmarkManager.moveLandmark()` | — | Inline source update |
+| Action      | API Method                                   | Endpoint                          | Refresh Event              |
+| ----------- | -------------------------------------------- | --------------------------------- | -------------------------- |
+| Create      | `POST`                                       | `/api/v2/landmarks/`              | `speleo:refresh-landmarks` |
+| Update      | `PATCH`                                      | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
+| Delete      | `DELETE`                                     | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
+| Move (drag) | `PATCH` via `LandmarkManager.moveLandmark()` | —                                 | Inline source update       |
 
 ### Exploration Lead CRUD
 
-| Action | API Method | Endpoint | Refresh Event |
-|---|---|---|---|
-| Create | `POST` | `/api/v2/projects/{projectId}/exploration-leads/` | Layer refresh inline |
-| Update | `PATCH` | `/api/v2/exploration-leads/{leadId}/` | Layer refresh inline |
-| Delete | `DELETE` | `/api/v2/exploration-leads/{leadId}/` | Layer refresh inline |
-| Move (drag) | `PATCH` via `ExplorationLeadManager.moveLead()` | — | Inline position update |
+| Action      | API Method                                      | Endpoint                                          | Refresh Event          |
+| ----------- | ----------------------------------------------- | ------------------------------------------------- | ---------------------- |
+| Create      | `POST`                                          | `/api/v2/projects/{projectId}/exploration-leads/` | Layer refresh inline   |
+| Update      | `PATCH`                                         | `/api/v2/exploration-leads/{leadId}/`             | Layer refresh inline   |
+| Delete      | `DELETE`                                        | `/api/v2/exploration-leads/{leadId}/`             | Layer refresh inline   |
+| Move (drag) | `PATCH` via `ExplorationLeadManager.moveLead()` | —                                                 | Inline position update |
 
 ### Cylinder Install CRUD
 
-| Action | API Method | Endpoint | Refresh Event |
-|---|---|---|---|
-| Create | `POST` | `/api/v2/cylinder-installs/` | `speleo:refresh-cylinder-installs` |
-| Update | `PATCH` | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
-| Delete | `DELETE` | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
+| Action | API Method | Endpoint                                 | Refresh Event                      |
+| ------ | ---------- | ---------------------------------------- | ---------------------------------- |
+| Create | `POST`     | `/api/v2/cylinder-installs/`             | `speleo:refresh-cylinder-installs` |
+| Update | `PATCH`    | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
+| Delete | `DELETE`   | `/api/v2/cylinder-installs/{installId}/` | `speleo:refresh-cylinder-installs` |
 
 ---
 
@@ -310,16 +312,17 @@ event dispatched → listener in `main.js` re-fetches from API → layer rebuilt
 - **Payload**: `{ projectId }`
 - **Dispatched by**: `Layers.refreshStationsAfterChange(projectId)`, called
   after station create/update/delete/move operations
-- **Handler**: Re-calls `StationManager.loadStationsForProject(projectId)`,
-  then `Layers.addSubSurfaceStationLayer()`, then `Layers.reorderLayers()`
+- **Handler**: Re-calls `StationManager.loadStationsForProject(projectId)`, then
+  `Layers.addSubSurfaceStationLayer()`, then `Layers.reorderLayers()`
 - **Scope**: Single project — only re-fetches stations for the affected project
 
 ### `speleo:refresh-surface-stations`
 
 - **Payload**: `{ networkId }`
 - **Dispatched by**: `Layers.refreshSurfaceStationsAfterChange(networkId)`
-- **Handler**: Re-calls `SurfaceStationManager.loadStationsForNetwork(networkId)`,
-  then `Layers.addSurfaceStationLayer()`, then `Layers.reorderLayers()`
+- **Handler**: Re-calls
+  `SurfaceStationManager.loadStationsForNetwork(networkId)`, then
+  `Layers.addSurfaceStationLayer()`, then `Layers.reorderLayers()`
 - **Scope**: Single network
 
 ### `speleo:refresh-landmarks`
@@ -402,8 +405,8 @@ Layers.addProjectGeoJSON()
 - **Used by**: `Geometry.findNearestSnapPointWithinRadius()` during drag
   operations for stations, exploration leads, and cylinder installs
 - **Invalidation**: Overwritten when project GeoJSON is reloaded
-- **Snap radius**: `MAGNETIC_SNAP_RADIUS = 10` meters (adjustable at runtime
-  via `Geometry.setSnapRadius()`)
+- **Snap radius**: `MAGNETIC_SNAP_RADIUS = 10` meters (adjustable at runtime via
+  `Geometry.setSnapRadius()`)
 
 ### Station Data — In-Memory Maps
 
@@ -411,10 +414,10 @@ All station data is kept in `State.allStations` and `State.allSurfaceStations`
 as flat `Map<id, stationObject>` lookups.
 
 - **Population**: During `StationManager.loadStationsForProject()` and
-  `SurfaceStationManager.loadStationsForNetwork()`, each station is stored
-  in the appropriate Map.
-- **Used by**: Click handlers (to look up station metadata for modals),
-  context menu (to check permissions), drag handlers (to read original coords).
+  `SurfaceStationManager.loadStationsForNetwork()`, each station is stored in
+  the appropriate Map.
+- **Used by**: Click handlers (to look up station metadata for modals), context
+  menu (to check permissions), drag handlers (to read original coords).
 - **Invalidation**: Overwritten on each `speleo:refresh-stations` /
   `speleo:refresh-surface-stations` event.
 
@@ -449,7 +452,8 @@ Layers.recomputeActiveDepthDomain()
       └─ Dispatches speleo:depth-data-updated (legacy)
 ```
 
-- **Per-project storage**: `State.projectDepthDomains` (`Map<string, {min,max}|null>`)
+- **Per-project storage**: `State.projectDepthDomains`
+  (`Map<string, {min,max}|null>`)
 - **Merged storage**: `State.activeDepthDomain` (`{min, max}|null`)
 - **Used by**: `Colors.getDepthPaint(depthDomain)` which produces a Mapbox
   `interpolate` expression mapping `depth_val` to a blue→yellow→red gradient
@@ -458,25 +462,25 @@ Layers.recomputeActiveDepthDomain()
 
 ### Effective Visibility
 
-`State.effectiveProjectVisibility` is a `Map<string, boolean>` that
-records whether each project is actually visible on the map. It is set
-inside `applyProjectLayerVisibility` **before** the map layer guard,
-so consumers always get the real state even if the map hasn't rendered
-that project's layers yet.
+`State.effectiveProjectVisibility` is a `Map<string, boolean>` that records
+whether each project is actually visible on the map. It is set inside
+`applyProjectLayerVisibility` **before** the map layer guard, so consumers
+always get the real state even if the map hasn't rendered that project's layers
+yet.
 
 `getVisibleProjectIds()` reads from `effectiveProjectVisibility` (not
-`projectLayerStates`), so stations, leads, cylinders, and depth domains
-all respect the two-level country gate.
+`projectLayerStates`), so stations, leads, cylinders, and depth domains all
+respect the two-level country gate.
 
-`toggleProjectVisibility` clears the stale
-`effectiveProjectVisibility` entry for the project before re-applying
-visibility, ensuring the map stays consistent.
+`toggleProjectVisibility` clears the stale `effectiveProjectVisibility` entry
+for the project before re-applying visibility, ensuring the map stays
+consistent.
 
 ### Project-Scoped Marker Visibility
 
-Cylinder installs and exploration leads are stored in global layers but
-scoped to projects via a `project_id` property on each feature. When project
-visibility changes:
+Cylinder installs and exploration leads are stored in global layers but scoped
+to projects via a `project_id` property on each feature. When project visibility
+changes:
 
 ```
 Layers.applyProjectScopedMarkerVisibility()

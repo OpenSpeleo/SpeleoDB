@@ -1,10 +1,10 @@
 /**
  * Simplified Map Viewer Entry Point for Public GIS Views
- * 
+ *
  * This module provides a read-only map viewer for publicly shared GIS Views.
  * It displays ONLY GeoJSON survey data without any management features
  * (no stations, landmarks, context menus, drag/drop, etc.)
- * 
+ *
  * Features:
  * - Loads GeoJSON data from a GIS View via public API
  * - Supports color modes: "By Project" and "By Depth"

@@ -57,7 +57,7 @@ export function init(context) {
                 if (parts.length === 1) {
                    // We are processing a file
                    result.files.push(file);
-                } 
+                }
                 else {
                    const index = result.folders.findIndex(folder => folder.name === folder_name);
                    if (index !== -1) {
@@ -65,7 +65,7 @@ export function init(context) {
                       // Let's find if there's a newer commit.
                       const currentDate = window.moment(result.folders[index].datetime, "YYYY/MM/DD HH:mm");
                       const newDate = window.moment(file.commit.authored_date, "YYYY/MM/DD HH:mm");
-                      
+
                       if (newDate.isAfter(currentDate)) {
                          result.folders[index] = {
                             ...result.folders[index], // copies all existing properties
@@ -108,10 +108,10 @@ export function init(context) {
 
           return result;
        }
-       
+
        // Function to refresh UX
        function refresh_ux(path="") {
-          
+
           // Empty the Git View
           $('#git-viewer-container').empty();
 
@@ -127,7 +127,7 @@ export function init(context) {
 
           // Fetch the files & folders at the path requested
           const data = get_files_and_folders_at_path(path);
-          
+
           // Populate the folders
           data.folders.forEach(function(folder) {
              const $folder_row = $('#row-template-folder').clone();

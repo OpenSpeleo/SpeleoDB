@@ -17,7 +17,7 @@
             <!-- Basic Information -->
             <section>
                 <h3 class="text-lg font-semibold text-slate-100 mb-4">Basic Information</h3>
-                
+
                 <!-- Name -->
                 <div class="mb-4">
                     <label class="block text-sm font-medium mb-1" for="name">
@@ -61,7 +61,7 @@
                 <div class="mt-5">
                     <h3 class="text-lg font-semibold text-slate-100 mb-4">Projects in This View</h3>
                     <p class="text-sm text-slate-400 mb-4">Manage which projects are included in this GIS view and their commit selection.</p>
-                    
+
                     <div>
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-medium text-slate-300">Selected Projects</h4>
@@ -72,7 +72,7 @@
                                 Add Project
                             </button>
                         </div>
-                        
+
                         <div id="projects_container" class="flow-y-3">
                             <!-- Existing projects -->
                             {% for view_project in gis_view.project_views.all %}
@@ -86,7 +86,7 @@
                                         </div>
                                         <input type="hidden" class="project-id" value="{{ view_project.project.id }}" />
                                     </div>
-                                    
+
                                     <!-- Commit Mode Selection -->
                                     <div>
                                         <label class="block text-xs font-medium text-slate-400 mb-2">Commit Selection</label>
@@ -101,7 +101,7 @@
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Commit SHA Selection -->
                                     <div class="commit-sha-container {% if view_project.use_latest %}hidden{% endif %}">
                                         <label class="block text-xs font-medium text-slate-400 mb-1">
@@ -112,10 +112,10 @@
                                         </select>
                                         <p class="text-xs text-slate-500 mt-1">Select a commit from the project history</p>
                                     </div>
-                                    
+
                                     <!-- Remove Button -->
                                     <div class="flex justify-end">
-                                        <button type="button" 
+                                        <button type="button"
                                                 class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-project-btn"
                                                 data-project-id="item_{{ forloop.counter }}">
                                             <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">

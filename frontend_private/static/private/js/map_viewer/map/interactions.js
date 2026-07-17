@@ -30,11 +30,11 @@ export const Interactions = {
             for (const feature of features) {
                 if (!feature.layer || !feature.layer.id) continue;
                 const layerId = feature.layer.id;
-                // Check for subsurface stations (circles, biology/bone/artifact/geology icons), 
+                // Check for subsurface stations (circles, biology/bone/artifact/geology icons),
                 // surface stations, Landmarks, and custom markers
-                if ((layerId.startsWith('stations-') && 
+                if ((layerId.startsWith('stations-') &&
                      (layerId.endsWith('-circles') || layerId.endsWith('-biology-icons') ||
-                      layerId.endsWith('-bone-icons') || layerId.endsWith('-artifact-icons') || 
+                      layerId.endsWith('-bone-icons') || layerId.endsWith('-artifact-icons') ||
                       layerId.endsWith('-geology-icons') || layerId.endsWith('-labels'))) ||
                     layerId.startsWith('surface-stations-') ||
                     layerId === 'landmarks-layer' ||
@@ -66,7 +66,7 @@ export const Interactions = {
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
-                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') ||
                  f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
                  f.layer.id.endsWith('-geology-icons')) &&
                 !f.layer.id.startsWith('surface-')
@@ -173,8 +173,8 @@ export const Interactions = {
 
             // Check Station (circles, biology/bone/artifact/geology icons)
             const stationFeature = features.find(f =>
-                f.layer && f.layer.id && f.layer.id.startsWith('stations-') && 
-                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                f.layer && f.layer.id && f.layer.id.startsWith('stations-') &&
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') ||
                  f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
                  f.layer.id.endsWith('-geology-icons'))
             );
@@ -413,7 +413,7 @@ export const Interactions = {
             const stationFeature = features.find(f =>
                 f.layer && f.layer.id &&
                 f.layer.id.startsWith('stations-') &&
-                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') || 
+                (f.layer.id.endsWith('-circles') || f.layer.id.endsWith('-biology-icons') ||
                  f.layer.id.endsWith('-bone-icons') || f.layer.id.endsWith('-artifact-icons') ||
                  f.layer.id.endsWith('-geology-icons')) &&
                 !f.layer.id.startsWith('surface-')
@@ -502,4 +502,3 @@ export const Interactions = {
         });
     }
 };
-

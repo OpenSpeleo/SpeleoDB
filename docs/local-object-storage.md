@@ -2,16 +2,16 @@
 
 ## Intent and Ownership
 
-Local development and backend tests use RustFS as an S3-compatible object
-store. Django serves the private and public map viewers from
-`http://localhost:8000`, while RustFS serves signed GeoJSON and GPS-track URLs
-from `http://localhost:9000`. Those browser downloads are cross-origin, so the
-RustFS bucket owns their CORS response headers. Django's CORS middleware cannot
-alter a response returned directly by RustFS.
+Local development and backend tests use RustFS as an S3-compatible object store.
+Django serves the private and public map viewers from `http://localhost:8000`,
+while RustFS serves signed GeoJSON and GPS-track URLs from
+`http://localhost:9000`. Those browser downloads are cross-origin, so the RustFS
+bucket owns their CORS response headers. Django's CORS middleware cannot alter a
+response returned directly by RustFS.
 
 Production does not use this bootstrap path. Private production files use
-CloudFront signed URLs, and production bucket/CDN policy remains external to
-the local management command.
+CloudFront signed URLs, and production bucket/CDN policy remains external to the
+local management command.
 
 ## Provisioning Contract
 
@@ -28,18 +28,18 @@ configuration. It:
 - reapplies policy and CORS configuration safely when a bucket already exists.
 
 Those bucket names are a static local-infrastructure contract. The management
-command intentionally does not derive them from `AWS_STORAGE_BUCKET_NAME`, so
-an unexpected runtime setting cannot silently create or reconfigure a different
+command intentionally does not derive them from `AWS_STORAGE_BUCKET_NAME`, so an
+unexpected runtime setting cannot silently create or reconfigure a different
 bucket.
 
 The wildcard CORS origin is deliberately limited to local/test buckets. CORS
 controls whether browser JavaScript may read a response; it does not grant S3
-authorization. Private GeoJSON, GPS tracks, attachments, and default media
-still require a valid presigned URL.
+authorization. Private GeoJSON, GPS tracks, attachments, and default media still
+require a valid presigned URL.
 
-Local and test settings explicitly select S3 Signature Version 4. Current
-boto3 and django-storages versions already default to SigV4, but making the
-choice explicit keeps signed URLs deterministic across compatible object-store
+Local and test settings explicitly select S3 Signature Version 4. Current boto3
+and django-storages versions already default to SigV4, but making the choice
+explicit keeps signed URLs deterministic across compatible object-store
 versions. Production CloudFront signing is unchanged.
 
 ## One-Time Bootstrap
@@ -60,8 +60,8 @@ Run it again only for an intentional local policy/CORS migration. For example,
 an existing volume created before bucket CORS was introduced needs one explicit
 run to receive the rule; the volume does not need to be deleted.
 
-The same configuration can be applied explicitly from an already-running
-Django container:
+The same configuration can be applied explicitly from an already-running Django
+container:
 
 ```bash
 python manage.py create_s3_local_buckets
@@ -74,8 +74,8 @@ provisioning path.
 ## Diagnostics
 
 A browser may report a generic CORS failure when RustFS actually returned an
-authorization or signature error without readable CORS headers. Distinguish
-the two failure classes with the exact signed URL from the API response:
+authorization or signature error without readable CORS headers. Distinguish the
+two failure classes with the exact signed URL from the API response:
 
 ```bash
 curl -i -H 'Origin: http://localhost:8000' '<presigned-url>'
@@ -93,9 +93,9 @@ aws --endpoint-url http://localhost:9000 s3api get-bucket-cors \
   --bucket speleodb-user-artifacts-dev
 ```
 
-If provisioning fails, use the action- and bucket-specific command error
-before resetting any volume. Authorization and RustFS availability failures
-are not treated as missing buckets.
+If provisioning fails, use the action- and bucket-specific command error before
+resetting any volume. Authorization and RustFS availability failures are not
+treated as missing buckets.
 
 ## Testing and Performance
 
@@ -105,6 +105,6 @@ generates SigV4 `GET` and `HEAD` URLs, sends browser `Origin` headers, and
 asserts the returned CORS headers before deleting the object.
 
 Provisioning adds a few S3 control-plane calls during explicit setup only. It
-adds no application-startup or Django request-path work, no map feature
-rescans, and no production runtime cost. RustFS evaluates the stored CORS rule
-while serving the object response.
+adds no application-startup or Django request-path work, no map feature rescans,
+and no production runtime cost. RustFS evaluates the stored CORS rule while
+serving the object response.

@@ -133,7 +133,7 @@ export const StationTags = {
                     <div class="p-6 flow-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
-                            <input type="text" id="new-tag-name" 
+                            <input type="text" id="new-tag-name"
                                    class="w-full bg-slate-700 text-white rounded-lg p-2 border border-slate-600 focus:border-sky-500 focus:outline-hidden"
                                    placeholder="e.g., Active, Completed, High Priority">
                         </div>
@@ -143,8 +143,8 @@ export const StationTags = {
                                 ${State.tagColors.map(color => {
                                     const safe = Utils.safeCssColor(color);
                                     return `
-                                    <div class="tag-color-option" 
-                                         style="background-color: ${safe}" 
+                                    <div class="tag-color-option"
+                                         style="background-color: ${safe}"
                                          data-color="${Utils.escapeHtml(safe)}"
                                          ${Utils.mapActionAttributes('tags.selectTagColor', safe)}
                                          title="${Utils.escapeHtml(safe)}"></div>
@@ -152,11 +152,11 @@ export const StationTags = {
                                 }).join('')}
                             </div>
                             <input type="hidden" id="new-tag-color" value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}">
-                            
+
                             <!-- Custom Color Picker -->
                             <div class="mt-4 flex items-center gap-3 flex-wrap">
                                 <label class="text-sm text-slate-400">Or pick a custom color:</label>
-                                <input type="color" id="new-tag-custom-color" 
+                                <input type="color" id="new-tag-custom-color"
                                        value="${Utils.safeCssColor(State.tagColors[0] || '#ef4444')}"
                                        ${Utils.mapActionAttributes('tags.useCustomColorForNewTag')} data-map-event="change"
                                        class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"

@@ -57,7 +57,7 @@ export function init(context) {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
-                    
+
                     // Response should be JSON string or object
                     let jsonString;
                     if (typeof response === 'string') {
@@ -65,13 +65,13 @@ export function init(context) {
                     } else {
                         jsonString = JSON.stringify(response, null, 2);
                     }
-                    
+
                     // Store the response for later use
                     window.surveyData = jsonString;
-                    
+
                     // Display the content in the modal
                     displayCodeInModal(jsonString);
-                    
+
                     $statusEl.text('Conversion successful!')
                               .css({ 'color': 'green', 'font-weight': 'bold' });
                 },
@@ -79,7 +79,7 @@ export function init(context) {
                     // Hide spinner and show error
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
-                    
+
                     // Try to extract error message from response
                     let errorMessage = error;
                     if (xhr.responseJSON && xhr.responseJSON.error) {
@@ -94,11 +94,11 @@ export function init(context) {
                             errorMessage = xhr.responseText.substring(0, 200); // Limit length
                         }
                     }
-                    
+
                     // Display error in modal
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
-                    
+
                     $statusEl.text('Error occurred. See details.')
                               .css({ 'color': 'red', 'font-weight': 'bold' });
                 }
@@ -112,14 +112,14 @@ export function init(context) {
         function displayCodeInModal(code) {
             // Store original code for copy/download
             originalCode = code;
-            
+
             // Escape HTML and create code block
             const escapedCode = $('<div>').text(code).html();
             $('#codeDisplay').html('<pre class="line-numbers"><code class="language-json">' + escapedCode + '</code></pre>');
-            
+
             // Highlight with Prism
             window.Prism.highlightElement($('#codeDisplay code')[0]);
-            
+
             // Show modal
             $('#resultModal').addClass('show');
         }
@@ -154,15 +154,15 @@ export function init(context) {
         let copyButtonTimeout = null;
         const originalCopyButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> Copy to Clipboard';
         const copiedButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!';
-        
+
         $('#copyCodeBtn').on('click', function() {
             const $btn = $('#copyCodeBtn');
-            
+
             // Clear any existing timeout
             if (copyButtonTimeout) {
                 clearTimeout(copyButtonTimeout);
             }
-            
+
             navigator.clipboard.writeText(originalCode).then(function() {
                 $btn.html(copiedButtonHTML);
                 copyButtonTimeout = setTimeout(function() {

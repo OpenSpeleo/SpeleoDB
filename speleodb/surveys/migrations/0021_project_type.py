@@ -15,14 +15,14 @@ class Migration(migrations.Migration):
             name='type',
             field=models.CharField(
                 choices=[
-                    ('ariane', 'ARIANE'), 
-                    ('compass', 'COMPASS'), 
-                    ('stickmaps', 'STICKMAPS'), 
-                    ('therion', 'THERION'), 
-                    ('walls', 'WALLS'), 
+                    ('ariane', 'ARIANE'),
+                    ('compass', 'COMPASS'),
+                    ('stickmaps', 'STICKMAPS'),
+                    ('therion', 'THERION'),
+                    ('walls', 'WALLS'),
                     ('other', 'OTHER')
-                ], 
-                default='ariane', 
+                ],
+                default='ariane',
                 max_length=20
             ),
             preserve_default=False,

@@ -15,7 +15,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </div>
-            
+
             <!-- Title -->
             <h2 class="text-3xl text-slate-100 font-bold mb-4">GIS Integration</h2>
 
@@ -28,7 +28,7 @@
                 "Add OGC Server") will not be able to follow it. Use the project GIS-View / Personal
                 GIS-View landing pages for those clients.
             </p>
-            
+
             <!-- API URL -->
             <div class="w-full mb-6">
                 <label class="block text-sm font-medium text-slate-300 mb-2">GeoJSON Download URL</label>
@@ -37,7 +37,7 @@
                         <code id="api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
                             {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:experiment' gis_token=experiment.gis_token %}
                         </code>
-                        <button 
+                        <button
                             id="copy-btn"
                             type="button"
                             class="w-full md:w-auto md:shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
@@ -50,7 +50,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Warning -->
             <div class="w-full mb-6">
                 <div class="bg-srgb-orange-900-30 border border-srgb-orange-600-50 rounded-lg p-4">
@@ -62,7 +62,7 @@
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
                                 <p class="text-sm text-srgb-orange-300-90 mb-3">
-                                    Sharing this link gives access to the entire dataset collected in the experiment. 
+                                    Sharing this link gives access to the entire dataset collected in the experiment.
                                     This should be considered private and kept safe like a password.
                                 </p>
                                 <p class="text-sm text-srgb-orange-300-90">
@@ -74,7 +74,7 @@
                         {% if is_experiment_admin %}
                         <form method="post" id="refresh-token-form" class="w-full">
                             {% csrf_token %}
-                            <button 
+                            <button
                                 type="submit"
                                 name="_refresh_token"
                                 class="w-full md:w-auto px-4 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-md text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg focus:outline-hidden focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-800"
@@ -87,7 +87,7 @@
                         </form>
                         {% else %}
                         <div class="w-full">
-                            <button 
+                            <button
                                 type="button"
                                 disabled
                                 class="w-full md:w-auto px-4 py-2.5 bg-slate-600 text-slate-400 rounded-md text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2 opacity-50"
@@ -118,10 +118,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             </div>
-            
+
             <!-- Title -->
             <h3 class="text-xl font-semibold text-white text-center mb-3">Refresh GIS Token?</h3>
-            
+
             <!-- Content -->
             <div class="mb-6">
                 <p class="text-slate-300 text-center mb-4">
@@ -136,18 +136,18 @@
                     </p>
                 </div>
             </div>
-            
+
             <!-- Actions -->
             <div class="flex items-center justify-end gap-3">
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     id="refresh-token-cancel"
                     class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200"
                 >
                     Cancel
                 </button>
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     id="refresh-token-confirm"
                     class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
                 >

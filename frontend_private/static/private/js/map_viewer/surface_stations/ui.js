@@ -313,14 +313,14 @@ export const SurfaceStationUI = {
                         longitude
                     });
                     Utils.showNotification('success', 'Surface station created!');
-                    
+
                     // Close both the create modal and the surface station manager
                     Modal.close('create-surface-station-modal');
                     const managerModal = document.getElementById('surface-station-manager-modal');
                     if (managerModal) {
                         managerModal.classList.add('hidden');
                     }
-                    
+
                     // Open station details
                     StationDetails.openModal(station.id, networkId, true, 'surface');
                 } catch (err) {

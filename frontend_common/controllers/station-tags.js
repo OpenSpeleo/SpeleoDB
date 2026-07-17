@@ -158,20 +158,20 @@ export function init(context) {
         function populateColorPicker(selectedColor) {
             const picker = $('#edit-tag-color-picker');
             let html = '';
-            
+
             // Normalize selected color for comparison (case-insensitive)
             const normalizedSelected = selectedColor ? selectedColor.toUpperCase() : null;
-            
+
             predefinedColors.forEach(color => {
                 const isSelected = color.toUpperCase() === normalizedSelected ? 'selected' : '';
                 html += `
-                    <div class="tag-color-picker-option ${isSelected}" 
-                         style="background-color: ${color}" 
-                         data-color="${color}" 
+                    <div class="tag-color-picker-option ${isSelected}"
+                         style="background-color: ${color}"
+                         data-color="${color}"
                          title="${color}"></div>
                 `;
             });
-            
+
             picker.html(html);
 
             // Attach click handlers

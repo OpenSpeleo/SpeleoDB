@@ -21,4 +21,3 @@ describe('mergeDepthDomains', () => {
         expect(mergeDepthDomains([{ min: -20, max: 10 }, { min: 5, max: 40 }])).toEqual({ min: 0, max: 40 });
     });
 });
-

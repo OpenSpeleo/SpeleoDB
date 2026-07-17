@@ -12,11 +12,11 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     replaces = [
-        ('users', '0001_initial'), 
-        ('users', '0002_surveyteam_surveyteammembership'), 
-        ('users', '0003_alter_surveyteam_id_and_more'), 
+        ('users', '0001_initial'),
+        ('users', '0002_surveyteam_surveyteammembership'),
+        ('users', '0003_alter_surveyteam_id_and_more'),
         ('users', '0004_alter_surveyteammembership_deactivated_by'),
-        ('users', '0005_convert_surveyteam_to_uuid'), 
+        ('users', '0005_convert_surveyteam_to_uuid'),
         ('users', '0006_rename__role_surveyteammembership_role')
     ]
 

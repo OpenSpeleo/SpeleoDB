@@ -158,14 +158,14 @@ button.tool-action {
         gap: 8px;
         align-items: center;
     }
-    
+
     /* Mobile responsive styles */
     @media (max-width: 768px) {
         .controls {
             flex-wrap: wrap;
             justify-content: center;
         }
-        
+
         .controls button {
             flex: 1 1 calc(50% - 4px);
             min-width: 120px;

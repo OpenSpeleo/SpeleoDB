@@ -31,7 +31,7 @@ export const ProjectPanel = {
                 <div id="project-list" class="flow-y-1 overflow-y-auto custom-scrollbar" style="max-height: 400px;">
                 </div>
             </div>
-            
+
             <div id="project-panel-minimized" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: none;">
                 <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center flow-x-2" title="Expand">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@ export const ProjectPanel = {
                 </button>
             </div>
             `;
-            
+
             const mapContainer = document.querySelector('#map').parentElement;
             if (mapContainer) {
                 const temp = document.createElement('div');
@@ -51,7 +51,7 @@ export const ProjectPanel = {
                 }
             }
         }
-        
+
         this.refreshList();
     },
 

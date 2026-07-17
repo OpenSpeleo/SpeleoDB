@@ -333,7 +333,3 @@ export const API = {
     deleteCylinderPressureCheck: (installId, checkId) =>
         apiRequest(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
 };
-
-
-
-

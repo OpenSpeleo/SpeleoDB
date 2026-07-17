@@ -22,7 +22,7 @@
 
                        <div class="mb-2 mr-2 flex w-full items-center md:w-auto">
                            <a class="btn git_btn group mr-0 grow-0 cursor-pointer rounded-full bg-linear-to-b/srgb from-white to-gray-100 text-sm md:px-4 md:text-base" href="{% url 'api:v2:project-download-at-hash' id=project.id hexsha=hexsha fileformat='dump' %}">
-                           
+
                               <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-type-zip mr-2" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round"  width="1.5em" height="1.5em" viewBox="4.25 2.25 15.5 19.5">
                                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                  <path d="M14 3v4a1 1 0 0 0 1 1h4" />
@@ -58,7 +58,7 @@
                               <span id="commit-hexsha_short" class="mr-1"></span>&#20;-&#20;<span id="commit-dt_since"></span>
                            </div>
                         </div>
-                        
+
                         <!-- ============================ Git View Container =========================== -->
                         <ul id="git-viewer-container" class="mb-8 rounded-b-lg border border-t-0 border-gray-600 bg-srgb-gray-900-50">
                         </ul>
@@ -134,10 +134,10 @@
 {% if debug %}
 <script src="{% static 'private/js/vendors/moment.js' %}"></script>
 {% else %}
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" 
-    integrity="sha512-+H4iLjY3JsKiF2V6N366in5IQHj2uEsGV7Pp/GRcm0fn76aPAk5V8xB6n8fQhhSonTqTXs/klFz4D0GIn6Br9g==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"
+    integrity="sha512-+H4iLjY3JsKiF2V6N366in5IQHj2uEsGV7Pp/GRcm0fn76aPAk5V8xB6n8fQhhSonTqTXs/klFz4D0GIn6Br9g=="
+    crossorigin="anonymous"
     referrerpolicy="no-referrer">
 </script>
 {% endif %}

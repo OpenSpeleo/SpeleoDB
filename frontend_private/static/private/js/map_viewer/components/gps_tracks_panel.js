@@ -11,7 +11,7 @@ export const GPSTracksPanel = {
             console.log('📍 No GPS tracks available - hiding GPS Tracks panel');
             return;
         }
-        
+
         this.render();
         this.bindEvents();
         this.setupLoadingListener();
@@ -40,7 +40,7 @@ export const GPSTracksPanel = {
                     <!-- GPS track items will be inserted here -->
                 </div>
             </div>
-            
+
             <div id="gps-tracks-panel-minimized" class="absolute bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: block;">
                 <button id="gps-panel-expand" class="text-white hover:text-cyan-400 transition-colors flex items-center flow-x-2" title="Expand GPS Tracks">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +50,7 @@ export const GPSTracksPanel = {
                 </button>
             </div>
             `;
-            
+
             // Append to map container's RELATIVE parent
             const mapContainer = document.querySelector('#map').parentElement;
             if (mapContainer) {
@@ -64,7 +64,7 @@ export const GPSTracksPanel = {
             // Position the panel below the project panel
             this.positionPanel();
         }
-        
+
         this.refreshList();
     },
 
@@ -173,36 +173,36 @@ export const GPSTracksPanel = {
 
     refreshList: function() {
         const list = document.getElementById('gps-tracks-list');
-        
+
         if (!list) return;
 
         list.innerHTML = '';
-        
+
         const tracks = Config.gpsTracks;
-        
+
         // Sort tracks by name (case-insensitive)
-        const sortedTracks = [...tracks].sort((a, b) => 
+        const sortedTracks = [...tracks].sort((a, b) =>
             a.name.toLowerCase().localeCompare(b.name.toLowerCase())
         );
-        
+
         sortedTracks.forEach(track => {
             const isVisible = Layers.isGPSTrackVisible(track.id);
             const isLoading = Layers.isGPSTrackLoading(track.id);
             const color = this.getTrackColor(track.id);
-            
+
             const item = document.createElement('div');
             item.className = 'gps-track-button flex items-center justify-between bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
             if (!isVisible) item.classList.add('opacity-50');
             item.dataset.trackId = track.id;
             item.dataset.trackUrl = track.file;
             item.dataset.color = color;
-            
+
             // Truncate long track names
             const maxLen = DEFAULTS.UI.TRACK_NAME_MAX_LENGTH;
-            const displayName = track.name.length > maxLen 
-                ? track.name.substring(0, maxLen - 3) + '...' 
+            const displayName = track.name.length > maxLen
+                ? track.name.substring(0, maxLen - 3) + '...'
                 : track.name;
-            
+
             item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center gap-2 overflow-hidden flex-1">
                     <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(Utils.safeCssColor(isVisible ? color : DEFAULTS.COLORS.FALLBACK))}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
@@ -216,10 +216,10 @@ export const GPSTracksPanel = {
                     </label>
                 </div>
             `;
-            
+
             // Bind checkbox change event
             const checkbox = item.querySelector('input[type="checkbox"]');
-            
+
             // Handle card body click - activate track and fly to it
             item.addEventListener('click', async (e) => {
                 // Don't handle if clicking on the toggle switch
@@ -227,22 +227,22 @@ export const GPSTracksPanel = {
                     await this.activateAndFlyToTrack(track.id, track.file);
                 }
             });
-            
+
             checkbox.addEventListener('change', async (e) => {
                 e.stopPropagation();
                 const newState = e.target.checked;
-                
+
                 // Disable checkbox while loading
                 if (newState && !State.gpsTrackCache.has(String(track.id))) {
                     checkbox.disabled = true;
                 }
-                
+
                 await this.toggleTrack(track.id, newState, track.file);
-                
+
                 // Re-enable checkbox
                 checkbox.disabled = false;
             });
-            
+
             // Stop propagation on toggle switch container click
             const toggleLabel = item.querySelector('.toggle-switch');
             if (toggleLabel) {
@@ -258,12 +258,12 @@ export const GPSTracksPanel = {
     activateAndFlyToTrack: async function(trackId, trackUrl) {
         const tid = String(trackId);
         const isVisible = Layers.isGPSTrackVisible(tid);
-        
+
         // If track is not visible, activate it first
         if (!isVisible) {
             await this.toggleTrack(trackId, true, trackUrl);
         }
-        
+
         // Now fly to the track (bounds should be available after loading)
         this.flyToTrack(trackId);
     },
@@ -271,7 +271,7 @@ export const GPSTracksPanel = {
     flyToTrack: function(trackId) {
         const tid = String(trackId);
         const bounds = State.gpsTrackBounds.get(tid);
-        
+
         if (bounds && State.map) {
             State.map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
         } else {
@@ -314,7 +314,7 @@ export const GPSTracksPanel = {
             if (item) {
                 const spinner = item.querySelector('.gps-track-loading-spinner');
                 const checkbox = item.querySelector('input[type="checkbox"]');
-                
+
                 if (spinner) {
                     if (isLoading) {
                         spinner.classList.remove('hidden');
@@ -322,7 +322,7 @@ export const GPSTracksPanel = {
                         spinner.classList.add('hidden');
                     }
                 }
-                
+
                 if (checkbox) {
                     checkbox.disabled = isLoading;
                 }
@@ -330,7 +330,7 @@ export const GPSTracksPanel = {
         };
         window.addEventListener('speleo:gps-track-loading-changed', this._loadingListener);
     },
-    
+
     getTrackColor: function(trackId) {
         // Use centralized color assignment from Colors module
         return Colors.getGPSTrackColor(trackId);

@@ -4,11 +4,11 @@
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
     }
-    
+
     .welcome-modal {
         animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    
+
     @keyframes modalSlideIn {
         from {
             opacity: 0;
@@ -19,22 +19,22 @@
             transform: scale(1) translateY(0);
         }
     }
-    
+
     .feature-card {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     .feature-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 20px 25px -5px rgba(168, 85, 247, 0.2);
     }
-    
+
     /* The former theme(...) declaration was invalid in browser-served template CSS. */
-    
+
     .pulse-glow {
         animation: pulseGlow 2s ease-in-out infinite;
     }
-    
+
     @keyframes pulseGlow {
         0%, 100% {
             opacity: 0.7;
@@ -43,7 +43,7 @@
             opacity: 1;
         }
     }
-    
+
     @media (max-width: 640px) {
         .welcome-modal {
             max-height: 90vh;

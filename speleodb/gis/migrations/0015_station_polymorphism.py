@@ -9,7 +9,7 @@ def inject_polymorphic_ctype(apps, schema_editor):
     Station = apps.get_model('gis', 'Station')
     SubSurfaceStation = apps.get_model('gis', 'SubSurfaceStation')
     ContentType = apps.get_model('contenttypes', 'ContentType')
-    
+
     new_ct = ContentType.objects.get_for_model(SubSurfaceStation)
     Station.objects.filter(polymorphic_ctype__isnull=True).update(polymorphic_ctype=new_ct)
 
@@ -17,7 +17,7 @@ def inject_polymorphic_ctype(apps, schema_editor):
 def migrate_stations_to_subsurface(apps, schema_editor):
     """
     Forward migration: Convert all existing Stations to SubSurfaceStations.
-    
+
     Uses raw SQL to:
     1. Insert rows into gis_subsurfacestation linking to existing stations
     2. Set polymorphic_ctype for all migrated stations
@@ -35,22 +35,22 @@ def migrate_stations_to_subsurface(apps, schema_editor):
 def reverse_migrate_to_base_stations(apps, schema_editor):
     """
     Reverse migration: Convert SubSurfaceStations back to base Stations.
-    
+
     Uses raw SQL to:
     1. Copy project_id from SubSurfaceStation back to Station
     2. Clear polymorphic_ctype
     3. Delete SubSurfaceStation and SurfaceStation rows
-    """    
+    """
     with schema_editor.connection.cursor() as cursor:
         # Copy project data back from SubSurfaceStation to Station
         # Uses PostgreSQL UPDATE...FROM syntax
         cursor.execute('''
-            UPDATE gis_station 
+            UPDATE gis_station
             SET _project_id = ss.project_id
             FROM gis_subsurfacestation ss
             WHERE gis_station.id = ss.station_ptr_id
         ''')
-        
+
         # Delete all child table rows (the Station rows remain intact)
         cursor.execute('DELETE FROM gis_subsurfacestation')
 
@@ -64,7 +64,7 @@ class Migration(migrations.Migration):
         ('surveys', '0019_alter_format__format'),
     ]
 
-   
+
     operations = [
         # ================================================================
         # STEP 1: Add polymorphic_ctype to Station (nullable for now)
@@ -156,4 +156,4 @@ class Migration(migrations.Migration):
             model_name='station',
             name='_project',
         ),
-    ] 
+    ]

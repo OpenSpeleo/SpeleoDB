@@ -20,23 +20,23 @@ export const Geometry = {
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        
+
         return EARTH_RADIUS_METERS * c;
     },
 
     // Cache line features and extract start/end snap points from a project's GeoJSON source
     cacheLineFeatures: function(projectId, geojsonData) {
         if (!geojsonData || !geojsonData.features) return;
-        
+
         const snapPoints = [];
         let lineCount = 0;
-        
+
         geojsonData.features.forEach((feature, index) => {
             if (feature.geometry && feature.geometry.type === 'LineString') {
                 const coords = feature.geometry.coordinates;
                 const lineName = feature.properties?.section_name || feature.properties?.name || `Line ${index}`;
                 lineCount++;
-                
+
                 if (coords.length >= 2) {
                     const startCoord = [coords[0][0], coords[0][1]];
                     snapPoints.push({
@@ -45,7 +45,7 @@ export const Geometry = {
                         type: 'start',
                         lineIndex: 0
                     });
-                    
+
                     const endCoord = [coords[coords.length - 1][0], coords[coords.length - 1][1]];
                     snapPoints.push({
                         coordinates: endCoord,
@@ -56,7 +56,7 @@ export const Geometry = {
                 }
             }
         });
-        
+
         if (lineCount > 0) {
             snapPointsCache.set(String(projectId), snapPoints);
             console.log(`📐 Project ${projectId}: ${lineCount} lines, ${snapPoints.length} snap points (start/end only)`);
@@ -78,15 +78,15 @@ export const Geometry = {
             for (const [pid, points] of snapPointsCache.entries()) {
                 // If a specific project is requested, only check that project
                 if (projectId && pid !== String(projectId)) continue;
-                
+
                 // Skip hidden projects
                 if (!Layers.isProjectVisible(pid)) continue;
-                
+
                 if (!Array.isArray(points) || points.length === 0) continue;
-                
+
                 for (const snapPoint of points) {
                     const d = this.calculateDistanceInMeters(target, snapPoint.coordinates);
-                    
+
                     if (d < bestDistance) {
                         bestDistance = d;
                         bestPoint = snapPoint.coordinates;
@@ -94,7 +94,7 @@ export const Geometry = {
                         bestPointType = snapPoint.type; // 'start' or 'end'
                         bestProjectId = pid;
                     }
-                    
+
                     if (bestDistance === 0) break;
                 }
                 if (bestDistance === 0) break;
@@ -126,13 +126,13 @@ export const Geometry = {
     // Find project for a feature based on layer ID
     findProjectForFeature: function(feature, map, allProjectLayers) {
         if (!feature.layer || !feature.layer.id) return null;
-        
+
         // Check if it's a station layer - extract UUID from layer ID
         if (feature.layer.id.startsWith('stations-')) {
             const uuidMatch = feature.layer.id.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
             return uuidMatch ? uuidMatch[0] : null;
         }
-        
+
         // Check if it's a project layer
         for (const [projectId, layerIds] of allProjectLayers.entries()) {
             if (layerIds.includes(feature.layer.id)) {
@@ -215,7 +215,7 @@ export const Geometry = {
             for (const [pid, points] of snapPointsCache.entries()) {
                 if (!Array.isArray(points) || points.length === 0) continue;
                 if (!Layers.isProjectVisible(pid)) continue;
-                
+
                 for (const snapPoint of points) {
                     const d = this.calculateDistanceInMeters(target, snapPoint.coordinates);
                     if (d < bestDistance) {
@@ -269,6 +269,3 @@ export const Geometry = {
         return MAGNETIC_SNAP_RADIUS;
     }
 };
-
-
-

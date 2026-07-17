@@ -21,14 +21,14 @@ export async function init(context) {
                 $(this).removeClass('border-slate-700 bg-srgb-slate-700-30');
                 $(this).addClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
             });
-            
+
             $('#dropzone').on('dragleave', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $(this).removeClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
                 $(this).addClass('border-slate-700 bg-srgb-slate-700-30');
             });
-            
+
             $('#dropzone').on('drop', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -36,19 +36,19 @@ export async function init(context) {
                 let newFiles = Array.from(e.originalEvent.dataTransfer.files);
                 handleFiles(newFiles);
             });
-            
+
             $('#dropzone').on('click', function(e) {
                 e.preventDefault();
                 $('#artifact').click();
             });
-            
+
             $('#artifact').on('change', function(e) {
                 let newFiles = Array.from(this.files);
                 handleFiles(newFiles);
                 // Clear the input field to allow the same file to be selected again
                 $('#artifact').val('');
             });
-            
+
             function handleFiles(newFiles) {
                 // Verify the max number of files:
                 if (filesArray.length + newFiles.length > context.maxFiles) {
@@ -56,7 +56,7 @@ export async function init(context) {
                     $("#modal_error").css("display", "flex");
                     return false;
                 }
-            
+
                 // Verify each file is under the max size [2Mb]
                 let totalSize = filesArray.reduce((acc, file) => acc + file.size, 0);
                 for (let file of newFiles) {
@@ -67,30 +67,30 @@ export async function init(context) {
                         return false;
                     }
                 }
-            
+
                 // Verify the total size is under the max size [50Mb]
                 if (totalSize > context.maxTotalSizeMb * 1024 * 1024) {
                     $("#modal_error_txt").text("Total upload size exceeds " + context.maxTotalSizeMb + " Mb.");
                     $("#modal_error").css("display", "flex");
                     return false;
                 }
-            
+
                 // Add new files to the array
                 filesArray = filesArray.concat(newFiles);
-            
+
                 // If it was done with drag & drop
                 $('#dropzone').removeClass('border-srgb-amber-500-50 bg-srgb-amber-400-10');
-            
+
                 // If it was done with filepicker
                 $('#dropzone').removeClass('hover bg-srgb-slate-700-30 border-slate-700');
                 $('#dropzone').addClass('bg-srgb-emerald-500-10 border-emerald-300');
-            
+
                 $("#icon_waiting_for_file").hide();
                 $('#dropzone').addClass('dropped');
-            
+
                 updateFileList();
             }
-            
+
             function updateFileList() {
                 if (filesArray.length === 0) {
                     // Reset to initial state
@@ -99,13 +99,13 @@ export async function init(context) {
                     $("#icon_waiting_for_file").show();
                     $('#dropzone label').html('Please upload up to ' + context.maxFiles + ' files, each under ' + context.maxFileSizeMb + ' Mb [Total under ' + context.maxTotalSizeMb + ' Mb].');
                 } else {
-                    let fileNames = filesArray.map((file, index) => 
+                    let fileNames = filesArray.map((file, index) =>
                         `<div>
                             - ${escapeHtml(file.name)} <span class="remove-file" data-index="${index}" style="color: red; font-size: 20px; cursor: pointer;">&times;</span>
                         </div>`
                     ).join("");
                     $('#dropzone label').html("<b>** Files to upload **</b><hr class='my-4'>" + fileNames);
-            
+
                     $('.remove-file').on('click', function(event) {
                         event.stopPropagation(); // Prevent the file picker from opening
                         event.preventDefault(); // Prevent the default behavior

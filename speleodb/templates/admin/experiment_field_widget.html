@@ -6,21 +6,21 @@
 <div class="experiment-field-builder">
     <!-- Hidden textarea for actual form submission -->
     <textarea name="{{ widget.name }}" id="{{ widget.attrs.id }}" style="display: none;">{{ widget.value|default:"[]" }}</textarea>
-    
+
     <div class="exp-container">
         <!-- Mandatory Fields Display -->
         <div style="margin-bottom: 24px;">
             <h3 class="exp-section-title">
                 Mandatory Fields (Non-editable)
             </h3>
-            
+
             <div class="exp-mandatory-field">
                 <strong>1. Measurement Date</strong> <span class="exp-required" style="color: #dc2626; font-weight: bold; font-size: 1.1em;">*</span>
                 <span class="exp-mandatory-badge">SYSTEM FIELD</span>
                 <br>
                 <span class="exp-field-type">Type: date</span>
             </div>
-            
+
             <div class="exp-mandatory-field">
                 <strong>2. Submitter Email</strong> <span class="exp-required" style="color: #dc2626; font-weight: bold; font-size: 1.1em;">*</span>
                 <span class="exp-mandatory-badge">SYSTEM FIELD</span>
@@ -42,11 +42,11 @@
             <div style="background: var(--darkened-bg, #fff3cd); border-left: 3px solid var(--selected-bg, #ffc107); padding: 10px 12px; margin-bottom: 12px; border-radius: 4px; font-size: 12px; color: var(--body-fg, #856404);">
                 <strong>⚠️ Important:</strong> Once saved, fields become <strong>immutable</strong>. You can only <strong>add new fields</strong>, never remove or modify existing ones. This ensures data integrity for all collected measurements.
             </div>
-            
+
             <div id="custom-fields-container" style="display: flex; flex-direction: column; gap: 12px;">
                 <!-- Custom fields will be added here -->
             </div>
-            
+
             <div id="no-fields-msg" class="exp-no-fields">
                 No custom fields yet. Click "Add Field" to create one.
             </div>

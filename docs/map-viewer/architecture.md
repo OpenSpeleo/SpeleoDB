@@ -6,10 +6,10 @@ The SpeleoDB map viewer is a **Mapbox GL JS** based application for visualizing
 cave survey data, stations, landmarks, exploration leads, GPS tracks, and safety
 cylinders. It has two entry points:
 
-| Entry point | File | Purpose |
-|---|---|---|
+| Entry point | File                                                    | Purpose                                                                                                                                                                                           |
+| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Private** | `frontend_private/static/private/js/map_viewer/main.js` | Full-featured viewer for authenticated users. Supports CRUD on stations, landmarks, exploration leads, cylinder installs, GPS tracks, drag-and-drop, context menus, and permission-gated actions. |
-| **Public** | `frontend_public/static/js/gis_view_main.js` | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`. |
+| **Public**  | `frontend_public/static/js/gis_view_main.js`            | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`.                                      |
 
 Both entry points share core modules located in
 `frontend_private/static/private/js/map_viewer/`. The public viewer imports them
@@ -107,31 +107,31 @@ flowchart TD
 
 ## Private vs Public Viewer Comparison
 
-| Feature | Private | Public |
-|---|:---:|:---:|
-| Survey GeoJSON (lines, points) | Yes | Yes |
-| Color modes (By Project / By Depth) | Yes | Yes |
-| Project colors (model-stored) | Yes | Yes (color from API) |
-| Country grouping in project panel | Yes | No (flat list) |
-| Project visibility toggle panel | Yes | Yes |
-| Depth legend | Yes | Yes |
-| Auto-zoom to bounds | Yes | Yes |
-| Max zoom limiting | No | Yes (`LIMITED_MAX_ZOOM = 13` when `allowPreciseZoom` is false) |
-| Subsurface stations (CRUD) | Yes | No |
-| Surface stations (CRUD) | Yes | No |
-| Landmarks (CRUD, GPX import) | Yes | No |
-| Exploration leads (CRUD) | Yes | No |
-| Cylinder installs | Yes | No |
-| GPS tracks panel | Yes | No |
-| Station tags & colors | Yes | No |
-| Station logs, resources, sensors, experiments | Yes | No |
-| Context menu (right-click) | Yes | No |
-| Drag-and-drop repositioning | Yes | No |
-| URL `?goto=LAT,LONG` deep linking | Yes | No |
-| Permission-gated actions | Yes | No (all read-only) |
+| Feature                                       | Private |                             Public                             |
+| --------------------------------------------- | :-----: | :------------------------------------------------------------: |
+| Survey GeoJSON (lines, points)                |   Yes   |                              Yes                               |
+| Color modes (By Project / By Depth)           |   Yes   |                              Yes                               |
+| Project colors (model-stored)                 |   Yes   |                      Yes (color from API)                      |
+| Country grouping in project panel             |   Yes   |                         No (flat list)                         |
+| Project visibility toggle panel               |   Yes   |                              Yes                               |
+| Depth legend                                  |   Yes   |                              Yes                               |
+| Auto-zoom to bounds                           |   Yes   |                              Yes                               |
+| Max zoom limiting                             |   No    | Yes (`LIMITED_MAX_ZOOM = 13` when `allowPreciseZoom` is false) |
+| Subsurface stations (CRUD)                    |   Yes   |                               No                               |
+| Surface stations (CRUD)                       |   Yes   |                               No                               |
+| Landmarks (CRUD, GPX import)                  |   Yes   |                               No                               |
+| Exploration leads (CRUD)                      |   Yes   |                               No                               |
+| Cylinder installs                             |   Yes   |                               No                               |
+| GPS tracks panel                              |   Yes   |                               No                               |
+| Station tags & colors                         |   Yes   |                               No                               |
+| Station logs, resources, sensors, experiments |   Yes   |                               No                               |
+| Context menu (right-click)                    |   Yes   |                               No                               |
+| Drag-and-drop repositioning                   |   Yes   |                               No                               |
+| URL `?goto=LAT,LONG` deep linking             |   Yes   |                               No                               |
+| Permission-gated actions                      |   Yes   |                       No (all read-only)                       |
 
-**Shared modules used by public viewer:**
-`State`, `Config`, `MapCore`, `MapSources`, `Layers`, `Utils`, `ProjectPanel`, `DepthLegend`
+**Shared modules used by public viewer:** `State`, `Config`, `MapCore`,
+`MapSources`, `Layers`, `Utils`, `ProjectPanel`, `DepthLegend`
 
 ---
 
@@ -235,51 +235,54 @@ Holds project/network metadata and permissions. Loaded from API during
 initialization and not mutated during the session (except
 `filterProjectsByGeoJSON` which prunes the list once).
 
-| Property | Type | Purpose |
-|---|---|---|
-| `_projects` | `Array` | Project list with `id`, `name`, `permissions`, `country`, `color`, `geojson_url` |
-| `_networks` | `Array` | Surface network list with `id`, `name`, `permission_level` |
-| `_gpsTracks` | `Array` | GPS track metadata with `id`, `name`, `color`, `file` URL |
+| Property     | Type    | Purpose                                                                          |
+| ------------ | ------- | -------------------------------------------------------------------------------- |
+| `_projects`  | `Array` | Project list with `id`, `name`, `permissions`, `country`, `color`, `geojson_url` |
+| `_networks`  | `Array` | Surface network list with `id`, `name`, `permission_level`                       |
+| `_gpsTracks` | `Array` | GPS track metadata with `id`, `name`, `color`, `file` URL                        |
 
 Key methods: `hasProjectAccess(id, action)`, `hasNetworkAccess(id, action)`,
 `hasScopedAccess(scopeType, scopeId, action)`, `getStationAccess(station)`,
 `getProjectById(id)`, `getGPSTrackById(id)`.
 
 Permission model uses ranked levels:
-- Projects: `UNKNOWN(0)` < `WEB_VIEWER(1)` < `READ_ONLY(2)` < `READ_AND_WRITE(3)` < `ADMIN(4)`
+
+- Projects: `UNKNOWN(0)` < `WEB_VIEWER(1)` < `READ_ONLY(2)` <
+  `READ_AND_WRITE(3)` < `ADMIN(4)`
 - Networks: numeric levels `0` < `1 (READ)` < `2 (WRITE)` < `3 (DELETE/ADMIN)`
 
 ### `State` — Mutable Runtime State
 
-All fields are reset by `State.resetLayerState()`. Every map is keyed by string IDs.
+All fields are reset by `State.resetLayerState()`. Every map is keyed by string
+IDs.
 
-| Field | Type | Purpose |
-|---|---|---|
-| `map` | `mapboxgl.Map` | The Mapbox GL map instance |
-| `projectLayerStates` | `Map<string, boolean>` | Per-project visibility toggle (persisted to localStorage) |
-| `networkLayerStates` | `Map<string, boolean>` | Per-network visibility toggle (persisted to localStorage) |
-| `allProjectLayers` | `Map<string, string[]>` | Mapbox layer IDs belonging to each project |
-| `allNetworkLayers` | `Map<string, string[]>` | Mapbox layer IDs belonging to each network |
-| `allStations` | `Map<string, object>` | All subsurface stations by ID |
-| `allSurfaceStations` | `Map<string, object>` | All surface stations by ID |
-| `allLandmarks` | `Map<string, object>` | All landmarks by ID |
-| `explorationLeads` | `Map<string, object>` | Exploration lead markers by ID |
-| `cylinderInstalls` | `Map<string, object>` | Cylinder install data by ID |
-| `projectDepthDomains` | `Map<string, {min,max}\|null>` | Per-project depth range (computed from GeoJSON) |
-| `activeDepthDomain` | `{min, max}\|null` | Merged depth domain across currently visible projects |
-| `projectBounds` | `Map<string, LngLatBounds>` | Geographic bounds per project (for auto-zoom) |
-| `networkBounds` | `Map<string, LngLatBounds>` | Geographic bounds per network |
-| `landmarksVisible` | `boolean` | Global landmark layer visibility (default `true`) |
-| `userTags` | `Array` | User's station tags |
-| `tagColors` | `Array` | Predefined tag color palette |
-| `currentStationForTagging` | `string\|null` | Station being tagged |
-| `currentProjectId` | `string\|null` | Currently selected project for station creation |
-| `gpsTrackLayerStates` | `Map<string, boolean>` | Per-track visibility (session-only, default OFF) |
-| `gpsTrackCache` | `Map<string, object>` | Downloaded GeoJSON data keyed by track ID |
-| `gpsTrackLoadingStates` | `Map<string, boolean>` | Which tracks are currently downloading |
-| `allGPSTrackLayers` | `Map<string, string[]>` | Mapbox layer IDs belonging to each GPS track |
-| `gpsTrackBounds` | `Map<string, LngLatBounds>` | Geographic bounds per GPS track |
-| `effectiveProjectVisibility` | `Map<string, boolean>` | Actual on-map visibility (respects both country gate and individual toggle) |
+| Field                        | Type                           | Purpose                                                                     |
+| ---------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| `map`                        | `mapboxgl.Map`                 | The Mapbox GL map instance                                                  |
+| `projectLayerStates`         | `Map<string, boolean>`         | Per-project visibility toggle (persisted to localStorage)                   |
+| `networkLayerStates`         | `Map<string, boolean>`         | Per-network visibility toggle (persisted to localStorage)                   |
+| `allProjectLayers`           | `Map<string, string[]>`        | Mapbox layer IDs belonging to each project                                  |
+| `allNetworkLayers`           | `Map<string, string[]>`        | Mapbox layer IDs belonging to each network                                  |
+| `allStations`                | `Map<string, object>`          | All subsurface stations by ID                                               |
+| `allSurfaceStations`         | `Map<string, object>`          | All surface stations by ID                                                  |
+| `allLandmarks`               | `Map<string, object>`          | All landmarks by ID                                                         |
+| `explorationLeads`           | `Map<string, object>`          | Exploration lead markers by ID                                              |
+| `cylinderInstalls`           | `Map<string, object>`          | Cylinder install data by ID                                                 |
+| `projectDepthDomains`        | `Map<string, {min,max}\|null>` | Per-project depth range (computed from GeoJSON)                             |
+| `activeDepthDomain`          | `{min, max}\|null`             | Merged depth domain across currently visible projects                       |
+| `projectBounds`              | `Map<string, LngLatBounds>`    | Geographic bounds per project (for auto-zoom)                               |
+| `networkBounds`              | `Map<string, LngLatBounds>`    | Geographic bounds per network                                               |
+| `landmarksVisible`           | `boolean`                      | Global landmark layer visibility (default `true`)                           |
+| `userTags`                   | `Array`                        | User's station tags                                                         |
+| `tagColors`                  | `Array`                        | Predefined tag color palette                                                |
+| `currentStationForTagging`   | `string\|null`                 | Station being tagged                                                        |
+| `currentProjectId`           | `string\|null`                 | Currently selected project for station creation                             |
+| `gpsTrackLayerStates`        | `Map<string, boolean>`         | Per-track visibility (session-only, default OFF)                            |
+| `gpsTrackCache`              | `Map<string, object>`          | Downloaded GeoJSON data keyed by track ID                                   |
+| `gpsTrackLoadingStates`      | `Map<string, boolean>`         | Which tracks are currently downloading                                      |
+| `allGPSTrackLayers`          | `Map<string, string[]>`        | Mapbox layer IDs belonging to each GPS track                                |
+| `gpsTrackBounds`             | `Map<string, LngLatBounds>`    | Geographic bounds per GPS track                                             |
+| `effectiveProjectVisibility` | `Map<string, boolean>`         | Actual on-map visibility (respects both country gate and individual toggle) |
 
 ---
 
@@ -289,15 +292,15 @@ All fields are reset by `State.resetLayerState()`. Every map is keyed by string 
 
 All Mapbox sources and layers follow consistent naming:
 
-| Entity | Source ID | Layer IDs |
-|---|---|---|
-| Project GeoJSON | `project-geojson-{projectId}` | `project-layer-{id}` (lines), `project-labels-{id}`, `project-points-{id}` |
-| Subsurface Stations | `stations-source-{projectId}` | `stations-{id}-circles`, `stations-{id}-biology-icons`, `stations-{id}-bone-icons`, `stations-{id}-artifact-icons`, `stations-{id}-geology-icons`, `stations-{id}-labels` |
-| Surface Stations | `surface-stations-source-{networkId}` | `surface-stations-{id}`, `surface-stations-{id}-labels` |
-| Landmarks | `landmarks-source` | `landmarks-layer`, `landmarks-labels` |
-| Exploration Leads | `exploration-leads-source` | `exploration-leads-layer` |
-| Cylinder Installs | `cylinder-installs-source` | `cylinder-installs-layer`, `cylinder-installs-labels` |
-| GPS Tracks | `gps-track-source-{trackId}` | `gps-track-line-{id}` |
+| Entity              | Source ID                             | Layer IDs                                                                                                                                                                 |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Project GeoJSON     | `project-geojson-{projectId}`         | `project-layer-{id}` (lines), `project-labels-{id}`, `project-points-{id}`                                                                                                |
+| Subsurface Stations | `stations-source-{projectId}`         | `stations-{id}-circles`, `stations-{id}-biology-icons`, `stations-{id}-bone-icons`, `stations-{id}-artifact-icons`, `stations-{id}-geology-icons`, `stations-{id}-labels` |
+| Surface Stations    | `surface-stations-source-{networkId}` | `surface-stations-{id}`, `surface-stations-{id}-labels`                                                                                                                   |
+| Landmarks           | `landmarks-source`                    | `landmarks-layer`, `landmarks-labels`                                                                                                                                     |
+| Exploration Leads   | `exploration-leads-source`            | `exploration-leads-layer`                                                                                                                                                 |
+| Cylinder Installs   | `cylinder-installs-source`            | `cylinder-installs-layer`, `cylinder-installs-labels`                                                                                                                     |
+| GPS Tracks          | `gps-track-source-{trackId}`          | `gps-track-line-{id}`                                                                                                                                                     |
 
 ### Z-Ordering Strategy
 
@@ -321,36 +324,37 @@ All Mapbox sources and layers follow consistent naming:
   then creates new ones.
 - **Update**: Source data is updated in-place via `source.setData(data)` for
   position/property changes without recreating layers.
-- **Visibility**: Toggled via `map.setLayoutProperty(layerId, 'visibility', ...)`
-  through centralized `applyProjectVisibility()` / `applyProjectScopedMarkerVisibility()`.
+- **Visibility**: Toggled via
+  `map.setLayoutProperty(layerId, 'visibility', ...)` through centralized
+  `applyProjectVisibility()` / `applyProjectScopedMarkerVisibility()`.
 - **Refresh**: Full re-fetch + re-render triggered by `speleo:refresh-*` events.
-- **Base map source changes**: `MapSources.applyMapSource()` persists the selected
-  source and switches ESRI sources by replacing one `speleo-base-raster-layer`
-  below the first SpeleoDB overlay layer. It hides/restores underlying Mapbox
-  base-style layers so only one visible base tile source is active while
-  survey/station/marker layers stay untouched above it. Non-destructive source
-  changes emit `reloadRequired: false`, and both entrypoints ignore those
-  events instead of rebuilding overlays.
+- **Base map source changes**: `MapSources.applyMapSource()` persists the
+  selected source and switches ESRI sources by replacing one
+  `speleo-base-raster-layer` below the first SpeleoDB overlay layer. It
+  hides/restores underlying Mapbox base-style layers so only one visible base
+  tile source is active while survey/station/marker layers stay untouched above
+  it. Non-destructive source changes emit `reloadRequired: false`, and both
+  entrypoints ignore those events instead of rebuilding overlays.
 
 ### Map Sources
 
-Base map providers are defined once in `MAP_SOURCES` in `config.js`.
-Each entry declares its id, label, style/tile URL, source type, attribution,
-and whether it needs a token. `MapSources` resolves the selected source from
+Base map providers are defined once in `MAP_SOURCES` in `config.js`. Each entry
+declares its id, label, style/tile URL, source type, attribution, and whether it
+needs a token. `MapSources` resolves the selected source from
 `DEFAULTS.STORAGE_KEYS.MAP_SOURCE`, filters token-required providers when no
 token is available, and builds either a Mapbox style URL or a raster style
 object for tile APIs. Raster tile URLs may include `{accessToken}` for future
-tokenized providers; ESRI hillshade sources do not need a token. ESRI
-hillshade raster sources use provider `maxzoom: 16`: the map can still zoom
-beyond 16, but Mapbox GL overzooms zoom-16 ESRI tiles instead of requesting
-ESRI zoom 17+ tiles, which showed unavailable-data imagery in Mexico testing.
-ESRI Satellite uses the public World Imagery raster endpoint with provider
-`maxzoom: 18`. `DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing
-tile image hash list applied systematically to every configured raster source,
-not a per-provider opt-in. Matching tile responses are rejected by JavaScript
-when the viewer can inspect the image bytes. The Mapbox CDN builds currently
-loaded by SpeleoDB do not expose a documented custom tile protocol API, so ESRI
-raster sources keep their normal provider URLs to avoid breaking rendering.
+tokenized providers; ESRI hillshade sources do not need a token. ESRI hillshade
+raster sources use provider `maxzoom: 16`: the map can still zoom beyond 16, but
+Mapbox GL overzooms zoom-16 ESRI tiles instead of requesting ESRI zoom 17+
+tiles, which showed unavailable-data imagery in Mexico testing. ESRI Satellite
+uses the public World Imagery raster endpoint with provider `maxzoom: 18`.
+`DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing tile image hash
+list applied systematically to every configured raster source, not a
+per-provider opt-in. Matching tile responses are rejected by JavaScript when the
+viewer can inspect the image bytes. The Mapbox CDN builds currently loaded by
+SpeleoDB do not expose a documented custom tile protocol API, so ESRI raster
+sources keep their normal provider URLs to avoid breaking rendering.
 `MapCore.init()` installs a JavaScript `fetch` wrapper fallback that hashes
 matching configured raster tile responses when those requests pass through page
 `fetch`. Tile validation is implemented in browser JavaScript, not in Python.
@@ -363,17 +367,17 @@ the icon manually. Do not interpolate user or API data into that constant.
 
 Each layer type has a `minzoom` threshold defined in `ZOOM_LEVELS`:
 
-| Layer Type | Min Zoom |
-|---|---|
-| Project survey lines | 8 |
-| Project line labels | 14 |
-| Project entry points (stars) | 10 |
-| GPS track lines | 8 |
-| Landmarks | 12 (symbol), 16 (label) |
-| Subsurface stations | 12 (symbol), 16 (label) |
-| Surface stations | 12 (symbol), 16 (label) |
-| Cylinder installs | 12 (symbol), 16 (label) |
-| Exploration leads | 12 |
+| Layer Type                   | Min Zoom                |
+| ---------------------------- | ----------------------- |
+| Project survey lines         | 8                       |
+| Project line labels          | 14                      |
+| Project entry points (stars) | 10                      |
+| GPS track lines              | 8                       |
+| Landmarks                    | 12 (symbol), 16 (label) |
+| Subsurface stations          | 12 (symbol), 16 (label) |
+| Surface stations             | 12 (symbol), 16 (label) |
+| Cylinder installs            | 12 (symbol), 16 (label) |
+| Exploration leads            | 12                      |
 
 ---
 
@@ -384,36 +388,36 @@ modules. All are dispatched on `window` unless noted.
 
 ### Refresh Events (listened in `main.js`)
 
-| Event | Payload | Purpose |
-|---|---|---|
-| `speleo:refresh-stations` | `{ projectId }` | Re-fetch and re-render all stations for a project |
-| `speleo:refresh-surface-stations` | `{ networkId }` | Re-fetch and re-render surface stations for a network |
-| `speleo:refresh-landmarks` | (none) | Re-fetch and re-render all landmarks |
-| `speleo:refresh-gps-tracks` | `{ deactivateAll? }` | Clear cache, reload GPS track list, optionally hide all visible tracks |
-| `speleo:refresh-cylinder-installs` | (none) | Re-fetch cylinder installs GeoJSON (dispatched on `document`) |
+| Event                              | Payload              | Purpose                                                                |
+| ---------------------------------- | -------------------- | ---------------------------------------------------------------------- |
+| `speleo:refresh-stations`          | `{ projectId }`      | Re-fetch and re-render all stations for a project                      |
+| `speleo:refresh-surface-stations`  | `{ networkId }`      | Re-fetch and re-render surface stations for a network                  |
+| `speleo:refresh-landmarks`         | (none)               | Re-fetch and re-render all landmarks                                   |
+| `speleo:refresh-gps-tracks`        | `{ deactivateAll? }` | Clear cache, reload GPS track list, optionally hide all visible tracks |
+| `speleo:refresh-cylinder-installs` | (none)               | Re-fetch cylinder installs GeoJSON (dispatched on `document`)          |
 
 ### State Change Events (dispatched by modules)
 
-| Event | Payload | Purpose |
-|---|---|---|
-| `speleo:color-mode-changed` | `{ mode: 'project'\|'depth' }` | Dispatched by `MapCore.setupColorModeToggle()` when user toggles color mode |
-| `speleo:map-source-changed` | `{ sourceId, reloadRequired: boolean }` | Dispatched by `MapSources.applyMapSource()`; ESRI switches use `reloadRequired: false` and do not rebuild overlays |
-| `speleo:depth-domain-updated` | `{ domain, available, max }` | Dispatched by `Layers.emitDepthDomainUpdated()` when merged depth domain changes |
-| `speleo:depth-data-updated` | `{ domain, available, max }` | Legacy alias of `depth-domain-updated` |
-| `speleo:gps-track-loading-changed` | `{ trackId, isLoading }` | Dispatched by `Layers.setGPSTrackLoading()` for UI spinner updates |
+| Event                              | Payload                                 | Purpose                                                                                                            |
+| ---------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `speleo:color-mode-changed`        | `{ mode: 'project'\|'depth' }`          | Dispatched by `MapCore.setupColorModeToggle()` when user toggles color mode                                        |
+| `speleo:map-source-changed`        | `{ sourceId, reloadRequired: boolean }` | Dispatched by `MapSources.applyMapSource()`; ESRI switches use `reloadRequired: false` and do not rebuild overlays |
+| `speleo:depth-domain-updated`      | `{ domain, available, max }`            | Dispatched by `Layers.emitDepthDomainUpdated()` when merged depth domain changes                                   |
+| `speleo:depth-data-updated`        | `{ domain, available, max }`            | Legacy alias of `depth-domain-updated`                                                                             |
+| `speleo:gps-track-loading-changed` | `{ trackId, isLoading }`                | Dispatched by `Layers.setGPSTrackLoading()` for UI spinner updates                                                 |
 
 ### Dispatchers and Listeners
 
-| Event | Dispatched By | Listened By |
-|---|---|---|
-| `refresh-stations` | `Layers.refreshStationsAfterChange()` | `main.js` |
-| `refresh-surface-stations` | `Layers.refreshSurfaceStationsAfterChange()` | `main.js` |
-| `refresh-landmarks` | Landmark CRUD modules | `main.js` |
-| `refresh-gps-tracks` | Upload/GPX import modules | `main.js` |
-| `refresh-cylinder-installs` | `cylinders.js` | `main.js` |
-| `color-mode-changed` | `map/core.js` | `depth_legend.js` |
-| `depth-domain-updated` | `map/layers.js` | `depth_legend.js` |
-| `gps-track-loading-changed` | `map/layers.js` | `gps_tracks_panel.js` |
+| Event                       | Dispatched By                                | Listened By           |
+| --------------------------- | -------------------------------------------- | --------------------- |
+| `refresh-stations`          | `Layers.refreshStationsAfterChange()`        | `main.js`             |
+| `refresh-surface-stations`  | `Layers.refreshSurfaceStationsAfterChange()` | `main.js`             |
+| `refresh-landmarks`         | Landmark CRUD modules                        | `main.js`             |
+| `refresh-gps-tracks`        | Upload/GPX import modules                    | `main.js`             |
+| `refresh-cylinder-installs` | `cylinders.js`                               | `main.js`             |
+| `color-mode-changed`        | `map/core.js`                                | `depth_legend.js`     |
+| `depth-domain-updated`      | `map/layers.js`                              | `depth_legend.js`     |
+| `gps-track-loading-changed` | `map/layers.js`                              | `gps_tracks_panel.js` |
 
 ---
 
@@ -422,45 +426,45 @@ modules. All are dispatched on `window` unless noted.
 ### Vite route graph
 
 The map viewers are lazy branches of the single Vite graph, not independent
-compiler pipelines. Django emits inert structured context for the
-`private-map`, `public-gis`, or `landmark-details` controller. The small
-application bootstrap initializes controllers in document order, and each map
-controller dynamically imports its existing module root:
+compiler pipelines. Django emits inert structured context for the `private-map`,
+`public-gis`, or `landmark-details` controller. The small application bootstrap
+initializes controllers in document order, and each map controller dynamically
+imports its existing module root:
 
-| Controller | Lazy module root |
-|---|---|
-| `private-map` | `frontend_private/static/private/js/map_viewer/main.js` |
-| `public-gis` | `frontend_public/static/js/gis_view_main.js` |
+| Controller         | Lazy module root                                                         |
+| ------------------ | ------------------------------------------------------------------------ |
+| `private-map`      | `frontend_private/static/private/js/map_viewer/main.js`                  |
+| `public-gis`       | `frontend_public/static/js/gis_view_main.js`                             |
 | `landmark-details` | `frontend_private/static/private/js/landmark_collection/details_main.js` |
 
 Common map modules become shared chunks. Public pages do not preload or fetch
-the private map controller. Vite owns compilation and disk watching while
-Django remains the server; production is minified and hashed, development uses
-stable entry names and source maps.
+the private map controller. Vite owns compilation and disk watching while Django
+remains the server; production is minified and hashed, development uses stable
+entry names and source maps.
 
 ### Tailwind CSS
 
 The public and private applications consume one Tailwind product asset:
 
-| Canonical reference | Production input | Output |
-|---|---|---|
+| Canonical reference              | Production input         | Output                         |
+| -------------------------------- | ------------------------ | ------------------------------ |
 | `tailwind_css/private/style.css` | `tailwind_css/style.css` | Vite logical entry `style-app` |
 
 The neutral input imports the private reference unchanged, then adds public
 sources and namespaced public-site components. Vite emits the hashed product
-stylesheet and records it in its manifest. Public GIS therefore receives
-the Tailwind asset once; its private custom/modal/map styles continue to load
-after the public custom stylesheet. Production builds use `--minify`.
+stylesheet and records it in its manifest. Public GIS therefore receives the
+Tailwind asset once; its private custom/modal/map styles continue to load after
+the public custom stylesheet. Production builds use `--minify`.
 
 ### Key npm Scripts
 
-| Script | Purpose |
-|---|---|
-| `npm run dev` | One Vite disk-build watcher; Django remains the server |
-| `npm run build` | Full clean + production build |
-| `npm run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof |
-| `npm run lint:js` | ESLint across frontend and Node tooling JS (excludes `dist/` and `vendors/`) |
-| `npm run test:js` | Jest test runner for frontend tests |
+| Script                      | Purpose                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`               | One Vite disk-build watcher; Django remains the server                       |
+| `npm run build`             | Full clean + production build                                                |
+| `npm run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof                              |
+| `npm run lint:js`           | ESLint across frontend and Node tooling JS (excludes `dist/` and `vendors/`) |
+| `npm run test:js`           | Jest test runner for frontend tests                                          |
 
 ### Integration Points
 
@@ -468,4 +472,5 @@ after the public custom stylesheet. Production builds use `--minify`.
   which performs the clean production Vite build.
 - **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
 - **Railway deploy** (`railway.toml`): Production build via root npm commands.
-- **Django**: Templates reference the bundled output files in `dist/` directories.
+- **Django**: Templates reference the bundled output files in `dist/`
+  directories.

@@ -3,11 +3,11 @@
         .revision-table {
             display: none;
         }
-        
+
         .revision-list {
             display: block;
         }
-        
+
         .revision-item {
             background: rgba(30, 41, 59, 0.3);
             border: 1px solid rgba(100, 116, 139, 0.2);
@@ -16,38 +16,38 @@
             margin-bottom: 12px;
             transition: all 0.2s ease;
         }
-        
+
         .revision-item:hover {
             background: rgba(30, 41, 59, 0.5);
             border-color: rgba(99, 102, 241, 0.3);
         }
-        
+
         .revision-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
-        
+
         .revision-id {
             font-family: monospace;
             font-size: 14px;
             color: #a5b4fc;
             font-weight: 600;
         }
-        
+
         .revision-actions {
             display: flex;
             gap: 12px;
         }
-        
+
         .revision-message {
             font-size: 15px;
             color: #e2e8f0;
             margin-bottom: 10px;
             line-height: 1.4;
         }
-        
+
         .revision-meta {
             display: flex;
             flex-wrap: wrap;
@@ -55,25 +55,25 @@
             font-size: 13px;
             color: #94a3b8;
         }
-        
+
         .revision-meta-item {
             display: flex;
             align-items: center;
             gap: 6px;
         }
-        
+
         .revision-meta-icon {
             width: 16px;
             height: 16px;
             flex-shrink: 0;
         }
     }
-    
+
     @media (min-width: 769px) {
         .revision-table {
             display: block;
         }
-        
+
         .revision-list {
             display: none;
         }

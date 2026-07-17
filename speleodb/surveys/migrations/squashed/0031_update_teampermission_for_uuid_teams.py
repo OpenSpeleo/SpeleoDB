@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
             name='target_uuid',
             field=models.UUIDField(null=True),
         ),
-        
+
         # Step 3: Drop FK Constraint
         migrations.AlterField(
             model_name='teampermission',

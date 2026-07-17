@@ -199,4 +199,3 @@ describe('Config permission refactor', () => {
         });
     });
 });
-

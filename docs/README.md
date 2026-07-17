@@ -26,8 +26,8 @@ Unlike product docs, these files prioritize:
 ### Feature Documentation
 
 - `api-docs-access.md`
-  - user-level API Docs/API Schema menu visibility flag, admin ownership,
-    and permission boundaries
+  - user-level API Docs/API Schema menu visibility flag, admin ownership, and
+    permission boundaries
 - `map-viewer/features.md`
   - station/landmark/exploration lead/GPS track/cylinder management,
     drag-and-drop, context menu, component library
@@ -70,8 +70,8 @@ Unlike product docs, these files prioritize:
 ### Coding Rules
 
 - `coding-rules.md`
-  - JS constant centralization, Python import ordering, Django ORM rules
-    (hard rules, must not be violated)
+  - JS constant centralization, Python import ordering, Django ORM rules (hard
+    rules, must not be violated)
 
 Repository-wide agent guardrails live at:
 

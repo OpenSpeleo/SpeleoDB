@@ -3,34 +3,34 @@ import { afterWindowLoad } from '../readiness.js';
 export async function init(context) {
     await afterWindowLoad();
     'use strict';
-        
+
         // ============================================
         // Global Variables
         // ============================================
         let gridApi = null;
         const experimentId = context.experimentId;
             let experimentFields = null; // Will store field definitions with order and names
-        
+
         // ============================================
         // Data Loading
         // ============================================
         async function loadExperimentData() {
             try {
                 showLoading();
-                
+
                 // First, fetch experiment details to get field definitions
                 const experimentResponse = await fetch(
-                    Urls["api:v2:experiment-detail"](experimentId), 
+                    Urls["api:v2:experiment-detail"](experimentId),
                     { credentials: 'same-origin' }
                 );
-                
+
                 if (!experimentResponse.ok) {
                     throw new Error(`Failed to fetch experiment details: ${experimentResponse.status}`);
                 }
-                
+
                 const experimentData = await experimentResponse.json();
                 experimentFields = experimentData.data?.experiment_fields || experimentData.experiment_fields || [];
-                
+
                 // Sort fields by order parameter
                 if (Array.isArray(experimentFields)) {
                     experimentFields.sort((a, b) => {
@@ -39,47 +39,47 @@ export async function init(context) {
                         return orderA - orderB;
                     });
                 }
-                
+
                 // Fetch GeoJSON data from the API
                 const apiUrl = context.dataUrl;
                 const response = await fetch(apiUrl);
-                
+
                 if (!response.ok) {
                     throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
                 }
-                
+
                 const geojsonData = await response.json();
-                
+
                 if (!geojsonData || !geojsonData.features || !Array.isArray(geojsonData.features)) {
                     throw new Error('Invalid GeoJSON data format');
                 }
-                
+
                 // Transform GeoJSON features to table rows
                 const rows = transformGeoJSONToRows(geojsonData.features);
-                
+
                 // Create grid
                 createDataGrid(rows);
-                
+
                 // Update stats
                 $('#recordCount').text(rows.length);
                 $('#columnCount').text(Object.keys(rows[0] || {}).length);
-                
+
                 showDataGrid();
-                
+
             } catch (error) {
                 console.error('Error loading data:', error);
                 showError(error.message);
             }
         }
-        
+
         function transformGeoJSONToRows(features) {
             const rows = [];
-            
+
             features.forEach(feature => {
                 const props = feature.properties || {};
                 const geometry = feature.geometry || {};
                 const coordinates = geometry.coordinates || [];
-                
+
                 // Build row object with standard fields first
                 const row = {
                     'Project Name': props.project_name || '',
@@ -89,18 +89,18 @@ export async function init(context) {
                     'Longitude': coordinates[0] || '',
                     'Latitude': coordinates[1] || '',
                 };
-                
+
                 // Add experiment fields in the order defined by experiment_fields
                 if (experimentFields && Array.isArray(experimentFields)) {
                     experimentFields.forEach(field => {
                         const fieldId = field.id;
                         const fieldName = field.name;
-                        
+
                         // Skip status fields
                         if (fieldName && (fieldName.toLowerCase() === 'status')) {
                             return;
                         }
-                        
+
                         // Get value by field UUID from properties
                         if (fieldId in props) {
                             row[fieldName] = formatValue(props[fieldId]);
@@ -109,7 +109,7 @@ export async function init(context) {
                 } else {
                     // Fallback: if experimentFields not loaded, add all remaining properties
                     const skipFields = ['id', 'station_name', 'station_id', 'project_name', 'project_id', 'created_by', 'status'];
-                    
+
                     Object.keys(props).forEach(key => {
                         if (!skipFields.includes(key) && key.toLowerCase() !== 'status') {
                             // Format field name: flow -> Flow
@@ -120,10 +120,10 @@ export async function init(context) {
                         }
                     });
                 }
-                
+
                 rows.push(row);
             });
-            
+
             // Remove status columns from all rows to ensure they don't appear anywhere
             const cleanedRows = rows.map(row => {
                 const cleanedRow = {};
@@ -134,10 +134,10 @@ export async function init(context) {
                 });
                 return cleanedRow;
             });
-            
+
             return cleanedRows;
         }
-        
+
         function formatValue(value) {
             if (value === null || value === undefined) {
                 return '';
@@ -147,7 +147,7 @@ export async function init(context) {
             }
             return String(value);
         }
-        
+
         // ============================================
         // AG Grid Setup
         // ============================================
@@ -157,16 +157,16 @@ export async function init(context) {
             // Example: 'Project Name': 'Project',
             // 'Station ID': 'Station Identifier',
         };
-        
+
         // Columns to exclude from the table
         const excludedColumns = ['Status', 'status'];
-        
+
         function createDataGrid(rows) {
             if (rows.length === 0) {
                 showError('No data available to display');
                 return;
             }
-            
+
             // Generate column definitions from first row
             const firstRow = rows[0];
             const columnDefs = Object.keys(firstRow)
@@ -180,7 +180,7 @@ export async function init(context) {
                     minWidth: 150,
                     flex: 1,
                 }));
-            
+
             // Grid options
             const gridOptions = {
                 columnDefs: columnDefs,
@@ -198,19 +198,19 @@ export async function init(context) {
                 animateRows: true,
                 rowSelection: 'multiple',
             };
-            
+
             // Create the grid
             const gridDiv = document.querySelector('#dataGrid');
             gridApi = window.agGrid.createGrid(gridDiv, gridOptions);
         }
-        
+
         // ============================================
         // Export to Excel
         // ============================================
         $('#exportExcelBtn').on('click', async function() {
             const $btn = $(this);
             const originalHtml = $btn.html();
-            
+
             try {
                 // Disable button and show loading
                 $btn.prop('disabled', true).html(`
@@ -220,10 +220,10 @@ export async function init(context) {
                     </svg>
                     <span>Exporting...</span>
                 `);
-                
+
                 // Call export API
                 const response = await fetch(
-                    Urls['api:v2:experiment-export-excel'](experimentId), 
+                    Urls['api:v2:experiment-export-excel'](experimentId),
                     {
                         method: 'GET',
                         headers: {
@@ -232,11 +232,11 @@ export async function init(context) {
                         credentials: 'same-origin',
                     }
                 );
-                
+
                 if (!response.ok) {
                     throw new Error(`Export failed: ${response.status} ${response.statusText}`);
                 }
-                
+
                 // Get filename from Content-Disposition header
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = 'experiment_data.xlsx';
@@ -247,7 +247,7 @@ export async function init(context) {
                         filename = filenameMatch[1].trim();
                     }
                 }
-                
+
                 // Download file with proper MIME type
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -258,7 +258,7 @@ export async function init(context) {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 a.remove();
-                
+
                 // Show success message
                 $btn.removeClass('bg-indigo-600 hover:bg-indigo-700')
                     .addClass('bg-green-600 hover:bg-green-700')
@@ -268,21 +268,21 @@ export async function init(context) {
                         </svg>
                         <span>Exported!</span>
                     `);
-                
+
                 setTimeout(() => {
                     $btn.removeClass('bg-green-600 hover:bg-green-700')
                         .addClass('bg-indigo-600 hover:bg-indigo-700')
                         .html(originalHtml)
                         .prop('disabled', false);
                 }, 2000);
-                
+
             } catch (error) {
                 console.error('Export error:', error);
                 alert('Failed to export data: ' + error.message);
                 $btn.html(originalHtml).prop('disabled', false);
             }
         });
-        
+
         // ============================================
         // Refresh Data
         // ============================================
@@ -293,7 +293,7 @@ export async function init(context) {
             }
             loadExperimentData();
         });
-        
+
         // ============================================
         // UI State Management
         // ============================================
@@ -302,20 +302,20 @@ export async function init(context) {
             $('#dataGridContainer').addClass('hidden');
             $('#errorMessage').addClass('hidden');
         }
-        
+
         function showDataGrid() {
             $('#loadingSpinner').addClass('hidden');
             $('#dataGridContainer').removeClass('hidden');
             $('#errorMessage').addClass('hidden');
         }
-        
+
         function showError(message) {
             $('#loadingSpinner').addClass('hidden');
             $('#dataGridContainer').addClass('hidden');
             $('#errorMessage').removeClass('hidden');
             $('#errorText').text(message);
         }
-        
+
         // ============================================
         // Initialize
         // ============================================

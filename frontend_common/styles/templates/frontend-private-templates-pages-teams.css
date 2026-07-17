@@ -3,11 +3,11 @@
         .teams-table {
             display: none;
         }
-        
+
         .teams-cards {
             display: block;
         }
-        
+
         .team-card {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
             border: 1px solid rgba(100, 116, 139, 0.3);
@@ -16,12 +16,12 @@
             margin-bottom: 16px;
             transition: all 0.3s ease;
         }
-        
+
         .team-card:hover {
             border-color: rgba(99, 102, 241, 0.5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
-        
+
         .team-card-header {
             display: flex;
             justify-content: space-between;
@@ -30,42 +30,42 @@
             padding-bottom: 12px;
             border-bottom: 1px solid rgba(100, 116, 139, 0.3);
         }
-        
+
         .team-card-title {
             font-size: 18px;
             font-weight: 600;
             color: #e2e8f0;
         }
-        
+
         .team-card-body {
             display: grid;
             gap: 12px;
         }
-        
+
         .team-card-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .team-card-label {
             font-size: 13px;
             color: #94a3b8;
             font-weight: 500;
         }
-        
+
         .team-card-value {
             font-size: 15px;
             color: #cbd5e1;
             font-weight: 500;
         }
     }
-    
+
     @media (min-width: 769px) {
         .teams-table {
             display: block;
         }
-        
+
         .teams-cards {
             display: none;
         }

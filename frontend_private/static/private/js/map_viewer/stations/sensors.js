@@ -1284,5 +1284,3 @@ export const StationSensors = {
 };
 
 // Expose functions globally for onclick handlers
-
-

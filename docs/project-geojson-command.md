@@ -1,7 +1,7 @@
 # Project GeoJSON Build Command
 
-`build_project_geojsons` materializes survey sources from project Git history and
-stores a `ProjectGeoJSON` for each supported commit. It supports a bounded
+`build_project_geojsons` materializes survey sources from project Git history
+and stores a `ProjectGeoJSON` for each supported commit. It supports a bounded
 single-project workflow for repairs and a batch workflow for backfills.
 
 The former `build_all_project_geojsons` command has been removed. There is no
@@ -17,13 +17,13 @@ python manage.py build_project_geojsons --all
 python manage.py build_project_geojsons --project 01234567-89ab-cdef-0123-456789abcdef
 ```
 
-| Option | Valid mode | Effect |
-|---|---|---|
-| `--all` | Batch | Processes all projects where `exclude_geojson=False`, newest first. |
-| `--project <uuid>` | Single project | Processes only the identified project. |
-| `--fresh` | Single project | Removes the local working copy before repository access, forcing a GitLab clone. |
-| `--project_type <type>` | Batch | Restricts the eligible queryset to one `ProjectType`. |
-| `--force_recompute` | Both | Deletes and recreates GeoJSON records that already exist. |
+| Option                  | Valid mode     | Effect                                                                           |
+| ----------------------- | -------------- | -------------------------------------------------------------------------------- |
+| `--all`                 | Batch          | Processes all projects where `exclude_geojson=False`, newest first.              |
+| `--project <uuid>`      | Single project | Processes only the identified project.                                           |
+| `--fresh`               | Single project | Removes the local working copy before repository access, forcing a GitLab clone. |
+| `--project_type <type>` | Batch          | Restricts the eligible queryset to one `ProjectType`.                            |
+| `--force_recompute`     | Both           | Deletes and recreates GeoJSON records that already exist.                        |
 
 Examples:
 
@@ -63,8 +63,8 @@ status.
 
 ## Processing and repository lifecycle
 
-The command walks every non-initial commit available from `GitRepo.commits`.
-For Ariane projects it materializes the TML source; for Compass projects it
+The command walks every non-initial commit available from `GitRepo.commits`. For
+Ariane projects it materializes the TML source; for Compass projects it
 materializes the TOML-declared MAK/DAT bundle. Each source is passed to the
 project's existing `build_geojson()` processor and stored through the existing
 `ProjectCommit` and `ProjectGeoJSON` models.
@@ -75,13 +75,13 @@ existing GitLab create-or-clone path. Deletion errors other than a missing path
 are surfaced so the command cannot silently process a stale checkout.
 
 As before, every processed project's local working copy is removed in a
-`finally` block. This applies to both selection modes and to successful or failed
-processing.
+`finally` block. This applies to both selection modes and to successful or
+failed processing.
 
 Batch mode logs a project-level failure and continues with the remaining
 projects. Single-project mode raises `CommandError` for a repository-level
-failure so automation receives a nonzero result. Commit-level materialization
-or generation failures remain isolated to that commit and are logged before the
+failure so automation receives a nonzero result. Commit-level materialization or
+generation failures remain isolated to that commit and are logged before the
 command continues.
 
 ## Performance and verification

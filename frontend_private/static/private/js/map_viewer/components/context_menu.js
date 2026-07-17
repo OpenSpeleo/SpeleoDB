@@ -5,7 +5,7 @@ export const ContextMenu = {
     menuEl: null,
     iconDataUrlCache: new Map(),
     iconFetchPromises: new Map(),
-    
+
     init() {
         this.menuEl = document.getElementById('context-menu');
         this.prefetchKnownIcons();
@@ -145,23 +145,23 @@ export const ContextMenu = {
         });
 
         this.menuEl.innerHTML = html;
-        
+
         // Convert map-relative coords to viewport coords
         const mapEl = document.getElementById('map');
         let posX = mapX;
         let posY = mapY;
-        
+
         if (mapEl) {
             const rect = mapEl.getBoundingClientRect();
             posX = rect.left + mapX;
             posY = rect.top + mapY;
         }
-        
+
         // Position the menu
         this.menuEl.style.left = `${posX}px`;
         this.menuEl.style.top = `${posY}px`;
         this.menuEl.style.display = 'block';
-        
+
         // Adjust position once dimensions are measurable.
         requestAnimationFrame(() => {
             if (!this.menuEl || this.menuEl.style.display === 'none') return;
@@ -178,7 +178,7 @@ export const ContextMenu = {
             if (node.classList && node.classList.contains('context-menu-item')) {
                 // Skip separator items in data array
                 while (items[itemIndex] === '-') itemIndex++;
-                
+
                 const item = items[itemIndex];
                 if (item && !item.disabled && item.onClick) {
                     node.onclick = (e) => {
@@ -200,4 +200,3 @@ export const ContextMenu = {
         }
     }
 };
-

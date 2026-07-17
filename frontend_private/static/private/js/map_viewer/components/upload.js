@@ -1,6 +1,6 @@
 /**
  * Upload Progress Component
- * 
+ *
  * Provides a reusable upload functionality with progress tracking
  * for large file uploads (Station Resources, Journal Entries, etc.)
  */
@@ -184,7 +184,7 @@ export class UploadProgressController {
      */
     update(percent, loaded, total) {
         const { bar, percent: percentEl, size, status } = this.getElements();
-        
+
         if (bar) {
             bar.style.width = `${percent}%`;
         }
@@ -268,7 +268,7 @@ export class UploadProgressController {
 
     /**
      * Set the XHR object for potential cancellation
-     * @param {XMLHttpRequest} xhr 
+     * @param {XMLHttpRequest} xhr
      */
     setXHR(xhr) {
         this.xhr = xhr;

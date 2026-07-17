@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             name='__temp_publicannouncement__',
             table='plugins_publicannoucement',
         ),
-        
+
         # ============= GIS:GeoJSON ============= #
         migrations.RenameModel(
             old_name='GeoJSON',
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
             name='__temp_geojson__',
             table='gis_geojson',
         ),
-        
+
         # ============= GIS:PointOfInterest ============= #
         migrations.RenameModel(
             old_name='PointOfInterest',

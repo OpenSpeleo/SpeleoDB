@@ -126,7 +126,7 @@ button.tool-action {
         min-width: 200px;
         font-family: monospace;
     }
-    
+
     /* Mobile responsive styles */
     @media (max-width: 768px) {
         .form-controls {
@@ -134,35 +134,35 @@ button.tool-action {
             align-items: stretch;
             gap: 16px;
         }
-        
+
         .form-group {
             width: 100%;
         }
-        
+
         .form-group.flex-1 {
             flex: none;
             width: 100%;
         }
-        
+
         .date-input,
         .text-input {
             min-width: 100%;
             width: 100%;
         }
-        
+
         .controls {
             flex-wrap: wrap;
         }
-        
+
         .controls button {
             flex: 1 1 calc(50% - 4px);
             min-width: 120px;
         }
-        
+
         table {
             font-size: 12px;
         }
-        
+
         thead th,
         tbody td {
             padding: 4px;

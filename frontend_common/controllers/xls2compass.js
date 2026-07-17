@@ -5,7 +5,7 @@ export function init(context) {
     const COLUMNS = ["station", "depth", "length", "azimuth", "left", "right", "up", "down", "flags", "comment"];
         const $tbody = $('#dataTable tbody');
         const $statusEl = $('#status');
-        
+
         // Survey Team Tags
         const surveyTeamMembers = [];
         const $teamContainer = $('#surveyTeamContainer');
@@ -22,7 +22,7 @@ export function init(context) {
         function renderTeamTags() {
             // Remove all existing tags
             $teamContainer.find('.tag').remove();
-            
+
             // Add each tag before the input field
             surveyTeamMembers.forEach((member, index) => {
                 const $tag = $('<div class="tag"></div>');
@@ -77,7 +77,7 @@ export function init(context) {
 
         $('#locationSearch').on('input', function() {
             const query = $(this).val().trim();
-            
+
             // Clear previous timeout
             if (locationSearchTimeout) {
                 clearTimeout(locationSearchTimeout);
@@ -102,7 +102,7 @@ export function init(context) {
         function searchLocation(query) {
             // OpenStreetMap Nominatim API
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`;
-            
+
             $.ajax({
                 url: url,
                 method: 'GET',
@@ -131,12 +131,12 @@ export function init(context) {
 
             results.forEach(function(result) {
                 const $item = $('<div class="location-result-item"></div>');
-                
+
                 const displayName = result.display_name;
                 const parts = displayName.split(', ');
                 const mainName = parts.slice(0, 2).join(', ');
                 const details = parts.slice(2).join(', ');
-                
+
                 $item.append(`<div class="location-name">${escapeHtml(mainName)}</div>`);
                 if (details) {
                     $item.append(`<div class="location-details">${escapeHtml(details)}</div>`);
@@ -154,21 +154,21 @@ export function init(context) {
 
         function selectLocation(location) {
             selectedLocation = location;
-            
+
             // Set the search input to the selected location
             $('#locationSearch').val(location.display_name);
-            
+
             // Store coordinates
             $('#latitude').val(location.lat);
             $('#longitude').val(location.lon);
-            
+
             // Display coordinates
             $('#latDisplay').text(parseFloat(location.lat).toFixed(6));
             $('#lonDisplay').text(parseFloat(location.lon).toFixed(6));
-            
+
             // Remove invalid state since location is now selected
             $('#locationSearch').removeClass('invalid-field');
-            
+
             // Hide results
             $('#locationResults').removeClass('show').empty();
         }
@@ -285,11 +285,11 @@ export function init(context) {
 
             return { valid: isValid, errors: errors };
         }
-        
+
         // Set max date to today (no future dates allowed)
         const today = new Date().toISOString().split('T')[0];
         $('#surveyDate').attr('max', today);
-        
+
         // Unit switch handler
         let currentUnit = 'feet'; // Default unit is feet
         $('#unitSwitch').on('change', function() {
@@ -423,7 +423,7 @@ export function init(context) {
             $("#loading_spinner").show();
 
             // Build AJAX data object
-            const ajaxData = { 
+            const ajaxData = {
                 shots: rows,
                 survey_date: surveyDate,
                 unit: currentUnit,
@@ -454,13 +454,13 @@ export function init(context) {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
-                    
+
                     // Store the response for later use
                     window.surveyData = response;
-                    
+
                     // Display the content in the modal
                     displayCodeInModal(response);
-                    
+
                     $('#status').text('Survey generated successfully!')
                                 .css({ 'color': 'green', 'font-weight': 'bold' });
                 },
@@ -468,7 +468,7 @@ export function init(context) {
                     // Hide spinner and show error
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
-                    
+
                     // Try to extract error message from response
                     let errorMessage = error;
                     if (xhr.responseJSON && xhr.responseJSON.error) {
@@ -483,11 +483,11 @@ export function init(context) {
                             errorMessage = xhr.responseText.substring(0, 200); // Limit length
                         }
                     }
-                    
+
                     // Display error in modal
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
-                    
+
                     $('#status').text('Error occurred. See details.')
                                 .css({ 'color': 'red', 'font-weight': 'bold' });
                 }
@@ -502,18 +502,18 @@ export function init(context) {
         function displayCodeInModal(code) {
             // Store original code for copy/download
             originalCode = code;
-            
+
             // Escape HTML and create code block
             const escapedCode = $('<div>').text(code).html();
             $('#codeDisplay').html('<pre class="line-numbers"><code class="language-makefile">' + escapedCode + '</code></pre>');
-            
+
             // Highlight with Prism
             window.Prism.highlightElement($('#codeDisplay code')[0]);
-            
+
             // After highlighting, wrap form feed characters in span for visual styling
             const $codeElement = $('#codeDisplay code');
             $codeElement.html($codeElement.html().replace(/\f/g, '<span class="ff-char">\f</span>'));
-            
+
             // Show modal
             $('#resultModal').addClass('show');
         }
@@ -548,15 +548,15 @@ export function init(context) {
         let copyButtonTimeout = null;
         const originalCopyButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg> Copy to Clipboard';
         const copiedButtonHTML = '<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg> Copied!';
-        
+
         $('#copyCodeBtn').on('click', function() {
             const $btn = $('#copyCodeBtn');
-            
+
             // Clear any existing timeout
             if (copyButtonTimeout) {
                 clearTimeout(copyButtonTimeout);
             }
-            
+
             navigator.clipboard.writeText(originalCode).then(function() {
                 $btn.html(copiedButtonHTML);
                 copyButtonTimeout = setTimeout(function() {

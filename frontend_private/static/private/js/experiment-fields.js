@@ -55,13 +55,13 @@ export const ExperimentFields = (function ($) {
                     </div>
                     <div class="flex-1">
                         <label class="block text-xs font-medium text-slate-400 mb-1">
-                            Field Name 
+                            Field Name
                             <span class="text-emerald-400">✏️ New Field</span>
                             <span class="text-rose-600"> *</span>
                         </label>
-                        <input type="text" 
-                               class="form-input w-full field-name" 
-                               placeholder="e.g., pH Level, Water Hardness" 
+                        <input type="text"
+                               class="form-input w-full field-name"
+                               placeholder="e.g., pH Level, Water Hardness"
                                required />
                     </div>
                     <div class="flex-1">
@@ -82,22 +82,22 @@ export const ExperimentFields = (function ($) {
                         </label>
                     </div>
                 </div>
-                
+
                 <!-- Options section for Multiple Choices -->
                 <div class="field-options-container hidden mt-3 pt-3 border-t border-slate-600">
                     <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
                     <div class="flex gap-2 mb-2">
-                        <input type="text" 
-                               class="form-input flex-1 field-option-input text-sm" 
+                        <input type="text"
+                               class="form-input flex-1 field-option-input text-sm"
                                placeholder="Type an option and press Enter or comma" />
                     </div>
                     <div class="flex flex-wrap gap-2 field-tags-container min-h-[2rem]">
                         <!-- Tags will be added here -->
                     </div>
                 </div>
-                
+
                 <div class="flex justify-end mt-3 pt-3 border-t border-slate-600">
-                    <button type="button" 
+                    <button type="button"
                             class="btn-sm bg-rose-500 hover:bg-rose-600 text-white remove-field-btn"
                             data-field-id="${fieldId}">
                         <svg class="w-4 h-4 fill-current shrink-0 inline-block mr-1" viewBox="0 0 16 16">
@@ -123,7 +123,7 @@ export const ExperimentFields = (function ($) {
         $('.existing-field-item').each(function () {
             const fieldId = $(this).data('field-id');
             const editedName = $(this).find('.existing-field-name').val().trim();
-            
+
             if (editedName) {
                 const lowerName = editedName.toLowerCase();
 

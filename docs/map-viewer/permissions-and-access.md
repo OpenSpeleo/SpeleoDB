@@ -58,7 +58,8 @@ Level model:
 - write: level >= 2
 - delete: level >= 3
 
-If numeric `permission_level` is present, it takes precedence over label fallback.
+If numeric `permission_level` is present, it takes precedence over label
+fallback.
 
 ### Landmark Collection permissions
 
@@ -75,9 +76,9 @@ authoritative for read, edit, delete, drag, and import-assignment behavior. The
 map viewer consumes backend `can_write` and `can_delete` flags for individual
 Landmarks and uses collection-level write flags only to populate collection
 selectors. WRITE access can update a shared collection's map color; personal
-collection details show only the Landmark table and keep sharing and
-danger-zone management hidden. Personal collection owners can still use the GIS
-integration tab for tokenized OGC access.
+collection details show only the Landmark table and keep sharing and danger-zone
+management hidden. Personal collection owners can still use the GIS integration
+tab for tokenized OGC access.
 
 ## Scope Routing Rules
 

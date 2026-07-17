@@ -17,10 +17,10 @@
                 <h2 class="text-3xl text-slate-100 font-bold">Data Viewer</h2>
                 <p class="text-slate-400 mt-2">View and export experiment data in table format</p>
             </div>
-            
+
             <!-- Export Button -->
             <div class="flex gap-3">
-                <button 
+                <button
                     id="refreshDataBtn"
                     type="button"
                     class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2"
@@ -30,7 +30,7 @@
                     </svg>
                     <span>Refresh</span>
                 </button>
-                <button 
+                <button
                     id="exportExcelBtn"
                     type="button"
                     class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-semibold transition-colors duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
@@ -63,7 +63,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span class="text-slate-300 text-sm">
-                        <span class="font-semibold">Total Records:</span> 
+                        <span class="font-semibold">Total Records:</span>
                         <span id="recordCount" class="text-indigo-400 font-bold">0</span>
                     </span>
                 </div>
@@ -72,7 +72,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     <span class="text-slate-300 text-sm">
-                        <span class="font-semibold">Columns:</span> 
+                        <span class="font-semibold">Columns:</span>
                         <span id="columnCount" class="text-green-400 font-bold">0</span>
                     </span>
                 </div>
@@ -126,10 +126,10 @@
 {% if debug %}
 <script src="{% static 'private/js/vendors/ag-grid-community.min.js' %}"></script>
 {% else %}
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/ag-grid/34.2.0/ag-grid-community.min.js" 
-    integrity="sha512-Zhgoh+vE3dmd0rcKatRMB9x6xlTo5e7+YHNeenVQ003lt2RDmsoOAxhvE/rAuENdBTZXaR4W00He9S0Gu/1+7w==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/ag-grid/34.2.0/ag-grid-community.min.js"
+    integrity="sha512-Zhgoh+vE3dmd0rcKatRMB9x6xlTo5e7+YHNeenVQ003lt2RDmsoOAxhvE/rAuENdBTZXaR4W00He9S0Gu/1+7w=="
+    crossorigin="anonymous"
     referrerpolicy="no-referrer">
 </script>
 {% endif %}

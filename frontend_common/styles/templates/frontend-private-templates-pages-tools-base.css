@@ -42,7 +42,7 @@
         max-height: calc(100vh - 200px);
         overflow-y: auto;
     }
-    
+
     /* Ensure all parents allow overflow on mobile */
     @media (max-width: 768px) {
         .bg-slate-800.shadow-lg.rounded-xs,
@@ -50,12 +50,12 @@
         .flex.flex-col.md\:flex-row {
             overflow: visible !important;
         }
-        
+
         /* Allow content to extend beyond */
         main.grow {
             overflow: visible !important;
         }
-        
+
         .px-4.sm\:px-6.lg\:px-8 {
             overflow: visible !important;
         }

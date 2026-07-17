@@ -9,19 +9,19 @@
 <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
 <link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
 {% else %}
-<link 
-    rel="stylesheet" 
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css" 
-    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==" 
-    crossorigin="anonymous" 
-    referrerpolicy="no-referrer" 
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css"
+    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
 />
-<link 
-    rel="stylesheet" 
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css" 
-    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" 
-    crossorigin="anonymous" 
-    referrerpolicy="no-referrer" 
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
+    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
 />
 {% endif %}
 {% endblock extra_css %}
@@ -58,7 +58,7 @@
                                 You are <b>required</b> to `acquire` the project lock before being able to push to the repository:
                                 <ul class="ml-4 list-inside list-chevron">
                                     <li class="my-4">
-                                        If you start working on your local copy  <b>without first acquiring the lock</b>, 
+                                        If you start working on your local copy  <b>without first acquiring the lock</b>,
                                         you expose yourself to <b>merge conflicts and data loss.</b>
                                     </li>
                                     <li class="my-4">
@@ -108,7 +108,7 @@ cd ./{{project.id}}/
 # 4. Modify and Commit your changes
 #     - Force push will be rejected.
 #     - Any other branch than `{{ default_branch }}` will be rejected.
-#     - If you do not own the project's lock, your commits will be rejected. 
+#     - If you do not own the project's lock, your commits will be rejected.
 #     - If you are not careful, you will create data corruption and potentially permanent data loss.
 #     - Be very systematic at acquiring and releasing the project. This is the best protection you have.
 git add .
@@ -133,22 +133,22 @@ git push
 <script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}" defer></script>
 <script src="{% static 'private/js/vendors/prism-bash.min.js' %}" defer></script>
 {% else %}
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" 
-    integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"
+    integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg=="
+    crossorigin="anonymous"
     referrerpolicy="no-referrer">
 </script>
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js" 
-    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"
+    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw=="
+    crossorigin="anonymous"
     referrerpolicy="no-referrer">
 </script>
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js" 
-    integrity="sha512-whYhDwtTmlC/NpZlCr6PSsAaLOrfjVg/iXAnC4H/dtiHawpShhT2SlIMbpIhT/IL/NrpdMm+Hq2C13+VKpHTYw==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"
+    integrity="sha512-whYhDwtTmlC/NpZlCr6PSsAaLOrfjVg/iXAnC4H/dtiHawpShhT2SlIMbpIhT/IL/NrpdMm+Hq2C13+VKpHTYw=="
+    crossorigin="anonymous"
     ="no-referrer">
 </script>
 {% endif %}

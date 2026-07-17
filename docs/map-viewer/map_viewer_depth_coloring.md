@@ -59,9 +59,8 @@ Depth legend and cursor behavior is centralized in:
 
 ## Complexity
 
-| Operation | Before | After |
-|---|---|---|
-| GeoJSON load | O(total features) | O(total features) + per-project cache write |
-| Project toggle (depth mode) | O(active features) | O(active projects) |
-| Memory | GeoJSON only | GeoJSON + one domain object per project |
-
+| Operation                   | Before             | After                                       |
+| --------------------------- | ------------------ | ------------------------------------------- |
+| GeoJSON load                | O(total features)  | O(total features) + per-project cache write |
+| Project toggle (depth mode) | O(active features) | O(active projects)                          |
+| Memory                      | GeoJSON only       | GeoJSON + one domain object per project     |

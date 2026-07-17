@@ -106,11 +106,11 @@ This module is reused by both private/public entrypoints.
 
 ### Complexity targets
 
-| Operation | Previous expectation | Current expectation |
-|---|---|---|
-| GeoJSON load | O(total features) | O(total features) + cache write |
-| Toggle in depth mode | O(active features) | O(active projects) |
-| Memory | GeoJSON only | GeoJSON + one domain per project |
+| Operation            | Previous expectation | Current expectation              |
+| -------------------- | -------------------- | -------------------------------- |
+| GeoJSON load         | O(total features)    | O(total features) + cache write  |
+| Toggle in depth mode | O(active features)   | O(active projects)               |
+| Memory               | GeoJSON only         | GeoJSON + one domain per project |
 
 ### Why this matters
 
@@ -159,4 +159,3 @@ And manually verify:
 - Keep map mutation concentrated in layer/legend modules.
 - Prefer extending existing helpers over introducing parallel utilities.
 - If event payload shape changes, update all listeners and tests together.
-

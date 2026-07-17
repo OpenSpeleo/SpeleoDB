@@ -200,4 +200,3 @@ describe('Layers depth domain reactivity', () => {
         window.removeEventListener('speleo:depth-domain-updated', handleDomainUpdate);
     });
 });
-

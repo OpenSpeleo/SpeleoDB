@@ -42,7 +42,7 @@
                                         <label class="block text-sm font-medium mb-1" for="latitude">Experiment Name:<span class="text-rose-600"> *</span></label>
                                         <input id="name" name="name" class="form-input max-w-full w-full" type="text" />
                                     </div>
-                                    
+
                                     <div class="w-full lg:flex-1">
                                         <div class="flex flex-wrap gap-4">
 
@@ -79,13 +79,13 @@
                                 <div class="mt-5">
                                     <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
                                     <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Define the fields that will be tracked for each station in this experiment.</p>
-                                    
+
                                     <!-- All Fields Container (Sortable) -->
                                     <div id="all_fields_container" class="flow-y-3 mb-6">
-                                        <h4 class="text-sm font-medium text-slate-300 mb-3">All Fields 
+                                        <h4 class="text-sm font-medium text-slate-300 mb-3">All Fields
                                             <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Mandatory fields in amber)</span>
                                         </h4>
-                                        
+
                                         <!-- Measurement Date (Mandatory) -->
                                         <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 mandatory-field-item" data-field-name="Measurement Date" data-field-type="date" data-field-required="true">
                                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -97,7 +97,7 @@
                                                 </div>
                                                 <div class="flex-1">
                                                     <label class="block text-xs font-medium text-slate-400 mb-1">
-                                                        Field Name 
+                                                        Field Name
                                                         <span class="text-amber-400">🔒 Mandatory</span>
                                                     </label>
                                                     <input type="text" value="Measurement Date" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
@@ -126,7 +126,7 @@
                                                 </div>
                                                 <div class="flex-1">
                                                     <label class="block text-xs font-medium text-slate-400 mb-1">
-                                                        Field Name 
+                                                        Field Name
                                                         <span class="text-amber-400">🔒 Mandatory</span>
                                                     </label>
                                                     <input type="text" value="Submitter Email" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
@@ -143,7 +143,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <!-- New custom fields will be dynamically added here via JavaScript -->
                                     </div>
                                     <!-- End of all_fields_container -->
@@ -159,7 +159,7 @@
                                                 Add Field
                                             </button>
                                         </div>
-                                        
+
                                         <div id="no_fields_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
                                             No custom fields yet. Click "Add Field" to create one.
                                         </div>
@@ -202,10 +202,10 @@
 {% if debug %}
 <script src="{% static 'private/js/vendors/Sortable.min.js' %}"></script>
 {% else %}
-<script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js" 
-    integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw==" 
-    crossorigin="anonymous" 
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"
+    integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw=="
+    crossorigin="anonymous"
     referrerpolicy="no-referrer">
 </script>
 {% endif %}

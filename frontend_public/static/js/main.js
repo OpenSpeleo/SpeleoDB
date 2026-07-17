@@ -154,7 +154,7 @@ class ParticleAnimation {
 
   clearContext() {
     this.context.clearRect(0, 0, this.canvasSize.w, this.canvasSize.h);
-  }  
+  }
 
   drawParticles() {
     this.clearContext();
@@ -241,7 +241,7 @@ class Highlighter {
 
   initContainer() {
     this.containerSize.w = this.container.offsetWidth;
-    this.containerSize.h = this.container.offsetHeight;        
+    this.containerSize.h = this.container.offsetHeight;
   }
 
   onMouseMove(event) {
@@ -267,7 +267,7 @@ class Highlighter {
     this.initContainer();
     window.addEventListener('resize', this.initContainer);
     window.addEventListener('mousemove', this.onMouseMove);
-  }  
+  }
 }
 
 // Init Highlighter

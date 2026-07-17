@@ -32,8 +32,8 @@
                 <!-- Mobile Dropdown Menu -->
                 <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
                     <div class="relative">
-                        <button 
-                            @click="open = !open" 
+                        <button
+                            @click="open = !open"
                             :class="open ? 'open' : ''"
                             class="cylinder-fleet-dropdown-trigger">
                             <span>Fleet Settings</span>
@@ -41,9 +41,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
-                        
-                        <div 
-                            x-show="open" 
+
+                        <div
+                            x-show="open"
                             @click.outside="open = false"
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 -translate-y-2"
@@ -53,13 +53,13 @@
                             x-transition:leave-end="opacity-0 -translate-y-2"
                             class="cylinder-fleet-dropdown-menu"
                             x-cloak>
-                            
+
                             <!-- Settings Section -->
                             <div class="cylinder-fleet-dropdown-section">
                                 <div class="cylinder-fleet-dropdown-section-title">Settings</div>
-                                
-                                <a href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_details' %}active{% endif %}" 
+
+                                <a href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_details' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="0 0 22 22">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -75,23 +75,23 @@
                                     </svg>
                                     <span>Fleet Details & Cylinders</span>
                                 </a>
-                                
-                                <a href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_user_permissions' %}active{% endif %}" 
+
+                                <a href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_user_permissions' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
                                         <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
                                     </svg>
                                     <span>User Access Control</span>
                                 </a>
-                                
+
                             </div>
-                            
+
                             <!-- Management Section -->
                             <div class="cylinder-fleet-dropdown-section">
-                                <div class="cylinder-fleet-dropdown-section-title">Management</div> 
-                                <a href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_history' %}active{% endif %}" 
+                                <div class="cylinder-fleet-dropdown-section-title">Management</div>
+                                <a href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_history' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -101,9 +101,9 @@
                                     </svg>
                                     <span>Cylinder Activity History</span>
                                 </a>
-                                
-                                <a href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_watchlist' %}active{% endif %}" 
+
+                                <a href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_watchlist' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -112,9 +112,9 @@
                                     </svg>
                                     <span>Cylinders Watchlist</span>
                                 </a>
-                                
-                                <a href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_hydro' %}active{% endif %}" 
+
+                                <a href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_hydro' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -123,9 +123,9 @@
                                     </svg>
                                     <span>Needs Hydro Test</span>
                                 </a>
-                                
-                                <a href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_visual' %}active{% endif %}" 
+
+                                <a href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_visual' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -135,13 +135,13 @@
                                     <span>Needs Visual Inspection</span>
                                 </a>
                             </div>
-                            
+
                             {% if has_admin_access %}
                             <!-- Administration Section -->
                             <div class="cylinder-fleet-dropdown-section">
                                 <div class="cylinder-fleet-dropdown-section-title">Administration</div>
-                                <a href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}" 
-                                   class="cylinder-fleet-dropdown-item danger {% if request.url_name == 'cylinder_fleet_danger_zone' %}active{% endif %}" 
+                                <a href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}"
+                                   class="cylinder-fleet-dropdown-item danger {% if request.url_name == 'cylinder_fleet_danger_zone' %}active{% endif %}"
                                    @click="open = false">
                                     <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -215,8 +215,8 @@
 
                         </ul>
                     </div>
-                    
-                    
+
+
                     <!-- Group 2 -->
                     <div>
                         <hr class="my-4" style="border-color: rgb(255 255 255 / 40%);">
@@ -312,7 +312,7 @@
                             </li>
                         </ul>
                     </div>
-                    
+
                     {% if has_admin_access %}
                     <!-- Group 3 -->
                     <div>

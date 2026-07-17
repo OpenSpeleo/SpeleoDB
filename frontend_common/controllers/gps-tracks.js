@@ -23,9 +23,9 @@ export function init(context) {
         // Format date for display
         function formatDate(dateString) {
             const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
@@ -46,7 +46,7 @@ export function init(context) {
                     <p class="text-lg font-medium">No GPS tracks yet</p>
                     <p class="text-sm mt-1">Import a GPX file to add your first GPS track</p>
                 `;
-                
+
                 tableBody.html(`
                     <tr>
                         <td colspan="4" class="px-2 py-8 text-center text-slate-400">

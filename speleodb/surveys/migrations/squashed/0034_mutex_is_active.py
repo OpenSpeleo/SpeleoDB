@@ -23,5 +23,5 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=True, verbose_name='Is Active'),
         ),
         migrations.RunPython(set_mutex_active_status),  # Necessary to properly set mutex active status
-       
+
     ]

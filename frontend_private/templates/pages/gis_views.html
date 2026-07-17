@@ -44,7 +44,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                         </svg>
                     </div>
-                    
+
                     <!-- Title -->
                     <h2 class="text-2xl text-slate-100 font-bold mb-2">Personal GIS View</h2>
 
@@ -52,7 +52,7 @@
                     <p class="text-base text-slate-200 w-full text-center mb-6">
                         Visualize all your projects in GIS
                     </p>
-                    
+
                     <!-- API URL -->
                     <div class="w-full mb-4">
                         <label class="block text-sm font-medium text-slate-300 mb-2">API Endpoint URL</label>
@@ -61,7 +61,7 @@
                                 <code id="personal-api-url" class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
                                     {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:user-landing' key=user_token.key %}
                                 </code>
-                                <button 
+                                <button
                                     id="personal-copy-btn"
                                     type="button"
                                     class="w-full md:w-auto md:shrink-0 px-4 py-2.5 md:px-3 md:py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
@@ -74,7 +74,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Security Warning -->
                     <div class="w-full">
                         <div class="bg-srgb-orange-900-30 border border-srgb-orange-600-50 rounded-lg p-4">
@@ -85,7 +85,7 @@
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-orange-200 mb-1">Security Warning</p>
                                     <p class="text-sm text-srgb-orange-300-90">
-                                        Sharing this link gives access to GeoJSON data for all your projects. 
+                                        Sharing this link gives access to GeoJSON data for all your projects.
                                         This should be considered private and kept safe like a password.
                                     </p>
                                 </div>

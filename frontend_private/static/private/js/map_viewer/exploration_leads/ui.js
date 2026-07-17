@@ -22,7 +22,7 @@ export const ExplorationLeadUI = {
                         class="form-input form-textarea"
                         placeholder="Describe the exploration lead..."></textarea>
                     <p class="text-xs text-slate-400 mt-2">
-                        💡 <strong>Tip:</strong> Describe how the lead looks like - direction (N/S/E/W), 
+                        💡 <strong>Tip:</strong> Describe how the lead looks like - direction (N/S/E/W),
                         up or down, big or small passage, sidemount or backmount access, water flow, etc.
                     </p>
                 </div>

@@ -11,11 +11,11 @@
         --ag-range-selection-background-color: rgba(99, 102, 241, 0.2);
         --ag-input-focus-border-color: rgb(99, 102, 241);
     }
-    
+
     .ag-theme-alpine-dark .ag-header-cell-text {
         font-weight: 600;
     }
-    
+
     .ag-theme-alpine-dark .ag-cell {
         line-height: 40px;
     }

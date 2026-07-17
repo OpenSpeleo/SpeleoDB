@@ -23,7 +23,7 @@ def copy_user_email(apps, schema_editor):
 
             # Copy email
             obj.closing_user_email = user.email
-            
+
         obj.save(update_fields=['closing_user_email'])
 
 
@@ -52,8 +52,8 @@ class Migration(migrations.Migration):
             model_name='projectmutex',
             name='closing_user_email',
             field=models.EmailField(
-                blank=True, 
-                help_text='User who released the mutex.', 
+                blank=True,
+                help_text='User who released the mutex.',
                 max_length=254,
                 null=True
             ),
@@ -70,8 +70,8 @@ class Migration(migrations.Migration):
             model_name='projectmutex',
             name='closing_user_email',
             field=models.EmailField(
-                blank=True, 
-                help_text='User who released the mutex.', 
+                blank=True,
+                help_text='User who released the mutex.',
                 max_length=254,
                 null=False,
             ),

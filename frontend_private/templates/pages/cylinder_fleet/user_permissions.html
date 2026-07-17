@@ -31,7 +31,7 @@
             <!-- Right: Actions -->
             <div class="flex justify-start sm:justify-end">
                 <!-- Grant Access button -->
-                
+
                 {% if not has_admin_access %}
                 <button class="btn bg-slate-600 text-white w-full sm:w-auto" disabled>
                     <svg class="w-4 h-4 fill-current opacity-100 shrink-0" width="24" height="24" viewBox="0 0 16 16">
@@ -68,9 +68,9 @@
                                 {% set can_edit = False %}
                             {% endif %}
                             <!-- Edit Button -->
-                            <span class="{% if can_edit %}cursor-pointer btn_open_edit_perm{% endif %}" 
+                            <span class="{% if can_edit %}cursor-pointer btn_open_edit_perm{% endif %}"
                                   {% if can_edit %}data-user="{{permission.user.email}}" data-level="{{ permission.level_label }}"{% endif %}>
-                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline" 
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-amber-500{% else %}text-slate-500{% endif %} inline"
                                      viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                     <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
@@ -78,9 +78,9 @@
                                 </svg>
                             </span>
                             <!-- Delete Button -->
-                            <span class="{% if can_edit %}cursor-pointer btn_delete_perm{% endif %}" 
+                            <span class="{% if can_edit %}cursor-pointer btn_delete_perm{% endif %}"
                                   {% if can_edit %}data-user="{{permission.user.email}}"{% endif %}>
-                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline" 
+                                <svg class="stroke-current h-8 w-8 {% if can_edit %}text-rose-500{% else %}text-slate-500{% endif %} inline"
                                      viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                     <path d="M18 6l-12 12" />
