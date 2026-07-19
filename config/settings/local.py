@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
+from debug_toolbar.settings import PANELS_DEFAULTS
 from django.core.mail.backends.filebased import EmailBackend
 from django.utils import timezone
 
@@ -104,15 +105,28 @@ EMAIL_FILE_PATH = "./.workdir/emails"
 INSTALLED_APPS += ["debug_toolbar"]
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#middleware
 MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+
+# Keep the toolbar available while making every diagnostic panel opt-in. Import
+# the package's canonical list so newly added default panels also start disabled.
+DEBUG_TOOLBAR_PANELS = [*PANELS_DEFAULTS]
 # https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#debug-toolbar-config
 DEBUG_TOOLBAR_CONFIG = {
-    "DISABLE_PANELS": [
-        "debug_toolbar.panels.redirects.RedirectsPanel",
-        "debug_toolbar.panels.profiling.ProfilingPanel",
-    ],
-    "SHOW_TEMPLATE_CONTEXT": True,
+    "DISABLE_PANELS": set(DEBUG_TOOLBAR_PANELS),
+    "ENABLE_STACKTRACES": False,
+    "ENABLE_STACKTRACES_LOCALS": False,
+    "PRETTIFY_SQL": False,
+    "PROFILER_CAPTURE_PROJECT_CODE": False,
+    "SHOW_TEMPLATE_CONTEXT": False,
     "SHOW_TOOLBAR_CALLBACK": "speleodb.debug_toolbar.show_toolbar",
 }
+
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
+INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
+if env.bool("USE_DOCKER", default=False):  # pyright: ignore[reportArgumentType]
+    import socket
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
 
 
 # django-silk
@@ -135,14 +149,6 @@ SILKY_INTERCEPT_FUNC = lambda request: __ENABLE_PROFILING__  # noqa: E731
 # percentage of requests to profile (100 = all)
 SILKY_INTERCEPT_PERCENT = 100 if __ENABLE_PROFILING__ else 0
 SILKY_META = __ENABLE_PROFILING__  # optional, include meta info
-
-# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
-INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
-if env.bool("USE_DOCKER", default=False):  # pyright: ignore[reportArgumentType]
-    import socket
-
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
 
 # django-extensions
 # ------------------------------------------------------------------------------
