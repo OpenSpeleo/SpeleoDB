@@ -52,11 +52,33 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+# The standalone image remains Rust-free. The monorepo devcontainer enables
+# this layer because it develops the local PyO3-backed openspeleo_core package.
+# Keep it before the Python dependency layer so changing application
+# dependencies does not invalidate the comparatively expensive toolchain.
+ARG DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=0
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV CARGO_HOME=/usr/local/cargo
+ENV PATH="/usr/local/cargo/bin:${PATH}"
+RUN if [ "${DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN}" = "1" ]; then \
+    curl --proto '=https' --tlsv1.2 -sSf \
+        https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh \
+        -y \
+        --no-modify-path \
+        --profile minimal \
+        --default-toolchain stable \
+    && rm /tmp/rustup-init.sh \
+    && chmod -R a+rX "${CARGO_HOME}" "${RUSTUP_HOME}"; \
+    fi
+
 # UV settings
-ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+ENV VIRTUAL_ENV="/opt/speleodb-venv"
+ENV UV_PROJECT_ENVIRONMENT="${VIRTUAL_ENV}"
 ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_PYTHON_DOWNLOADS=0
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 # Install Project Dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -89,7 +111,8 @@ RUN chmod +x /start-flower
 RUN groupadd --gid 1000 dev-user \
     && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
     && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
-    && chmod 0440 /etc/sudoers.d/dev-user
+    && chmod 0440 /etc/sudoers.d/dev-user \
+    && chown -R dev-user:dev-user "${VIRTUAL_ENV}"
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
