@@ -1,6 +1,7 @@
 volumes:
   speleodb_local_postgres_data: {}
   speleodb_local_postgres_data_backups: {}
+  speleodb_local_web_node_modules: {}
   speleodb_local_gitlab_config: {}
   speleodb_local_gitlab_logs: {}
   speleodb_local_gitlab_data: {}
@@ -15,16 +16,13 @@ services:
       args:
         - DOCKER_BUILDKIT=1
     image: speleodb_local_django
-    container_name: speleodb_local_django
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
     depends_on:
-      postgres:
-        condition: service_started
-      redis:
-        condition: service_started
-      rustfs:
-        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
     volumes:
       - .:/app:z
+      - speleodb_local_web_node_modules:/app/node_modules
     env_file:
       - ./.envs/.django
       - ./.envs/.postgres
@@ -39,7 +37,7 @@ services:
       args:
         - DOCKER_BUILDKIT=1
     image: speleodb_production_postgres
-    container_name: speleodb_local_postgres
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_postgres"
     volumes:
       - speleodb_local_postgres_data:/var/lib/postgresql/data
       - speleodb_local_postgres_data_backups:/backups
@@ -47,23 +45,37 @@ services:
       - ./.envs/.postgres
     ports:
       - "5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   redis:
     image: docker.io/redis:6
-    container_name: speleodb_local_redis
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_redis"
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   django-webserver:
     <<: *django
     image: speleodb_local_django_webserver
-    container_name: speleodb_local_django_webserver
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django_webserver"
     command: /start
 
   # celeryworker:
   #   <<: *django
   #   image: speleodb_local_celeryworker
-  #   container_name: speleodb_local_celeryworker
+  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celeryworker"
   #   depends_on:
   #     - redis
   #     - postgres
@@ -73,7 +85,7 @@ services:
   # celerybeat:
   #   <<: *django
   #   image: speleodb_local_celerybeat
-  #   container_name: speleodb_local_celerybeat
+  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celerybeat"
   #   depends_on:
   #     - redis
   #     - postgres
@@ -83,18 +95,23 @@ services:
   # flower:
   #   <<: *django
   #   image: speleodb_local_flower
-  #   container_name: speleodb_local_flower
+  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_flower"
   #   ports:
   #     - "5555:5555"
   #   command: /start-flower
 
   gitlab:
     image: gitlab/gitlab-ce:latest
-    container_name: speleodb_gitlab_lab
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_gitlab_lab"
     privileged: true
     environment:
       # Root User Credentials: root:WE66dZFgKevGzj31My!5
       GITLAB_ROOT_PASSWORD: WE66dZFgKevGzj31My!5
+      GITLAB_ROOT_USERNAME: root
+      GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
+      GITLAB_BOOTSTRAP_TOKEN_NAME: speleodb-local-bootstrap
+      GITLAB_GROUP_NAME: speleodb
+      GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'http://localhost:9080'
         pages_external_url "http://localhost:9080/"
@@ -112,10 +129,18 @@ services:
       - speleodb_local_gitlab_config:/etc/gitlab
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
+      - ./compose/gitlab/healthcheck:/opt/speleodb/healthcheck:ro
+      - ./compose/gitlab/ensure_bootstrap_token.rb:/opt/speleodb/ensure_bootstrap_token.rb:ro
+    healthcheck:
+      test: ["CMD", "/bin/bash", "/opt/speleodb/healthcheck"]
+      interval: 30s
+      timeout: 120s
+      retries: 60
+      start_period: 15m
 
   rustfs:
     image: rustfs/rustfs:1.0.0-beta.8
-    container_name: speleodb_rustfs
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_rustfs"
     environment:
       - RUSTFS_ACCESS_KEY=access_key
       - RUSTFS_SECRET_KEY=secret_key
@@ -129,16 +154,24 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 20
       start_period: 5s
 
-  s3-init:
+  setup:
     <<: *django
-    container_name: speleodb_local_s3_init
-    profiles: ["setup"]
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_setup"
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       rustfs:
         condition: service_healthy
-    command: python manage.py create_s3_local_buckets
+      gitlab:
+        condition: service_healthy
+    environment:
+      GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
+      GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
+      LOCAL_AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-dev
+    command: /app/compose/setup
+    restart: "no"

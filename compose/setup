@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+python compose/setup_local_gitlab.py \
+    --env-file /app/.env \
+    --env-template /app/.env.dist
+if [[ "$(id -u)" == "0" ]]; then
+    chown --reference=/app /app/.env
+fi
+python manage.py create_s3_local_buckets
+python manage.py migrate
+python manage.py ensure_local_superuser

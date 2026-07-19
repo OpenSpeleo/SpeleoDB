@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+gitlab_url="http://localhost:9080"
+bootstrap_marker="/run/speleodb-bootstrap-token-ready"
+
+ensure_bootstrap_token() {
+    gitlab-rails runner /opt/speleodb/ensure_bootstrap_token.rb >/dev/null
+    touch "${bootstrap_marker}"
+}
+
+curl --fail --max-time 15 --silent --show-error \
+    "${gitlab_url}/-/readiness?all=1" >/dev/null
+
+if [[ ! -f "${bootstrap_marker}" ]]; then
+    ensure_bootstrap_token
+fi
+
+if curl --fail --max-time 15 --silent --show-error \
+    --header "PRIVATE-TOKEN: ${GITLAB_BOOTSTRAP_TOKEN}" \
+    "${gitlab_url}/api/v4/user" >/dev/null; then
+    if group_tokens="$(curl --fail --max-time 15 --silent --show-error \
+        --header "PRIVATE-TOKEN: ${GITLAB_BOOTSTRAP_TOKEN}" \
+        "${gitlab_url}/api/v4/groups/${GITLAB_GROUP_NAME}/access_tokens?state=active" \
+        2>/dev/null)"; then
+        if /opt/gitlab/embedded/bin/ruby -rjson -e '
+          tokens = JSON.parse($stdin.read)
+          token_name = ENV.fetch("GITLAB_GROUP_TOKEN_NAME")
+          exit(tokens.any? { |token|
+            token["name"] == token_name && !token["expires_at"].nil?
+          } ? 0 : 1)
+        ' <<<"${group_tokens}"; then
+            ensure_bootstrap_token
+        fi
+    fi
+    exit 0
+fi
+
+ensure_bootstrap_token
+
+curl --fail --max-time 15 --silent --show-error \
+    --header "PRIVATE-TOKEN: ${GITLAB_BOOTSTRAP_TOKEN}" \
+    "${gitlab_url}/api/v4/user" >/dev/null
