@@ -14,8 +14,9 @@ Unlike product docs, these files prioritize:
 ### Architecture and System Design
 
 - `local-object-storage.md`
-  - local RustFS ownership, one-time bucket/CORS bootstrap, signed URL flow,
-    production boundaries, diagnostics, and regression coverage
+  - local RustFS ownership, automatic `.env`/GitLab/bucket/superuser bootstrap,
+    isolated Compose projects, signed URL flow, production boundaries,
+    diagnostics, and regression coverage
 - `map-viewer/architecture.md`
   - module dependency graph, private vs public comparison, initialization
     sequences, state management, layer system, event system, build pipeline
@@ -46,6 +47,12 @@ Unlike product docs, these files prioritize:
 
 ### Specialized Topics
 
+- `local-debugging.md`
+  - always-available Django Debug Toolbar with every panel disabled by default,
+    panel activation, performance rationale, and verification
+- `monorepo-native-dependencies.md`
+  - monorepo-only Rust toolchain boundary, editable `openspeleo_core` setup,
+    cache invalidation, and standalone-image behavior
 - `project-geojson-command.md`
   - management-command modes, Git clone lifecycle, GeoJSON recomputation,
     failure behavior, and performance boundaries
