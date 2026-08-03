@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypedDict
 from typing import TypeVar
+from urllib.parse import unquote
+from urllib.parse import urlsplit
 
 import requests
 from django.conf import settings
@@ -51,6 +54,20 @@ COMPASS_SIDECAR_RELEASES_URL = (
 COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY = "frontend_public:compass_sidecar:release_info"
 COMPASS_SIDECAR_RELEASE_CACHE_TIMEOUT_SECONDS = 60 * 60  # 1 hour
 COMPASS_SIDECAR_FETCH_TIMEOUT_SECONDS = 5.0
+COMPASS_SIDECAR_GITHUB_RELEASE_DOWNLOAD_PATH_PATTERN = re.compile(
+    r"/OpenSpeleo/speleodb_compass_sidecar/releases/download/[^/]+/[^/]+\.msi",
+    flags=re.IGNORECASE,
+)
+COMPASS_SIDECAR_GITHUB_ASSET_API_PATH_PATTERN = re.compile(
+    r"/repos/OpenSpeleo/speleodb_compass_sidecar/releases/assets/[0-9]+",
+    flags=re.IGNORECASE,
+)
+COMPASS_SIDECAR_GITHUB_API_HEADERS = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
+ASCII_CONTROL_CHARACTER_LIMIT = 32
+ASCII_DELETE_CHARACTER = 127
 
 
 class LatestReleaseError(RuntimeError):
@@ -61,6 +78,89 @@ class CompassSidecarReleaseInfo(TypedDict):
     windows_url: str
     version: str
     pub_date: str | None
+
+
+def _has_safe_url_path_segments(path: str) -> bool:
+    return all(
+        segment not in {".", ".."}
+        and "\\" not in segment
+        and not any(
+            ord(character) < ASCII_CONTROL_CHARACTER_LIMIT
+            or ord(character) == ASCII_DELETE_CHARACTER
+            for character in segment
+        )
+        for segment in path.split("/")
+    )
+
+
+def _is_compass_sidecar_msi_download_url(url: str) -> bool:
+    try:
+        parsed_url = urlsplit(url)
+        decoded_path = unquote(parsed_url.path)
+        return (
+            parsed_url.scheme == "https"
+            and parsed_url.hostname == "github.com"
+            and parsed_url.port is None
+            and parsed_url.username is None
+            and parsed_url.password is None
+            and not parsed_url.query
+            and not parsed_url.fragment
+            and _has_safe_url_path_segments(decoded_path)
+            and COMPASS_SIDECAR_GITHUB_RELEASE_DOWNLOAD_PATH_PATTERN.fullmatch(
+                decoded_path
+            )
+            is not None
+        )
+    except ValueError:
+        return False
+
+
+def _is_compass_sidecar_github_asset_api_url(url: str) -> bool:
+    try:
+        parsed_url = urlsplit(url)
+        return (
+            parsed_url.scheme == "https"
+            and parsed_url.hostname == "api.github.com"
+            and parsed_url.port is None
+            and parsed_url.username is None
+            and parsed_url.password is None
+            and not parsed_url.query
+            and not parsed_url.fragment
+            and COMPASS_SIDECAR_GITHUB_ASSET_API_PATH_PATTERN.fullmatch(parsed_url.path)
+            is not None
+        )
+    except ValueError:
+        return False
+
+
+def _resolve_compass_sidecar_msi_url(
+    msi_url: str,
+    *,
+    fetch_timeout: float,
+) -> str:
+    if _is_compass_sidecar_msi_download_url(msi_url):
+        return msi_url
+
+    if not _is_compass_sidecar_github_asset_api_url(msi_url):
+        raise LatestReleaseError("Invalid Windows MSI release URL")
+
+    asset_response = requests.api.get(
+        msi_url,
+        headers=COMPASS_SIDECAR_GITHUB_API_HEADERS,
+        timeout=fetch_timeout,
+    )
+    asset_response.raise_for_status()
+    asset_data = asset_response.json()
+    if not isinstance(asset_data, dict):
+        raise LatestReleaseError("Invalid GitHub release asset payload")
+
+    browser_download_url = asset_data.get("browser_download_url")
+    if not isinstance(
+        browser_download_url, str
+    ) or not _is_compass_sidecar_msi_download_url(browser_download_url):
+        raise LatestReleaseError("Invalid GitHub browser download URL")
+
+    return browser_download_url
 
 
 def get_mobile_store_links() -> dict[str, str]:
@@ -111,6 +211,10 @@ def get_compass_sidecar_release_info(
         if (
             isinstance(cached_windows_url, str)
             and cached_windows_url
+            and (
+                cached_windows_url == releases_fallback_url
+                or _is_compass_sidecar_msi_download_url(cached_windows_url)
+            )
             and isinstance(cached_version, str)
             and cached_version
             and (cached_pub_date is None or isinstance(cached_pub_date, str))
@@ -143,6 +247,10 @@ def get_compass_sidecar_release_info(
         msi_url = msi_payload.get("url")
         if not isinstance(msi_url, str) or not msi_url:
             raise LatestReleaseError("Invalid windows MSI URL in latest.json")  # noqa: TRY301
+        msi_url = _resolve_compass_sidecar_msi_url(
+            msi_url,
+            fetch_timeout=fetch_timeout,
+        )
 
         version = data.get("version")
         if not isinstance(version, str) or not version:
