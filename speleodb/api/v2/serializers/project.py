@@ -208,7 +208,7 @@ class ProjectSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Projec
             return obj.git_repo.commit_count
         return None
 
-    def get_latest_commit(self, obj: Project) -> None | dict[str, str]:
+    def get_latest_commit(self, obj: Project) -> dict[str, str] | None:
         """
         Return the first commit in obj.commits (prefetch_related or default ordering).
         Returns None if there are no commits.
