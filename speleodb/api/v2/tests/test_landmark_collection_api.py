@@ -730,7 +730,7 @@ class TestLandmarkCollectionAPI:
             ),
         ],
     )
-    def test_import_to_collection_can_share_personal_coordinates(
+    def test_import_to_collection_can_share_personal_coordinates(  # noqa: PLR0917
         self,
         api_client: APIClient,
         owner: User,
@@ -835,7 +835,7 @@ class TestLandmarkCollectionAPI:
             ),
         ],
     )
-    def test_failed_import_rolls_back_created_landmarks(
+    def test_failed_import_rolls_back_created_landmarks(  # noqa: PLR0917
         self,
         api_client: APIClient,
         owner: User,
@@ -938,7 +938,7 @@ class TestLandmarkCollectionLandmarkExports:
             ),
         ],
     )
-    def test_read_write_and_admin_users_can_export(
+    def test_read_write_and_admin_users_can_export(  # noqa: PLR0917
         self,
         api_client: APIClient,
         owner: User,

@@ -103,7 +103,7 @@ def handle_exception(
     # Git working tree cleanup (not covered by DB rollback)
     try:
         project.git_repo.reset_and_remove_untracked()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning(
             "Failed to reset git working tree for project %s",
             project.id,

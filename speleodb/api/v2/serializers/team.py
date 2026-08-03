@@ -43,7 +43,7 @@ class SurveyTeamSerializer(
 
         return team
 
-    def get_role(self, obj: SurveyTeam) -> None | SurveyTeamMembershipRole:
+    def get_role(self, obj: SurveyTeam) -> SurveyTeamMembershipRole | None:
         if isinstance(obj, dict):
             # Unsaved object
             return None
