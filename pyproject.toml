@@ -151,7 +151,7 @@ production = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django-anymail[mailersend]==15.0", # https://github.com/anymail/django-anymail
+    "django-anymail[mailersend]==15.1", # https://github.com/anymail/django-anymail
 ]
 
 # Django
