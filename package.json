@@ -24,7 +24,7 @@
     "@tailwindcss/vite": "4.3.3",
     "cross-env": "^10.1.0",
     "eslint": "^10.8.0",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "jsdom": "^29.1.1",
     "npm-check-updates": "^22.2.9",
     "rimraf": "^6.1.3",
