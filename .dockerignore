@@ -25,6 +25,7 @@ Procfile
 .github
 .ipython
 .mypy_cache
+node_modules
 .pytest_cache
 .ropeproject
 .ruff_cache

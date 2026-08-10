@@ -116,6 +116,8 @@ RUN groupadd --gid 1000 dev-user \
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
+RUN mkdir -p "${APP_HOME}/node_modules" \
+    && chown dev-user:dev-user "${APP_HOME}/node_modules"
 
 # UV settings
 ENV UV_CACHE_DIR=/app/.uv/cache

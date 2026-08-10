@@ -93,6 +93,16 @@ avoid `--volumes` unless deletion is explicitly intended.
 The project also owns `/app/node_modules` as a named volume. Container-side
 Linux optional dependencies therefore remain separate from host-native npm
 installs even though the rest of the source tree is bind-mounted at `/app`.
+The root setup job initializes or migrates that volume to `dev-user` ownership,
+while both Django application services run as `dev-user`. Consequently `npm
+ci`, the Vite watcher, pre-commit builds, and interactive devcontainer commands
+all share one writer identity. The setup job checks the volume-root ownership
+before any recursive migration, so established volumes do not pay for a full
+`node_modules` traversal on every startup. Host `node_modules` is excluded from
+the image build context, and the volume uses `nocopy: true`, so image contents
+cannot seed a fresh Linux dependency volume. The devcontainer disables
+per-service remote UID rewriting because the setup, workspace, and webserver
+must agree that `dev-user` is UID/GID 1000 across the shared volume.
 
 Linux exposes the host-networked Django process on port 8000 directly. Docker
 Desktop requires its host-networking feature for equivalent host access; the

@@ -11,6 +11,9 @@
     "service": "django",
     // "remoteEnv": {"PATH": "/home/dev-user/.local/bin:${containerEnv:PATH}"},
     "remoteUser": "dev-user",
+    // Every Compose service that writes the shared Node volume uses UID 1000.
+    // Do not let Dev Containers rewrite only the interactive service's UID.
+    "updateRemoteUserUID": false,
     "workspaceFolder": "/app",
     // VS Code tunnel only: Docker still uses host networking and publishes no
     // container port. This makes port 8000 appear automatically in Ports.

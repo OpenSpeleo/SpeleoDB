@@ -4,6 +4,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+bash /app/compose/prepare_node_modules
+
 python compose/setup_local_gitlab.py \
     --env-file /app/.env \
     --env-template /app/.env.dist

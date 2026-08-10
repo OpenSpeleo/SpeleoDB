@@ -17,12 +17,17 @@ services:
         - DOCKER_BUILDKIT=1
     image: speleodb_local_django
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
+    user: dev-user
     depends_on:
       setup:
         condition: service_completed_successfully
     volumes:
       - .:/app:z
-      - speleodb_local_web_node_modules:/app/node_modules
+      - type: volume
+        source: speleodb_local_web_node_modules
+        target: /app/node_modules
+        volume:
+          nocopy: true
     env_file:
       - ./.envs/.django
       - ./.envs/.postgres
@@ -164,6 +169,7 @@ services:
   setup:
     <<: *django
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_setup"
+    user: root
     depends_on:
       postgres:
         condition: service_healthy
