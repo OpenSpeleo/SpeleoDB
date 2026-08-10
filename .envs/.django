@@ -16,10 +16,6 @@ GITLAB_GROUP_NAME=speleodb
 GITLAB_HOST_URL=localhost:9080
 # GITLAB_GROUP_ID and GITLAB_TOKEN are provisioned into the ignored .env file.
 
-# Map rendering (a real token may be supplied for Mapbox-backed local views)
-# ------------------------------------------------------------------------------
-MAPBOX_API_TOKEN=unused-local-token
-
 # RustFS / S3-compatible local object storage
 # ------------------------------------------------------------------------------
 AWS_ACCESS_KEY_ID=access_key

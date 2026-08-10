@@ -359,6 +359,13 @@ sources keep their normal provider URLs to avoid breaking rendering.
 matching configured raster tile responses when those requests pass through page
 `fetch`. Tile validation is implemented in browser JavaScript, not in Python.
 
+Local token ownership follows the same private-root configuration path as the
+other developer credentials: the repository-root `.env` owns
+`MAPBOX_API_TOKEN`, and `local.yml` explicitly interpolates it into the Django
+service environment. Do not duplicate a placeholder in `.envs/.django`, because
+OS environment values take precedence over Django's root `.env` loading and
+would silently replace the real token in both private and public map contexts.
+
 The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.js`. That SVG is
 inserted with `innerHTML` only as trusted static markup so the user can replace
 the icon manually. Do not interpolate user or API data into that constant.

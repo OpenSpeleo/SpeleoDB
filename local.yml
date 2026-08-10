@@ -26,6 +26,10 @@ services:
     env_file:
       - ./.envs/.django
       - ./.envs/.postgres
+    environment:
+      # Compose reads the developer-owned root .env for interpolation. Keep the
+      # tracked Django env file free of placeholder values that would shadow it.
+      MAPBOX_API_TOKEN: "${MAPBOX_API_TOKEN:-}"
     ports: []
     command: sleep infinity
     network_mode: "host"

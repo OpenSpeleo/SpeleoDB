@@ -31,6 +31,12 @@ The registry order is also the order shown in the selector. When no Mapbox token
 is available, the token-required `MapBox - Satellite` entry is filtered out and
 the first remaining source (`ESRI - Satellite`) becomes the default.
 
+For local Compose development, `MAPBOX_API_TOKEN` is developer-owned in the
+repository-root `.env`. `local.yml` interpolates that value into the Django and
+webserver services; `.envs/.django` must not define a placeholder that shadows
+it. If the root value is blank or absent, the existing tokenless ESRI Satellite
+fallback is used and the browser does not request the Mapbox Styles API.
+
 The ESRI hillshade sources use raster provider `maxzoom: 16`; the viewer may
 zoom beyond 16, but Mapbox GL overzooms the zoom-16 ESRI tiles instead of
 requesting ESRI zoom 17+ tiles. ESRI Satellite uses provider `maxzoom: 18`.
