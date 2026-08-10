@@ -822,6 +822,18 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gps_tracks/<uuid:id>/export/gpx/",
+        "module": "speleodb.api.v2.views.gps_track_export.GPSTrackExportGPXAPIView",
+        "name": "api:v1:gps-track-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gps_tracks/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gps_track.GPSTrackPermissionAPIView",
+        "name": "api:v1:gps-track-permissions",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/import/gpx/",
         "module": "speleodb.api.v2.views.gpx_import.GPXImportView",
         "name": "api:v1:gpx-import",
@@ -1650,6 +1662,18 @@
         "decorators": ""
     },
     {
+        "url": "/api/v2/gps_tracks/<uuid:id>/export/gpx/",
+        "module": "speleodb.api.v2.views.gps_track_export.GPSTrackExportGPXAPIView",
+        "name": "api:v2:gps-track-export-gpx",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gps_tracks/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gps_track.GPSTrackPermissionAPIView",
+        "name": "api:v2:gps-track-permissions",
+        "decorators": ""
+    },
+    {
         "url": "/api/v2/import/gpx/",
         "module": "speleodb.api.v2.views.gpx_import.GPXImportView",
         "name": "api:v2:gpx-import",
@@ -2361,6 +2385,12 @@
         "url": "/private/gis_views/",
         "module": "frontend_private.views.gis_views.GISViewListingView",
         "name": "private:gis_views",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gps-track/<uuid:track_id>/permissions/",
+        "module": "frontend_private.views.gps_tracks.GPSTrackUserPermissionsView",
+        "name": "private:gps_track_user_permissions",
         "decorators": ""
     },
     {

@@ -204,7 +204,8 @@ Loads the shared `attachUserAutocomplete` helper for the Add form.
 
 Used by: project/user_permissions, experiment/user_permissions,
 cylinder_fleet/user_permissions, sensor_fleet/user_permissions,
-surface_network/user_permissions.
+surface_network/user_permissions, landmark_collection/user_permissions, and
+gps_track/user_permissions.
 
 For `team/memberships.html` (which renames the DOM nodes to `#membership_modal`,
 `.btn_open_edit_membership`, etc. and uses `role` instead of `level`) pass a
@@ -407,7 +408,7 @@ attachGisViewForm({
 
 ### `tagged_entity_list.js` - `attachTaggedEntityList(options)`
 
-Generic CRUD scaffold for "named + colored + owned" list pages where rows are
+Generic CRUD scaffold for named and colored list pages where rows are
 loaded via GET, rendered into both a desktop table and a mobile cards grid, and
 support per-row edit + delete with confirmation.
 
@@ -416,7 +417,9 @@ collectEditPayload) and a handful of selectors; everything else is shared.
 Returns `{reload(), openEditModal(id), openDeleteModal(id)}` for external
 triggers (e.g. GPX import refreshes `gps_tracks`).
 
-Used by `station_tags.html` (PUT) and `gps_tracks.html` (PATCH).
+Used by `station_tags.html` (PUT) and `gps_tracks.html` (PATCH). GPS Tracks add
+API-provided capability checks around this shared scaffold: readers only see
+export/access actions, writers receive edit, and administrators receive delete.
 
 ```js
 const listApi = attachTaggedEntityList({

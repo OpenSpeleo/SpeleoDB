@@ -1,5 +1,8 @@
 const CONTROLLER_SELECTOR = '[data-speleodb-controller]';
-const controllerModules = import.meta.glob('./controllers/*.js');
+const controllerModules = import.meta.glob([
+    './controllers/*.js',
+    '!./controllers/*.test.js',
+]);
 const initializedElements = new WeakSet();
 
 function applyCriticalRouteState() {

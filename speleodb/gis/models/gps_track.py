@@ -4,18 +4,26 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db import transaction
+from django.db.models import Q
 from django.db.models import UniqueConstraint
+from django.utils import timezone
 
 from speleodb.common.enums import ColorPalette
+from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.fields import Sha256Field
 from speleodb.users.models import User
 from speleodb.utils.s3_storages import GPSTrackStorage
 from speleodb.utils.validators import GeoJsonValidator
+
+if TYPE_CHECKING:
+    from django_stubs_ext import StrOrPromise
 
 
 def get_gps_track_upload_path(instance: GPSTrack, filename: str) -> str:
@@ -27,6 +35,8 @@ class GPSTrack(models.Model):
     Represents a GPS Track on the map.
     GPSTrack are GeoJSON files not linked to any project.
     """
+
+    permissions: models.QuerySet[GPSTrackUserPermission]
 
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -73,6 +83,8 @@ class GPSTrack(models.Model):
         null=False,
     )
 
+    is_active = models.BooleanField(default=True)
+
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
@@ -82,12 +94,14 @@ class GPSTrack(models.Model):
         indexes = [
             models.Index(fields=["user"]),
             models.Index(fields=["sha256_hash"]),
+            models.Index(fields=["is_active"], name="gis_gpst_active_idx"),
         ]
         ordering = ["-creation_date"]
         constraints = [
             UniqueConstraint(
                 fields=["sha256_hash", "user"],
-                name="%(app_label)s_%(class)s_gps_track_per_user_unique",
+                condition=Q(is_active=True),
+                name="gis_gpst_active_user_hash_uniq",
             )
         ]
 
@@ -95,12 +109,20 @@ class GPSTrack(models.Model):
         return f"[GPS Track] {self.user.name} @ {self.creation_date}"
 
     def save(self, *args: Any, **kwargs: Any) -> None:
+        is_new = self._state.adding
         update_fields: list[str] | None = kwargs.get("update_fields")
         if update_fields is None or "file" in update_fields:
             self._set_file_hash()
 
         self.full_clean()
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if is_new:
+                GPSTrackUserPermission.objects.get_or_create(
+                    user=self.user,
+                    gps_track=self,
+                    defaults={"level": PermissionLevel.ADMIN},
+                )
 
     def _set_file_hash(self) -> None:
         if not self.file:
@@ -123,3 +145,99 @@ class GPSTrack(models.Model):
         if not self.file:
             raise ValidationError("No file to download.")
         return self.file.storage.url(self.file.name, expire=expires_in)  # type: ignore[call-arg]
+
+    def deactivate(self, deactivated_by: User) -> None:
+        """Soft-delete the track and its active permissions atomically."""
+        timestamp = timezone.now()
+        with transaction.atomic():
+            self.permissions.filter(is_active=True).update(
+                is_active=False,
+                deactivated_by=deactivated_by,
+                modified_date=timestamp,
+            )
+            self.is_active = False
+            self.modified_date = timestamp
+            super().save(update_fields=["is_active", "modified_date"])
+
+
+class GPSTrackUserPermission(models.Model):
+    user = models.ForeignKey(
+        User,
+        related_name="gps_track_permissions",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    gps_track = models.ForeignKey(
+        GPSTrack,
+        related_name="permissions",
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    level = models.IntegerField(
+        choices=PermissionLevel.choices_no_webviewer,
+        default=PermissionLevel.READ_ONLY,
+        null=False,
+        blank=False,
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
+    deactivated_by = models.ForeignKey(
+        User,
+        on_delete=models.RESTRICT,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    class Meta:
+        verbose_name = "GPS Track - User Permission"
+        verbose_name_plural = "GPS Track - User Permissions"
+        indexes = [
+            models.Index(
+                fields=["user", "is_active"],
+                name="gis_gptup_user_active_idx",
+            ),
+            models.Index(
+                fields=["gps_track", "is_active"],
+                name="gis_gptup_track_active_idx",
+            ),
+            models.Index(
+                fields=["user", "gps_track", "is_active"],
+                name="gis_gptup_user_track_act_idx",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "gps_track"],
+                name="gis_gptup_user_track_perm_uniq",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} => {self.gps_track.name} [{self.level}]"
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {self}>"
+
+    def deactivate(self, deactivated_by: User) -> None:
+        self.is_active = False
+        self.deactivated_by = deactivated_by
+        self.save()
+
+    def reactivate(self, level: PermissionLevel) -> None:
+        self.is_active = True
+        self.deactivated_by = None
+        self.level = level
+        self.save()
+
+    @property
+    def level_label(self) -> StrOrPromise:
+        return PermissionLevel.from_value(self.level).label

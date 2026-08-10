@@ -106,6 +106,13 @@ from django.urls import reverse
             "landmark-collection/{collection_id}/danger_zone/",
             {"collection_id": uuid.uuid4()},
         ),
+        # GPS Track routes
+        ("private:gps_tracks", "gps-tracks/", None),
+        (
+            "private:gps_track_user_permissions",
+            "gps-track/{track_id}/permissions/",
+            {"track_id": uuid.uuid4()},
+        ),
     ],
 )
 def test_routes(name: str, path: str, kwargs: Any) -> None:

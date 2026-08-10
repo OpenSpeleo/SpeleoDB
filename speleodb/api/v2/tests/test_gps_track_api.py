@@ -2,8 +2,8 @@
 
 """Tests for `gps-tracks` (list) and `gps-track-detail` (GET/PUT/PATCH/DELETE).
 
-View lives in `speleodb/api/v2/views/gps_track.py`. GPSTrack is a private
-per-user GeoJSON track (ownership permission).
+View lives in `speleodb/api/v2/views/gps_track.py`. GPS Tracks use direct-user
+permissions; the legacy `user` field records creator provenance.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _create_gps_track(user: User, name: str = "My Track") -> GPSTrack:
 
 @pytest.mark.django_db
 class TestGPSTrackList(BaseAPITestCase):
-    """GET /api/v2/gps_tracks/ - returns current user's tracks only."""
+    """GET /api/v2/gps_tracks/ returns readable active tracks."""
 
     def test_requires_authentication(self) -> None:
         response = self.client.get(reverse("api:v2:gps-tracks"))
@@ -91,7 +91,7 @@ class TestGPSTrackList(BaseAPITestCase):
 
 @pytest.mark.django_db
 class TestGPSTrackDetailRead(BaseAPITestCase):
-    """GET /api/v2/gps_tracks/<id>/ - owner only."""
+    """GET /api/v2/gps_tracks/<id>/ requires a readable permission."""
 
     def test_owner_can_read(self) -> None:
         track = _create_gps_track(self.user, name="Readme")
@@ -186,7 +186,11 @@ class TestGPSTrackDetailWrite(BaseAPITestCase):
             headers={"authorization": self.auth},
         )
         assert response.status_code == status.HTTP_200_OK, response.data
-        assert not GPSTrack.objects.filter(id=track_id).exists()
+        track.refresh_from_db()
+        assert GPSTrack.objects.filter(id=track_id).exists()
+        assert not track.is_active
+        assert not track.permissions.filter(is_active=True).exists()
+        assert track.file.name
 
     def test_stranger_cannot_delete(self) -> None:
         other = UserFactory.create()

@@ -37,6 +37,8 @@ from speleodb.gis.models import CylinderPressureCheck
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models import GPSTrack
+from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
@@ -417,6 +419,55 @@ class LandmarkFactory(DjangoModelFactory[Landmark]):
     collection: factory.LazyAttribute[Any, LandmarkCollection] = factory.LazyAttribute(
         lambda obj: get_or_create_personal_landmark_collection(user=obj.owner)
     )
+
+
+# ================ GPS TRACK FACTORIES ================ #
+
+
+class GPSTrackFactory(DjangoModelFactory[GPSTrack]):
+    """Factory for creating valid, uniquely hashed GPS Tracks."""
+
+    class Meta:
+        model = GPSTrack
+
+    name: str = factory.Sequence(  # type: ignore[assignment]
+        lambda n: f"GPS Track {n:03d}"
+    )
+    user: User = factory.SubFactory(  # type: ignore[assignment]
+        UserFactory,
+        email=factory.Sequence(lambda n: f"gps-track-owner-{n}@test.local"),
+    )
+    color = "#377eb8"
+    is_active = True
+    file: SimpleUploadedFile = factory.Sequence(  # type: ignore[assignment]
+        lambda n: SimpleUploadedFile(
+            f"gps-track-{n}.geojson",
+            (
+                '{"type":"FeatureCollection","features":[{"type":"Feature",'
+                '"geometry":{"type":"LineString","coordinates":'
+                f"[[{-87.5 - (n / 10000)},20.19],[-87.51,20.2]]}},"
+                '"properties":{}}]}'
+            ).encode(),
+            content_type="application/geo+json",
+        )
+    )
+
+
+class GPSTrackUserPermissionFactory(DjangoModelFactory[GPSTrackUserPermission]):
+    """Factory for creating GPS Track collaborator permissions."""
+
+    class Meta:
+        model = GPSTrackUserPermission
+
+    user: User = factory.SubFactory(  # type: ignore[assignment]
+        UserFactory,
+        email=factory.Sequence(lambda n: f"gps-track-reader-{n}@test.local"),
+    )
+    gps_track: GPSTrack = factory.SubFactory(  # type: ignore[assignment]
+        GPSTrackFactory
+    )
+    level = PermissionLevel.READ_AND_WRITE
+    is_active = True
 
 
 class StationResourceFactory(DjangoModelFactory[StationResource]):

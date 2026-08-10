@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import logging
-import re
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -22,6 +21,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v2.direct_user_permissions import parse_direct_user_permission_data
 from speleodb.api.v2.landmark_access import accessible_landmark_collections_queryset
 from speleodb.api.v2.landmark_access import collection_landmarks_queryset
 from speleodb.api.v2.permissions import IsObjectDeletion
@@ -41,14 +41,12 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.users.models import User
 from speleodb.utils.api_mixin import SDBAPIViewMixin
-from speleodb.utils.exceptions import BadRequestError
-from speleodb.utils.exceptions import MissingFieldError
-from speleodb.utils.exceptions import NotAuthorizedError
-from speleodb.utils.exceptions import UserNotActiveError
-from speleodb.utils.exceptions import UserNotFoundError
-from speleodb.utils.exceptions import ValueNotFoundError
+from speleodb.utils.gpx import GPX_CONTENT_TYPE
+from speleodb.utils.gpx import dated_export_filename
+from speleodb.utils.gpx import gpx_download_response
+from speleodb.utils.gpx import new_gpx_document
+from speleodb.utils.gpx import sanitize_export_filename
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -56,21 +54,15 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
     from rest_framework.response import Response
 
+    from speleodb.users.models import User
+
 logger = logging.getLogger(__name__)
 
 
 _LANDMARK_EXPORT_XLSX_CONTENT_TYPE = (
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-_LANDMARK_EXPORT_GPX_CONTENT_TYPE = "application/gpx+xml"
-_LANDMARK_EXPORT_GPX_CREATOR = "SpeleoDB"
-_LANDMARK_EXPORT_GPX_VERSION = "1.1"
 _PERSONAL_COLLECTION_EDITABLE_FIELDS = frozenset({"color"})
-
-
-def _sanitize_export_filename(value: str) -> str:
-    filename = re.sub(r'[\\/*?:"<>|]', "", value).strip()
-    return filename or "landmarks"
 
 
 class LandmarkCollectionApiView(GenericAPIView[LandmarkCollection], SDBAPIViewMixin):
@@ -206,62 +198,13 @@ class LandmarkCollectionPermissionApiView(
     def _process_request_data(
         self, request: Request, data: dict[str, Any], skip_level: bool = False
     ) -> dict[str, Any]:
-        request_user = self.get_user()
-        permission_data: dict[str, Any] = {}
-
-        for key in ["user", "level"]:
-            try:
-                if key == "level" and skip_level:
-                    continue
-
-                value = data[key]
-
-                match key:
-                    case "level":
-                        if not isinstance(value, str) or value.upper() not in [
-                            name for _, name in PermissionLevel.choices_no_webviewer
-                        ]:
-                            raise BadRequestError(
-                                f"Invalid value received for `{key}`: `{value}`"
-                            )
-
-                        try:
-                            permission_data[key] = PermissionLevel.from_str(
-                                value.upper()
-                            )
-                        except AttributeError as e:
-                            raise ValueNotFoundError(
-                                f"The user permission level: `{value.upper()}` does "
-                                "not exist."
-                            ) from e
-
-                    case "user":
-                        try:
-                            user = User.objects.get(email=value)
-                        except ObjectDoesNotExist as e:
-                            raise UserNotFoundError(
-                                f"The user: `{value}` does not exist."
-                            ) from e
-
-                        if request_user == user:
-                            raise NotAuthorizedError(
-                                "A user can not edit their own permission"
-                            )
-
-                        if not user.is_active:
-                            raise UserNotActiveError(
-                                f"The user: `{value}` is inactive."
-                            )
-
-                        permission_data["user"] = user
-
-                    case _:
-                        raise ValueNotFoundError(f"Unknown key: {key}")
-
-            except KeyError as e:
-                raise MissingFieldError(f"Attribute: `{key}` is missing. {data}") from e
-
-        return permission_data
+        return dict(
+            parse_direct_user_permission_data(
+                request_user=self.get_user(),
+                data=data,
+                skip_level=skip_level,
+            )
+        )
 
     def get(
         self, request: Request, collection_id: str, *args: Any, **kwargs: Any
@@ -477,7 +420,7 @@ class LandmarkCollectionLandmarksExportExcelApiView(
 
         filename = (
             "landmark_collection_"
-            f"{_sanitize_export_filename(collection.name)}_"
+            f"{sanitize_export_filename(collection.name, fallback='landmarks')}_"
             f"{timezone.localdate().isoformat()}.xlsx"
         )
         response = StreamingHttpResponse(
@@ -502,7 +445,7 @@ class LandmarkCollectionLandmarksExportGPXApiView(
 
     @extend_schema(
         operation_id="v2_landmark_collection_landmarks_export_gpx",
-        responses={(200, _LANDMARK_EXPORT_GPX_CONTENT_TYPE): OpenApiTypes.BINARY},
+        responses={(200, GPX_CONTENT_TYPE): OpenApiTypes.BINARY},
     )
     def get(
         self,
@@ -513,11 +456,10 @@ class LandmarkCollectionLandmarksExportGPXApiView(
         collection = self.get_object()
         landmarks = collection_landmarks_queryset(collection=collection)
 
-        gpx = gpxpy.gpx.GPX()
-        gpx.creator = _LANDMARK_EXPORT_GPX_CREATOR
-        gpx.version = _LANDMARK_EXPORT_GPX_VERSION
-        gpx.name = collection.name
-        gpx.description = collection.description
+        gpx = new_gpx_document(
+            name=collection.name,
+            description=collection.description,
+        )
 
         for landmark in landmarks:
             description_parts: list[str] = []
@@ -534,17 +476,13 @@ class LandmarkCollectionLandmarksExportGPXApiView(
                 )
             )
 
-        filename = (
-            "landmark_collection_"
-            f"{_sanitize_export_filename(collection.name)}_"
-            f"{timezone.localdate().isoformat()}.gpx"
+        filename = dated_export_filename(
+            prefix="landmark_collection",
+            name=collection.name,
+            extension="gpx",
+            fallback="landmarks",
         )
-        response = StreamingHttpResponse(
-            [gpx.to_xml(version=_LANDMARK_EXPORT_GPX_VERSION).encode("utf-8")],
-            content_type=_LANDMARK_EXPORT_GPX_CONTENT_TYPE,
-        )
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
+        return gpx_download_response(gpx=gpx, filename=filename)
 
 
 class LandmarkCollectionBulkTransferApiView(

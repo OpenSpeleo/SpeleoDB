@@ -30,6 +30,7 @@ from frontend_private.views import GISViewDetailsView
 from frontend_private.views import GISViewGISIntegrationView
 from frontend_private.views import GISViewListingView
 from frontend_private.views import GPSTrackListView
+from frontend_private.views import GPSTrackUserPermissionsView
 from frontend_private.views import LandmarkCollectionDangerZoneView
 from frontend_private.views import LandmarkCollectionDetailsView
 from frontend_private.views import LandmarkCollectionGISView
@@ -338,6 +339,11 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("gis_view/<uuid:gis_view_id>/", include(gis_view_patterns)),
     # GPS Tracks
     path("gps-tracks/", GPSTrackListView.as_view(), name="gps_tracks"),
+    path(
+        "gps-track/<uuid:track_id>/permissions/",
+        GPSTrackUserPermissionsView.as_view(),
+        name="gps_track_user_permissions",
+    ),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

@@ -119,7 +119,7 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
                 collection__collection_type=LandmarkCollection.CollectionType.PERSONAL,
                 collection__is_active=True,
             ).count(),
-            "total_gps_tracks": user.gps_tracks.count(),
+            "total_gps_tracks": user.gps_tracks.filter(is_active=True).count(),
             "total_stations_created": SubSurfaceStation.objects.filter(
                 created_by=user.email
             ).count(),

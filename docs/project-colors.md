@@ -124,8 +124,10 @@ For users without write access:
 
 ### GPS track color dots
 
-The GPS track list on `gps_tracks.html` shows a color dot next to each track
-name, rendered server-side from `track.color`.
+The GPS track list on `gps_tracks.html` shows a color dot next to each readable
+track name. The permission-aware controller validates the API-provided color at
+the HTML sink. Users with READ_AND_WRITE or ADMIN access can update the shared
+model color; every reader therefore sees the same rendered color.
 
 ---
 

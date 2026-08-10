@@ -21,6 +21,7 @@
     "style-template-frontend-private-templates-pages-gis-view-base": "frontend_common/styles/templates/frontend-private-templates-pages-gis-view-base.css",
     "style-template-frontend-private-templates-pages-gis-views": "frontend_common/styles/templates/frontend-private-templates-pages-gis-views.css",
     "style-template-frontend-private-templates-pages-gps-tracks": "frontend_common/styles/templates/frontend-private-templates-pages-gps-tracks.css",
+    "style-template-frontend-private-templates-pages-gps-track-user-permissions": "frontend_common/styles/templates/frontend-private-templates-pages-gps-track-user-permissions.css",
     "style-template-frontend-private-templates-pages-landmark-collection-details": "frontend_common/styles/templates/frontend-private-templates-pages-landmark-collection-details.css",
     "style-template-frontend-private-templates-pages-landmark-collection-user-permissions": "frontend_common/styles/templates/frontend-private-templates-pages-landmark-collection-user-permissions.css",
     "style-template-frontend-private-templates-pages-project-base": "frontend_common/styles/templates/frontend-private-templates-pages-project-base.css",

@@ -26,6 +26,9 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- `gps-tracks.md`
+  - GPS Track sharing permissions, soft-delete lifecycle, GPX export mapping,
+    API/UI contracts, performance boundaries, and verification strategy
 - `api-docs-access.md`
   - user-level API Docs/API Schema menu visibility flag, admin ownership, and
     permission boundaries

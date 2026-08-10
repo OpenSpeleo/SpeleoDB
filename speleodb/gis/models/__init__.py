@@ -9,6 +9,7 @@ from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
 # GPS Track Related Models
 from speleodb.gis.models.gps_track import GPSTrack
+from speleodb.gis.models.gps_track import GPSTrackUserPermission
 
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
@@ -65,6 +66,7 @@ __all__ = [
     "GISProjectView",
     "GISView",
     "GPSTrack",
+    "GPSTrackUserPermission",
     "Landmark",
     "LandmarkCollection",
     "LandmarkCollectionUserPermission",

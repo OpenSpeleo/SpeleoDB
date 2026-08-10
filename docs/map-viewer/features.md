@@ -260,13 +260,15 @@ Coordinates are stored with 7 decimal places of precision (`toFixed(7)`).
 
 **Module:** `components/gps_tracks_panel.js`
 
-GPS tracks are **user-owned** track files. The panel is only rendered if
+GPS tracks are authenticated, direct-user permissioned track files. Creator
+provenance remains on the model, while active READ_ONLY, READ_AND_WRITE, or
+ADMIN permission rows determine access. The panel is only rendered if
 `Config.gpsTracks.length > 0`.
 
 ### Architecture
 
 - Track metadata is provided via `Config.gpsTracks` (populated from the
-  server-rendered context).
+  accessible-track API). This includes creator-owned and shared tracks.
 - Track GeoJSON data is loaded **on demand** when the user activates a track via
   the panel toggle.
 - Loaded track data is **lazily cached** in `State.gpsTrackCache` (keyed by
@@ -277,7 +279,9 @@ GPS tracks are **user-owned** track files. The panel is only rendered if
 ### GPX import
 
 New tracks are imported via `API.importGPX(formData)` which hits
-`PUT /api/v2/import/gpx/`. The server converts GPX to GeoJSON for storage.
+`PUT /api/v2/import/gpx/`. The server converts GPX to GeoJSON for storage and
+grants the importer ADMIN access. See `docs/gps-tracks.md` for export and
+sharing contracts.
 
 ### Panel behavior
 

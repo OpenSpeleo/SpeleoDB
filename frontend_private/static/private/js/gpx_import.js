@@ -205,10 +205,8 @@ export const GPXImport = (function() {
 
         const messageEl = document.getElementById('gpx-success-message');
         const modal = document.getElementById('gpx-success-modal');
-        const reloadText = document.getElementById('gpx-success-reload-text');
 
         if (messageEl) messageEl.textContent = message;
-        if (reloadText) reloadText.textContent = 'Refreshing map data...';
         if (modal) modal.classList.remove('hidden');
 
         // Dispatch events to refresh data without full page reload

@@ -34,12 +34,16 @@
         .track-card-title {
             flex: 1;
             margin-right: 12px;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .track-card-actions {
             display: flex;
             gap: 8px;
             flex-shrink: 0;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .track-card-body {
@@ -66,6 +70,8 @@
             color: #cbd5e1;
             font-weight: 500;
             text-align: right;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
     }
 

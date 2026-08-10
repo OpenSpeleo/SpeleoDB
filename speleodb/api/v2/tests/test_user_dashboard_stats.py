@@ -13,6 +13,8 @@ from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v2.tests.factories import ExplorationLeadFactory
+from speleodb.api.v2.tests.factories import GPSTrackFactory
+from speleodb.api.v2.tests.factories import GPSTrackUserPermissionFactory
 from speleodb.api.v2.tests.factories import ProjectCommitFactory
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
@@ -253,6 +255,18 @@ class TestDashboardStatsSummaryCounts(BaseAPITestCase):
 
     def test_total_gps_tracks_count(self) -> None:
         assert self._get_summary()["total_gps_tracks"] == 0
+
+        _ = GPSTrackFactory.create(user=self.user)
+        inactive = GPSTrackFactory.create(user=self.user)
+        inactive.deactivate(deactivated_by=self.user)
+        shared = GPSTrackFactory.create()
+        GPSTrackUserPermissionFactory.create(
+            user=self.user,
+            gps_track=shared,
+            level=PermissionLevel.READ_ONLY,
+        )
+
+        assert self._get_summary()["total_gps_tracks"] == 1
 
     def test_total_stations_created_by_user_email(self) -> None:
         assert self._get_summary()["total_stations_created"] == 2  # noqa: PLR2004

@@ -46,6 +46,11 @@ describe('first-party Vite graph', () => {
                 .flatMap(output => Object.keys(output.modules))
                 .map(moduleId => path.resolve(moduleId.split('?')[0])),
         );
+        expect(
+            [...bundledModules]
+                .filter(moduleId => moduleId.endsWith('.test.js'))
+                .map(relative),
+        ).toEqual([]);
         const authored = authoredFiles(
             [
                 'frontend_common',

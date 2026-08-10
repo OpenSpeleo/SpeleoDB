@@ -25,6 +25,7 @@ from speleodb.api.v2.serializers.gis_view import GISViewSerializer
 from speleodb.api.v2.serializers.git import GitCommitSerializer
 from speleodb.api.v2.serializers.git import GitFileSerializer
 from speleodb.api.v2.serializers.gps_track import GPSTrackSerializer
+from speleodb.api.v2.serializers.gps_track import GPSTrackUserPermissionSerializer
 from speleodb.api.v2.serializers.gps_track import GPSTrackWithFileSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
@@ -84,6 +85,7 @@ __all__ = [
     "GISViewDataSerializer",
     "GISViewSerializer",
     "GPSTrackSerializer",
+    "GPSTrackUserPermissionSerializer",
     "GPSTrackWithFileSerializer",
     "GitCommitSerializer",
     "GitFileSerializer",

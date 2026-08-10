@@ -21,6 +21,7 @@ from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GPSTrack
+from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
@@ -155,6 +156,20 @@ class BaseAccessLevel(permissions.BasePermission):
                 except ObjectDoesNotExist:
                     return False
 
+            case GPSTrack():
+                try:
+                    return (
+                        obj.is_active
+                        and GPSTrackUserPermission.objects.get(
+                            user=request.user,
+                            gps_track=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist:
+                    return False
+
             # =============================================================== #
             #                        TRANSITIVE MODELS                        #
             # =============================================================== #
@@ -250,6 +265,11 @@ class BaseAccessLevel(permissions.BasePermission):
 
             case LandmarkCollectionUserPermission():
                 return self.has_object_permission(request, view, obj.collection)
+
+            # GPS Track Models
+            # -----------------------------------------------------------------
+            case GPSTrackUserPermission():
+                return self.has_object_permission(request, view, obj.gps_track)
 
             # SensorFleet & Station Models
             # -----------------------------------------------------------------
@@ -363,30 +383,8 @@ class UserHasMemberAccess(BaseTeamAccessLevel):
 # =============== GPS Track =============== #
 
 
-class GPSTrackOwnershipPermission(permissions.BasePermission):
-    """
-    Permission class specifically for GPSTrack ownership.
-    - Users can only see/modify their own GPSTrack.
-    - No sharing or public access to GPSTrack
-    """
-
-    def has_permission(self, request: Request, view: APIView) -> bool:
-        if request.user and request.user.is_authenticated:
-            return True
-
-        raise NotAuthenticated("Authentication credentials were not provided.")
-
-    def has_object_permission(
-        self,
-        request: AuthenticatedDRFRequest,  # type: ignore[override]
-        view: APIView,
-        obj: GPSTrack,
-    ) -> bool:
-        """Users can only access GPSTracks they created."""
-        if not isinstance(obj, GPSTrack):
-            raise TypeError(f"Expected a `GPSTrack` object, got {type(obj)}")
-
-        return obj.user == request.user
+class GPSTrackOwnershipPermission(SDB_AdminAccess):
+    """Backward-compatible alias for GPS Track ADMIN access."""
 
 
 # ================ GISView ================ #

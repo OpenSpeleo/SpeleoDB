@@ -239,7 +239,7 @@ initialization and not mutated during the session (except
 | ------------ | ------- | -------------------------------------------------------------------------------- |
 | `_projects`  | `Array` | Project list with `id`, `name`, `permissions`, `country`, `color`, `geojson_url` |
 | `_networks`  | `Array` | Surface network list with `id`, `name`, `permission_level`                       |
-| `_gpsTracks` | `Array` | GPS track metadata with `id`, `name`, `color`, `file` URL                        |
+| `_gpsTracks` | `Array` | Readable GPS track metadata with `id`, `name`, `color`, and signed `file` URL     |
 
 Key methods: `hasProjectAccess(id, action)`, `hasNetworkAccess(id, action)`,
 `hasScopedAccess(scopeType, scopeId, action)`, `getStationAccess(station)`,

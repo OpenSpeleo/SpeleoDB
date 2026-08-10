@@ -31,13 +31,14 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "id",
         "name",
         "user",
+        "is_active",
         "short_sha256",
         "creation_date",
         "download_link",
     )
 
     list_select_related = ("user",)
-    list_filter = ("user", "creation_date")
+    list_filter = ("is_active", "user", "creation_date")
     search_fields = ("name", "sha256_hash", "user__name")
     ordering = ("-creation_date",)
 
@@ -60,6 +61,7 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                     "id",
                     "name",
                     "user",
+                    "is_active",
                 )
             },
         ),
@@ -102,8 +104,7 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         request: HttpRequest,
         obj: GPSTrack | None = None,
     ) -> bool:
-        # Optional: allow deletion (set to False to fully lock down)
-        return True
+        return False
 
     # ─────────────────────────────────────────────
     # Custom display helpers

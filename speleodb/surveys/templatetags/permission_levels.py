@@ -11,7 +11,7 @@ register = template.Library()
 
 @register.simple_tag
 def get_user_project_permission_levels() -> list[PermissionLevel]:
-    return PermissionLevel.members  # type: ignore[arg-type]
+    return list(PermissionLevel)
 
 
 @register.simple_tag
@@ -36,6 +36,11 @@ def get_surface_network_permission_levels() -> list[PermissionLevel]:
 
 @register.simple_tag
 def get_landmark_collection_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members_no_webviewer
+
+
+@register.simple_tag
+def get_gps_track_permission_levels() -> list[PermissionLevel]:
     return PermissionLevel.members_no_webviewer
 
 
