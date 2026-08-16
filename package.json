@@ -23,7 +23,7 @@
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
     "cross-env": "^10.1.0",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "npm-check-updates": "^22.2.9",
