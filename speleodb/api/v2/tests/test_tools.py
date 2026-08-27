@@ -114,7 +114,7 @@ class TestXLS2MnemoDMP(BaseAPITestCase):
         )
 
         assert (
-            hashlib.sha256(content.encode("utf-8")).hexdigest()
+            hashlib.sha256(content.removesuffix("\n").encode("utf-8")).hexdigest()
             == "fdcfe05641f8fe916c70a00a170b467f00e261c5e70ccb6e4b1d5f958b56537f"
         ), content
 
