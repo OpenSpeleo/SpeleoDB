@@ -8,9 +8,12 @@ bash /app/compose/prepare_node_modules
 
 python compose/setup_local_gitlab.py \
     --env-file /app/.env \
-    --env-template /app/.env.dist
+    --env-template /app/.env.dist \
+    --test-env-file /app/.envs/test.env \
+    --test-env-template /app/.envs/test.env.dist
 if [[ "$(id -u)" == "0" ]]; then
     chown --reference=/app /app/.env
+    chown --reference=/app /app/.envs/test.env
 fi
 python manage.py create_s3_local_buckets
 python manage.py migrate

@@ -68,6 +68,29 @@ def test_local_application_services_share_dev_user_node_modules() -> None:
     assert '"updateRemoteUserUID": false' in devcontainer_config
 
 
+def test_setup_defines_isolated_dev_and_test_resource_names() -> None:
+    compose_config: dict[str, Any] = yaml.safe_load(
+        (REPOSITORY_ROOT / "local.yml").read_text(encoding="utf-8")
+    )
+
+    setup_environment: dict[str, str] = compose_config["services"]["setup"][
+        "environment"
+    ]
+    assert setup_environment["GITLAB_GROUP_TOKEN_NAME"] == (
+        "speleodb-local-development"  # noqa: S105
+    )
+    assert setup_environment["GITLAB_TEST_GROUP_NAME"] == "speleodb-test"
+    assert setup_environment["GITLAB_TEST_GROUP_TOKEN_NAME"] == (
+        "speleodb-local-test"  # noqa: S105
+    )
+    assert setup_environment["LOCAL_AWS_STORAGE_BUCKET_NAME"] == (
+        "speleodb-user-artifacts-dev"
+    )
+    assert setup_environment["LOCAL_AWS_TEST_STORAGE_BUCKET_NAME"] == (
+        "speleodb-user-artifacts-test"
+    )
+
+
 def _assert_node_modules_volume(service: dict[str, Any]) -> None:
     volume = next(
         mount

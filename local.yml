@@ -182,6 +182,9 @@ services:
     environment:
       GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
       GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
+      GITLAB_TEST_GROUP_NAME: speleodb-test
+      GITLAB_TEST_GROUP_TOKEN_NAME: speleodb-local-test
       LOCAL_AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-dev
+      LOCAL_AWS_TEST_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
     command: /app/compose/setup
     restart: "no"

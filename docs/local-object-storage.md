@@ -50,21 +50,24 @@ service until PostgreSQL, Redis, RustFS, and GitLab are healthy and `setup`
 exits successfully. GitLab uses its full readiness probe, including its own
 database, Redis, and Gitaly checks; a first GitLab boot can take many minutes.
 
-On its first run, the setup job copies `.env.dist` to the ignored `.env`. An
-existing `.env` is never replaced. The job then uses the existing
-`python-gitlab` dependency to create or retrieve the local `speleodb` GitLab
-group, validate the group access token stored in `.env`, and replace the token
-only when it is missing, expired, or invalid. It writes the actual GitLab group
-ID and non-expiring group token to `.env`; the ID is never assumed. The local
-GitLab bootstrap disables access-token expiration enforcement, and setup rotates
-any older development token that still has an expiration date. Django already
-loads this private file through `config/settings/base.py`.
+On its first run, the setup job copies `.env.dist` to the ignored `.env` and
+`.envs/test.env.dist` to the ignored `.envs/test.env`. Existing files are never
+replaced. The job then uses the existing `python-gitlab` dependency to provision
+the development `speleodb` group and the isolated `speleodb-test` group. Each
+group receives its own named, non-expiring access token, validated against the
+credential stored in its corresponding private env file and replaced only when
+missing, expired, or invalid. Group IDs are discovered independently and never
+assumed. The local GitLab bootstrap disables access-token expiration
+enforcement and rotates any older expiring token. Normal Django settings load
+the development resources from `.env`, while `config.settings.test` loads only
+the test resources from `.envs/test.env`.
 
 The same job then runs `create_s3_local_buckets`. The command creates missing
 RustFS buckets and reapplies the canonical local policy and CORS configuration
-idempotently. It writes `AWS_STORAGE_BUCKET_NAME=speleodb-user-artifacts-dev`
-and its concrete local custom domain to `.env` before invoking the Django
-command.
+idempotently. It writes `speleodb-user-artifacts-dev` and its concrete custom
+domain to `.env`, and separately writes `speleodb-user-artifacts-test` and its
+custom domain to `.envs/test.env`, before invoking the Django command. Both
+buckets use the local RustFS service but do not share object namespaces.
 
 After object-storage setup, the same one-shot job applies migrations and runs
 `ensure_local_superuser`. The DEBUG-only command creates or repairs
@@ -74,8 +77,8 @@ marks its allauth email record verified and primary.
 
 Every `docker compose up` may rerun the one-shot job. Existing valid GitLab and
 RustFS resources are reused. If either persistent volume is reset, the next run
-recreates the missing resources and refreshes stale private env values without
-requiring a hard-coded group ID.
+recreates the missing resources and refreshes stale development and test env
+values without requiring a hard-coded group ID.
 
 For a clean test without touching existing volumes, use a different Compose
 project and container prefix:

@@ -1,7 +1,8 @@
-# ruff: noqa: S105, S106
+# ruff: noqa: S105, S106, S107
 
 from __future__ import annotations
 
+import sys
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,6 +13,7 @@ from gitlab.const import AccessLevel
 
 from compose.setup_local_gitlab import PythonGitLabClient
 from compose.setup_local_gitlab import initialize_env_file
+from compose.setup_local_gitlab import main
 from compose.setup_local_gitlab import provision_gitlab
 from compose.setup_local_gitlab import read_env_file
 from compose.setup_local_gitlab import resolve_gitlab_setup_url
@@ -153,10 +155,12 @@ class FakeGitLabClient:
         group: dict[str, Any] | None,
         token_valid: bool,
         group_tokens: list[dict[str, Any]] | None = None,
+        created_token: str = "new-group-token",
     ) -> None:
         self.group = group
         self.token_valid = token_valid
         self.group_tokens = group_tokens or []
+        self.created_token = created_token
         self.created_groups: list[str] = []
         self.revoked_tokens: list[tuple[str, str]] = []
         self.created_tokens: list[tuple[str, str]] = []
@@ -180,7 +184,16 @@ class FakeGitLabClient:
 
     def create_group_token(self, group_id: str, token_name: str) -> dict[str, Any]:
         self.created_tokens.append((group_id, token_name))
-        return {"id": 99, "token": "new-group-token"}
+        self.group_tokens.append(
+            {
+                "id": 99,
+                "name": token_name,
+                "active": True,
+                "expires_at": None,
+            }
+        )
+        self.token_valid = True
+        return {"id": 99, "token": self.created_token}
 
 
 def test_existing_group_and_valid_token_are_reused() -> None:
@@ -303,3 +316,101 @@ def test_private_env_update_preserves_user_values_and_is_idempotent(
     assert env_file.read_text(encoding="utf-8").count("GITLAB_TOKEN=") == 1
     assert update_env_file(env_file, values) is False
     assert env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
+
+
+def test_setup_provisions_isolated_dev_and_test_resources(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    env_template = tmp_path / ".env.dist"
+    env_file = tmp_path / ".env"
+    test_env_template = tmp_path / "test.env.dist"
+    test_env_file = tmp_path / "test.env"
+    env_template.write_text(
+        "CUSTOM_DEV=preserved\nGITLAB_TOKEN=<placeholder>\n",
+        encoding="utf-8",
+    )
+    test_env_template.write_text(
+        "DATABASE_URL=sqlite:///test.db\n"
+        "AWS_STORAGE_BUCKET_NAME=test-bucket\n"
+        "GITLAB_GROUP_NAME=<placeholder>\n"
+        "GITLAB_TOKEN=<placeholder>\n",
+        encoding="utf-8",
+    )
+    dev_client = FakeGitLabClient(group={"id": 7}, token_valid=False)
+    test_client = FakeGitLabClient(
+        group=None,
+        token_valid=False,
+        created_token="new-test-group-token",
+    )
+    clients = iter([dev_client, test_client, dev_client, test_client])
+    monkeypatch.setattr(
+        "compose.setup_local_gitlab.PythonGitLabClient",
+        lambda *_args: next(clients),
+    )
+    monkeypatch.setenv("GITLAB_GROUP_NAME", "speleodb")
+    monkeypatch.setenv("GITLAB_TEST_GROUP_NAME", "speleodb-test")
+    monkeypatch.setenv("GITLAB_HOST_URL", "localhost:9080")
+    monkeypatch.setenv("GITLAB_BOOTSTRAP_TOKEN", "bootstrap-token")
+    monkeypatch.setenv("GITLAB_GROUP_TOKEN_NAME", "speleodb-local-development")
+    monkeypatch.setenv("GITLAB_TEST_GROUP_TOKEN_NAME", "speleodb-local-test")
+    monkeypatch.setenv(
+        "LOCAL_AWS_STORAGE_BUCKET_NAME",
+        "speleodb-user-artifacts-dev",
+    )
+    monkeypatch.setenv(
+        "LOCAL_AWS_TEST_STORAGE_BUCKET_NAME",
+        "speleodb-user-artifacts-test",
+    )
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://localhost:9000")
+    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "setup_local_gitlab.py",
+            "--env-file",
+            str(env_file),
+            "--env-template",
+            str(env_template),
+            "--test-env-file",
+            str(test_env_file),
+            "--test-env-template",
+            str(test_env_template),
+        ],
+    )
+
+    main()
+
+    expected_dev_gitlab_values = {
+        "GITLAB_GROUP_ID": "7",
+        "GITLAB_GROUP_NAME": "speleodb",
+        "GITLAB_HOST_URL": "localhost:9080",
+        "GITLAB_TOKEN": "new-group-token",
+    }
+    assert read_env_file(env_file) == {
+        "CUSTOM_DEV": "preserved",
+        **expected_dev_gitlab_values,
+        "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-dev",
+        "AWS_S3_CUSTOM_DOMAIN": ("localhost:9000/speleodb-user-artifacts-dev"),
+    }
+    assert read_env_file(test_env_file) == {
+        "DATABASE_URL": "sqlite:///test.db",
+        "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-test",
+        "GITLAB_GROUP_ID": "42",
+        "GITLAB_GROUP_NAME": "speleodb-test",
+        "GITLAB_HOST_URL": "localhost:9080",
+        "GITLAB_TOKEN": "new-test-group-token",
+        "AWS_S3_CUSTOM_DOMAIN": "localhost:9000/speleodb-user-artifacts-test",
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "safe.directory",
+        "GIT_CONFIG_VALUE_0": "*",
+    }
+    assert env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
+    assert test_env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
+
+    main()
+
+    assert dev_client.created_tokens == [("7", "speleodb-local-development")]
+    assert test_client.created_groups == ["speleodb-test"]
+    assert test_client.created_tokens == [("42", "speleodb-local-test")]

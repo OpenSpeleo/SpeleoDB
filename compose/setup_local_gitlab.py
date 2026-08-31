@@ -270,28 +270,45 @@ def resolve_s3_custom_domain(s3_endpoint: str, bucket_name: str) -> str:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(
-        description="Provision local GitLab resources and Django's private env file."
+        description="Provision local GitLab resources and Django's private env files."
     )
     parser.add_argument("--env-file", required=True, type=Path)
     parser.add_argument("--env-template", required=True, type=Path)
+    parser.add_argument("--test-env-file", required=True, type=Path)
+    parser.add_argument("--test-env-template", required=True, type=Path)
     arguments = parser.parse_args()
 
     group_name = _required_environment("GITLAB_GROUP_NAME")
+    test_group_name = _required_environment("GITLAB_TEST_GROUP_NAME")
     gitlab_host = _required_environment("GITLAB_HOST_URL")
     bootstrap_token = _required_environment("GITLAB_BOOTSTRAP_TOKEN")
     token_name = _required_environment("GITLAB_GROUP_TOKEN_NAME")
+    test_token_name = _required_environment("GITLAB_TEST_GROUP_TOKEN_NAME")
     bucket_name = _required_environment("LOCAL_AWS_STORAGE_BUCKET_NAME")
+    test_bucket_name = _required_environment("LOCAL_AWS_TEST_STORAGE_BUCKET_NAME")
     s3_endpoint = _required_environment("AWS_S3_ENDPOINT_URL")
     base_url = resolve_gitlab_setup_url(gitlab_host)
     s3_custom_domain = resolve_s3_custom_domain(s3_endpoint, bucket_name)
+    test_s3_custom_domain = resolve_s3_custom_domain(s3_endpoint, test_bucket_name)
 
     env_created = initialize_env_file(arguments.env_file, arguments.env_template)
+    test_env_created = initialize_env_file(
+        arguments.test_env_file,
+        arguments.test_env_template,
+    )
     current_env = read_env_file(arguments.env_file)
     result = provision_gitlab(
         PythonGitLabClient(base_url, bootstrap_token),
         group_name=group_name,
         token_name=token_name,
         current_token=current_env.get("GITLAB_TOKEN"),
+    )
+    current_test_env = read_env_file(arguments.test_env_file)
+    test_result = provision_gitlab(
+        PythonGitLabClient(base_url, bootstrap_token),
+        group_name=test_group_name,
+        token_name=test_token_name,
+        current_token=current_test_env.get("GITLAB_TOKEN"),
     )
     env_changed = update_env_file(
         arguments.env_file,
@@ -304,15 +321,43 @@ def main() -> None:
             "AWS_S3_CUSTOM_DOMAIN": s3_custom_domain,
         },
     )
+    test_env_changed = update_env_file(
+        arguments.test_env_file,
+        {
+            "GITLAB_GROUP_ID": test_result.group_id,
+            "GITLAB_GROUP_NAME": test_group_name,
+            "GITLAB_HOST_URL": gitlab_host,
+            "GITLAB_TOKEN": test_result.group_token,
+            "AWS_STORAGE_BUCKET_NAME": test_bucket_name,
+            "AWS_S3_CUSTOM_DOMAIN": test_s3_custom_domain,
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "safe.directory",
+            "GIT_CONFIG_VALUE_0": "*",
+        },
+    )
 
     group_action = "created" if result.group_created else "already exists"
     token_action = "created" if result.token_created else "already valid"
+    test_group_action = "created" if test_result.group_created else "already exists"
+    test_token_action = "created" if test_result.token_created else "already valid"
     template_action = "created from template" if env_created else "already exists"
     env_action = "updated" if env_changed else "already current"
-    logger.info("GitLab group %s (ID %s).", group_action, result.group_id)
-    logger.info("GitLab group token %s.", token_action)
+    test_template_action = (
+        "created from template" if test_env_created else "already exists"
+    )
+    test_env_action = "updated" if test_env_changed else "already current"
+    logger.info("Development GitLab group %s (ID %s).", group_action, result.group_id)
+    logger.info("Development GitLab group token %s.", token_action)
+    logger.info(
+        "Test GitLab group %s (ID %s).",
+        test_group_action,
+        test_result.group_id,
+    )
+    logger.info("Test GitLab group token %s.", test_token_action)
     logger.info("Private Django env file %s.", template_action)
     logger.info("Private Django env file %s.", env_action)
+    logger.info("Private Django test env file %s.", test_template_action)
+    logger.info("Private Django test env file %s.", test_env_action)
 
 
 if __name__ == "__main__":
