@@ -104,10 +104,19 @@ cannot seed a fresh Linux dependency volume. The devcontainer disables
 per-service remote UID rewriting because the setup, workspace, and webserver
 must agree that `dev-user` is UID/GID 1000 across the shared volume.
 
-Linux exposes the host-networked Django process on port 8000 directly. Docker
-Desktop requires its host-networking feature for equivalent host access; the
-root devcontainer otherwise exposes port 8000 through VS Code forwarding. The
+The standalone Compose stack exposes the host-networked Django process on Linux.
+The root devcontainer instead publishes port 8000 on host loopback from its
+workspace container and runs the webserver in that shared network namespace,
+making `http://localhost:8000` available in both VS Code and Zed. Internal
+Django requests use the `rustfs` Compose hostname while generated browser-facing
+object URLs retain `localhost:9000`. Its setup service also uses Compose DNS for
+provisioning while persisting browser-facing GitLab and RustFS addresses. The
 container-local database health check is `/api/health/details/`.
+
+The root devcontainer also supplies test-only internal GitLab and RustFS
+endpoints. `config.settings.test` applies them after loading the standalone test
+environment, so the same test suite reaches Compose services in the root
+container while standalone tests keep their host-networked `localhost` values.
 
 The RustFS configuration can still be applied explicitly from an already-running
 Django container:

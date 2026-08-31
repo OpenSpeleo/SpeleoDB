@@ -31,7 +31,6 @@ load_env_files_from_pyproject()
 
 from .base import *  # noqa: E402, F403
 from .base import AWS_STORAGE_BUCKET_NAME  # noqa: E402
-from .base import GITLAB_HOST_URL  # noqa: E402
 from .base import INSTALLED_APPS  # noqa: E402
 from .base import TEMPLATES  # noqa: E402
 from .base import env  # noqa: E402
@@ -61,11 +60,18 @@ TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
 # GITLAB
 # ------------------------------------------------------------------------------
-GITLAB_HTTP_PROTOCOL = "http" if str(GITLAB_HOST_URL) == "localhost:9080" else "https"
+if (gitlab_test_host := env.str("GITLAB_TEST_HOST_URL", default=None)) is not None:  # type: ignore[arg-type]
+    GITLAB_HOST_URL = gitlab_test_host
+GITLAB_HTTP_PROTOCOL = (
+    "http" if str(GITLAB_HOST_URL) in {"localhost:9080", "gitlab:9080"} else "https"
+)
 
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------
-if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None:  # type: ignore[arg-type]
+s3_endpoint_url = env.str("AWS_S3_TEST_ENDPOINT_URL", default="") or env.str(
+    "AWS_S3_ENDPOINT_URL", default=""
+)
+if s3_endpoint_url:
     AWS_S3_ENDPOINT_URL: str = s3_endpoint_url  # pyright: ignore[reportAssignmentType]
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False

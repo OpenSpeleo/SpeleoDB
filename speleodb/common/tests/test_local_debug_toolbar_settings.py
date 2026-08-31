@@ -31,6 +31,8 @@ print(
     json.dumps(
         {
             "installed": "debug_toolbar" in settings.INSTALLED_APPS,
+            "s3_custom_domain": settings.AWS_S3_CUSTOM_DOMAIN,
+            "s3_endpoint_url": settings.AWS_S3_ENDPOINT_URL,
             "middleware": (
                 "debug_toolbar.middleware.DebugToolbarMiddleware"
                 in settings.MIDDLEWARE
@@ -66,6 +68,8 @@ print(
 
 class DebugToolbarState(TypedDict):
     installed: bool
+    s3_custom_domain: str
+    s3_endpoint_url: str
     middleware: bool
     route: bool
     rendered: bool
@@ -86,6 +90,7 @@ def probe_local_settings() -> DebugToolbarState:
         {
             "AWS_ACCESS_KEY_ID": "access_key",
             "AWS_S3_CUSTOM_DOMAIN": "localhost:9000/test-bucket",
+            "AWS_S3_ENDPOINT_URL": "http://rustfs:9000",
             "AWS_SECRET_ACCESS_KEY": "secret_key",
             "AWS_STORAGE_BUCKET_NAME": "test-bucket",
             "DATABASE_URL": "sqlite:///:memory:",
@@ -144,6 +149,8 @@ def probe_local_settings() -> DebugToolbarState:
 
     return DebugToolbarState(
         installed=require_bool("installed"),
+        s3_custom_domain=require_string("s3_custom_domain"),
+        s3_endpoint_url=require_string("s3_endpoint_url"),
         middleware=require_bool("middleware"),
         route=require_bool("route"),
         rendered=require_bool("rendered"),
@@ -175,3 +182,10 @@ def test_local_debug_toolbar_is_present_with_all_panels_disabled() -> None:
     assert state["profiler_capture_project_code"] is False
     assert state["show_template_context"] is False
     assert state["show_toolbar_callback"] == "speleodb.debug_toolbar.show_toolbar"
+
+
+def test_local_storage_keeps_internal_and_browser_endpoints_separate() -> None:
+    state = probe_local_settings()
+
+    assert state["s3_endpoint_url"] == "http://rustfs:9000"
+    assert state["s3_custom_domain"] == "localhost:9000/test-bucket"

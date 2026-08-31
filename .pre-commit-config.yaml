@@ -113,13 +113,14 @@ repos:
   # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date dependencies
   - repo: local
     hooks:
-      - args: ["run", "--", "--config-file", "pyproject.toml"]
+      - args: ["--config-file", "pyproject.toml", "."]
         description: Static type checker for Python
         # https://github.com/pre-commit/mirrors-mypy/blob/main/.pre-commit-hooks.yaml
-        entry: dmypy
+        entry: mypy
         id: mypy
         language: system
         name: mypy
+        pass_filenames: false
         require_serial: true
         types_or: [python, pyi]
 

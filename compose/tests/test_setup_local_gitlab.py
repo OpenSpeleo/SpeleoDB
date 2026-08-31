@@ -14,6 +14,8 @@ from compose.setup_local_gitlab import PythonGitLabClient
 from compose.setup_local_gitlab import initialize_env_file
 from compose.setup_local_gitlab import provision_gitlab
 from compose.setup_local_gitlab import read_env_file
+from compose.setup_local_gitlab import resolve_gitlab_setup_url
+from compose.setup_local_gitlab import resolve_s3_custom_domain
 from compose.setup_local_gitlab import update_env_file
 
 if TYPE_CHECKING:
@@ -23,6 +25,41 @@ if TYPE_CHECKING:
 
 
 PRIVATE_ENV_MODE = 0o600
+
+
+def test_internal_setup_urls_do_not_replace_browser_addresses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITLAB_SETUP_URL", "http://gitlab:9080")
+    monkeypatch.setenv(
+        "AWS_S3_CUSTOM_DOMAIN",
+        "localhost:9000/speleodb-user-artifacts-dev",
+    )
+
+    assert resolve_gitlab_setup_url("localhost:9080") == "http://gitlab:9080"
+    assert (
+        resolve_s3_custom_domain(
+            "http://rustfs:9000",
+            "speleodb-user-artifacts-dev",
+        )
+        == "localhost:9000/speleodb-user-artifacts-dev"
+    )
+
+
+def test_setup_urls_default_to_the_original_local_behavior(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GITLAB_SETUP_URL", raising=False)
+    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
+
+    assert resolve_gitlab_setup_url("localhost:9080") == "http://localhost:9080"
+    assert (
+        resolve_s3_custom_domain(
+            "http://localhost:9000",
+            "speleodb-user-artifacts-dev",
+        )
+        == "localhost:9000/speleodb-user-artifacts-dev"
+    )
 
 
 def test_private_env_is_copied_from_template_once(tmp_path: Path) -> None:

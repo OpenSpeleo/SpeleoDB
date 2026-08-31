@@ -250,6 +250,23 @@ def _required_environment(name: str) -> str:
     return value
 
 
+def resolve_gitlab_setup_url(gitlab_host: str) -> str:
+    configured_url = os.environ.get("GITLAB_SETUP_URL")
+    if configured_url:
+        return configured_url
+    return gitlab_host if "://" in gitlab_host else f"http://{gitlab_host}"
+
+
+def resolve_s3_custom_domain(s3_endpoint: str, bucket_name: str) -> str:
+    configured_domain = os.environ.get("AWS_S3_CUSTOM_DOMAIN")
+    if configured_domain:
+        return configured_domain
+    endpoint_domain = (
+        s3_endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
+    )
+    return f"{endpoint_domain}/{bucket_name}"
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(
@@ -265,11 +282,8 @@ def main() -> None:
     token_name = _required_environment("GITLAB_GROUP_TOKEN_NAME")
     bucket_name = _required_environment("LOCAL_AWS_STORAGE_BUCKET_NAME")
     s3_endpoint = _required_environment("AWS_S3_ENDPOINT_URL")
-    base_url = gitlab_host if "://" in gitlab_host else f"http://{gitlab_host}"
-    s3_custom_domain = (
-        s3_endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
-        + f"/{bucket_name}"
-    )
+    base_url = resolve_gitlab_setup_url(gitlab_host)
+    s3_custom_domain = resolve_s3_custom_domain(s3_endpoint, bucket_name)
 
     env_created = initialize_env_file(arguments.env_file, arguments.env_template)
     current_env = read_env_file(arguments.env_file)
