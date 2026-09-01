@@ -34,3 +34,37 @@ Verification:
 - Ruff check/format and mypy for the new Python test: passed.
 - Clean Vite production build with the development watcher stopped: passed.
 - `git diff --check`: passed.
+
+## Devcontainer reconciliation follow-up
+
+- [x] Confirm the rendered Compose model has the configured token while the
+      running Django containers still have the stale placeholder.
+- [x] Reconcile the workspace and webserver services through Compose when an
+      existing devcontainer stack is reopened.
+- [x] Add regression coverage and synchronize the root devcontainer docs.
+- [x] Recreate the affected services and verify the active token classification,
+      Django response, focused tests, and root monorepo tool suite.
+
+The recurrence came from the monorepo adding a host restart workflow beside the
+normal Compose lifecycle. Bind-mounted code changed immediately, but raw
+container restarts retained the old immutable environment. The separate path was
+removed: standalone and devcontainer startup now both use the complete Compose
+build/up graph, including dependency ordering, health checks, setup, and
+application services.
+
+Follow-up verification:
+
+- Active container environment and Django settings: configured, not printed.
+- Authenticated `/private/map_viewer/`: HTTP 200, configured token present,
+  placeholder absent.
+- Live loopback response from the shared container network: HTTP 200.
+- Compose configuration tests: 4 passed, 1 skipped.
+- Focused map source/initialization tests: 21 passed.
+- Root tool suite through direct Node, npm, and Make entrypoints: 16 passed in
+  each run.
+- Full merged `docker compose up --detach --build` smoke test: rebuilt the local
+  PostgreSQL and Django-family images, evaluated every service, waited for all
+  dependency health checks, completed setup with exit code zero, and started
+  both application services.
+- Devcontainer JSON, merged Compose configuration, and `git diff --check`:
+  passed.

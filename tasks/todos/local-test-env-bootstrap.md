@@ -11,7 +11,8 @@
 - [x] Preserve developer-owned values and keep repeated setup runs idempotent.
 - [x] Add focused unit coverage for both managed environment files.
 - [x] Allow Git operations in dynamically generated per-test repositories under
-      the bind-mounted local work root with the Git version shipped by the image.
+      the bind-mounted local work root with the Git version shipped by the
+      image.
 - [x] Update local-environment documentation and run focused Python, shell, and
       Compose validation.
 
