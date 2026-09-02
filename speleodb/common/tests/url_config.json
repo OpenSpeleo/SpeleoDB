@@ -606,6 +606,30 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-layers/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerCollectionAPIView",
+        "name": "api:v1:gis-layers",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-layers/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerSpecificAPIView",
+        "name": "api:v1:gis-layer-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-layers/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerPermissionAPIView",
+        "name": "api:v1:gis-layer-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-layers/<uuid:id>/source/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerSourceAPIView",
+        "name": "api:v1:gis-layer-source",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-ogc/experiment/<gis_token:gis_token>",
         "module": "speleodb.api.v2.views.experiment.ExperimentGISApiView",
         "name": "api:v1:gis-ogc:experiment",
@@ -1443,6 +1467,30 @@
         "url": "/api/v2/exploration-leads/geojson/",
         "module": "speleodb.api.v2.views.exploration_lead.AllExploLeadsGeoJSONApiView",
         "name": "api:v2:exploration-lead-all-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-layers/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerCollectionAPIView",
+        "name": "api:v2:gis-layers",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-layers/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerSpecificAPIView",
+        "name": "api:v2:gis-layer-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-layers/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerPermissionAPIView",
+        "name": "api:v2:gis-layer-permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-layers/<uuid:id>/source/",
+        "module": "speleodb.api.v2.views.gis_layer.GISLayerSourceAPIView",
+        "name": "api:v2:gis-layer-source",
         "decorators": ""
     },
     {
@@ -2355,6 +2403,18 @@
         "url": "/private/feedback/",
         "module": "frontend_private.views.user.FeedbackView",
         "name": "private:user_feedback",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-layer/<uuid:layer_id>/permissions/",
+        "module": "frontend_private.views.gis_layers.GISLayerUserPermissionsView",
+        "name": "private:gis_layer_user_permissions",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-layers/",
+        "module": "frontend_private.views.gis_layers.GISLayerListView",
+        "name": "private:gis_layers",
         "decorators": ""
     },
     {

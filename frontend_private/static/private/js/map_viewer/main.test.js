@@ -56,6 +56,17 @@ const layersMock = {
     refreshCylinderInstallsLayer: vi.fn(),
 };
 
+const gisLayerStoreMock = {
+    load: vi.fn(),
+    invalidate: vi.fn(),
+};
+
+const gisLayerRuntimeMock = {
+    markRegistrationsRemoved: vi.fn(),
+    restoreDesired: vi.fn(),
+    reconcile: vi.fn(),
+};
+
 const utilsMock = {
     showNotification: vi.fn(),
 };
@@ -101,6 +112,14 @@ vi.mock('./components/project_panel.js', () => ({
 vi.mock('./components/gps_tracks_panel.js', () => ({
     GPSTracksPanel: { init: vi.fn(), refreshList: vi.fn() }
 }));
+vi.mock('./components/gis_layers_panel.js', () => ({
+    GISLayersPanel: { init: vi.fn(), refreshList: vi.fn() }
+}));
+vi.mock('./gis_layer_store.js', () => ({ GISLayerStore: gisLayerStoreMock }));
+vi.mock('./gis_layers_runtime.js', () => ({
+    getGISLayerRuntime: () => gisLayerRuntimeMock,
+    resetGISLayerRuntime: vi.fn(),
+}));
 vi.mock('./components/depth_legend.js', () => ({ DepthLegend: { init: vi.fn() } }));
 vi.mock('./api.js', () => ({ API: apiMock }));
 
@@ -130,6 +149,8 @@ describe('private map viewer entrypoint', () => {
         configMock.loadProjects.mockResolvedValue(undefined);
         configMock.loadNetworks.mockResolvedValue(undefined);
         configMock.loadGPSTracks.mockResolvedValue(undefined);
+        gisLayerStoreMock.load.mockResolvedValue([]);
+        gisLayerRuntimeMock.restoreDesired.mockResolvedValue(undefined);
         mapCoreMock.init.mockReturnValue(mapMock);
         mapSourcesMock.requiresDataReload.mockReturnValue(false);
         apiMock.getAllProjectsGeoJSON.mockResolvedValue([]);
@@ -205,7 +226,7 @@ describe('private map viewer entrypoint', () => {
         expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
     });
 
-    it('kicks off project, network and GPS track loads in parallel', async () => {
+    it('kicks off project, network, GPS track, and private GIS Layer loads in parallel', async () => {
         // Projects hangs; networks/gpsTracks must still be invoked, proving the
         // three loads are started concurrently rather than awaited one-by-one.
         configMock.loadProjects.mockReturnValue(new Promise(() => { }));
@@ -216,6 +237,7 @@ describe('private map viewer entrypoint', () => {
         expect(configMock.loadProjects).toHaveBeenCalledTimes(1);
         expect(configMock.loadNetworks).toHaveBeenCalledTimes(1);
         expect(configMock.loadGPSTracks).toHaveBeenCalledTimes(1);
+        expect(gisLayerStoreMock.load).toHaveBeenCalledTimes(1);
     });
 
     it('prefetches the all-projects GeoJSON metadata once and consumes it during initial load', async () => {

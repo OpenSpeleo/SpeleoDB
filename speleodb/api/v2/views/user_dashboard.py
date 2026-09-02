@@ -14,6 +14,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
 from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
@@ -119,7 +120,7 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
                 collection__collection_type=LandmarkCollection.CollectionType.PERSONAL,
                 collection__is_active=True,
             ).count(),
-            "total_gps_tracks": user.gps_tracks.filter(is_active=True).count(),
+            "total_gps_tracks": accessible_gps_tracks_queryset(user=user).count(),
             "total_stations_created": SubSurfaceStation.objects.filter(
                 created_by=user.email
             ).count(),

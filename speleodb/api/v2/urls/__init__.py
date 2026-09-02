@@ -23,6 +23,7 @@ from speleodb.api.v2.urls.exploration_lead import (
 )
 from speleodb.api.v2.urls.file_import import urlpatterns as file_import_urlpatterns
 from speleodb.api.v2.urls.gis import urlpatterns as gis_urlpatterns
+from speleodb.api.v2.urls.gis_layer import urlpatterns as gis_layer_urlpatterns
 from speleodb.api.v2.urls.gis_view import urlpatterns as gis_view_urlpatterns
 from speleodb.api.v2.urls.gps_track import urlpatterns as gps_track_urlpatterns
 from speleodb.api.v2.urls.landmark import urlpatterns as landmark_urlpatterns
@@ -63,6 +64,7 @@ urlpatterns: list[URLResolver | URLPattern] = [
     path("exploration-leads/", include(exploration_lead_urlpatterns)),
     path("gis-ogc/", include((gis_urlpatterns, "gis-ogc"), namespace="gis-ogc")),
     path("gis_view/", include(gis_view_urlpatterns)),
+    path("gis-layers/", include(gis_layer_urlpatterns)),
     path("gps_tracks/", include(gps_track_urlpatterns)),
     path("import/", include(file_import_urlpatterns)),
     path("logs/", include(log_entry_urlpatterns)),

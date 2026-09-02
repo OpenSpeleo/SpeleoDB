@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from speleodb.permissions.admin.cylinder_fleet import CylinderFleetUserPermissionAdmin
 from speleodb.permissions.admin.experiment import ExperimentUserPermissionAdmin
+from speleodb.permissions.admin.gis_layer import GISLayerUserPermissionAdmin
 from speleodb.permissions.admin.gps_track import GPSTrackUserPermissionAdmin
 from speleodb.permissions.admin.landmark_collection import (
     LandmarkCollectionUserPermissionAdmin,
@@ -19,6 +20,7 @@ from speleodb.permissions.admin.sensor_fleet import SensorFleetUserPermissionAdm
 __all__ = [
     "CylinderFleetUserPermissionAdmin",
     "ExperimentUserPermissionAdmin",
+    "GISLayerUserPermissionAdmin",
     "GPSTrackUserPermissionAdmin",
     "LandmarkCollectionUserPermissionAdmin",
     "PermissionAdmin",

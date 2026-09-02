@@ -8,30 +8,12 @@ import {
     resolveLineDepthValue
 } from './depth.js';
 import { Geometry } from './geometry.js';
+import { computeGeoJSONBounds } from './geojson.js';
 import { API } from '../api.js';
 import { getRuntimeContext } from '../runtime_context.js';
 
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
-
-function computeGeoJSONBounds(geojsonData) {
-    const bounds = new mapboxgl.LngLatBounds();
-    if (geojsonData && geojsonData.features) {
-        const extend = (coords) => {
-            if (typeof coords[0] === 'number') {
-                bounds.extend(coords);
-            } else {
-                coords.forEach(extend);
-            }
-        };
-        geojsonData.features.forEach(feature => {
-            if (feature.geometry && feature.geometry.coordinates) {
-                extend(feature.geometry.coordinates);
-            }
-        });
-    }
-    return bounds;
-}
 
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
@@ -380,7 +362,7 @@ export const Layers = {
     },
 
     // Toggle GPS track visibility - handles lazy loading of GeoJSON
-    toggleGPSTrackVisibility: async function (trackId, isVisible, trackUrl) {
+    toggleGPSTrackVisibility: async function (trackId, isVisible) {
         const tid = String(trackId);
 
         // Update in-memory state (no persistence)
@@ -394,7 +376,8 @@ export const Layers = {
 
                 try {
                     console.log(`🔄 Downloading GPS track GeoJSON: ${trackId}`);
-                    const response = await fetch(trackUrl);
+                    const track = await API.getGPSTrackDetails(trackId);
+                    const response = await fetch(track.file);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const geojsonData = await response.json();
 
@@ -1257,6 +1240,7 @@ export const Layers = {
         // Find all layer types
         const gpsTrackLineLayers = allLayerIds.filter(id => id.startsWith('gps-track-line-'));
         const gpsTrackPointLayers = allLayerIds.filter(id => id.startsWith('gps-track-points-'));
+        const gisLayerLayers = allLayerIds.filter(id => id.startsWith('gis-layer-'));
         const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
         const stationBiologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-biology-icons'));
         const stationBoneIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-bone-icons'));
@@ -1287,6 +1271,16 @@ export const Layers = {
                 map.moveLayer(layerId);
             } catch (e) {
                 // Layer might not exist
+            }
+        });
+
+        // GIS display products render above GPS tracks but below stations and
+        // editable survey features. One logical GIS Layer can own many roles.
+        gisLayerLayers.forEach(layerId => {
+            try {
+                map.moveLayer(layerId);
+            } catch (e) {
+                // Layer might have been removed during permission reconciliation.
             }
         });
 

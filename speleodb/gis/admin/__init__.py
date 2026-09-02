@@ -11,6 +11,7 @@ from speleodb.gis.admin.cylinder import CylinderPressureCheckAdmin
 from speleodb.gis.admin.experiment import ExperimentAdmin
 from speleodb.gis.admin.experiment import ExperimentRecordAdmin
 from speleodb.gis.admin.explo_lead import ExplorationLeadAdmin
+from speleodb.gis.admin.gis_layer import GISLayerAdmin
 from speleodb.gis.admin.gps_track import GPSTrackAdmin
 from speleodb.gis.admin.landmark import LandmarkAdmin
 from speleodb.gis.admin.landmark import LandmarkCollectionAdmin
@@ -34,6 +35,7 @@ __all__ = [
     "ExperimentAdmin",
     "ExperimentRecordAdmin",
     "ExplorationLeadAdmin",
+    "GISLayerAdmin",
     "GISProjectViewAdmin",
     "GISViewAdmin",
     "GPSTrackAdmin",

@@ -11,6 +11,11 @@ from speleodb.gis.models.project_geojson import ProjectGeoJSON
 from speleodb.gis.models.gps_track import GPSTrack
 from speleodb.gis.models.gps_track import GPSTrackUserPermission
 
+# GIS Layer Related Models
+from speleodb.gis.models.gis_layer import GISLayer
+from speleodb.gis.models.gis_layer import GISLayerSourceFormat
+from speleodb.gis.models.gis_layer import GISLayerUserPermission
+
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
 from speleodb.gis.models.landmark import LandmarkCollection
@@ -63,6 +68,9 @@ __all__ = [
     "ExperimentRecord",
     "ExperimentUserPermission",
     "ExplorationLead",
+    "GISLayer",
+    "GISLayerSourceFormat",
+    "GISLayerUserPermission",
     "GISProjectView",
     "GISView",
     "GPSTrack",

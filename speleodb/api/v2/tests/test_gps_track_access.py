@@ -40,7 +40,7 @@ def _user(prefix: str) -> User:
 class TestAccessibleGPSTracksQueryset:
     def test_returns_exact_active_readable_tracks_with_permission_level(self) -> None:
         user = _user("query-user")
-        owned = GPSTrackFactory.create(user=user, name="Owned")
+        created = GPSTrackFactory.create(creator=user, name="Created")
         shared = GPSTrackFactory.create(name="Shared")
         GPSTrackUserPermissionFactory.create(
             user=user,
@@ -62,20 +62,20 @@ class TestAccessibleGPSTracksQueryset:
             gps_track=revoked,
             level=PermissionLevel.READ_ONLY,
         )
-        revoked_permission.deactivate(deactivated_by=revoked.user)
+        revoked_permission.deactivate(deactivated_by=user)
 
         tracks = list(accessible_gps_tracks_queryset(user=user))
 
-        assert [track.id for track in tracks] == [shared.id, owned.id]
+        assert [track.id for track in tracks] == [shared.id, created.id]
         levels = {
             track.name: track.user_permission_level  # type: ignore[attr-defined]
             for track in tracks
         }
         assert levels == {
-            "Owned": PermissionLevel.ADMIN,
+            "Created": PermissionLevel.ADMIN,
             "Shared": PermissionLevel.READ_AND_WRITE,
         }
-        assert all(track.user.email for track in tracks)
+        assert all(track.created_by for track in tracks)
 
     def test_permission_level_helpers_reject_inactive_track_and_permission(
         self,
@@ -103,7 +103,7 @@ class TestAccessibleGPSTracksQueryset:
             min_level=PermissionLevel.ADMIN,
         )
 
-        permission.deactivate(deactivated_by=gps_track.user)
+        permission.deactivate(deactivated_by=user)
         assert get_gps_track_permission_level(user=user, gps_track=gps_track) is None
 
         permission.reactivate(level=PermissionLevel.ADMIN)
@@ -166,7 +166,7 @@ class TestGPSTrackBaseAccessLevel:
         request = _request_for(user)
         view = APIView()
 
-        permission.deactivate(deactivated_by=gps_track.user)
+        permission.deactivate(deactivated_by=user)
         assert not SDB_ReadAccess().has_object_permission(request, view, gps_track)
 
         permission.reactivate(level=PermissionLevel.ADMIN)

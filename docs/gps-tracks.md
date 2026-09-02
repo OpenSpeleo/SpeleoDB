@@ -7,7 +7,7 @@ They can be shared with other SpeleoDB users and exported back to GPX without
 introducing a second storage representation. The stored GeoJSON remains the
 source of truth used by the private map viewer and by export.
 
-The original `GPSTrack.user` relationship is creator provenance. Access is
+`GPSTrack.created_by` stores the creator's email as provenance. Access is
 authorized exclusively through active `GPSTrackUserPermission` rows so creator
 and collaborator behavior follows the same permission model.
 
@@ -31,8 +31,8 @@ GPS Tracks are top-level collaborative entities and are never hard-deleted by
 the product API or Django admin. DELETE marks the track inactive, deactivates
 its active permissions, and retains the GeoJSON and audit history. All normal
 list, object, permission, export, and map querysets filter inactive tracks.
-Same-owner hash uniqueness applies to active tracks, so importing the same data
-after deletion creates a new active track without mutating historical rows.
+Importing the same data again creates another track; the lightweight model does
+not hash or deduplicate uploads.
 
 ## API and query ownership
 
@@ -48,8 +48,10 @@ The API is mounted under `/api/v2/gps_tracks/` and the legacy `/api/v1/` mirror.
 
 Accessible track selection uses an `Exists` predicate and a permission-level
 `Subquery`. The serializer reads the annotation instead of querying once per
-track. The signed GeoJSON URL is intentionally unchanged, allowing shared
-tracks to flow through `Config.loadGPSTracks()` and the existing lazy map cache.
+track. Shared tracks flow through `Config.loadGPSTracks()` and the existing lazy
+map cache. The map refreshes the authenticated detail response immediately
+before the first data download so an idle page does not reuse an expired signed
+URL.
 
 ## GPX export contract
 

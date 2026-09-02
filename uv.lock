@@ -2166,6 +2166,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyshp"
+version = "3.1.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/6e/f6f241fcb57f09c856ae78249d70cf31c576840218226ba7d88eda5ceab8/pyshp-3.1.6.tar.gz", hash = "sha256:4c4b5a4138815c93defd6ebe50bae885b7e58984f431cdb7bb5d00718ac71daf", size = 2227945, upload-time = "2026-07-25T16:53:12.324Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/72/1f79dab76eb7651b5e3622a46b18a7f93f57c3a1317b712986c58810895e/pyshp-3.1.6-py3-none-any.whl", hash = "sha256:be8cd9436dcbde477c63ea789f7dcdea3af19f17ea84f2744bfc12efe9145d1e", size = 73744, upload-time = "2026-07-25T16:53:10.889Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2585,6 +2594,8 @@ dependencies = [
     { name = "pillow" },
     { name = "pillow-heif" },
     { name = "pymupdf" },
+    { name = "pyproj" },
+    { name = "pyshp" },
     { name = "python-dotenv" },
     { name = "python-gitlab" },
     { name = "pytz" },
@@ -2693,6 +2704,8 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], marker = "extra == 'local'", specifier = "==3.3.4" },
     { name = "psycopg", extras = ["c"], marker = "extra == 'production'", specifier = "==3.3.4" },
     { name = "pymupdf", specifier = "==1.28.0" },
+    { name = "pyproj", specifier = "==3.7.2" },
+    { name = "pyshp", specifier = "==3.1.6" },
     { name = "pytest", marker = "extra == 'local'", specifier = "==9.1.1" },
     { name = "pytest-django", marker = "extra == 'local'", specifier = "==4.12.0" },
     { name = "pytest-sugar", marker = "extra == 'local'", specifier = "==1.1.1" },

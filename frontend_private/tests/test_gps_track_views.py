@@ -17,7 +17,10 @@ RESPONSIVE_RENDER_COUNT = 2
 class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.track = GPSTrackFactory.create(user=self.user, name="Shared Traverse")
+        self.track = GPSTrackFactory.create(
+            creator=self.user,
+            name="Shared Traverse",
+        )
 
     def permission_url(self) -> str:
         return reverse(
@@ -141,7 +144,7 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         active_user = UserFactory.create(email="active-gps@example.com")
         revoked_user = UserFactory.create(email="inactive-gps@example.com")
         other_user = UserFactory.create(email="other-track-gps@example.com")
-        other_track = GPSTrackFactory.create(user=other_user)
+        other_track = GPSTrackFactory.create(creator=other_user)
         GPSTrackUserPermissionFactory.create(
             user=active_user,
             gps_track=self.track,

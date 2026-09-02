@@ -692,6 +692,13 @@ describe('API module', () => {
             expect(fetch.mock.calls[0][0]).toContain('api:v2:gps-tracks');
         });
 
+        it('getGPSTrackDetails requests a fresh detail response', async () => {
+            await API.getGPSTrackDetails('track-1');
+            expect(fetch.mock.calls[0][0]).toContain(
+                'api:v2:gps-track-detail/track-1'
+            );
+        });
+
         it('importGPX sends FormData with PUT', async () => {
             const formData = new FormData();
             await API.importGPX(formData);

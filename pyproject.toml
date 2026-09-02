@@ -47,6 +47,8 @@ dependencies = [
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
     "jsonschema-rs==0.49.1", # https://github.com/Stranger6667/jsonschema
     "orjson==3.11.9",        # https://github.com/ijl/orjson
+    "pyproj==3.7.2",         # https://github.com/pyproj4/pyproj
+    "pyshp==3.1.6",          # https://github.com/GeospatialPython/pyshp
 
     # Speleo Libraries
     # ------------------------------------------------------------------------------

@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from typing import TYPE_CHECKING
-from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db import transaction
-from django.db.models import Q
-from django.db.models import UniqueConstraint
 from django.utils import timezone
 
 from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import PermissionLevel
-from speleodb.surveys.fields import Sha256Field
 from speleodb.users.models import User
 from speleodb.utils.s3_storages import GPSTrackStorage
 from speleodb.utils.validators import GeoJsonValidator
@@ -60,12 +55,6 @@ class GPSTrack(models.Model):
         validators=[GeoJsonValidator()],
     )
 
-    sha256_hash = Sha256Field(
-        blank=False,
-        null=False,
-        verbose_name="SHA256 hash of the `geojson file`",
-    )
-
     color = models.CharField(
         max_length=7,
         default=ColorPalette.random_color,
@@ -75,12 +64,10 @@ class GPSTrack(models.Model):
         help_text="Hex color code for map rendering (e.g. #377eb8)",
     )
 
-    user = models.ForeignKey(
-        User,
-        related_name="gps_tracks",
-        on_delete=models.CASCADE,
-        blank=False,
+    created_by = models.EmailField(
         null=False,
+        blank=False,
+        help_text="User who created or submitted the entry.",
     )
 
     is_active = models.BooleanField(default=True)
@@ -92,52 +79,12 @@ class GPSTrack(models.Model):
         verbose_name = "GPS Track"
         verbose_name_plural = "GPS Tracks"
         indexes = [
-            models.Index(fields=["user"]),
-            models.Index(fields=["sha256_hash"]),
             models.Index(fields=["is_active"], name="gis_gpst_active_idx"),
         ]
         ordering = ["-creation_date"]
-        constraints = [
-            UniqueConstraint(
-                fields=["sha256_hash", "user"],
-                condition=Q(is_active=True),
-                name="gis_gpst_active_user_hash_uniq",
-            )
-        ]
 
     def __str__(self) -> str:
-        return f"[GPS Track] {self.user.name} @ {self.creation_date}"
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        is_new = self._state.adding
-        update_fields: list[str] | None = kwargs.get("update_fields")
-        if update_fields is None or "file" in update_fields:
-            self._set_file_hash()
-
-        self.full_clean()
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            if is_new:
-                GPSTrackUserPermission.objects.get_or_create(
-                    user=self.user,
-                    gps_track=self,
-                    defaults={"level": PermissionLevel.ADMIN},
-                )
-
-    def _set_file_hash(self) -> None:
-        if not self.file:
-            raise ValueError("File is `None`")
-
-        sha256 = hashlib.sha256()
-
-        # no need to open the file
-        for chunk in self.file.chunks():
-            sha256.update(chunk)
-
-        # reset the pointer to beginning
-        self.file.seek(0)
-
-        self.sha256_hash = sha256.hexdigest()
+        return f"[GPS Track] {self.created_by} @ {self.creation_date}"
 
     # Signed URL helper — delegates to django-storages which produces
     # CloudFront signed URLs in production or S3 presigned URLs in local dev.
@@ -161,6 +108,8 @@ class GPSTrack(models.Model):
 
 
 class GPSTrackUserPermission(models.Model):
+    """Durable direct-user permission row for one GPS Track."""
+
     user = models.ForeignKey(
         User,
         related_name="gps_track_permissions",

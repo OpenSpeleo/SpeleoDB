@@ -78,10 +78,7 @@ Both serializers implement `validate_color()`:
 - Validates format via `ColorPalette.is_valid_hex()`.
 - Normalizes to lowercase on write.
 
-`GPSTrackSerializer` has a custom `update()` method that passes `update_fields`
-to `save()`, so metadata-only changes (like color) skip S3 file re-hashing.
-`GPSTrack.save()` skips file hashing when `update_fields` is provided and
-doesn't include `file`.
+`GPSTrackSerializer` updates metadata without replacing the stored GeoJSON.
 
 ---
 

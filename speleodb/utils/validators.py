@@ -10,9 +10,23 @@ import jsonschema_rs
 import orjson
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
+from django.core.validators import MaxValueValidator
+from django.core.validators import MinValueValidator
 
 if TYPE_CHECKING:
     from django.db.models.fields.files import FieldFile
+
+
+class LongitudeValidator:
+    def __call__(self, longitude: float) -> None:
+        MinValueValidator(-180)(longitude)
+        MaxValueValidator(180)(longitude)
+
+
+class LatitudeValidator:
+    def __call__(self, latitude: float) -> None:
+        MinValueValidator(-90)(latitude)
+        MaxValueValidator(90)(latitude)
 
 
 class ImageWithHeicSupportValidator(FileExtensionValidator):

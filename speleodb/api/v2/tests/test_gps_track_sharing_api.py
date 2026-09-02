@@ -42,7 +42,7 @@ def _permissions_url(track: GPSTrack) -> str:
 @pytest.mark.django_db
 class TestGPSTrackAccessibleList(BaseAPITestCase):
     def test_list_contains_owned_and_shared_tracks_with_capabilities(self) -> None:
-        owned = GPSTrackFactory.create(user=self.user, name="Owned")
+        created = GPSTrackFactory.create(creator=self.user, name="Created")
         shared = GPSTrackFactory.create(name="Shared")
         GPSTrackUserPermissionFactory.create(
             user=self.user,
@@ -58,20 +58,20 @@ class TestGPSTrackAccessibleList(BaseAPITestCase):
 
         assert response.status_code == status.HTTP_200_OK
         tracks = {item["name"]: item for item in response.data}
-        assert set(tracks) == {"Owned", "Shared"}
-        assert tracks["Owned"] == {
-            **tracks["Owned"],
-            "owner_email": self.user.email,
+        assert set(tracks) == {"Created", "Shared"}
+        assert tracks["Created"] == {
+            **tracks["Created"],
+            "created_by": self.user.email,
             "user_permission_level": PermissionLevel.ADMIN,
             "user_permission_level_label": "ADMIN",
             "can_write": True,
             "can_delete": True,
         }
-        assert tracks["Shared"]["owner_email"] == shared.user.email
+        assert tracks["Shared"]["created_by"] == shared.created_by
         assert tracks["Shared"]["user_permission_level_label"] == "READ_AND_WRITE"
         assert tracks["Shared"]["can_write"] is True
         assert tracks["Shared"]["can_delete"] is False
-        assert tracks["Owned"]["id"] == str(owned.id)
+        assert tracks["Created"]["id"] == str(created.id)
         assert all(item["file"] for item in tracks.values())
 
     def test_list_excludes_revoked_permissions_and_inactive_tracks(self) -> None:
@@ -81,14 +81,14 @@ class TestGPSTrackAccessibleList(BaseAPITestCase):
             gps_track=revoked,
             level=PermissionLevel.READ_ONLY,
         )
-        permission.deactivate(deactivated_by=revoked.user)
+        permission.deactivate(deactivated_by=self.user)
         inactive = GPSTrackFactory.create(name="Inactive")
         GPSTrackUserPermissionFactory.create(
             user=self.user,
             gps_track=inactive,
             level=PermissionLevel.ADMIN,
         )
-        inactive.deactivate(deactivated_by=inactive.user)
+        inactive.deactivate(deactivated_by=self.user)
 
         response = self.client.get(
             reverse("api:v2:gps-tracks"),
@@ -163,7 +163,7 @@ class TestGPSTrackDetailPermissionMatrix(BaseAPITestCase):
         assert response.status_code == expected_status, response.data
 
     def test_soft_delete_is_atomic_and_preserves_file_and_prior_audit(self) -> None:
-        track = GPSTrackFactory.create(user=self.user)
+        track = GPSTrackFactory.create(creator=self.user)
         active_user = UserFactory.create()
         active = GPSTrackUserPermissionFactory.create(
             user=active_user,
@@ -205,7 +205,7 @@ class TestGPSTrackDetailPermissionMatrix(BaseAPITestCase):
 class TestGPSTrackPermissionAPI(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.track = GPSTrackFactory.create(user=self.user, name="Shared Track")
+        self.track = GPSTrackFactory.create(creator=self.user, name="Shared Track")
         self.target = UserFactory.create()
         self.url = _permissions_url(self.track)
 

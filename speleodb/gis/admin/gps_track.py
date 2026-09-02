@@ -3,26 +3,25 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import cast
 
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 
+from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GPSTrack
+from speleodb.gis.models import GPSTrackUserPermission
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
+    from speleodb.users.models import User
+
 
 @admin.register(GPSTrack)
 class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
-    """
-    Admin interface for GPSTrack.
-
-    GPSTrack objects are immutable:
-    - No updates allowed
-    - No file replacement
-    """
+    """Admin interface for the lightweight GPS Track record."""
 
     # ─────────────────────────────────────────────
     # List view
@@ -30,16 +29,13 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     list_display = (
         "id",
         "name",
-        "user",
+        "created_by",
         "is_active",
-        "short_sha256",
         "creation_date",
         "download_link",
     )
-
-    list_select_related = ("user",)
-    list_filter = ("is_active", "user", "creation_date")
-    search_fields = ("name", "sha256_hash", "user__name")
+    list_filter = ("is_active", "created_by", "creation_date")
+    search_fields = ("name", "created_by")
     ordering = ("-creation_date",)
 
     # ─────────────────────────────────────────────
@@ -47,7 +43,8 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # ─────────────────────────────────────────────
     readonly_fields = (
         "id",
-        "sha256_hash",
+        "created_by",
+        "is_active",
         "creation_date",
         "modified_date",
         "signed_download_url",
@@ -60,7 +57,7 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "fields": (
                     "id",
                     "name",
-                    "user",
+                    "created_by",
                     "is_active",
                 )
             },
@@ -70,7 +67,6 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             {
                 "fields": (
                     "file",
-                    "sha256_hash",
                     "signed_download_url",
                 )
             },
@@ -89,15 +85,31 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # ─────────────────────────────────────────────
     # Permissions (immutability enforcement)
     # ─────────────────────────────────────────────
-    def has_change_permission(
+    def get_readonly_fields(
         self,
         request: HttpRequest,
         obj: GPSTrack | None = None,
-    ) -> bool:
-        # Allow viewing but not editing existing objects
-        if obj is not None:
-            return False
-        return super().has_change_permission(request, obj)
+    ) -> tuple[str, ...]:
+        fields = tuple(super().get_readonly_fields(request, obj))
+        return (*fields, "file") if obj is not None else fields
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: GPSTrack,
+        form: object,
+        change: bool,
+    ) -> None:
+        user = cast("User", request.user)
+        if not obj.created_by:
+            obj.created_by = user.email
+        super().save_model(request, obj, form, change)
+        if not change:
+            GPSTrackUserPermission.objects.get_or_create(
+                gps_track=obj,
+                user=user,
+                defaults={"level": PermissionLevel.ADMIN},
+            )
 
     def has_delete_permission(
         self,
@@ -109,10 +121,6 @@ class GPSTrackAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # ─────────────────────────────────────────────
     # Custom display helpers
     # ─────────────────────────────────────────────
-    @admin.display(description="SHA256")
-    def short_sha256(self, obj: GPSTrack) -> str:
-        return f"{obj.sha256_hash[:12]}…"
-
     @admin.display(description="Download")
     def download_link(self, obj: GPSTrack) -> str:
         try:

@@ -183,6 +183,29 @@
                                 </a>
                             </li>
 
+                            <!-- My GIS Layers -->
+                            {% if request.url_name|is_in_list:"gis_layers,gis_layer_user_permissions" %}
+                            {% set stroke_color = 'indigo' %}
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
+                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_layers' %}">
+                            {% else %}
+                            {% set stroke_color = 'slate' %}
+                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
+                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_layers' %}">
+                            {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{stroke_color}}-400" viewBox="0 0 24 24" stroke-width="1.8">
+                                                <path d="M12 3l8 4-8 4-8-4 8-4z"></path>
+                                                <path d="M4 12l8 4 8-4"></path>
+                                                <path d="M4 17l8 4 8-4"></path>
+                                            </svg>
+                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+
                             <!-- My Survey Projects -->
                             {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone,project_git_instructions" %}
                             {% set stroke_color = 'indigo' %}

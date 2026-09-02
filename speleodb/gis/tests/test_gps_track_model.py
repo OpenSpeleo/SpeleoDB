@@ -5,11 +5,10 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
 import pytest
 from django.contrib import admin
-from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.db import transaction
 from django.test import RequestFactory
@@ -18,25 +17,12 @@ from speleodb.api.v2.tests.factories import GPSTrackFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import GPSTrackUserPermission
+from speleodb.permissions.admin.gps_track import GPSTrackUserPermissionAdmin
 from speleodb.permissions.admin.gps_track import GPSTrackUserPermissionProxy
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from speleodb.users.models import User
-
-REIMPORT_TRACK_COUNT = 2
-
-
-def _geojson_file(name: str = "track.geojson") -> SimpleUploadedFile:
-    return SimpleUploadedFile(
-        name,
-        (
-            b'{"type":"FeatureCollection","features":[{"type":"Feature",'
-            b'"geometry":{"type":"LineString","coordinates":'
-            b'[[-87.5,20.19],[-87.51,20.2]]},"properties":{}}]}'
-        ),
-        content_type="application/geo+json",
-    )
 
 
 def _user(prefix: str) -> User:
@@ -45,12 +31,12 @@ def _user(prefix: str) -> User:
 
 @pytest.mark.django_db
 class TestGPSTrackModel:
-    def test_new_track_creates_single_active_owner_admin_permission(self) -> None:
-        owner = _user("owner")
-        gps_track = GPSTrackFactory.create(user=owner)
+    def test_new_track_creates_single_active_creator_admin_permission(self) -> None:
+        creator = _user("creator")
+        gps_track = GPSTrackFactory.create(creator=creator)
 
         permission = GPSTrackUserPermission.objects.get(
-            user=owner,
+            user=creator,
             gps_track=gps_track,
         )
 
@@ -59,7 +45,7 @@ class TestGPSTrackModel:
         assert permission.deactivated_by is None
         assert gps_track.permissions.count() == 1
 
-    def test_updating_track_does_not_duplicate_owner_permission(self) -> None:
+    def test_updating_track_does_not_duplicate_creator_permission(self) -> None:
         gps_track = GPSTrackFactory.create()
 
         gps_track.name = "Updated name"
@@ -67,44 +53,11 @@ class TestGPSTrackModel:
 
         assert gps_track.permissions.count() == 1
 
-    def test_active_hash_uniqueness_allows_reimport_after_soft_delete(self) -> None:
-        owner = _user("hash-owner")
-        first = GPSTrack(
-            user=owner,
-            name="First",
-            color="#377eb8",
-            file=_geojson_file("first.geojson"),
-        )
-        first.save()
+    def test_track_stores_creator_email(self) -> None:
+        creator = _user("creator-email")
+        gps_track = GPSTrackFactory.create(creator=creator)
 
-        duplicate = GPSTrack(
-            user=owner,
-            name="Duplicate",
-            color="#377eb8",
-            file=_geojson_file("duplicate.geojson"),
-        )
-        with pytest.raises(ValidationError):
-            duplicate.save()
-
-        first.is_active = False
-        first.save(update_fields=["is_active", "modified_date"])
-        replacement = GPSTrack(
-            user=owner,
-            name="Replacement",
-            color="#377eb8",
-            file=_geojson_file("replacement.geojson"),
-        )
-        replacement.save()
-
-        assert replacement.is_active
-        assert replacement.sha256_hash == first.sha256_hash
-        assert (
-            GPSTrack.objects.filter(
-                user=owner,
-                sha256_hash=first.sha256_hash,
-            ).count()
-            == REIMPORT_TRACK_COUNT
-        )
+        assert gps_track.created_by == creator.email
 
     def test_deactivate_soft_deletes_track_and_only_active_permissions(self) -> None:
         gps_track = GPSTrackFactory.create()
@@ -122,14 +75,15 @@ class TestGPSTrackModel:
         original_deactivator = _user("original-deactivator")
         previously_revoked.deactivate(deactivated_by=original_deactivator)
 
-        gps_track.deactivate(deactivated_by=gps_track.user)
+        administrator = gps_track.permissions.get(level=PermissionLevel.ADMIN).user
+        gps_track.deactivate(deactivated_by=administrator)
 
         gps_track.refresh_from_db()
         active_permission.refresh_from_db()
         previously_revoked.refresh_from_db()
         assert not gps_track.is_active
         assert not active_permission.is_active
-        assert active_permission.deactivated_by == gps_track.user
+        assert active_permission.deactivated_by == administrator
         assert not previously_revoked.is_active
         assert previously_revoked.deactivated_by == original_deactivator
 
@@ -161,10 +115,11 @@ class TestGPSTrackUserPermissionModel:
             level=PermissionLevel.READ_ONLY,
         )
 
-        permission.deactivate(deactivated_by=gps_track.user)
+        administrator = gps_track.permissions.get(level=PermissionLevel.ADMIN).user
+        permission.deactivate(deactivated_by=administrator)
         permission.refresh_from_db()
         assert not permission.is_active
-        assert permission.deactivated_by == gps_track.user
+        assert permission.deactivated_by == administrator
 
         permission.reactivate(level=PermissionLevel.READ_AND_WRITE)
         permission.refresh_from_db()
@@ -210,8 +165,27 @@ class TestGPSTrackAdmin:
 
         assert "is_active" in gps_track_admin.list_display
         assert "is_active" in gps_track_admin.list_filter
+        assert "is_active" in gps_track_admin.readonly_fields
         assert not gps_track_admin.has_delete_permission(request)
 
     def test_permission_proxy_is_registered(self) -> None:
         assert GPSTrackUserPermissionProxy._meta.proxy  # noqa: SLF001
         assert GPSTrackUserPermissionProxy in admin.site._registry  # noqa: SLF001
+
+    def test_permission_admin_preserves_identity_and_lifecycle_fields(self) -> None:
+        permission_admin = GPSTrackUserPermissionAdmin(
+            GPSTrackUserPermissionProxy,
+            admin.site,
+        )
+        request: Any = RequestFactory().get("/")
+
+        assert not permission_admin.has_delete_permission(request)
+        assert {"is_active", "deactivated_by"} <= set(
+            permission_admin.get_readonly_fields(request)
+        )
+        assert {"user", "gps_track"} <= set(
+            permission_admin.get_readonly_fields(
+                request,
+                cast("GPSTrackUserPermissionProxy", object()),
+            )
+        )

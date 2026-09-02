@@ -19,6 +19,8 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models import GISLayer
+from speleodb.gis.models import GISLayerUserPermission
 from speleodb.gis.models import GISView
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import GPSTrackUserPermission
@@ -170,6 +172,20 @@ class BaseAccessLevel(permissions.BasePermission):
                 except ObjectDoesNotExist:
                     return False
 
+            case GISLayer():
+                try:
+                    return (
+                        obj.is_active
+                        and GISLayerUserPermission.objects.get(
+                            user=request.user,
+                            gis_layer=obj,
+                            is_active=True,
+                        ).level
+                        >= self.MIN_ACCESS_LEVEL
+                    )
+                except ObjectDoesNotExist:
+                    return False
+
             # =============================================================== #
             #                        TRANSITIVE MODELS                        #
             # =============================================================== #
@@ -270,6 +286,9 @@ class BaseAccessLevel(permissions.BasePermission):
             # -----------------------------------------------------------------
             case GPSTrackUserPermission():
                 return self.has_object_permission(request, view, obj.gps_track)
+
+            case GISLayerUserPermission():
+                return self.has_object_permission(request, view, obj.gis_layer)
 
             # SensorFleet & Station Models
             # -----------------------------------------------------------------
@@ -378,13 +397,6 @@ class UserHasLeaderAccess(BaseTeamAccessLevel):
 
 class UserHasMemberAccess(BaseTeamAccessLevel):
     MIN_ACCESS_LEVEL = SurveyTeamMembershipRole.MEMBER
-
-
-# =============== GPS Track =============== #
-
-
-class GPSTrackOwnershipPermission(SDB_AdminAccess):
-    """Backward-compatible alias for GPS Track ADMIN access."""
 
 
 # ================ GISView ================ #

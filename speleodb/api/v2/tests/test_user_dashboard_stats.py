@@ -256,8 +256,8 @@ class TestDashboardStatsSummaryCounts(BaseAPITestCase):
     def test_total_gps_tracks_count(self) -> None:
         assert self._get_summary()["total_gps_tracks"] == 0
 
-        _ = GPSTrackFactory.create(user=self.user)
-        inactive = GPSTrackFactory.create(user=self.user)
+        _ = GPSTrackFactory.create(creator=self.user)
+        inactive = GPSTrackFactory.create(creator=self.user)
         inactive.deactivate(deactivated_by=self.user)
         shared = GPSTrackFactory.create()
         GPSTrackUserPermissionFactory.create(
@@ -265,8 +265,12 @@ class TestDashboardStatsSummaryCounts(BaseAPITestCase):
             gps_track=shared,
             level=PermissionLevel.READ_ONLY,
         )
+        creator_without_access = GPSTrackFactory.create(creator=self.user)
+        creator_without_access.permissions.get(user=self.user).deactivate(
+            deactivated_by=self.user
+        )
 
-        assert self._get_summary()["total_gps_tracks"] == 1
+        assert self._get_summary()["total_gps_tracks"] == 2  # noqa: PLR2004
 
     def test_total_stations_created_by_user_email(self) -> None:
         assert self._get_summary()["total_stations_created"] == 2  # noqa: PLR2004

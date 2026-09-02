@@ -12,6 +12,8 @@ from django.test import override_settings
 
 from speleodb.utils.s3_storages import AttachmentStorage
 from speleodb.utils.s3_storages import GeoJSONStorage
+from speleodb.utils.s3_storages import GISLayerStorage
+from speleodb.utils.s3_storages import GPSTrackStorage
 from speleodb.utils.s3_storages import PersonPhotoStorage
 from speleodb.utils.s3_storages import S3MediaStorage
 
@@ -99,6 +101,26 @@ class AttachmentStorageTests(TestCase):
 
         for filename in ["test.jpg", "test.mp4", "test.pdf"]:
             assert storage.get_available_name(filename) == filename
+
+
+class GISLayerStorageTests(TestCase):
+    def test_private_gis_layer_storage_configuration(self) -> None:
+        storage = GISLayerStorage()
+
+        assert storage.location == "gis_layers"
+        assert storage.default_acl == "private"
+        assert not storage.file_overwrite
+        assert storage.bucket_name == settings.AWS_STORAGE_BUCKET_NAME
+        assert storage.object_parameters == {"CacheControl": "private, no-store"}
+
+
+class GPSTrackStorageTests(TestCase):
+    def test_private_gps_track_storage_is_not_publicly_cacheable(self) -> None:
+        storage = GPSTrackStorage()
+
+        assert storage.location == "gps_tracks"
+        assert storage.default_acl == "private"
+        assert storage.object_parameters == {"CacheControl": "private, no-store"}
 
 
 class S3PresignedURLTests(TestCase):

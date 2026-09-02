@@ -224,7 +224,7 @@ export const GPSTracksPanel = {
             item.addEventListener('click', async (e) => {
                 // Don't handle if clicking on the toggle switch
                 if (e.target !== checkbox && e.target !== checkbox.nextElementSibling && e.target.closest('.toggle-switch') === null) {
-                    await this.activateAndFlyToTrack(track.id, track.file);
+                    await this.activateAndFlyToTrack(track.id);
                 }
             });
 
@@ -237,7 +237,7 @@ export const GPSTracksPanel = {
                     checkbox.disabled = true;
                 }
 
-                await this.toggleTrack(track.id, newState, track.file);
+                await this.toggleTrack(track.id, newState);
 
                 // Re-enable checkbox
                 checkbox.disabled = false;
@@ -255,13 +255,13 @@ export const GPSTracksPanel = {
         });
     },
 
-    activateAndFlyToTrack: async function(trackId, trackUrl) {
+    activateAndFlyToTrack: async function(trackId) {
         const tid = String(trackId);
         const isVisible = Layers.isGPSTrackVisible(tid);
 
         // If track is not visible, activate it first
         if (!isVisible) {
-            await this.toggleTrack(trackId, true, trackUrl);
+            await this.toggleTrack(trackId, true);
         }
 
         // Now fly to the track (bounds should be available after loading)
@@ -279,8 +279,8 @@ export const GPSTracksPanel = {
         }
     },
 
-    toggleTrack: async function(trackId, isVisible, trackUrl) {
-        await Layers.toggleGPSTrackVisibility(trackId, isVisible, trackUrl);
+    toggleTrack: async function(trackId, isVisible) {
+        await Layers.toggleGPSTrackVisibility(trackId, isVisible);
         this.refreshList(); // Refresh to update opacity/colors
     },
 

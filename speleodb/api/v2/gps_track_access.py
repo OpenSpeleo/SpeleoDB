@@ -62,7 +62,6 @@ def accessible_gps_tracks_queryset(user: User) -> QuerySet[GPSTrack]:
     return (
         GPSTrack.objects.filter(is_active=True)
         .filter(Exists(permission_qs))
-        .select_related("user")
         .annotate(
             user_permission_level=Subquery(
                 permission_qs.values("level")[:1],

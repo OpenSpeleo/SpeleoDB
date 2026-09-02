@@ -56,15 +56,6 @@ export const GPXImport = (function() {
             }
         });
 
-        // Close when clicking outside modal content
-        const importModal = document.getElementById('import-gpx-modal');
-        if (importModal) {
-            importModal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    hideModal();
-                }
-            });
-        }
     }
 
     function formatFileSize(bytes) {

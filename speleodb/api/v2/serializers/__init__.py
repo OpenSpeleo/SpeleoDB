@@ -17,6 +17,9 @@ from speleodb.api.v2.serializers.experiment import ExperimentRecordGISSerializer
 from speleodb.api.v2.serializers.experiment import ExperimentRecordSerializer
 from speleodb.api.v2.serializers.experiment import ExperimentSerializer
 from speleodb.api.v2.serializers.file import UploadSerializer
+from speleodb.api.v2.serializers.gis_layer import GISLayerCreateSerializer
+from speleodb.api.v2.serializers.gis_layer import GISLayerSerializer
+from speleodb.api.v2.serializers.gis_layer import GISLayerUserPermissionSerializer
 from speleodb.api.v2.serializers.gis_view import GISProjectViewInputSerializer
 from speleodb.api.v2.serializers.gis_view import GISProjectViewSerializer
 from speleodb.api.v2.serializers.gis_view import GISViewCreateUpdateSerializer
@@ -79,6 +82,9 @@ __all__ = [
     "ExperimentRecordSerializer",
     "ExperimentSerializer",
     "ExperimentUserPermissionSerializer",
+    "GISLayerCreateSerializer",
+    "GISLayerSerializer",
+    "GISLayerUserPermissionSerializer",
     "GISProjectViewInputSerializer",
     "GISProjectViewSerializer",
     "GISViewCreateUpdateSerializer",

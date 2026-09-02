@@ -1,0 +1,12 @@
+Downloaded from: https://eric.clst.org/tech/usgeojson/ on September 1st 2026
+
+Original Data from: US Census Bureau:
+https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.2010.html#list-tab-1556094155
+
+Citation:
+https://www.census.gov/about/policies/citation.html#accordion-8d30296d18-item-7a93281bab
+
+U.S. Census Bureau. 2010 Census Production Settings Redistricting Data (P.L. 94-171)
+Demonstration Noisy Measurement File,
+<https://aws.amazon.com/marketplace/pp/prodview-krnfluihbyhqi?sr=0-1&ref_=beagle&applicationId=AWSMPContessa>,
+accessed on November 15, 2024

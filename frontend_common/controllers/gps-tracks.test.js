@@ -5,7 +5,7 @@ function track(overrides = {}) {
         id: '11111111-1111-4111-8111-111111111111',
         name: 'Cenote Traverse',
         color: '#377eb8',
-        owner_email: 'owner@example.com',
+        created_by: 'creator@example.com',
         user_permission_level_label: 'READ_ONLY',
         can_write: false,
         can_delete: false,
@@ -38,7 +38,7 @@ describe('GPS Tracks rendered list contract', () => {
         render([track()]);
 
         expect(document.body.textContent).toContain('Cenote Traverse');
-        expect(document.body.textContent).toContain('owner@example.com');
+        expect(document.body.textContent).toContain('creator@example.com');
         expect(document.body.textContent).toContain('Read Only');
         expect(document.querySelectorAll('a[href$="/export/gpx/"]')).toHaveLength(2);
         expect(document.querySelectorAll('a[href$="/permissions/"]')).toHaveLength(2);
@@ -80,7 +80,7 @@ describe('GPS Tracks rendered list contract', () => {
         render([track({
             id: 'bad-id" onmouseover="alert(1)',
             name: '<img src=x onerror="alert(1)">',
-            owner_email: '<script>alert("owner")</script>',
+            created_by: '<script>alert("creator")</script>',
             color: 'red; background-image:url(https://evil.test)',
             can_write: true,
         })]);
@@ -91,7 +91,7 @@ describe('GPS Tracks rendered list contract', () => {
         expect(document.querySelector('.w-3.h-3').style.backgroundColor)
             .toBe('rgb(148, 163, 184)');
         expect(document.body.textContent).toContain('<img src=x onerror="alert(1)">');
-        expect(document.body.textContent).toContain('<script>alert("owner")</script>');
+        expect(document.body.textContent).toContain('<script>alert("creator")</script>');
     });
 
     it('renders the responsive empty state', () => {

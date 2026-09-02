@@ -25,6 +25,8 @@ from frontend_private.views import ExperimentGISView
 from frontend_private.views import ExperimentListingView
 from frontend_private.views import ExperimentUserPermissionsView
 from frontend_private.views import FeedbackView
+from frontend_private.views import GISLayerListView
+from frontend_private.views import GISLayerUserPermissionsView
 from frontend_private.views import GISViewDangerZoneView
 from frontend_private.views import GISViewDetailsView
 from frontend_private.views import GISViewGISIntegrationView
@@ -343,6 +345,13 @@ urlpatterns: list[URLPattern | URLResolver] = [
         "gps-track/<uuid:track_id>/permissions/",
         GPSTrackUserPermissionsView.as_view(),
         name="gps_track_user_permissions",
+    ),
+    # Private GIS Layers
+    path("gis-layers/", GISLayerListView.as_view(), name="gis_layers"),
+    path(
+        "gis-layer/<uuid:layer_id>/permissions/",
+        GISLayerUserPermissionsView.as_view(),
+        name="gis_layer_user_permissions",
     ),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),

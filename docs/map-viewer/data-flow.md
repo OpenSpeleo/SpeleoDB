@@ -24,6 +24,10 @@ Django Backend
   │   Response: { success, data: [{ id, name, color, file, ... }] }
   │   Stored in: Config._gpsTracks
   │
+  ├─ GET /api/v2/gis-layers/                  → GISLayerStore.load()
+  │   Response: readable metadata with one signed renderable `file` URL
+  │   Stored in: GISLayerStore until private-viewer refresh/reconciliation
+  │
   └─ GET /api/v2/all-projects-geojson/        → API.getAllProjectsGeoJSON()
       Response: { success, data: [{ id, geojson_file, ... }] }
       Used for: Config.filterProjectsByGeoJSON()
@@ -361,7 +365,9 @@ event dispatched → listener in `main.js` re-fetches from API → layer rebuilt
 
 ### GPS Tracks — On-Demand Loading + Cache
 
-GPS track GeoJSON is **not** loaded at initialization. Tracks default to OFF.
+GPS track GeoJSON is **not** loaded at initialization. Tracks default to OFF and
+retain the established `Layers.toggleGPSTrackVisibility()` plus
+`State.gpsTrackCache` lifecycle. GIS Layers do not alter that behavior.
 
 ```
 User toggles track ON
@@ -385,6 +391,35 @@ User toggles track ON
 - **Invalidation**: `State.gpsTrackCache.clear()` on `speleo:refresh-gps-tracks`
 - **Persistence**: Session-only. No localStorage. All tracks reset to OFF on
   page reload.
+
+### GIS Layers — Lazy Overlay Lifecycle
+
+GIS Layer files are not loaded at initialization. Layers default to OFF and use
+a GIS-only `LazyOverlayManager`.
+
+```
+User toggles logical overlay ON
+  │
+  ├─ Record desired visibility
+  │
+  ├─ NO current cached registration:
+  │   ├─ refresh the authenticated detail response for a current signed URL
+  │   ├─ register one GeoJSON source
+  │   ├─ after every await, reject stale desired state
+  │   └─ retain only within the hidden-overlay LRU budget
+  │
+  └─ Current cached registration:
+      └─ show every child layer for the logical overlay
+```
+
+- **GIS delivery**: list and detail metadata carry the signed renderable
+  GeoJSON URL for every source format. Activation refreshes detail metadata,
+  then gives that URL directly to Mapbox without client-side parsing.
+- **Invalidation**: targeted by metadata modification time and map-style rebuild.
+- **Persistence**: session-only. No localStorage. All GIS Layers reset to OFF on
+  page reload.
+- **Race behavior**: OFF aborts pending work immediately; a late response cannot
+  re-show an overlay after OFF, revocation, deletion, or metadata refresh.
 
 ### Snap Points — Computed Once Per Project
 

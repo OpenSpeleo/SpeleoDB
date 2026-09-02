@@ -6,7 +6,6 @@ import hashlib
 import uuid
 from pathlib import Path
 
-import requests
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from faker import Faker
@@ -19,6 +18,7 @@ from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import NoteStationResourceFactory
 from speleodb.api.v2.tests.factories import PhotoStationResourceFactory
 from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
+from speleodb.api.v2.tests.file_utils import sha256_from_url
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import StationResourceType
 from speleodb.gis.models import Station
@@ -27,16 +27,6 @@ from speleodb.gis.models import SubSurfaceStation
 from speleodb.utils.test_utils import named_product
 
 ARTIFACT_DIR = Path(__file__).parent / "artifacts"
-
-
-def sha256_from_url(url: str) -> str:
-    sha256 = hashlib.sha256()
-    with requests.api.get(url, stream=True, timeout=10) as r:
-        r.raise_for_status()  # ensure the request succeeded
-        for chunk in r.iter_content(chunk_size=8192):
-            if chunk:  # skip keep-alive chunks
-                sha256.update(chunk)
-    return sha256.hexdigest()
 
 
 @parameterized_class(

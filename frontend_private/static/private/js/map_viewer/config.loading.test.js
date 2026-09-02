@@ -311,7 +311,6 @@ describe('Config loading and data methods', () => {
                     name: 'Track 1',
                     color: '#e41a1c',
                     file: '/tracks/t1.geojson',
-                    sha256_hash: 'abc123',
                     creation_date: '2024-01-01',
                     modified_date: '2024-06-01',
                 },
@@ -326,7 +325,6 @@ describe('Config loading and data methods', () => {
                     name: 'Track 1',
                     color: '#e41a1c',
                     file: '/tracks/t1.geojson',
-                    sha256_hash: 'abc123',
                     creation_date: '2024-01-01',
                     modified_date: '2024-06-01',
                 },
@@ -373,7 +371,6 @@ describe('Config loading and data methods', () => {
                     name: 'Track',
                     color: '#ff0000',
                     file: '/file.geojson',
-                    sha256_hash: 'hash',
                     creation_date: '2024-01-01',
                     modified_date: '2024-02-01',
                     extra_field: 'should be excluded',
@@ -384,7 +381,7 @@ describe('Config loading and data methods', () => {
 
             const track = Config.gpsTracks[0];
             expect(Object.keys(track).sort()).toEqual(
-                ['color', 'creation_date', 'file', 'id', 'modified_date', 'name', 'sha256_hash']
+                ['color', 'creation_date', 'file', 'id', 'modified_date', 'name']
             );
         });
     });

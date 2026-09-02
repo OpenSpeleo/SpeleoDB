@@ -59,9 +59,14 @@ def _create_gps_track(
         orjson.dumps(geojson),
         content_type="application/geo+json",
     )
-    track = GPSTrack(user=user, name=name, color="#377eb8")
+    track = GPSTrack(created_by=user.email, name=name, color="#377eb8")
     track.file.save(filename, uploaded_file, save=False)
     track.save()
+    GPSTrackUserPermission.objects.create(
+        user=user,
+        gps_track=track,
+        level=PermissionLevel.ADMIN,
+    )
     return track
 
 
@@ -71,7 +76,7 @@ def _response_bytes(response: Any) -> bytes:
 
 @pytest.mark.django_db
 class TestGPSTrackExportGPXAPI(BaseAPITestCase):
-    def test_owner_exports_gpx_with_ordered_segments_and_elevation(self) -> None:
+    def test_admin_exports_gpx_with_ordered_segments_and_elevation(self) -> None:
         geojson = _geojson_feature_collection(
             _geojson_feature(
                 "LineString",

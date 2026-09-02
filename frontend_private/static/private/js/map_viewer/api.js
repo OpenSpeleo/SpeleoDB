@@ -272,6 +272,9 @@ export const API = {
     getGPSTracks: () =>
         apiRequest(Urls['api:v2:gps-tracks']()),
 
+    getGPSTrackDetails: (trackId) =>
+        apiRequest(Urls['api:v2:gps-track-detail'](trackId)),
+
     // GPX Import
     importGPX: (formData) =>
         apiRequest(Urls['api:v2:gpx-import'](), 'PUT', formData, true),

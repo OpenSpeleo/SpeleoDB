@@ -304,7 +304,40 @@ sharing contracts.
 ### Visibility control
 
 `Layers.toggleGPSTrackVisibility(trackId, isVisible, trackUrl)` handles both
-fetching (if not cached) and showing/hiding the track layer.
+fetching (if not cached) and showing/hiding the track layer. GIS Layers do not
+replace or generalize this established GPS Track lifecycle.
+
+## 4.1 Private GIS Layers
+
+**Modules:** `components/gis_layers_panel.js`, `gis_layers_runtime.js`,
+`gis_layer_client.js`, `gis_layer_store.js`, and `map/gis_layers.js`
+
+GIS Layers are authenticated KML, KMZ, GeoJSON, TopoJSON, or zipped Shapefile
+overlays. Every layer defaults OFF. On activation, the runtime refreshes the
+authenticated detail response and passes its current signed GeoJSON `file` URL
+directly to Mapbox. It does not download or parse the file first. The renderer
+creates fill, outline, line, point, and label children while the panel exposes
+one logical toggle.
+
+Feature clicks open a GIS-scoped dark Mapbox popup. The popup uses DOM creation
+and `textContent` only, shows a compact title and optional plain-text
+description, and limits already-available geometry/folder/ExtendedData rows and
+text length before adding them to the DOM. Its content, tip, close button,
+focus, responsive width, and overflow styles are all nested beneath
+`.gis-layer-feature-popup`; other Mapbox popups are not restyled. The feature
+header and bounded metadata footer remain fixed; only the optional plain-text
+description is a scroll viewport. That viewport contains overscroll and stops
+wheel/touch propagation so reaching its boundary neither scrolls the page nor
+changes the map zoom. When measured overflow exists, a persistent GIS-owned
+rail and position thumb remain visible independently of operating-system
+scrollbar settings. The rail does not intercept input: native wheel, touch, and
+keyboard scrolling remain intact. Short descriptions show no rail.
+
+Rapid ON/OFF, duplicate clicks, refresh, revocation, deletion,
+and style rebuilds are reconciled through a GIS-only `LazyOverlayManager`. The
+feature is not imported by the public viewer. The GIS panel follows the existing
+GPS panel's mobile breakpoint behavior; it does not create replacement Project
+or GPS controls.
 
 ---
 
@@ -527,11 +560,21 @@ See Section 4. Positioned below the project panel, auto-repositions on project
 panel resize (including country group collapse/expand) via a `ResizeObserver` on
 the project panel container.
 
+### 8.6 GIS Layers Panel
+
+**Module:** `components/gis_layers_panel.js`
+
+Private accessible layers appear alphabetically, default OFF, and show loading
+and safe failure feedback. It is an
+isolated sibling below GPS Tracks in the existing left-side panel stack and is
+hidden at the same established mobile breakpoint. Geometry-role children never
+become user-facing toggles.
+
 ---
 
-## 9. Project & GPS Track Colors
+## 9. Project, GPS Track & GIS Layer Colors
 
-**Model fields:** `Project.color`, `GPSTrack.color`, `LandmarkCollection.color`
+**Model fields:** `Project.color`, `GPSTrack.color`, `GISLayer.color`, `LandmarkCollection.color`
 (all `CharField(max_length=7)`) **Palette:** `ColorPalette` in
 `speleodb/common/enums.py` **JS module:** `map/colors.js`
 
@@ -580,10 +623,7 @@ The palette is exposed to Django templates via the
 `LandmarkCollectionSerializer.validate_color()` enforce hex format via
 `ColorPalette.is_valid_hex()` and normalize to lowercase.
 
-`GPSTrackSerializer` has a custom `update()` method that passes `update_fields`
-to `save()`, allowing metadata-only changes (like color) to skip S3 file
-re-hashing. `GPSTrack.save()` skips file hashing when `update_fields` is
-provided and doesn't include `file`.
+`GPSTrackSerializer` updates metadata without replacing the stored GeoJSON.
 
 ### Color picker UI
 

@@ -20,6 +20,9 @@ import { Utils } from './utils.js';
 import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
+import { GISLayersPanel } from './components/gis_layers_panel.js';
+import { GISLayerStore } from './gis_layer_store.js';
+import { getGISLayerRuntime, resetGISLayerRuntime } from './gis_layers_runtime.js';
 import { DepthLegend } from './components/depth_legend.js';
 import { API } from './api.js';
 import { getRuntimeContext } from './runtime_context.js';
@@ -68,6 +71,7 @@ export async function initPrivateMapViewer() {
     console.log('🚀 SpeleoDB Map Viewer Initializing...');
 
     // 1. Initialize State
+    resetGISLayerRuntime();
     State.resetLayerState();
 
     // 2. Initialize Map immediately so the Mapbox style and tiles download
@@ -85,6 +89,7 @@ export async function initPrivateMapViewer() {
         Config.loadProjects(),
         Config.loadNetworks(),
         Config.loadGPSTracks(),
+        GISLayerStore.load(),
     ]);
 
     // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
@@ -402,7 +407,7 @@ export async function initPrivateMapViewer() {
         return geojsonMetadataCache;
     }
 
-    function clearRenderedMapState() {
+    async function clearRenderedMapState() {
         State.effectiveProjectVisibility = new Map();
         State.allProjectLayers = new Map();
         State.allNetworkLayers = new Map();
@@ -418,6 +423,7 @@ export async function initPrivateMapViewer() {
         State.cylinderInstalls = new Map();
         State.allGPSTrackLayers = new Map();
         State.gpsTrackBounds = new Map();
+        await getGISLayerRuntime().markRegistrationsRemoved();
     }
 
     async function loadProjectAndStationLayers(geojsonMetadata, showProgress) {
@@ -530,10 +536,15 @@ export async function initPrivateMapViewer() {
             if (State.gpsTrackCache.has(trackId)) {
                 await Layers.addGPSTrackLayer(trackId, State.gpsTrackCache.get(trackId));
             } else {
-                await Layers.toggleGPSTrackVisibility(trackId, true, track.file);
+                await Layers.toggleGPSTrackVisibility(trackId, true);
             }
         }));
         GPSTracksPanel.refreshList();
+    }
+
+    async function loadVisibleGISLayers() {
+        await getGISLayerRuntime().restoreDesired();
+        GISLayersPanel.refreshList();
     }
 
     function fitInitialCamera() {
@@ -593,6 +604,7 @@ export async function initPrivateMapViewer() {
         if (initializePanels) {
             ProjectPanel.init();
             GPSTracksPanel.init();
+            GISLayersPanel.init();
         } else {
             ProjectPanel.refreshVisibilityState();
         }
@@ -612,6 +624,7 @@ export async function initPrivateMapViewer() {
             loadExplorationLeadLayers(),
             loadCylinderInstallLayers(),
             loadVisibleGPSTrackLayers(),
+            loadVisibleGISLayers(),
         ]);
         Layers.reorderLayers();
 
@@ -635,7 +648,7 @@ export async function initPrivateMapViewer() {
     window.addEventListener('speleo:map-source-changed', async (event) => {
         if (!MapSources.requiresDataReload(event)) return;
         try {
-            clearRenderedMapState();
+            await clearRenderedMapState();
             await loadMapData();
             Utils.showNotification('success', 'Map source updated');
         } catch (e) {
@@ -747,10 +760,26 @@ export async function initPrivateMapViewer() {
                 // Panel doesn't exist but we now have tracks - initialize it
                 GPSTracksPanel.init();
             }
+            GISLayersPanel.setupStackListener();
 
             Utils.showNotification('success', 'GPS tracks refreshed');
         } catch (e) {
             console.error('Error refreshing GPS tracks', e);
+        }
+    });
+
+    window.addEventListener('speleo:refresh-gis-layers', async () => {
+        try {
+            GISLayerStore.invalidate();
+            const layers = await GISLayerStore.load();
+            await getGISLayerRuntime().reconcile(layers);
+            if (document.getElementById('gis-layers-panel')) {
+                GISLayersPanel.refreshList();
+            } else if (layers.length > 0) {
+                GISLayersPanel.init();
+            }
+        } catch (error) {
+            console.error('Error refreshing GIS Layers', error);
         }
     });
 

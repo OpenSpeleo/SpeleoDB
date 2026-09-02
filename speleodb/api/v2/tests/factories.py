@@ -11,6 +11,7 @@ from datetime import date
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 import factory
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -425,18 +426,23 @@ class LandmarkFactory(DjangoModelFactory[Landmark]):
 
 
 class GPSTrackFactory(DjangoModelFactory[GPSTrack]):
-    """Factory for creating valid, uniquely hashed GPS Tracks."""
+    """Factory for GPS Tracks with the creator's initial ADMIN permission."""
 
     class Meta:
         model = GPSTrack
+        skip_postgeneration_save = True
 
     name: str = factory.Sequence(  # type: ignore[assignment]
         lambda n: f"GPS Track {n:03d}"
     )
-    user: User = factory.SubFactory(  # type: ignore[assignment]
-        UserFactory,
-        email=factory.Sequence(lambda n: f"gps-track-owner-{n}@test.local"),
-    )
+
+    class Params:
+        creator: User = factory.SubFactory(  # type: ignore[assignment]
+            UserFactory,
+            email=factory.Sequence(lambda n: f"gps-track-creator-{n}@test.local"),
+        )
+
+    created_by: str = factory.LazyAttribute(lambda obj: obj.creator.email)  # type: ignore[assignment]
     color = "#377eb8"
     is_active = True
     file: SimpleUploadedFile = factory.Sequence(  # type: ignore[assignment]
@@ -451,6 +457,17 @@ class GPSTrackFactory(DjangoModelFactory[GPSTrack]):
             content_type="application/geo+json",
         )
     )
+
+    @factory.post_generation
+    def creator_permission(self, create: bool, extracted: Any, **kwargs: Any) -> None:
+        if not create:
+            return
+        creator = User.objects.get(email=self.created_by)
+        GPSTrackUserPermission.objects.get_or_create(
+            user=creator,
+            gps_track=cast("GPSTrack", self),
+            defaults={"level": PermissionLevel.ADMIN},
+        )
 
 
 class GPSTrackUserPermissionFactory(DjangoModelFactory[GPSTrackUserPermission]):

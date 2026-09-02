@@ -248,6 +248,7 @@ describe('frontend_public gis_view_main', () => {
         await mapHandlers.load();
 
         expect(globalThis.fetch).toHaveBeenCalledWith(Urls['api:v2:gis-ogc:view-geojson']('public-token'));
+        expect(globalThis.fetch.mock.calls.some(([url]) => String(url).includes('/gis-layers'))).toBe(false);
         expect(configMock._projects).toEqual([
             { id: 'p1', name: 'Project One', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g1.geojson' },
             { id: 'p2', name: 'Project Two', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g2.geojson' }

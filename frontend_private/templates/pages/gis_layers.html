@@ -1,0 +1,191 @@
+{% extends "base_private.html" %}
+{% load vite_assets %}
+{% load project_colors %}
+
+{% block extra_css %}
+{% vite_preload 'controller-gis-layers' %}
+{% vite_styles 'style-template-frontend-private-templates-pages-gis-layers' %}
+{% endblock extra_css %}
+
+{% block content %}
+<main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
+        {% csrf_token %}
+
+        <div class="sm:flex sm:justify-between sm:items-center mb-8">
+            <div class="mb-4 sm:mb-0 sm:mr-8">
+                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">My GIS Layers</h1>
+                <p class="text-slate-400 mt-2">
+                    Upload private KML, KMZ, GeoJSON, TopoJSON, or zipped Shapefile vector data, collaborate with other users, and show layers on demand in the GIS Map Viewer.
+                </p>
+            </div>
+            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+                <button type="button" id="upload-layer-open" class="btn bg-red-600 hover:bg-red-700 text-white">
+                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span class="hidden xs:block ml-2">Upload GIS Layer</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="tracks-cards md:hidden">
+            <div id="gis-layers-cards-container" class="p-4">
+                <div class="text-center py-12 text-slate-400">
+                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <p>Loading GIS Layers...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tracks-table hidden md:block bg-slate-800 shadow-lg rounded-xs border border-slate-700">
+            <div class="overflow-x-auto">
+                <table class="table-auto w-full text-slate-300">
+                    <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
+                        <tr>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-12"><div class="font-semibold text-center">#</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3"><div class="font-semibold text-left">Layer Name</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-52"><div class="font-semibold text-center">Creator</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-40"><div class="font-semibold text-center">Access Level</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-52"><div class="font-semibold text-center">Source</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-48"><div class="font-semibold text-center">Creation Date</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 w-44"><div class="font-semibold text-center">Actions</div></th>
+                        </tr>
+                    </thead>
+                    <tbody id="gis-layers-table-body" class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
+                        <tr>
+                            <td colspan="7" class="px-2 py-8 text-center text-slate-400">
+                                <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                <p>Loading GIS Layers...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="edit-layer-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="edit-layer-modal-title">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg max-h-[90vh] overflow-y-auto w-full shadow-2xl border border-slate-600">
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 id="edit-layer-modal-title" class="text-xl font-semibold text-slate-100">Edit GIS Layer</h3>
+                <button type="button" class="btn-close-edit-modal text-slate-400 hover:text-slate-200" aria-label="Close edit dialog">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <form id="edit-layer-form">
+            <input type="hidden" id="edit-layer-id" value="">
+            <div class="px-6 py-4 flow-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-layer-name">Layer Name <span class="text-rose-500">*</span></label>
+                    <input type="text" id="edit-layer-name" required maxlength="255" class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-layer-description">Description</label>
+                    <textarea id="edit-layer-description" maxlength="2000" rows="3" class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Identity / Fallback Color</label>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div id="edit-layer-color-preview" class="w-8 h-8 rounded-sm border-2 border-slate-500 shrink-0"></div>
+                        <button type="button" id="edit-layer-color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color" aria-label="Choose a custom color">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 22a10 10 0 100-20 10 10 0 000 20zm0-4h.01M7.5 9h.01M12 6h.01M16.5 9h.01"></path></svg>
+                        </button>
+                        <input type="color" id="edit-layer-color-picker" class="sr-only">
+                        <input type="hidden" id="edit-layer-color-value" value="">
+                        <div class="flex items-stretch"><span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span><input type="text" id="edit-layer-color-hex" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-hidden" spellcheck="false"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        {% get_project_color_palette as edit_palette %}
+                        {% for color in edit_palette %}<button type="button" class="edit-layer-color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer" style="background-color: {{ color }}" data-color="{{ color }}" aria-label="Use color {{ color }}"></button>{% endfor %}
+                    </div>
+                    <p class="mt-2 text-sm text-slate-500">Imported styles are preserved; this color identifies the layer and fills missing styles.</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+                <button type="button" class="btn-close-edit-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="delete-layer-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="delete-layer-modal-title">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg max-h-[90vh] overflow-y-auto w-full shadow-2xl border border-slate-600">
+        <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+                <h3 id="delete-layer-modal-title" class="text-xl font-semibold text-slate-100">Delete GIS Layer</h3>
+                <button type="button" class="btn-close-delete-modal text-slate-400 hover:text-slate-200" aria-label="Close delete dialog">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="px-6 py-4">
+            <input type="hidden" id="delete-layer-id" value="">
+            <div class="flex items-start flow-x-4">
+                <div class="shrink-0"><svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                <div class="flex-1">
+                    <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this GIS Layer?</p>
+                    <div id="delete-layer-info" class="mb-3"></div>
+                    <p class="text-slate-400 text-sm">This will remove the layer from active use and revoke collaborator access.</p>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+            <button type="button" class="btn-close-delete-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">Cancel</button>
+            <button type="button" id="btn-confirm-delete" class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">Delete Layer</button>
+        </div>
+    </div>
+</div>
+
+<div id="upload-layer-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="upload-layer-modal-title">
+    <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b border-slate-600">
+            <div class="flex items-center gap-3"><svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg><h2 id="upload-layer-modal-title" class="text-xl font-semibold text-white">Upload GIS Layer</h2></div>
+            <button type="button" data-layer-upload-action="hide" class="text-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Close upload dialog"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        <form id="upload-layer-form" class="p-6 flow-y-4">
+            <div id="upload-layer-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400 cursor-pointer">
+                <input type="file" id="upload-layer-file-input" accept=".kml,.kmz,.geojson,.json,.topojson,.zip,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/geo+json,application/topo+json,application/zip" class="hidden">
+                <svg class="w-12 h-12 center-x text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <p class="text-slate-300 mb-2">Drag and drop KML, KMZ, GeoJSON, TopoJSON, or a zipped Shapefile here</p><p class="text-slate-500 text-sm mb-4">or</p>
+                <button type="button" data-layer-upload-action="browse" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">Browse Files</button>
+                <p class="text-slate-500 text-xs mt-4">Choose the extension that matches the file format.</p>
+            </div>
+            <div id="upload-layer-selected-file" class="hidden p-4 bg-srgb-slate-700-50 rounded-lg">
+                <div class="flex items-center justify-between"><div class="flex items-center gap-3"><svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><div><p id="upload-layer-file-name" class="text-white font-medium break-all"></p><p id="upload-layer-file-size" class="text-slate-400 text-sm"></p></div></div><button type="button" data-layer-upload-action="clear" class="text-slate-400 hover:text-red-400 transition-colors" aria-label="Clear selected file"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
+            </div>
+            <div><label class="block text-sm font-medium text-slate-300 mb-2" for="upload-layer-name">Layer Name <span class="text-rose-500">*</span></label><input id="upload-layer-name" maxlength="255" required class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"></div>
+            <div><label class="block text-sm font-medium text-slate-300 mb-2" for="upload-layer-description">Description</label><textarea id="upload-layer-description" maxlength="2000" rows="3" class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"></textarea></div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Identity / Fallback Color</label>
+                <div class="flex items-center gap-3 mb-2"><div id="upload-layer-color-preview" class="w-8 h-8 rounded-sm border-2 border-slate-500 shrink-0"></div><button type="button" id="upload-layer-color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color" aria-label="Choose a custom color"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 22a10 10 0 100-20 10 10 0 000 20zm0-4h.01M7.5 9h.01M12 6h.01M16.5 9h.01"></path></svg></button><input type="color" id="upload-layer-color-picker" class="sr-only"><input type="hidden" id="upload-layer-color-value" value="#377eb8"><div class="flex items-stretch"><span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span><input type="text" id="upload-layer-color-hex" value="377eb8" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-hidden" spellcheck="false"></div></div>
+                <div class="flex flex-wrap gap-2">{% get_project_color_palette as upload_palette %}{% for color in upload_palette %}<button type="button" class="upload-layer-color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer" style="background-color: {{ color }}" data-color="{{ color }}" aria-label="Use color {{ color }}"></button>{% endfor %}</div>
+            </div>
+            <div id="upload-layer-progress-wrap" class="hidden" aria-live="polite"><div class="flex justify-between text-xs text-slate-400 mb-1"><span id="upload-layer-progress-label">Uploading…</span><span id="upload-layer-progress-value">0%</span></div><div class="h-2 bg-slate-700 rounded-full overflow-hidden"><div id="upload-layer-progress" class="h-full bg-cyan-500 transition-[width]" style="width: 0%"></div></div></div>
+            <div id="upload-layer-error-message" class="hidden p-4 bg-srgb-red-500-20 border border-srgb-red-500-50 rounded-lg" role="alert"><p class="text-red-300 text-sm" id="upload-layer-error-text"></p></div>
+            <div class="pt-2 flex justify-end gap-3"><button type="button" data-layer-upload-action="hide" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button><button type="submit" id="upload-layer-button" disabled class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"><span id="upload-layer-spinner" class="hidden"><svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></span><span id="upload-layer-button-text">Upload Layer</span></button></div>
+        </form>
+    </div>
+</div>
+
+{% include 'snippets/modal_success.html' %}
+{% include 'snippets/modal_error.html' %}
+{% endblock content %}
+
+{% block extra_js %}<script src="{% url 'url_reverse.js' %}"></script>{% endblock extra_js %}
+{% block inline_extra_js %}
+<script type="application/json" data-speleodb-controller="gis-layers">
+{
+    "csrfToken": "{{ csrf_token|escapejs }}",
+    "listEndpoint": "{% url 'api:v2:gis-layers' %}"
+}
+</script>
+{% endblock inline_extra_js %}

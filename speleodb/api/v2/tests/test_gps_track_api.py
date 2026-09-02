@@ -2,8 +2,8 @@
 
 """Tests for `gps-tracks` (list) and `gps-track-detail` (GET/PUT/PATCH/DELETE).
 
-View lives in `speleodb/api/v2/views/gps_track.py`. GPS Tracks use direct-user
-permissions; the legacy `user` field records creator provenance.
+View lives in `speleodb/api/v2/views/gps_track.py`. GPS Tracks store creator
+email provenance and use direct-user permissions for access.
 """
 
 from __future__ import annotations
@@ -19,7 +19,9 @@ from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v2.tests.factories import TokenFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GPSTrack
+from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -53,9 +55,14 @@ def _geojson_file(name: str = "track.geojson") -> SimpleUploadedFile:
 
 
 def _create_gps_track(user: User, name: str = "My Track") -> GPSTrack:
-    track = GPSTrack(user=user, name=name, color="#377eb8")
+    track = GPSTrack(created_by=user.email, name=name, color="#377eb8")
     track.file.save(f"{uuid.uuid4()}.geojson", _geojson_file(), save=False)
     track.save()
+    GPSTrackUserPermission.objects.create(
+        user=user,
+        gps_track=track,
+        level=PermissionLevel.ADMIN,
+    )
     return track
 
 
@@ -67,7 +74,7 @@ class TestGPSTrackList(BaseAPITestCase):
         response = self.client.get(reverse("api:v2:gps-tracks"))
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_returns_only_own_tracks(self) -> None:
+    def test_returns_only_permitted_tracks(self) -> None:
         _ = _create_gps_track(self.user, name="Mine")
         other_user = UserFactory.create()
         _ = _create_gps_track(other_user, name="Theirs")
@@ -93,7 +100,7 @@ class TestGPSTrackList(BaseAPITestCase):
 class TestGPSTrackDetailRead(BaseAPITestCase):
     """GET /api/v2/gps_tracks/<id>/ requires a readable permission."""
 
-    def test_owner_can_read(self) -> None:
+    def test_admin_can_read(self) -> None:
         track = _create_gps_track(self.user, name="Readme")
         response = self.client.get(
             reverse("api:v2:gps-track-detail", kwargs={"id": track.id}),
@@ -111,7 +118,7 @@ class TestGPSTrackDetailRead(BaseAPITestCase):
             reverse("api:v2:gps-track-detail", kwargs={"id": track.id}),
             headers={"authorization": self.auth},
         )
-        # The ownership permission enforces 403/404.
+        # The permission-scoped queryset does not expose inaccessible tracks.
         assert response.status_code in (
             status.HTTP_403_FORBIDDEN,
             status.HTTP_404_NOT_FOUND,
@@ -129,7 +136,7 @@ class TestGPSTrackDetailRead(BaseAPITestCase):
 class TestGPSTrackDetailWrite(BaseAPITestCase):
     """PUT / PATCH / DELETE on detail endpoint."""
 
-    def test_owner_can_patch_name(self) -> None:
+    def test_admin_can_patch_name(self) -> None:
         track = _create_gps_track(self.user, name="Old")
         response = self.client.patch(
             reverse("api:v2:gps-track-detail", kwargs={"id": track.id}),
@@ -141,7 +148,7 @@ class TestGPSTrackDetailWrite(BaseAPITestCase):
         track.refresh_from_db()
         assert track.name == "New"
 
-    def test_owner_can_patch_color(self) -> None:
+    def test_admin_can_patch_color(self) -> None:
         track = _create_gps_track(self.user, name="With color")
         response = self.client.patch(
             reverse("api:v2:gps-track-detail", kwargs={"id": track.id}),
@@ -178,7 +185,7 @@ class TestGPSTrackDetailWrite(BaseAPITestCase):
             status.HTTP_404_NOT_FOUND,
         ), response.data
 
-    def test_owner_can_delete(self) -> None:
+    def test_admin_can_delete(self) -> None:
         track = _create_gps_track(self.user, name="Delete me")
         track_id = track.id
         response = self.client.delete(
@@ -215,7 +222,7 @@ class TestGPSTrackDetailWrite(BaseAPITestCase):
 
 @pytest.mark.django_db
 class TestGPSTrackPermissionMatrix(BaseAPITestCase):
-    """Sanity matrix: owner vs stranger for every method."""
+    """Sanity matrix: permitted user versus stranger for every method."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -224,7 +231,7 @@ class TestGPSTrackPermissionMatrix(BaseAPITestCase):
         self.stranger_token = TokenFactory.create(user=self.stranger)
         self.stranger_auth = "Token " + self.stranger_token.key
 
-    def test_owner_can_list_stranger_sees_empty(self) -> None:
+    def test_permitted_user_can_list_stranger_sees_empty(self) -> None:
         for auth in [self.auth, self.stranger_auth]:
             response = self.client.get(
                 reverse("api:v2:gps-tracks"), headers={"authorization": auth}

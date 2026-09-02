@@ -133,7 +133,7 @@ export function buildTrackListMarkup(tracks) {
                         <div class="font-medium text-slate-100">${escapeHtml(track.name)}</div>
                     </div>
                 </td>
-                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-300 text-sm">${escapeHtml(track.owner_email)}</div></td>
+                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-300 text-sm">${escapeHtml(track.created_by)}</div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center"><span class="inline-flex font-medium ${permissionPillClass(track.user_permission_level_label)} rounded-full px-2.5 py-0.5">${escapeHtml(permissionLabel)}</span></div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-400 text-sm">${escapeHtml(formatDate(track.creation_date))}</div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="flex items-center justify-center gap-2">${renderDesktopActions(track)}</div></td>
@@ -152,7 +152,7 @@ export function buildTrackListMarkup(tracks) {
                     <div class="track-card-actions">${renderMobileActions(track)}</div>
                 </div>
                 <div class="track-card-body">
-                    <div class="track-card-row"><span class="track-card-label">Owner</span><span class="track-card-value">${escapeHtml(track.owner_email)}</span></div>
+                    <div class="track-card-row"><span class="track-card-label">Creator</span><span class="track-card-value">${escapeHtml(track.created_by)}</span></div>
                     <div class="track-card-row"><span class="track-card-label">Access</span><span class="inline-flex font-medium ${permissionPillClass(track.user_permission_level_label)} rounded-full px-2.5 py-0.5">${escapeHtml(permissionLabel)}</span></div>
                     <div class="track-card-row"><span class="track-card-label">Created</span><span class="track-card-value">${escapeHtml(formatDate(track.creation_date))}</span></div>
                 </div>

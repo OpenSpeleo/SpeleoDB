@@ -18,7 +18,6 @@ from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 class GPSTrackSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[GPSTrack]):
     sanitized_fields: ClassVar[list[str]] = ["name"]
 
-    owner_email = serializers.EmailField(source="user.email", read_only=True)
     user_permission_level = serializers.IntegerField(read_only=True, required=False)
     user_permission_level_label = serializers.SerializerMethodField()
     can_write = serializers.SerializerMethodField()
@@ -30,7 +29,7 @@ class GPSTrackSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[GPSTr
             "id",
             "name",
             "color",
-            "owner_email",
+            "created_by",
             "user_permission_level",
             "user_permission_level_label",
             "can_write",
@@ -40,7 +39,7 @@ class GPSTrackSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[GPSTr
         ]
         read_only_fields = [
             "id",
-            "owner_email",
+            "created_by",
             "user_permission_level",
             "user_permission_level_label",
             "can_write",
@@ -86,7 +85,7 @@ class GPSTrackWithFileSerializer(GPSTrackSerializer):
     file = serializers.SerializerMethodField()
 
     class Meta(GPSTrackSerializer.Meta):
-        fields = [*GPSTrackSerializer.Meta.fields, "file", "sha256_hash"]
+        fields = [*GPSTrackSerializer.Meta.fields, "file"]
         read_only_fields = fields
 
     def get_file(self, obj: GPSTrack) -> str:

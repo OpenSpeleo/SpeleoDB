@@ -16,6 +16,7 @@ export const DEFAULTS = Object.freeze({
         FLY_TO_ZOOM: 18,
         FIT_BOUNDS_PADDING: 50,
         FIT_BOUNDS_MAX_ZOOM: 16,
+        ANTIMERIDIAN_WRAP_DEGREES: 360,
         SCALE_CONTROL_MAX_WIDTH: 200,
         RESIZE_DELAY_MS: 100,
         MISSING_TILE_SHA256_HASHES: Object.freeze([
@@ -37,6 +38,7 @@ export const DEFAULTS = Object.freeze({
         CYLINDER_INSTALL_LABEL: 16,
         EXPLORATION_LEAD_SYMBOL: 12,
         GPS_TRACK_LINE: 8,
+        GIS_LAYER_LABEL: 8,
     },
 
     SNAP: {
@@ -57,8 +59,38 @@ export const DEFAULTS = Object.freeze({
         NOTIFICATION_FADEOUT_MS: 300,
         OVERLAY_FADE_DELAY_MS: 500,
         TRACK_NAME_MAX_LENGTH: 30,
+        GIS_LAYER_NAME_MAX_LENGTH: 30,
         NOTE_PREVIEW_LENGTH: 200,
         COUNTRY_GROUP_TRANSITION_MS: 250,
+        OVERLAY_CACHE_MAX_ENTRIES: 8,
+        OVERLAY_SOURCE_LOAD_TIMEOUT_MS: 30000,
+        MAP_PANEL_EDGE_PX: 16,
+        MAP_PANEL_GAP_PX: 10,
+        MAP_PANEL_POSITION_DELAY_MS: 50,
+    },
+
+    GIS_LAYER_RENDER: {
+        FILL_OPACITY: 0.35,
+        OUTLINE_WIDTH: 1.5,
+        LINE_WIDTH: 2.5,
+        LINE_OPACITY: 0.95,
+        POINT_RADIUS_ZOOM_MIN: 5,
+        POINT_RADIUS_MIN: 3,
+        POINT_RADIUS_ZOOM_MAX: 14,
+        POINT_RADIUS_MAX: 6,
+        POINT_STROKE_COLOR: '#ffffff',
+        POINT_STROKE_WIDTH: 1,
+        LABEL_SIZE: 11,
+        LABEL_OFFSET: [0, 1.1],
+        LABEL_COLOR: '#f8fafc',
+        LABEL_HALO_COLOR: '#0f172a',
+        LABEL_HALO_WIDTH: 1.5,
+        POPUP_MAX_WIDTH_PX: 360,
+        POPUP_DESCRIPTION_MAX_CHARS: 1200,
+        POPUP_METADATA_MAX_ROWS: 4,
+        POPUP_METADATA_VALUE_MAX_CHARS: 180,
+        POPUP_OVERFLOW_TOLERANCE_PX: 1,
+        POPUP_SCROLL_THUMB_MIN_PX: 28,
     },
 
     UPLOAD: {
@@ -487,7 +519,6 @@ export const Config = {
                     name: t.name,
                     color: t.color,
                     file: t.file, // URL to download the GeoJSON
-                    sha256_hash: t.sha256_hash,
                     creation_date: t.creation_date,
                     modified_date: t.modified_date,
                 }));

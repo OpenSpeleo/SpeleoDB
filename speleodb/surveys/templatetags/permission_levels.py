@@ -45,5 +45,10 @@ def get_gps_track_permission_levels() -> list[PermissionLevel]:
 
 
 @register.simple_tag
+def get_gis_layer_permission_levels() -> list[PermissionLevel]:
+    return PermissionLevel.members_no_webviewer
+
+
+@register.simple_tag
 def get_team_permission_levels() -> list[PermissionLevel]:
     return PermissionLevel.members_no_admin

@@ -113,6 +113,13 @@ from django.urls import reverse
             "gps-track/{track_id}/permissions/",
             {"track_id": uuid.uuid4()},
         ),
+        # Private GIS Layer routes
+        ("private:gis_layers", "gis-layers/", None),
+        (
+            "private:gis_layer_user_permissions",
+            "gis-layer/{layer_id}/permissions/",
+            {"layer_id": uuid.uuid4()},
+        ),
     ],
 )
 def test_routes(name: str, path: str, kwargs: Any) -> None:

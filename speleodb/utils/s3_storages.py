@@ -32,6 +32,7 @@ _PRIVATE_CUSTOM_DOMAIN = (
     or not getattr(settings, "AWS_QUERYSTRING_AUTH", True)
     else False
 )
+_PRIVATE_VECTOR_OBJECT_PARAMETERS = {"CacheControl": "private, no-store"}
 
 
 class BrowserFacingS3Storage(S3Storage):
@@ -228,7 +229,7 @@ class GPSTrackStorage(BrowserFacingS3Storage):
 
     bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
-    object_parameters = BaseS3Storage.object_parameters
+    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
 
     location = "gps_tracks"
     default_acl = "private"
@@ -245,7 +246,7 @@ class GISLayerStorage(BrowserFacingS3Storage):
 
     bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
-    object_parameters = BaseS3Storage.object_parameters
+    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
 
     location = "gis_layers"
     default_acl = "private"

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -16,7 +15,6 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
-from django.db import IntegrityError
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -32,6 +30,7 @@ from speleodb.api.v2.landmark_access import user_has_collection_access
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import GPSTrack
+from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.surveys.models import Project
@@ -149,6 +148,7 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
 
         landmarks_created = 0
         gps_tracks_created = 0
+        stored_gps_track_files: list[tuple[Any, str]] = []
 
         try:
             with file.open(mode="r") as f:
@@ -214,25 +214,33 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                         content_type="application/geo+json",
                     )
 
-                    # Skip if GPSTrack already exists
-                    with (
-                        contextlib.suppress(IntegrityError, ValidationError),
-                        transaction.atomic(),
-                    ):
-                        _, created = GPSTrack.objects.get_or_create(
-                            file=geojson_f,
-                            user=user,
-                            defaults={
-                                "name": (
-                                    track.name
-                                    or f"Imported on {timezone.now().isoformat()}"
-                                ),
-                            },
+                    with transaction.atomic():
+                        gps_track = GPSTrack(
+                            created_by=user.email,
+                            name=(
+                                track.name
+                                or f"Imported on {timezone.now().isoformat()}"
+                            ),
                         )
-                        if created:
-                            gps_tracks_created += 1
+                        gps_track.file.save("track.geojson", geojson_f, save=False)
+                        if gps_track.file.name:
+                            stored_gps_track_files.append(
+                                (gps_track.file.storage, gps_track.file.name)
+                            )
+                        gps_track.save()
+                        GPSTrackUserPermission.objects.create(
+                            gps_track=gps_track,
+                            user=user,
+                            level=PermissionLevel.ADMIN,
+                        )
+                        gps_tracks_created += 1
 
         except Exception as e:
+            for storage, name in reversed(stored_gps_track_files):
+                try:
+                    storage.delete(name)
+                except Exception:
+                    logger.exception("Failed to clean an unpublished GPS Track file.")
             if settings.DEBUG:
                 raise
 

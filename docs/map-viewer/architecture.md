@@ -49,6 +49,7 @@ flowchart TD
         DEPTH_LEGEND["depth_legend.js"]
         PROJECT_PANEL["project_panel.js<br/>(country grouping)"]
         GPS_PANEL["gps_tracks_panel.js"]
+        GIS_PANEL["gis_layers_panel.js<br/>(private only)"]
         UPLOAD["upload.js"]
     end
 
@@ -82,7 +83,7 @@ flowchart TD
     %% Private entrypoint imports
     MAIN --> CONFIG & STATE & API & UTILS
     MAIN --> CORE & LAYERS & INTERACTIONS & GEOMETRY
-    MAIN --> CONTEXT_MENU & PROJECT_PANEL & GPS_PANEL & DEPTH_LEGEND
+    MAIN --> CONTEXT_MENU & PROJECT_PANEL & GPS_PANEL & GIS_PANEL & DEPTH_LEGEND
     MAIN --> ST_MANAGER & ST_UI & ST_DETAILS & ST_TAGS & ST_CYLINDERS
     MAIN --> SS_MANAGER & SS_UI
     MAIN --> LM_MANAGER & LM_UI
@@ -123,6 +124,7 @@ flowchart TD
 | Exploration leads (CRUD)                      |   Yes   |                               No                               |
 | Cylinder installs                             |   Yes   |                               No                               |
 | GPS tracks panel                              |   Yes   |                               No                               |
+| Private GIS Layers panel                      |   Yes   |                               No                               |
 | Station tags & colors                         |   Yes   |                               No                               |
 | Station logs, resources, sensors, experiments |   Yes   |                               No                               |
 | Context menu (right-click)                    |   Yes   |                               No                               |
@@ -158,7 +160,7 @@ DOMContentLoaded
 │     └─ Map Source comes from localStorage or DEFAULTS.MAP.DEFAULT_SOURCE_ID
 │
 ├─ 3. Kick off in parallel (NOT awaited here):
-│     ├─ configReady = Promise.all([loadProjects, loadNetworks, loadGPSTracks])
+│     ├─ configReady = Promise.all([loadProjects, loadNetworks, loadGPSTracks, loadGISLayers])
 │     └─ metadataReady = loadGeoJSONMetadata()   prefetch all-projects GeoJSON metadata
 │
 ├─ 4. Interactions.init(map, handlers)      Wire click, hover, drag, context-menu
@@ -178,6 +180,7 @@ DOMContentLoaded
     ├─ ProjectPanel.init()                  Render project list in sidebar
     │     └─ _applyInitialCountryVisibility()  Enforce country gates on load
     ├─ GPSTracksPanel.init()                Render GPS tracks panel (all OFF by default)
+    ├─ GISLayersPanel.init()                Render isolated GIS panel (all OFF by default)
     ├─ StationTags.init()                   Load user tags + colors
     │
     ├─ Promise.all([                        All independent layer phases concurrently:
@@ -186,7 +189,8 @@ DOMContentLoaded
     │     loadLandmarkLayers(),             ├─ landmark collections + landmarks
     │     loadExplorationLeadLayers(),      ├─ exploration leads
     │     loadCylinderInstallLayers(),      ├─ safety cylinders
-    │     loadVisibleGPSTrackLayers(),      └─ visible GPS tracks
+    │     loadVisibleGPSTrackLayers(),      ├─ visible GPS tracks
+    │     loadVisibleGISLayers(),           └─ desired GIS Layers
     │   ])
     ├─ Layers.reorderLayers()               Single authoritative z-order pass
     │
@@ -301,6 +305,7 @@ All Mapbox sources and layers follow consistent naming:
 | Exploration Leads   | `exploration-leads-source`            | `exploration-leads-layer`                                                                                                                                                 |
 | Cylinder Installs   | `cylinder-installs-source`            | `cylinder-installs-layer`, `cylinder-installs-labels`                                                                                                                     |
 | GPS Tracks          | `gps-track-source-{trackId}`          | `gps-track-line-{id}`                                                                                                                                                     |
+| GIS Layers          | `gis-layer-source-{layerId}`          | `gis-layer-{layerId}-{fill|outline|line|point|label}`                                                                                                                     |
 
 ### Z-Ordering Strategy
 
@@ -309,7 +314,7 @@ All Mapbox sources and layers follow consistent naming:
 1. Selected base tiles from the Map Source registry
 2. Project survey lines (`project-layer-*`)
 3. Project labels + entry points
-4. GPS track lines (`gps-track-line-*`)
+4. GPS track lines and GIS vector fills/outlines/lines/points/labels
 5. Subsurface station circles and icons
 6. Subsurface station labels
 7. Surface station symbols and labels
@@ -425,6 +430,23 @@ modules. All are dispatched on `window` unless noted.
 | `color-mode-changed`        | `map/core.js`                                | `depth_legend.js`     |
 | `depth-domain-updated`      | `map/layers.js`                              | `depth_legend.js`     |
 | `gps-track-loading-changed` | `map/layers.js`                              | `gps_tracks_panel.js` |
+
+### Private GIS Layer overlays
+
+GIS Layers are a private-entrypoint feature. `main.js` loads accessible layer
+metadata alongside projects, networks, and GPS Tracks; the public GIS
+entrypoint neither imports the GIS Layer client/runtime nor calls its API.
+
+`LazyOverlayManager` owns GIS Layer visibility and cancellation; GPS Tracks keep
+their existing cache and visibility behavior. Each GIS Layer refreshes its
+authenticated detail response on activation and uses that signed GeoJSON `file`
+URL as one Mapbox source, with child fill, outline, line, point, and label
+layers. The browser does not download or preprocess the GeoJSON first.
+
+The GIS panel is an isolated sibling positioned below the existing GPS panel in
+the left-side stack. It copies the GPS card, toggle, loading, and minimize
+interaction conventions without owning or duplicating Project/GPS controls. It
+is hidden at the same established mobile breakpoint as those panels.
 
 ---
 

@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.serializers import GPSTrackSerializer
@@ -24,6 +25,7 @@ from speleodb.utils.gpx import gpx_download_response
 from speleodb.utils.response import ErrorResponse
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django.http import StreamingHttpResponse
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -36,6 +38,9 @@ class GPSTrackExportGPXAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     permission_classes = [IsReadOnly & SDB_ReadAccess]
     serializer_class = GPSTrackSerializer
     lookup_field = "id"
+
+    def get_queryset(self) -> QuerySet[GPSTrack]:
+        return accessible_gps_tracks_queryset(user=self.get_user())
 
     @extend_schema(
         operation_id="v2_gps_track_export_gpx",
