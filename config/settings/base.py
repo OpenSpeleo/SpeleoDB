@@ -340,6 +340,13 @@ AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")  # pyright: ignore[reportArgumentType]
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN")
+AWS_S3_BROWSER_ENDPOINT_URL: str | None = (
+    env.str(
+        "AWS_S3_BROWSER_ENDPOINT_URL",
+        default="",
+    )
+    or None
+)
 
 
 # DJANGO CORS: https://github.com/adamchainz/django-cors-headers#setup

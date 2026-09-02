@@ -33,12 +33,28 @@ def test_internal_setup_urls_do_not_replace_browser_addresses(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GITLAB_SETUP_URL", "http://gitlab:9080")
-    monkeypatch.setenv(
-        "AWS_S3_CUSTOM_DOMAIN",
-        "localhost:9000/speleodb-user-artifacts-dev",
-    )
+    monkeypatch.setenv("AWS_S3_BROWSER_ENDPOINT_URL", "http://localhost:9000")
+    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
 
     assert resolve_gitlab_setup_url("localhost:9080") == "http://gitlab:9080"
+    assert (
+        resolve_s3_custom_domain(
+            "http://rustfs:9000",
+            "speleodb-user-artifacts-dev",
+        )
+        == "localhost:9000/speleodb-user-artifacts-dev"
+    )
+
+
+def test_internal_s3_custom_domain_is_repaired(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AWS_S3_BROWSER_ENDPOINT_URL", "http://localhost:9000")
+    monkeypatch.setenv(
+        "AWS_S3_CUSTOM_DOMAIN",
+        "rustfs:9000/speleodb-user-artifacts-dev",
+    )
+
     assert (
         resolve_s3_custom_domain(
             "http://rustfs:9000",
@@ -392,11 +408,13 @@ def test_setup_provisions_isolated_dev_and_test_resources(
         "CUSTOM_DEV": "preserved",
         **expected_dev_gitlab_values,
         "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-dev",
+        "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
         "AWS_S3_CUSTOM_DOMAIN": ("localhost:9000/speleodb-user-artifacts-dev"),
     }
     assert read_env_file(test_env_file) == {
         "DATABASE_URL": "sqlite:///test.db",
         "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-test",
+        "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
         "GITLAB_GROUP_ID": "42",
         "GITLAB_GROUP_NAME": "speleodb-test",
         "GITLAB_HOST_URL": "localhost:9080",

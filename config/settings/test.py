@@ -73,15 +73,27 @@ s3_endpoint_url = env.str("AWS_S3_TEST_ENDPOINT_URL", default="") or env.str(
 )
 if s3_endpoint_url:
     AWS_S3_ENDPOINT_URL: str = s3_endpoint_url  # pyright: ignore[reportAssignmentType]
+    AWS_S3_BROWSER_ENDPOINT_URL = (
+        env.str(
+            "AWS_S3_TEST_BROWSER_ENDPOINT_URL",
+            default="",
+        )
+        or env.str("AWS_S3_BROWSER_ENDPOINT_URL", default="")
+        or None
+    )
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False
     AWS_S3_ADDRESSING_STYLE = "path"
     # Keep test presigned URLs deterministic across S3-compatible backends even
     # though current boto3/django-storages releases default to Signature V4.
     AWS_S3_SIGNATURE_VERSION = "s3v4"
-    AWS_S3_CUSTOM_DOMAIN = (
-        f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
+    custom_domain_endpoint = AWS_S3_BROWSER_ENDPOINT_URL or AWS_S3_ENDPOINT_URL
+    custom_domain_host = (
+        custom_domain_endpoint.removeprefix("http://")
+        .removeprefix("https://")
+        .rstrip("/")
     )
+    AWS_S3_CUSTOM_DOMAIN = f"{custom_domain_host}/{AWS_STORAGE_BUCKET_NAME}"
     AWS_QUERYSTRING_AUTH = True
 
 # PASSWORDS

@@ -34,7 +34,8 @@ GITLAB_HTTP_PROTOCOL = "http"
 
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------
-if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None:  # type: ignore[arg-type]
+AWS_S3_BROWSER_ENDPOINT_URL = env.str("AWS_S3_BROWSER_ENDPOINT_URL", default="") or None
+if s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=""):
     AWS_S3_ENDPOINT_URL: str = s3_endpoint_url  # pyright: ignore[reportAssignmentType]
     AWS_S3_USE_SSL = False
     AWS_S3_VERIFY = False
@@ -48,6 +49,9 @@ if (s3_endpoint_url := env.str("AWS_S3_ENDPOINT_URL", default=None)) is not None
             f"{AWS_S3_ENDPOINT_URL.replace('http://', '')}/{AWS_STORAGE_BUCKET_NAME}"
         ),
     )
+    if not AWS_S3_BROWSER_ENDPOINT_URL:
+        browser_s3_host = AWS_S3_CUSTOM_DOMAIN.split("/", maxsplit=1)[0]
+        AWS_S3_BROWSER_ENDPOINT_URL = f"http://{browser_s3_host}"
     AWS_QUERYSTRING_AUTH = True
 
 

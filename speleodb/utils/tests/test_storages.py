@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 from django.test import TestCase
+from django.test import override_settings
 
 from speleodb.utils.s3_storages import AttachmentStorage
 from speleodb.utils.s3_storages import GeoJSONStorage
@@ -109,3 +110,15 @@ class S3PresignedURLTests(TestCase):
 
         assert settings.AWS_S3_SIGNATURE_VERSION == "s3v4"
         assert query["X-Amz-Algorithm"] == ["AWS4-HMAC-SHA256"]
+
+    @override_settings(AWS_S3_BROWSER_ENDPOINT_URL="http://localhost:9000")
+    def test_presigned_url_uses_browser_endpoint(self) -> None:
+        storage = GeoJSONStorage(
+            endpoint_url="http://rustfs:9000",
+            custom_domain=False,
+        )
+
+        url = storage.url("project/commit/test.geojson")
+
+        assert urlparse(url).netloc == "localhost:9000"
+        assert "X-Amz-Signature" in parse_qs(urlparse(url).query)

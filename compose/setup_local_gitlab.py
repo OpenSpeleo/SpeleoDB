@@ -259,10 +259,17 @@ def resolve_gitlab_setup_url(gitlab_host: str) -> str:
 
 def resolve_s3_custom_domain(s3_endpoint: str, bucket_name: str) -> str:
     configured_domain = os.environ.get("AWS_S3_CUSTOM_DOMAIN")
-    if configured_domain:
-        return configured_domain
-    endpoint_domain = (
+    internal_endpoint_domain = (
         s3_endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
+    )
+    configured_host = (
+        configured_domain.split("/", maxsplit=1)[0] if configured_domain else ""
+    )
+    if configured_domain and configured_host != internal_endpoint_domain:
+        return configured_domain
+    browser_endpoint = os.environ.get("AWS_S3_BROWSER_ENDPOINT_URL", s3_endpoint)
+    endpoint_domain = (
+        browser_endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
     )
     return f"{endpoint_domain}/{bucket_name}"
 
@@ -287,6 +294,7 @@ def main() -> None:
     bucket_name = _required_environment("LOCAL_AWS_STORAGE_BUCKET_NAME")
     test_bucket_name = _required_environment("LOCAL_AWS_TEST_STORAGE_BUCKET_NAME")
     s3_endpoint = _required_environment("AWS_S3_ENDPOINT_URL")
+    browser_s3_endpoint = os.environ.get("AWS_S3_BROWSER_ENDPOINT_URL", s3_endpoint)
     base_url = resolve_gitlab_setup_url(gitlab_host)
     s3_custom_domain = resolve_s3_custom_domain(s3_endpoint, bucket_name)
     test_s3_custom_domain = resolve_s3_custom_domain(s3_endpoint, test_bucket_name)
@@ -318,6 +326,7 @@ def main() -> None:
             "GITLAB_HOST_URL": gitlab_host,
             "GITLAB_TOKEN": result.group_token,
             "AWS_STORAGE_BUCKET_NAME": bucket_name,
+            "AWS_S3_BROWSER_ENDPOINT_URL": browser_s3_endpoint,
             "AWS_S3_CUSTOM_DOMAIN": s3_custom_domain,
         },
     )
@@ -329,6 +338,7 @@ def main() -> None:
             "GITLAB_HOST_URL": gitlab_host,
             "GITLAB_TOKEN": test_result.group_token,
             "AWS_STORAGE_BUCKET_NAME": test_bucket_name,
+            "AWS_S3_BROWSER_ENDPOINT_URL": browser_s3_endpoint,
             "AWS_S3_CUSTOM_DOMAIN": test_s3_custom_domain,
             "GIT_CONFIG_COUNT": "1",
             "GIT_CONFIG_KEY_0": "safe.directory",

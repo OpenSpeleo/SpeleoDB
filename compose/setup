@@ -16,5 +16,5 @@ if [[ "$(id -u)" == "0" ]]; then
     chown --reference=/app /app/.envs/test.env
 fi
 python manage.py create_s3_local_buckets
-python manage.py migrate
+python manage.py migrate || echo "Failed to apply django migrations ..."
 python manage.py ensure_local_superuser

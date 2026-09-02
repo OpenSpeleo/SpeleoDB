@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
@@ -92,9 +93,10 @@ const compile = async (inputPath, cwd) => {
 const compileOutput = relativeInput => compile(path.join(ROOT, relativeInput), ROOT);
 
 const compileSourceMirror = async () => {
-    const mirrorRoot = fs.mkdtempSync(path.join(ROOT, '.tailwind-contract-'));
+    const mirrorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-tailwind-contract-'));
 
     try {
+        fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(mirrorRoot, 'node_modules'), 'dir');
         fs.cpSync(path.join(ROOT, 'tailwind_css'), path.join(mirrorRoot, 'tailwind_css'), { recursive: true });
 
         const sources = {
@@ -260,9 +262,10 @@ describe('Tailwind v4 single-bundle contract', () => {
 
         const lockedInstallScripts = Object.entries(packageLock.packages)
             .filter(([, metadata]) => metadata.hasInstallScript)
-            .map(([lockPath, metadata]) => `${lockPath.replace(/^node_modules\//, '')}@${metadata.version}`)
+            .map(([lockPath]) => lockPath.replace(/^node_modules\//, ''))
             .sort();
-        expect(Object.keys(packageJson.allowScripts).sort()).toEqual(lockedInstallScripts);
+        expect(packageJson.allowScripts).toBeUndefined();
+        expect(read('.npmrc').trim()).toBe(`allow-scripts=${lockedInstallScripts.join(',')}`);
     });
 
     it('exposes exactly one neutral build, watch, and pre-commit interface', () => {

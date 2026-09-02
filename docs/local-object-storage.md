@@ -111,8 +111,9 @@ The standalone Compose stack exposes the host-networked Django process on Linux.
 The root devcontainer instead publishes port 8000 on host loopback from its
 workspace container and runs the webserver in that shared network namespace,
 making `http://localhost:8000` available in both VS Code and Zed. Internal
-Django requests use the `rustfs` Compose hostname while generated browser-facing
-object URLs retain `localhost:9000`. Its setup service also uses Compose DNS for
+Django requests use the `rustfs` Compose hostname while browser-facing URLs are
+signed separately with `AWS_S3_BROWSER_ENDPOINT_URL` and retain
+`localhost:9000`. Its setup service also uses Compose DNS for
 provisioning while persisting browser-facing GitLab and RustFS addresses. The
 container-local database health check is `/api/health/details/`.
 

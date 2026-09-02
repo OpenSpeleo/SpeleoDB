@@ -5,9 +5,11 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from django.conf import settings
 from storages.backends.s3 import S3Storage
+from storages.utils import clean_name
 
 # ---------------------------------------------------------------------------
 # CloudFront signed-URL support
@@ -32,7 +34,71 @@ _PRIVATE_CUSTOM_DOMAIN = (
 )
 
 
-class BaseS3Storage(S3Storage):
+class BrowserFacingS3Storage(S3Storage):
+    """Use a separate endpoint only when signing URLs for a local browser."""
+
+    bucket_name: str
+    client_config: Any
+    custom_domain: str | bool | None
+    querystring_auth: bool
+    querystring_expire: int
+    region_name: str | None
+    use_ssl: bool
+    verify: Any
+
+    def url(
+        self,
+        name: str | None,
+        parameters: dict[str, Any] | None = None,
+        expire: int | None = None,
+        http_method: str | None = None,
+    ) -> str:
+        browser_endpoint = getattr(settings, "AWS_S3_BROWSER_ENDPOINT_URL", None)
+        if (
+            name is None
+            or not browser_endpoint
+            or self.custom_domain
+            or not self.querystring_auth
+        ):
+            return cast(
+                "str",
+                super().url(  # type: ignore[no-untyped-call]
+                    name,
+                    parameters=parameters,
+                    expire=expire,
+                    http_method=http_method,
+                ),
+            )
+
+        normalized_name = self._normalize_name(  # type: ignore[no-untyped-call]
+            clean_name(name)  # type: ignore[no-untyped-call]
+        )
+        params = parameters.copy() if parameters else {}
+        params["Bucket"] = self.bucket_name
+        params["Key"] = normalized_name
+        if expire is None:
+            expire = self.querystring_expire
+
+        client = self._create_session().client(  # type: ignore[no-untyped-call]
+            "s3",
+            region_name=self.region_name,
+            use_ssl=self.use_ssl,
+            endpoint_url=browser_endpoint,
+            config=self.client_config,
+            verify=self.verify,
+        )
+        return cast(
+            "str",
+            client.generate_presigned_url(
+                "get_object",
+                Params=params,
+                ExpiresIn=expire,
+                HttpMethod=http_method,
+            ),
+        )
+
+
+class BaseS3Storage(BrowserFacingS3Storage):
     """Base class for S3 storage configurations."""
 
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
@@ -55,13 +121,13 @@ class BaseS3Storage(S3Storage):
 
         def url(
             self,
-            name: Any,
-            parameters: Any = None,
-            expire: Any = None,
-            http_method: Any = None,
-        ) -> Any:
+            name: str | None,
+            parameters: dict[str, Any] | None = None,
+            expire: int | None = None,
+            http_method: str | None = None,
+        ) -> str:
             # Let the parent class build the URL
-            url = super().url(  # type: ignore[no-untyped-call]
+            url = super().url(
                 name, parameters=parameters, expire=expire, http_method=http_method
             )
 
@@ -96,7 +162,7 @@ class PersonPhotoStorage(BaseS3Storage):
     querystring_auth = False  # No signed URLs - relies on bucket policy
 
 
-class AttachmentStorage(S3Storage):
+class AttachmentStorage(BrowserFacingS3Storage):
     """Private S3 storage for Station Resources uploads.
 
     Files are stored under the "attachments/" prefix; the model's
@@ -118,7 +184,7 @@ class AttachmentStorage(S3Storage):
     custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
-class BaseGeoJSONStorage(S3Storage):
+class BaseGeoJSONStorage(BrowserFacingS3Storage):
     """Private S3 storage for GeoJSON uploads."""
 
     # NOTE: This class can **not** inherit from BaseS3Storage because it uses a
@@ -137,7 +203,7 @@ class BaseGeoJSONStorage(S3Storage):
     custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
-class GeoJSONStorage(S3Storage):
+class GeoJSONStorage(BrowserFacingS3Storage):
     """
     Files are stored under the "geojson/" prefix; the model's upload_to
     callable should place them into "project.id/commit.sha/" subfolder.
@@ -154,7 +220,7 @@ class GeoJSONStorage(S3Storage):
     custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
-class GPSTrackStorage(S3Storage):
+class GPSTrackStorage(BrowserFacingS3Storage):
     """
     Files are stored under the "gps_tracks/" prefix; the model's upload_to
     callable should place them directly into the folder.
@@ -165,6 +231,23 @@ class GPSTrackStorage(S3Storage):
     object_parameters = BaseS3Storage.object_parameters
 
     location = "gps_tracks"
+    default_acl = "private"
+
+    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
+    custom_domain = _PRIVATE_CUSTOM_DOMAIN
+
+
+class GISLayerStorage(BrowserFacingS3Storage):
+    """
+    Files are stored under the "gis_layers/" prefix; the model's upload_to
+    callable should place them directly into the folder.
+    """
+
+    bucket_name = BaseS3Storage.bucket_name
+    file_overwrite = BaseS3Storage.file_overwrite
+    object_parameters = BaseS3Storage.object_parameters
+
+    location = "gis_layers"
     default_acl = "private"
 
     # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
