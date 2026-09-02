@@ -11,6 +11,7 @@ Test Django settings for SpeleoDB project.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -22,7 +23,10 @@ def load_env_files_from_pyproject() -> None:
         if env_path.exists():
             load_dotenv(env_path, override=True)
         else:
-            print(f"Warning: env file not found: `{env_path.resolve()}`")  # noqa: T201
+            print(  # noqa: T201
+                f"Warning: env file not found: `{env_path.resolve()}`",
+                file=sys.stderr,
+            )
 
 
 # Ensures the .env files are loaded before anything else

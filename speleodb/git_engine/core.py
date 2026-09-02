@@ -566,16 +566,22 @@ class GitRepo(Repo):
 
     @classmethod
     def clone_from(cls, *args: Any, **kwargs: Any) -> Self:
-        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS):
-            repo = super().clone_from(*args, **kwargs)
-            break
-        else:
+        try:
+            repo = retry_with_backoff(
+                super().clone_from,
+                *args,
+                retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
+                exc_types=(GitCommandError,),
+                base_delay=1.0,
+                **kwargs,
+            )
+        except GitCommandError:
             try:
                 url = kwargs["url"]
             except KeyError:
                 url = args[0]
 
-            raise GitBaseError(f"Impossible to clone repository: {url=}")
+            raise GitBaseError(f"Impossible to clone repository: {url=}") from None
 
         return cls.from_repo(repo)
 

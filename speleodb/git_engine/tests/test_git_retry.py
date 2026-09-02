@@ -190,3 +190,52 @@ class CommitAndPushRetryTests(TestCase):
                 author_name="Test",
                 author_email="test@test.com",
             )
+
+
+class CloneRetryTests(TestCase):
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_clone_retries_transient_git_command_errors(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        cloned_repo = MagicMock(spec=git.Repo)
+        expected_repo = MagicMock(spec=GitRepo)
+        transient_error = GitCommandError("clone", 128, stderr="not ready")
+
+        with (
+            patch.object(
+                git.Repo,
+                "clone_from",
+                side_effect=[transient_error, cloned_repo],
+            ) as mock_clone,
+            patch.object(GitRepo, "from_repo", return_value=expected_repo),
+        ):
+            result = GitRepo.clone_from(
+                url="https://gitlab.example/test/project.git",
+                to_path=pathlib.Path("project"),
+            )
+
+        assert result is expected_repo
+        assert mock_clone.call_count == 2  # noqa: PLR2004
+        mock_sleep.assert_called_once_with(1.0)
+
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_clone_raises_git_base_error_after_retries(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        persistent_error = GitCommandError("clone", 128, stderr="not found")
+
+        with (
+            patch.object(
+                git.Repo,
+                "clone_from",
+                side_effect=persistent_error,
+            ) as mock_clone,
+            pytest.raises(GitBaseError, match="Impossible to clone repository"),
+        ):
+            GitRepo.clone_from(
+                url="https://gitlab.example/test/project.git",
+                to_path=pathlib.Path("project"),
+            )
+
+        assert mock_clone.call_count == 5  # noqa: PLR2004
+        assert mock_sleep.call_count == 4  # noqa: PLR2004
