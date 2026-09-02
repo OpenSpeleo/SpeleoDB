@@ -243,7 +243,7 @@ initialization and not mutated during the session (except
 | ------------ | ------- | -------------------------------------------------------------------------------- |
 | `_projects`  | `Array` | Project list with `id`, `name`, `permissions`, `country`, `color`, `geojson_url` |
 | `_networks`  | `Array` | Surface network list with `id`, `name`, `permission_level`                       |
-| `_gpsTracks` | `Array` | Readable GPS track metadata with `id`, `name`, `color`, and signed `file` URL     |
+| `_gpsTracks` | `Array` | Readable GPS track metadata with `id`, `name`, `color`, and signed `file` URL    |
 
 Key methods: `hasProjectAccess(id, action)`, `hasNetworkAccess(id, action)`,
 `hasScopedAccess(scopeType, scopeId, action)`, `getStationAccess(station)`,
@@ -305,7 +305,7 @@ All Mapbox sources and layers follow consistent naming:
 | Exploration Leads   | `exploration-leads-source`            | `exploration-leads-layer`                                                                                                                                                 |
 | Cylinder Installs   | `cylinder-installs-source`            | `cylinder-installs-layer`, `cylinder-installs-labels`                                                                                                                     |
 | GPS Tracks          | `gps-track-source-{trackId}`          | `gps-track-line-{id}`                                                                                                                                                     |
-| GIS Layers          | `gis-layer-source-{layerId}`          | `gis-layer-{layerId}-{fill|outline|line|point|label}`                                                                                                                     |
+| GIS Layers          | `gis-layer-source-{layerId}`          | `gis-layer-{layerId}-{fill                                                                                                                                                | outline | line | point}` |
 
 ### Z-Ordering Strategy
 
@@ -365,11 +365,11 @@ matching configured raster tile responses when those requests pass through page
 `fetch`. Tile validation is implemented in browser JavaScript, not in Python.
 
 Local token ownership follows the same private-root configuration path as the
-other developer credentials: the repository-root `.env` owns
-`MAPBOX_API_TOKEN`, and `local.yml` explicitly interpolates it into the Django
-service environment. Do not duplicate a placeholder in `.envs/.django`, because
-OS environment values take precedence over Django's root `.env` loading and
-would silently replace the real token in both private and public map contexts.
+other developer credentials: the repository-root `.env` owns `MAPBOX_API_TOKEN`,
+and `local.yml` explicitly interpolates it into the Django service environment.
+Do not duplicate a placeholder in `.envs/.django`, because OS environment values
+take precedence over Django's root `.env` loading and would silently replace the
+real token in both private and public map contexts.
 
 The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.js`. That SVG is
 inserted with `innerHTML` only as trusted static markup so the user can replace
@@ -430,23 +430,36 @@ modules. All are dispatched on `window` unless noted.
 | `color-mode-changed`        | `map/core.js`                                | `depth_legend.js`     |
 | `depth-domain-updated`      | `map/layers.js`                              | `depth_legend.js`     |
 | `gps-track-loading-changed` | `map/layers.js`                              | `gps_tracks_panel.js` |
+| `gis-layer-loading-changed` | `map/layers.js`                              | `gis_layers_panel.js` |
 
 ### Private GIS Layer overlays
 
 GIS Layers are a private-entrypoint feature. `main.js` loads accessible layer
-metadata alongside projects, networks, and GPS Tracks; the public GIS
-entrypoint neither imports the GIS Layer client/runtime nor calls its API.
+metadata alongside projects, networks, and GPS Tracks; the public GIS entrypoint
+neither loads GIS Layer metadata nor calls its API.
 
-`LazyOverlayManager` owns GIS Layer visibility and cancellation; GPS Tracks keep
-their existing cache and visibility behavior. Each GIS Layer refreshes its
-authenticated detail response on activation and uses that signed GeoJSON `file`
-URL as one Mapbox source, with child fill, outline, line, point, and label
-layers. The browser does not download or preprocess the GeoJSON first.
+GIS Layers deliberately use the established GPS Track architecture: API calls
+live in `api.js`, metadata in `Config`, session state in `State`, and rendering
+in `map/layers.js`. First activation refreshes the authenticated detail
+response, downloads the current signed GeoJSON, and passes that same object
+unchanged to Mapbox. The one parse needed for display also provides the bounds
+used by the existing `fitBounds` behavior. Polygon fill/outline, line, and point
+are the only rendering roles.
+
+Polygon fill and point clicks open the established GIS feature card. Popup
+clicks use the Map Viewer's single global interaction dispatcher. The active
+fill and point layer IDs live in `State.gisLayerClickableLayerIds`; one rendered
+feature query selects Mapbox's topmost result across every GIS Layer. Replacing
+a source updates that ID set, while a destructive style rebuild clears it, so
+there are no per-layer handlers to accumulate. The popup owns presentation
+only; it does not introduce a second data-loading lifecycle.
 
 The GIS panel is an isolated sibling positioned below the existing GPS panel in
 the left-side stack. It copies the GPS card, toggle, loading, and minimize
 interaction conventions without owning or duplicating Project/GPS controls. It
-is hidden at the same established mobile breakpoint as those panels.
+is hidden at the same established mobile breakpoint as those panels. Clicking
+the card shows the layer if necessary and calls only `fitBounds`; the toggle
+changes visibility without moving the camera.
 
 ---
 

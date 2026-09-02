@@ -134,6 +134,18 @@ export const Interactions = {
                 return;
             }
 
+            // Mapbox returns rendered features in visual stacking order. Query
+            // all clickable GIS roles together so an overlap produces exactly
+            // one popup for the topmost feature, regardless of source ownership.
+            const gisLayerIds = [...State.gisLayerClickableLayerIds];
+            if (gisLayerIds.length > 0) {
+                const [gisFeature] = map.queryRenderedFeatures(e.point, { layers: gisLayerIds });
+                if (gisFeature) {
+                    this.handlers.onGISFeatureClick?.(gisFeature, e.lngLat);
+                    return;
+                }
+            }
+
             // Map Click (background)
             if (this.handlers.onMapClick) {
                 this.handlers.onMapClick(e.lngLat.toArray());

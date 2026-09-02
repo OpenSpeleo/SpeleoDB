@@ -34,6 +34,14 @@ export const State = {
     allGPSTrackLayers: new Map(), // Track all layer IDs for each GPS track
     gpsTrackBounds: new Map(), // Track bounds for each GPS track for fly-to
 
+    // GIS Layers state (session-only, default OFF)
+    gisLayerStates: new Map(),
+    gisLayerCache: new Map(),
+    gisLayerLoadingStates: new Map(),
+    allGISLayerLayers: new Map(),
+    gisLayerBounds: new Map(),
+    gisLayerClickableLayerIds: new Set(),
+
     // Resets layer and map data state. Does NOT reset map instance,
     // userTags, tagColors, currentStationForTagging, or currentProjectId.
     resetLayerState: function () {
@@ -59,5 +67,12 @@ export const State = {
         this.gpsTrackLoadingStates = new Map();
         this.allGPSTrackLayers = new Map();
         this.gpsTrackBounds = new Map();
+        // GIS Layers
+        this.gisLayerStates = new Map();
+        this.gisLayerCache = new Map();
+        this.gisLayerLoadingStates = new Map();
+        this.allGISLayerLayers = new Map();
+        this.gisLayerBounds = new Map();
+        this.gisLayerClickableLayerIds = new Set();
     }
 };

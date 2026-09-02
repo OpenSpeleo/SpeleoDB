@@ -24,6 +24,197 @@ const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
     'exploration-leads-layer'
 ]);
 
+function boundedGISPopupText(value, maxLength) {
+    const text = String(value ?? '').trim();
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function structuredGISPopupValue(value) {
+    if (value && typeof value === 'object') return value;
+    if (typeof value !== 'string') return null;
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function readableGISPopupLabel(value) {
+    return String(value).replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function gisPopupMetadataRows(feature) {
+    const properties = feature?.properties || {};
+    const rows = [];
+    const geometryType = feature?.geometry?.type;
+    if (geometryType) rows.push(['Geometry', readableGISPopupLabel(geometryType)]);
+
+    const folderPath = structuredGISPopupValue(properties.folder_path);
+    if (Array.isArray(folderPath) && folderPath.length > 0) {
+        rows.push(['Folder', folderPath.map(String).join(' / ')]);
+    }
+
+    const extendedData = structuredGISPopupValue(properties.extended_data);
+    if (extendedData && !Array.isArray(extendedData)) {
+        for (const [key, value] of Object.entries(extendedData)) {
+            if (value === null || value === undefined || typeof value === 'object') continue;
+            rows.push([readableGISPopupLabel(key), value]);
+        }
+    }
+    return rows.slice(0, DEFAULTS.GIS_LAYER_RENDER.POPUP_METADATA_MAX_ROWS);
+}
+
+export function bindGISPopupScrollIsolation(container) {
+    const stopPropagation = event => event.stopPropagation();
+    container.addEventListener('wheel', stopPropagation, { passive: true });
+    container.addEventListener('touchmove', stopPropagation, { passive: true });
+    return () => {
+        container.removeEventListener('wheel', stopPropagation);
+        container.removeEventListener('touchmove', stopPropagation);
+    };
+}
+
+export function updateGISPopupOverflowAffordance(card) {
+    const viewport = card.querySelector('.gis-layer-feature-card__scroll');
+    if (!viewport) return false;
+    const tolerance = DEFAULTS.GIS_LAYER_RENDER.POPUP_OVERFLOW_TOLERANCE_PX;
+    const maxScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    const isScrollable = maxScrollTop > tolerance;
+    card.classList.toggle('is-scrollable', isScrollable);
+
+    const rail = card.querySelector('.gis-layer-feature-card__scroll-rail');
+    const thumb = rail?.querySelector('.gis-layer-feature-card__scroll-thumb');
+    if (!isScrollable) {
+        viewport.removeAttribute('tabindex');
+        viewport.removeAttribute('aria-label');
+        thumb?.style.removeProperty('height');
+        thumb?.style.removeProperty('transform');
+        return false;
+    }
+
+    viewport.tabIndex = 0;
+    viewport.setAttribute('aria-label', 'Scrollable feature description');
+    if (rail && thumb && rail.clientHeight > 0) {
+        const render = DEFAULTS.GIS_LAYER_RENDER;
+        const proportionalHeight = rail.clientHeight * (viewport.clientHeight / viewport.scrollHeight);
+        const thumbHeight = Math.min(
+            rail.clientHeight,
+            Math.max(render.POPUP_SCROLL_THUMB_MIN_PX, proportionalHeight),
+        );
+        const availableTravel = Math.max(0, rail.clientHeight - thumbHeight);
+        const scrollProgress = Math.min(1, Math.max(0, viewport.scrollTop / maxScrollTop));
+        thumb.style.height = `${thumbHeight}px`;
+        thumb.style.transform = `translateY(${availableTravel * scrollProgress}px)`;
+    } else {
+        thumb?.style.removeProperty('height');
+        thumb?.style.removeProperty('transform');
+    }
+    return isScrollable;
+}
+
+export function bindGISPopupScrollBehavior(card) {
+    const viewport = card.querySelector('.gis-layer-feature-card__scroll');
+    if (!viewport) return () => {};
+
+    const stopIsolation = bindGISPopupScrollIsolation(viewport);
+    const update = () => updateGISPopupOverflowAffordance(card);
+    const frame = window.requestAnimationFrame(update);
+    viewport.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+
+    const resizeObserver = globalThis.ResizeObserver ? new ResizeObserver(update) : null;
+    resizeObserver?.observe(viewport);
+    if (viewport.firstElementChild) resizeObserver?.observe(viewport.firstElementChild);
+
+    return () => {
+        window.cancelAnimationFrame(frame);
+        viewport.removeEventListener('scroll', update);
+        window.removeEventListener('resize', update);
+        resizeObserver?.disconnect();
+        stopIsolation();
+    };
+}
+
+export function buildGISFeaturePopup(feature) {
+    const properties = feature?.properties || {};
+    const card = document.createElement('article');
+    card.className = 'gis-layer-feature-card';
+    card.setAttribute('aria-label', 'GIS feature details');
+
+    const header = document.createElement('header');
+    header.className = 'gis-layer-feature-card__header';
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'gis-layer-feature-card__eyebrow';
+    eyebrow.textContent = 'GIS feature';
+    const title = document.createElement('h3');
+    title.className = 'gis-layer-feature-card__title';
+    title.textContent = boundedGISPopupText(
+        properties.name || properties.title || properties.render_label || 'Untitled feature',
+        DEFAULTS.GIS_LAYER_RENDER.POPUP_METADATA_VALUE_MAX_CHARS,
+    );
+    header.append(eyebrow, title);
+    card.appendChild(header);
+
+    const description = boundedGISPopupText(
+        properties.description,
+        DEFAULTS.GIS_LAYER_RENDER.POPUP_DESCRIPTION_MAX_CHARS,
+    );
+    if (description) {
+        const body = document.createElement('div');
+        body.className = 'gis-layer-feature-card__body';
+        const viewport = document.createElement('div');
+        viewport.className = 'gis-layer-feature-card__scroll';
+        const descriptionElement = document.createElement('p');
+        descriptionElement.className = 'gis-layer-feature-card__description';
+        descriptionElement.textContent = description;
+        viewport.appendChild(descriptionElement);
+
+        const rail = document.createElement('span');
+        rail.className = 'gis-layer-feature-card__scroll-rail';
+        rail.setAttribute('aria-hidden', 'true');
+        const thumb = document.createElement('span');
+        thumb.className = 'gis-layer-feature-card__scroll-thumb';
+        rail.appendChild(thumb);
+        body.append(viewport, rail);
+        card.appendChild(body);
+    }
+
+    const rows = gisPopupMetadataRows(feature);
+    if (rows.length > 0) {
+        const metadata = document.createElement('dl');
+        metadata.className = 'gis-layer-feature-card__metadata';
+        for (const [label, value] of rows) {
+            const term = document.createElement('dt');
+            term.textContent = boundedGISPopupText(label, DEFAULTS.GIS_LAYER_RENDER.POPUP_METADATA_VALUE_MAX_CHARS);
+            const detail = document.createElement('dd');
+            detail.textContent = boundedGISPopupText(value, DEFAULTS.GIS_LAYER_RENDER.POPUP_METADATA_VALUE_MAX_CHARS);
+            metadata.append(term, detail);
+        }
+        card.appendChild(metadata);
+    }
+    return card;
+}
+
+function openGISFeaturePopup(map, feature, lngLat) {
+    if (!globalThis.mapboxgl?.Popup) return;
+    const content = buildGISFeaturePopup(feature);
+    const cleanup = bindGISPopupScrollBehavior(content);
+    const popup = new mapboxgl.Popup({
+        className: 'gis-layer-feature-popup',
+        closeButton: true,
+        closeOnClick: true,
+        focusAfterOpen: true,
+        maxWidth: `${DEFAULTS.GIS_LAYER_RENDER.POPUP_MAX_WIDTH_PX}px`,
+    });
+    popup.once?.('close', cleanup);
+    popup
+        .setLngLat(lngLat)
+        .setDOMContent(content)
+        .addTo(map);
+}
+
 /**
  * Remove map layers first, then their source to avoid dependent-layer issues.
  */
@@ -377,6 +568,7 @@ export const Layers = {
                 try {
                     console.log(`🔄 Downloading GPS track GeoJSON: ${trackId}`);
                     const track = await API.getGPSTrackDetails(trackId);
+                    if (!track?.file) throw new Error('The GPS Track has no display file.');
                     const response = await fetch(track.file);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const geojsonData = await response.json();
@@ -478,6 +670,160 @@ export const Layers = {
         console.log(`📍 Added GPS track layers for ${trackId}`);
 
         // Reorder layers to ensure proper z-ordering
+        this.reorderLayers();
+    },
+
+    // GIS Layers follow the same session-only lazy loading pattern as GPS Tracks.
+    isGISLayerVisible: function (layerId) {
+        return State.gisLayerStates.get(String(layerId)) === true;
+    },
+
+    isGISLayerLoading: function (layerId) {
+        return State.gisLayerLoadingStates.get(String(layerId)) === true;
+    },
+
+    setGISLayerLoading: function (layerId, isLoading) {
+        const id = String(layerId);
+        State.gisLayerLoadingStates.set(id, isLoading);
+        window.dispatchEvent(new CustomEvent('speleo:gis-layer-loading-changed', {
+            detail: { layerId: id, isLoading }
+        }));
+    },
+
+    toggleGISLayerVisibility: async function (layerId, isVisible) {
+        const id = String(layerId);
+        State.gisLayerStates.set(id, isVisible);
+
+        if (!isVisible) {
+            this.showGISLayerLayers(id, false);
+            return true;
+        }
+
+        if (State.gisLayerCache.has(id)) {
+            if ((State.allGISLayerLayers.get(id) || []).length === 0) {
+                await this.addGISLayer(id, State.gisLayerCache.get(id));
+            } else {
+                this.showGISLayerLayers(id, true);
+            }
+            return true;
+        }
+
+        this.setGISLayerLoading(id, true);
+        try {
+            // Detail is intentionally refreshed here so an expired signed URL
+            // from the list response is never used for the file request.
+            const layer = await API.getGISLayerDetails(id);
+            if (!layer?.file) throw new Error('The GIS Layer has no display file.');
+            const response = await fetch(layer.file);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const geojsonData = await response.json();
+            State.gisLayerCache.set(id, geojsonData);
+            if (!this.isGISLayerVisible(id)) return false;
+            await this.addGISLayer(id, geojsonData);
+            return true;
+        } catch (error) {
+            console.error(`Failed to display GIS Layer ${id}:`, error);
+            State.gisLayerStates.set(id, false);
+            return false;
+        } finally {
+            this.setGISLayerLoading(id, false);
+        }
+    },
+
+    showGISLayerLayers: function (layerId, isVisible) {
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+        const layerIds = State.allGISLayerLayers.get(String(layerId)) || [];
+        layerIds.forEach(id => {
+            if (map.getLayer(id)) {
+                map.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
+            }
+        });
+    },
+
+    openGISFeaturePopup: function (feature, lngLat) {
+        const map = State.map;
+        if (!map) return;
+        openGISFeaturePopup(map, feature, lngLat);
+    },
+
+    addGISLayer: async function (layerId, geojsonData) {
+        const map = State.map;
+        if (!map) return;
+
+        const id = String(layerId);
+        const sourceId = `gis-layer-source-${id}`;
+        const fillLayerId = `gis-layer-${id}-fill`;
+        const outlineLayerId = `gis-layer-${id}-outline`;
+        const lineLayerId = `gis-layer-${id}-line`;
+        const pointLayerId = `gis-layer-${id}-point`;
+        const layerIds = [fillLayerId, outlineLayerId, lineLayerId, pointLayerId];
+        State.gisLayerClickableLayerIds.delete(fillLayerId);
+        State.gisLayerClickableLayerIds.delete(pointLayerId);
+        removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
+
+        const color = Config.getGISLayerById(id)?.color || DEFAULTS.COLORS.FALLBACK;
+        const render = DEFAULTS.GIS_LAYER_RENDER;
+        map.addSource(sourceId, {
+            type: 'geojson',
+            data: geojsonData,
+            generateId: true
+        });
+        map.addLayer({
+            id: fillLayerId,
+            type: 'fill',
+            source: sourceId,
+            filter: ['==', '$type', 'Polygon'],
+            layout: { visibility: 'visible' },
+            paint: { 'fill-color': color, 'fill-opacity': render.FILL_OPACITY }
+        });
+        map.addLayer({
+            id: outlineLayerId,
+            type: 'line',
+            source: sourceId,
+            filter: ['==', '$type', 'Polygon'],
+            layout: { visibility: 'visible' },
+            paint: {
+                'line-color': color,
+                'line-width': render.OUTLINE_WIDTH,
+                'line-opacity': render.LINE_OPACITY
+            }
+        });
+        map.addLayer({
+            id: lineLayerId,
+            type: 'line',
+            source: sourceId,
+            filter: ['==', '$type', 'LineString'],
+            layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+                'line-color': color,
+                'line-width': render.LINE_WIDTH,
+                'line-opacity': render.LINE_OPACITY
+            }
+        });
+        map.addLayer({
+            id: pointLayerId,
+            type: 'circle',
+            source: sourceId,
+            filter: ['==', '$type', 'Point'],
+            layout: { visibility: 'visible' },
+            paint: {
+                'circle-color': color,
+                'circle-radius': [
+                    'interpolate', ['linear'], ['zoom'],
+                    render.POINT_RADIUS_ZOOM_MIN, render.POINT_RADIUS_MIN,
+                    render.POINT_RADIUS_ZOOM_MAX, render.POINT_RADIUS_MAX
+                ],
+                'circle-stroke-color': render.POINT_STROKE_COLOR,
+                'circle-stroke-width': render.POINT_STROKE_WIDTH
+            }
+        });
+
+        State.allGISLayerLayers.set(id, layerIds);
+        State.gisLayerClickableLayerIds.add(fillLayerId);
+        State.gisLayerClickableLayerIds.add(pointLayerId);
+        const bounds = computeGeoJSONBounds(geojsonData);
+        if (!bounds.isEmpty()) State.gisLayerBounds.set(id, bounds);
         this.reorderLayers();
     },
 

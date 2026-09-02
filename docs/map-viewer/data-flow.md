@@ -24,9 +24,9 @@ Django Backend
   │   Response: { success, data: [{ id, name, color, file, ... }] }
   │   Stored in: Config._gpsTracks
   │
-  ├─ GET /api/v2/gis-layers/                  → GISLayerStore.load()
+  ├─ GET /api/v2/gis-layers/                  → Config.loadGISLayers()
   │   Response: readable metadata with one signed renderable `file` URL
-  │   Stored in: GISLayerStore until private-viewer refresh/reconciliation
+  │   Stored in: Config._gisLayers
   │
   └─ GET /api/v2/all-projects-geojson/        → API.getAllProjectsGeoJSON()
       Response: { success, data: [{ id, geojson_file, ... }] }
@@ -392,34 +392,34 @@ User toggles track ON
 - **Persistence**: Session-only. No localStorage. All tracks reset to OFF on
   page reload.
 
-### GIS Layers — Lazy Overlay Lifecycle
+### GIS Layers — GPS Track Pattern
 
 GIS Layer files are not loaded at initialization. Layers default to OFF and use
-a GIS-only `LazyOverlayManager`.
+the same direct State/Layers flow as GPS Tracks.
 
 ```
-User toggles logical overlay ON
+User toggles GIS Layer ON
   │
-  ├─ Record desired visibility
+  ├─ State.gisLayerCache.has(layerId)?
   │
-  ├─ NO current cached registration:
-  │   ├─ refresh the authenticated detail response for a current signed URL
-  │   ├─ register one GeoJSON source
-  │   ├─ after every await, reject stale desired state
-  │   └─ retain only within the hidden-overlay LRU budget
+  ├─ NO (first load):
+  │   ├─ refresh authenticated detail metadata for a current signed URL
+  │   ├─ fetch and parse the GeoJSON once
+  │   ├─ cache that exact object and compute its bounds
+  │   └─ add fill, outline, line, and point Mapbox layers
   │
-  └─ Current cached registration:
-      └─ show every child layer for the logical overlay
+  └─ YES (cached):
+      └─ show the existing Mapbox layers
 ```
 
-- **GIS delivery**: list and detail metadata carry the signed renderable
-  GeoJSON URL for every source format. Activation refreshes detail metadata,
-  then gives that URL directly to Mapbox without client-side parsing.
-- **Invalidation**: targeted by metadata modification time and map-style rebuild.
+- **GIS delivery**: activation refreshes detail metadata before fetching the
+  signed GeoJSON. No client transformation or feature interpretation occurs.
+- **Invalidation**: a page reload starts a new session; a style rebuild re-adds
+  visible layers from the cache.
 - **Persistence**: session-only. No localStorage. All GIS Layers reset to OFF on
   page reload.
-- **Race behavior**: OFF aborts pending work immediately; a late response cannot
-  re-show an overlay after OFF, revocation, deletion, or metadata refresh.
+- **Camera**: a card-body click calls only `fitBounds`; toggle clicks never move
+  the camera.
 
 ### Snap Points — Computed Once Per Project
 

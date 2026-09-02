@@ -275,6 +275,13 @@ export const API = {
     getGPSTrackDetails: (trackId) =>
         apiRequest(Urls['api:v2:gps-track-detail'](trackId)),
 
+    // GIS Layers (private viewer only)
+    getGISLayers: () =>
+        apiRequest(Urls['api:v2:gis-layers']()),
+
+    getGISLayerDetails: (layerId) =>
+        apiRequest(Urls['api:v2:gis-layer-detail'](layerId)),
+
     // GPX Import
     importGPX: (formData) =>
         apiRequest(Urls['api:v2:gpx-import'](), 'PUT', formData, true),

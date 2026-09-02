@@ -62,6 +62,15 @@ describe('State', () => {
             expect(State.allGPSTrackLayers).toBeInstanceOf(Map);
             expect(State.gpsTrackBounds).toBeInstanceOf(Map);
         });
+
+        it('has Map instances for GIS Layer state', () => {
+            expect(State.gisLayerStates).toBeInstanceOf(Map);
+            expect(State.gisLayerCache).toBeInstanceOf(Map);
+            expect(State.gisLayerLoadingStates).toBeInstanceOf(Map);
+            expect(State.allGISLayerLayers).toBeInstanceOf(Map);
+            expect(State.gisLayerBounds).toBeInstanceOf(Map);
+            expect(State.gisLayerClickableLayerIds).toBeInstanceOf(Set);
+        });
     });
 
     describe('resetLayerState()', () => {
@@ -119,6 +128,24 @@ describe('State', () => {
             expect(State.gpsTrackLoadingStates.size).toBe(0);
             expect(State.allGPSTrackLayers.size).toBe(0);
             expect(State.gpsTrackBounds.size).toBe(0);
+        });
+
+        it('resets all GIS Layer Maps', () => {
+            State.gisLayerStates.set('g1', true);
+            State.gisLayerCache.set('g1', {});
+            State.gisLayerLoadingStates.set('g1', true);
+            State.allGISLayerLayers.set('g1', ['layer-1']);
+            State.gisLayerBounds.set('g1', [0, 0, 1, 1]);
+            State.gisLayerClickableLayerIds.add('gis-layer-g1-fill');
+
+            State.resetLayerState();
+
+            expect(State.gisLayerStates.size).toBe(0);
+            expect(State.gisLayerCache.size).toBe(0);
+            expect(State.gisLayerLoadingStates.size).toBe(0);
+            expect(State.allGISLayerLayers.size).toBe(0);
+            expect(State.gisLayerBounds.size).toBe(0);
+            expect(State.gisLayerClickableLayerIds.size).toBe(0);
         });
 
         it('does not reset map, tags, currentStationForTagging, or currentProjectId', () => {

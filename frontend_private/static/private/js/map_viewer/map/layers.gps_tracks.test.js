@@ -51,4 +51,16 @@ describe('GPS Track lazy loading', () => {
         expect(fetch).toHaveBeenCalledWith('/fresh-signed-url');
         expect(State.gpsTrackCache.has('track-1')).toBe(true);
     });
+
+    it('never fetches an undefined URL when detail metadata has no file', async () => {
+        mocks.getGPSTrackDetails.mockResolvedValue({ id: 'track-1' });
+        globalThis.fetch = vi.fn();
+
+        await Layers.toggleGPSTrackVisibility('track-1', true);
+
+        expect(fetch).not.toHaveBeenCalled();
+        expect(State.gpsTrackLayerStates.get('track-1')).toBe(false);
+        expect(State.gpsTrackLoadingStates.get('track-1')).toBe(false);
+        expect(State.gpsTrackCache.has('track-1')).toBe(false);
+    });
 });

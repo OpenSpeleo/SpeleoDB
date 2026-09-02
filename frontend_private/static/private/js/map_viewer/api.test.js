@@ -56,6 +56,18 @@ describe('API module', () => {
     // ------------------------------------------------------------------ //
 
     describe('request configuration', () => {
+        it('uses the private GIS Layer list and detail routes', async () => {
+            globalThis.fetch = mockFetchResponse({});
+
+            await API.getGISLayers();
+            await API.getGISLayerDetails('layer-1');
+
+            expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+                '/api/api:v2:gis-layers',
+                '/api/api:v2:gis-layer-detail/layer-1',
+            ]);
+        });
+
         it('includes CSRF token and Content-Type headers for JSON requests', async () => {
             globalThis.fetch = mockFetchResponse({});
 

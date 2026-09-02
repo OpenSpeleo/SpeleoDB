@@ -6,6 +6,7 @@ vi.mock('./api.js', () => ({
         getAllProjects: vi.fn(),
         getAllSurfaceNetworks: vi.fn(),
         getGPSTracks: vi.fn(),
+        getGISLayers: vi.fn(),
     },
 }));
 
@@ -13,20 +14,24 @@ describe('Config loading and data methods', () => {
     let originalProjects;
     let originalNetworks;
     let originalGpsTracks;
+    let originalGISLayers;
 
     beforeEach(() => {
         originalProjects = Config._projects;
         originalNetworks = Config._networks;
         originalGpsTracks = Config._gpsTracks;
+        originalGISLayers = Config._gisLayers;
         Config._projects = null;
         Config._networks = null;
         Config._gpsTracks = null;
+        Config._gisLayers = null;
     });
 
     afterEach(() => {
         Config._projects = originalProjects;
         Config._networks = originalNetworks;
         Config._gpsTracks = originalGpsTracks;
+        Config._gisLayers = originalGISLayers;
         vi.restoreAllMocks();
         vi.clearAllMocks();
     });
@@ -98,6 +103,35 @@ describe('Config loading and data methods', () => {
         it('returns array of GPS track IDs', () => {
             Config._gpsTracks = [{ id: 't-1' }, { id: 't-2' }];
             expect(Config.gpsTrackIds).toEqual(['t-1', 't-2']);
+        });
+    });
+
+    describe('GIS Layer data', () => {
+        it('loads accessible layers once and normalizes IDs', async () => {
+            API.getGISLayers.mockResolvedValue([{
+                id: 42,
+                name: 'Protected areas',
+                color: '#6366f1',
+                file: '/stale-list-url',
+            }]);
+
+            const first = await Config.loadGISLayers();
+            const second = await Config.loadGISLayers();
+
+            expect(API.getGISLayers).toHaveBeenCalledOnce();
+            expect(first).toBe(second);
+            expect(Config.gisLayerIds).toEqual(['42']);
+            expect(Config.getGISLayerById(42)).toEqual(expect.objectContaining({
+                id: '42',
+                name: 'Protected areas',
+            }));
+        });
+
+        it('uses an empty collection for invalid or failed responses', async () => {
+            API.getGISLayers.mockRejectedValue(new Error('network'));
+
+            await expect(Config.loadGISLayers()).resolves.toEqual([]);
+            expect(Config.getGISLayerById('missing')).toBeNull();
         });
     });
 

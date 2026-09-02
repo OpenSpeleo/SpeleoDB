@@ -62,6 +62,11 @@ class GPSTrackSpecificAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     serializer_class = GPSTrackSerializer
     lookup_field = "id"
 
+    def get_serializer_class(self) -> type[GPSTrackSerializer]:
+        if self.request.method == "GET":
+            return GPSTrackWithFileSerializer
+        return GPSTrackSerializer
+
     def get_queryset(self) -> QuerySet[GPSTrack]:
         return accessible_gps_tracks_queryset(user=self.get_user())
 

@@ -2,10 +2,12 @@ const configMock = {
     loadProjects: vi.fn(),
     loadNetworks: vi.fn(),
     loadGPSTracks: vi.fn(),
+    loadGISLayers: vi.fn(),
     filterProjectsByGeoJSON: vi.fn(),
     projects: [],
     networks: [],
     gpsTracks: [],
+    gisLayers: [],
 };
 
 const stateMock = {
@@ -26,6 +28,11 @@ const stateMock = {
     gpsTrackBounds: new Map(),
     gpsTrackCache: new Map(),
     gpsTrackLayerStates: new Map(),
+    allGISLayerLayers: new Map(),
+    gisLayerBounds: new Map(),
+    gisLayerCache: new Map(),
+    gisLayerStates: new Map(),
+    gisLayerClickableLayerIds: new Set(),
 };
 
 const mapMock = {
@@ -52,19 +59,11 @@ const layersMock = {
     isGPSTrackVisible: vi.fn(),
     toggleGPSTrackVisibility: vi.fn(),
     addGPSTrackLayer: vi.fn(),
+    isGISLayerVisible: vi.fn(),
+    toggleGISLayerVisibility: vi.fn(),
+    openGISFeaturePopup: vi.fn(),
     toggleLandmarkVisibility: vi.fn(),
     refreshCylinderInstallsLayer: vi.fn(),
-};
-
-const gisLayerStoreMock = {
-    load: vi.fn(),
-    invalidate: vi.fn(),
-};
-
-const gisLayerRuntimeMock = {
-    markRegistrationsRemoved: vi.fn(),
-    restoreDesired: vi.fn(),
-    reconcile: vi.fn(),
 };
 
 const utilsMock = {
@@ -115,11 +114,6 @@ vi.mock('./components/gps_tracks_panel.js', () => ({
 vi.mock('./components/gis_layers_panel.js', () => ({
     GISLayersPanel: { init: vi.fn(), refreshList: vi.fn() }
 }));
-vi.mock('./gis_layer_store.js', () => ({ GISLayerStore: gisLayerStoreMock }));
-vi.mock('./gis_layers_runtime.js', () => ({
-    getGISLayerRuntime: () => gisLayerRuntimeMock,
-    resetGISLayerRuntime: vi.fn(),
-}));
 vi.mock('./components/depth_legend.js', () => ({ DepthLegend: { init: vi.fn() } }));
 vi.mock('./api.js', () => ({ API: apiMock }));
 
@@ -149,8 +143,7 @@ describe('private map viewer entrypoint', () => {
         configMock.loadProjects.mockResolvedValue(undefined);
         configMock.loadNetworks.mockResolvedValue(undefined);
         configMock.loadGPSTracks.mockResolvedValue(undefined);
-        gisLayerStoreMock.load.mockResolvedValue([]);
-        gisLayerRuntimeMock.restoreDesired.mockResolvedValue(undefined);
+        configMock.loadGISLayers.mockResolvedValue(undefined);
         mapCoreMock.init.mockReturnValue(mapMock);
         mapSourcesMock.requiresDataReload.mockReturnValue(false);
         apiMock.getAllProjectsGeoJSON.mockResolvedValue([]);
@@ -171,6 +164,11 @@ describe('private map viewer entrypoint', () => {
         stateMock.gpsTrackBounds = new Map();
         stateMock.gpsTrackCache = new Map();
         stateMock.gpsTrackLayerStates = new Map();
+        stateMock.allGISLayerLayers = new Map();
+        stateMock.gisLayerBounds = new Map();
+        stateMock.gisLayerCache = new Map();
+        stateMock.gisLayerStates = new Map();
+        stateMock.gisLayerClickableLayerIds = new Set();
 
         document.body.innerHTML = '<div id="map"></div>';
         window.MAPVIEWER_CONTEXT = { mapboxToken: 'mapbox-token', icons: {} };
@@ -215,6 +213,19 @@ describe('private map viewer entrypoint', () => {
         expect(stateMock.allProjectLayers).toEqual(new Map([['p1', ['project-layer-p1']]]));
     });
 
+    it('clears clickable GIS layer registration before a destructive style rebuild', async () => {
+        mapSourcesMock.requiresDataReload.mockReturnValue(true);
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        stateMock.gisLayerClickableLayerIds.add('gis-layer-layer-1-point');
+
+        window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
+            detail: { sourceId: 'mapbox-satellite', reloadRequired: true }
+        }));
+
+        await vi.waitFor(() => expect(stateMock.gisLayerClickableLayerIds.size).toBe(0));
+    });
+
     it('initializes the map without waiting for startup config to resolve', async () => {
         // Keep projects pending forever: a sequential `await` chain would block
         // here and never initialize the map or start the other loads.
@@ -237,7 +248,7 @@ describe('private map viewer entrypoint', () => {
         expect(configMock.loadProjects).toHaveBeenCalledTimes(1);
         expect(configMock.loadNetworks).toHaveBeenCalledTimes(1);
         expect(configMock.loadGPSTracks).toHaveBeenCalledTimes(1);
-        expect(gisLayerStoreMock.load).toHaveBeenCalledTimes(1);
+        expect(configMock.loadGISLayers).toHaveBeenCalledTimes(1);
     });
 
     it('prefetches the all-projects GeoJSON metadata once and consumes it during initial load', async () => {

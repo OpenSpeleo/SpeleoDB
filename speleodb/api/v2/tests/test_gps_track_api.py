@@ -109,6 +109,9 @@ class TestGPSTrackDetailRead(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data["id"] == str(track.id)
         assert response.data["name"] == "Readme"
+        assert isinstance(response.data["file"], str)
+        assert track.file.name is not None
+        assert track.file.name in response.data["file"]
 
     def test_stranger_gets_forbidden(self) -> None:
         other = UserFactory.create()

@@ -21,8 +21,6 @@ import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { GISLayersPanel } from './components/gis_layers_panel.js';
-import { GISLayerStore } from './gis_layer_store.js';
-import { getGISLayerRuntime, resetGISLayerRuntime } from './gis_layers_runtime.js';
 import { DepthLegend } from './components/depth_legend.js';
 import { API } from './api.js';
 import { getRuntimeContext } from './runtime_context.js';
@@ -71,7 +69,6 @@ export async function initPrivateMapViewer() {
     console.log('🚀 SpeleoDB Map Viewer Initializing...');
 
     // 1. Initialize State
-    resetGISLayerRuntime();
     State.resetLayerState();
 
     // 2. Initialize Map immediately so the Mapbox style and tiles download
@@ -89,7 +86,7 @@ export async function initPrivateMapViewer() {
         Config.loadProjects(),
         Config.loadNetworks(),
         Config.loadGPSTracks(),
-        GISLayerStore.load(),
+        Config.loadGISLayers(),
     ]);
 
     // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
@@ -132,6 +129,7 @@ export async function initPrivateMapViewer() {
             // Open cylinder details modal for installed cylinders
             CylinderInstalls.showCylinderDetails(cylinderId);
         },
+        onGISFeatureClick: (feature, lngLat) => Layers.openGISFeaturePopup(feature, lngLat),
         onStationDrag: (stationId, projectId, newCoords) => {
             Layers.updateStationPosition(projectId, stationId, newCoords);
         },
@@ -423,7 +421,9 @@ export async function initPrivateMapViewer() {
         State.cylinderInstalls = new Map();
         State.allGPSTrackLayers = new Map();
         State.gpsTrackBounds = new Map();
-        await getGISLayerRuntime().markRegistrationsRemoved();
+        State.allGISLayerLayers = new Map();
+        State.gisLayerBounds = new Map();
+        State.gisLayerClickableLayerIds = new Set();
     }
 
     async function loadProjectAndStationLayers(geojsonMetadata, showProgress) {
@@ -543,7 +543,10 @@ export async function initPrivateMapViewer() {
     }
 
     async function loadVisibleGISLayers() {
-        await getGISLayerRuntime().restoreDesired();
+        const visibleLayers = Config.gisLayers.filter(layer => Layers.isGISLayerVisible(layer.id));
+        await Promise.all(visibleLayers.map(layer => (
+            Layers.toggleGISLayerVisibility(layer.id, true)
+        )));
         GISLayersPanel.refreshList();
     }
 
@@ -765,21 +768,6 @@ export async function initPrivateMapViewer() {
             Utils.showNotification('success', 'GPS tracks refreshed');
         } catch (e) {
             console.error('Error refreshing GPS tracks', e);
-        }
-    });
-
-    window.addEventListener('speleo:refresh-gis-layers', async () => {
-        try {
-            GISLayerStore.invalidate();
-            const layers = await GISLayerStore.load();
-            await getGISLayerRuntime().reconcile(layers);
-            if (document.getElementById('gis-layers-panel')) {
-                GISLayersPanel.refreshList();
-            } else if (layers.length > 0) {
-                GISLayersPanel.init();
-            }
-        } catch (error) {
-            console.error('Error refreshing GIS Layers', error);
         }
     });
 

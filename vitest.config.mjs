@@ -5,6 +5,10 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./frontend_common/test/setup.js'],
+        // Vite and Tailwind builds spawn their own parallel work. Limiting
+        // file workers prevents those builds from starving JSDOM test event
+        // loops in constrained devcontainers and CI runners.
+        maxWorkers: 4,
         include: [
             'frontend_common/**/*.test.js',
             'frontend_public/static/js/**/*.test.js',

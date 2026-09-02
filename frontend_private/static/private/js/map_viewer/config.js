@@ -38,7 +38,6 @@ export const DEFAULTS = Object.freeze({
         CYLINDER_INSTALL_LABEL: 16,
         EXPLORATION_LEAD_SYMBOL: 12,
         GPS_TRACK_LINE: 8,
-        GIS_LAYER_LABEL: 8,
     },
 
     SNAP: {
@@ -62,8 +61,6 @@ export const DEFAULTS = Object.freeze({
         GIS_LAYER_NAME_MAX_LENGTH: 30,
         NOTE_PREVIEW_LENGTH: 200,
         COUNTRY_GROUP_TRANSITION_MS: 250,
-        OVERLAY_CACHE_MAX_ENTRIES: 8,
-        OVERLAY_SOURCE_LOAD_TIMEOUT_MS: 30000,
         MAP_PANEL_EDGE_PX: 16,
         MAP_PANEL_GAP_PX: 10,
         MAP_PANEL_POSITION_DELAY_MS: 50,
@@ -80,11 +77,6 @@ export const DEFAULTS = Object.freeze({
         POINT_RADIUS_MAX: 6,
         POINT_STROKE_COLOR: '#ffffff',
         POINT_STROKE_WIDTH: 1,
-        LABEL_SIZE: 11,
-        LABEL_OFFSET: [0, 1.1],
-        LABEL_COLOR: '#f8fafc',
-        LABEL_HALO_COLOR: '#0f172a',
-        LABEL_HALO_WIDTH: 1.5,
         POPUP_MAX_WIDTH_PX: 360,
         POPUP_DESCRIPTION_MAX_CHARS: 1200,
         POPUP_METADATA_MAX_ROWS: 4,
@@ -203,6 +195,9 @@ export const Config = {
     // Private storage for GPS tracks loaded from API
     _gpsTracks: null,
 
+    // Private storage for GIS Layers loaded from API
+    _gisLayers: null,
+
     get projects() {
         return this._projects || [];
     },
@@ -225,6 +220,14 @@ export const Config = {
 
     get gpsTrackIds() {
         return this.gpsTracks.map(t => t.id);
+    },
+
+    get gisLayers() {
+        return this._gisLayers || [];
+    },
+
+    get gisLayerIds() {
+        return this.gisLayers.map(layer => layer.id);
     },
 
     setPublicProjects(projects) {
@@ -338,6 +341,11 @@ export const Config = {
     getGPSTrackById: function (trackId) {
         if (!trackId) return null;
         return this.gpsTracks.find(track => track.id === String(trackId)) || null;
+    },
+
+    getGISLayerById: function (layerId) {
+        if (!layerId) return null;
+        return this.gisLayers.find(layer => layer.id === String(layerId)) || null;
     },
 
     getProjectPermissionRank: function (projectId) {
@@ -533,5 +541,23 @@ export const Config = {
         }
 
         return this._gpsTracks;
+    },
+
+    async loadGISLayers() {
+        if (this._gisLayers) {
+            return this._gisLayers;
+        }
+
+        try {
+            const response = await API.getGISLayers();
+            this._gisLayers = Array.isArray(response)
+                ? response.map(layer => ({ ...layer, id: String(layer.id) }))
+                : [];
+        } catch (error) {
+            console.error('Failed to load GIS Layers:', error);
+            this._gisLayers = [];
+        }
+
+        return this._gisLayers;
     }
 };

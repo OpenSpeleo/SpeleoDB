@@ -1,6 +1,6 @@
-import { DEFAULTS } from '../config.js';
-import { GISLayerStore } from '../gis_layer_store.js';
-import { getGISLayerRuntime } from '../gis_layers_runtime.js';
+import { Config, DEFAULTS } from '../config.js';
+import { Layers } from '../map/layers.js';
+import { State } from '../state.js';
 import { Utils } from '../utils.js';
 
 function visibleAnchor(...elementIds) {
@@ -12,13 +12,13 @@ function visibleAnchor(...elementIds) {
 export const GISLayersPanel = {
     _resizeObserver: null,
     _mutationObserver: null,
-    _stateListener: null,
+    _loadingListener: null,
 
     init() {
-        if (GISLayerStore.layers.length === 0) return;
+        if (Config.gisLayers.length === 0) return;
         this.render();
         this.bindEvents();
-        this.setupStateListener();
+        this.setupLoadingListener();
         this.setupStackListener();
     },
 
@@ -90,7 +90,7 @@ export const GISLayersPanel = {
         const list = document.getElementById('gis-layers-map-list');
         const panel = document.getElementById('gis-layers-panel');
         const minimized = document.getElementById('gis-layers-panel-minimized');
-        const layers = [...GISLayerStore.layers].sort((first, second) => (
+        const layers = [...Config.gisLayers].sort((first, second) => (
             first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
         ));
 
@@ -105,10 +105,9 @@ export const GISLayersPanel = {
             minimized.style.display = 'block';
         }
 
-        const runtime = getGISLayerRuntime();
         list.replaceChildren(...layers.map(layer => {
-            const isVisible = runtime.isDesired(layer.id);
-            const isLoading = runtime.isLoading(layer.id);
+            const isVisible = Layers.isGISLayerVisible(layer.id);
+            const isLoading = Layers.isGISLayerLoading(layer.id);
             const color = Utils.safeCssColor(layer.color || DEFAULTS.COLORS.FALLBACK);
             const maxLength = DEFAULTS.UI.GIS_LAYER_NAME_MAX_LENGTH;
             const displayName = layer.name.length > maxLength
@@ -126,7 +125,7 @@ export const GISLayersPanel = {
                 <div class="flex items-center gap-2">
                     <div class="gis-layer-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" aria-label="Loading GIS Layer"></div>
                     <label class="toggle-switch m-0 scale-75 origin-right">
-                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} aria-label="Show ${layer.name}">
+                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')} aria-label="Show ${layer.name}">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>`;
@@ -134,17 +133,41 @@ export const GISLayersPanel = {
             const checkbox = item.querySelector('input[type="checkbox"]');
             item.addEventListener('click', async event => {
                 if (event.target.closest('.toggle-switch')) return;
-                await runtime.setDesired(layer, true);
-                this.refreshList();
+                await this.activateAndZoom(layer.id);
             });
             checkbox.addEventListener('change', async event => {
                 event.stopPropagation();
-                await runtime.setDesired(layer, checkbox.checked);
+                checkbox.disabled = true;
+                const displayed = await Layers.toggleGISLayerVisibility(layer.id, checkbox.checked);
+                checkbox.disabled = false;
                 this.refreshList();
+                if (checkbox.checked && !displayed) {
+                    Utils.showNotification('error', `Unable to display ${layer.name}.`);
+                }
             });
             item.querySelector('.toggle-switch').addEventListener('click', event => event.stopPropagation());
             return item;
         }));
+    },
+
+    async activateAndZoom(layerId) {
+        const id = String(layerId);
+        if (Layers.isGISLayerLoading(id)) return;
+        if (!Layers.isGISLayerVisible(id)) {
+            const displayed = await Layers.toggleGISLayerVisibility(id, true);
+            this.refreshList();
+            if (!displayed) {
+                Utils.showNotification('error', `Unable to display ${Config.getGISLayerById(id)?.name || 'GIS Layer'}.`);
+                return;
+            }
+        }
+        const bounds = State.gisLayerBounds.get(id);
+        if (bounds && State.map) {
+            State.map.fitBounds(bounds, {
+                padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING,
+                maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM
+            });
+        }
     },
 
     bindEvents() {
@@ -160,10 +183,13 @@ export const GISLayersPanel = {
         });
     },
 
-    setupStateListener() {
-        if (this._stateListener) return;
-        this._stateListener = () => this.refreshList();
-        window.addEventListener('speleo:gis-layer-state-changed', this._stateListener);
+    setupLoadingListener() {
+        if (this._loadingListener) return;
+        this._loadingListener = event => {
+            const { layerId } = event.detail || {};
+            if (layerId) this.refreshList();
+        };
+        window.addEventListener('speleo:gis-layer-loading-changed', this._loadingListener);
     },
 
     setupStackListener() {
@@ -190,9 +216,9 @@ export const GISLayersPanel = {
         this._mutationObserver?.disconnect();
         this._resizeObserver = null;
         this._mutationObserver = null;
-        if (this._stateListener) {
-            window.removeEventListener('speleo:gis-layer-state-changed', this._stateListener);
-            this._stateListener = null;
+        if (this._loadingListener) {
+            window.removeEventListener('speleo:gis-layer-loading-changed', this._loadingListener);
+            this._loadingListener = null;
         }
     },
 };
