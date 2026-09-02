@@ -39,6 +39,26 @@ or revoked by an administrator.
 Deletion is soft: the layer and its active permissions become inactive. Stored
 files remain available for retention and administrative recovery.
 
+## Web interface
+
+`/private/gis-layers/` remains the listing and upload entry point. Each desktop
+row and mobile card provides the source download plus the same circular
+right-arrow Open control used by Project and Surface Network listings. Open
+leads to `/private/gis-layer/<uuid>/`; metadata editing and deletion are no
+longer separate listing modals.
+
+The opened layer uses the standard responsive settings workflow:
+
+- Details displays name, description, color, and Download Source. It is
+  read-only for readers and editable for writers and administrators.
+- User Access at `/private/gis-layer/<uuid>/permissions/` is visible to every
+  reader; only administrators receive grant/edit/revoke controls.
+- Danger Zone is administrator-only and invokes the existing soft deletion.
+
+GIS Layers and GPS Tracks share the settings shell, Details, User Access, and
+Danger Zone templates. The pages reuse the common entity CRUD, permission
+modal, danger-zone, and list-loader controllers.
+
 ## API
 
 - `GET/POST /api/v2/gis-layers/` lists accessible layers or uploads one.
@@ -49,3 +69,7 @@ files remain available for retention and administrative recovery.
 
 The list/detail serializer returns `file` as the signed renderable GeoJSON URL
 and derives `source_format` from the original filename.
+
+The list and permission querysets annotate access in bulk and prefetch related
+users, respectively. The new workflow does not add per-row requests or model
+queries to listing rendering.

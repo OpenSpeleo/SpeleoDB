@@ -2406,6 +2406,18 @@
         "decorators": ""
     },
     {
+        "url": "/private/gis-layer/<uuid:layer_id>/",
+        "module": "frontend_private.views.gis_layers.GISLayerDetailsView",
+        "name": "private:gis_layer_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-layer/<uuid:layer_id>/danger_zone/",
+        "module": "frontend_private.views.gis_layers.GISLayerDangerZoneView",
+        "name": "private:gis_layer_danger_zone",
+        "decorators": ""
+    },
+    {
         "url": "/private/gis-layer/<uuid:layer_id>/permissions/",
         "module": "frontend_private.views.gis_layers.GISLayerUserPermissionsView",
         "name": "private:gis_layer_user_permissions",
@@ -2445,6 +2457,18 @@
         "url": "/private/gis_views/",
         "module": "frontend_private.views.gis_views.GISViewListingView",
         "name": "private:gis_views",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gps-track/<uuid:track_id>/",
+        "module": "frontend_private.views.gps_tracks.GPSTrackDetailsView",
+        "name": "private:gps_track_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gps-track/<uuid:track_id>/danger_zone/",
+        "module": "frontend_private.views.gps_tracks.GPSTrackDangerZoneView",
+        "name": "private:gps_track_danger_zone",
         "decorators": ""
     },
     {

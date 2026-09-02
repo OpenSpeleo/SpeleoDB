@@ -65,7 +65,7 @@ class _BaseSurfaceNetworkView(AuthenticatedTemplateView):
 
 
 class SurfaceNetworkDetailsView(_BaseSurfaceNetworkView):
-    template_name = "pages/surface_network/details.html"
+    template_name = "pages/shared/entity_settings/details.html"
 
     def get(  # type: ignore[override]
         self,
@@ -82,11 +82,28 @@ class SurfaceNetworkDetailsView(_BaseSurfaceNetworkView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
+        network = data["network"]
+        data.update(
+            entity=network,
+            entity_label="Surface Network",
+            entity_label_lower="surface network",
+            entity_settings_base_template="pages/surface_network/base.html",
+            listing_url=reverse("private:surface_networks"),
+            api_detail_url=reverse(
+                "api:v2:surface-network",
+                kwargs={"network_id": network.id},
+            ),
+            details_form_id="surface_network_details_form",
+            details_method="PUT",
+            details_success_message="The surface network has been updated.",
+            show_description=True,
+            show_color=False,
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
 class SurfaceNetworkDangerZoneView(_BaseSurfaceNetworkView):
-    template_name = "pages/surface_network/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -111,11 +128,24 @@ class SurfaceNetworkDangerZoneView(_BaseSurfaceNetworkView):
                 )
             )
 
+        network = data["network"]
+        data.update(
+            entity_label="Surface Network",
+            entity_settings_base_template="pages/surface_network/base.html",
+            api_detail_url=reverse(
+                "api:v2:surface-network",
+                kwargs={"network_id": network.id},
+            ),
+            listing_url=reverse("private:surface_networks"),
+            danger_success_message=(
+                "The Surface Network has been deleted successfully."
+            ),
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
 class SurfaceNetworkUserPermissionsView(_BaseSurfaceNetworkView):
-    template_name = "pages/surface_network/user_permissions.html"
+    template_name = "pages/shared/entity_settings/user_permissions.html"
 
     def get(  # type: ignore[override]
         self,
@@ -132,10 +162,27 @@ class SurfaceNetworkUserPermissionsView(_BaseSurfaceNetworkView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:surface_networks"))
 
+        network = data["network"]
         data["permissions"] = list(
             SurfaceMonitoringNetworkUserPermission.objects.filter(
-                network=data["network"], is_active=True
-            ).prefetch_related("user")
+                network=network,
+                is_active=True,
+            )
+            .select_related("user")
+            .order_by("-level", "user__email")
+        )
+        data.update(
+            entity=network,
+            entity_settings_base_template="pages/surface_network/base.html",
+            permission_levels=PermissionLevel.members_no_webviewer,
+            permission_endpoint=reverse(
+                "api:v2:surface-network-permissions",
+                kwargs={"network_id": network.id},
+            ),
+            permission_add_title="Add a collaborator to the network",
+            permission_success_message="The network permission has been saved.",
+            permission_delete_message="The network permission has been removed.",
+            show_disabled_grant_access=True,
         )
 
         return super().get(request, *args, **data, **kwargs)

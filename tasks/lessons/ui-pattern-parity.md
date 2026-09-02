@@ -18,3 +18,14 @@ Project user permissions for:
 - icon-only edit/delete actions
 
 Only permission choices differ: Landmark Collections use no-WEB_VIEWER levels.
+
+When a listing is explicitly aligned with Projects or Surface Networks, reuse
+their Open control exactly: the same `right_arrow.svg`, circular container,
+dimensions, colors, spacing, and responsive presentation. A newly drawn SVG or
+near-equivalent chevron is a design regression even when it has the same
+function.
+
+Shared responsive markup must carry its essential breakpoint utilities at the
+markup boundary. Do not make mobile-card/desktop-table visibility depend on an
+optional route stylesheet: every consumer must render exactly one layout even if
+its surrounding model shell or asset set differs.

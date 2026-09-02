@@ -144,7 +144,7 @@ class LandmarkCollectionDetailsView(_BaseLandmarkCollectionView):
 
 
 class LandmarkCollectionDangerZoneView(_BaseLandmarkCollectionView):
-    template_name = "pages/landmark_collection/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -176,11 +176,24 @@ class LandmarkCollectionDangerZoneView(_BaseLandmarkCollectionView):
                 )
             )
 
+        collection = data["collection"]
+        data.update(
+            entity_label="Landmark Collection",
+            entity_settings_base_template="pages/landmark_collection/base.html",
+            api_detail_url=reverse(
+                "api:v2:landmark-collection-detail",
+                kwargs={"collection_id": collection.id},
+            ),
+            listing_url=reverse("private:landmark_collections"),
+            danger_success_message=(
+                "The landmark collection has been deleted successfully."
+            ),
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
 class LandmarkCollectionUserPermissionsView(_BaseLandmarkCollectionView):
-    template_name = "pages/landmark_collection/user_permissions.html"
+    template_name = "pages/shared/entity_settings/user_permissions.html"
 
     def get(  # type: ignore[override]
         self,
@@ -212,6 +225,24 @@ class LandmarkCollectionUserPermissionsView(_BaseLandmarkCollectionView):
             )
             .select_related("user", "collection")
             .order_by("-level", "user__email")
+        )
+        collection = data["collection"]
+        data.update(
+            entity=collection,
+            entity_settings_base_template="pages/landmark_collection/base.html",
+            permission_levels=PermissionLevel.members_no_webviewer,
+            permission_endpoint=reverse(
+                "api:v2:landmark-collection-permissions",
+                kwargs={"collection_id": collection.id},
+            ),
+            permission_add_title=("Add a collaborator to the landmark collection"),
+            permission_success_message=(
+                "The landmark collection permission has been saved."
+            ),
+            permission_delete_message=(
+                "The landmark collection permission has been removed."
+            ),
+            show_disabled_grant_access=True,
         )
 
         return super().get(request, *args, **data, **kwargs)

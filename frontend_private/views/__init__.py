@@ -14,6 +14,8 @@ from frontend_private.views.experiments import ExperimentGISView
 from frontend_private.views.experiments import ExperimentListingView
 from frontend_private.views.experiments import ExperimentUserPermissionsView
 from frontend_private.views.experiments import NewExperimentView
+from frontend_private.views.gis_layers import GISLayerDangerZoneView
+from frontend_private.views.gis_layers import GISLayerDetailsView
 from frontend_private.views.gis_layers import GISLayerListView
 from frontend_private.views.gis_layers import GISLayerUserPermissionsView
 from frontend_private.views.gis_views import GISViewDangerZoneView
@@ -21,6 +23,8 @@ from frontend_private.views.gis_views import GISViewDetailsView
 from frontend_private.views.gis_views import GISViewGISIntegrationView
 from frontend_private.views.gis_views import GISViewListingView
 from frontend_private.views.gis_views import NewGISViewView
+from frontend_private.views.gps_tracks import GPSTrackDangerZoneView
+from frontend_private.views.gps_tracks import GPSTrackDetailsView
 from frontend_private.views.gps_tracks import GPSTrackListView
 from frontend_private.views.gps_tracks import GPSTrackUserPermissionsView
 from frontend_private.views.landmark_collections import LandmarkCollectionDangerZoneView
@@ -91,12 +95,16 @@ __all__ = [
     "ExperimentListingView",
     "ExperimentUserPermissionsView",
     "FeedbackView",
+    "GISLayerDangerZoneView",
+    "GISLayerDetailsView",
     "GISLayerListView",
     "GISLayerUserPermissionsView",
     "GISViewDangerZoneView",
     "GISViewDetailsView",
     "GISViewGISIntegrationView",
     "GISViewListingView",
+    "GPSTrackDangerZoneView",
+    "GPSTrackDetailsView",
     "GPSTrackListView",
     "GPSTrackUserPermissionsView",
     "LandmarkCollectionDangerZoneView",

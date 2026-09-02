@@ -12,25 +12,33 @@ function layer(overrides = {}) {
 beforeEach(() => {
     globalThis.Urls = {
         'api:v2:gis-layer-source': id => `/api/v2/gis-layers/${id}/source/`,
-        'private:gis_layer_user_permissions': id => `/gis-layer/${id}/permissions/`,
+        'private:gis_layer_details': id => `/private/gis-layer/${id}/`,
     };
 });
 afterEach(() => { delete globalThis.Urls; });
 
 describe('GIS Layer management markup', () => {
-    it('shows readable actions without mutation controls', () => {
-        const { tableHtml, cardsHtml } = buildGISLayerListMarkup([layer()]);
+    it('shows source download and the standard Open control', () => {
+        const { tableHtml, cardsHtml } = buildGISLayerListMarkup(
+            [layer()],
+            '/static/private/media/right_arrow.svg',
+        );
         document.body.innerHTML = `<table><tbody>${tableHtml}</tbody></table>${cardsHtml}`;
         expect(document.body.textContent).toContain('Protected Areas');
         expect(document.body.textContent).toContain('KMZ');
         expect(document.querySelectorAll('a[href$="/source/"]')).toHaveLength(2);
+        expect(document.querySelectorAll('a[href$="111111111111/"]')).toHaveLength(2);
+        expect(document.querySelectorAll('img[src$="right_arrow.svg"]')).toHaveLength(2);
         expect(document.querySelectorAll('.btn-edit-gis-layer')).toHaveLength(0);
         expect(document.querySelectorAll('.btn-delete-gis-layer')).toHaveLength(0);
         expect(document.querySelector('.bg-pastel-beige')).not.toBeNull();
     });
 
-    it('requires literal server capabilities for every mutation', () => {
-        const { tableHtml } = buildGISLayerListMarkup([layer({ can_write: 'true', can_delete: 'true' })]);
+    it('does not expose inline mutations for writers or administrators', () => {
+        const { tableHtml } = buildGISLayerListMarkup([layer({
+            can_write: true,
+            can_delete: true,
+        })], '/static/private/media/right_arrow.svg');
         document.body.innerHTML = `<table><tbody>${tableHtml}</tbody></table>`;
         expect(document.querySelector('.btn-edit-gis-layer')).toBeNull();
         expect(document.querySelector('.btn-delete-gis-layer')).toBeNull();
@@ -43,7 +51,8 @@ describe('GIS Layer management markup', () => {
             created_by: '<svg/onload=alert(1)>', color: 'red;background:url(evil)', can_write: true,
         })]);
         document.body.innerHTML = `<table><tbody>${tableHtml}</tbody></table>`;
-        expect(document.querySelector('img,script,[onmouseover],[onload]')).toBeNull();
+        expect(document.querySelector('script,[onmouseover],[onload]')).toBeNull();
+        expect(document.querySelectorAll('img')).toHaveLength(1);
         expect(document.querySelector('svg')).not.toBeNull();
         expect(document.body.textContent).toContain('<img src=x onerror=alert(1)>');
         expect(document.querySelector('.w-3.h-3').style.backgroundColor).toBe('rgb(148, 163, 184)');
@@ -51,7 +60,7 @@ describe('GIS Layer management markup', () => {
 
     it('sanitizes action URLs while retaining trusted static icons', () => {
         globalThis.Urls['api:v2:gis-layer-source'] = () => 'javascript:alert(1)';
-        globalThis.Urls['private:gis_layer_user_permissions'] = () => 'data:text/html,<script>alert(1)</script>';
+        globalThis.Urls['private:gis_layer_details'] = () => 'data:text/html,<script>alert(1)</script>';
         const { tableHtml } = buildGISLayerListMarkup([layer()]);
         document.body.innerHTML = `<table><tbody>${tableHtml}</tbody></table>`;
         expect([...document.querySelectorAll('a')].every(anchor => !/^(javascript|data):/i.test(anchor.getAttribute('href')))).toBe(true);

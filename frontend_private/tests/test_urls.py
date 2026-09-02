@@ -109,15 +109,35 @@ from django.urls import reverse
         # GPS Track routes
         ("private:gps_tracks", "gps-tracks/", None),
         (
+            "private:gps_track_details",
+            "gps-track/{track_id}/",
+            {"track_id": uuid.uuid4()},
+        ),
+        (
             "private:gps_track_user_permissions",
             "gps-track/{track_id}/permissions/",
+            {"track_id": uuid.uuid4()},
+        ),
+        (
+            "private:gps_track_danger_zone",
+            "gps-track/{track_id}/danger_zone/",
             {"track_id": uuid.uuid4()},
         ),
         # Private GIS Layer routes
         ("private:gis_layers", "gis-layers/", None),
         (
+            "private:gis_layer_details",
+            "gis-layer/{layer_id}/",
+            {"layer_id": uuid.uuid4()},
+        ),
+        (
             "private:gis_layer_user_permissions",
             "gis-layer/{layer_id}/permissions/",
+            {"layer_id": uuid.uuid4()},
+        ),
+        (
+            "private:gis_layer_danger_zone",
+            "gis-layer/{layer_id}/danger_zone/",
             {"layer_id": uuid.uuid4()},
         ),
     ],

@@ -74,20 +74,29 @@ import/storage contract is intentionally outside this feature.
 
 ## Web interface
 
-The GPS Tracks page is the collaboration hub. It shows creator and caller
-permission information on desktop and mobile. Every reader receives Export GPX
-and Access Control links. Edit actions only exist for writers and administrators;
-delete actions only exist for administrators. Hidden actions are omitted from
-the DOM rather than rendered as disabled controls.
+`/private/gps-tracks/` is the listing and import entry point. Its desktop rows
+and mobile cards provide Export GPX plus the same circular right-arrow Open
+control used by the Project and Surface Network listings. Open leads to
+`/private/gps-track/<uuid>/`; metadata editing is no longer split into an inline
+listing modal.
+
+The per-track workflow uses the standard responsive settings shell:
+
+- Details displays the name, color, and Export GPX action. Readers receive a
+  read-only form; writers and administrators can save metadata changes.
+- User Access at `/private/gps-track/<uuid>/permissions/` lets every reader
+  inspect collaborators and restricts grant/edit/revoke controls to admins.
+- Danger Zone is administrator-only and performs the existing soft deletion.
+
+The Details, User Access, and Danger Zone pages share their shell and form
+templates with GIS Layers. They also reuse the common entity CRUD, permission
+modal, and danger-zone controllers rather than implementing track-specific form
+behavior.
 
 After an import succeeds, the modal reports that GPS tracks are being refreshed;
 map-specific refresh wording remains owned by the GIS Survey Map import flow.
 
-The per-track Access Control page reuses the shared permission modal,
-autocomplete, responsive permission cards/table, CSRF handling, and error
-modals. Readers may inspect collaborators, while only administrators receive
-grant/edit/revoke controls. The public map viewer continues to exclude GPS
-Tracks.
+The public map viewer continues to exclude GPS Tracks.
 
 ## Testing and performance
 

@@ -20,13 +20,19 @@ from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import CylinderFleetFactory
 from speleodb.api.v2.tests.factories import CylinderFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import ExperimentFactory
 from speleodb.api.v2.tests.factories import LandmarkCollectionFactory
 from speleodb.api.v2.tests.factories import LandmarkCollectionUserPermissionFactory
 from speleodb.api.v2.tests.factories import LandmarkFactory
 from speleodb.api.v2.tests.factories import SensorFleetFactory
 from speleodb.api.v2.tests.factories import SensorFleetUserPermissionFactory
+from speleodb.api.v2.tests.factories import SurfaceMonitoringNetworkFactory
+from speleodb.api.v2.tests.factories import (
+    SurfaceMonitoringNetworkUserPermissionFactory,
+)
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
+from speleodb.api.v2.tests.factories import UserExperimentPermissionFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
@@ -108,6 +114,20 @@ class TeamViewsTest(BaseTestCase):
         )
         self.execute_test(
             view_name, {"team_id": self.team.id}, expected_status=expected_status
+        )
+
+    def test_leader_danger_zone_uses_shared_entity_template(self) -> None:
+        if self.role != SurveyTeamMembershipRole.LEADER:
+            return
+
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("private:team_danger_zone", kwargs={"team_id": self.team.id})
+        )
+
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/danger_zone.html",
         )
 
 
@@ -263,6 +283,89 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
         assert generated_css_position < custom_css_position < inline_git_css_position
 
 
+class SurfaceNetworkSharedSettingsTest(BaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.network = SurfaceMonitoringNetworkFactory.create(
+            created_by=self.user.email,
+        )
+        SurfaceMonitoringNetworkUserPermissionFactory.create(
+            user=self.user,
+            network=self.network,
+            level=PermissionLevel.ADMIN,
+        )
+
+    def test_compatible_pages_use_shared_entity_templates(self) -> None:
+        self.client.force_login(self.user)
+        cases = (
+            (
+                "surface_network_details",
+                "pages/shared/entity_settings/details.html",
+            ),
+            (
+                "surface_network_user_permissions",
+                "pages/shared/entity_settings/user_permissions.html",
+            ),
+            (
+                "surface_network_danger_zone",
+                "pages/shared/entity_settings/danger_zone.html",
+            ),
+        )
+
+        for view_name, template_name in cases:
+            with self.subTest(view_name=view_name):
+                response = self.client.get(
+                    reverse(
+                        f"private:{view_name}",
+                        kwargs={"network_id": self.network.id},
+                    )
+                )
+                assert response.status_code == status.HTTP_200_OK
+                self.assertTemplateUsed(response, template_name)
+                self.assertTemplateUsed(response, "pages/surface_network/base.html")
+
+                if view_name == "surface_network_details":
+                    content = response.content.decode()
+                    assert 'id="name"' in content
+                    assert 'id="description"' in content
+                    assert 'id="color-picker"' not in content
+
+
+class ExperimentSharedSettingsTest(BaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.experiment = ExperimentFactory.create(created_by=self.user.email)
+        UserExperimentPermissionFactory.create(
+            user=self.user,
+            experiment=self.experiment,
+            level=PermissionLevel.ADMIN,
+        )
+
+    def test_permissions_and_danger_use_shared_entity_templates(self) -> None:
+        self.client.force_login(self.user)
+        cases = (
+            (
+                "experiment_user_permissions",
+                "pages/shared/entity_settings/user_permissions.html",
+            ),
+            (
+                "experiment_danger_zone",
+                "pages/shared/entity_settings/danger_zone.html",
+            ),
+        )
+
+        for view_name, template_name in cases:
+            with self.subTest(view_name=view_name):
+                response = self.client.get(
+                    reverse(
+                        f"private:{view_name}",
+                        kwargs={"experiment_id": self.experiment.id},
+                    )
+                )
+                assert response.status_code == status.HTTP_200_OK
+                self.assertTemplateUsed(response, template_name)
+
+
 class SensorFleetViewsTest(BaseTestCase):
     """Tests for Sensor Fleet frontend views."""
 
@@ -299,6 +402,20 @@ class SensorFleetViewsTest(BaseTestCase):
             {"fleet_id": self.fleet.id},
         )
 
+    def test_permissions_use_shared_entity_template(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:sensor_fleet_user_permissions",
+                kwargs={"fleet_id": self.fleet.id},
+            )
+        )
+
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/user_permissions.html",
+        )
+
 
 class CylinderFleetViewsTest(BaseTestCase):
     """Tests for Cylinder Fleet frontend views."""
@@ -332,6 +449,20 @@ class CylinderFleetViewsTest(BaseTestCase):
         self.execute_test(
             view_name,
             {"fleet_id": self.fleet.id},
+        )
+
+    def test_permissions_use_shared_entity_template(self) -> None:
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse(
+                "private:cylinder_fleet_user_permissions",
+                kwargs={"fleet_id": self.fleet.id},
+            )
+        )
+
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/user_permissions.html",
         )
 
 
@@ -648,18 +779,41 @@ class LandmarkCollectionViewsTest(BaseTestCase):
 
         content = response.content.decode()
         assert response.status_code == status.HTTP_200_OK
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/user_permissions.html",
+        )
         assert "permissions-cards" in content
-        assert "permissions-table bg-slate-800 shadow-lg rounded-xs" in content
+        assert "permissions-table hidden md:block bg-srgb-slate-900-20" in content
         assert "Grant Access" in content
         assert "btn bg-slate-700 hover:bg-slate-600 text-slate-200" not in content
-        assert "Remove" not in content
-        assert "icon-tabler-lock-open" in content
-        assert "icon-tabler-x" in content
+        assert f'aria-label="Edit {collaborator.email} access"' in content
+        assert f'aria-label="Remove {collaborator.email} access"' in content
         assert 'class="cursor-pointer btn_open_edit_perm"' in content
         assert 'class="cursor-pointer btn_delete_perm"' in content
         assert f'data-user="{collaborator.email}"' in content
-        assert "modal_user_landmark_collection_permission_form" not in content
+        assert 'class="permissions-cards md:hidden"' in content
+        assert 'class="permissions-table hidden md:block' in content
         assert "Select an option ..." in content
+
+    def test_admin_danger_zone_uses_shared_entity_template(self) -> None:
+        self.collection.permissions.filter(user=self.user).update(
+            level=PermissionLevel.ADMIN,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "private:landmark_collection_danger_zone",
+                kwargs={"collection_id": self.collection.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/danger_zone.html",
+        )
 
     def test_shared_collection_permissions_match_project_sorting(self) -> None:
         admin_user = UserFactory.create(email="z-admin@example.com")
@@ -807,6 +961,27 @@ class GISViewTemplateOGCURLTest(BaseTestCase):
         followed = self.client.get(landing_url)
         assert followed.status_code == status.HTTP_200_OK, (
             f"Rendered OGC URL {landing_url} returned {followed.status_code}, not 200"
+        )
+
+    def test_gis_view_danger_zone_uses_shared_entity_template(self) -> None:
+        gis_view = GISView.objects.create(
+            name="Disposable Cave Map",
+            owner=self.user,
+            allow_precise_zoom=False,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "private:gis_view_danger_zone",
+                kwargs={"gis_view_id": gis_view.id},
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        self.assertTemplateUsed(
+            response,
+            "pages/shared/entity_settings/danger_zone.html",
         )
 
     def test_gis_view_integration_renders_view_landing_url(self) -> None:

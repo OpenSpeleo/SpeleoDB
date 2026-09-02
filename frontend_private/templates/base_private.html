@@ -155,7 +155,7 @@
                             </li>
 
                             <!-- My GPS Tracks -->
-                            {% if request.url_name|is_in_list:"gps_tracks,gps_track_user_permissions" %}
+                            {% if request.url_name|is_in_list:"gps_tracks,gps_track_details,gps_track_user_permissions,gps_track_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
@@ -184,7 +184,7 @@
                             </li>
 
                             <!-- My GIS Layers -->
-                            {% if request.url_name|is_in_list:"gis_layers,gis_layer_user_permissions" %}
+                            {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
                             {% set stroke_color = 'indigo' %}
                             <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
                                 <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_layers' %}">

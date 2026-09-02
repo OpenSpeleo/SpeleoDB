@@ -35,7 +35,7 @@ class _BaseTeamView(AuthenticatedTemplateView):
         self,
         request: AuthenticatedHttpRequest,
         team_id: UUID,
-    ) -> HttpResponseRedirectBase | dict[str, SurveyTeam | bool]:
+    ) -> HttpResponseRedirectBase | dict[str, Any]:
         try:
             team = SurveyTeam.objects.get(id=team_id)
             if request.user and request.user.is_authenticated:
@@ -87,7 +87,7 @@ class TeamMembershipsView(_BaseTeamView):
 
 
 class TeamDangerZoneView(_BaseTeamView):
-    template_name = "pages/team/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -105,4 +105,15 @@ class TeamDangerZoneView(_BaseTeamView):
                 reverse("private:team_details", kwargs={"team_id": team_id})
             )
 
+        team = data["team"]
+        data.update(
+            entity_label="Team",
+            entity_settings_base_template="pages/team/base.html",
+            api_detail_url=reverse(
+                "api:v2:team-detail",
+                kwargs={"id": team.id},
+            ),
+            listing_url=reverse("private:teams"),
+            danger_success_message="The team has been deleted successfully.",
+        )
         return super().get(request, *args, **data, **kwargs)

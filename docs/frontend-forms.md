@@ -129,8 +129,9 @@ attachDangerZone({
 });
 ```
 
-Used by (all 7 danger-zone templates): project, experiment, team, gis_view,
-cylinder_fleet, sensor_fleet, surface_network.
+Used by the shared entity Danger Zone for GIS Layer, GPS Track, Surface Network,
+Experiment, Cylinder Fleet, Sensor Fleet, Landmark Collection, GIS View, and
+Team. Project retains its purpose-built template.
 
 ### `entity_crud_form.js` - `attachEntityCrudForm(options)`
 
@@ -202,10 +203,9 @@ Validation:
 
 Loads the shared `attachUserAutocomplete` helper for the Add form.
 
-Used by: project/user_permissions, experiment/user_permissions,
-cylinder_fleet/user_permissions, sensor_fleet/user_permissions,
-surface_network/user_permissions, landmark_collection/user_permissions, and
-gps_track/user_permissions.
+Used by Project and by the shared entity User Access template for GIS Layer,
+GPS Track, Surface Network, Experiment, Cylinder Fleet, Sensor Fleet, and
+Landmark Collection.
 
 For `team/memberships.html` (which renames the DOM nodes to `#membership_modal`,
 `.btn_open_edit_membership`, etc. and uses `role` instead of `level`) pass a
@@ -408,18 +408,20 @@ attachGisViewForm({
 
 ### `tagged_entity_list.js` - `attachTaggedEntityList(options)`
 
-Generic CRUD scaffold for named and colored list pages where rows are
-loaded via GET, rendered into both a desktop table and a mobile cards grid, and
-support per-row edit + delete with confirmation.
+Generic loader and optional CRUD scaffold for named and colored list pages.
+Rows are loaded via GET and rendered into both a desktop table and a mobile
+cards grid. Callers may configure per-row edit/delete modals or use list-only
+mode and link each row to a standard settings workflow.
 
-The caller supplies three domain callbacks (render, openEditModalForEntity,
-collectEditPayload) and a handful of selectors; everything else is shared.
+Every caller supplies `renderList`. Mutation callers also supply the relevant
+domain callbacks and selectors; list-only callers omit all modal configuration.
 Returns `{reload(), openEditModal(id), openDeleteModal(id)}` for external
 triggers (e.g. GPX import refreshes `gps_tracks`).
 
-Used by `station_tags.html` (PUT) and `gps_tracks.html` (PATCH). GPS Tracks add
-API-provided capability checks around this shared scaffold: readers only see
-export/access actions, writers receive edit, and administrators receive delete.
+Used by `station_tags.html` for CRUD and by `gps_tracks.html` and
+`gis_layers.html` in list-only mode. GPS Tracks and GIS Layers render download
+plus the standard Open action and move metadata/access/deletion into their
+shared settings pages.
 
 ```js
 const listApi = attachTaggedEntityList({
@@ -445,6 +447,41 @@ const listApi = attachTaggedEntityList({
     collectEditPayload: function () { ... },
 });
 ```
+
+## Shared entity settings templates
+
+Compatible settings pages live under
+`frontend_private/templates/pages/shared/entity_settings/`. They centralize the
+same responsive navigation, Details form, User Access cards/table and modal,
+and Danger Zone used across entity types. A view supplies domain data and URLs;
+it must not copy the shared markup into a model-specific template.
+
+The shared templates accept these context contracts:
+
+- `entity_settings_base_template` selects an existing model shell when one is
+  required; otherwise the shared base is used.
+- Details receives `entity`, `entity_label`, `entity_label_lower`,
+  `details_form_id`, `details_method`, `api_detail_url`, `listing_url`, and
+  `details_success_message`. `show_description`, `show_color`, and the optional
+  download values control only the fields/actions supported by that model.
+- User Access receives `permissions`, `permission_levels`,
+  `permission_endpoint`, modal text, and access flags. Permission querysets are
+  ordered by descending level and then user email to keep every model aligned.
+- Danger Zone receives `entity_label`, `api_detail_url`, `listing_url`, and
+  `danger_success_message`. Its warning copy is owned by the template rather
+  than supplied by individual views.
+
+The responsive User Access layout is deliberately self-contained in the
+template: `md:hidden` selects mobile cards and `hidden md:block` selects the
+desktop table. Do not move those essential visibility rules to a route-specific
+stylesheet. Otherwise a missing or stale asset registration can render both UI
+variants simultaneously on mobile.
+
+Current consumers are GIS Layer and GPS Track for all three pages; Surface
+Network for Details, User Access, and Danger Zone; Experiment, Cylinder Fleet,
+Sensor Fleet, and Landmark Collection for User Access and Danger Zone; and GIS
+View and Team for Danger Zone. Project remains separate where its existing
+workflow has intentional domain-specific markup.
 
 ### `tool_file_upload.js` - `attachToolFileUpload(options)`
 

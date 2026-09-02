@@ -158,7 +158,7 @@ class GISViewGISIntegrationView(_BaseGISViewView):
 class GISViewDangerZoneView(_BaseGISViewView):
     """Delete a GIS view (hard delete)."""
 
-    template_name = "pages/gis_view/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -175,4 +175,15 @@ class GISViewDangerZoneView(_BaseGISViewView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:gis_views"))
 
+        gis_view = data["gis_view"]
+        data.update(
+            entity_label="GIS View",
+            entity_settings_base_template="pages/gis_view/base.html",
+            api_detail_url=reverse(
+                "api:v2:gis-view-detail",
+                kwargs={"id": gis_view.id},
+            ),
+            listing_url=reverse("private:gis_views"),
+            danger_success_message="The GIS view has been deleted successfully.",
+        )
         return super().get(request, *args, **data, **kwargs)

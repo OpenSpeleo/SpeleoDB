@@ -39,67 +39,37 @@ function permissionPillClass(label) {
     })[label] || 'bg-slate-700 text-slate-300';
 }
 
-function renderDesktopActions(layer) {
-    const safeLayerId = escapeHtml(layer.id);
+function renderDesktopActions(layer, openIconUrl) {
     const sourceUrl = escapeHtml(routeUrl('api:v2:gis-layer-source', layer.id));
-    const permissionsUrl = escapeHtml(routeUrl('private:gis_layer_user_permissions', layer.id));
-    let html = `
+    const detailsUrl = escapeHtml(routeUrl('private:gis_layer_details', layer.id));
+    const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
+    return `
         <a class="inline-flex cursor-pointer" href="${sourceUrl}" title="Download original source" aria-label="Download GIS Layer source">
             <svg class="h-6 w-6 stroke-current text-cyan-500 hover:text-cyan-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 3v12"></path><path d="M8 11l4 4 4-4"></path><path d="M5 21h14"></path>
             </svg>
         </a>
-        <a class="inline-flex cursor-pointer" href="${permissionsUrl}" title="Manage layer access" aria-label="View GIS Layer access control">
-            <svg class="h-6 w-6 stroke-current text-indigo-500 hover:text-indigo-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6"></path><path d="M22 11h-6"></path>
-            </svg>
-        </a>`;
-    if (layer.can_write === true) {
-        html += `
-            <button class="btn-edit-gis-layer cursor-pointer" data-layer-id="${safeLayerId}" title="Edit layer" aria-label="Edit GIS Layer">
-                <svg class="h-6 w-6 stroke-current text-amber-500 hover:text-amber-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"></path><path d="M13.5 6.5l4 4"></path>
-                </svg>
-            </button>`;
-    }
-    if (layer.can_delete === true) {
-        html += `
-            <button class="btn-delete-gis-layer cursor-pointer" data-layer-id="${safeLayerId}" title="Delete layer" aria-label="Delete GIS Layer">
-                <svg class="h-6 w-6 stroke-current text-rose-500 hover:text-rose-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path>
-                </svg>
-            </button>`;
-    }
-    return html;
+        <div class="w-10 aspect-square min-w-0 shrink bg-slate-700 rounded-full">
+            <a class="flex items-center justify-center w-full h-full" href="${detailsUrl}" title="Open layer settings" aria-label="Open GIS Layer settings">
+                <img class="w-5 h-5" src="${iconUrl}" alt="Icon Open">
+            </a>
+        </div>`;
 }
 
-function renderMobileActions(layer) {
-    const safeLayerId = escapeHtml(layer.id);
+function renderMobileActions(layer, openIconUrl) {
     const sourceUrl = escapeHtml(routeUrl('api:v2:gis-layer-source', layer.id));
-    const permissionsUrl = escapeHtml(routeUrl('private:gis_layer_user_permissions', layer.id));
-    let html = `
+    const detailsUrl = escapeHtml(routeUrl('private:gis_layer_details', layer.id));
+    const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
+    return `
         <a class="w-10 h-10 shrink-0 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 rounded-full transition" href="${sourceUrl}" aria-label="Download GIS Layer source">
             <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor"><path d="M12 3v12"></path><path d="M8 11l4 4 4-4"></path><path d="M5 21h14"></path></svg>
         </a>
-        <a class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition" href="${permissionsUrl}" aria-label="View GIS Layer access control">
-            <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6"></path><path d="M22 11h-6"></path></svg>
+        <a class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition" href="${detailsUrl}" aria-label="Open GIS Layer settings">
+            <img class="ml-1" src="${iconUrl}" width="20" height="20" alt="View">
         </a>`;
-    if (layer.can_write === true) {
-        html += `
-            <button class="btn-edit-gis-layer w-10 h-10 shrink-0 flex items-center justify-center bg-amber-600 hover:bg-amber-500 rounded-full transition" data-layer-id="${safeLayerId}" aria-label="Edit GIS Layer">
-                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"></path><path d="M13.5 6.5l4 4"></path></svg>
-            </button>`;
-    }
-    if (layer.can_delete === true) {
-        html += `
-            <button class="btn-delete-gis-layer w-10 h-10 shrink-0 flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-full transition" data-layer-id="${safeLayerId}" aria-label="Delete GIS Layer">
-                <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></svg>
-            </button>`;
-    }
-    return html;
 }
 
-export function buildGISLayerListMarkup(layers) {
+export function buildGISLayerListMarkup(layers, openIconUrl = '') {
     if (!Array.isArray(layers) || layers.length === 0) {
         const emptyStateHtml = `
             <svg class="w-16 h-16 center-x mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,7 +99,7 @@ export function buildGISLayerListMarkup(layers) {
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center"><span class="inline-flex font-medium ${permissionPillClass(layer.user_permission_level_label)} rounded-full px-2.5 py-0.5">${escapeHtml(permissionLabel)}</span></div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-sm uppercase text-slate-300">${escapeHtml(layer.source_format || '—')}</div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-400 text-sm">${escapeHtml(formatDate(layer.creation_date))}</div></td>
-                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="flex items-center justify-center gap-2">${renderDesktopActions(layer)}</div></td>
+                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="flex items-center justify-center gap-2">${renderDesktopActions(layer, openIconUrl)}</div></td>
             </tr>`;
     }).join('');
 
@@ -142,7 +112,7 @@ export function buildGISLayerListMarkup(layers) {
                         <div class="w-4 h-4 mt-1 rounded-full shrink-0" style="background-color: ${safeCssColor(layer.color, FALLBACK_COLOR)}"></div>
                         <div class="min-w-0"><div class="text-lg font-semibold text-slate-100 break-words">${escapeHtml(layer.name)}</div>${layer.description ? `<div class="text-xs text-slate-400 mt-1 break-words">${escapeHtml(layer.description)}</div>` : ''}</div>
                     </div>
-                    <div class="track-card-actions">${renderMobileActions(layer)}</div>
+                    <div class="track-card-actions">${renderMobileActions(layer, openIconUrl)}</div>
                 </div>
                 <div class="track-card-body">
                     <div class="track-card-row"><span class="track-card-label">Creator</span><span class="track-card-value">${escapeHtml(layer.created_by || '—')}</span></div>
@@ -164,73 +134,24 @@ function formatFileSize(bytes) {
 export function init(context) {
     let selectedFile = null;
     let uploadRequest = null;
-    let listApi = null;
-
-    function attachEventHandlers() {
-        $('.btn-edit-gis-layer').off('click').on('click', function () {
-            listApi.openEditModal($(this).data('layer-id'));
-        });
-        $('.btn-delete-gis-layer').off('click').on('click', function () {
-            listApi.openDeleteModal($(this).data('layer-id'));
-        });
-    }
 
     function renderLayers(layers) {
-        const { tableHtml, cardsHtml } = buildGISLayerListMarkup(layers);
+        const { tableHtml, cardsHtml } = buildGISLayerListMarkup(layers, context.openIconUrl);
         $('#gis-layers-table-body').html(tableHtml);
         $('#gis-layers-cards-container').html(cardsHtml);
-        attachEventHandlers();
     }
 
-    const setEditColor = initColorPicker({
-        preview: '#edit-layer-color-preview', hiddenInput: '#edit-layer-color-value',
-        nativePicker: '#edit-layer-color-picker', pickerBtn: '#edit-layer-color-picker-btn',
-        hexInput: '#edit-layer-color-hex', presets: '.edit-layer-color-preset',
-    });
     const setUploadColor = initColorPicker({
         preview: '#upload-layer-color-preview', hiddenInput: '#upload-layer-color-value',
         nativePicker: '#upload-layer-color-picker', pickerBtn: '#upload-layer-color-picker-btn',
         hexInput: '#upload-layer-color-hex', presets: '.upload-layer-color-preset',
     });
 
-    listApi = attachTaggedEntityList({
+    const listApi = attachTaggedEntityList({
         listEndpoint: context.listEndpoint,
-        detailEndpointBuilder: id => globalThis.Urls['api:v2:gis-layer-detail'](id),
-        editMethod: 'PATCH', renderList: renderLayers, entityLabel: 'GIS Layer',
-        loadFailedMessage: 'Error loading GIS Layers', editFormSelector: '#edit-layer-form',
-        editIdInputSelector: '#edit-layer-id', editModalSelector: '#edit-layer-modal',
-        closeEditModalSelectors: '.btn-close-edit-modal', deleteModalSelector: '#delete-layer-modal',
-        deleteIdInputSelector: '#delete-layer-id', confirmDeleteSelector: '#btn-confirm-delete',
-        closeDeleteModalSelectors: '.btn-close-delete-modal',
-        openEditModalForEntity: layer => {
-            $('#edit-layer-id').val(layer.id);
-            $('#edit-layer-name').val(layer.name);
-            $('#edit-layer-description').val(layer.description || '');
-            setEditColor(layer.color || FALLBACK_COLOR);
-        },
-        openDeleteModalForEntity: layer => {
-            $('#delete-layer-info').html(
-                '<div class="flex items-center gap-2 bg-srgb-slate-700-50 rounded-lg p-3">' +
-                '  <div class="track-icon">' +
-                '    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                '      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7l8-4 8 4-8 4-8-4zm0 5l8 4 8-4M4 17l8 4 8-4"></path>' +
-                '    </svg>' +
-                '  </div>' +
-                '  <span class="text-slate-100 font-medium">' + escapeHtml(layer.name) + '</span>' +
-                '</div>',
-            );
-        },
-        collectEditPayload: () => {
-            const name = $('#edit-layer-name').val().trim();
-            if (!name) {
-                FormModals.showError('Please enter a layer name');
-                return null;
-            }
-            return {
-                name, description: $('#edit-layer-description').val().trim(),
-                color: $('#edit-layer-color-value').val(),
-            };
-        },
+        renderList: renderLayers,
+        entityLabel: 'GIS Layer',
+        loadFailedMessage: 'Error loading GIS Layers',
     });
 
     const uploadModal = document.getElementById('upload-layer-modal');

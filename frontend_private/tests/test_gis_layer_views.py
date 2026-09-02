@@ -34,14 +34,25 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
             kwargs={"layer_id": self.layer.id},
         )
 
-    def test_list_and_permissions_require_authentication(self) -> None:
+    def details_url(self) -> str:
+        return reverse(
+            "private:gis_layer_details",
+            kwargs={"layer_id": self.layer.id},
+        )
+
+    def danger_url(self) -> str:
+        return reverse(
+            "private:gis_layer_danger_zone",
+            kwargs={"layer_id": self.layer.id},
+        )
+
+    def test_management_pages_require_authentication(self) -> None:
         assert (
             self.client.get(reverse("private:gis_layers")).status_code
             == status.HTTP_302_FOUND
         )
-        assert (
-            self.client.get(self.permission_url()).status_code == status.HTTP_302_FOUND
-        )
+        for url in (self.details_url(), self.permission_url(), self.danger_url()):
+            assert self.client.get(url).status_code == status.HTTP_302_FOUND
 
     def test_list_declares_private_management_controller(self) -> None:
         self.client.force_login(self.user)
@@ -56,9 +67,64 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert 'id="gis-layers-cards-container"' in content
         assert 'class="tracks-table ' in content
         assert 'id="upload-layer-modal"' in content
-        assert 'id="edit-layer-color-picker-btn"' in content
+        assert 'id="edit-layer-modal"' not in content
+        assert 'id="delete-layer-modal"' not in content
+        assert "right_arrow.svg" in content
         assert "Compatibility notes" not in content
         assert "Landmarks Only" not in content
+
+    def test_details_use_shared_settings_workflow(self) -> None:
+        self.client.force_login(self.user)
+
+        content = self.client.get(self.details_url()).content.decode()
+
+        assert "GIS Layer: Protected Areas" in content
+        assert "GIS Layer Details" in content
+        assert "User Access Control" in content
+        assert "Danger Zone" in content
+        assert "Download Source" in content
+        assert 'id="gis_layer_details_form"' in content
+        assert (
+            reverse(
+                "api:v2:gis-layer-detail",
+                kwargs={"id": self.layer.id},
+            )
+            in content
+        )
+
+    def test_reader_gets_read_only_details_and_no_danger_zone(self) -> None:
+        reader = UserFactory.create(email="gis-details-reader@example.com")
+        GISLayerUserPermission.objects.create(
+            user=reader,
+            gis_layer=self.layer,
+            level=PermissionLevel.READ_ONLY,
+        )
+        self.client.force_login(reader)
+
+        content = self.client.get(self.details_url()).content.decode()
+
+        assert "Read-only" in content
+        assert "Download Source" in content
+        assert 'id="btn_submit"' not in content
+        assert "Danger Zone" not in content
+        response = self.client.get(self.danger_url())
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response["Location"] == self.details_url()
+
+    def test_admin_can_open_danger_zone(self) -> None:
+        self.client.force_login(self.user)
+
+        content = self.client.get(self.danger_url()).content.decode()
+
+        assert "GIS Layer Danger Zone" in content
+        assert 'data-speleodb-controller="danger-zone"' in content
+        assert (
+            reverse(
+                "api:v2:gis-layer-detail",
+                kwargs={"id": self.layer.id},
+            )
+            in content
+        )
 
     def test_reader_can_inspect_but_not_mutate_permissions(self) -> None:
         reader = UserFactory.create(email="gis-reader@example.com")

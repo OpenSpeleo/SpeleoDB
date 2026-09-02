@@ -119,7 +119,7 @@ class SensorFleetDetailsView(_BaseSensorFleetView):
 
 
 class SensorFleetDangerZoneView(_BaseSensorFleetView):
-    template_name = "pages/sensor_fleet/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -144,11 +144,22 @@ class SensorFleetDangerZoneView(_BaseSensorFleetView):
                 )
             )
 
+        fleet = data["sensor_fleet"]
+        data.update(
+            entity_label="Sensor Fleet",
+            entity_settings_base_template="pages/sensor_fleet/base.html",
+            api_detail_url=reverse(
+                "api:v2:sensor-fleet-detail",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            listing_url=reverse("private:sensor_fleets"),
+            danger_success_message=("The Sensor Fleet has been deleted successfully."),
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
 class SensorFleetUserPermissionsView(_BaseSensorFleetView):
-    template_name = "pages/sensor_fleet/user_permissions.html"
+    template_name = "pages/shared/entity_settings/user_permissions.html"
 
     def get(  # type: ignore[override]
         self,
@@ -165,9 +176,28 @@ class SensorFleetUserPermissionsView(_BaseSensorFleetView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:sensor_fleets"))
 
-        data["permissions"] = SensorFleetUserPermission.objects.filter(
-            sensor_fleet=data["sensor_fleet"], is_active=True
-        ).prefetch_related("user")
+        fleet = data["sensor_fleet"]
+        data["permissions"] = list(
+            SensorFleetUserPermission.objects.filter(
+                sensor_fleet=fleet,
+                is_active=True,
+            )
+            .select_related("user")
+            .order_by("-level", "user__email")
+        )
+        data.update(
+            entity=fleet,
+            entity_settings_base_template="pages/sensor_fleet/base.html",
+            permission_levels=PermissionLevel.members_no_webviewer,
+            permission_endpoint=reverse(
+                "api:v2:sensor-fleet-permissions",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            permission_add_title="Add a collaborator to the sensor fleet",
+            permission_success_message=("The sensor fleet permission has been saved."),
+            permission_delete_message=("The sensor fleet permission has been removed."),
+            show_disabled_grant_access=True,
+        )
 
         return super().get(request, *args, **data, **kwargs)
 

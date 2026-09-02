@@ -106,7 +106,7 @@ class ExperimentDetailsView(_BaseExperimentView):
 
 
 class ExperimentDangerZoneView(_BaseExperimentView):
-    template_name = "pages/experiment/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -131,6 +131,17 @@ class ExperimentDangerZoneView(_BaseExperimentView):
                 )
             )
 
+        experiment = data["experiment"]
+        data.update(
+            entity_label="Experiment",
+            entity_settings_base_template="pages/experiment/base.html",
+            api_detail_url=reverse(
+                "api:v2:experiment-detail",
+                kwargs={"id": experiment.id},
+            ),
+            listing_url=reverse("private:experiments"),
+            danger_success_message="The experiment has been deleted successfully.",
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
@@ -193,7 +204,7 @@ class ExperimentGISView(_BaseExperimentView):
 
 
 class ExperimentUserPermissionsView(_BaseExperimentView):
-    template_name = "pages/experiment/user_permissions.html"
+    template_name = "pages/shared/entity_settings/user_permissions.html"
 
     def get(  # type: ignore[override]
         self,
@@ -210,10 +221,28 @@ class ExperimentUserPermissionsView(_BaseExperimentView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:experiments"))
 
+        experiment = data["experiment"]
         data["permissions"] = list(
             ExperimentUserPermission.objects.filter(
-                experiment=data["experiment"], is_active=True
-            ).prefetch_related("user")
+                experiment=experiment,
+                is_active=True,
+            )
+            .select_related("user")
+            .order_by("-level", "user__email")
+        )
+        data.update(
+            entity=experiment,
+            has_admin_access=data["is_experiment_admin"],
+            entity_settings_base_template="pages/experiment/base.html",
+            permission_levels=PermissionLevel.members_no_webviewer,
+            permission_endpoint=reverse(
+                "api:v2:experiment-user-permissions-detail",
+                kwargs={"id": experiment.id},
+            ),
+            permission_add_title="Add a collaborator to the experiment",
+            permission_success_message=("The experiment permission has been saved."),
+            permission_delete_message=("The experiment permission has been removed."),
+            show_disabled_grant_access=True,
         )
 
         return super().get(request, *args, **data, **kwargs)

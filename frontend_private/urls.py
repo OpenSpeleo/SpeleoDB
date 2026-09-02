@@ -25,12 +25,16 @@ from frontend_private.views import ExperimentGISView
 from frontend_private.views import ExperimentListingView
 from frontend_private.views import ExperimentUserPermissionsView
 from frontend_private.views import FeedbackView
+from frontend_private.views import GISLayerDangerZoneView
+from frontend_private.views import GISLayerDetailsView
 from frontend_private.views import GISLayerListView
 from frontend_private.views import GISLayerUserPermissionsView
 from frontend_private.views import GISViewDangerZoneView
 from frontend_private.views import GISViewDetailsView
 from frontend_private.views import GISViewGISIntegrationView
 from frontend_private.views import GISViewListingView
+from frontend_private.views import GPSTrackDangerZoneView
+from frontend_private.views import GPSTrackDetailsView
 from frontend_private.views import GPSTrackListView
 from frontend_private.views import GPSTrackUserPermissionsView
 from frontend_private.views import LandmarkCollectionDangerZoneView
@@ -275,6 +279,34 @@ team_urls: list[URLPattern] = [
     ),
 ]
 
+gps_track_patterns: list[URLPattern] = [
+    path("", GPSTrackDetailsView.as_view(), name="gps_track_details"),
+    path(
+        "permissions/",
+        GPSTrackUserPermissionsView.as_view(),
+        name="gps_track_user_permissions",
+    ),
+    path(
+        "danger_zone/",
+        GPSTrackDangerZoneView.as_view(),
+        name="gps_track_danger_zone",
+    ),
+]
+
+gis_layer_patterns: list[URLPattern] = [
+    path("", GISLayerDetailsView.as_view(), name="gis_layer_details"),
+    path(
+        "permissions/",
+        GISLayerUserPermissionsView.as_view(),
+        name="gis_layer_user_permissions",
+    ),
+    path(
+        "danger_zone/",
+        GISLayerDangerZoneView.as_view(),
+        name="gis_layer_danger_zone",
+    ),
+]
+
 urlpatterns: list[URLPattern | URLResolver] = [
     # User URLs
     path("", DashboardView.as_view(), name="user_dashboard"),
@@ -341,18 +373,10 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("gis_view/<uuid:gis_view_id>/", include(gis_view_patterns)),
     # GPS Tracks
     path("gps-tracks/", GPSTrackListView.as_view(), name="gps_tracks"),
-    path(
-        "gps-track/<uuid:track_id>/permissions/",
-        GPSTrackUserPermissionsView.as_view(),
-        name="gps_track_user_permissions",
-    ),
+    path("gps-track/<uuid:track_id>/", include(gps_track_patterns)),
     # Private GIS Layers
     path("gis-layers/", GISLayerListView.as_view(), name="gis_layers"),
-    path(
-        "gis-layer/<uuid:layer_id>/permissions/",
-        GISLayerUserPermissionsView.as_view(),
-        name="gis_layer_user_permissions",
-    ),
+    path("gis-layer/<uuid:layer_id>/", include(gis_layer_patterns)),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

@@ -2,11 +2,11 @@
  * Shared CRUD scaffold for "named + colored + owned" list pages:
  *   - `pages/station_tags.html`
  *   - `pages/gps_tracks.html`
+ *   - `pages/gis_layers.html`
  *
- * Both pages have the same skeleton: fetch a list of entities, render
- * them into a desktop table + mobile cards, open an edit modal from a
- * row button, submit the modal back to a detail endpoint, and handle a
- * separate delete-confirm modal.
+ * These pages share the same list skeleton: fetch entities and render them
+ * into a desktop table + mobile cards. Mutation modals are optional so a
+ * listing can send users to the standard settings workflow instead.
  *
  * The *rendering* (which columns, how colors are shown, etc.) and the
  * *modal fields* differ, so those are supplied as callbacks. Everything
@@ -50,8 +50,8 @@
  *       loadFailedMessage: 'Error loading tags',
  *   });
  *
- * Returns an object with a `reload()` method that reruns the fetch.
- * Useful for external events (e.g. GPX import refreshes the tracks list).
+ * Edit and delete options are optional. List-only pages can use the same loader
+ * and returned `reload()` method without providing modal configuration.
  *
  * Requires: jQuery, FormModals, showAjaxErrorModal.
  */
@@ -96,13 +96,14 @@ export function attachTaggedEntityList(options) {
     var loadFailedMessage = options.loadFailedMessage || ('Failed to load ' + entityLabel + 's');
 
     if (!listEndpoint) { throw new Error('attachTaggedEntityList: listEndpoint is required'); }
-    if (typeof detailEndpointBuilder !== 'function') {
+    if ((editFormSelector || confirmDeleteSelector)
+        && typeof detailEndpointBuilder !== 'function') {
         throw new Error('attachTaggedEntityList: detailEndpointBuilder must be function(id)');
     }
     if (typeof renderList !== 'function') {
         throw new Error('attachTaggedEntityList: renderList is required');
     }
-    if (typeof collectEditPayload !== 'function') {
+    if (editFormSelector && typeof collectEditPayload !== 'function') {
         throw new Error('attachTaggedEntityList: collectEditPayload is required');
     }
 

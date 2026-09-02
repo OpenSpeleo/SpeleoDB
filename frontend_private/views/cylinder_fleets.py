@@ -112,7 +112,7 @@ class CylinderFleetDetailsView(_BaseCylinderFleetView):
 
 
 class CylinderFleetDangerZoneView(_BaseCylinderFleetView):
-    template_name = "pages/cylinder_fleet/danger_zone.html"
+    template_name = "pages/shared/entity_settings/danger_zone.html"
 
     def get(  # type: ignore[override]
         self,
@@ -137,11 +137,24 @@ class CylinderFleetDangerZoneView(_BaseCylinderFleetView):
                 )
             )
 
+        fleet = data["cylinder_fleet"]
+        data.update(
+            entity_label="Cylinder Fleet",
+            entity_settings_base_template="pages/cylinder_fleet/base.html",
+            api_detail_url=reverse(
+                "api:v2:cylinder-fleet-detail",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            listing_url=reverse("private:cylinder_fleets"),
+            danger_success_message=(
+                "The Cylinder Fleet has been deleted successfully."
+            ),
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
 class CylinderFleetUserPermissionsView(_BaseCylinderFleetView):
-    template_name = "pages/cylinder_fleet/user_permissions.html"
+    template_name = "pages/shared/entity_settings/user_permissions.html"
 
     def get(  # type: ignore[override]
         self,
@@ -158,9 +171,32 @@ class CylinderFleetUserPermissionsView(_BaseCylinderFleetView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:cylinder_fleets"))
 
-        data["permissions"] = CylinderFleetUserPermission.objects.filter(
-            cylinder_fleet=data["cylinder_fleet"], is_active=True
-        ).prefetch_related("user")
+        fleet = data["cylinder_fleet"]
+        data["permissions"] = list(
+            CylinderFleetUserPermission.objects.filter(
+                cylinder_fleet=fleet,
+                is_active=True,
+            )
+            .select_related("user")
+            .order_by("-level", "user__email")
+        )
+        data.update(
+            entity=fleet,
+            entity_settings_base_template="pages/cylinder_fleet/base.html",
+            permission_levels=PermissionLevel.members_no_webviewer,
+            permission_endpoint=reverse(
+                "api:v2:cylinder-fleet-permissions",
+                kwargs={"fleet_id": fleet.id},
+            ),
+            permission_add_title="Add a collaborator to the cylinder fleet",
+            permission_success_message=(
+                "The cylinder fleet permission has been saved."
+            ),
+            permission_delete_message=(
+                "The cylinder fleet permission has been removed."
+            ),
+            show_disabled_grant_access=True,
+        )
 
         return super().get(request, *args, **data, **kwargs)
 

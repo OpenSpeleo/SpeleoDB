@@ -15,7 +15,10 @@ function track(overrides = {}) {
 }
 
 function render(tracks) {
-    const { tableHtml, cardsHtml } = buildTrackListMarkup(tracks);
+    const { tableHtml, cardsHtml } = buildTrackListMarkup(
+        tracks,
+        '/static/private/media/right_arrow.svg',
+    );
     document.body.innerHTML = `
         <table><tbody id="tracks-table-body">${tableHtml}</tbody></table>
         <div id="tracks-cards-container">${cardsHtml}</div>`;
@@ -24,7 +27,7 @@ function render(tracks) {
 beforeEach(() => {
     globalThis.Urls = {
         'api:v2:gps-track-export-gpx': id => `/api/v2/gps_tracks/${id}/export/gpx/`,
-        'private:gps_track_user_permissions': id => `/private/gps-track/${id}/permissions/`,
+        'private:gps_track_details': id => `/private/gps-track/${id}/`,
     };
 });
 
@@ -34,30 +37,30 @@ afterEach(() => {
 });
 
 describe('GPS Tracks rendered list contract', () => {
-    it('renders real export and access links for readers without mutation controls', () => {
+    it('renders the standard Open control and export link in both responsive views', () => {
         render([track()]);
 
         expect(document.body.textContent).toContain('Cenote Traverse');
         expect(document.body.textContent).toContain('creator@example.com');
         expect(document.body.textContent).toContain('Read Only');
         expect(document.querySelectorAll('a[href$="/export/gpx/"]')).toHaveLength(2);
-        expect(document.querySelectorAll('a[href$="/permissions/"]')).toHaveLength(2);
+        expect(document.querySelectorAll('a[href$="111111111111/"]')).toHaveLength(2);
+        expect(document.querySelectorAll('img[src$="right_arrow.svg"]')).toHaveLength(2);
         expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(0);
         expect(document.querySelectorAll('.btn-delete-track')).toHaveLength(0);
     });
 
-    it('renders edit but not delete for writers in both responsive views', () => {
+    it('keeps list actions identical for writers and administrators', () => {
         render([track({
             user_permission_level_label: 'READ_AND_WRITE',
             can_write: true,
         })]);
 
         expect(document.body.textContent).toContain('Read And Write');
-        expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(2);
+        expect(document.querySelectorAll('img[src$="right_arrow.svg"]')).toHaveLength(2);
+        expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(0);
         expect(document.querySelectorAll('.btn-delete-track')).toHaveLength(0);
-    });
 
-    it('renders edit and delete for administrators in both responsive views', () => {
         render([track({
             user_permission_level_label: 'ADMIN',
             can_write: true,
@@ -65,13 +68,6 @@ describe('GPS Tracks rendered list contract', () => {
         })]);
 
         expect(document.body.textContent).toContain('Admin');
-        expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(2);
-        expect(document.querySelectorAll('.btn-delete-track')).toHaveLength(2);
-    });
-
-    it('requires literal boolean capabilities', () => {
-        render([track({ can_write: 'true', can_delete: 'true' })]);
-
         expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(0);
         expect(document.querySelectorAll('.btn-delete-track')).toHaveLength(0);
     });
@@ -85,7 +81,7 @@ describe('GPS Tracks rendered list contract', () => {
             can_write: true,
         })]);
 
-        expect(document.querySelector('img')).toBeNull();
+        expect(document.querySelectorAll('img')).toHaveLength(2);
         expect(document.querySelector('script')).toBeNull();
         expect(document.querySelector('[onmouseover]')).toBeNull();
         expect(document.querySelector('.w-3.h-3').style.backgroundColor)

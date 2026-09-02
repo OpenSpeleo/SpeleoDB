@@ -1,47 +1,38 @@
-{% extends "pages/cylinder_fleet/base.html" %}
-{% load static %}
+{% extends entity_settings_base_template|default:"pages/shared/entity_settings/base.html" %}
 {% load vite_assets %}
 
 {% block right_panel %}
-<div class="grow">
-
-    <!-- Panel body -->
+<div class="grow min-w-0">
     <div class="p-6 flow-y-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-16">Cylinder Fleet Danger Zone</h2>
-
+        <h2 class="text-2xl text-slate-100 font-bold mb-16">{{ entity_label }} Danger Zone</h2>
         {% csrf_token %}
-
-        <!-- Delete Cylinder Fleet -->
         <section>
             <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
                 <div class="w-full border border-srgb-rose-600-50 bg-srgb-rose-900-10 p-6 rounded-lg">
                     <h1 class="mb-6 underline font-heavy text-rose-600">! WARNING ! WARNING ! WARNING ! WARNING ! WARNING ! WARNING !</h1>
-                    <h1 class="mb-2 underline font-heavy text-slate-100">Delete this Cylinder Fleet?</h1>
+                    <h1 class="mb-2 underline font-heavy text-slate-100">Delete this {{ entity_label }}?</h1>
                     <span class="block text-sm font-medium mb-1 text-slate-300">
-                        Once you delete a Cylinder Fleet, there is no going back. The token will be invalidated immediately and all external tools using it will stop working. Please be <b><u>absolutely</u></b> certain.
+                        Once you delete this {{ entity_label }}, there is no going back. Please be <b><u>absolutely</u></b> certain.
                     </span>
-                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete Cylinder Fleet</button>
+                    <button id="btn_delete" class="btn bg-rose-500 hover:bg-rose-600 text-white mt-4">Delete {{ entity_label }}</button>
                 </div>
             </div>
         </section>
-
     </div>
-
 </div>
 
 {% include 'snippets/modal_success.html' %}
 {% include 'snippets/modal_error.html' %}
 {% include 'snippets/modal_confirmation_delete.html' %}
-
 {% endblock right_panel %}
 
 {% block inline_extra_js %}
 {% vite_preload 'controller-danger-zone' %}
 <script type="application/json" data-speleodb-controller="danger-zone">
 {
-    "deleteUrl": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
-    "successMessage": "The Cylinder Fleet has been deleted successfully.",
-    "successRedirect": "{% url 'private:cylinder_fleets' %}"
+    "deleteUrl": "{{ api_detail_url }}",
+    "successMessage": "{{ danger_success_message|escapejs }}",
+    "successRedirect": "{{ listing_url }}"
 }
 </script>
 {% endblock inline_extra_js %}

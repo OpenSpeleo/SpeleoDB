@@ -28,6 +28,18 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
             kwargs={"track_id": self.track.id},
         )
 
+    def details_url(self) -> str:
+        return reverse(
+            "private:gps_track_details",
+            kwargs={"track_id": self.track.id},
+        )
+
+    def danger_url(self) -> str:
+        return reverse(
+            "private:gps_track_danger_zone",
+            kwargs={"track_id": self.track.id},
+        )
+
     def test_list_requires_authentication(self) -> None:
         response = self.client.get(reverse("private:gps_tracks"))
 
@@ -39,6 +51,65 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
 
         assert response.status_code == status.HTTP_302_FOUND
         assert isinstance(response, HttpResponseRedirect)
+
+    def test_details_and_danger_zone_require_authentication(self) -> None:
+        for url in (self.details_url(), self.danger_url()):
+            response = self.client.get(url)
+            assert response.status_code == status.HTTP_302_FOUND
+            assert isinstance(response, HttpResponseRedirect)
+
+    def test_details_use_shared_settings_workflow(self) -> None:
+        self.client.force_login(self.user)
+
+        content = self.client.get(self.details_url()).content.decode()
+
+        assert "GPS Track: Shared Traverse" in content
+        assert "GPS Track Details" in content
+        assert "User Access Control" in content
+        assert "Danger Zone" in content
+        assert "Export GPX" in content
+        assert 'id="gps_track_details_form"' in content
+        assert (
+            reverse(
+                "api:v2:gps-track-detail",
+                kwargs={"id": self.track.id},
+            )
+            in content
+        )
+
+    def test_reader_gets_read_only_details_and_no_danger_zone(self) -> None:
+        reader = UserFactory.create(email="gps-details-reader@example.com")
+        GPSTrackUserPermissionFactory.create(
+            user=reader,
+            gps_track=self.track,
+            level=PermissionLevel.READ_ONLY,
+        )
+        self.client.force_login(reader)
+
+        content = self.client.get(self.details_url()).content.decode()
+
+        assert "Read-only" in content
+        assert "Export GPX" in content
+        assert 'id="btn_submit"' not in content
+        assert "Danger Zone" not in content
+        response = self.client.get(self.danger_url())
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response["Location"] == self.details_url()
+
+    def test_admin_can_open_danger_zone(self) -> None:
+        self.client.force_login(self.user)
+
+        content = self.client.get(self.danger_url()).content.decode()
+
+        assert "GPS Track Danger Zone" in content
+        assert 'data-speleodb-controller="danger-zone"' in content
+        assert (
+            reverse(
+                "api:v2:gps-track-detail",
+                kwargs={"id": self.track.id},
+            )
+            in content
+        )
 
     def test_active_reader_can_view_collaborators_without_mutation_controls(
         self,
@@ -230,3 +301,6 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert '<div class="font-semibold text-center">Access Level</div>' in content
         assert 'data-speleodb-controller="gps-tracks"' in content
         assert reverse("api:v2:gps-tracks") in content
+        assert "right_arrow.svg" in content
+        assert 'id="edit-track-modal"' not in content
+        assert 'id="delete-track-modal"' not in content
