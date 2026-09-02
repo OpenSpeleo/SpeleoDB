@@ -145,9 +145,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
             git_repo = GitRepo.init(project_dir)
 
-            origin = git_repo.create_remote("origin", url=git_url)
-            origin.fetch()
-            assert origin.exists()
+            git_repo.create_remote("origin", url=git_url)
 
             # Create an initial empty commit
             git_repo.publish_first_commit()
