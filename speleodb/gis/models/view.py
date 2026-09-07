@@ -79,7 +79,7 @@ class GISView(models.Model):
         help_text="User who owns and can manage this view",
     )
 
-    projects = models.ManyToManyField(  # type: ignore[var-annotated]
+    projects = models.ManyToManyField(
         Project,
         through="GISProjectView",
         related_name="gis_views",

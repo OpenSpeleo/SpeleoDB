@@ -23,6 +23,7 @@ from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -129,7 +130,7 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
-        data = request.data
+        data = require_mapping_request_data(request.data).copy()
         data["created_by"] = user.email
 
         try:

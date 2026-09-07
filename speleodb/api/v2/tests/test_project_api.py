@@ -278,6 +278,17 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
 
 
 class TestProjectCreation(BaseAPITestCase):
+    def test_create_project_rejects_array_body(self) -> None:
+        response = self.client.post(
+            reverse("api:v2:projects"),
+            data=[],
+            format="json",
+            headers={"authorization": self.auth},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert response.data == {"detail": "Request body must be a JSON object."}
+
     @parameterized.expand([True, False])
     def test_create_project(self, use_lat_long: bool) -> None:
         _, project_type = random.choice(ProjectType.choices)

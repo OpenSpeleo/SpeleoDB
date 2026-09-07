@@ -1,4 +1,4 @@
-FROM python:3.14.6-bookworm
+FROM python:3.14.7-bookworm
 
 ARG BUILD_ENVIRONMENT=local
 ARG APP_HOME=/app

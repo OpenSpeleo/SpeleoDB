@@ -14,6 +14,7 @@ from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -61,7 +62,8 @@ class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
-        comment = request.data.get("comment", "")
+        request_data = require_mapping_request_data(request.data)
+        comment = request_data.get("comment", "")
 
         try:
             project.release_mutex(user=user, comment=comment)

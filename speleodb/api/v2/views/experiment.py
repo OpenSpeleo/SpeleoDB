@@ -36,6 +36,7 @@ from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models.experiment import MandatoryFieldUuid
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
@@ -183,10 +184,7 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
-        # Create a mutable copy of request.data
-        data = (
-            request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
-        )
+        data = require_mapping_request_data(request.data).copy()
         data["created_by"] = user.email
 
         serializer = self.get_serializer(data=data)

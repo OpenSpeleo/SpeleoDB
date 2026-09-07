@@ -11,12 +11,12 @@ from speleodb.users.tasks import get_users_count
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
-    from pytest_django.fixtures import SettingsWrapper
+    from pytest_django.fixtures import Settings
 
 pytestmark = pytest.mark.django_db
 
 
-def test_user_count(settings: SettingsWrapper) -> None:
+def test_user_count(settings: Settings) -> None:
     """A basic test to execute the get_users_count Celery task."""
     batch_size = 3
     UserFactory.create_batch(batch_size)

@@ -9,10 +9,10 @@
 import logging
 import re
 
-logger = logging.getLogger(__name__)   # <-- executable code between imports
+logger = logging.getLogger(__name__)  # <-- executable code between imports
 
-from django.db import models           # <-- E402: import not at top of file
-from speleodb.gis.models import Foo    # <-- E402
+from django.db import models  # <-- E402: import not at top of file
+from speleodb.gis.models import Foo  # <-- E402
 ```
 
 Placing `logger = ...` between the stdlib and third-party import groups makes
@@ -31,7 +31,7 @@ from speleodb.gis.models import Foo
 if TYPE_CHECKING:
     ...
 
-logger = logging.getLogger(__name__)   # <-- after ALL imports
+logger = logging.getLogger(__name__)  # <-- after ALL imports
 ```
 
 ## Rule

@@ -157,6 +157,36 @@ The repository now uses a single Node workspace at the repo root.
 - CI jobs: `.github/workflows/ci.yml` (root npm install + test/lint paths).
 - Pre-commit hooks: `.pre-commit-config.yaml` (root npm scripts).
 
+## Dependency Update Workflow
+
+- Treat the open Dependabot PRs targeting `dev` as the authoritative branch set.
+  Fetch and merge every open `dependabot/*` head before consolidating the
+  manifests and lockfiles.
+- Run `npx --yes npm-check-updates -u --peer`. Generate `package-lock.json`
+  independently of `node_modules` and its hidden lockfile, then verify that
+  package keys are portable, the root dependency graph matches `package.json`,
+  and every registry package retains `resolved` and `integrity` metadata.
+- Apply compatible Python direct updates, run `uv lock --upgrade`, and use
+  `uv tree --outdated --depth 1` to prove that every remaining old direct
+  dependency has an explicit incompatibility.
+- Run Cargo or Bun update and lockfile workflows only when their manifests are
+  present. Do not introduce a new package manager to satisfy this checklist.
+- Run `prek update`, review every hook revision change, and keep duplicated tool
+  hooks such as ruff and djLint aligned with their project pins.
+- Validate a clean install, production asset build, all JavaScript and Python
+  tests, and `prek run -a` before creating the single dependency-update commit.
+
+### Current Dependency Blockers
+
+- Can't update Django to 6.1.x until `django-celery-beat` supports Django 6.1;
+  version 2.9.0 requires Django `<6.1`.
+- Can't update orjson to 3.12.x until `compass-lib` relaxes its `orjson<3.12`
+  constraint and supported non-x86 architectures have a binary-wheel path;
+  version 0.0.7 requires `orjson>=3.11.8,<3.12`, while orjson 3.12 removes
+  ppc64le and s390x wheels and the standalone image is intentionally Rust-free.
+- Can't update pyproj to 3.8.x until `compass-lib` relaxes its `pyproj<3.8`
+  constraint; version 0.0.7 requires `pyproj>=3.7.2,<3.8`.
+
 ## Map Viewer Design Guardrails
 
 - Keep private/public map viewers behaviorally aligned where intended.

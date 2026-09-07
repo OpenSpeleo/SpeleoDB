@@ -135,9 +135,8 @@ class AdaptiveDownloadRedirectViewTests(TestCase):
         expected_mobile_destination: str | None,
     ) -> None:
 
-        response = self.client.get(
-            reverse("download_redirect"), headers={"user-agent": user_agent}
-        )
+        headers = {} if user_agent is None else {"user-agent": user_agent}
+        response = self.client.get(reverse("download_redirect"), headers=headers)
 
         expected_location = (
             reverse("download")

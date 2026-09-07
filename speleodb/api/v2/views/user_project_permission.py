@@ -24,6 +24,7 @@ from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
 from speleodb.utils.exceptions import ValueNotFoundError
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -61,8 +62,12 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
     lookup_field = "id"
 
     def _process_request_data(
-        self, request: Request, data: dict[str, Any], skip_level: bool = False
+        self,
+        request: Request,
+        data: dict[str, Any] | list[Any],
+        skip_level: bool = False,
     ) -> dict[str, Any]:
+        data = require_mapping_request_data(data)
         request_user = self.get_user()
         perm_data: dict[str, Any] = {}
         for key in ["user", "level"]:

@@ -56,6 +56,7 @@ from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
 from speleodb.utils.exceptions import ValueNotFoundError
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import NoWrapResponse
 from speleodb.utils.response import SuccessResponse
@@ -107,7 +108,7 @@ class CylinderFleetApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
         """Create a new cylinder fleet."""
         user = self.get_user()
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
 
         # Add created_by to data
         data["created_by"] = user.email
@@ -229,7 +230,7 @@ class CylinderApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
         fleet = self.get_object()
 
         # Add fleet and created_by to data
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["fleet"] = fleet.id
         data["created_by"] = user.email
 
@@ -312,8 +313,12 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
     lookup_url_kwarg = "fleet_id"
 
     def _process_request_data(
-        self, request: Request, data: dict[str, Any], skip_level: bool = False
+        self,
+        request: Request,
+        data: dict[str, Any] | list[Any],
+        skip_level: bool = False,
     ) -> dict[str, Any]:
+        data = require_mapping_request_data(data)
         request_user = self.get_user()
         perm_data: dict[str, Any] = {}
 
@@ -915,7 +920,7 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
         """Create a new cylinder install."""
         user = self.get_user()
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["install_user"] = user.email
         data["created_by"] = user.email
 
@@ -1019,7 +1024,7 @@ class CylinderInstallSpecificApiView(GenericAPIView[CylinderInstall], SDBAPIView
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
 
         # If changing status to anything other than INSTALLED, set uninstall fields
         new_status = data.get("status", install.status)
@@ -1144,7 +1149,7 @@ class CylinderPressureCheckApiView(
         if error:
             return error
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["install"] = install.id  # type: ignore[union-attr]
         data["user"] = user.email
 
@@ -1220,7 +1225,7 @@ class CylinderPressureCheckSpecificApiView(
             )
 
         # Inject install from existing object (not changeable via API)
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["install"] = check.install_id
 
         serializer = self.get_serializer(check, data=data, partial=partial)

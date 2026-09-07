@@ -60,6 +60,7 @@ from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.exceptions import UserNotActiveError
 from speleodb.utils.exceptions import UserNotFoundError
 from speleodb.utils.exceptions import ValueNotFoundError
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -110,7 +111,7 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         """Create a new sensor fleet."""
         user = self.get_user()
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
 
         # Extract sensors data if provided
         sensors_data = data.pop("sensors", [])
@@ -244,7 +245,7 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         fleet = self.get_object()
 
         # Add fleet and created_by to data
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
 
         data["fleet"] = fleet.id
         data["created_by"] = user.email
@@ -354,8 +355,12 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
     lookup_url_kwarg = "fleet_id"
 
     def _process_request_data(
-        self, request: Request, data: dict[str, Any], skip_level: bool = False
+        self,
+        request: Request,
+        data: dict[str, Any] | list[Any],
+        skip_level: bool = False,
     ) -> dict[str, Any]:
+        data = require_mapping_request_data(data)
         request_user = self.get_user()
         perm_data: dict[str, Any] = {}
 
@@ -1003,7 +1008,7 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         user = self.get_user()
         station = self.get_object()
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["station"] = station.id
         data["install_user"] = user.email
         data["created_by"] = user.email
@@ -1060,7 +1065,7 @@ class StationSensorInstallSpecificApiView(
         user = self.get_user()
         sensor_install = self.get_object()
 
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
 
         # If changing status to anything else than RETRIEVED:
         # => set uninstall_user if not provided

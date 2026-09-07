@@ -60,6 +60,7 @@ from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
 from speleodb.utils.helpers import retry_with_backoff
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import DownloadResponseFromFile
 from speleodb.utils.response import ErrorResponse
@@ -174,7 +175,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     )
 
                 # Verify the commit message is not empty
-                if not (commit_message := request.data.get("message", "")):
+                request_data = require_mapping_request_data(request.data)
+                if not (commit_message := request_data.get("message", "")):
                     data = {
                         "error": (
                             f"Empty or no `message` received: `{commit_message}`."
