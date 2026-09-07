@@ -35,6 +35,7 @@ from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -73,7 +74,8 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
         **kwargs: Any,
     ) -> SuccessResponse | ErrorResponse:
         user = self.get_user()
-        collection_id = request.data.get("collection")
+        request_data = require_mapping_request_data(request.data)
+        collection_id = request_data.get("collection")
         if collection_id:
             try:
                 collection = LandmarkCollection.objects.get(

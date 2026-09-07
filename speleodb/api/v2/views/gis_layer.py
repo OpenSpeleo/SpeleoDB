@@ -38,12 +38,11 @@ from speleodb.gis.models import GISLayer
 from speleodb.gis.models import GISLayerSourceFormat
 from speleodb.gis.models import GISLayerUserPermission
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from django.db.models import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
@@ -231,7 +230,7 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
         *,
         skip_level: bool = False,
     ) -> DirectUserPermissionData:
-        data = cast("Mapping[str, Any]", request.data)
+        data = require_mapping_request_data(request.data)
         return parse_direct_user_permission_data(
             request_user=self.get_user(),
             data=data,

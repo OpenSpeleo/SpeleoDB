@@ -145,7 +145,7 @@ class GISLayerCreateSerializer(GISLayerSerializer):
             "compilation_result",
             None,
         )
-        source_file: UploadedFile = validated_data.pop("source_file")
+        source_file: UploadedFile[bytes] = validated_data.pop("source_file")
         original_filename = safe_upload_filename(source_file.name or "source")
         layer = GISLayer(created_by=request.user.email, **validated_data)
         written_files: list[tuple[Any, str]] = []

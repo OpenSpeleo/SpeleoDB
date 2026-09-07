@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from _pytest.compat import LEGACY_PATH
-    from pytest_django.fixtures import SettingsWrapper
+    from pytest_django.fixtures import Settings
 
     from speleodb.surveys.models import Project
     from speleodb.users.models import SurveyTeam
@@ -36,7 +36,7 @@ def _load_test_env() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _media_storage(settings: SettingsWrapper, tmpdir: LEGACY_PATH) -> None:
+def _media_storage(settings: Settings, tmpdir: LEGACY_PATH) -> None:
     settings.MEDIA_ROOT = tmpdir.strpath
 
 

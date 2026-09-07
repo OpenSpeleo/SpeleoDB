@@ -31,7 +31,7 @@ from speleodb.users.tests.factories import UserFactory
 if TYPE_CHECKING:
     from django.test.client import Client
     from django.test.client import RequestFactory
-    from pytest_django.fixtures import SettingsWrapper
+    from pytest_django.fixtures import Settings
 
     from speleodb.surveys.models import Project
 
@@ -87,7 +87,7 @@ class TestUserAdmin:
         assert response.status_code == status.HTTP_200_OK, response.data  # type: ignore[attr-defined]
 
     @pytest.fixture
-    def _force_allauth(self, settings: SettingsWrapper) -> None:
+    def _force_allauth(self, settings: Settings) -> None:
         settings.DJANGO_ADMIN_FORCE_ALLAUTH = True
         # Reload the admin module to apply the setting change
         import speleodb.users.admin as users_admin  # noqa: PLC0415
@@ -97,7 +97,7 @@ class TestUserAdmin:
 
     @pytest.mark.django_db
     @pytest.mark.usefixtures("_force_allauth")
-    def test_allauth_login(self, rf: RequestFactory, settings: SettingsWrapper) -> None:
+    def test_allauth_login(self, rf: RequestFactory, settings: Settings) -> None:
         request = rf.get("/fake-url")
         request.user = AnonymousUser()
         response = admin.site.login(request)

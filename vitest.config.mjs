@@ -9,6 +9,15 @@ export default defineConfig({
         // file workers prevents those builds from starving JSDOM test event
         // loops in constrained devcontainers and CI runners.
         maxWorkers: 4,
+        experimental: {
+            diagnostics: {
+                // `vitest doctor` confirmed that the shared-environment and VM
+                // alternatives fail this suite and the safe candidates save
+                // less than 3%, so this recurring hint is not actionable.
+                environment: false,
+                isolate: false
+            }
+        },
         include: [
             'frontend_common/**/*.test.js',
             'frontend_public/static/js/**/*.test.js',

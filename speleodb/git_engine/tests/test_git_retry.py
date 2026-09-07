@@ -98,7 +98,7 @@ class CommitAndPushRetryTests(TestCase):
         with (
             patch.object(git.IndexFile, "commit", flaky_commit),
             patch.object(self.repo, "is_dirty", return_value=True),
-            patch.object(git.Git, "execute", return_value=""),
+            patch.object(git.Git, "push", create=True, return_value=""),
             patch(
                 "speleodb.git_engine.core.GitRepo.active_branch",
                 new_callable=PropertyMock,
@@ -160,9 +160,6 @@ class CommitAndPushRetryTests(TestCase):
         """After DJANGO_GIT_RETRY_ATTEMPTS push failures, GitBaseError is raised."""
         (self.git_path / "pushfile.txt").write_text("content")
 
-        def always_fail_push(self_git: git.Git, command: str, **kwargs: object) -> str:
-            raise GitCommandError("push", "remote error")
-
         mock_origin = MagicMock()
         mock_origin.url = "https://token@gitlab.com/test/repo.git"
         mock_remotes = MagicMock()
@@ -170,7 +167,12 @@ class CommitAndPushRetryTests(TestCase):
 
         with (
             patch.object(self.repo, "is_dirty", return_value=True),
-            patch.object(git.Git, "execute", always_fail_push),
+            patch.object(
+                git.Git,
+                "push",
+                create=True,
+                side_effect=GitCommandError("push", "remote error"),
+            ),
             patch(
                 "speleodb.git_engine.core.GitRepo.active_branch",
                 new_callable=PropertyMock,

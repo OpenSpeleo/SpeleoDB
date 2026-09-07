@@ -17,6 +17,7 @@ from speleodb.api.v2.serializers.station_tag import StationTagSerializer
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationTag
 from speleodb.utils.api_mixin import SDBAPIViewMixin
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -189,7 +190,8 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
         station = self.get_object()
         user = self.get_user()
 
-        tag_id = request.data.get("tag_id")
+        request_data = require_mapping_request_data(request.data)
+        tag_id = request_data.get("tag_id")
         if not tag_id:
             return ErrorResponse(
                 {"error": "tag_id is required"},

@@ -7,7 +7,11 @@ compiles Tailwind, route CSS, application ES modules, and shared chunks; Django
 remains the only HTML and static-file server. The repository does not run
 Vite's development server, proxy, HMR client, or HTML transformer.
 
-Node 22.12 or newer is required. Production images use Node 24. Exact direct
+The supported Node lines and their exact minimum releases are declared by the
+root `package.json` engine range. Production images use Node 24. This declared
+range tracks the runtime floor of the frontend test/tooling graph. CI and
+Railpack exercise Node 24, the Compose/devcontainer image exercises Node 22,
+and the local clean install covers the newer `>=26` range. Exact direct
 dependency versions live only in `package.json` and `package-lock.json` so
 documentation cannot drift from the install graph. Registry-backed lockfile
 nodes retain `resolved` and `integrity` metadata, and `allowScripts` must exactly
@@ -70,8 +74,12 @@ and Gunicorn/Django remains the start command.
 
 When updating tooling, regenerate the root lockfile independently of the
 installed tree; npm's hidden `node_modules/.package-lock.json` is not an
-acceptable source because it can omit registry resolution metadata. Confirm
-every registry-backed package retains its checksum, then run clean installs on
-Node 22 and 24, audit pending scripts, run the complete build/lint/test suite,
-exercise watcher invalidation, and verify `collectstatic` plus production
-module MIME/CORS behavior.
+acceptable source because it can omit registry resolution metadata. Run npm
+with the temporary directory as its real working directory: using `--prefix`
+and then moving that lockfile can encode temporary paths into package keys.
+Confirm package keys are empty or `node_modules/...`, the root manifest matches,
+and every registry-backed package retains its checksum. Then run clean installs
+on the maintained Node 22 and 24 lines plus the active local `>=26` runtime,
+audit pending scripts, run the complete
+build/lint/test suite, exercise watcher invalidation, and verify `collectstatic`
+plus production module MIME/CORS behavior.

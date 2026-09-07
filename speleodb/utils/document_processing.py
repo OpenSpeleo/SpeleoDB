@@ -7,7 +7,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
 
-import fitz  # PyMuPDF
+import pymupdf
 from django.core.files.base import ContentFile
 from PIL import Image
 from PIL import ImageDraw
@@ -55,7 +55,7 @@ class DocumentProcessor:
             pdf_data = document_file.read()
 
             # Open PDF with PyMuPDF
-            with fitz.open(stream=pdf_data, filetype="pdf") as pdf_reader:  # type: ignore[no-untyped-call]
+            with pymupdf.open(stream=pdf_data, filetype="pdf") as pdf_reader:  # type: ignore[no-untyped-call]
                 # PDF with no content or invalid
                 if not pdf_reader:
                     return DocumentProcessor._create_placeholder_with_icon(ext)
@@ -65,7 +65,7 @@ class DocumentProcessor:
 
                 # Render page to image at lower resolution for thumbnail
                 # zoom = 0.5 means 72 DPI (half of default 144 DPI)
-                mat = fitz.Matrix(0.5, 0.5)  # type: ignore[no-untyped-call]
+                mat = pymupdf.Matrix(0.5, 0.5)  # type: ignore[no-untyped-call]
                 pix = page.get_pixmap(matrix=mat)  # pyright: ignore[reportAttributeAccessIssue]
 
                 # Convert to PIL Image

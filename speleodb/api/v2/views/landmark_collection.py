@@ -47,6 +47,7 @@ from speleodb.utils.gpx import dated_export_filename
 from speleodb.utils.gpx import gpx_download_response
 from speleodb.utils.gpx import new_gpx_document
 from speleodb.utils.gpx import sanitize_export_filename
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -85,7 +86,7 @@ class LandmarkCollectionApiView(GenericAPIView[LandmarkCollection], SDBAPIViewMi
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        data = request.data.copy()
+        data = require_mapping_request_data(request.data).copy()
         data["created_by"] = user.email
 
         serializer = self.get_serializer(data=data)
@@ -125,8 +126,9 @@ class LandmarkCollectionSpecificApiView(
         self, request: Request, partial: bool, *args: Any, **kwargs: Any
     ) -> Response:
         collection = self.get_object()
+        request_data = require_mapping_request_data(request.data)
         if collection.is_personal:
-            requested_fields = set(request.data.keys())
+            requested_fields = set(request_data.keys())
             disallowed_fields = requested_fields - _PERSONAL_COLLECTION_EDITABLE_FIELDS
             if disallowed_fields:
                 return ErrorResponse(
@@ -141,7 +143,7 @@ class LandmarkCollectionSpecificApiView(
 
         serializer = self.get_serializer(
             collection,
-            data=request.data,
+            data=request_data,
             partial=partial,
         )
 
@@ -196,8 +198,12 @@ class LandmarkCollectionPermissionApiView(
     lookup_url_kwarg = "collection_id"
 
     def _process_request_data(
-        self, request: Request, data: dict[str, Any], skip_level: bool = False
+        self,
+        request: Request,
+        data: dict[str, Any] | list[Any],
+        skip_level: bool = False,
     ) -> dict[str, Any]:
+        data = require_mapping_request_data(data)
         return dict(
             parse_direct_user_permission_data(
                 request_user=self.get_user(),
@@ -500,10 +506,11 @@ class LandmarkCollectionBulkTransferApiView(
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         source = self.get_object()
         user = self.get_user()
+        request_data = require_mapping_request_data(request.data)
 
-        raw_ids: list[str] = request.data.get("landmark_ids", [])
+        raw_ids: list[str] = request_data.get("landmark_ids", [])
         landmark_ids: list[str] = list(dict.fromkeys(raw_ids))
-        target_id: str | None = request.data.get("target_collection")
+        target_id: str | None = request_data.get("target_collection")
 
         if not landmark_ids:
             return ErrorResponse(
@@ -588,8 +595,9 @@ class LandmarkCollectionBulkDeleteApiView(
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         collection = self.get_object()
+        request_data = require_mapping_request_data(request.data)
 
-        raw_ids: list[str] = request.data.get("landmark_ids", [])
+        raw_ids: list[str] = request_data.get("landmark_ids", [])
         landmark_ids: list[str] = list(dict.fromkeys(raw_ids))
         if not landmark_ids:
             return ErrorResponse(

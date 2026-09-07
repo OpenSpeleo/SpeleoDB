@@ -30,6 +30,7 @@ from rest_framework.views import APIView
 
 from speleodb.api.v2.views.tmp_utils import SurveyData
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
+from speleodb.utils.requests import require_mapping_request_data
 from speleodb.utils.response import DownloadResponseFromBlob
 from speleodb.utils.response import ErrorResponse
 
@@ -65,7 +66,8 @@ class ToolXLSToDMP(APIView):
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
-        survey_unit = request.data["unit"]
+        request_data = require_mapping_request_data(request.data)
+        survey_unit = request_data["unit"]
 
         def format_float(val: str | None) -> float:
             if val is None or val == "":
@@ -79,10 +81,10 @@ class ToolXLSToDMP(APIView):
 
         try:
             survey_data: dict[str, Any] = {
-                "date": f"{request.data['survey_date']} 00:00",
+                "date": f"{request_data['survey_date']} 00:00",
                 "direction": (
                     SurveyDirection.IN
-                    if request.data["direction"] == "in"
+                    if request_data["direction"] == "in"
                     else SurveyDirection.OUT
                 ),
                 "name": "AA1",
@@ -90,7 +92,7 @@ class ToolXLSToDMP(APIView):
             }
 
             shots: list[dict[str, Any]] = []
-            for shot_data_start, shot_data_end in pairwise(request.data["shots"]):
+            for shot_data_start, shot_data_end in pairwise(request_data["shots"]):
                 shots.append(
                     {
                         "depth_in": format_float(shot_data_start["depth"]),
@@ -321,7 +323,8 @@ class ToolDMPDoctor(APIView):
         # Parse JSON data from the 'data' field
 
         try:
-            data = json.loads(request.data.get("data", {}))
+            request_data = require_mapping_request_data(request.data)
+            data = json.loads(request_data.get("data", {}))
         except json.JSONDecodeError:
             return ErrorResponse(
                 {"error": "Invalid data format"},

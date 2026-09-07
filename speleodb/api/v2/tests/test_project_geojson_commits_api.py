@@ -57,7 +57,7 @@ def sha1_hash() -> str:
     return sha1(rand_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
-def create_project_geojson(
+def create_project_geojson(  # noqa: PLR0917
     project: Project,
     commit_sha: str,
     commit_date: datetime.datetime,
