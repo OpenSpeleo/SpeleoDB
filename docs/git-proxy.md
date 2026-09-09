@@ -38,11 +38,22 @@ Automatic redirects are disabled. A redirect can indicate an authentication,
 canonical-host, or infrastructure problem; following it could turn that
 problem into a successful HTML response that is invalid Git protocol data.
 
-For a missing repository, the proxy preserves the existing one-time recovery
-flow: on the first upstream `404`, SpeleoDB asks `GitlabManager` to create or
-clone the project and retries the request once. A repeated `404` is an upstream
-failure. Every response discarded during retry is closed before the next
-request.
+Only discovery GETs may be replayed. Before consuming any body, discovery retries
+connection/timeouts and HTTP 429, 500, 502, 503, or 504 up to
+`DJANGO_GIT_RETRY_ATTEMPTS` attempts (currently five), with 1/2/4/8-second
+backoff. Numeric and HTTP-date `Retry-After` headers are honored up to 30 seconds.
+A longer requested delay ends the request with the controlled 502 instead of
+retrying too early or holding a worker indefinitely. Malformed headers fall back
+to backoff. Authorization failures, redirects, and invalid successful content
+types are not retried.
+
+For a missing repository, discovery retains one recovery: after the first
+upstream `404`, SpeleoDB asks `GitlabManager` to create or clone the project,
+then starts one new discovery phase with its own bounded request budget. A
+repeated `404` is an upstream failure. Every discarded response is closed before
+the next request or delay. Upload and receive POSTs never trigger retries or
+repository recovery, because a request may have taken effect before an error was
+returned. The client can initiate a fresh discovery safely.
 
 ## Response Validation and Streaming
 
@@ -112,6 +123,8 @@ Automated tests should mock GitLab and cover:
   and disabled redirects.
 - First-`404` recovery followed by success, repeated-`404` failure, and response
   closure on every branch.
+- Bounded transient discovery recovery/exhaustion, numeric/date rate-limit delays,
+  and refusal to replay POSTs or partially delivered responses.
 - Connection timeouts, request failures, deferred stream failures, and public
   endpoint authentication and permission enforcement.
 
@@ -141,6 +154,9 @@ scope and expiry.
 
 Successful bodies are streamed in bounded chunks, so memory use is independent
 of repository size. Response validation uses status and headers only and does
-not scan or buffer the body. The sole additional upstream request is the
-existing retry after an initial repository `404`; all other failures terminate
-without retry.
+not scan or buffer the body. Successful requests add no calls or delays. A failed
+discovery has at most five attempts per phase, or ten across the single 404
+recovery; the manager's API/Git recovery has a separate budget. Each request
+retains its 30-second timeout. These limits are not an end-to-end deadline:
+backoff and repository recovery add elapsed time. No retry occurs after a stream
+has been handed to Django, even if failure happens on its first read.

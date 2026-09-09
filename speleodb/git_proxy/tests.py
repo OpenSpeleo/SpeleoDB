@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
+from email.utils import format_datetime
 from types import GeneratorType
 from typing import TYPE_CHECKING
 from typing import Any
 from unittest.mock import MagicMock
+from unittest.mock import call
 from unittest.mock import patch
 
 import pytest
 from django.conf import settings
 from django.urls import reverse
 from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import RequestException
 from requests.exceptions import Timeout
 from rest_framework import status
@@ -20,6 +26,8 @@ from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
+from speleodb.git_proxy.views import get_upstream_retry_delay
+from speleodb.git_proxy.views import request_git_upstream
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -53,6 +61,9 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
         )
         self.credentials_patcher.start()
         self.addCleanup(self.credentials_patcher.stop)
+        self.sleep: MagicMock = self.enterContext(
+            patch("speleodb.git_proxy.views.time.sleep")
+        )
 
     def _info_url(self) -> str:
         endpoint: str = reverse("git_info", kwargs={"id": self.project.id})
@@ -237,6 +248,8 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
         self._assert_sanitized_bad_gateway(response)
         upstream_response.iter_content.assert_not_called()
         upstream_response.close.assert_called_once_with()
+        request_mock.assert_called_once()
+        self.sleep.assert_not_called()
 
     @patch("speleodb.git_proxy.views.requests.api.request")
     def test_wrong_git_media_type_becomes_sanitized_bad_gateway(
@@ -255,15 +268,18 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
         self._assert_sanitized_bad_gateway(response)
         upstream_response.iter_content.assert_not_called()
         upstream_response.close.assert_called_once_with()
+        request_mock.assert_called_once()
+        self.sleep.assert_not_called()
 
     @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_redirect_and_upstream_error_become_sanitized_bad_gateway(
+    def test_permanent_upstream_errors_are_not_retried(
         self, request_mock: MagicMock
     ) -> None:
         for status_code, reason in (
             (status.HTTP_302_FOUND, "Found"),
             (status.HTTP_401_UNAUTHORIZED, "Unauthorized"),
-            (status.HTTP_503_SERVICE_UNAVAILABLE, "Service Unavailable"),
+            (status.HTTP_403_FORBIDDEN, "Forbidden"),
+            (status.HTTP_400_BAD_REQUEST, "Bad Request"),
         ):
             with self.subTest(status_code=status_code):
                 upstream_response: MagicMock = self._upstream_response(
@@ -282,6 +298,141 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
                 self._assert_sanitized_bad_gateway(response)
                 upstream_response.iter_content.assert_not_called()
                 upstream_response.close.assert_called_once_with()
+                request_mock.assert_called_once()
+                self.sleep.assert_not_called()
+
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_transient_discovery_response_is_closed_before_retry(
+        self, request_mock: MagicMock
+    ) -> None:
+        for status_code in (
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status.HTTP_502_BAD_GATEWAY,
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            status.HTTP_504_GATEWAY_TIMEOUT,
+        ):
+            with self.subTest(status_code=status_code):
+                rejected: MagicMock = self._upstream_response(status_code=status_code)
+                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
+                request_mock.reset_mock()
+                self.sleep.reset_mock()
+                request_mock.side_effect = [rejected, accepted]
+                events: MagicMock = MagicMock()
+                events.attach_mock(request_mock, "request")
+                events.attach_mock(rejected.close, "close_rejected")
+
+                response: HttpResponseBase = self.client.get(
+                    self._info_url(), headers={"authorization": self.auth}
+                )
+
+                assert [entry[0] for entry in events.mock_calls] == [
+                    "request",
+                    "close_rejected",
+                    "request",
+                ]
+                self.sleep.assert_called_once_with(1)
+                rejected.iter_content.assert_not_called()
+                assert self._response_body(response) == b"0000"
+                accepted.close.assert_called_once_with()
+
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_discovery_status_exhaustion_has_bounded_backoff(
+        self, request_mock: MagicMock
+    ) -> None:
+        responses: list[MagicMock] = [
+            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS)
+        ]
+        request_mock.side_effect = responses
+
+        response: HttpResponseBase = self.client.get(
+            self._info_url(), headers={"authorization": self.auth}
+        )
+
+        self._assert_sanitized_bad_gateway(response)
+        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
+        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)]
+        for upstream_response in responses:
+            upstream_response.close.assert_called_once_with()
+            upstream_response.iter_content.assert_not_called()
+
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_discovery_recovers_from_timeout_and_connection_failure(
+        self, request_mock: MagicMock
+    ) -> None:
+        for error_type in (Timeout, RequestsConnectionError):
+            with self.subTest(error_type=error_type.__name__):
+                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
+                request_mock.reset_mock()
+                self.sleep.reset_mock()
+                request_mock.side_effect = [error_type("temporary failure"), accepted]
+
+                response: HttpResponseBase = self.client.get(
+                    self._info_url(), headers={"authorization": self.auth}
+                )
+
+                assert self._response_body(response) == b"0000"
+                assert request_mock.call_count == REQUEST_ATTEMPTS_WITH_RETRY
+                self.sleep.assert_called_once_with(1)
+                accepted.close.assert_called_once_with()
+
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_discovery_honors_short_retry_after_values(
+        self, request_mock: MagicMock
+    ) -> None:
+        now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
+        for retry_after in (
+            "3",
+            format_datetime(now + timedelta(seconds=3), usegmt=True),
+        ):
+            with self.subTest(retry_after=retry_after):
+                rejected: MagicMock = self._upstream_response(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+                rejected.headers["Retry-After"] = retry_after
+                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
+                request_mock.reset_mock()
+                self.sleep.reset_mock()
+                request_mock.side_effect = [rejected, accepted]
+
+                with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
+                    response: HttpResponseBase = self.client.get(
+                        self._info_url(), headers={"authorization": self.auth}
+                    )
+
+                self.sleep.assert_called_once_with(3)
+                assert self._response_body(response) == b"0000"
+                rejected.close.assert_called_once_with()
+                accepted.close.assert_called_once_with()
+
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_long_retry_after_is_not_shortened_into_an_early_retry(
+        self, request_mock: MagicMock
+    ) -> None:
+        now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
+        for retry_after in (
+            "31",
+            format_datetime(now + timedelta(seconds=31), usegmt=True),
+        ):
+            with self.subTest(retry_after=retry_after):
+                rejected: MagicMock = self._upstream_response(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+                rejected.headers["Retry-After"] = retry_after
+                request_mock.reset_mock()
+                request_mock.return_value = rejected
+
+                with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
+                    response: HttpResponseBase = self.client.get(
+                        self._info_url(), headers={"authorization": self.auth}
+                    )
+
+                self._assert_sanitized_bad_gateway(response)
+                request_mock.assert_called_once()
+                self.sleep.assert_not_called()
+                rejected.close.assert_called_once_with()
+                rejected.iter_content.assert_not_called()
 
     @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
     @patch("speleodb.git_proxy.views.requests.api.request")
@@ -339,6 +490,114 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
 
     @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
     @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_404_recovery_has_a_fresh_bounded_discovery_budget(
+        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
+    ) -> None:
+        failures_before: list[MagicMock] = [
+            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS - 1)
+        ]
+        missing: MagicMock = self._upstream_response(
+            status_code=status.HTTP_404_NOT_FOUND
+        )
+        failures_after: list[MagicMock] = [
+            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS - 1)
+        ]
+        accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
+        responses: list[MagicMock] = [
+            *failures_before,
+            missing,
+            *failures_after,
+            accepted,
+        ]
+        request_mock.side_effect = responses
+
+        response: HttpResponseBase = self.client.get(
+            self._info_url(), headers={"authorization": self.auth}
+        )
+
+        assert self._response_body(response) == b"0000"
+        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS * 2
+        create_or_clone_mock.assert_called_once_with(self.project)
+        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)] * 2
+        for upstream_response in responses:
+            upstream_response.close.assert_called_once_with()
+
+    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_post_status_failures_are_never_replayed_or_recovered(
+        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
+    ) -> None:
+        self.project.acquire_mutex(self.user)
+        for url, service in (
+            (self._upload_url(), "git-upload-pack"),
+            (self._receive_url(), "git-receive-pack"),
+        ):
+            for status_code in (
+                status.HTTP_404_NOT_FOUND,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status.HTTP_502_BAD_GATEWAY,
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                status.HTTP_504_GATEWAY_TIMEOUT,
+            ):
+                with self.subTest(service=service, status_code=status_code):
+                    rejected: MagicMock = self._upstream_response(
+                        status_code=status_code
+                    )
+                    request_mock.reset_mock()
+                    request_mock.return_value = rejected
+
+                    response: HttpResponseBase = self.client.post(
+                        url,
+                        data=b"0000",
+                        content_type=f"application/x-{service}-request",
+                        headers={"authorization": self.auth},
+                    )
+
+                    self._assert_sanitized_bad_gateway(response)
+                    request_mock.assert_called_once()
+                    create_or_clone_mock.assert_not_called()
+                    self.sleep.assert_not_called()
+                    rejected.close.assert_called_once_with()
+                    rejected.iter_content.assert_not_called()
+
+    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
+    @patch("speleodb.git_proxy.views.requests.api.request")
+    def test_post_transport_failures_are_not_replayed_or_logged_verbatim(
+        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
+    ) -> None:
+        self.project.acquire_mutex(self.user)
+        for url, service in (
+            (self._upload_url(), "git-upload-pack"),
+            (self._receive_url(), "git-receive-pack"),
+        ):
+            for error_type in (Timeout, RequestsConnectionError):
+                with self.subTest(service=service, error_type=error_type.__name__):
+                    request_mock.reset_mock()
+                    request_mock.side_effect = error_type(
+                        f"private error {UPSTREAM_TOKEN}"
+                    )
+
+                    with self.assertLogs(
+                        "speleodb.git_proxy.views", level="WARNING"
+                    ) as logs:
+                        response: HttpResponseBase = self.client.post(
+                            url,
+                            data=b"0000",
+                            content_type=f"application/x-{service}-request",
+                            headers={"authorization": self.auth},
+                        )
+
+                    self._assert_sanitized_bad_gateway(response)
+                    request_mock.assert_called_once()
+                    create_or_clone_mock.assert_not_called()
+                    self.sleep.assert_not_called()
+                    assert UPSTREAM_TOKEN not in "\n".join(logs.output)
+
+    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
+    @patch("speleodb.git_proxy.views.requests.api.request")
     def test_404_recovery_failure_is_sanitized_and_does_not_log_secret(
         self,
         request_mock: MagicMock,
@@ -368,25 +627,35 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
     def test_connection_timeout_returns_sanitized_bad_gateway(
         self, request_mock: MagicMock
     ) -> None:
-        request_mock.side_effect = Timeout("upstream timed out")
+        request_mock.side_effect = Timeout(f"upstream timed out {UPSTREAM_TOKEN}")
 
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
+        with self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs:
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": self.auth}
+            )
 
         self._assert_sanitized_bad_gateway(response)
+        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
+        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)]
+        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
 
     @patch("speleodb.git_proxy.views.requests.api.request")
     def test_request_exception_returns_sanitized_bad_gateway(
         self, request_mock: MagicMock
     ) -> None:
-        request_mock.side_effect = RequestException("upstream request failed")
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
+        request_mock.side_effect = RequestException(
+            f"upstream request failed {UPSTREAM_TOKEN}"
         )
 
+        with self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs:
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": self.auth}
+            )
+
         self._assert_sanitized_bad_gateway(response)
+        request_mock.assert_called_once()
+        self.sleep.assert_not_called()
+        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
 
     @patch("speleodb.git_proxy.views.requests.api.request")
     def test_deferred_stream_failure_closes_upstream_response(
@@ -394,7 +663,7 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
     ) -> None:
         def broken_stream() -> Iterator[bytes]:
             yield b"partial GitLab packet"
-            raise ChunkedEncodingError("upstream stream ended early")
+            raise ChunkedEncodingError(f"upstream stream ended early {UPSTREAM_TOKEN}")
 
         upstream_response: MagicMock = self._upstream_response()
         upstream_response.iter_content.return_value = broken_stream()
@@ -403,10 +672,16 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
             self._info_url(), headers={"authorization": self.auth}
         )
 
-        with pytest.raises(ChunkedEncodingError):
+        with (
+            self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs,
+            pytest.raises(ChunkedEncodingError),
+        ):
             self._response_body(response)
 
         upstream_response.close.assert_called_once_with()
+        request_mock.assert_called_once()
+        self.sleep.assert_not_called()
+        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
 
     @patch("speleodb.git_proxy.views.requests.api.request")
     def test_partially_consumed_stream_closes_upstream_on_client_disconnect(
@@ -432,6 +707,58 @@ class TestGitProxyServer(BaseAPIProjectTestCase):
         upstream_response.close.assert_called_once_with()
         assert response.closed
         self.project.refresh_from_db()
+
+
+@pytest.mark.parametrize(
+    ("retry_after", "expected"),
+    [
+        (None, 4.0),
+        ("", 4.0),
+        ("invalid", 4.0),
+        ("NaN", 4.0),
+        ("inf", 4.0),
+        ("1e309", 4.0),
+        ("-1", 4.0),
+        ("0", 0.0),
+        ("3", 3.0),
+        ("30", 30.0),
+        ("31", None),
+    ],
+)
+def test_upstream_retry_after_value_policy(
+    retry_after: str | None, expected: float | None
+) -> None:
+    assert get_upstream_retry_delay(retry_after, attempt=2) == expected
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"), [(-5, 0.0), (0, 0.0), (3, 3.0), (30, 30.0), (31, None)]
+)
+def test_upstream_retry_after_date_policy(seconds: int, expected: float | None) -> None:
+    now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
+    retry_after: str = format_datetime(now + timedelta(seconds=seconds), usegmt=True)
+    with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
+        assert get_upstream_retry_delay(retry_after, attempt=0) == expected
+
+
+@pytest.mark.parametrize(
+    ("discovery", "method"),
+    [(False, "GET"), (True, "POST"), (False, "POST"), (True, "HEAD")],
+)
+def test_only_discovery_get_is_retryable(discovery: bool, method: str) -> None:
+    with (
+        patch(
+            "speleodb.git_proxy.views.requests.api.request",
+            side_effect=Timeout("timeout"),
+        ) as request_mock,
+        patch("speleodb.git_proxy.views.time.sleep") as sleep,
+        pytest.raises(Timeout),
+    ):
+        request_git_upstream(
+            discovery=discovery, method=method, url="https://gitlab.example/info/refs"
+        )
+    request_mock.assert_called_once()
+    sleep.assert_not_called()
 
 
 class TestGitProxyAccessBoundary(BaseAPIProjectTestCase):

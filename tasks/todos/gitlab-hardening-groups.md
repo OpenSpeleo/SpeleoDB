@@ -17,10 +17,10 @@
    - [x] Review project-level re-clone recovery so network outages do not imply local corruption.
    - [x] Add real local-repository regressions, update documentation, verify, and commit.
 4. **Proxy discovery retries**
-   - [ ] Add bounded retries for transient discovery GET failures before streaming starts.
-   - [ ] Honor reasonable rate-limit delays and close failed responses before retrying.
-   - [ ] Keep push POSTs and partially delivered streams out of automatic replay.
-   - [ ] Add protocol regressions, update documentation, verify, and commit.
+   - [x] Add bounded retries for transient discovery GET failures before streaming starts.
+   - [x] Honor reasonable rate-limit delays and close failed responses before retrying.
+   - [x] Keep push POSTs and partially delivered streams out of automatic replay.
+   - [x] Add protocol regressions, update documentation, verify, and commit.
 5. **Final verification**
    - [ ] Run the complete Python test suite with isolated GitLab, storage, and database resources.
    - [ ] Run the complete JavaScript test suite and all repository hooks.
@@ -52,3 +52,6 @@ the full integration run for the completed series. Do not push the commits.
   diagnostics run covered credential-bearing origin creation/repair failures.
   Ruff and mypy passed. Downloads also use safe branch/fetch selection; review
   findings about missing-object exceptions and origin configuration were fixed.
+- Proxy: all 45 focused tests passed against isolated PostgreSQL; Ruff and mypy
+  passed. Independent review found no required changes. Full-suite preflight
+  collected 4,303 tests without duplicate IDs or light/offline flags.

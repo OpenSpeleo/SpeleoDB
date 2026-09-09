@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
+import time
+from email.utils import parsedate_to_datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,6 +15,8 @@ import requests
 from django.conf import settings
 from django.http import HttpResponse
 from django.http import StreamingHttpResponse
+from django.utils import timezone
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import RequestException
 from requests.exceptions import Timeout
 from rest_framework import status
@@ -51,6 +56,67 @@ UPSTREAM_REQUEST_HEADERS = (
 )
 UPSTREAM_RESPONSE_HEADERS = ("Cache-Control", "Expires", "Pragma")
 UPSTREAM_ERROR_MESSAGE = "SpeleoDB Git service is temporarily unavailable."
+UPSTREAM_RETRY_STATUSES = frozenset(
+    {
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status.HTTP_502_BAD_GATEWAY,
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+        status.HTTP_504_GATEWAY_TIMEOUT,
+    }
+)
+UPSTREAM_MAX_RETRY_DELAY_SECONDS = 30
+
+
+def get_upstream_retry_delay(retry_after: str | None, attempt: int) -> float | None:
+    """Honor short server delays; refuse a retry earlier than a long Retry-After."""
+    delay = float(2**attempt)
+    if retry_after:
+        try:
+            requested_delay = float(retry_after)
+            if requested_delay < 0:
+                requested_delay = delay
+        except ValueError:
+            try:
+                requested_delay = (
+                    parsedate_to_datetime(retry_after) - timezone.now()
+                ).total_seconds()
+            except ValueError, TypeError, OverflowError:
+                requested_delay = delay
+        if math.isfinite(requested_delay):
+            delay = max(0.0, requested_delay)
+    return delay if delay <= UPSTREAM_MAX_RETRY_DELAY_SECONDS else None
+
+
+def request_git_upstream(
+    *, discovery: bool, method: str, **kwargs: Any
+) -> requests.Response:
+    """Retry only discovery GETs, before any upstream body is consumed."""
+    attempts = (
+        settings.DJANGO_GIT_RETRY_ATTEMPTS if discovery and method == "GET" else 1
+    )
+    for attempt in range(attempts):
+        try:
+            response = requests.api.request(method=method, **kwargs)
+        except RequestsConnectionError, Timeout:
+            if attempt + 1 == attempts:
+                raise
+            delay = float(2**attempt)
+        else:
+            if (
+                response.status_code not in UPSTREAM_RETRY_STATUSES
+                or attempt + 1 == attempts
+            ):
+                return response
+            retry_delay = get_upstream_retry_delay(
+                response.headers.get("Retry-After"), attempt
+            )
+            if retry_delay is None:
+                return response
+            response.close()
+            delay = retry_delay
+        time.sleep(delay)
+    raise RuntimeError("Git upstream retry budget exhausted")
 
 
 class GitService(Enum):
@@ -79,7 +145,7 @@ class UpstreamResponseStream:
         try:
             yield from self.response.iter_content(chunk_size=8192)
         except RequestException:
-            logger.exception(
+            logger.warning(
                 "Git upstream stream failed: project_id=%s method=%s service=%s",
                 self.project_id,
                 self.request_method,
@@ -238,7 +304,8 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
         gitlab_response: requests.Response
         for tentative_id in range(2):
             try:
-                gitlab_response = requests.api.request(
+                gitlab_response = request_git_upstream(
+                    discovery=discovery,
                     method=request_method,
                     url=target_url,
                     headers=headers,
@@ -259,7 +326,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
                 )
                 return generate_upstream_error_response()
             except RequestException:
-                logger.exception(
+                logger.warning(
                     "Git upstream request failed: project_id=%s method=%s service=%s",
                     project.id,
                     request_method,
@@ -267,7 +334,11 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
                 )
                 return generate_upstream_error_response()
 
-            if gitlab_response.status_code != status.HTTP_404_NOT_FOUND:
+            if (
+                gitlab_response.status_code != status.HTTP_404_NOT_FOUND
+                or not discovery
+                or request_method != "GET"
+            ):
                 break
 
             if tentative_id == 0:
