@@ -84,3 +84,17 @@ CI jobs sharing a GitLab group. Other live integration tests still need isolated
 test resources and must not overlap a group-wide cleanup. The fix does not
 establish which remote status caused the original CI failure because the old
 exception handling discarded it.
+
+## User-project cleanup
+
+`wipe_test_user_projects` removes a Django project only after the remote delete
+succeeds or an explicit GitLab lookup returns HTTP 404. A permission error,
+throttled request, server failure, or network exception does not establish that
+the remote is absent: the command propagates the failure and preserves the
+local record. This prevents a temporary outage from turning cleanup into
+unintended local data loss. Lookup and deletion have separate error boundaries;
+a failed remote delete also preserves the database record.
+
+Command tests simulate the remote outcomes against a real test database,
+including successful deletion, confirmed absence, permission/transport errors,
+and failed remote deletion. They never invoke live cleanup.

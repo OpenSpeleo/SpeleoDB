@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -98,10 +99,13 @@ class Command(BaseCommand):
                 gitproject = gl_manager.projects.get(
                     f"{gl_creds.group_name}/{project.id}"
                 )
+            except gitlab.exceptions.GitlabGetError as error:
+                if error.response_code != HTTPStatus.NOT_FOUND:
+                    raise
+                project.delete()  # The remote is confirmed absent.
+                print("Skipped!")  # noqa: T201
+            else:
                 gitproject.delete()  # Gitlab Delete
                 project.delete()  # Django Delete
                 print("Deleted!")  # noqa: T201
                 time.sleep(5)
-            except gitlab.exceptions.GitlabGetError:
-                project.delete()  # Django Delete
-                print("Skipped!")  # noqa: T201
