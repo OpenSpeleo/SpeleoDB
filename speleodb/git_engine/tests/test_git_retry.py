@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 import shutil
 import tempfile
+import traceback
 from typing import TYPE_CHECKING
 from unittest import TestCase
 from unittest.mock import MagicMock
@@ -224,20 +225,56 @@ class CloneRetryTests(TestCase):
     def test_clone_raises_git_base_error_after_retries(
         self, mock_sleep: MagicMock
     ) -> None:
-        persistent_error = GitCommandError("clone", 128, stderr="not found")
+        encoded_credential = "fake%40credential"
+        decoded_credential = "fake@credential"
+        url = f"https://oauth2:{encoded_credential}@gitlab.example/test/project.git"
+        decoded_url = url.replace(encoded_credential, decoded_credential)
+        persistent_error = GitCommandError(
+            ["git", "clone", url],
+            128,
+            stderr=(
+                f"fatal: unable to access '{url}': repository not found; "
+                f"decoded URL: {decoded_url}; token: {decoded_credential}"
+            ),
+        )
 
-        with (
-            patch.object(
-                git.Repo,
-                "clone_from",
-                side_effect=persistent_error,
-            ) as mock_clone,
-            pytest.raises(GitBaseError, match="Impossible to clone repository"),
-        ):
-            GitRepo.clone_from(
-                url="https://gitlab.example/test/project.git",
-                to_path=pathlib.Path("project"),
-            )
+        for use_keyword_url in (False, True):
+            with self.subTest(use_keyword_url=use_keyword_url):
+                project_path = pathlib.Path("project")
+                clone_args = () if use_keyword_url else (url, project_path)
+                clone_kwargs = (
+                    {"url": url, "to_path": project_path} if use_keyword_url else {}
+                )
+                mock_sleep.reset_mock()
+                with (
+                    patch.object(
+                        git.Repo,
+                        "clone_from",
+                        side_effect=persistent_error,
+                    ) as mock_clone,
+                    self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+                    pytest.raises(
+                        GitBaseError, match="Impossible to clone repository"
+                    ) as exc_info,
+                ):
+                    GitRepo.clone_from(*clone_args, **clone_kwargs)
 
-        assert mock_clone.call_count == 5  # noqa: PLR2004
-        assert mock_sleep.call_count == 4  # noqa: PLR2004
+                traceback_text = "".join(
+                    traceback.format_exception(
+                        exc_info.type,
+                        exc_info.value,
+                        exc_info.tb,
+                    )
+                )
+                diagnostic_text = "\n".join([traceback_text, *logs.output])
+
+                assert encoded_credential not in diagnostic_text
+                assert decoded_credential not in diagnostic_text
+                assert "oauth2:" not in diagnostic_text
+                assert "gitlab.example/test/project.git" in diagnostic_text
+                assert "exit code(128)" in diagnostic_text
+                assert "repository not found" in diagnostic_text
+                assert exc_info.value.__cause__ is None
+                assert exc_info.value.__context__ is None
+                assert mock_clone.call_count == 5  # noqa: PLR2004
+                assert mock_sleep.call_count == 4  # noqa: PLR2004

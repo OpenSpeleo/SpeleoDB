@@ -9,6 +9,7 @@ import datetime
 import logging
 import os
 import pathlib
+import re
 import time
 from abc import ABCMeta
 from abc import abstractmethod
@@ -18,6 +19,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 from typing import override
+from urllib.parse import unquote
+from urllib.parse import urlsplit
 
 import git
 from django.conf import settings
@@ -566,23 +569,54 @@ class GitRepo(Repo):
 
     @classmethod
     def clone_from(cls, *args: Any, **kwargs: Any) -> Self:
-        try:
-            repo = retry_with_backoff(
-                super().clone_from,
-                *args,
-                retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
-                exc_types=(GitCommandError,),
-                base_delay=1.0,
-                **kwargs,
-            )
-        except GitCommandError:
+        raw_url = str(kwargs.get("url", args[0] if args else ""))
+        parsed_url = urlsplit(raw_url)
+        raw_userinfo = (
+            parsed_url.netloc.rpartition("@")[0] if "@" in parsed_url.netloc else ""
+        )
+        raw_credential = (
+            raw_userinfo.partition(":")[2] if ":" in raw_userinfo else raw_userinfo
+        )
+        credential_variants = {
+            credential
+            for credential in (raw_credential, unquote(raw_credential))
+            if credential
+        }
+        credential_url_pattern = re.compile(
+            r"(?P<scheme>[a-z][a-z0-9+.-]*://)[^/@\s'\"<>]+@",
+            flags=re.IGNORECASE,
+        )
+
+        def redact_credentials(value: object) -> str:
+            redacted = str(value)
+            for credential in sorted(credential_variants, key=len, reverse=True):
+                redacted = redacted.replace(credential, "[REDACTED]")
+            return credential_url_pattern.sub(r"\g<scheme>", redacted)
+
+        sanitized_url = redact_credentials(raw_url)
+        parent_clone_from = super().clone_from
+
+        def clone_with_sanitized_errors(*clone_args: Any, **clone_kwargs: Any) -> Repo:
+            clone_error: GitBaseError
             try:
-                url = kwargs["url"]
-            except KeyError:
-                url = args[0]
+                return parent_clone_from(*clone_args, **clone_kwargs)
+            except GitCommandError as error:
+                clone_error = GitBaseError(
+                    "Impossible to clone repository: "
+                    f"url={sanitized_url!r}. {redact_credentials(error)}"
+                )
+            # Raise outside the handler so retry logs and exception chains
+            # cannot retain the original credential-bearing exception.
+            raise clone_error from None
 
-            raise GitBaseError(f"Impossible to clone repository: {url=}") from None
-
+        repo = retry_with_backoff(
+            clone_with_sanitized_errors,
+            *args,
+            retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
+            exc_types=(GitBaseError,),
+            base_delay=1.0,
+            **kwargs,
+        )
         return cls.from_repo(repo)
 
     @override

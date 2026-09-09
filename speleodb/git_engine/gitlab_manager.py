@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from functools import cache
 from functools import lru_cache
 from functools import wraps
+from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -114,7 +115,9 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         gitlab_creds = GitlabCredentials.get()
 
         self._gl.projects.create(
-            {"name": str(project.id), "namespace_id": str(gitlab_creds.group_id)}
+            {"name": str(project.id), "namespace_id": str(gitlab_creds.group_id)},
+            retry_transient_errors=True,
+            max_retries=settings.DJANGO_GIT_RETRY_ATTEMPTS - 1,
         )
 
     @check_initialized
@@ -142,21 +145,41 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         try:
             # try to create the repository in Gitlab
             self.create_project(project)
+        except gitlab.exceptions.GitlabCreateError as create_error:
+            # GitLab reports duplicate paths as 400 or 409, but these codes
+            # can also describe other errors. Confirm the repository exists
+            # before falling back to clone; never mask a failed create with
+            # repeated clones of a nonexistent repository.
+            if create_error.response_code not in {
+                HTTPStatus.BAD_REQUEST,
+                HTTPStatus.CONFLICT,
+            }:
+                raise
+            if self._gl is None:
+                raise ValueError(
+                    "Gitlab API has not been initialized"
+                ) from create_error
+            try:
+                self._gl.projects.get(
+                    f"{gitlab_creds.group_name}/{project.id}",
+                    retry_transient_errors=True,
+                    max_retries=settings.DJANGO_GIT_RETRY_ATTEMPTS - 1,
+                )
+            except gitlab.exceptions.GitlabGetError as lookup_error:
+                if lookup_error.response_code == HTTPStatus.NOT_FOUND:
+                    raise create_error from None
+                raise
 
+            git_repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
+            if not git_repo.head.is_valid():
+                git_repo.publish_first_commit()
+        else:
             git_repo = GitRepo.init(project_dir)
 
             git_repo.create_remote("origin", url=git_url)
 
             # Create an initial empty commit
             git_repo.publish_first_commit()
-
-            return git_repo
-
-        except gitlab.exceptions.GitlabCreateError:
-            # The repository already exists in Gitlab - git clone instead
-            git_repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
-            if not git_repo.head.is_valid():
-                git_repo.publish_first_commit()
 
         return git_repo
 

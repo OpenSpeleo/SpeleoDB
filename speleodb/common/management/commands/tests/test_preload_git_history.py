@@ -2,159 +2,159 @@
 
 from __future__ import annotations
 
-import pathlib
-from io import StringIO
-from typing import TYPE_CHECKING
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-import pytest
+import git
+from django.conf import settings
 from django.core.management import call_command
-from django.urls import reverse
+from django.test import override_settings
 
-from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v2.tests.factories import ProjectFactory
-from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
-from speleodb.common.enums import PermissionLevel
-from speleodb.surveys.models import FileFormat
+from speleodb.git_engine.core import GitRepo
+from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 
-if TYPE_CHECKING:
-    import uuid
 
-BASE_DIR = (
-    pathlib.Path(__file__).parent.parent.parent.parent.parent
-    / "api"
-    / "v2"
-    / "tests"
-    / "artifacts"
-)
-TEST_FILE = BASE_DIR / "test_simple.tml"
-
-
-@pytest.mark.skip_if_lighttest
-class TestPreloadGitHistory(BaseAPIProjectTestCase):
-    """Test suite for preload_git_history management command."""
+class TestPreloadGitHistory(BaseProjectTestCaseMixin):
+    """Exercise real Git history reconstruction without external services."""
 
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.ADMIN,
-            permission_type=PermissionType.USER,
+        self.root: Path = Path(
+            self.enterContext(tempfile.TemporaryDirectory())
+        ).resolve()
+        self.working_dir: Path = self.root / "working"
+        self.enterContext(override_settings(DJANGO_GIT_PROJECTS_DIR=self.working_dir))
+        self.clone: MagicMock = self.enterContext(
+            patch.object(
+                GitlabManager,
+                "create_or_clone_project",
+                side_effect=self._clone_local_project,
+            )
         )
 
-    def _upload_file(
-        self, project_id: str | uuid.UUID, message: str = "Commit"
-    ) -> None:
-        """Helper to upload a file and create a commit."""
-        project = self.project if str(self.project.id) == str(project_id) else None
-        if not project:
-            # If it's not self.project, we might need to handle permissions or mutex
-            # For simplicity, assume we are using self.project or a project the user
-            # has access to
-            pass
-
-        # We need to acquire mutex for the project we are uploading to
-        # But acquire_mutex is on the project instance
-
-        project_obj = Project.objects.get(id=project_id)
-        project_obj.acquire_mutex(self.user)
-
-        with TEST_FILE.open(mode="rb") as file_data:
-            self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": project_id,
-                        "fileformat": FileFormat.ARIANE_TML.label.lower(),
-                    },
-                ),
-                {"artifact": file_data, "message": message},
-                format="multipart",
-                headers={"authorization": self.auth},
+    def _seed_remote(
+        self, project: Project, messages: tuple[str, ...] = ()
+    ) -> list[str]:
+        remote_path: Path = self.root / "remotes" / str(project.id)
+        seed_path: Path = self.root / "seeds" / str(project.id)
+        branch: str = settings.DJANGO_GIT_BRANCH_NAME
+        remote: git.Repo = git.Repo.init(remote_path, bare=True, initial_branch=branch)
+        seed: git.Repo = git.Repo.init(seed_path, initial_branch=branch)
+        self.addCleanup(remote.close)
+        self.addCleanup(seed.close)
+        actor: git.Actor = git.Actor(self.user.name, self.user.email)
+        hashes: list[str] = []
+        for index, message in enumerate(
+            (settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE, *messages)
+        ):
+            # ProjectCommit's primary key is the SHA across all projects.
+            # Make even initial commits unique when created in the same second.
+            (seed_path / "README.txt").write_text(
+                f"Project {project.id}, revision {index}\n", encoding="utf-8"
             )
+            seed.index.add(["README.txt"])
+            commit: git.Commit = seed.index.commit(
+                message, author=actor, committer=actor
+            )
+            hashes.append(commit.hexsha)
+        seed.create_remote("origin", str(remote_path))
+        seed.git.push("origin", branch)
+        return hashes
 
-        project_obj.release_mutex(self.user)
+    def _clone_local_project(self, project: Project) -> GitRepo:
+        self.working_dir.mkdir(parents=True, exist_ok=True)
+        return GitRepo.clone_from(
+            url=str(self.root / "remotes" / str(project.id)),
+            to_path=project.git_repo_dir,
+        )
 
-    def test_preload_with_commits(self) -> None:
-        """Test preloading history for a project with commits."""
-        assert TEST_FILE.exists()
-
-        # 1. Create a commit
-        self._upload_file(self.project.id, "User commit")
-
-        # Verify commit exists (User commit + Initial commit)
-        assert ProjectCommit.objects.filter(project=self.project).count() >= 2  # noqa: PLR2004
-
-        # 2. Clear the database cache (delete ProjectCommit objects)
-        ProjectCommit.objects.filter(project=self.project).delete()
-        assert ProjectCommit.objects.filter(project=self.project).count() == 0
-
-        # 3. Run the management command
-        out = StringIO()
-        call_command("preload_git_history", stdout=out)
-
-        # 4. Verify commits are recreated
-        assert ProjectCommit.objects.filter(project=self.project).count() >= 2  # noqa: PLR2004
-
-        # Verify user commit is present
-        assert ProjectCommit.objects.filter(
-            project=self.project, message="User commit"
-        ).exists()
+    def _assert_history(self, project: Project, hashes: list[str]) -> None:
+        commits = ProjectCommit.objects.filter(project=project)
+        assert set(commits.values_list("id", flat=True)) == set(hashes)
+        # The command owns and removes its working copy, but not the remote.
+        assert not project.git_repo_dir.exists()
+        assert (self.root / "remotes" / str(project.id)).exists()
 
     def test_preload_no_commits(self) -> None:
-        """Test preloading history for a project with no user commits."""
-        # Note: Projects created via factories/GitlabManager automatically get an
-        # "[Automated] Project Creation" commit.
+        """Cache the initial Git commit when there are no user commits."""
+        hashes: list[str] = self._seed_remote(self.project)
+        assert not ProjectCommit.objects.filter(project=self.project).exists()
 
-        # Run command
-        out = StringIO()
-        call_command("preload_git_history", stdout=out)
+        call_command("preload_git_history")
 
-        # Verify at least the initial commit exists
-        assert ProjectCommit.objects.filter(project=self.project).count() >= 1
+        self._assert_history(self.project, hashes)
+        assert ProjectCommit.objects.get(id=hashes[0]).message == (
+            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
+        )
+        self.clone.assert_called_once()
 
-        # Verify no user commits (random check)
-        assert not ProjectCommit.objects.filter(
-            project=self.project, message="User commit"
-        ).exists()
+    def test_preload_with_commits(self) -> None:
+        """Rebuild deleted cache rows from the remote's complete history."""
+        hashes: list[str] = self._seed_remote(self.project, ("User commit",))
+
+        call_command("preload_git_history")
+        self._assert_history(self.project, hashes)
+        ProjectCommit.objects.filter(project=self.project).delete()
+
+        call_command("preload_git_history")
+
+        self._assert_history(self.project, hashes)
+        user_commit: ProjectCommit = ProjectCommit.objects.get(id=hashes[-1])
+        assert user_commit.message == "User commit"
+        assert user_commit.parent_ids == [hashes[0]]
+        assert user_commit.author_email == self.user.email
+        assert self.clone.call_count == 2  # noqa: PLR2004
 
     def test_preload_multiple_projects(self) -> None:
-        """Test preloading history for multiple projects."""
-        # Create a second project
-        project2 = ProjectFactory.create(created_by=self.user.email)
+        project2: Project = ProjectFactory.create(created_by=self.user.email)
+        hashes1: list[str] = self._seed_remote(self.project, ("Project 1 Commit",))
+        hashes2: list[str] = self._seed_remote(project2, ("Project 2 Commit",))
 
-        # Grant permission to user for project2 so we can upload
-
-        UserProjectPermissionFactory(
-            target=self.user, project=project2, level=PermissionLevel.ADMIN
-        )
-
-        # Upload to project 1
-        self._upload_file(self.project.id, "Project 1 Commit")
-
-        # Upload to project 2
-        self._upload_file(project2.id, "Project 2 Commit")
-
-        # Verify commits exist
-        assert ProjectCommit.objects.filter(project=self.project).count() >= 2  # noqa: PLR2004
-        assert ProjectCommit.objects.filter(project=project2).count() >= 2  # noqa: PLR2004
-
-        # Clear DB cache
+        call_command("preload_git_history")
         ProjectCommit.objects.all().delete()
-        assert ProjectCommit.objects.count() == 0
 
-        # Run command
-        out = StringIO()
-        call_command("preload_git_history", stdout=out)
+        call_command("preload_git_history")
 
-        # Verify commits recreated for both
-        assert ProjectCommit.objects.filter(project=self.project).count() >= 2  # noqa: PLR2004
-        assert ProjectCommit.objects.filter(project=project2).count() >= 2  # noqa: PLR2004
+        self._assert_history(self.project, hashes1)
+        self._assert_history(project2, hashes2)
+        assert ProjectCommit.objects.get(id=hashes1[-1]).message == "Project 1 Commit"
+        assert ProjectCommit.objects.get(id=hashes2[-1]).message == "Project 2 Commit"
 
-        assert ProjectCommit.objects.filter(
-            project=self.project, message="Project 1 Commit"
-        ).exists()
-        assert ProjectCommit.objects.filter(
-            project=project2, message="Project 2 Commit"
-        ).exists()
+    def test_preload_is_idempotent_after_working_copy_cleanup(self) -> None:
+        hashes: list[str] = self._seed_remote(self.project, ("User commit",))
+
+        call_command("preload_git_history")
+        self._assert_history(self.project, hashes)
+
+        call_command("preload_git_history")
+
+        self._assert_history(self.project, hashes)
+        assert self.clone.call_count == 2  # noqa: PLR2004
+
+    def test_preload_continues_after_project_failure(self) -> None:
+        broken_project: Project = ProjectFactory.create(created_by=self.user.email)
+        hashes: list[str] = self._seed_remote(self.project)
+
+        def clone_with_failure(project: Project) -> GitRepo:
+            if project.id == broken_project.id:
+                project.git_repo_dir.mkdir(parents=True, exist_ok=True)
+                raise GitBaseError("simulated clone failure")
+            return self._clone_local_project(project)
+
+        self.clone.side_effect = clone_with_failure
+        with self.assertLogs(
+            "speleodb.common.management.commands.preload_git_history", level="ERROR"
+        ) as logs:
+            call_command("preload_git_history")
+
+        self._assert_history(self.project, hashes)
+        assert not broken_project.git_repo_dir.exists()
+        assert not ProjectCommit.objects.filter(project=broken_project).exists()
+        assert "simulated clone failure" in "\n".join(logs.output)
