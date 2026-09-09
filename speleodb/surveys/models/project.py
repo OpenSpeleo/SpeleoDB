@@ -468,27 +468,13 @@ class Project(models.Model):
 
     @property
     def commit_history(self) -> list[dict[str, Any]] | None:
-        try:
-            if (
-                commit_history := GitlabManager.get_commit_history(project=self)
-            ) is None:
-                return []
-
-            commits = [
-                commit
-                for commit in commit_history
-                if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
-            ]
-
-            if isinstance(commits, (list, tuple)):
-                return commits
-
-            # No Commit was found
+        if (commit_history := GitlabManager.get_commit_history(project=self)) is None:
             return []
-
-        except RuntimeError:
-            #  Gitlab API Error
-            return []
+        return [
+            commit
+            for commit in commit_history
+            if commit["message"] != settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
+        ]
 
     def has_write_access(self, user: User) -> bool:
         from speleodb.common.enums import PermissionLevel  # noqa: PLC0415

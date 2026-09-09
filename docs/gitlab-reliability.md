@@ -1,4 +1,4 @@
-# GitLab repository creation and history preload
+# GitLab reliability
 
 ## Intent and ownership
 
@@ -98,3 +98,30 @@ a failed remote delete also preserves the database record.
 Command tests simulate the remote outcomes against a real test database,
 including successful deletion, confirmed absence, permission/transport errors,
 and failed remote deletion. They never invoke live cleanup.
+
+## Shared REST policy
+
+`GitlabClient` owns the REST request policy for the application manager and the
+test-group maintenance command. Every request has a 30-second connect/read
+timeout and at most `DJANGO_GIT_RETRY_ATTEMPTS` attempts by default, including
+authentication and each pagination request. Transient retries are enabled for
+GET/HEAD reads. Writes must explicitly opt in; project creation retains its
+existing retry-and-confirm-conflict contract. The SDK's bounded rate-limit
+handling remains enabled for all methods. This is not an end-to-end deadline:
+pagination, backoff, and server-directed rate-limit delays add elapsed time.
+
+The SDK raises operation-specific `GitlabGetError` and `GitlabListError`, not
+`GitlabHttpError`, at the object-manager boundary. History and branch helpers
+return no data only for an explicit 404. Permission, transport, and server
+failures propagate; the model must not misrepresent them as an empty history.
+Only successful project lookups are cached. Reauthentication clears the cache
+so cached objects cannot retain an obsolete client, and history/branch 404s
+invalidate cached numeric project IDs so the same path can be rediscovered
+after repository recreation. A failed authentication never leaves a partially
+initialized client installed on the singleton.
+
+Simulated HTTP regressions exercise the real SDK for request timeouts, bounded
+retries, authentication, history and branch reads, and recovery after a missing
+project. Successful calls add no extra requests. Bootstrap provisioning keeps
+its separate policy because its token creation/revocation lifecycle differs
+from normal application reads.

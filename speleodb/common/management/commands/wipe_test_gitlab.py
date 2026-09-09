@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
-import gitlab
 import gitlab.exceptions
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
+
+from speleodb.git_engine.client import GitlabClient
 
 if TYPE_CHECKING:
     import argparse
@@ -72,9 +73,10 @@ class Command(BaseCommand):
 
         self.stdout.write("")  # Visual Spacing
         try:
-            gl = gitlab.Gitlab(
+            gl = GitlabClient(
                 f"{settings.GITLAB_HTTP_PROTOCOL}://{os.environ['GITLAB_HOST_URL']}/",
                 private_token=os.environ["GITLAB_TOKEN"],
+                keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
             )
             group = gl.groups.get(os.environ["GITLAB_GROUP_ID"])
 

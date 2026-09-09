@@ -7,10 +7,10 @@
    - [x] Preserve Django projects on authorization, throttling, server, and transport failures.
    - [x] Add command regressions and documentation, verify, and commit.
 2. **Shared GitLab API policy**
-   - [ ] Centralize finite timeouts and bounded transient retries for API calls.
-   - [ ] Apply the policy to authentication, project reads, history, branches, and maintenance clients.
-   - [ ] Handle operation-specific SDK exceptions and distinguish missing data from outages.
-   - [ ] Add regressions, update documentation, verify, and commit.
+   - [x] Centralize finite timeouts and bounded transient retries for API calls.
+   - [x] Apply the policy to authentication, project reads, history, branches, and maintenance clients.
+   - [x] Handle operation-specific SDK exceptions and distinguish missing data from outages.
+   - [x] Add regressions, update documentation, verify, and commit.
 3. **Git subprocess diagnostics and recovery**
    - [ ] Share credential-safe diagnostics across clone, pull, and push retries.
    - [ ] Require confirmed branch absence before branch creation; preserve upstream failures.
@@ -44,3 +44,6 @@ the full integration run for the completed series. Do not push the commits.
 - Cleanup: five database-backed regression tests passed; targeted Ruff and mypy
   passed. Independent review found no required changes. Full-suite and hook
   verification will run after the complete series.
+- Shared REST: 29 focused tests passed against isolated PostgreSQL, including
+  real SDK retry/error mapping and both cached-client/recreated-project edges.
+  Ruff and mypy passed; review findings were fixed and regression-tested.

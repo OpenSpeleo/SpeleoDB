@@ -20,6 +20,7 @@ import gitlab
 import gitlab.exceptions
 from django.conf import settings
 
+from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.metaclasses import SingletonMetaClass
 
@@ -92,19 +93,23 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
         gitlab_creds = GitlabCredentials.get()
 
-        self._gl = gitlab.Gitlab(
+        client = GitlabClient(
             f"{settings.GITLAB_HTTP_PROTOCOL}://{gitlab_creds.instance}",
             private_token=gitlab_creds.token,
             keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
         )
 
+        self._gl = None
+        self._get_project.cache_clear()
         try:
-            self._gl.auth()
-        except gitlab.exceptions.GitlabAuthenticationError:
-            self._gl = None
+            client.auth()
+        except Exception:
+            client.session.close()
+            raise
 
-        if settings.DEBUG_GITLAB and self._gl:
-            self._gl.enable_debug()
+        self._gl = client
+        if settings.DEBUG_GITLAB:
+            client.enable_debug()
 
     @check_initialized
     def create_project(self, project: Project) -> None:
@@ -117,7 +122,6 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         self._gl.projects.create(
             {"name": str(project.id), "namespace_id": str(gitlab_creds.group_id)},
             retry_transient_errors=True,
-            max_retries=settings.DJANGO_GIT_RETRY_ATTEMPTS - 1,
         )
 
     @check_initialized
@@ -162,8 +166,6 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             try:
                 self._gl.projects.get(
                     f"{gitlab_creds.group_name}/{project.id}",
-                    retry_transient_errors=True,
-                    max_retries=settings.DJANGO_GIT_RETRY_ATTEMPTS - 1,
                 )
             except gitlab.exceptions.GitlabGetError as lookup_error:
                 if lookup_error.response_code == HTTPStatus.NOT_FOUND:
@@ -190,19 +192,14 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             raise ValueError("Gitlab API has not been initialized")
 
         gitlab_creds = GitlabCredentials.get()
-        try:
-            return self._gl.projects.get(f"{gitlab_creds.group_name}/{project.id}")
-        except gitlab.exceptions.GitlabHttpError:
-            # Communication Problem
-            return None
+        # Cache only successful lookups. A 404 can be temporary after creation;
+        # raised exceptions are deliberately not cached by lru_cache.
+        return self._gl.projects.get(f"{gitlab_creds.group_name}/{project.id}")
 
     @check_initialized
     def get_commit_history(self, project: Project) -> list[dict[str, Any]] | None:
         try:
-            try:
-                gl_project = self._get_project(project)
-            except gitlab.exceptions.GitlabGetError as e:
-                raise RuntimeError from e
+            gl_project = self._get_project(project)
 
             if gl_project is None:
                 return None
@@ -214,17 +211,21 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             for commit in data:
                 del commit["web_url"]
 
-        except gitlab.exceptions.GitlabHttpError:
-            return None
+        except (
+            gitlab.exceptions.GitlabGetError,
+            gitlab.exceptions.GitlabListError,
+        ) as error:
+            if error.response_code == HTTPStatus.NOT_FOUND:
+                self._get_project.cache_clear()
+                return None
+            raise
 
         return data
 
+    @check_initialized
     def get_last_commit_hash(self, project: Project) -> str | None:
         try:
-            try:
-                gl_project = self._get_project(project)
-            except gitlab.exceptions.GitlabGetError as e:
-                raise RuntimeError from e
+            gl_project = self._get_project(project)
 
             if gl_project is None:
                 return None
@@ -234,8 +235,11 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             # Get the current hash of the branch
             return branch.commit["id"]  # type: ignore[no-any-return]
 
-        except gitlab.exceptions.GitlabHttpError:
-            return None
+        except gitlab.exceptions.GitlabGetError as error:
+            if error.response_code == HTTPStatus.NOT_FOUND:
+                self._get_project.cache_clear()
+                return None
+            raise
 
 
 GitlabManager: GitlabManagerCls = GitlabManagerCls()

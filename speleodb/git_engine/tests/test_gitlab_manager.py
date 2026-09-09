@@ -17,6 +17,7 @@ from django.conf import settings
 from requests import Response
 from requests.exceptions import Timeout
 
+from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
@@ -83,7 +84,7 @@ class ProjectCreationFailureTests(TestCase):
             group_id="1",
             group_name="test-group",
         )
-        self.client: gitlab.Gitlab = gitlab.Gitlab(
+        self.client: GitlabClient = GitlabClient(
             "https://gitlab.example", private_token=self.credentials.token
         )
         self.addCleanup(self.client.session.close)
