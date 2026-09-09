@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 from typing import TypeVar
+from urllib.parse import quote
 
 import gitlab
 import gitlab.exceptions
@@ -22,10 +23,12 @@ from django.conf import settings
 
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.core import GitRepo
+from speleodb.git_engine.operations import retry_git_operation
 from speleodb.utils.metaclasses import SingletonMetaClass
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from uuid import UUID
 
     from gitlab.v4.objects.projects import Project as GL_Project
 
@@ -70,6 +73,12 @@ class GitlabCredentials:
     token: str
     group_id: str
     group_name: str
+
+    def project_url(self, project_id: UUID) -> str:
+        return (
+            f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{quote(self.token, safe='')}"
+            f"@{self.instance}/{self.group_name}/{project_id}.git"
+        )
 
     @classmethod
     @cache
@@ -143,7 +152,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         shutil.rmtree(project_dir, ignore_errors=True)
 
         project_dir.parent.mkdir(exist_ok=True, parents=True)
-        git_url = f"{settings.GITLAB_HTTP_PROTOCOL}://oauth2:{gitlab_creds.token}@{gitlab_creds.instance}/{gitlab_creds.group_name}/{project.id}.git"
+        git_url = gitlab_creds.project_url(project.id)
 
         git_repo: GitRepo
         try:
@@ -174,11 +183,21 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
             git_repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
             if not git_repo.head.is_valid():
-                git_repo.publish_first_commit()
+                if git_repo.remotes.origin.refs:
+                    # An unset/stale remote HEAD does not imply an empty remote.
+                    git_repo.checkout_default_branch_and_pull()
+                else:
+                    git_repo.publish_first_commit()
         else:
             git_repo = GitRepo.init(project_dir)
 
-            git_repo.create_remote("origin", url=git_url)
+            retry_git_operation(
+                git_repo.create_remote,
+                "origin",
+                url=git_url,
+                remote_url=git_url,
+                action="configure origin for",
+            )
 
             # Create an initial empty commit
             git_repo.publish_first_commit()

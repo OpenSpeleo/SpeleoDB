@@ -9,7 +9,6 @@ import datetime
 import logging
 import os
 import pathlib
-import re
 import time
 from abc import ABCMeta
 from abc import abstractmethod
@@ -19,8 +18,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Self
 from typing import override
-from urllib.parse import unquote
-from urllib.parse import urlsplit
 
 import git
 from django.conf import settings
@@ -36,6 +33,7 @@ from git.exc import InvalidGitRepositoryError
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.exceptions import GitPathNotFoundError
+from speleodb.git_engine.operations import retry_git_operation
 from speleodb.utils.helpers import retry_with_backoff
 
 if TYPE_CHECKING:
@@ -570,51 +568,11 @@ class GitRepo(Repo):
     @classmethod
     def clone_from(cls, *args: Any, **kwargs: Any) -> Self:
         raw_url = str(kwargs.get("url", args[0] if args else ""))
-        parsed_url = urlsplit(raw_url)
-        raw_userinfo = (
-            parsed_url.netloc.rpartition("@")[0] if "@" in parsed_url.netloc else ""
-        )
-        raw_credential = (
-            raw_userinfo.partition(":")[2] if ":" in raw_userinfo else raw_userinfo
-        )
-        credential_variants = {
-            credential
-            for credential in (raw_credential, unquote(raw_credential))
-            if credential
-        }
-        credential_url_pattern = re.compile(
-            r"(?P<scheme>[a-z][a-z0-9+.-]*://)[^/@\s'\"<>]+@",
-            flags=re.IGNORECASE,
-        )
-
-        def redact_credentials(value: object) -> str:
-            redacted = str(value)
-            for credential in sorted(credential_variants, key=len, reverse=True):
-                redacted = redacted.replace(credential, "[REDACTED]")
-            return credential_url_pattern.sub(r"\g<scheme>", redacted)
-
-        sanitized_url = redact_credentials(raw_url)
-        parent_clone_from = super().clone_from
-
-        def clone_with_sanitized_errors(*clone_args: Any, **clone_kwargs: Any) -> Repo:
-            clone_error: GitBaseError
-            try:
-                return parent_clone_from(*clone_args, **clone_kwargs)
-            except GitCommandError as error:
-                clone_error = GitBaseError(
-                    "Impossible to clone repository: "
-                    f"url={sanitized_url!r}. {redact_credentials(error)}"
-                )
-            # Raise outside the handler so retry logs and exception chains
-            # cannot retain the original credential-bearing exception.
-            raise clone_error from None
-
-        repo = retry_with_backoff(
-            clone_with_sanitized_errors,
+        repo = retry_git_operation(
+            super().clone_from,
             *args,
-            retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
-            exc_types=(GitBaseError,),
-            base_delay=1.0,
+            remote_url=raw_url,
+            action="clone",
             **kwargs,
         )
         return cls.from_repo(repo)
@@ -718,18 +676,31 @@ class GitRepo(Repo):
 
     def pull(self) -> None:
         origin = self.remotes.origin
-        try:
-            retry_with_backoff(
-                origin.pull,
-                "+refs/heads/*:refs/heads/*",
-                retries=settings.DJANGO_GIT_RETRY_ATTEMPTS,
-                exc_types=(GitCommandError,),
-            )
-        except GitCommandError:
-            raise GitBaseError(
-                "Impossible to pull repository: "
-                f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
-            ) from None
+        retry_git_operation(
+            origin.pull,
+            self.active_branch.name,
+            ff_only=True,
+            remote_url=origin.url,
+            action="pull",
+        )
+
+    def fetch(self) -> None:
+        origin = self.remotes.origin
+        retry_git_operation(
+            origin.fetch,
+            "+refs/heads/*:refs/remotes/origin/*",
+            prune=True,
+            remote_url=origin.url,
+            action="fetch",
+        )
+
+    def set_origin_url(self, url: str) -> None:
+        retry_git_operation(
+            self.remotes.origin.set_url,
+            url,
+            remote_url=url,
+            action="configure origin for",
+        )
 
     def _checkout_branch_or_commit_and_maybe_pull(
         self, hexsha: str | None = None, branch_name: str | None = None
@@ -745,34 +716,30 @@ class GitRepo(Repo):
             )
 
         if hexsha:
-            with contextlib.suppress(GitCommandError):
-                # Try to checkout the commit directly - no pull
-                self.git.checkout(hexsha)
-                return
+            try:
+                self.commit(hexsha)
+            except ValueError, git.BadName, git.BadObject:
+                self.fetch()
+            # Checkout errors (e.g. dirty files) do not imply missing objects.
+            self.git.checkout(hexsha)
+            return
 
-        try:
-            self.pull()
-            self.git.checkout(branch_name or hexsha)
-
-        except GitCommandError:
-            if branch_name:  # Create the branch if it doesn't exist yet
-                self.git.checkout("-b", branch_name)
-            else:
-                raise
+        assert branch_name is not None
+        if branch_name not in self.heads:
+            self.fetch()
+            remote_ref = f"origin/{branch_name}"
+            if branch_name not in self.remotes.origin.refs:
+                raise GitBaseError(f"Remote branch {branch_name!r} does not exist")
+            self.git.checkout("--track", "-b", branch_name, remote_ref)
+        else:
+            # Return from detached historical checkouts before pulling.
+            self.git.checkout(branch_name)
+        self.pull()
 
     def checkout_default_branch_and_pull(self) -> None:
-        try:
-            self._checkout_branch_or_commit_and_maybe_pull(
-                branch_name=settings.DJANGO_GIT_BRANCH_NAME
-            )
-        except GitBaseError:
-            try:
-                self.git.checkout("-b", settings.DJANGO_GIT_BRANCH_NAME)
-            except GitCommandError:
-                raise GitBaseError(
-                    "Failed to checkout default branch and pull repository: "
-                    f"{self.remotes.origin.url.split('@')[-1]}"
-                ) from None
+        self._checkout_branch_or_commit_and_maybe_pull(
+            branch_name=settings.DJANGO_GIT_BRANCH_NAME
+        )
 
     def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit_and_maybe_pull(hexsha=hexsha)
@@ -804,19 +771,14 @@ class GitRepo(Repo):
                 **_retry_kwargs,
             )
 
-            try:
-                retry_with_backoff(
-                    self.git.push,
-                    "--set-upstream",
-                    "origin",
-                    self.active_branch,
-                    **_retry_kwargs,
-                )
-            except GitCommandError:
-                raise GitBaseError(
-                    "Impossible to push to repository: "
-                    f"{self.remotes.origin.url.split('@')[-1]}"  # Removes OAUTH2 token
-                ) from None
+            retry_git_operation(
+                self.git.push,
+                "--set-upstream",
+                "origin",
+                self.active_branch,
+                remote_url=self.remotes.origin.url,
+                action="push to",
+            )
 
             return commit.hexsha
 
@@ -857,8 +819,10 @@ class GitRepo(Repo):
                 dir_path.rmdir()
 
     def publish_first_commit(self) -> None:
-        # Create an initial empty commit
-        self.checkout_default_branch_and_pull()
+        if self.head.is_valid() or self.remotes.origin.refs:
+            raise GitBaseError("Cannot initialize a repository with existing commits")
+        # An empty remote has nothing to pull; explicitly select its unborn branch.
+        self.git.symbolic_ref("HEAD", f"refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}")
         self.commit_and_push_project(
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
             author_name=settings.DJANGO_GIT_COMMITTER_NAME,

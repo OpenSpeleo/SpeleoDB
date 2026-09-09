@@ -13,6 +13,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.utils.text import slugify
 from django.utils.timezone import get_default_timezone
+from git.exc import BadName
+from git.exc import BadObject
 from git.exc import GitCommandError
 
 from speleodb.git_engine.core import GitCommit
@@ -194,15 +196,15 @@ class BaseFileProcessor:
                     try:
                         commit = self.project.git_repo.commit(hexsha)
                         break
-                    except ValueError:
-                        # In case the commit doesn't exist - pull and retry
-                        self.project.git_repo.pull()
+                    except ValueError, BadName, BadObject:
+                        # Fetch objects without changing a historical checkout.
+                        self.project.git_repo.fetch()
                 else:
                     raise ValueError(f"Impossible to find commit `{hexsha}`")
 
             else:
-                # If we select the HEAD commit - no other choice than pull first
-                self.project.git_repo.pull()
+                # A previous historical request may have left HEAD detached.
+                self.project.git_repo.checkout_default_branch_and_pull()
                 commit = self.project.git_repo.head.commit
 
             if commit is None:

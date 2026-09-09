@@ -23,6 +23,40 @@ if TYPE_CHECKING:
     from git import Commit
     from git.index.typ import BaseIndexEntry
 
+ENCODED_CREDENTIAL = "fake%40credential"
+DECODED_CREDENTIAL = "fake@credential"
+REMOTE_URL = f"https://oauth2:{ENCODED_CREDENTIAL}@gitlab.example/test/project.git"
+DECODED_REMOTE_URL = REMOTE_URL.replace(ENCODED_CREDENTIAL, DECODED_CREDENTIAL)
+
+
+def remote_git_error(action: str) -> GitCommandError:
+    return GitCommandError(
+        ["git", action, REMOTE_URL],
+        128,
+        stderr=(
+            f"fatal: unable to access '{REMOTE_URL}': remote unavailable; "
+            f"decoded URL: {DECODED_REMOTE_URL}; credential: {DECODED_CREDENTIAL}"
+        ),
+    )
+
+
+def assert_credentials_redacted(diagnostic_text: str) -> None:
+    assert ENCODED_CREDENTIAL not in diagnostic_text
+    assert DECODED_CREDENTIAL not in diagnostic_text
+    assert "oauth2:" not in diagnostic_text
+    assert "gitlab.example/test/project.git" in diagnostic_text
+    assert "exit code(128)" in diagnostic_text
+    assert "remote unavailable" in diagnostic_text
+
+
+def assert_remote_backoff(mock_sleep: MagicMock) -> None:
+    assert [mock_call.args[0] for mock_call in mock_sleep.call_args_list] == [
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+    ]
+
 
 class CommitAndPushRetryTests(TestCase):
     """Tests for retry logic on index.add, index.commit, and push."""
@@ -37,6 +71,7 @@ class CommitAndPushRetryTests(TestCase):
         readme.write_text("initial")
         self.repo.index.add(["README.md"])
         self.repo.index.commit("initial commit")
+        self.repo.create_remote("origin", url=REMOTE_URL)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmpdir, ignore_errors=True)
@@ -116,6 +151,32 @@ class CommitAndPushRetryTests(TestCase):
         assert result is not None
         mock_sleep.assert_called_once()
 
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_push_retries_sanitized_transient_error(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        (self.git_path / "pushfile.txt").write_text("content")
+
+        with (
+            patch.object(
+                git.Git,
+                "push",
+                create=True,
+                side_effect=[remote_git_error("push"), ""],
+            ) as mock_push,
+            self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+        ):
+            result = self.repo.commit_and_push_project(
+                message="test",
+                author_name="Test",
+                author_email="test@test.com",
+            )
+
+        assert result is not None
+        assert mock_push.call_count == 2  # noqa: PLR2004
+        mock_sleep.assert_called_once_with(1.0)
+        assert_credentials_redacted("\n".join(logs.output))
+
     def test_index_add_raises_after_exhausted_retries(self) -> None:
         """After DJANGO_GIT_RETRY_ATTEMPTS failures, the error should propagate."""
 
@@ -157,14 +218,12 @@ class CommitAndPushRetryTests(TestCase):
                 author_email="test@test.com",
             )
 
-    def test_push_raises_after_exhausted_retries(self) -> None:
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_push_raises_redacted_error_after_exhausted_retries(
+        self, mock_sleep: MagicMock
+    ) -> None:
         """After DJANGO_GIT_RETRY_ATTEMPTS push failures, GitBaseError is raised."""
         (self.git_path / "pushfile.txt").write_text("content")
-
-        mock_origin = MagicMock()
-        mock_origin.url = "https://token@gitlab.com/test/repo.git"
-        mock_remotes = MagicMock()
-        mock_remotes.origin = mock_origin
 
         with (
             patch.object(self.repo, "is_dirty", return_value=True),
@@ -172,27 +231,128 @@ class CommitAndPushRetryTests(TestCase):
                 git.Git,
                 "push",
                 create=True,
-                side_effect=GitCommandError("push", "remote error"),
-            ),
-            patch(
-                "speleodb.git_engine.core.GitRepo.active_branch",
-                new_callable=PropertyMock,
-                return_value=MagicMock(name="master"),
-            ),
-            patch.object(
-                type(self.repo),
-                "remotes",
-                new_callable=PropertyMock,
-                return_value=mock_remotes,
-            ),
-            patch("speleodb.utils.helpers.time.sleep"),
-            pytest.raises(GitBaseError, match="Impossible to push"),
+                side_effect=remote_git_error("push"),
+            ) as mock_push,
+            self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+            pytest.raises(GitBaseError, match="Impossible to push") as exc_info,
         ):
             self.repo.commit_and_push_project(
                 message="test",
                 author_name="Test",
                 author_email="test@test.com",
             )
+
+        traceback_text = "".join(
+            traceback.format_exception(
+                exc_info.type,
+                exc_info.value,
+                exc_info.tb,
+            )
+        )
+        assert_credentials_redacted("\n".join([traceback_text, *logs.output]))
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__context__ is None
+        assert mock_push.call_count == 5  # noqa: PLR2004
+        assert_remote_backoff(mock_sleep)
+
+
+class PullAndFetchRetryTests(TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
+        self.repo = GitRepo.init(path=pathlib.Path(self.tmpdir) / "test_repo")
+        readme = self.repo.path / "README.md"
+        readme.write_text("initial")
+        self.repo.index.add([readme.name])
+        self.repo.index.commit("initial commit")
+        self.repo.create_remote("origin", url=REMOTE_URL)
+
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_pull_and_fetch_retry_sanitized_transient_errors(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        for operation_name in ("pull", "fetch"):
+            with (
+                self.subTest(operation=operation_name),
+                patch.object(
+                    git.Remote,
+                    operation_name,
+                    side_effect=[remote_git_error(operation_name), []],
+                ) as remote_operation,
+                self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+            ):
+                mock_sleep.reset_mock()
+                getattr(self.repo, operation_name)()
+
+                assert remote_operation.call_count == 2  # noqa: PLR2004
+                mock_sleep.assert_called_once_with(1.0)
+                assert_credentials_redacted("\n".join(logs.output))
+
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_pull_and_fetch_raise_redacted_errors_after_exhaustion(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        for operation_name in ("pull", "fetch"):
+            mock_sleep.reset_mock()
+            with (
+                self.subTest(operation=operation_name),
+                patch.object(
+                    git.Remote,
+                    operation_name,
+                    side_effect=remote_git_error(operation_name),
+                ) as remote_operation,
+                self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+                pytest.raises(
+                    GitBaseError,
+                    match=f"Impossible to {operation_name} repository",
+                ) as exc_info,
+            ):
+                getattr(self.repo, operation_name)()
+
+            traceback_text = "".join(
+                traceback.format_exception(
+                    exc_info.type,
+                    exc_info.value,
+                    exc_info.tb,
+                )
+            )
+            assert_credentials_redacted("\n".join([traceback_text, *logs.output]))
+            assert exc_info.value.__cause__ is None
+            assert exc_info.value.__context__ is None
+            assert remote_operation.call_count == 5  # noqa: PLR2004
+            assert_remote_backoff(mock_sleep)
+
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_set_origin_url_raises_redacted_error_after_exhaustion(
+        self, mock_sleep: MagicMock
+    ) -> None:
+        with (
+            patch.object(
+                git.Remote,
+                "set_url",
+                side_effect=remote_git_error("remote set-url"),
+            ) as set_url,
+            self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+            pytest.raises(
+                GitBaseError,
+                match="Impossible to configure origin for repository",
+            ) as exc_info,
+        ):
+            self.repo.set_origin_url(REMOTE_URL)
+
+        traceback_text = "".join(
+            traceback.format_exception(
+                exc_info.type,
+                exc_info.value,
+                exc_info.tb,
+            )
+        )
+        assert_credentials_redacted("\n".join([traceback_text, *logs.output]))
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__context__ is None
+        assert set_url.call_count == 5  # noqa: PLR2004
+        assert_remote_backoff(mock_sleep)
 
 
 class CloneRetryTests(TestCase):
@@ -225,25 +385,16 @@ class CloneRetryTests(TestCase):
     def test_clone_raises_git_base_error_after_retries(
         self, mock_sleep: MagicMock
     ) -> None:
-        encoded_credential = "fake%40credential"
-        decoded_credential = "fake@credential"
-        url = f"https://oauth2:{encoded_credential}@gitlab.example/test/project.git"
-        decoded_url = url.replace(encoded_credential, decoded_credential)
-        persistent_error = GitCommandError(
-            ["git", "clone", url],
-            128,
-            stderr=(
-                f"fatal: unable to access '{url}': repository not found; "
-                f"decoded URL: {decoded_url}; token: {decoded_credential}"
-            ),
-        )
+        persistent_error = remote_git_error("clone")
 
         for use_keyword_url in (False, True):
             with self.subTest(use_keyword_url=use_keyword_url):
                 project_path = pathlib.Path("project")
-                clone_args = () if use_keyword_url else (url, project_path)
+                clone_args = () if use_keyword_url else (REMOTE_URL, project_path)
                 clone_kwargs = (
-                    {"url": url, "to_path": project_path} if use_keyword_url else {}
+                    {"url": REMOTE_URL, "to_path": project_path}
+                    if use_keyword_url
+                    else {}
                 )
                 mock_sleep.reset_mock()
                 with (
@@ -268,13 +419,8 @@ class CloneRetryTests(TestCase):
                 )
                 diagnostic_text = "\n".join([traceback_text, *logs.output])
 
-                assert encoded_credential not in diagnostic_text
-                assert decoded_credential not in diagnostic_text
-                assert "oauth2:" not in diagnostic_text
-                assert "gitlab.example/test/project.git" in diagnostic_text
-                assert "exit code(128)" in diagnostic_text
-                assert "repository not found" in diagnostic_text
+                assert_credentials_redacted(diagnostic_text)
                 assert exc_info.value.__cause__ is None
                 assert exc_info.value.__context__ is None
                 assert mock_clone.call_count == 5  # noqa: PLR2004
-                assert mock_sleep.call_count == 4  # noqa: PLR2004
+                assert_remote_backoff(mock_sleep)

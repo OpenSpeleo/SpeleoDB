@@ -42,14 +42,43 @@ transient error: a subsequent duplicate response can be resolved by confirming
 the repository exists. New repositories retain their initial commit behavior;
 existing empty repositories receive their initial commit after cloning.
 
-## Clone diagnostics
+## Git subprocess retries and working-copy recovery
 
-Clone retains its existing five-attempt Git retry policy and 1/2/4/8-second
-backoff. Before a failure reaches the retry logger, URL credentials and known
+Clone, fetch, pull, push, and credential-bearing origin configuration share a
+five-attempt Git retry policy and 1/2/4/8-second backoff. Before a failure reaches
+the retry logger, URL credentials and known
 encoded/decoded token values are removed from the command, status, stderr, and
 stdout. The final `GitBaseError` includes the sanitized repository URL, Git
 exit status, and error details. Raw credential-bearing exception chains are
 not attached to the raised exception.
+
+Initial publication explicitly selects the configured unborn branch and never
+pulls from an empty remote. Existing commits or remote refs prohibit initial
+publication: an unset remote HEAD does not establish that a repository is empty.
+Normal checkout switches to an existing local branch before a fast-forward-only
+pull, including when returning from detached historical commits. A missing local
+branch is created only from a verified remote-tracking branch after a successful
+pruning fetch. Dirty-worktree, missing-branch, and transport failures propagate
+instead of creating an arbitrary branch. Historical commits already available
+locally need no network request.
+
+Download processors use the same rules: a latest-version download restores and
+updates the default branch, while fetching a missing historical commit leaves
+the current checkout unchanged.
+
+The project wrapper repairs an incorrect origin URL in place using the same
+canonical URL builder as creation. It never deletes and reclones a working copy
+merely because checkout or pull failed; transient outages are not evidence of
+local corruption, and deleting files can destroy uncommitted work. History is
+rebuilt only after successful checkout/pull. Actual object corruption requires
+an explicit recovery decision rather than an automatic destructive fallback.
+
+Local bare-repository regressions cover initialization, detached checkout,
+remote updates, missing branches, dirty files, URL repair, and outage preservation.
+Retry tests assert credential-safe logs and tracebacks for each remote operation.
+Successful existing-branch pulls need no preliminary fetch; only an absent local
+branch or commit adds one. Failure backoff gives the remote time to recover but
+does not classify authentication or corrupt-object Git stderr as transient.
 
 ## Tests and external dependencies
 

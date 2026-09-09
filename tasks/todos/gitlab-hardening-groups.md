@@ -12,10 +12,10 @@
    - [x] Handle operation-specific SDK exceptions and distinguish missing data from outages.
    - [x] Add regressions, update documentation, verify, and commit.
 3. **Git subprocess diagnostics and recovery**
-   - [ ] Share credential-safe diagnostics across clone, pull, and push retries.
-   - [ ] Require confirmed branch absence before branch creation; preserve upstream failures.
-   - [ ] Review project-level re-clone recovery so network outages do not imply local corruption.
-   - [ ] Add real local-repository regressions, update documentation, verify, and commit.
+   - [x] Share credential-safe diagnostics across clone, pull, and push retries.
+   - [x] Require confirmed branch absence before branch creation; preserve upstream failures.
+   - [x] Review project-level re-clone recovery so network outages do not imply local corruption.
+   - [x] Add real local-repository regressions, update documentation, verify, and commit.
 4. **Proxy discovery retries**
    - [ ] Add bounded retries for transient discovery GET failures before streaming starts.
    - [ ] Honor reasonable rate-limit delays and close failed responses before retrying.
@@ -47,3 +47,8 @@ the full integration run for the completed series. Do not push the commits.
 - Shared REST: 29 focused tests passed against isolated PostgreSQL, including
   real SDK retry/error mapping and both cached-client/recreated-project edges.
   Ruff and mypy passed; review findings were fixed and regression-tested.
+- Git operations: 55 checkout, retry, manager, preload, and project-history tests
+  passed, including live GitLab/storage integrations. A subsequent 25-test
+  diagnostics run covered credential-bearing origin creation/repair failures.
+  Ruff and mypy passed. Downloads also use safe branch/fetch selection; review
+  findings about missing-object exceptions and origin configuration were fixed.

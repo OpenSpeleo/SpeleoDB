@@ -3,19 +3,29 @@
 from __future__ import annotations
 
 import pathlib
+import tempfile
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import git
 import pytest
+from django.conf import settings
 from django.test import TestCase
+from django.test import override_settings
 from django.urls import reverse
+from git.exc import GitCommandError
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import PermissionLevel
+from speleodb.git_engine.core import GitRepo
+from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
+from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
+from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.exceptions import ProjectNotFound
@@ -268,15 +278,91 @@ class TestCheckoutCommitOrDefaultBranch(TestCase):
             project.checkout_commit_or_default_pull_branch()
 
 
-@pytest.mark.skip_if_lighttest
-class TestGitRepoCorruptionRecovery(BaseAPIProjectTestCase):
-    """Test that broken git repos are recovered by deleting and re-cloning.
+class TestProjectCheckoutPreservesWorktree(TestCase):
+    """Transport failures must not destroy the project's existing working copy."""
 
-    Regression test: previously, when pull() failed on a broken repo,
-    the fallback checkout also failed, causing an unhandled exception chain
-    that resulted in a 500 error. The fix catches the error, deletes the
-    broken local copy, re-clones from the remote, and retries.
-    """
+    def setUp(self) -> None:
+        super().setUp()
+        self.root: pathlib.Path = pathlib.Path(
+            self.enterContext(tempfile.TemporaryDirectory())
+        )
+        self.enterContext(
+            override_settings(DJANGO_GIT_PROJECTS_DIR=self.root / "working")
+        )
+        self.project: Project = ProjectFactory.create()
+        self.remote: git.Repo = git.Repo.init(
+            self.root / "remote.git",
+            bare=True,
+            initial_branch=settings.DJANGO_GIT_BRANCH_NAME,
+        )
+        self.repo: GitRepo = GitRepo.init(self.project.git_repo_dir)
+        self.addCleanup(self.remote.close)
+        self.addCleanup(self.repo.close)
+        self.repo.git.symbolic_ref(
+            "HEAD", f"refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}"
+        )
+        readme: pathlib.Path = self.repo.path / "README.txt"
+        readme.write_text("initial", encoding="utf-8")
+        self.repo.index.add(["README.txt"])
+        actor: git.Actor = git.Actor("Test Author", "test@example.invalid")
+        self.repo.index.commit("initial", author=actor, committer=actor)
+        self.repo.create_remote("origin", str(self.remote.git_dir))
+        self.repo.git.push("origin", self.repo.active_branch.name)
+        self.sentinel: pathlib.Path = self.repo.path / "local-work.txt"
+        self.sentinel.write_text("keep me", encoding="utf-8")
+        self.enterContext(
+            patch.object(
+                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
+            )
+        )
+
+    def test_checkout_failure_preserves_working_copy_and_skips_reconstruction(
+        self,
+    ) -> None:
+        for hexsha in (None, self.repo.head.commit.hexsha):
+            operation: str = (
+                "checkout_default_branch_and_pull"
+                if hexsha is None
+                else "checkout_commit"
+            )
+            for error in (
+                GitBaseError("upstream unavailable"),
+                GitCommandError("checkout", 128),
+            ):
+                with (
+                    self.subTest(hexsha=hexsha, error=type(error).__name__),
+                    patch.object(GitRepo, operation, side_effect=error),
+                    patch.object(GitlabManager, "create_or_clone_project") as clone,
+                    patch.object(
+                        Project, "construct_git_history_from_project"
+                    ) as construct,
+                    pytest.raises(type(error)),
+                ):
+                    self.project.checkout_commit_or_default_pull_branch(hexsha=hexsha)
+                clone.assert_not_called()
+                construct.assert_not_called()
+                assert self.sentinel.read_text(encoding="utf-8") == "keep me"
+                assert (self.repo.path / ".git" / "HEAD").exists()
+
+    def test_wrong_origin_is_repaired_in_place(self) -> None:
+        original_sha: str = self.repo.head.commit.hexsha
+        self.repo.remotes.origin.set_url("https://invalid.example/nonexistent.git")
+
+        with patch.object(GitlabManager, "create_or_clone_project") as clone:
+            self.project.checkout_commit_or_default_pull_branch()
+
+        clone.assert_not_called()
+        assert self.repo.remotes.origin.url == str(self.remote.git_dir)
+        assert self.repo.head.commit.hexsha == original_sha
+        assert self.sentinel.read_text(encoding="utf-8") == "keep me"
+        assert ProjectCommit.objects.filter(
+            project=self.project, id=original_sha
+        ).exists()
+
+
+@pytest.mark.skip_if_lighttest
+class TestGitRepoRemoteConfigurationRepair(BaseAPIProjectTestCase):
+    """Repair a drifted origin URL while retaining the existing working copy."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -286,9 +372,7 @@ class TestGitRepoCorruptionRecovery(BaseAPIProjectTestCase):
         )
 
     def test_checkout_recovers_from_broken_remote(self) -> None:
-        """Upload an artifact, break the remote URL so pull() fails, then
-        verify that checkout_commit_or_default_pull_branch recovers
-        gracefully by deleting the local repo and re-cloning."""
+        """Restore the configured remote before pulling, without losing local files."""
 
         assert TEST_FILE.exists()
 
@@ -316,26 +400,22 @@ class TestGitRepoCorruptionRecovery(BaseAPIProjectTestCase):
         assert git_repo_dir.exists()
         assert (git_repo_dir / ".git" / "HEAD").exists()
 
-        # 2. Break the repo by pointing the remote to a URL that will never
-        #    resolve.  This makes pull() fail after all retries, without
-        #    corrupting git internals (which could affect the parent repo).
+        # A modified remote URL is configuration drift, not repository corruption.
         git_repo = self.project.git_repo
+        sentinel: pathlib.Path = git_repo_dir / "local-work.txt"
+        sentinel.write_text("preserve local work", encoding="utf-8")
         git_repo.git.remote(
             "set-url", "origin", "https://invalid.example.com/nonexistent.git"
         )
 
-        # 3. checkout_commit_or_default_pull_branch should recover:
-        #    - pull() fails (unreachable remote) → GitBaseError
-        #    - fallback "git checkout -b master" fails (already exists) →
-        #      GitCommandError, re-raised as GitBaseError
-        #    - Model catches the error, deletes local repo, re-clones from
-        #      GitLab (using the real URL from credentials, not the broken
-        #      local config), and retries successfully.
-        #
-        # Without the fix this raises an unhandled exception.
-        self.project.checkout_commit_or_default_pull_branch()
+        with patch.object(GitlabManager, "create_or_clone_project") as clone:
+            self.project.checkout_commit_or_default_pull_branch()
 
-        # Verify the repo was re-created and is valid
+        clone.assert_not_called()
+        assert sentinel.read_text(encoding="utf-8") == "preserve local work"
+        assert git_repo.remotes.origin.url == GitlabCredentials.get().project_url(
+            self.project.id
+        )
         assert git_repo_dir.exists()
         assert (git_repo_dir / ".git" / "HEAD").exists()
 

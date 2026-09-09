@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import traceback
 import uuid
 from http import HTTPStatus
 from pathlib import Path
@@ -14,11 +15,13 @@ from unittest.mock import patch
 import gitlab
 import pytest
 from django.conf import settings
+from git.exc import GitCommandError
 from requests import Response
 from requests.exceptions import Timeout
 
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.core import GitRepo
+from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 
@@ -54,6 +57,65 @@ class CreateOrCloneProjectTests(TestCase):
         git_repo.create_remote.assert_called_once()
         origin.fetch.assert_not_called()
         git_repo.publish_first_commit.assert_called_once_with()
+
+    def test_new_project_remote_configuration_failure_is_sanitized(self) -> None:
+        project = MagicMock()
+        project.id = uuid.uuid4()
+        git_repo = MagicMock(spec=GitRepo)
+        raw_credential = "fake@credential"
+        credentials = GitlabCredentials(
+            instance="gitlab.example",
+            token=raw_credential,
+            group_id="1",
+            group_name="test-group",
+        )
+        remote_url = credentials.project_url(project.id)
+        git_repo.create_remote.side_effect = GitCommandError(
+            ["git", "remote", "add", "origin", remote_url],
+            128,
+            stderr=f"remote URL {remote_url}; credential {raw_credential}",
+        )
+
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.object(GitlabManager, "_gl", MagicMock()),
+            patch.object(GitlabCredentials, "get", return_value=credentials),
+            patch.object(GitlabManager, "create_project"),
+            patch.object(GitRepo, "init", return_value=git_repo),
+            patch("speleodb.utils.helpers.time.sleep") as sleep,
+            self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
+            pytest.raises(
+                GitBaseError,
+                match="Impossible to configure origin for repository",
+            ) as exc_info,
+        ):
+            GitlabManager.create_or_clone_project(
+                project,
+                base_dir=Path(temp_dir),
+            )
+
+        traceback_text = "".join(
+            traceback.format_exception(
+                exc_info.type,
+                exc_info.value,
+                exc_info.tb,
+            )
+        )
+        diagnostic_text = "\n".join([traceback_text, *logs.output])
+        assert raw_credential not in diagnostic_text
+        assert "fake%40credential" not in diagnostic_text
+        assert "oauth2:" not in diagnostic_text
+        assert "gitlab.example/test-group" in diagnostic_text
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__context__ is None
+        assert git_repo.create_remote.call_count == 5  # noqa: PLR2004
+        assert [mock_call.args[0] for mock_call in sleep.call_args_list] == [
+            1.0,
+            2.0,
+            4.0,
+            8.0,
+        ]
+        git_repo.publish_first_commit.assert_not_called()
 
 
 def gitlab_response(
@@ -300,6 +362,7 @@ class ProjectCreationFailureTests(TestCase):
 
     def test_confirmed_empty_repository_gets_initial_commit(self) -> None:
         self.repo.head.is_valid.return_value = False
+        self.repo.remotes.origin.refs = []
         with patch.object(
             self.client.session,
             "send",
@@ -310,3 +373,18 @@ class ProjectCreationFailureTests(TestCase):
         ):
             assert self.create_or_clone() is self.repo
         self.repo.publish_first_commit.assert_called_once_with()
+
+    def test_unset_remote_head_does_not_initialize_over_existing_refs(self) -> None:
+        self.repo.head.is_valid.return_value = False
+        self.repo.remotes.origin.refs = [MagicMock()]
+        with patch.object(
+            self.client.session,
+            "send",
+            side_effect=[
+                gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
+                gitlab_response(HTTPStatus.OK),
+            ],
+        ):
+            assert self.create_or_clone() is self.repo
+        self.repo.publish_first_commit.assert_not_called()
+        self.repo.checkout_default_branch_and_pull.assert_called_once_with()

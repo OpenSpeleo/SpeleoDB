@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import logging
 import pathlib
-import shutil
 import uuid
 from itertools import chain
 from typing import TYPE_CHECKING
@@ -29,7 +28,6 @@ from django.db.models.functions import Coalesce
 from django.db.utils import IntegrityError
 from django.utils import timezone
 from django_countries.fields import CountryField
-from git.exc import GitCommandError
 from openspeleo_lib.errors import EmptySurveyError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
@@ -39,7 +37,7 @@ from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import ProjectVisibility
 from speleodb.git_engine.core import GitRepo
-from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
@@ -504,33 +502,17 @@ class Project(models.Model):
         if not (git_repo := self.git_repo):
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
 
-        try:
-            if hexsha is None:
-                # Make sure the project is update to ToT (Top of Tree)
-                git_repo.checkout_default_branch_and_pull()
+        # Configuration drift is repairable without deleting local work. Network
+        # and checkout failures are not evidence of repository corruption.
+        origin = git_repo.remotes.origin
+        expected_url = GitlabCredentials.get().project_url(self.id)
+        if origin.url != expected_url:
+            git_repo.set_origin_url(expected_url)
 
-            else:
-                git_repo.checkout_commit(hexsha=hexsha)
-
-        except GitBaseError, GitCommandError:
-            logger.warning(
-                "Failed to checkout/pull for project %s. "
-                "Deleting local copy and re-cloning from scratch.",
-                self.id,
-            )
-
-            # Delete the corrupted/broken local repository
-            shutil.rmtree(self.git_repo_dir, ignore_errors=True)
-
-            # Re-clone from scratch (git_repo property handles this when the
-            # directory doesn't exist)
-            git_repo = self.git_repo
-
-            # Retry once with the fresh clone
-            if hexsha is None:
-                git_repo.checkout_default_branch_and_pull()
-            else:
-                git_repo.checkout_commit(hexsha=hexsha)
+        if hexsha is None:
+            git_repo.checkout_default_branch_and_pull()
+        else:
+            git_repo.checkout_commit(hexsha=hexsha)
 
         self.construct_git_history_from_project(git_repo=git_repo)
 
