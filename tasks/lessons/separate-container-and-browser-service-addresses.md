@@ -13,3 +13,8 @@ must access a published host port.
 Test settings that reload standalone environment files need the same audit.
 Provide explicit devcontainer test endpoints after that reload rather than
 changing the standalone test configuration to Compose-only hostnames.
+
+Integration-test runners must preserve that split too: override test/internal
+endpoints with Compose DNS, but leave standalone browser-facing defaults on
+`localhost`. A runner-wide browser endpoint override can invalidate setup
+configuration tests even when application requests succeed.

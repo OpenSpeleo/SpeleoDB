@@ -9,3 +9,12 @@ RustFS service instances, but they must have separate GitLab groups, group
 tokens, and storage buckets. The setup job must provision and validate each
 resource set independently and write only the matching values to each private
 environment file.
+
+Run Linux ownership and container-bootstrap tests with temporary state on a
+native Docker volume. A macOS bind mount does not reproduce Linux `chown`
+semantics; mount source read-only and keep generated state off that mount.
+
+Before a full live-service run, check Docker memory pressure and authenticated
+service health. Concurrent builds can cause the Docker VM to kill GitLab workers
+without restarting the container. Diagnose that infrastructure failure instead
+of increasing application retry budgets to hide it.

@@ -36,10 +36,10 @@
          hits.
    - [x] Verify and commit independently after the final cross-group review.
 6. **Final verification**
-   - [ ] Run the complete Python test suite with isolated GitLab, storage, and
+   - [x] Run the complete Python test suite with isolated GitLab, storage, and
          database resources.
    - [x] Run the complete JavaScript test suite and all repository hooks.
-   - [ ] Review the commit series, record results, and remove task-owned
+   - [x] Review the commit series, record results, and remove task-owned
          temporary resources.
 
 ## Design decisions
@@ -76,14 +76,31 @@ the full integration run for the completed series. Do not push the commits.
   security scans, JavaScript lint, URL checks, and the Vite production build.
 - Initial full macOS run: 4,146 passed, 156 skipped, one environment failure.
   The existing container-ownership test requires Linux `getent`/GNU `stat`. The
-  final complete suite will run on Linux, also including the reviewed
-  download-origin follow-up.
+  final complete suite ran on Linux, also including the reviewed download-origin
+  follow-up.
 - Download follow-up: all 21 local checkout/model tests passed, including
   stale-origin latest/historical downloads and network-free cached downloads.
   Full static/type/security/build checks passed. The live recheck encountered
-  GitLab HTTP 502 during authentication; service health is being verified before
-  the Linux full-suite run.
+  GitLab HTTP 502 during authentication; service health was verified before the
+  Linux full-suite run.
 - The local 502s were traced to Docker VM memory exhaustion killing GitLab's
   Puma/Sidekiq workers during a concurrent container build. GitLab recovered;
   authenticated requests succeeded again. This does not establish the cause of
   the original CI incident.
+- The first Linux run exposed runner-only mismatches: macOS bind mounts did not
+  preserve Linux ownership semantics, and an internal endpoint override leaked
+  into browser-facing setup defaults. Native Docker test-state storage and
+  separate internal/browser endpoints resolved all three failing checks.
+- Final complete Linux run on the finished code: **4,148 passed, 155 skipped**
+  in 195.85 seconds, exit code 0. All 4,303 collected tests were accounted for;
+  no light/offline flags were used. Live GitLab, storage, and database tests
+  passed against isolated task-owned services.
+- Fix commits, in order: `4d6cdc10` (cleanup), `f6784274` (REST policy),
+  `23a25801` (Git operations), `e5180620` (proxy), and `0adad58a` (download
+  origins). Each logical group includes regression tests and documentation.
+  Final independent review found no further required changes to this series.
+- Cleanup: removed the four task-owned service containers, isolated network, six
+  Compose volumes, and native Linux test-state volume. Preserved existing
+  services, images, and user environment files. Temporary runner scripts were
+  deleted; generated workspace test data was moved to macOS Trash for recovery.
+  No commits were pushed.
