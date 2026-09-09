@@ -16,6 +16,7 @@ from git.exc import GitCommandError
 
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import Project
 
@@ -261,12 +262,18 @@ class GitCheckoutTests(TestCase):
         repo: GitRepo = self._clone()
         repo.checkout_commit(original_sha)
         latest_sha: str = self._push_revision("latest version")
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
         processor: BaseFileProcessor = BaseFileProcessor(Project(name="Test"))
         processor.TARGET_SAVE_FILENAME = "README.txt"
         target: Path = self.root / "download.txt"
 
-        with patch.object(
-            Project, "git_repo", new_callable=PropertyMock, return_value=repo
+        with (
+            patch.object(
+                Project, "git_repo", new_callable=PropertyMock, return_value=repo
+            ),
+            patch.object(
+                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
+            ),
         ):
             filename: str = processor.get_filename_for_download(target)
 
@@ -274,18 +281,26 @@ class GitCheckoutTests(TestCase):
         assert target.read_text(encoding="utf-8") == "latest version"
         assert repo.active_branch.name == self.branch
         assert repo.head.commit.hexsha == latest_sha
+        assert repo.remotes.origin.url == str(self.remote.git_dir)
 
     def test_commit_download_fetches_missing_objects_without_moving_head(self) -> None:
         original_sha: str = self._push_revision("first version")
         repo: GitRepo = self._clone()
         repo.checkout_commit(original_sha)
         latest_sha: str = self._push_revision("latest version")
+        invalid_origin: str = str(self.root / "missing.git")
+        repo.remotes.origin.set_url(invalid_origin)
         processor: BaseFileProcessor = BaseFileProcessor(Project(name="Test"))
         processor.TARGET_SAVE_FILENAME = "README.txt"
         target: Path = self.root / "download.txt"
 
-        with patch.object(
-            Project, "git_repo", new_callable=PropertyMock, return_value=repo
+        with (
+            patch.object(
+                Project, "git_repo", new_callable=PropertyMock, return_value=repo
+            ),
+            patch.object(
+                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
+            ),
         ):
             filename: str = processor.get_filename_for_download(
                 target, hexsha=latest_sha
@@ -296,6 +311,30 @@ class GitCheckoutTests(TestCase):
         assert repo.head.is_detached
         assert repo.head.commit.hexsha == original_sha
         assert (repo.path / "README.txt").read_text(encoding="utf-8") == "first version"
+        assert repo.remotes.origin.url == str(self.remote.git_dir)
+
+        # The fetched commit is now local: another download needs neither
+        # remote configuration repair nor a network request.
+        repo.remotes.origin.set_url(invalid_origin)
+        with (
+            patch.object(
+                Project, "git_repo", new_callable=PropertyMock, return_value=repo
+            ),
+            patch.object(Project, "ensure_git_origin") as repair,
+            patch.object(
+                GitRepo, "fetch", side_effect=AssertionError("unexpected fetch")
+            ),
+            patch.object(
+                GitRepo, "pull", side_effect=AssertionError("unexpected pull")
+            ),
+        ):
+            processor.get_filename_for_download(target, hexsha=latest_sha)
+
+        repair.assert_not_called()
+        assert target.read_text(encoding="utf-8") == "latest version"
+        assert repo.remotes.origin.url == invalid_origin
+        assert repo.head.is_detached
+        assert repo.head.commit.hexsha == original_sha
 
     def test_pull_outage_preserves_existing_branch_and_files(self) -> None:
         original_sha: str = self._push_revision("first version")

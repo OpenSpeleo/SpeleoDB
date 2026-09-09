@@ -64,7 +64,10 @@ locally need no network request.
 
 Download processors use the same rules: a latest-version download restores and
 updates the default branch, while fetching a missing historical commit leaves
-the current checkout unchanged.
+the current checkout unchanged. Both use `Project.ensure_git_origin()` before
+network access, so a changed GitLab token, host, or group is repaired on downloads
+as well as normal checkout. Already-local historical downloads need no repair
+or remote access.
 
 The project wrapper repairs an incorrect origin URL in place using the same
 canonical URL builder as creation. It never deletes and reclones a working copy

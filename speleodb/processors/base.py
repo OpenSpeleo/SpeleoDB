@@ -188,24 +188,26 @@ class BaseFileProcessor:
 
         # 1. Fetch the commit requested by the user - pull repository if needed.
         try:
+            if hexsha is not None and not self.validate_hexsha(hexsha):
+                raise ValueError(f"Invalid Git SHA value: `{hexsha}`.")
+            git_repo = self.project.git_repo
             if hexsha is not None:
-                if not self.validate_hexsha(hexsha):
-                    raise ValueError(f"Invalid Git SHA value: `{hexsha}`.")
-
                 for _ in range(2):
                     try:
-                        commit = self.project.git_repo.commit(hexsha)
+                        commit = git_repo.commit(hexsha)
                         break
                     except ValueError, BadName, BadObject:
                         # Fetch objects without changing a historical checkout.
-                        self.project.git_repo.fetch()
+                        self.project.ensure_git_origin(git_repo)
+                        git_repo.fetch()
                 else:
                     raise ValueError(f"Impossible to find commit `{hexsha}`")
 
             else:
                 # A previous historical request may have left HEAD detached.
-                self.project.git_repo.checkout_default_branch_and_pull()
-                commit = self.project.git_repo.head.commit
+                self.project.ensure_git_origin(git_repo)
+                git_repo.checkout_default_branch_and_pull()
+                commit = git_repo.head.commit
 
             if commit is None:
                 raise ValueError("Impossible to find HEAD commit")

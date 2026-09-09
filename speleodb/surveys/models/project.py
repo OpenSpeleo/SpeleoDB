@@ -502,12 +502,7 @@ class Project(models.Model):
         if not (git_repo := self.git_repo):
             raise ProjectNotFound("This project does not exist on gitlab or on drive")
 
-        # Configuration drift is repairable without deleting local work. Network
-        # and checkout failures are not evidence of repository corruption.
-        origin = git_repo.remotes.origin
-        expected_url = GitlabCredentials.get().project_url(self.id)
-        if origin.url != expected_url:
-            git_repo.set_origin_url(expected_url)
+        self.ensure_git_origin(git_repo)
 
         if hexsha is None:
             git_repo.checkout_default_branch_and_pull()
@@ -515,6 +510,14 @@ class Project(models.Model):
             git_repo.checkout_commit(hexsha=hexsha)
 
         self.construct_git_history_from_project(git_repo=git_repo)
+
+    def ensure_git_origin(self, git_repo: GitRepo) -> None:
+        # Configuration drift is repairable without deleting local work. Network
+        # and checkout failures are not evidence of repository corruption.
+        origin = git_repo.remotes.origin
+        expected_url = GitlabCredentials.get().project_url(self.id)
+        if origin.url != expected_url:
+            git_repo.set_origin_url(expected_url)
 
     def construct_git_history_from_project(self, git_repo: GitRepo) -> None:
         from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
