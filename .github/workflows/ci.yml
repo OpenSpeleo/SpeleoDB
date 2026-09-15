@@ -169,8 +169,8 @@ jobs:
           python manage.py check_gitlab --settings config.settings.test
           python manage.py create_s3_local_buckets --settings config.settings.test
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
-          # Stream uncaptured output and dump thread stacks after a minute.
-          pytest -vvv -s -o faulthandler_timeout=60 --durations=20
+          # Keep normal output capture, hang diagnostics, and the slowest tests.
+          pytest -o faulthandler_timeout=60 --durations=20
         env:
           GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
