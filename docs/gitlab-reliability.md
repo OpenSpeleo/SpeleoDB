@@ -104,6 +104,22 @@ Existing GitLab integration coverage remains in separate test modules, including
 `skip_if_lighttest` marker and require provisioned GitLab and storage services.
 Their service availability is distinct from the command's history-cache behavior.
 
+### Diagnosing CI stalls
+
+CI runs pytest with `-vvv -s -o faulthandler_timeout=60 --durations=20`. Verbose
+output identifies individual tests, and `-s` disables output capture.
+Pytest's built-in faulthandler prints all
+Python thread stacks when a test takes longer than 60 seconds, including setup
+and teardown. This reports where execution is waiting without aborting the
+test or changing its retry behavior. The duration summary identifies slow
+phases when the run completes. These diagnostics require no extra dependency.
+
+GitHub can delay displaying an unfinished progress line, so the last visible
+module is not proof that it owns the blocked operation. Inspect the stack dump
+before attributing a stall to database cleanup, Git transport, or REST retries.
+The upload tests use real GitLab; a successful local Compose run establishes
+local behavior but does not establish the health of CI's remote GitLab service.
+
 ## Performance and limits
 
 Successful creation adds no requests. The existing-repository path adds one

@@ -229,6 +229,14 @@ daily automatic cleanup. Confirm the saved retention configuration survives a
 restart. Do not invent environment switches for settings the pinned version
 only exposes in its dashboard/API.
 
+The persisted settings are `data_retention.task_successful_days=30`,
+`data_retention.task_unsuccessful_days=30`, and the
+`data_retention.schedule` settings `preset=daily`, `hour=3`, `minute=0`,
+`timezone=UTC`, and `enabled=true`. The pinned release stores them through
+`AppConfigService`; authenticated API updates use
+`PUT /api/config/settings/{key}`. Verify them through the service or
+`GET /api/config` after saving. Configure the schedule before enabling it.
+
 Leave workflow automation rules disabled. Django admin is the supported export
 retry interface; raw task replays from Kanchi do not create new application
 attempts. Existing task-ID/attempt guards must make stale replays harmless.
@@ -256,37 +264,79 @@ The root Node manifest and lockfile pin `railway@3.11.0`, TypeScript, and Node
 type definitions. `npm run typecheck:railway` validates the authoring file and
 runs through pre-commit/CI. Its native IaC runner requires Railway CLI 5.42.1 or
 newer; the read-only production plan was checked with CLI 5.57.1.
-Before reviewing a deployment plan, set `SPELEODB_RELEASE_COMMIT` to the exact
-reviewed 40-character application commit. Workers use that commit from the
-repository's `master` release branch. Check the live web service's source branch
-and migration history before applying the prepared graph.
+The web service, worker, and Beat track the repository's `master` release branch
+with GitHub check suites enabled. Worker and Beat sources have no fixed commit
+SHA, and their empty watch-pattern lists allow every repository change to trigger
+a rebuild after checks pass. This keeps application tasks aligned with releases
+that update shared code, dependencies, or build configuration. Kanchi follows
+its pinned image digest and upgrades independently of application Git pushes.
+Check the live web service's source branch and migration history before applying
+the prepared graph, and record the actual commit on each resulting deployment.
+After service creation, read back the worker and Beat source settings to confirm
+the `master` branch, absent commit pin, and enabled GitHub check suites were
+retained.
 
-Production deployment and pushes are paused for collaborative review; review
-commits are authorized after the required container checks.
-The consolidated read-only plan has seven safe changes and zero removals: create
-`Celery-Worker`, `Celery-Beat`, and `Kanchi`; update the web service's broker,
-dashboard link, and deployment commands/settings. This preview
-does not provision services or validate missing shared values. Generate a fresh
-plan against the reviewed release commit before any authorized apply.
+Railway may normalize omitted fields to default restart-policy or watch-pattern
+values on read-back. Compare any `null`-to-default plan differences with the
+effective deployment manifest before applying again; correct runtime settings
+do not require repeated deployments to chase representational differences.
+
+The authorized rollout creates `Celery-Worker`, `Celery-Beat`, and `Kanchi` and
+updates the web service's broker, dashboard link, and deployment commands/settings.
+Generate a fresh plan before applying and reject unrelated changes or removals.
+A plan does not provision services or validate missing referenced values; verify
+those prerequisites against the target production environment.
 
 Before rollout, verify the existing Redis server has a persistent volume, AOF,
 and `noeviction`. Provision a separate Kanchi database and restricted login on the
 existing PostgreSQL server. Neither existing infrastructure service is managed
-or replaced by this named IaC partial. These production prerequisites remain
-pending; local setup does not provision production resources.
+or replaced by this named IaC partial. Verify these prerequisites in production;
+local setup does not provision production resources.
 
-Provision these shared Railway variables during the reviewed rollout:
+This topology needs no environment-wide shared variables. Redis owns its
+connection settings, PostgreSQL owns its private hostname, and Kanchi owns its
+dedicated database password and authentication secrets. Consumers use Railway
+references so credential/address changes have one source of truth and Railway
+can display service dependencies. Never copy a resolved infrastructure URL into
+shared storage or a consumer's variables.
 
-- `CELERY_BROKER_URL`, selecting logical database 1 on the existing Redis server.
-  Keep the web service's cache `REDIS_URL` on its existing database 0.
-- `KANCHI_DATABASE_URL`, using `postgresql+psycopg://` with Kanchi's own database
-  and user on the existing PostgreSQL server; do not reuse Django credentials.
-- `KANCHI_USERNAME` and `KANCHI_PASSWORD_HASH` (PBKDF2-SHA256 format).
-- Independent `KANCHI_SESSION_SECRET_KEY` and `KANCHI_TOKEN_SECRET_KEY`.
-- `KANCHI_ALLOWED_HOSTS`, including the chosen hostname and
-  `healthcheck.railway.app`.
-- `KANCHI_ALLOWED_ORIGINS`, containing the exact HTTPS origin.
-- `KANCHI_URL`, the authenticated dashboard's HTTPS URL.
+Set `CELERY_BROKER_URL=${{REDIS_URL}}/1` on `Redis-Prod`. Its existing `REDIS_URL`
+already references Redis's own password and private domain and has no database
+suffix. Web, worker, Beat, and Kanchi each set
+`CELERY_BROKER_URL=${{Redis-Prod.CELERY_BROKER_URL}}`. This selects logical
+database 1; the web cache continues using database 0. The Redis-owned variable
+is a prerequisite managed on that existing service, outside this IaC partial.
+
+When replacing copied values, inspect both raw reference expressions and
+rendered connection URLs. Compare resolved values without printing secrets,
+then verify a broker `PING` and database connection from a deployed consumer.
+Remove the obsolete shared value only after checking every service for remaining
+references. An equivalent reference-only correction does not require a restart.
+
+Configure these native environment variables directly on the Kanchi service:
+
+- `DATABASE_PASSWORD`, holding only Kanchi's dedicated database login password.
+- `DATABASE_URL`:
+  `postgresql+psycopg://kanchi:${{DATABASE_PASSWORD}}@${{Postgres-Prod.PGPRIVATEHOST}}:5432/kanchi`.
+  The dedicated database/user remain separate from Django. `PGPRIVATEHOST`
+  references PostgreSQL's private domain; its existing `PGHOST` and `PGPORT`
+  describe the public proxy and must not be used for this private connection.
+- `BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD_HASH` (Django-compatible
+  `pbkdf2_sha256` format). The username does not need to be an email address.
+- Independent random `SESSION_SECRET_KEY` and `TOKEN_SECRET_KEY` values.
+- `ALLOWED_EMAIL_PATTERNS`, referencing the same service's
+  `${{BASIC_AUTH_USERNAME}}` variable to allow only that operator username.
+- `ALLOWED_HOSTS`: `${{RAILWAY_PUBLIC_DOMAIN}},healthcheck.railway.app`.
+- `ALLOWED_ORIGINS`: `https://${{RAILWAY_PUBLIC_DOMAIN}}`.
+
+Set `KANCHI_URL=https://${{Kanchi.RAILWAY_PUBLIC_DOMAIN}}/ui/` on
+`SpeleoDB-Prod`, which displays the dashboard link. Kanchi's public domain must
+resolve to the configured custom hostname, `kanchi.speleodb.org`.
+Kanchi's credentials, authentication settings, and hostname configuration have
+one consumer, so they remain on Kanchi instead of shared environment scope.
+The IaC file uses `preserve()` for its sensitive service-local values. When
+moving an existing value, verify the destination before removing its shared
+copy, and preserve any pending operator changes.
 
 The IaC file references the existing web service's runtime variables for Django
 worker and Beat. Inventory those variable names before applying; optional deployment
@@ -294,10 +344,11 @@ overrides such as a custom sender address or Sentry configuration must be carrie
 over explicitly when present. Existing web variables use `preserve()` because
 declaring an IaC environment map owns the complete map. Refresh that inventory
 before each plan so newly added settings cannot be deleted. Web, worker, Beat,
-and Kanchi reference the same shared broker URL. The application background
+and Kanchi reference the same Redis-owned broker URL. The application background
 services explicitly use `https://www.speleodb.org` for notification links.
 
-Deploy these continuously running services:
+Deploy these continuously running services in `us-east4-eqdc4a`, alongside the
+existing web service:
 
 - `Celery-Worker`: one replica initially, consuming both queues with concurrency
   one; begin with 2 vCPU/4 GiB limits. Scale this service's replicas to add
@@ -318,7 +369,8 @@ Deployment order:
    unrelated deletions or secret replacements. Reconcile legacy web-config
    ownership before applying an IaC file that manages that service.
 3. Validate durability and eviction settings on shared Redis; provision only the
-   Kanchi database/user on existing PostgreSQL, then set the shared variables.
+   Kanchi database/user on existing PostgreSQL, then set the Redis-owned broker and
+   service-local variables described above.
 4. Verify storage configuration and signed/anonymous download behavior. Deploy
    additive application migrations, then install the intended periodic schedules.
 5. Deploy the shared worker, Beat, and Kanchi. Confirm all application
@@ -340,6 +392,23 @@ For rollback, return application services to a compatible release while
 preserving additive tables and history. Keep artifact cleanup and published
 downloads available where supported by that release. Roll back Kanchi
 independently.
+
+### Production rollout verification
+
+The infrastructure rollout completed on September 15, 2026. The worker, Beat,
+web, and pinned Kanchi deployments all reached `SUCCESS`. One worker consumes
+both queues, one PostgreSQL advisory-lock owner runs Beat, and scheduled
+maintenance/cleanup dispatch is visible. Read-only application tasks completed
+in Django and appeared as successful in Kanchi; normal web task dispatch also
+completed. Kanchi's 30-day retention and daily cleanup are stored, its first
+automatic cleanup succeeded, and workflow automation remains disabled.
+
+HTTPS web/health/login-page availability and rejection of anonymous config API
+requests were verified. A successful session using the operator's sealed
+password was not tested. Real-account export, notification email, authenticated
+download, and the full expiry/deletion cycle remain separate future operator
+smoke checks. Exact deployment IDs and runtime evidence are recorded in
+[the rollout review](../tasks/todos/railway-background-rollout.md).
 
 ## Sources
 
