@@ -51,13 +51,13 @@ def test_upload_download_and_delete_preserve_exact_key_and_metadata(
         assert metadata["Metadata"]["sha256"] == digest
         assert metadata["ContentLength"] == len(data)
         assert metadata["ContentType"] == "application/zip"
-        assert metadata["CacheControl"] == "private, no-store"
+        assert metadata["CacheControl"] == "public, max-age=86400"
         assert metadata["ContentDisposition"] == f'attachment; filename="{filename}"'
         url: str = signed_archive_url(key=key, expires=180)
         response: requests.Response = requests.get(url, timeout=30)
         assert response.status_code == HTTPStatus.OK
         assert response.content == data
-        assert response.headers["Cache-Control"] == "private, no-store"
+        assert response.headers["Cache-Control"] == "public, max-age=86400"
         assert response.headers["Content-Disposition"] == metadata["ContentDisposition"]
         delete_archive(key=key)
         with pytest.raises(ClientError) as missing:

@@ -296,7 +296,7 @@ class ExportStorage(PrivateS3Storage):
     file_overwrite = True
     default_acl = None
     querystring_auth = True
-    object_parameters = _PRIVATE_OBJECT_PARAMETERS
+    object_parameters = BaseS3Storage.object_parameters
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)

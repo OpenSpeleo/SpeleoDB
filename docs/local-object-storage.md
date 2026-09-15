@@ -48,8 +48,10 @@ uploads continue using Django's `save()` and filename rules.
 Exports use `ExportStorage.url()` and the same URL path as other private backends.
 Their adapter supplies ZIP metadata and accepts historical stored keys as well
 as new flat `exports/{filename}.zip` keys. `ExportStorage.save()` also overwrites
-an existing key. CloudFront downloads use ordinary signed file URLs and uploaded
-object metadata. Ordinary RustFS GETs also return that metadata for signed and
+an existing key. Exports reuse the shared media/attachment cache metadata
+(`public, max-age=86400`) while retaining private signed access. CloudFront
+downloads use ordinary signed file URLs and uploaded object metadata. Ordinary
+RustFS GETs also return that metadata for signed and
 unsigned requests. Download URLs carry their normal authentication parameters;
 they need no response-header overrides or extra metadata lookup. Export transfers
 retain two upload threads and 16 MiB parts; signing and cleanup add no full-file

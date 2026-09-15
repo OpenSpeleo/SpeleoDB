@@ -57,7 +57,7 @@ def test_save_and_streaming_upload_overwrite_the_same_key(tmp_path: Path) -> Non
         assert (
             response.headers["Content-Disposition"] == f'attachment; filename="{name}"'
         )
-        assert response.headers["Cache-Control"] == "private, no-store"
+        assert response.headers["Cache-Control"] == "public, max-age=86400"
         # Inspect only this test's names; other test files may coexist.
         names: list[str] = [
             stored_name for stored_name in storage.listdir("")[1] if name in stored_name

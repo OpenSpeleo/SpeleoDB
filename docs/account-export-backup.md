@@ -135,13 +135,18 @@ Private production files use CloudFront signed URLs; local development uses
 S3 presigning against the browser endpoint. Shared transfer and object-cleanup
 methods use the backend's configured S3 connection, while the export adapter
 provides ZIP metadata and validates the export prefix. Uploads retain bounded
-multipart transfers (two threads, 16 MiB parts) and private/no-store caching.
+multipart transfers (two threads, 16 MiB parts) and reuse the cache headers of
+the shared media/attachment storage policy.
 Exports are ordinary ZIP files with no password.
 
 Uploads replace an existing object at the same key. Signed downloads address
-that key directly and use the filename and `private, no-store` headers stored as
+that key directly and use the filename and `public, max-age=86400` headers stored as
 upload metadata. The shared private CloudFront behavior requires signed viewer
-requests and honors the object's no-store headers with a zero minimum TTL.
+requests and retains the existing `CachingOptimized` managed policy. Archive
+metadata allows one-day caching; CloudFront enforces signed URL expiry on
+requests for cached content. The cache directive does not make the S3 object public.
+The authenticated API redirect remains `private, no-store` so clients obtain
+fresh signed links. No custom cache policy is required.
 No export-specific query forwarding is needed. Anonymous direct S3 reads remain
 denied. See [the production policy and setup
 steps](export-storage-policy.md) before deploying this configuration.

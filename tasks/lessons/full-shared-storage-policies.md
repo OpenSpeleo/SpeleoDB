@@ -28,3 +28,11 @@ the bucket and all object keys.
   including unsigned public downloads. Prefer a verified provider fix over
   per-feature response-header workarounds. Public and private classes must share
   transport, endpoint and transfer logic while retaining their access policies.
+- The user explicitly accepts CloudFront caching. Preserve the existing managed
+  cache/CORS policies; do not prescribe zero TTL or a custom policy as a signed
+  download requirement. CloudFront checks signatures and expiry on cache hits.
+  Distinguish object cache headers, CDN cache duration and access authorization.
+- When the user requests caching, align uploaded object metadata as well as
+  infrastructure documentation. Keeping `private, no-store` on export objects
+  defeats useful CDN caching. Reuse the existing cacheable storage policy;
+  retain no-store on the authenticated redirect that issues expiring URLs.

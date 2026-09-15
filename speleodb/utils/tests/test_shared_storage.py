@@ -39,7 +39,7 @@ BACKENDS: tuple[tuple[type[BrowserFacingS3Storage], str, bool], ...] = (
     (GeoJSONStorage, "public, max-age=86400", False),
     (GPSTrackStorage, "private, no-store", False),
     (GISLayerStorage, "private, no-store", False),
-    (ExportStorage, "private, no-store", False),
+    (ExportStorage, "public, max-age=86400", False),
     (S3StaticStorage, "public, max-age=120", True),
 )
 

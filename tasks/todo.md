@@ -13,6 +13,14 @@ See [the review](todos/post-commit-timeout-sleep.md) and
 
 ## Plain export files and shared storage managers
 
+The subsequent caching decision keeps the existing CloudFront managed policies.
+The user accepts caching; documentation no longer requires a custom policy or
+zero minimum TTL. Signed access and URL expiry remain required on cache hits.
+Export uploads now reuse the shared `public, max-age=86400` metadata; only the
+authenticated redirect retains no-store. Cache-header verification passed 85
+storage/API tests and the isolated live export case, plus full mypy and Ruff.
+See [the cache-header review](todos/export-cache-headers.md).
+
 This review supersedes the earlier export version-tracking and CloudFront query
 requirements below. Exports overwrite the existing key and use ordinary signed
 URLs. The new migration removes the obsolete fields, and setup removes obsolete

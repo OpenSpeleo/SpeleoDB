@@ -108,8 +108,16 @@ from S3, following the
 Use the existing distribution, S3 origin/OAC, domain, and trusted signing key.
 The production export URL is the stored file path with only `Expires`,
 `Signature`, and `Key-Pair-Id`. Filename, content type, and
-`Cache-Control: private, no-store` are object metadata written during upload.
+`Cache-Control: public, max-age=86400` are object metadata written during upload.
 CloudFront downloads do not request response-header overrides.
+
+Exports reuse the shared cacheable storage policy used by media and attachments.
+The `public` cache directive permits caching; it does not grant anonymous object
+access. S3 access policy and CloudFront signed viewer access remain authoritative.
+The authenticated Django redirect retains `private, no-store` so a browser does
+not reuse a redirect containing an expired signed URL. Existing objects retain
+their stored headers; generating a new archive after deployment writes the new
+cache metadata.
 
 Direct S3 downloads also use an ordinary signed file URL, containing only SigV4
 authentication parameters. Local Compose and CI pin RustFS `1.0.0-rc.1`, whose
@@ -119,10 +127,14 @@ applies to every backend, including unsigned public files. No response-header
 overrides or metadata lookup are needed to generate a download URL.
 
 The existing private behavior must require signed URLs and trust the configured
-signing identity, as it does for other protected files. Its cache policy should
-honor the object's cache headers (minimum TTL zero). Exports require no custom
-query forwarding or additional CloudFront permissions. Existing public asset
-behaviors keep their existing access and caching settings. See
+signing identity, as it does for other protected files. Keep the existing managed
+policies: `CachingOptimized`, `CORS-S3Origin`, and
+`CORS-with-preflight-and-SecurityHeadersPolicy`. The user accepts CloudFront
+caching; no custom cache policy or zero minimum TTL is required. New archives
+carry the shared one-day cache lifetime. CloudFront still validates the signature
+and expiry before serving cached content.
+Exports require no custom query forwarding or additional CloudFront permissions.
+See [AWS cache duration rules](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Expiration.html),
 [AWS signed URLs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls.html)
 and [cache behavior settings](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior.html).
 

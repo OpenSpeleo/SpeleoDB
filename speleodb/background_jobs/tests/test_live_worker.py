@@ -335,7 +335,7 @@ def test_live_export_download_notification_and_expiration(
     assert download.headers["Content-Disposition"] == (
         f'attachment; filename="{artifact.filename}"'
     )
-    assert download.headers["Cache-Control"] == "private, no-store"
+    assert download.headers["Cache-Control"] == "public, max-age=86400"
     with ZipFile(io.BytesIO(download.content)) as archive:
         assert archive.testzip() is None
         assert set(archive.namelist()) == {
