@@ -30,6 +30,7 @@ from speleodb.background_jobs.services import ExportExpiredError
 from speleodb.background_jobs.services import ExportUnavailableError
 from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.services import request_notification
+from speleodb.background_jobs.services import retry_cleanup as retry_job_cleanup
 from speleodb.background_jobs.services import retry_export
 from speleodb.users.models import User
 
@@ -53,6 +54,9 @@ class JobAttemptInline(admin.TabularInline):  # type: ignore[type-arg]
         "started_at",
         "finished_at",
         "error",
+        "cleanup_attempts",
+        "cleanup_due_at",
+        "cleanup_error",
     )
     readonly_fields = fields
 
@@ -98,7 +102,12 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     ordering = ("-created_at",)
     list_per_page = 50
     inlines = [JobAttemptInline]
-    actions = ("retry_failed", "retry_notifications", "replace_partial")
+    actions = (
+        "retry_failed",
+        "retry_notifications",
+        "retry_cleanup",
+        "replace_partial",
+    )
     readonly_fields = (
         "id",
         "requester",
@@ -113,6 +122,8 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "summary",
         "notification_state",
         "notification_error",
+        "notification_attempts",
+        "notification_due_at",
         "attachment",
         "artifact_metadata",
         "kanchi_dashboard",
@@ -152,7 +163,7 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[BackgroundJob]:
         queryset: QuerySet[BackgroundJob] = super().get_queryset(request)
-        return queryset.select_related("requester", "artifact").annotate(
+        return queryset.select_related("requester", "artifact__attempt").annotate(
             _attempt_count=Count("attempts"),
             _started_at=Min("attempts__started_at"),
             _finished_at=Max("attempts__finished_at"),
@@ -184,11 +195,16 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if artifact.deleted_at is not None:
             return "Deleted"
         if artifact.expires_at <= timezone.now():
-            return (
-                "Expired; deletion pending"
-                if not artifact.delete_error
-                else "Expired; deletion retry required"
-            )
+            if (
+                artifact.attempt.cleanup_attempts
+                >= settings.EXPORTS_MAX_CLEANUP_ATTEMPTS
+                and (
+                    artifact.attempt.cleanup_due_at is None
+                    or artifact.attempt.cleanup_due_at <= timezone.now()
+                )
+            ):
+                return "Expired; cleanup retry required"
+            return "Expired; deletion pending"
         return "Available"
 
     @admin.display(description="Artifact metadata")
@@ -279,6 +295,26 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 )
                 count += int(created)
         self.message_user(request, f"Created {count} replacement export(s).")
+
+    @admin.action(description="Retry exhausted artifact cleanup")
+    def retry_cleanup(
+        self, request: HttpRequest, queryset: QuerySet[BackgroundJob]
+    ) -> None:
+        count = 0
+        for job in queryset.filter(kind="export"):
+            try:
+                restarted = retry_job_cleanup(job, self._operator(request))
+            except ExportUnavailableError as error:
+                self.message_user(request, f"{job.pk}: {error}", messages.WARNING)
+            else:
+                if restarted:
+                    self.log_change(
+                        request,
+                        job,
+                        f"Reset cleanup retry budget for {restarted} object(s).",
+                    )
+                    count += restarted
+        self.message_user(request, f"Queued {count} object(s) for cleanup retry.")
 
 
 class ReadOnlyTechnicalResultAdmin(admin.ModelAdmin):  # type: ignore[type-arg]

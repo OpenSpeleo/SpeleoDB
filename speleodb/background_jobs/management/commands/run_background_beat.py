@@ -8,23 +8,35 @@ import sys
 from threading import Event
 from typing import Any
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
 from django.db import connection
 
 BEAT_LOCK_ID: int = 736735226
 LOCK_WAIT_SECONDS: int = 5
+LOCK_MAX_ATTEMPTS: int = 6
+SHUTDOWN_TIMEOUT_SECONDS: int = 10
+KILL_TIMEOUT_SECONDS: int = 5
 
 
 def wait_for_scheduler_lock(stop_requested: Event) -> bool:
-    """Remain a live standby during rolling deployments; exit promptly on stop."""
-    while not stop_requested.is_set():
+    """Wait for deployment handover with finite attempts and interruptible backoff."""
+    for attempt in range(LOCK_MAX_ATTEMPTS):
+        if stop_requested.is_set():
+            return False
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_try_advisory_lock(%s)", [BEAT_LOCK_ID])
             if cursor.fetchone()[0]:
                 return True
-        stop_requested.wait(LOCK_WAIT_SECONDS)
-    return False
+        if attempt + 1 < LOCK_MAX_ATTEMPTS and stop_requested.wait(
+            LOCK_WAIT_SECONDS * (2**attempt)
+        ):
+            return False
+    raise CommandError(
+        "Could not acquire the background scheduler lock after "
+        f"{LOCK_MAX_ATTEMPTS} attempts."
+    )
 
 
 class Command(BaseCommand):
@@ -50,7 +62,8 @@ class Command(BaseCommand):
             # Keep this exact connection alive. Reconnecting could lose ownership
             # while an old scheduler continued publishing periodic work.
             owner_connection = connection.connection
-            process = subprocess.Popen(
+            # The scheduler class comes from trusted application settings.
+            process = subprocess.Popen(  # noqa: S603
                 [
                     sys.executable,
                     "-m",
@@ -59,11 +72,11 @@ class Command(BaseCommand):
                     "config.celery_app",
                     "beat",
                     "--loglevel=INFO",
-                    "--scheduler=django_celery_beat.schedulers:DatabaseScheduler",
+                    f"--scheduler={settings.CELERY_BEAT_SCHEDULER}",
                     "--pidfile=",
                 ]
             )
-            while process.poll() is None:
+            while not stop_requested.is_set() and process.poll() is None:
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
@@ -79,14 +92,23 @@ class Command(BaseCommand):
                     f"Celery Beat exited with status {process.returncode}."
                 )
         finally:
-            if process is not None:
-                if process.poll() is None:
-                    process.terminate()
+            try:
+                if process is not None:
+                    if process.poll() is None:
+                        process.terminate()
+                    try:
+                        process.wait(timeout=SHUTDOWN_TIMEOUT_SECONDS)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        try:
+                            process.wait(timeout=KILL_TIMEOUT_SECONDS)
+                        except subprocess.TimeoutExpired as error:
+                            raise CommandError(
+                                "Celery Beat did not exit after being killed."
+                            ) from error
+            finally:
                 try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-            signal.signal(signal.SIGTERM, previous_term)
-            signal.signal(signal.SIGINT, previous_int)
-            connection.close()
+                    signal.signal(signal.SIGTERM, previous_term)
+                    signal.signal(signal.SIGINT, previous_int)
+                finally:
+                    connection.close()

@@ -32,6 +32,26 @@ including during deployment overlap. Only `install_background_schedules` owns
 the feature's periodic task installation. Run it after migrations. Celery result
 cleanup must also route to `background_control`.
 
+## Bounded failure recovery
+
+Generation has three attempts per automatic cycle. Broker publication failures
+and publications left unclaimed for ten minutes consume that same budget.
+Notification publication and delivery share five attempts; object cleanup has
+five persisted attempts per object. Retries wait 60/120/240/... seconds, capped
+at one hour, without sleeping in the worker between tasks. Due times and counts
+live in PostgreSQL, so periodic sweeps and process restarts cannot reset them.
+Cleanup records survive exhaustion; staff can explicitly restart cleanup in
+the job admin, with an audit entry. Download expiry remains enforced even when
+physical deletion fails.
+
+Migration `0002_attempt_cleanup_budget` adds publication tracking and cleanup
+counters, due times, errors, and ownership tokens. Apply it before starting the
+updated worker/web application; no new service is required. Notifications carry
+dispatch tokens, so drain old queued notification messages or deploy scheduler
+and worker together to avoid old workers receiving the new task argument.
+See [bounded retries](bounded-retries.md) for startup/transport limits and
+verification status.
+
 ## Docker Compose and devcontainer
 
 Start the full graph from the repository root:

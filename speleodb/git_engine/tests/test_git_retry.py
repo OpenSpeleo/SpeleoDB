@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
+import shlex
 import shutil
+import signal
+import subprocess
+import sys
 import tempfile
 import traceback
+from io import BytesIO
 from typing import TYPE_CHECKING
+from typing import Any
 from unittest import TestCase
 from unittest.mock import MagicMock
 from unittest.mock import PropertyMock
@@ -14,13 +21,16 @@ from unittest.mock import patch
 
 import git
 import pytest
+from django.test import override_settings
 from git.exc import GitCommandError
 
+from speleodb.git_engine.core import GIT_COMMITTER
+from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.operations import BoundedGit
 
 if TYPE_CHECKING:
-    from git import Commit
     from git.index.typ import BaseIndexEntry
 
 ENCODED_CREDENTIAL = "fake%40credential"
@@ -59,7 +69,7 @@ def assert_remote_backoff(mock_sleep: MagicMock) -> None:
 
 
 class CommitAndPushRetryTests(TestCase):
-    """Tests for retry logic on index.add, index.commit, and push."""
+    """Tests for retry logic on index.add, supervised commit, and push."""
 
     def setUp(self) -> None:
         self.tmpdir = tempfile.mkdtemp()
@@ -109,30 +119,27 @@ class CommitAndPushRetryTests(TestCase):
         mock_sleep.assert_called_once()
 
     @patch("speleodb.utils.helpers.time.sleep")
-    def test_index_commit_retries_on_git_command_error(
-        self, mock_sleep: MagicMock
-    ) -> None:
-        """index.commit should retry on GitCommandError."""
+    def test_commit_retries_on_git_command_error(self, mock_sleep: MagicMock) -> None:
+        """The supervised commit should retry on GitCommandError."""
         (self.git_path / "newfile.txt").write_text("content")
 
-        real_commit = git.IndexFile.commit
+        real_commit = GitRepo._commit_project  # noqa: SLF001
         call_count = 0
 
         def flaky_commit(
-            self_idx: git.IndexFile,
+            repo: GitRepo,
             message: str,
             *,
-            author: git.Actor | None = None,
-            committer: git.Actor | None = None,
-        ) -> Commit:
+            author: git.Actor,
+        ) -> GitCommit:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 raise GitCommandError("commit", "index.lock exists")
-            return real_commit(self_idx, message, author=author, committer=committer)
+            return real_commit(repo, message, author=author)
 
         with (
-            patch.object(git.IndexFile, "commit", flaky_commit),
+            patch.object(GitRepo, "_commit_project", flaky_commit),
             patch.object(self.repo, "is_dirty", return_value=True),
             patch.object(git.Git, "push", create=True, return_value=""),
             patch(
@@ -194,21 +201,20 @@ class CommitAndPushRetryTests(TestCase):
                 author_email="test@test.com",
             )
 
-    def test_index_commit_raises_after_exhausted_retries(self) -> None:
+    def test_commit_raises_after_exhausted_retries(self) -> None:
         """After DJANGO_GIT_RETRY_ATTEMPTS failures on commit, error propagates."""
 
         def always_fail(
-            self_idx: git.IndexFile,
+            repo: GitRepo,
             message: str,
             *,
-            author: git.Actor | None = None,
-            committer: git.Actor | None = None,
-        ) -> Commit:
+            author: git.Actor,
+        ) -> GitCommit:
             raise GitCommandError("commit", "persistent lock")
 
         with (
             patch.object(self.repo, "is_dirty", return_value=True),
-            patch.object(git.IndexFile, "commit", always_fail),
+            patch.object(GitRepo, "_commit_project", always_fail),
             patch("speleodb.utils.helpers.time.sleep"),
             pytest.raises(GitCommandError),
         ):
@@ -255,6 +261,42 @@ class CommitAndPushRetryTests(TestCase):
         assert mock_push.call_count == 5  # noqa: PLR2004
         assert_remote_backoff(mock_sleep)
 
+    def test_supervised_commit_preserves_author_and_committer(self) -> None:
+        commit = self.repo._commit_project(  # noqa: SLF001
+            "authored commit",
+            author=git.Actor("Original Author", "author@example.org"),
+        )
+
+        assert commit.message == "authored commit"
+        assert commit.author.name == "Original Author"
+        assert commit.author.email == "author@example.org"
+        assert commit.committer == GIT_COMMITTER
+
+    @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.5)
+    @patch("speleodb.utils.helpers.time.sleep")
+    def test_post_commit_timeout_does_not_retry_completed_commit(
+        self, sleep: MagicMock
+    ) -> None:
+        hook: pathlib.Path = pathlib.Path(self.repo.git_dir) / "hooks" / "post-commit"
+        hook.write_text(
+            f"#!/bin/sh\nexec {shlex.quote(sys.executable)} -c "
+            "'import signal; signal.pause()'\n"
+        )
+        hook.chmod(0o755)
+        original_head: str = self.repo.head.commit.hexsha
+
+        with pytest.raises(GitBaseError, match="was created, but its hook failed"):
+            self.repo.commit_and_push_project(
+                message="one commit only",
+                author_name="Original Author",
+                author_email="author@example.org",
+                force_empty_commit=True,
+            )
+
+        assert self.repo.head.commit.parents[0].hexsha == original_head
+        assert self.repo.head.commit.message.strip() == "one commit only"
+        sleep.assert_not_called()
+
 
 class PullAndFetchRetryTests(TestCase):
     def setUp(self) -> None:
@@ -267,6 +309,12 @@ class PullAndFetchRetryTests(TestCase):
         self.repo.index.add([readme.name])
         self.repo.index.commit("initial commit")
         self.repo.create_remote("origin", url=REMOTE_URL)
+
+    def test_description_reads_git_description_without_recursing(self) -> None:
+        description = pathlib.Path(self.repo.git_dir) / "description"
+        description.write_text("A project description\n")
+
+        assert self.repo.description == "A project description"
 
     @patch("speleodb.utils.helpers.time.sleep")
     def test_pull_and_fetch_retry_sanitized_transient_errors(
@@ -424,3 +472,170 @@ class CloneRetryTests(TestCase):
                 assert exc_info.value.__context__ is None
                 assert mock_clone.call_count == 5  # noqa: PLR2004
                 assert_remote_backoff(mock_sleep)
+
+
+class GitProcessDeadlineTests(TestCase):
+    def test_synchronous_failure_preserves_stdout_and_stderr(self) -> None:
+        with pytest.raises(GitCommandError) as error:
+            BoundedGit().execute(
+                [
+                    sys.executable,
+                    "-c",
+                    "import os, sys; os.write(1, b'output details\\n'); "
+                    "os.write(2, b'error details\\n'); sys.exit(3)",
+                ]
+            )
+
+        assert error.value.status == 3  # noqa: PLR2004
+        assert "output details" in error.value.stdout
+        assert "error details" in error.value.stderr
+
+    def test_synchronous_output_preserves_bytes_and_exit_status(self) -> None:
+        result: tuple[int, bytes, str] = BoundedGit().execute(
+            [
+                sys.executable,
+                "-c",
+                "import os, sys; os.write(1, b'\\xff\\n'); "
+                "os.write(2, b'warning\\n'); sys.exit(3)",
+            ],
+            stdout_as_string=False,
+            with_extended_output=True,
+            with_exceptions=False,
+        )
+
+        assert result == (3, b"\xff", "warning")
+
+    def test_output_stream_preserves_trailing_newlines(self) -> None:
+        output = BytesIO()
+
+        BoundedGit().execute(
+            [sys.executable, "-c", "import os; os.write(1, b'archive bytes\\n\\n')"],
+            output_stream=output,
+        )
+
+        assert output.getvalue() == b"archive bytes\n\n"
+
+    @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.1)
+    def test_clone_timeout_terminates_streamed_subprocess(self) -> None:
+        """clone_from uses as_process=True, where GitPython ignores its timeout."""
+        processes: list[subprocess.Popen[bytes]] = []
+
+        def start_stalled_clone(
+            command: list[str], **kwargs: Any
+        ) -> subprocess.Popen[bytes]:
+            process: subprocess.Popen[bytes] = subprocess.Popen(
+                [sys.executable, "-c", "import signal; signal.pause()"],
+                **kwargs,
+            )
+            processes.append(process)
+            return process
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(DJANGO_GIT_RETRY_ATTEMPTS=1),
+            patch("git.cmd.safer_popen", side_effect=start_stalled_clone),
+            pytest.raises(GitBaseError, match="deadline"),
+        ):
+            GitRepo.clone_from(REMOTE_URL, pathlib.Path(directory) / "clone")
+
+        assert len(processes) == 1
+        assert processes[0].poll() is not None
+
+    def test_wait_timeout_kills_streamed_process(self) -> None:
+        process = BoundedGit().execute(
+            [sys.executable, "-c", "import signal; signal.pause()"],
+            as_process=True,
+            kill_after_timeout=0.1,
+        )
+        child: subprocess.Popen[bytes] = process.proc
+
+        with pytest.raises(GitCommandError, match="deadline"):
+            process.wait()
+
+        assert child.poll() is not None
+
+    def test_timeout_kills_helpers_holding_pipes_after_parent_exits(self) -> None:
+        command: str = (
+            "import subprocess, sys; "
+            "subprocess.Popen([sys.executable, '-c', "
+            "'import signal; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            "signal.pause()'])"
+        )
+        with patch(
+            "speleodb.git_engine.operations.os.killpg", wraps=os.killpg
+        ) as kill_group:
+            process = BoundedGit().execute(
+                [sys.executable, "-c", command],
+                as_process=True,
+                kill_after_timeout=0.5,
+            )
+            child_pid: int = process.proc.pid
+
+            with pytest.raises(GitCommandError, match="deadline"):
+                process.communicate()
+
+        kill_group.assert_any_call(child_pid, signal.SIGKILL)
+
+    def test_successful_parent_still_cleans_up_detached_helper_output(self) -> None:
+        command: str = (
+            "import subprocess, sys; "
+            "subprocess.Popen([sys.executable, '-c', "
+            "'import signal; signal.pause()'], "
+            "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)"
+        )
+        with patch(
+            "speleodb.git_engine.operations.os.killpg", wraps=os.killpg
+        ) as kill_group:
+            process = BoundedGit().execute(
+                [sys.executable, "-c", command],
+                as_process=True,
+                kill_after_timeout=5,
+            )
+            leader: subprocess.Popen[bytes] = process.proc
+            process.communicate()
+            assert leader.returncode == 0
+
+            assert process.wait() == 0
+
+        kill_group.assert_any_call(leader.pid, signal.SIGKILL)
+
+    @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.1)
+    def test_synchronous_git_commands_use_configured_deadline(self) -> None:
+        with pytest.raises(GitCommandError, match="deadline"):
+            BoundedGit().execute(
+                [sys.executable, "-c", "import signal; signal.pause()"]
+            )
+
+    @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.1)
+    def test_direct_streamed_commands_cannot_omit_deadline(self) -> None:
+        process = BoundedGit().execute(
+            [sys.executable, "-c", "import signal; signal.pause()"],
+            as_process=True,
+        )
+
+        with pytest.raises(GitCommandError, match="deadline"):
+            process.communicate()
+
+    def test_only_cat_file_batch_readers_skip_process_deadline(self) -> None:
+        for method, options, bounded in (
+            ("cat_file", {"batch": True}, False),
+            ("cat_file", {"batch_check": True}, False),
+            ("cat_file", {"p": True}, True),
+            ("log", {}, True),
+        ):
+            with (
+                self.subTest(method=method, options=options),
+                patch.object(git.Git, "execute") as execute,
+                patch("speleodb.git_engine.operations.DeadlineGitProcess") as deadline,
+            ):
+                getattr(BoundedGit(), method)(as_process=True, **options)
+
+            assert ("kill_after_timeout" in execute.call_args.kwargs) is bounded
+            assert deadline.called is bounded
+
+    @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=7)
+    def test_remote_commands_cannot_disable_configured_deadline(self) -> None:
+        with patch.object(git.Git, "_call_process", return_value="") as call:
+            BoundedGit().clone("remote", "clone", kill_after_timeout=None)
+
+        assert call.call_args.kwargs["kill_after_timeout"] == 7  # noqa: PLR2004

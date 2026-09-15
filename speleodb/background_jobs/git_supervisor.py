@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import math
 import os
 import selectors
 import signal
@@ -39,10 +40,12 @@ def _terminate_group(process: subprocess.Popen[bytes]) -> None:
         # including when wait() above succeeds immediately.
         with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
-        process.wait()
+        process.wait(timeout=TERMINATE_SECONDS)
 
 
 def supervise(*, parent_fd: int, timeout: float, command: list[str]) -> int:
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("Git supervisor timeout must be finite and positive")
     stopping: bool = False
 
     def stop(signum: int, frame: FrameType | None) -> None:
@@ -54,26 +57,27 @@ def supervise(*, parent_fd: int, timeout: float, command: list[str]) -> int:
     deadline: float = time.monotonic() + timeout
     with selectors.DefaultSelector() as selector:
         selector.register(parent_fd, selectors.EVENT_READ)
-        with subprocess.Popen(  # noqa: S603
+        process = subprocess.Popen(  # noqa: S603
             command,
             start_new_session=True,
             close_fds=True,
-        ) as process:
-            try:
-                while True:
-                    returncode: int | None = process.poll()
-                    if returncode is not None:
-                        return returncode if returncode >= 0 else 128 - returncode
-                    if stopping:
+        )
+        try:
+            while True:
+                returncode: int | None = process.poll()
+                if returncode is not None:
+                    return returncode if returncode >= 0 else 128 - returncode
+                if stopping:
+                    return STOPPED_EXIT_CODE
+                remaining: float = deadline - time.monotonic()
+                if remaining <= 0:
+                    return TIMEOUT_EXIT_CODE
+                if selector.select(timeout=min(POLL_SECONDS, remaining)):
+                    if not os.read(parent_fd, 1):
                         return STOPPED_EXIT_CODE
-                    remaining: float = deadline - time.monotonic()
-                    if remaining <= 0:
-                        return TIMEOUT_EXIT_CODE
-                    if selector.select(timeout=min(POLL_SECONDS, remaining)):
-                        if not os.read(parent_fd, 1):
-                            return STOPPED_EXIT_CODE
-            finally:
-                _terminate_group(process)
+        finally:
+            # Popen.__exit__ waits without a deadline, so cleanup is explicit.
+            _terminate_group(process)
 
 
 def main() -> int:
@@ -85,7 +89,7 @@ def main() -> int:
     command: list[str] = arguments.command
     if command[:1] == ["--"]:
         command = command[1:]
-    if not command or arguments.timeout <= 0:
+    if not command or not math.isfinite(arguments.timeout) or arguments.timeout <= 0:
         parser.error("A command and positive timeout are required.")
     try:
         return supervise(

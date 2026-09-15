@@ -47,6 +47,11 @@ Technical stage/item counts remain available through the API and admin. The page
 refreshes active jobs every five seconds and pauses when hidden. Terminal jobs
 do not require continuous polling; an expiry timer removes unavailable cards
 when their download deadline arrives.
+Failed refreshes have a five-failure budget and 5/10/20/30-second backoff.
+Each request, including JSON decoding, has a 30-second deadline. Exhaustion
+stops automatic network retries and shows a reload/retry message; local expiry
+removal continues. Success or an explicit submission/pagination action resets
+the failure budget. Export POSTs are never automatically replayed.
 Requests are asynchronous; duplicate clicks are guarded in the browser and
 deduplicated by the durable job service. History is paginated to bound response
 size and rendering work. Artifact joins avoid per-row database queries.
@@ -78,7 +83,9 @@ not suppress a ready download.
 Active staff can inspect jobs, progress, attempt history, attachment metadata,
 and sanitized errors. Fields are read-only and deletion is disabled. Audited
 actions invoke application services to retry failed generation, retry failed
-notifications, or generate replacements for partial archives. Only superusers
+notifications, restart exhausted storage cleanup, or generate replacements for
+partial archives. Cleanup counters, due times, and errors remain visible in
+attempt history after exhaustion. Only superusers
 see attachment download links for other users.
 
 `KANCHI_URL` optionally provides a link to the dashboard root. No undocumented

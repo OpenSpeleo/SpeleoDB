@@ -9,6 +9,7 @@ import uuid
 from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 from typing import Any
 
 from allauth.account.models import EmailAddress
@@ -30,19 +31,25 @@ from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
-from speleodb.background_jobs.services import NOTIFICATION_TASK
 from speleodb.background_jobs.services import claim_attempt
 from speleodb.background_jobs.services import dispatch_attempt
+from speleodb.background_jobs.services import dispatch_notification
 from speleodb.background_jobs.services import fail_attempt
+from speleodb.background_jobs.services import fail_notification
 from speleodb.background_jobs.services import publish_artifact
+from speleodb.background_jobs.services import retry_delay
 from speleodb.background_jobs.services import retry_due_jobs
 from speleodb.background_jobs.storage import delete_archive
 from speleodb.background_jobs.storage import upload_archive
 from speleodb.users.models import User
 
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from django.db.models import QuerySet
+
 logger = logging.getLogger(__name__)
 PROGRESS_INTERVAL_SECONDS: int = 5
-MAX_NOTIFICATION_ATTEMPTS: int = 5
 
 
 class ExportExecutionError(RuntimeError):
@@ -246,68 +253,71 @@ def maintain_background_jobs() -> None:
         dispatch_attempt(attempt_id)
     # A lost process has an ambiguous delivery outcome and still consumes an
     # attempt. Exhausted leases require an explicit operator retry.
-    BackgroundJob.objects.filter(
-        notification_state="sending",
-        notification_due_at__lt=now,
-        notification_attempts__gte=MAX_NOTIFICATION_ATTEMPTS,
-    ).update(
-        notification_state="failed",
-        notification_error="Notification delivery could not be confirmed after "
-        f"{MAX_NOTIFICATION_ATTEMPTS} attempts.",
-        notification_token=None,
-        notification_due_at=None,
-        updated_at=now,
-    )
-    BackgroundJob.objects.filter(
-        notification_state="sending", notification_due_at__lt=now
-    ).update(
-        notification_state="pending",
-        notification_token=None,
-    )
+    for job_id, token in (
+        BackgroundJob.objects.filter(
+            notification_state__in=["queued", "sending"],
+            notification_due_at__lt=now,
+        )
+        .values_list("id", "notification_token")
+        .iterator()
+    ):
+        fail_notification(
+            job_id,
+            token,
+            "Notification publication or delivery could not be confirmed.",
+        )
     for job_id in (
         BackgroundJob.objects.filter(
             state__in=[JobState.READY, JobState.PARTIAL, JobState.FAILED],
             notification_state="pending",
             notification_due_at__lte=now,
+            notification_attempts__lt=settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS,
         )
         .values_list("id", flat=True)
         .iterator()
     ):
-        try:
-            current_app.send_task(
-                NOTIFICATION_TASK,
-                args=[str(job_id)],
-                queue="background_control",
-                retry=False,
-            )
-        except Exception:  # noqa: BLE001 - The durable outbox retries broker failures.
-            logger.warning(
-                "Export notification dispatch deferred", extra={"job_id": str(job_id)}
-            )
-            break
+        dispatch_notification(job_id)
 
 
 @shared_task(name="speleodb.background_jobs.tasks.send_export_notification")
-def send_export_notification(job_id: str) -> dict[str, str]:
+def send_export_notification(
+    job_id: str, dispatch_token: str | None = None
+) -> dict[str, str]:
     now = timezone.now()
-    token = uuid.uuid4()
+    token = uuid.UUID(dispatch_token) if dispatch_token is not None else uuid.uuid4()
     with transaction.atomic():
         job = (
             BackgroundJob.objects.select_for_update()
             .filter(
                 pk=job_id,
-                notification_state="pending",
-                notification_due_at__lte=now,
                 state__in=[JobState.READY, JobState.PARTIAL, JobState.FAILED],
             )
             .first()
         )
         if job is None:
             return {"job_id": job_id, "notification": "ignored"}
+        if dispatch_token is None:
+            if (
+                job.notification_state != "pending"
+                or job.notification_due_at is None
+                or job.notification_due_at > now
+                or job.notification_attempts
+                >= settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS
+            ):
+                return {"job_id": job_id, "notification": "ignored"}
+            job.notification_attempts += 1
+        elif (
+            job.notification_state != "queued"
+            or job.notification_token != token
+            or job.notification_due_at is None
+            or job.notification_due_at <= now
+        ):
+            return {"job_id": job_id, "notification": "ignored"}
         job.notification_state = "sending"
         job.notification_token = token
-        job.notification_attempts += 1
-        job.notification_due_at = now + timedelta(minutes=5)
+        job.notification_due_at = now + timedelta(
+            seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS
+        )
         job.save(
             update_fields=[
                 "notification_state",
@@ -392,65 +402,112 @@ def send_export_notification(job_id: str) -> dict[str, str]:
             if isinstance(failure, ExportExecutionError)
             else f"Email delivery failed ({type(failure).__name__})."
         )
-    state = (
-        "sent"
-        if not error
-        else (
-            "pending"
-            if job.notification_attempts < MAX_NOTIFICATION_ATTEMPTS
-            else "failed"
+    if error:
+        fail_notification(job.pk, token, error)
+        job.refresh_from_db()
+        state = job.notification_state
+    else:
+        updated = BackgroundJob.objects.filter(
+            pk=job_id, notification_token=token, notification_state="sending"
+        ).update(
+            notification_state="sent",
+            notification_error="",
+            notification_token=None,
+            notification_due_at=None,
+            updated_at=timezone.now(),
+        )
+        state = "sent" if updated else "ignored"
+    return {"job_id": job_id, "notification": state}
+
+
+def _cleanup_candidates(now: datetime) -> QuerySet[JobAttempt]:
+    return (
+        JobAttempt.objects.filter(
+            object_deleted_at__isnull=True,
+            cleanup_attempts__lt=settings.EXPORTS_MAX_CLEANUP_ATTEMPTS,
+        )
+        .exclude(object_key="")
+        .filter(Q(cleanup_due_at__isnull=True) | Q(cleanup_due_at__lte=now))
+        .filter(
+            Q(artifact__expires_at__lte=now, artifact__deleted_at__isnull=True)
+            | Q(
+                state=JobState.FAILED,
+                deadline_at__lt=now - timedelta(minutes=5),
+                artifact__isnull=True,
+            )
         )
     )
-    BackgroundJob.objects.filter(pk=job_id, notification_token=token).update(
-        notification_state=state,
-        notification_error=error,
-        notification_token=None,
-        notification_due_at=timezone.now() + timedelta(minutes=5)
-        if state == "pending"
-        else None,
-        updated_at=timezone.now(),
-    )
-    return {"job_id": job_id, "notification": state}
+
+
+def _delete_attempt_object(attempt_id: uuid.UUID, now: datetime) -> None:
+    token = uuid.uuid4()
+    with transaction.atomic():
+        attempt = (
+            _cleanup_candidates(now)
+            .select_for_update(of=("self",))
+            .filter(pk=attempt_id)
+            .first()
+        )
+        if attempt is None:
+            return
+        attempt.cleanup_attempts += 1
+        attempt.cleanup_token = token
+        attempt.cleanup_due_at = (
+            now
+            + timedelta(seconds=settings.EXPORTS_CLEANUP_LEASE_SECONDS)
+            + retry_delay(attempt.cleanup_attempts)
+        )
+        # An interrupted final call must leave an actionable error as well.
+        attempt.cleanup_error = "Object deletion has not been confirmed."
+        attempt.save(
+            update_fields=[
+                "cleanup_attempts",
+                "cleanup_token",
+                "cleanup_due_at",
+                "cleanup_error",
+            ]
+        )
+    error: str = ""
+    try:
+        delete_archive(key=attempt.object_key, version=attempt.object_version)
+    except Exception as failure:  # noqa: BLE001 - Persist a finite per-object retry budget.
+        error = f"Deletion failed ({type(failure).__name__})."
+    with transaction.atomic():
+        current = (
+            JobAttempt.objects.select_for_update()
+            .filter(pk=attempt_id, cleanup_token=token)
+            .first()
+        )
+        if current is None:
+            return
+        current.cleanup_token = None
+        current.cleanup_error = error
+        current.cleanup_due_at = (
+            timezone.now() + retry_delay(current.cleanup_attempts)
+            if error
+            and current.cleanup_attempts < settings.EXPORTS_MAX_CLEANUP_ATTEMPTS
+            else None
+        )
+        if not error:
+            current.object_deleted_at = timezone.now()
+        current.save(
+            update_fields=[
+                "cleanup_token",
+                "cleanup_error",
+                "cleanup_due_at",
+                "object_deleted_at",
+            ]
+        )
+        JobArtifact.objects.filter(attempt_id=attempt_id).update(
+            delete_error=error, deleted_at=current.object_deleted_at
+        )
 
 
 @shared_task(name="speleodb.background_jobs.tasks.delete_expired_artifacts")
 def delete_expired_artifacts() -> None:
     now = timezone.now()
-    for artifact in JobArtifact.objects.filter(
-        expires_at__lte=now, deleted_at__isnull=True
-    ).iterator():
-        try:
-            delete_archive(key=artifact.object_key, version=artifact.object_version)
-        except Exception as error:  # noqa: BLE001 - Preserve each failed deletion for retry.
-            JobArtifact.objects.filter(pk=artifact.pk).update(
-                delete_error=f"Deletion failed ({type(error).__name__})."
-            )
-        else:
-            JobArtifact.objects.filter(pk=artifact.pk).update(
-                deleted_at=now, delete_error=""
-            )
-            JobAttempt.objects.filter(pk=artifact.attempt_id).update(
-                object_deleted_at=now
-            )
-    for attempt in (
-        JobAttempt.objects.filter(
-            state=JobState.FAILED,
-            object_deleted_at__isnull=True,
-            deadline_at__lt=now - timedelta(minutes=5),
-            artifact__isnull=True,
-        )
-        .exclude(object_key="")
-        .iterator()
-    ):
-        try:
-            delete_archive(key=attempt.object_key, version=attempt.object_version)
-        except Exception:  # noqa: BLE001 - Retry orphan cleanup on the next sweep.
-            logger.warning(
-                "Abandoned export deletion deferred",
-                extra={"attempt_id": str(attempt.id)},
-            )
-        else:
-            JobAttempt.objects.filter(pk=attempt.pk).update(object_deleted_at=now)
+    for attempt_id in _cleanup_candidates(now).values_list("id", flat=True).iterator():
+        _delete_attempt_object(attempt_id, now)
     # Keep records until every tracked object has been removed successfully.
     retained = (
         JobAttempt.objects.filter(object_deleted_at__isnull=True)

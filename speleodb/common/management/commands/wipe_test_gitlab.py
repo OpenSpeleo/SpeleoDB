@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,9 +11,11 @@ from typing import Any
 import gitlab.exceptions
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from dotenv import load_dotenv
 
 from speleodb.git_engine.client import GitlabClient
+from speleodb.utils.confirmation import confirm_command
 
 if TYPE_CHECKING:
     import argparse
@@ -86,18 +87,10 @@ class Command(BaseCommand):
             logger.warning(f"\t- URL : {group.web_url}")
 
             if not skip_user_confirmation:
-                while True:
-                    confirmation = input(
-                        "Is this the correct group? (Y/N, default N): "
-                    ).strip()
-
-                    if confirmation.upper() == "Y":
-                        logger.info("Confirmed. Proceeding with the operation...")
-                        break
-
-                    if confirmation.upper() == "N":
-                        logger.info("Operation canceled.")
-                        return
+                if not confirm_command("Is this the correct group? (Y/N, default N): "):
+                    logger.info("Operation canceled.")
+                    return
+                logger.info("Confirmed. Proceeding with the operation...")
 
             self.stdout.write("")  # Visual Spacing
             projects = group.projects.list(all=True)
@@ -114,10 +107,9 @@ class Command(BaseCommand):
                 if accept_danger:  # Not a dummy run - Actually proceed
                     project = gl.projects.get(project.id)  # type: ignore[assignment]  # noqa: PLW2901
                     project.delete()
-                    time.sleep(5)  # Time Throttling Mitigation
 
         except gitlab.exceptions.GitlabGetError as e:
-            self.stderr.write(f"Error fetching group: {e}")
+            raise CommandError("Unable to fetch the GitLab group or project.") from e
 
-        except Exception as e:  # noqa: BLE001
-            self.stderr.write(f"Unexpected error: {e}")
+        except Exception as e:
+            raise CommandError("The GitLab cleanup could not finish.") from e

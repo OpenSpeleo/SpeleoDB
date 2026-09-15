@@ -17,6 +17,8 @@ import gitlab
 import gitlab.exceptions
 from gitlab.const import AccessLevel
 
+from speleodb.utils.gitlab_client import BoundedGitlabClient
+
 if TYPE_CHECKING:
     from gitlab.v4.objects.groups import Group
 
@@ -49,7 +51,7 @@ class PythonGitLabClient:
         self.admin = self._connect(bootstrap_token)
 
     def _connect(self, token: str) -> gitlab.Gitlab:
-        return gitlab.Gitlab(
+        return BoundedGitlabClient(
             self.base_url,
             private_token=token,
             timeout=HTTP_TIMEOUT_SECONDS,

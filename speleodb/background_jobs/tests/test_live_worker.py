@@ -414,12 +414,15 @@ def test_live_broker_failure_keeps_request_for_maintenance(
             job, created = request_export(user)
     attempt: JobAttempt = job.attempts.get()
     assert created
-    assert job.state == JobState.QUEUED
+    job.refresh_from_db()
+    assert job.state == JobState.RETRY_WAIT
+    assert attempt.state == JobState.FAILED
     assert attempt.dispatched_at is None
-    JobAttempt.objects.filter(pk=attempt.pk).update(dispatch_after=timezone.now())
+    BackgroundJob.objects.filter(pk=job.pk).update(next_attempt_at=timezone.now())
     live_worker.run_control_task(MAINTENANCE_TASK)
     live_worker.wait_ready(job)
     assert JobArtifact.objects.filter(job=job).exists()
+    assert JobArtifact.objects.get(job=job).attempt_id != attempt.pk
 
 
 def test_live_worker_death_recovers_with_a_new_attempt(live_worker: LiveWorker) -> None:

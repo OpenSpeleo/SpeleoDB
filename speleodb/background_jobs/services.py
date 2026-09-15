@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import timedelta
 from functools import partial
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Max
+from django.db.models import Q
 from django.utils import timezone
 
 from speleodb.background_jobs.models import ACTIVE_STATES
@@ -24,7 +26,6 @@ from speleodb.background_jobs.storage import signed_archive_url
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
-    import uuid
     from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,17 @@ class ExportUnavailableError(ValueError):
 
 class ExportExpiredError(ValueError):
     """An archive's availability window has ended."""
+
+
+def retry_delay(attempts: int) -> timedelta:
+    """Persist one capped exponential schedule for every export retry budget."""
+    delay: int = settings.EXPORTS_RETRY_BASE_DELAY_SECONDS
+    maximum: int = settings.EXPORTS_RETRY_MAX_DELAY_SECONDS
+    for _ in range(max(0, attempts - 1)):
+        if delay >= maximum:
+            break
+        delay *= 2
+    return timedelta(seconds=min(delay, maximum))
 
 
 def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
@@ -123,9 +135,25 @@ def dispatch_attempt(attempt_id: uuid.UUID) -> None:
         )
         if attempt is None:
             return
-        attempt.dispatch_after = now + timedelta(minutes=10)
-        attempt.save(update_fields=["dispatch_after"])
+        # A previously claimed publication lease has elapsed without a worker
+        # claim. Fail this attempt instead of republishing its task forever.
+        stale_publication = (
+            attempt.dispatch_started_at is not None or attempt.dispatched_at is not None
+        )
+        if not stale_publication:
+            attempt.dispatch_started_at = now
+            attempt.dispatch_after = now + timedelta(
+                seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS
+            )
+            attempt.save(update_fields=["dispatch_started_at", "dispatch_after"])
         job_id, task_id = attempt.job_id, attempt.task_id
+    if stale_publication:
+        fail_attempt(
+            attempt_id,
+            "The queued export was not claimed before its deadline.",
+            queued_only=True,
+        )
+        return
     try:
         current_app.send_task(
             GENERATION_TASK,
@@ -134,9 +162,11 @@ def dispatch_attempt(attempt_id: uuid.UUID) -> None:
             queue="exports",
             retry=False,
         )
-    except Exception:  # noqa: BLE001 - Accepted requests must survive broker failures.
-        JobAttempt.objects.filter(pk=attempt_id, state=JobState.QUEUED).update(
-            dispatch_after=now + timedelta(minutes=1),
+    except Exception:  # noqa: BLE001 - Persist failed publications in the attempt budget.
+        fail_attempt(
+            attempt_id,
+            "Export publication failed; the broker is unavailable.",
+            queued_only=True,
         )
         logger.warning("Export dispatch deferred", extra={"job_id": str(job_id)})
     else:
@@ -178,12 +208,19 @@ def claim_attempt(job_id: str, attempt_id: str, task_id: str) -> JobAttempt | No
         return attempt
 
 
-def fail_attempt(attempt_id: uuid.UUID, error: str) -> None:
+def fail_attempt(
+    attempt_id: uuid.UUID, error: str, *, queued_only: bool = False
+) -> None:
     with transaction.atomic():
         reference = JobAttempt.objects.get(pk=attempt_id)
         job = BackgroundJob.objects.select_for_update().get(pk=reference.job_id)
         attempt = JobAttempt.objects.select_for_update().get(pk=attempt_id)
-        if job.current_attempt_id != attempt.id or job.state != JobState.RUNNING:
+        if (
+            job.current_attempt_id != attempt.id
+            or job.state not in (JobState.QUEUED, JobState.RUNNING)
+            or attempt.state not in (JobState.QUEUED, JobState.RUNNING)
+            or (queued_only and attempt.state != JobState.QUEUED)
+        ):
             return
         now = timezone.now()
         attempt.state = JobState.FAILED
@@ -192,13 +229,13 @@ def fail_attempt(attempt_id: uuid.UUID, error: str) -> None:
         attempt.save(update_fields=["state", "error", "finished_at"])
         job.summary = {"error": attempt.error}
         if attempt.cycle_attempt < settings.EXPORTS_MAX_ATTEMPTS:
-            delay = 60 if attempt.cycle_attempt == 1 else 300
             job.state = JobState.RETRY_WAIT
             job.stage = "Waiting to retry"
-            job.next_attempt_at = now + timedelta(seconds=delay)
+            job.next_attempt_at = now + retry_delay(attempt.cycle_attempt)
         else:
             job.state = JobState.FAILED
             job.stage = "Export failed"
+            job.next_attempt_at = None
             job.notification_due_at = now
         job.save()
 
@@ -277,7 +314,7 @@ def request_notification(job: BackgroundJob, user: User) -> None:
             raise ExportUnavailableError("This job has not completed.")
         if JobArtifact.objects.filter(job=job, expires_at__lte=timezone.now()).exists():
             raise ExportExpiredError("This archive has expired. Request a new export.")
-        if job.notification_state == "sending":
+        if job.notification_state in ("queued", "sending"):
             raise ExportConflictError("A notification is already being sent.")
         job.notification_state = "pending"
         job.notification_attempts = 0
@@ -292,6 +329,102 @@ def request_notification(job: BackgroundJob, user: User) -> None:
                 "updated_at",
             ]
         )
+
+
+def fail_notification(
+    job_id: uuid.UUID,
+    token: uuid.UUID | None,
+    error: str,
+    *,
+    queued_only: bool = False,
+) -> None:
+    with transaction.atomic():
+        job = (
+            BackgroundJob.objects.select_for_update()
+            .filter(
+                pk=job_id,
+                notification_token=token,
+                notification_state__in=["queued", "sending"],
+            )
+            .first()
+        )
+        if job is None or (queued_only and job.notification_state != "queued"):
+            return
+        exhausted = (
+            job.notification_attempts >= settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS
+        )
+        job.notification_state = "failed" if exhausted else "pending"
+        job.notification_due_at = (
+            None
+            if exhausted
+            else timezone.now() + retry_delay(job.notification_attempts)
+        )
+        job.notification_token = None
+        job.notification_error = error[:2000]
+        job.save()
+
+
+def dispatch_notification(job_id: uuid.UUID) -> None:
+    now = timezone.now()
+    token = uuid.uuid4()
+    with transaction.atomic():
+        job = (
+            BackgroundJob.objects.select_for_update()
+            .filter(
+                pk=job_id,
+                notification_state="pending",
+                notification_due_at__lte=now,
+                notification_attempts__lt=settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS,
+                state__in=[JobState.READY, JobState.PARTIAL, JobState.FAILED],
+            )
+            .first()
+        )
+        if job is None:
+            return
+        job.notification_state = "queued"
+        job.notification_attempts += 1
+        job.notification_token = token
+        job.notification_due_at = now + timedelta(
+            seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS
+        )
+        job.save()
+    try:
+        current_app.send_task(
+            NOTIFICATION_TASK,
+            args=[str(job_id), str(token)],
+            queue="background_control",
+            retry=False,
+        )
+    except Exception:  # noqa: BLE001 - Publication and delivery share a finite budget.
+        fail_notification(
+            job_id, token, "Notification publication failed.", queued_only=True
+        )
+
+
+def retry_cleanup(job: BackgroundJob, user: User) -> int:
+    """Only an explicit staff action starts another exhausted cleanup cycle."""
+    if not user.is_active or not user.is_staff:
+        raise PermissionDenied
+    now = timezone.now()
+    with transaction.atomic():
+        job = _lock_existing_job(job.pk)
+        attempts = (
+            job.attempts.filter(
+                object_deleted_at__isnull=True,
+                cleanup_attempts__gte=settings.EXPORTS_MAX_CLEANUP_ATTEMPTS,
+            )
+            .exclude(object_key="")
+            .filter(Q(cleanup_due_at__isnull=True) | Q(cleanup_due_at__lte=now))
+        )
+        count = attempts.update(
+            cleanup_attempts=0,
+            cleanup_due_at=now,
+            cleanup_token=None,
+        )
+        # Keep the last safe error visible until successful deletion.
+        if count:
+            job.save(update_fields=["updated_at"])
+        return count
 
 
 def retry_due_jobs(now: datetime) -> None:

@@ -21,12 +21,12 @@ exists. It can also describe validation, permission, throttling, or server
 errors. Treating all such errors as duplicates can trigger repeated attempts
 to clone a repository that was never created while hiding the original error.
 
-Creation now uses python-gitlab's request-scoped transient retry support. The
-retry count is `DJANGO_GIT_RETRY_ATTEMPTS - 1`, giving five total attempts with
-the current setting. This uses the library's status classification and
-exponential backoff, and honors GitLab's rate-limit headers. Authentication and
-permission failures are not retried as transient failures. See the client's
-[retry documentation](https://python-gitlab.readthedocs.io/en/stable/api-usage-advanced.html#transient-errors).
+Creation uses the shared `BoundedGitlabClient` transport policy, with
+`DJANGO_GIT_RETRY_ATTEMPTS` total attempts (currently five). The SDK still owns
+request serialization and operation-specific exceptions, but its internal
+retries are disabled. Application retries sleep 1/2/4/8 seconds, doubling up to
+the configured 30-second cap. Server delay headers cannot replace that schedule.
+Authentication and permission failures are not retried as transient failures.
 
 A create response with HTTP 400 or 409 can indicate a duplicate path. Before
 cloning, the manager performs an uncached lookup of the exact configured
@@ -51,6 +51,16 @@ encoded/decoded token values are removed from the command, status, stderr, and
 stdout. The final `GitBaseError` includes the sanitized repository URL, Git
 exit status, and error details. Raw credential-bearing exception chains are
 not attached to the raised exception.
+
+`GitRepo` installs `BoundedGit` through GitPython's command-wrapper extension.
+Each finite Git command has a 60-second deadline and a separate process group;
+termination includes helpers and hooks, with a five-second bounded reap. This
+also covers streamed clone/fetch commands for which the SDK's execution timeout
+is insufficient. Commit hooks run through the supervised Git CLI. If HEAD has
+already advanced before a hook times out, the failure is surfaced without
+creating another commit. Author, committer, and exact message bytes are retained.
+Cached `cat-file` readers keep their normal lifetime; filesystem/object database
+reads are not subject to a whole-operation deadline.
 
 Initial publication explicitly selects the configured unborn branch and never
 pulls from an empty remote. Existing commits or remote refs prohibit initial
@@ -129,9 +139,9 @@ These are attempt limits, not a total elapsed-time deadline.
 
 The preload tests no longer create external repositories or depend on concurrent
 CI jobs sharing a GitLab group. Other live integration tests still need isolated
-test resources and must not overlap a group-wide cleanup. The fix does not
-establish which remote status caused the original CI failure because the old
-exception handling discarded it.
+test resources and must not overlap a group-wide cleanup. The retry wrapper
+preserves remote status and body in SDK exceptions. Logs record attempt counts
+and delays without exposing credentials.
 
 ## User-project cleanup
 
@@ -154,9 +164,13 @@ test-group maintenance command. Every request has a 30-second connect/read
 timeout and at most `DJANGO_GIT_RETRY_ATTEMPTS` attempts by default, including
 authentication and each pagination request. Transient retries are enabled for
 GET/HEAD reads. Writes must explicitly opt in; project creation retains its
-existing retry-and-confirm-conflict contract. The SDK's bounded rate-limit
-handling remains enabled for all methods. This is not an end-to-end deadline:
-pagination, backoff, and server-directed rate-limit delays add elapsed time.
+existing retry-and-confirm-conflict contract. Rate-limit responses are retried
+for all methods unless explicitly disabled. The shared wrapper owns all retry
+sleeps; SDK retries are disabled. Caller overrides can reduce attempts/timeouts
+but cannot raise configured limits, and negative retry counts or nonfinite
+timeouts are rejected. This is not an end-to-end deadline: pagination and bounded
+backoff add elapsed time, and an HTTP read timeout measures inactivity rather
+than complete transfer duration.
 
 The SDK raises operation-specific `GitlabGetError` and `GitlabListError`, not
 `GitlabHttpError`, at the object-manager boundary. History and branch helpers
@@ -170,6 +184,21 @@ initialized client installed on the singleton.
 
 Simulated HTTP regressions exercise the real SDK for request timeouts, bounded
 retries, authentication, history and branch reads, and recovery after a missing
-project. Successful calls add no extra requests. Bootstrap provisioning keeps
-its separate policy because its token creation/revocation lifecycle differs
-from normal application reads.
+project. Successful calls add no extra requests. Standalone bootstrap
+provisioning uses the same pure-Python client with its existing 15-second request
+timeout and explicit transient-write opt-in. `compose/setup` invokes provisioning
+as a module so it can import this policy without initializing Django.
+
+## Confirmed September 2026 CI stall
+
+Run `34997387739`, job `104476947867`, dumped its stack at
+2026-09-15 16:52:14 UTC inside python-gitlab's `handle_retry_on_status` sleep.
+The blocked operation was project creation in the first Compass upload test;
+the last visible exploration-lead test and its teardown had completed. The
+installed SDK accepts a server-directed delay outside its HTTP timeout, even
+when the retry count is finite. The stack confirms that waiting path; it does
+not reveal the exact HTTP status or header value. Regression cases now cover
+huge, future, malformed, and repeated delay headers without real sleeps.
+
+See [bounded retries](bounded-retries.md) for the broader retry audit and
+verification status.

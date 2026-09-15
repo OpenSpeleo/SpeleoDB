@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 from django.conf import settings
+from django.test import override_settings
 from django.urls import reverse
 from requests.exceptions import ChunkedEncodingError
 from requests.exceptions import ConnectionError as RequestsConnectionError
@@ -759,6 +760,62 @@ def test_only_discovery_get_is_retryable(discovery: bool, method: str) -> None:
         )
     request_mock.assert_called_once()
     sleep.assert_not_called()
+
+
+@pytest.mark.parametrize("retry_after", ["0", "3"])
+@override_settings(DJANGO_GIT_RETRY_ATTEMPTS=8)
+def test_repeated_server_hints_preserve_capped_exponential_backoff(
+    retry_after: str,
+) -> None:
+    response: MagicMock = MagicMock(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        headers={"Retry-After": retry_after},
+    )
+    with (
+        patch(
+            "speleodb.git_proxy.views.requests.api.request", return_value=response
+        ) as request,
+        patch("speleodb.git_proxy.views.time.sleep") as sleep,
+    ):
+        assert (
+            request_git_upstream(
+                discovery=True, method="GET", url="https://gitlab.example/info/refs"
+            )
+            is response
+        )
+    assert request.call_count == 8  # noqa: PLR2004
+    expected: list[int] = (
+        [1, 2, 4, 8, 16, 30, 30] if retry_after == "0" else [3, 6, 12, 24, 30, 30, 30]
+    )
+    assert sleep.call_args_list == [call(delay) for delay in expected]
+    assert response.close.call_count == len(expected)
+
+
+@override_settings(DJANGO_GIT_RETRY_ATTEMPTS=8)
+def test_transport_failure_backoff_is_capped() -> None:
+    with (
+        patch(
+            "speleodb.git_proxy.views.requests.api.request", side_effect=Timeout
+        ) as request,
+        patch("speleodb.git_proxy.views.time.sleep") as sleep,
+        pytest.raises(Timeout),
+    ):
+        request_git_upstream(
+            discovery=True, method="GET", url="https://gitlab.example/info/refs"
+        )
+    assert request.call_count == 8  # noqa: PLR2004
+    assert sleep.call_args_list == [call(delay) for delay in [1, 2, 4, 8, 16, 30, 30]]
+
+
+@pytest.mark.parametrize("attempts", [-1, 0, True, 1.5])
+def test_upstream_rejects_invalid_attempt_budget(attempts: float) -> None:
+    with (
+        override_settings(DJANGO_GIT_RETRY_ATTEMPTS=attempts),
+        patch("speleodb.git_proxy.views.requests.api.request") as request,
+        pytest.raises(ValueError, match="positive integer"),
+    ):
+        request_git_upstream(discovery=True, method="GET")
+    request.assert_not_called()
 
 
 class TestGitProxyAccessBoundary(BaseAPIProjectTestCase):

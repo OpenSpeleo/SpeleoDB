@@ -169,7 +169,7 @@ def download_source(field: FieldFile, destination: Path) -> None:
         except BotoCoreError:
             if attempt == SOURCE_READ_ATTEMPTS - 1:
                 raise ArchiveBuildError("Source storage is unavailable.") from None
-        time.sleep(attempt + 1)
+        time.sleep(min(2**attempt, settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS))
 
 
 def project_git_source(
@@ -193,10 +193,13 @@ def _stop_supervisor(process: subprocess.Popen[bytes]) -> None:
     # Closing our liveness pipe requests group cleanup even if a Python soft
     # limit interrupts the caller. Leave time for TERM followed by group KILL.
     try:
-        process.wait(timeout=TERMINATE_SECONDS + 2 * GIT_POLL_SECONDS)
+        process.wait(timeout=2 * TERMINATE_SECONDS + 2 * GIT_POLL_SECONDS)
     except subprocess.TimeoutExpired:
         process.kill()
-        process.wait()
+        try:
+            process.wait(timeout=TERMINATE_SECONDS)
+        except subprocess.TimeoutExpired:
+            raise ArchiveBuildError("The Git source could not be stopped.") from None
 
 
 def _run_git(
@@ -218,7 +221,8 @@ def _run_git(
         os.fdopen(parent_read, "rb") as liveness_reader,
         os.fdopen(parent_write, "wb") as liveness_writer,
         TemporaryFile() as errors,
-        subprocess.Popen(  # noqa: S603
+    ):
+        process = subprocess.Popen(  # noqa: S603
             [
                 sys.executable,
                 str(Path(__file__).with_name("git_supervisor.py")),
@@ -238,8 +242,7 @@ def _run_git(
             stderr=errors,
             start_new_session=True,
             pass_fds=(parent_read,),
-        ) as process,
-    ):
+        )
         liveness_reader.close()
         try:
             while True:
@@ -254,7 +257,11 @@ def _run_git(
                     continue
         finally:
             liveness_writer.close()
-            _stop_supervisor(process)
+            try:
+                _stop_supervisor(process)
+            finally:
+                if process.stdout is not None:
+                    process.stdout.close()
         if process.returncode not in expected_exit_codes:
             if process.returncode == TIMEOUT_EXIT_CODE:
                 raise ArchiveBuildError("The Git source timed out.")

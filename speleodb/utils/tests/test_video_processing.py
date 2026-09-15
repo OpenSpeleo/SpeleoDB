@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import signal
+import subprocess
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import MagicMock
+from unittest.mock import call
+from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from PIL import Image
 
 from speleodb.utils.video_processing import VideoProcessor
@@ -71,6 +77,31 @@ class TestVideoProcessor:
             RuntimeError, match="Error extracting the thumbnail with ffmpeg"
         ):
             VideoProcessor.extract_thumbnail(fake_video)
+
+    @pytest.mark.parametrize("cleanup_hangs", [False, True])
+    def test_hung_ffmpeg_and_cleanup_have_deadlines(self, cleanup_hangs: bool) -> None:
+        process: MagicMock = MagicMock(pid=12345)
+        timeout = subprocess.TimeoutExpired("ffmpeg", 60)
+        process.wait.side_effect = [timeout, timeout if cleanup_hangs else 0]
+        with (
+            patch(
+                "speleodb.utils.video_processing.subprocess.Popen", return_value=process
+            ) as start,
+            patch("speleodb.utils.video_processing.os.killpg") as kill_group,
+            pytest.raises(
+                RuntimeError, match="Error extracting the thumbnail"
+            ) as error,
+        ):
+            VideoProcessor.extract_thumbnail(BytesIO(b"video"))
+
+        assert error.value.__cause__ is timeout
+        assert start.call_args.kwargs["start_new_session"] is True
+        kill_group.assert_called_once_with(process.pid, signal.SIGKILL)
+        assert process.wait.call_args_list == [
+            call(timeout=settings.VIDEO_PROCESSING_TIMEOUT_SECONDS),
+            call(timeout=settings.VIDEO_PROCESSING_CLEANUP_TIMEOUT_SECONDS),
+        ]
+        process.__exit__.assert_not_called()
 
     def test_add_play_button_overlay(self) -> None:
         """Test that play button overlay is added correctly."""

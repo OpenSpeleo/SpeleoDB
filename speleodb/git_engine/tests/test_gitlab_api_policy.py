@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from contextvars import Context
 from http import HTTPStatus
 from typing import Any
 from unittest import TestCase
@@ -14,12 +15,15 @@ import gitlab.exceptions
 import pytest
 from django.conf import settings
 from requests import Response
+from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout
 
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
+from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 API_URL = "https://gitlab.example"
 HTTP_TIMEOUT_SECONDS = 30
@@ -77,7 +81,9 @@ class GitlabClientPolicyTests(TestCase):
         super().setUp()
         self.client = GitlabClient(API_URL, private_token=TEST_TOKEN)
         self.addCleanup(self.client.session.close)
-        self.sleep: MagicMock = self.enterContext(patch("gitlab.utils.time.sleep"))
+        self.sleep: MagicMock = self.enterContext(
+            patch("speleodb.utils.gitlab_client.time.sleep")
+        )
 
     def test_get_and_head_retry_transient_failures_with_fixed_timeout(self) -> None:
         for verb in ("GET", "HEAD"):
@@ -159,6 +165,264 @@ class GitlabClientPolicyTests(TestCase):
         assert response.status_code == HTTPStatus.CREATED
         assert send.call_count == 2  # noqa: PLR2004
 
+    def test_resource_lock_conflicts_keep_the_sdk_transient_retry_policy(self) -> None:
+        for verb, explicit_retry in (("GET", None), ("HEAD", None), ("POST", True)):
+            locked: Response = gitlab_response(HTTPStatus.CONFLICT)
+            locked.reason = "Resource lock"
+            with (
+                self.subTest(verb=verb),
+                patch.object(
+                    self.client.session.get_adapter(API_URL),
+                    "send",
+                    side_effect=[locked, gitlab_response(HTTPStatus.OK)],
+                ) as send,
+            ):
+                self.sleep.reset_mock()
+                response: Response = self.client.http_request(
+                    verb, "/version", retry_transient_errors=explicit_retry
+                )
+
+            assert response.ok
+            assert send.call_count == 2  # noqa: PLR2004
+            self.sleep.assert_called_once_with(1.0)
+
+    def test_resource_lock_classification_does_not_retry_other_conflicts(self) -> None:
+        for reason, verb, explicit_retry in (
+            ("Conflict", "GET", None),
+            ("Resource lock", "GET", False),
+            ("Resource lock", "POST", None),
+        ):
+            conflict: Response = gitlab_response(HTTPStatus.CONFLICT)
+            conflict.reason = reason
+            with (
+                self.subTest(reason=reason, verb=verb, retry=explicit_retry),
+                patch.object(
+                    self.client.session.get_adapter(API_URL),
+                    "send",
+                    return_value=conflict,
+                ) as send,
+                pytest.raises(gitlab.exceptions.GitlabHttpError) as raised,
+            ):
+                self.client.http_request(
+                    verb, "/version", retry_transient_errors=explicit_retry
+                )
+
+            assert raised.value.response_code == HTTPStatus.CONFLICT
+            send.assert_called_once()
+        self.sleep.assert_not_called()
+
+    def test_resource_lock_classification_is_reset_for_the_next_attempt(self) -> None:
+        locked: Response = gitlab_response(HTTPStatus.CONFLICT)
+        locked.reason = "Resource lock"
+        ordinary: Response = gitlab_response(HTTPStatus.CONFLICT)
+        with (
+            patch.object(
+                self.client.session.get_adapter(API_URL),
+                "send",
+                side_effect=[locked, ordinary],
+            ) as send,
+            pytest.raises(gitlab.exceptions.GitlabHttpError) as raised,
+        ):
+            self.client.http_request("GET", "/version")
+
+        assert raised.value.response_code == HTTPStatus.CONFLICT
+        assert send.call_count == 2  # noqa: PLR2004
+        self.sleep.assert_called_once_with(1.0)
+
+    def test_resource_lock_classification_is_isolated_between_contexts(self) -> None:
+        isolated: Context = Context()
+        locked: Response = gitlab_response(HTTPStatus.CONFLICT)
+        locked.reason = "Resource lock"
+
+        def interleave_request(response: Response, **kwargs: Any) -> None:
+            if response is locked:
+                with pytest.raises(gitlab.exceptions.GitlabHttpError) as raised:
+                    isolated.run(self.client.http_request, "GET", "/other-request")
+                assert raised.value.response_code == HTTPStatus.CONFLICT
+
+        self.client.session.hooks["response"].append(interleave_request)
+        with patch.object(
+            self.client.session.get_adapter(API_URL),
+            "send",
+            side_effect=[
+                locked,
+                gitlab_response(HTTPStatus.CONFLICT),
+                gitlab_response(HTTPStatus.OK),
+            ],
+        ) as send:
+            response: Response = self.client.http_request("GET", "/version")
+
+        assert response.ok
+        assert send.call_count == 3  # noqa: PLR2004
+        self.sleep.assert_called_once_with(1.0)
+
+    def test_retry_override_cannot_remove_or_expand_the_attempt_limit(self) -> None:
+        with (
+            patch.object(self.client.session, "send") as send,
+            pytest.raises(ValueError, match="max_retries"),
+        ):
+            self.client.http_request("GET", "/version", max_retries=-1)
+        send.assert_not_called()
+        self.sleep.assert_not_called()
+
+        for max_retries, expected_attempts in (
+            (0, 1),
+            (1, 2),
+            (1_000_000, settings.DJANGO_GIT_RETRY_ATTEMPTS),
+        ):
+            self.sleep.reset_mock()
+            with (
+                self.subTest(max_retries=max_retries),
+                patch.object(
+                    self.client.session,
+                    "send",
+                    return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
+                ) as send,
+                pytest.raises(gitlab.exceptions.GitlabHttpError),
+            ):
+                self.client.http_request("GET", "/version", max_retries=max_retries)
+            assert send.call_count == expected_attempts
+            assert self.sleep.call_count == expected_attempts - 1
+
+    def test_timeout_override_must_be_finite_and_positive(self) -> None:
+        for timeout in (float("inf"), float("-inf"), float("nan"), 0.0, -1.0):
+            with (
+                self.subTest(timeout=timeout),
+                patch.object(self.client.session, "send") as send,
+                pytest.raises(ValueError, match="timeout"),
+            ):
+                self.client.http_request("GET", "/version", timeout=timeout)
+            send.assert_not_called()
+        self.sleep.assert_not_called()
+
+    def test_timeout_override_can_only_reduce_the_configured_limit(self) -> None:
+        for timeout, expected_timeout in (
+            (0.5, 0.5),
+            (3600.0, HTTP_TIMEOUT_SECONDS),
+        ):
+            with (
+                self.subTest(timeout=timeout),
+                patch.object(
+                    self.client.session,
+                    "send",
+                    return_value=gitlab_response(HTTPStatus.OK),
+                ) as send,
+            ):
+                self.client.http_request("GET", "/version", timeout=timeout)
+            assert send.call_args.kwargs["timeout"] == expected_timeout
+
+    def test_transport_failures_follow_the_read_and_write_policy(self) -> None:
+        for exception_type in (RequestsConnectionError, ChunkedEncodingError, Timeout):
+            for verb, explicit_retry, expected_attempts in (
+                ("GET", None, settings.DJANGO_GIT_RETRY_ATTEMPTS),
+                ("HEAD", None, settings.DJANGO_GIT_RETRY_ATTEMPTS),
+                ("GET", False, 1),
+                ("POST", None, 1),
+                ("POST", True, settings.DJANGO_GIT_RETRY_ATTEMPTS),
+            ):
+                failure = exception_type("original transport failure")
+                self.sleep.reset_mock()
+                with (
+                    self.subTest(
+                        exception=exception_type, verb=verb, retry=explicit_retry
+                    ),
+                    patch.object(
+                        self.client.session, "send", side_effect=failure
+                    ) as send,
+                    pytest.raises(exception_type) as raised,
+                ):
+                    self.client.http_request(
+                        verb,
+                        "/version",
+                        retry_transient_errors=explicit_retry,
+                    )
+                assert raised.value is failure
+                assert send.call_count == expected_attempts
+                expected_delays = [1.0, 2.0, 4.0, 8.0][: expected_attempts - 1]
+                actual_delays = [call.args[0] for call in self.sleep.call_args_list]
+                assert actual_delays == expected_delays
+
+    def test_rate_limit_retry_can_be_disabled(self) -> None:
+        with (
+            patch.object(
+                self.client.session,
+                "send",
+                return_value=gitlab_response(HTTPStatus.TOO_MANY_REQUESTS),
+            ) as send,
+            pytest.raises(gitlab.exceptions.GitlabHttpError),
+        ):
+            self.client.http_request("GET", "/version", obey_rate_limit=False)
+        send.assert_called_once()
+        self.sleep.assert_not_called()
+
+    def test_read_error_preserves_status_message_and_exact_response_body(self) -> None:
+        for status, expected_attempts in (
+            (HTTPStatus.FORBIDDEN, 1),
+            (HTTPStatus.NOT_FOUND, 1),
+            (HTTPStatus.SERVICE_UNAVAILABLE, settings.DJANGO_GIT_RETRY_ATTEMPTS),
+        ):
+            response = gitlab_response(status, {"message": "original read failure"})
+            self.sleep.reset_mock()
+            with (
+                self.subTest(status=status),
+                patch.object(
+                    self.client.session, "send", return_value=response
+                ) as send,
+                pytest.raises(gitlab.exceptions.GitlabGetError) as raised,
+            ):
+                self.client.projects.get(PROJECT_NUMERIC_ID)
+            assert send.call_count == expected_attempts
+            assert self.sleep.call_count == expected_attempts - 1
+            assert raised.value.response_code == status
+            assert raised.value.error_message == "original read failure"
+            assert raised.value.response_body == response.content
+
+    def test_longer_finite_budget_caps_exponential_delay(self) -> None:
+        max_attempts = 8
+        client = BoundedGitlabClient(
+            API_URL, private_token=TEST_TOKEN, max_attempts=max_attempts
+        )
+        self.addCleanup(client.session.close)
+        with (
+            patch.object(
+                client.session,
+                "send",
+                return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
+            ) as send,
+            pytest.raises(gitlab.exceptions.GitlabHttpError),
+        ):
+            client.http_request("GET", "/version")
+        assert send.call_count == max_attempts
+        assert [call.args[0] for call in self.sleep.call_args_list] == [
+            1.0,
+            2.0,
+            4.0,
+            8.0,
+            16.0,
+            30.0,
+            30.0,
+        ]
+
+    def test_invalid_constructor_budgets_are_rejected(self) -> None:
+        for max_attempts in (0, -1):
+            with (
+                self.subTest(max_attempts=max_attempts),
+                pytest.raises(ValueError, match="max_attempts"),
+            ):
+                BoundedGitlabClient(
+                    API_URL, private_token=TEST_TOKEN, max_attempts=max_attempts
+                )
+        for field in ("timeout", "base_delay", "max_delay"):
+            for value in (float("inf"), float("nan"), 0.0, -1.0):
+                invalid_options: dict[str, Any] = {field: value}
+                with (
+                    self.subTest(field=field, value=value),
+                    pytest.raises(ValueError, match="finite and positive"),
+                ):
+                    BoundedGitlabClient(
+                        API_URL, private_token=TEST_TOKEN, **invalid_options
+                    )
+
 
 class GitlabManagerReadPolicyTests(TestCase):
     def setUp(self) -> None:
@@ -178,7 +442,9 @@ class GitlabManagerReadPolicyTests(TestCase):
         self.enterContext(
             patch.object(GitlabCredentials, "get", return_value=self.credentials)
         )
-        self.sleep: MagicMock = self.enterContext(patch("gitlab.utils.time.sleep"))
+        self.sleep: MagicMock = self.enterContext(
+            patch("speleodb.utils.gitlab_client.time.sleep")
+        )
 
     def test_failed_auth_reinitialization_clears_cache_and_client(self) -> None:
         with patch.object(

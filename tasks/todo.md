@@ -1,5 +1,19 @@
 # Task reviews
 
+## Bounded retries and CI hang
+
+The diagnostic CI stack identified python-gitlab's server-directed retry sleep
+during project creation. Retry attempts/delays and subprocess cleanup are now
+bounded across GitLab, Git, startup, and export recovery. Durable counters keep
+periodic sweeps from resetting failure budgets. See
+[the retry review](todos/bounded-retries.md) and
+[design](../docs/bounded-retries.md).
+
+The user's typing/lint reports were corrected. Direct checks inside Docker
+passed: mypy on 705 source files and Ruff on `speleodb`, `config`, and
+`compose`. Tests and full hooks were not rerun. Earlier test results below
+predate these retry changes.
+
 ## Export storage reuse and flat filenames
 
 Exports now use the shared private storage backend: CloudFront signing in
@@ -9,9 +23,9 @@ unique attempt IDs; historical nested keys remain supported. Existing public
 backends retain their unsigned URLs. No schema migration is needed.
 
 Validation completed with 139 targeted tests passed, 1 skipped, full mypy, and
-Ruff on task-owned files. Independent review found no actionable regression.
-The complete production policy and CloudFront configuration steps are prepared.
-Live reads proved missing version/cleanup permissions and dropped version query
+Ruff on task-owned files. Independent review found no actionable regression. The
+complete production policy and CloudFront configuration steps are prepared. Live
+reads proved missing version/cleanup permissions and dropped version query
 parameters; production rollout requires those external AWS settings first.
 
 See [the storage review](todos/export-shared-storage.md) for verification scope,

@@ -58,8 +58,23 @@ DJANGO_GIT_FIRST_COMMIT_MESSAGE = env(
     "GIT_FIRST_COMMIT_MESSAGE", default="[Automated] Project Creation"
 )
 
+# Maximum total attempts for an individual Git or GitLab operation.
 DJANGO_GIT_RETRY_ATTEMPTS = 5
+# Bound each Git subprocess, including clone/fetch/pull/push.
+DJANGO_GIT_COMMAND_TIMEOUT_SECONDS = 60
+# Bound process reaping after terminating a timed-out Git process group.
+DJANGO_GIT_PROCESS_CLEANUP_TIMEOUT_SECONDS = 5
+# GitLab connect/read timeout per request; retries have a separate attempt cap.
+DJANGO_GITLAB_HTTP_TIMEOUT_SECONDS = 30
+# Failure retries sleep 1, 2, 4, 8, ... seconds, capped at the maximum below.
+DJANGO_GIT_RETRY_BASE_DELAY_SECONDS = 1.0
+DJANGO_GIT_RETRY_MAX_DELAY_SECONDS = 30.0
 DJANGO_GIT_BRANCH_NAME = "master"
+
+# Maximum runtime for extracting a video thumbnail from an uploaded file.
+VIDEO_PROCESSING_TIMEOUT_SECONDS = 60
+# Maximum wait for FFmpeg to exit after its process is killed.
+VIDEO_PROCESSING_CLEANUP_TIMEOUT_SECONDS = 5
 
 # File Upload Limits
 # ------------------------------------------------------------------------------
@@ -536,6 +551,13 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_RESULT_EXPIRES = 30 * 24 * 60 * 60
 CELERY_BROKER_CONNECTION_TIMEOUT = 3
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# Maximum broker retries after the initial connection attempt (six attempts).
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 5
+# Worker connection retries double their delay, capped at the maximum below.
+CELERY_BROKER_RETRY_BASE_DELAY_SECONDS = 1.0
+CELERY_BROKER_RETRY_MAX_DELAY_SECONDS = 30.0
+# Use Celery's supported consumer extension to replace Kombu's linear sleeps.
+CELERY_WORKER_CONSUMER = "speleodb.background_jobs.consumer:ExponentialBackoffConsumer"
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     "visibility_timeout": 3600,
     "socket_connect_timeout": 3,
@@ -563,6 +585,18 @@ EXPORTS_SOFT_TIME_LIMIT = 5 * 60
 # Total automatic generation attempts per request/retry cycle, including the
 # first attempt. A manual retry starts a fresh cycle and keeps earlier history.
 EXPORTS_MAX_ATTEMPTS = 3
+
+# Delay between durable export retries, doubling up to the maximum below.
+EXPORTS_RETRY_BASE_DELAY_SECONDS = 60
+EXPORTS_RETRY_MAX_DELAY_SECONDS = 3600
+# Maximum notification attempts, including failed broker publications.
+EXPORTS_MAX_NOTIFICATION_ATTEMPTS = 5
+# Maximum storage cleanup attempts before explicit operator recovery is required.
+EXPORTS_MAX_CLEANUP_ATTEMPTS = 5
+# Time allowed for a queued export publication to be claimed by a worker.
+EXPORTS_DISPATCH_LEASE_SECONDS = 600
+# Time allowed for a cleanup owner before another attempt can reclaim its work.
+EXPORTS_CLEANUP_LEASE_SECONDS = 600
 
 # Local workspace for cloned repositories, downloaded sources, and ZIP creation.
 # The worker creates it with mode 0700 and private per-attempt subdirectories.
@@ -607,7 +641,9 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 # TODO: set to whatever value is adequate in your circumstances
 CELERY_TASK_SOFT_TIME_LIMIT = 60
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#beat-scheduler
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_SCHEDULER = (
+    "speleodb.background_jobs.scheduler:ExponentialBackoffDatabaseScheduler"
+)
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-send-task-events
 CELERY_WORKER_SEND_TASK_EVENTS = True
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-task_send_sent_event

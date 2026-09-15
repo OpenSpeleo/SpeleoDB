@@ -36,6 +36,27 @@ function render(jobs, options = {}) {
     return container;
 }
 
+function exportPage() {
+    const root = document.createElement('div');
+    root.id = 'user-exports';
+    root.innerHTML = `
+        <form id="export-request-form">
+            <input name="csrfmiddlewaretoken" value="export-test-csrf">
+            <button id="export-create" type="submit"><span id="export-create-label"></span></button>
+        </form>
+        <div id="export-message"></div>
+        <div id="export-history"></div>
+        <button id="export-previous"></button>
+        <button id="export-next"></button>
+    `;
+    document.body.append(root);
+    return root;
+}
+
+function exportResponse(data) {
+    return { ok: true, json: async () => data };
+}
+
 describe('Export history presentation', () => {
     it.each([
         { page: '?page=2', pageStatus: 404, firstStatus: 200, expectedStatus: 200, expectedRequests: ['?page=2', ''] },
@@ -339,19 +360,7 @@ describe('Export history presentation', () => {
             server.listen(0, '127.0.0.1', resolve);
         });
         const originalUrl = window.location.href;
-        const root = document.createElement('div');
-        root.id = 'user-exports';
-        root.innerHTML = `
-            <form id="export-request-form">
-                <input name="csrfmiddlewaretoken" value="export-test-csrf">
-                <button id="export-create" type="submit"><span id="export-create-label"></span></button>
-            </form>
-            <div id="export-message"></div>
-            <div id="export-history"></div>
-            <button id="export-previous"></button>
-            <button id="export-next"></button>
-        `;
-        document.body.append(root);
+        const root = exportPage();
         globalThis.jsdom.reconfigure({ url: `http://127.0.0.1:${server.address().port}/exports/` });
         try {
             await init({ endpoint: ENDPOINT });
@@ -374,5 +383,291 @@ describe('Export history presentation', () => {
             server.closeAllConnections();
             await new Promise(resolve => server.close(resolve));
         }
+    });
+});
+
+describe('Export request and refresh budgets', () => {
+    let root;
+    let originalUrl;
+    let fetchMock;
+    let windowListeners;
+    let documentListeners;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOW);
+        originalUrl = window.location.href;
+        globalThis.jsdom.reconfigure({ url: 'http://localhost/exports/' });
+        windowListeners = vi.spyOn(window, 'addEventListener');
+        documentListeners = vi.spyOn(document, 'addEventListener');
+        fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        root = exportPage();
+    });
+
+    afterEach(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+        await vi.advanceTimersByTimeAsync(0);
+        for (const [event, listener, options] of windowListeners.mock.calls) {
+            if (['pagehide', 'pageshow'].includes(event)) window.removeEventListener(event, listener, options);
+        }
+        for (const [event, listener, options] of documentListeners.mock.calls) {
+            if (event === 'visibilitychange') document.removeEventListener(event, listener, options);
+        }
+        root.remove();
+        globalThis.jsdom.reconfigure({ url: originalUrl });
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
+
+    it('stops after five failures with capped exponential delays', async () => {
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'));
+        await init({ endpoint: ENDPOINT });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        for (const [index, delay] of [5000, 10_000, 20_000, 30_000].entries()) {
+            await vi.advanceTimersByTimeAsync(delay - 1);
+            expect(fetchMock).toHaveBeenCalledTimes(index + 1);
+            await vi.advanceTimersByTimeAsync(1);
+            expect(fetchMock).toHaveBeenCalledTimes(index + 2);
+        }
+
+        expect(root.querySelector('#export-message').textContent).toContain('Reload this page or try again.');
+        expect(root.querySelector('#export-create').disabled).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(fetchMock).toHaveBeenCalledTimes(5);
+    });
+
+    it('resets the failure budget after a successful refresh', async () => {
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'))
+            .mockRejectedValueOnce(new Error('Exports unavailable.'))
+            .mockRejectedValueOnce(new Error('Exports unavailable.'))
+            .mockResolvedValueOnce(exportResponse({ results: [job()], previous: null, next: null }));
+
+        await init({ endpoint: ENDPOINT });
+        await vi.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(10_000);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        expect(root.querySelector('#export-message').textContent).toBe('');
+        expect(root.querySelector('#export-history').textContent).toContain('Queued');
+
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+        await vi.advanceTimersByTimeAsync(4999);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(fetchMock).toHaveBeenCalledTimes(5);
+    });
+
+    it('preserves the failure backoff when the page becomes visible', async () => {
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'));
+        await init({ endpoint: ENDPOINT });
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(4999);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('continues successful active-job polling beyond the failure limit', async () => {
+        fetchMock.mockResolvedValue(exportResponse({ results: [job()], previous: null, next: null }));
+        await init({ endpoint: ENDPOINT });
+        for (let index = 0; index < 6; index += 1) {
+            await vi.advanceTimersByTimeAsync(5000);
+        }
+        expect(fetchMock).toHaveBeenCalledTimes(7);
+        expect(root.querySelector('#export-message').textContent).toBe('');
+    });
+
+    it.each(['fetch', 'body'])('times out a hanging %s even if it ignores cancellation', async stage => {
+        const hanging = new Promise(() => {});
+        fetchMock.mockImplementation(() => stage === 'fetch'
+            ? hanging : Promise.resolve({ ok: true, json: () => hanging }));
+        const url = new URL(ENDPOINT, window.location.href).href;
+        const result = loadExportPage(url, url);
+        const rejected = expect(result).rejects.toThrow('The export request timed out.');
+
+        await vi.advanceTimersByTimeAsync(29_999);
+        const signal = fetchMock.mock.calls[0][1].signal;
+        expect(signal.aborted).toBe(false);
+        await vi.advanceTimersByTimeAsync(1);
+        await rejected;
+        expect(signal.aborted).toBe(true);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('bounds both requests when loading a linked export', async () => {
+        globalThis.jsdom.reconfigure({ url: `http://localhost/exports/?export=${ID}` });
+        fetchMock.mockImplementation(() => new Promise(() => {}));
+        const initialized = init({ endpoint: ENDPOINT });
+
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(root.querySelector('#export-history').getAttribute('aria-busy')).toBe('true');
+        await vi.advanceTimersByTimeAsync(1);
+        await initialized;
+        expect(fetchMock.mock.calls.every(([, options]) => options.signal.aborted)).toBe(true);
+        expect(root.querySelector('#export-history').getAttribute('aria-busy')).toBe('false');
+        expect(root.querySelector('#export-message').textContent).toContain('timed out');
+        expect(vi.getTimerCount()).toBe(1);
+    });
+
+    it('bounds rate-limit failures on the linked export even while the history succeeds', async () => {
+        globalThis.jsdom.reconfigure({ url: `http://localhost/exports/?export=${ID}` });
+        const linkedUrl = `http://localhost${ENDPOINT}${ID}/`;
+        fetchMock.mockImplementation(url => Promise.resolve(url === linkedUrl
+            ? { ok: false, status: 429, json: async () => ({ detail: 'Too many requests.' }) }
+            : exportResponse({ results: [job()], previous: null, next: null })));
+
+        await init({ endpoint: ENDPOINT });
+        for (const [index, delay] of [5000, 10_000, 20_000, 30_000].entries()) {
+            await vi.advanceTimersByTimeAsync(delay - 1);
+            expect(fetchMock).toHaveBeenCalledTimes((index + 1) * 2);
+            await vi.advanceTimersByTimeAsync(1);
+            expect(fetchMock).toHaveBeenCalledTimes((index + 2) * 2);
+        }
+
+        expect(root.querySelector('#export-message').textContent).toContain('Reload this page or try again.');
+        expect(root.querySelectorAll('[data-export-id]')).toHaveLength(1);
+        expect(root.querySelector('#export-history').textContent).toContain('Queued');
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(fetchMock).toHaveBeenCalledTimes(10);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it.each([403, 404])('stops polling a linked export after terminal HTTP %s while history remains active', async status => {
+        globalThis.jsdom.reconfigure({ url: `http://localhost/exports/?export=${ID}` });
+        const linkedUrl = `http://localhost${ENDPOINT}${ID}/`;
+        fetchMock.mockImplementation(url => Promise.resolve(url === linkedUrl
+            ? { ok: false, status, json: async () => ({ detail: 'This export is inaccessible.' }) }
+            : exportResponse({ results: [job()], previous: null, next: null })));
+
+        await init({ endpoint: ENDPOINT });
+        for (let index = 0; index < 3; index += 1) {
+            await vi.advanceTimersByTimeAsync(5000);
+        }
+
+        expect(fetchMock.mock.calls.filter(([url]) => url === linkedUrl)).toHaveLength(1);
+        expect(fetchMock.mock.calls.filter(([url]) => url !== linkedUrl)).toHaveLength(4);
+        expect(root.querySelector('#export-message').textContent).toBe(status === 404
+            ? 'This export could not be found.' : 'This export is inaccessible.');
+        expect(root.querySelectorAll('[data-export-id]')).toHaveLength(1);
+    });
+
+    it('cleans up the deadline and parent listener on success or cancellation', async () => {
+        const url = new URL(ENDPOINT, window.location.href).href;
+        const controller = new AbortController();
+        const removeListener = vi.spyOn(controller.signal, 'removeEventListener');
+        fetchMock.mockResolvedValueOnce(exportResponse({ results: [] }));
+        await loadExportPage(url, url, { signal: controller.signal });
+        expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function));
+        expect(vi.getTimerCount()).toBe(0);
+
+        fetchMock.mockImplementation(() => new Promise(() => {}));
+        const result = loadExportPage(url, url, { signal: controller.signal });
+        const rejected = expect(result).rejects.toMatchObject({ name: 'AbortError' });
+        await vi.advanceTimersByTimeAsync(0);
+        controller.abort();
+        await rejected;
+        expect(fetchMock.mock.calls[1][1].signal.aborted).toBe(true);
+        expect(removeListener).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('cancels a hidden page request without scheduling a retry', async () => {
+        fetchMock.mockImplementation(() => new Promise(() => {}));
+        const initialized = init({ endpoint: ENDPOINT });
+        await vi.advanceTimersByTimeAsync(0);
+        window.dispatchEvent(new Event('pagehide'));
+        await initialized;
+        expect(root.querySelector('#export-message').textContent).toBe('');
+        expect(root.querySelector('#export-history').getAttribute('aria-busy')).toBe('false');
+        expect(vi.getTimerCount()).toBe(0);
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('times out a submission without automatically repeating the POST', async () => {
+        fetchMock.mockImplementation((url, options) => options.method === 'POST'
+            ? new Promise(() => {})
+            : Promise.resolve(exportResponse({ results: [], previous: null, next: null })));
+        await init({ endpoint: ENDPOINT });
+        root.querySelector('form').requestSubmit();
+        await vi.advanceTimersByTimeAsync(30_000);
+
+        expect(root.querySelector('#export-message').textContent).toContain('timed out');
+        expect(root.querySelector('#export-create').disabled).toBe(false);
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(fetchMock.mock.calls.filter(([, options]) => options.method === 'POST')).toHaveLength(1);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('starts a fresh refresh budget after an explicit export submission', async () => {
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'));
+        await init({ endpoint: ENDPOINT });
+        for (const delay of [5000, 10_000, 20_000, 30_000]) {
+            await vi.advanceTimersByTimeAsync(delay);
+        }
+        expect(root.querySelector('#export-create').disabled).toBe(false);
+        fetchMock.mockClear().mockImplementation((url, options) => options.method === 'POST'
+            ? Promise.resolve(exportResponse(job())) : Promise.reject(new Error('Still unavailable.')));
+
+        root.querySelector('form').requestSubmit();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(root.querySelector('#export-message').textContent).toBe('Still unavailable.');
+        expect(fetchMock.mock.calls.filter(([, options]) => !options.method)).toHaveLength(2);
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(fetchMock.mock.calls.filter(([, options]) => !options.method)).toHaveLength(4);
+        expect(fetchMock.mock.calls.filter(([, options]) => options.method === 'POST')).toHaveLength(1);
+    });
+
+    it('starts a fresh refresh budget after explicit pagination', async () => {
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'))
+            .mockResolvedValueOnce(exportResponse({ results: [], previous: null, next: `${ENDPOINT}?page=2` }));
+        await init({ endpoint: ENDPOINT });
+        root.querySelector('#export-next').click();
+        await vi.advanceTimersByTimeAsync(0);
+        for (const delay of [5000, 10_000, 20_000, 30_000]) {
+            await vi.advanceTimersByTimeAsync(delay);
+        }
+        expect(root.querySelector('#export-message').textContent).toContain('Reload this page');
+        fetchMock.mockClear();
+        root.querySelector('#export-next').click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(root.querySelector('#export-message').textContent).toBe('Exports unavailable.');
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        fetchMock.mockResolvedValue(exportResponse({ results: [], previous: null, next: null }));
+        root.querySelector('#export-next').click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(root.querySelector('#export-message').textContent).toBe('');
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('removes expired downloads after network retries are exhausted', async () => {
+        const expiresAt = NOW + 70_000;
+        fetchMock.mockRejectedValue(new Error('Exports unavailable.'))
+            .mockResolvedValueOnce(exportResponse({
+                results: [job({ state: 'ready', artifact: { expires_at: new Date(expiresAt).toISOString() } })],
+                previous: null,
+                next: `${ENDPOINT}?page=2`,
+            }));
+        await init({ endpoint: ENDPOINT });
+        root.querySelector('#export-next').click();
+        await vi.advanceTimersByTimeAsync(0);
+        for (const delay of [5000, 10_000, 20_000, 30_000]) {
+            await vi.advanceTimersByTimeAsync(delay);
+        }
+        expect(fetchMock).toHaveBeenCalledTimes(6);
+        expect(root.querySelector('[data-export-id]')).not.toBeNull();
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(root.querySelector('[data-export-id]')).toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(6);
+        expect(vi.getTimerCount()).toBe(0);
     });
 });

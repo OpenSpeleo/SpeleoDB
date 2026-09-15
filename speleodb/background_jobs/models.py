@@ -88,6 +88,7 @@ class JobAttempt(models.Model):
     state = models.CharField(max_length=20, choices=JobState, default=JobState.QUEUED)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     dispatched_at = models.DateTimeField(null=True, blank=True)
+    dispatch_started_at = models.DateTimeField(null=True, blank=True)
     dispatch_after = models.DateTimeField(default=timezone.now)
     started_at = models.DateTimeField(null=True, blank=True)
     deadline_at = models.DateTimeField(null=True, blank=True)
@@ -96,6 +97,10 @@ class JobAttempt(models.Model):
     object_key = models.CharField(max_length=500, blank=True)
     object_version = models.CharField(max_length=1024, blank=True)
     object_deleted_at = models.DateTimeField(null=True, blank=True)
+    cleanup_attempts = models.PositiveSmallIntegerField(default=0)
+    cleanup_due_at = models.DateTimeField(null=True, blank=True)
+    cleanup_error = models.TextField(blank=True)
+    cleanup_token = models.UUIDField(null=True, editable=False)
 
     class Meta:
         ordering = ["number"]

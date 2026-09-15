@@ -67,8 +67,9 @@ logger = logging.getLogger(__name__)
 # conservative — the data can never change for a given key.
 _GEOJSON_CACHE_TIMEOUT: int = 60 * 60 * 24
 _GEOJSON_CACHE_LOCK_TIMEOUT: int = 60
-_GEOJSON_CACHE_LOCK_RETRIES: int = 50
+_GEOJSON_CACHE_LOCK_RETRIES: int = 7
 _GEOJSON_CACHE_LOCK_WAIT_SECONDS: float = 0.1
+_GEOJSON_CACHE_LOCK_MAX_WAIT_SECONDS: float = 1.0
 
 # Hard upper bound on the orjson-serialised feature list we are willing
 # to cache, in bytes. Memcached's default ``-I`` flag is 1 MiB; Redis is
@@ -219,11 +220,13 @@ def _load_normalized_features(commit_sha: str) -> list[dict[str, Any]]:
         finally:
             cache.delete(lock_key)
 
+    delay: float = _GEOJSON_CACHE_LOCK_WAIT_SECONDS
     for _ in range(_GEOJSON_CACHE_LOCK_RETRIES):
-        time.sleep(_GEOJSON_CACHE_LOCK_WAIT_SECONDS)
+        time.sleep(delay)
         cached = cache.get(cache_key)
         if cached is not None:
             return cached  # type: ignore[no-any-return]
+        delay = min(delay * 2, _GEOJSON_CACHE_LOCK_MAX_WAIT_SECONDS)
 
     # If the filling worker died, serve the request rather than hanging.
     features = _read_normalized_features_from_storage(commit_sha)

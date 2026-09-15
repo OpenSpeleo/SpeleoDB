@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
+import signal
+import subprocess
 import tempfile
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
 
 import ffmpeg
+from django.conf import settings
 from django.core.files.base import ContentFile
 from PIL import Image
 from PIL import ImageDraw
@@ -57,13 +62,37 @@ class VideoProcessor:
                     vcodec="mjpeg",
                     **{"q:v": 2},
                 )
-                stdout, stderr = ffmpeg.run(
-                    stream,
-                    capture_stdout=True,
-                    capture_stderr=True,
-                )
-            except ffmpeg.Error as e:
+                # Files avoid a descendant holding a capture pipe open forever.
+                with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+                    process = subprocess.Popen(  # noqa: S603
+                        ffmpeg.compile(stream),
+                        stdin=subprocess.DEVNULL,
+                        stdout=out,
+                        stderr=err,
+                        start_new_session=True,
+                    )
+                    try:
+                        process.wait(timeout=settings.VIDEO_PROCESSING_TIMEOUT_SECONDS)
+                    finally:
+                        with contextlib.suppress(ProcessLookupError):
+                            os.killpg(process.pid, signal.SIGKILL)
+                        process.wait(
+                            timeout=settings.VIDEO_PROCESSING_CLEANUP_TIMEOUT_SECONDS
+                        )
+                    out.seek(0)
+                    err.seek(0)
+                    stdout: bytes = out.read()
+                    stderr: bytes = err.read()
+            except (ffmpeg.Error, subprocess.TimeoutExpired) as e:
                 raise RuntimeError("Error extracting the thumbnail with ffmpeg") from e
+
+            if process.returncode:
+                failure = ffmpeg.Error(  # type: ignore[no-untyped-call]
+                    "ffmpeg", stdout, stderr
+                )
+                raise RuntimeError(
+                    "Error extracting the thumbnail with ffmpeg"
+                ) from failure
 
             if not frame_path.exists():
                 raise FileNotFoundError(

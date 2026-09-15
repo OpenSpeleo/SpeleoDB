@@ -292,16 +292,21 @@ def test_unverified_email_retries_without_regenerating(user: User) -> None:
 
 def test_notification_attempts_are_bounded_and_manual_resend_is_independent(
     user: User,
+    settings: Settings,
 ) -> None:
     job, attempt = _running(user)
     assert _publish(attempt)
     artifact: JobArtifact = JobArtifact.objects.get(job=job)
-    for number in range(1, 6):
+    for number in range(1, settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS + 1):
         BackgroundJob.objects.filter(pk=job.pk).update(
             notification_due_at=timezone.now() - timedelta(seconds=1)
         )
         result: dict[str, str] = send_export_notification.run(str(job.pk))
-        assert result["notification"] == ("failed" if number == 5 else "pending")  # noqa: PLR2004
+        assert result["notification"] == (
+            "failed"
+            if number == settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS
+            else "pending"
+        )
     job.refresh_from_db()
     assert job.state == JobState.READY
     assert job.notification_due_at is None
@@ -391,6 +396,7 @@ def test_lost_notification_lease_is_recoverable(user: User) -> None:
     token: uuid.UUID = uuid.uuid4()
     BackgroundJob.objects.filter(pk=job.pk).update(
         notification_state="sending",
+        notification_attempts=1,
         notification_token=token,
         notification_due_at=timezone.now() + timedelta(minutes=1),
     )
@@ -406,12 +412,20 @@ def test_lost_notification_lease_is_recoverable(user: User) -> None:
     job.refresh_from_db()
     assert job.notification_state == "pending"
     assert job.notification_token is None
+    assert job.notification_due_at is not None
+    assert job.notification_due_at > timezone.now()
+    assert send_export_notification.run(str(job.pk))["notification"] == "ignored"
+    BackgroundJob.objects.filter(pk=job.pk).update(
+        notification_due_at=timezone.now() - timedelta(seconds=1)
+    )
     assert send_export_notification.run(str(job.pk))["notification"] == "sent"
     assert len(mail.outbox) == 1
     assert job.attempts.count() == 1
 
 
-def test_lost_final_notification_lease_requires_manual_retry(user: User) -> None:
+def test_lost_final_notification_lease_requires_manual_retry(
+    user: User, settings: Settings
+) -> None:
     job, attempt = _running(user)
     assert _publish(attempt)
     EmailAddress.objects.create(
@@ -421,7 +435,7 @@ def test_lost_final_notification_lease_requires_manual_retry(user: User) -> None
     expiry = artifact.expires_at
     BackgroundJob.objects.filter(pk=job.pk).update(
         notification_state="sending",
-        notification_attempts=5,
+        notification_attempts=settings.EXPORTS_MAX_NOTIFICATION_ATTEMPTS,
         notification_token=uuid.uuid4(),
         notification_due_at=timezone.now() - timedelta(seconds=1),
     )

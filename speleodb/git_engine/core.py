@@ -9,6 +9,7 @@ import datetime
 import logging
 import os
 import pathlib
+import tempfile
 import time
 from abc import ABCMeta
 from abc import abstractmethod
@@ -33,6 +34,7 @@ from git.exc import InvalidGitRepositoryError
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.exceptions import GitPathNotFoundError
+from speleodb.git_engine.operations import BoundedGit
 from speleodb.git_engine.operations import retry_git_operation
 from speleodb.utils.helpers import retry_with_backoff
 
@@ -536,6 +538,8 @@ class GitHead(HEAD):
 
 
 class GitRepo(Repo):
+    GitCommandWrapperType: type[git.Git] = BoundedGit
+
     def __repr__(self) -> str:
         """:return: String with pythonic representation of our object"""
         return f"<{self.__class__.__name__}: {pathlib.Path(self.git_dir).parent}>"
@@ -598,7 +602,7 @@ class GitRepo(Repo):
     @property  # type: ignore[misc]
     def description(self) -> str | None:  # type: ignore[override]
         try:
-            return self.description
+            return super().description
         except OSError:
             return None
 
@@ -744,6 +748,46 @@ class GitRepo(Repo):
     def checkout_commit(self, hexsha: str) -> None:
         self._checkout_branch_or_commit_and_maybe_pull(hexsha=hexsha)
 
+    def _commit_project(self, message: str, *, author: git.Actor) -> GitCommit:
+        # IndexFile.commit starts hooks outside the Git command wrapper. The CLI
+        # keeps hooks inside the same deadline and process group as the commit.
+        original_head: str | None = (
+            self.head.commit.hexsha if self.head.is_valid() else None
+        )
+        try:
+            with (
+                tempfile.TemporaryFile() as message_file,
+                self.git.custom_environment(
+                    GIT_AUTHOR_NAME=author.name,
+                    GIT_AUTHOR_EMAIL=author.email,
+                    GIT_COMMITTER_NAME=GIT_COMMITTER.name,
+                    GIT_COMMITTER_EMAIL=GIT_COMMITTER.email,
+                ),
+            ):
+                # -m adds a newline; verbatim stdin preserves stored messages,
+                # including the exact automated-first-commit marker.
+                message_file.write(message.encode("utf-8"))
+                message_file.seek(0)
+                self.git.commit(
+                    "--allow-empty",
+                    "--allow-empty-message",
+                    "--cleanup=verbatim",
+                    "--file=-",
+                    istream=message_file,
+                )
+        except GitCommandError:
+            current_head: str | None = (
+                self.head.commit.hexsha if self.head.is_valid() else None
+            )
+            if current_head is not None and current_head != original_head:
+                # A post-commit hook can fail after the commit exists. Retrying
+                # would create duplicate commits rather than repair that hook.
+                raise GitBaseError(
+                    f"Commit {current_head} was created, but its hook failed"
+                ) from None
+            raise
+        return self.head.commit
+
     def commit_and_push_project(
         self,
         message: str,
@@ -754,6 +798,7 @@ class GitRepo(Repo):
         _retry_kwargs: dict[str, Any] = {
             "retries": settings.DJANGO_GIT_RETRY_ATTEMPTS,
             "exc_types": (GitCommandError,),
+            "max_delay": settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS,
         }
 
         # Add every file pending
@@ -764,10 +809,9 @@ class GitRepo(Repo):
             author = git.Actor(author_name, author_email)
 
             commit = retry_with_backoff(
-                self.index.commit,
+                self._commit_project,
                 message,
                 author=author,
-                committer=GIT_COMMITTER,
                 **_retry_kwargs,
             )
 

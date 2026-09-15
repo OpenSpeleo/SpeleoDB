@@ -135,7 +135,7 @@ def gitlab_response(
 
 
 class ProjectCreationFailureTests(TestCase):
-    """Exercise the real python-gitlab retry and HTTP error mapping."""
+    """Exercise bounded retries through the SDK's real HTTP error mapping."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -162,7 +162,9 @@ class ProjectCreationFailureTests(TestCase):
         self.clone: MagicMock = self.enterContext(
             patch.object(GitRepo, "clone_from", return_value=self.repo)
         )
-        self.sleep: MagicMock = self.enterContext(patch("gitlab.utils.time.sleep"))
+        self.sleep: MagicMock = self.enterContext(
+            patch("speleodb.utils.gitlab_client.time.sleep")
+        )
 
     def create_or_clone(self) -> GitRepo | None:
         return GitlabManager.create_or_clone_project(self.project, self.base_dir)
@@ -192,7 +194,7 @@ class ProjectCreationFailureTests(TestCase):
                 self.sleep.assert_called_once()
         self.clone.assert_not_called()
 
-    def test_rate_limit_honors_retry_after(self) -> None:
+    def test_rate_limit_uses_application_delay_instead_of_retry_after(self) -> None:
         with patch.object(
             self.client.session,
             "send",
@@ -204,8 +206,44 @@ class ProjectCreationFailureTests(TestCase):
             ],
         ):
             assert self.create_or_clone() is self.repo
-        self.sleep.assert_called_once_with(3)
+        self.sleep.assert_called_once_with(1.0)
         self.clone.assert_not_called()
+
+    def test_rate_limit_headers_cannot_extend_the_create_retry_budget(self) -> None:
+        for headers in (
+            {"Retry-After": "3600"},
+            {"RateLimit-Reset": "999999999999"},
+            {"Retry-After": "not-a-number"},
+            {"RateLimit-Reset": "not-a-number"},
+            {"Retry-After": "Wed, 21 Oct 2099 07:28:00 GMT"},
+            {"Retry-After": "-1"},
+        ):
+            response = gitlab_response(
+                HTTPStatus.TOO_MANY_REQUESTS, "original rate limit failure"
+            )
+            response.headers.update(headers)
+            self.sleep.reset_mock()
+            with (
+                self.subTest(headers=headers),
+                patch.object(
+                    self.client.session, "send", return_value=response
+                ) as send,
+                pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
+            ):
+                self.create_or_clone()
+
+            assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
+            assert [call.args[0] for call in self.sleep.call_args_list] == [
+                1.0,
+                2.0,
+                4.0,
+                8.0,
+            ]
+            assert raised.value.response_code == HTTPStatus.TOO_MANY_REQUESTS
+            assert raised.value.error_message == "original rate limit failure"
+            assert raised.value.response_body == response.content
+        self.clone.assert_not_called()
+        self.init.assert_not_called()
 
     def test_create_timeout_recovers(self) -> None:
         with patch.object(
@@ -241,6 +279,10 @@ class ProjectCreationFailureTests(TestCase):
                 self.create_or_clone()
             assert raised.value.response_code == status
             assert "original create failure" in str(raised.value)
+            assert (
+                raised.value.response_body
+                == json.dumps({"message": "original create failure"}).encode()
+            )
             expected_attempts: int = (
                 1
                 if status == HTTPStatus.FORBIDDEN

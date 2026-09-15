@@ -1,4 +1,7 @@
 const POLL_INTERVAL_MS = 5000;
+const MAX_REFRESH_FAILURES = 5;
+const MAX_RETRY_DELAY_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 const ACTIVE_STATES = new Set(['queued', 'running', 'retry_wait']);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,13 +92,41 @@ async function responseData(response) {
     return data;
 }
 
+/** Bound the full request, including JSON reads, and propagate page cancellation. */
+async function fetchExportData(url, options = {}) {
+    const controller = new AbortController();
+    const cancel = () => controller.abort(options.signal.reason);
+    let rejectAborted;
+    const aborted = new Promise((_, reject) => { rejectAborted = reject; });
+    const onAbort = () => rejectAborted(controller.signal.reason);
+    controller.signal.addEventListener('abort', onAbort, { once: true });
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    const timeout = window.setTimeout(() => {
+        controller.abort(new Error('The export request timed out. Please try again.'));
+    }, REQUEST_TIMEOUT_MS);
+    try {
+        if (options.signal?.aborted) cancel();
+        return await Promise.race([
+            aborted,
+            Promise.resolve().then(() => {
+                controller.signal.throwIfAborted();
+                return fetch(url, { ...options, signal: controller.signal }).then(responseData);
+            }),
+        ]);
+    } finally {
+        window.clearTimeout(timeout);
+        options.signal?.removeEventListener('abort', cancel);
+        controller.signal.removeEventListener('abort', onAbort);
+    }
+}
+
 /** Expiry can remove the last row of a later page; fall back once to page one. */
 export async function loadExportPage(url, firstPageUrl, options) {
     try {
-        return { url, data: await fetch(url, options).then(responseData) };
+        return { url, data: await fetchExportData(url, options) };
     } catch (error) {
         if (error.status !== 404 || url === firstPageUrl) throw error;
-        return { url: firstPageUrl, data: await fetch(firstPageUrl, options).then(responseData) };
+        return { url: firstPageUrl, data: await fetchExportData(firstPageUrl, options) };
     }
 }
 
@@ -253,6 +284,8 @@ export async function init(context) {
     let pageActive = true;
     let timer = null;
     let requestController = null;
+    let refreshFailures = 0;
+    let retryAfter = null;
 
     function safePageUrl(value) {
         if (!value) return null;
@@ -283,16 +316,43 @@ export async function init(context) {
         timer = null;
     }
 
+    function resetRefreshFailures({ clearMessage = false } = {}) {
+        if (clearMessage) message.textContent = '';
+        refreshFailures = 0;
+        retryAfter = null;
+    }
+
+    function recordRefreshFailure(errorMessage) {
+        refreshFailures += 1;
+        retryAfter = Date.now() + Math.min(
+            MAX_RETRY_DELAY_MS, POLL_INTERVAL_MS * 2 ** (refreshFailures - 1),
+        );
+        const exhausted = refreshFailures >= MAX_REFRESH_FAILURES;
+        active = !exhausted || mergeExportJobs(jobs, linkedJob).some(job => ACTIVE_STATES.has(job.state));
+        message.textContent = exhausted
+            ? 'Unable to refresh exports after several attempts. Reload this page or try again.'
+            : errorMessage;
+    }
+
     function schedule() {
         stopPolling();
         const now = Date.now();
         redraw(now);
         if (!mutationPending && pageActive && !document.hidden) {
-            const delay = exportRefreshDelay(mergeExportJobs(jobs, linkedJob, now), active, now);
+            const visibleJobs = mergeExportJobs(jobs, linkedJob, now);
+            const exhausted = refreshFailures >= MAX_REFRESH_FAILURES;
+            let delay = exportRefreshDelay(visibleJobs, refreshFailures ? false : active, now);
+            if (refreshFailures && !exhausted) {
+                delay = Math.min(delay ?? Infinity, Math.max(1, retryAfter - now));
+            }
             if (delay !== null) {
                 timer = window.setTimeout(() => {
                     // Remove newly expired cards before waiting for the network.
                     redraw();
+                    if (exhausted || (refreshFailures && Date.now() < retryAfter)) {
+                        schedule();
+                        return;
+                    }
                     void refresh();
                 }, delay);
             }
@@ -300,6 +360,7 @@ export async function init(context) {
     }
 
     async function refresh() {
+        if (!pageActive || document.hidden || refreshFailures >= MAX_REFRESH_FAILURES) return;
         stopPolling();
         requestController?.abort();
         const controller = new AbortController();
@@ -309,9 +370,10 @@ export async function init(context) {
             const options = { credentials: 'same-origin', signal: controller.signal };
             const [pageResult, linkedResult] = await Promise.allSettled([
                 loadExportPage(currentUrl, endpoint.href, options),
-                linkedId ? fetch(`${endpoint.href}${linkedId}/`, options).then(responseData) : Promise.resolve(null),
+                linkedId ? fetchExportData(`${endpoint.href}${linkedId}/`, options) : Promise.resolve(null),
             ]);
             if (controller.signal.aborted) return;
+            if (refreshFailures) message.textContent = '';
             let failedLoad = false;
             if (pageResult.status === 'fulfilled') {
                 const { url, data } = pageResult.value;
@@ -330,21 +392,28 @@ export async function init(context) {
                 message.textContent = linkedResult.reason.status === 404
                     ? 'This export could not be found.'
                     : linkedResult.reason.message;
-                failedLoad ||= !linkedResult.reason.status || linkedResult.reason.status >= 500;
+                if ([403, 404].includes(linkedResult.reason.status)) {
+                    // Missing or inaccessible links cannot recover by polling.
+                    linkedId = null;
+                    focusLinkedExport = false;
+                } else {
+                    failedLoad = true;
+                }
             }
             const visibleJobs = mergeExportJobs(jobs, linkedJob);
             if (linkedJob && !visibleJobs.some(job => String(job.id).toLowerCase() === linkedId.toLowerCase())) {
                 message.textContent = 'This export has expired. Generate a new export.';
             }
-            active = failedLoad || visibleJobs.some(job => ACTIVE_STATES.has(job.state));
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                message.textContent = error.message;
-                // Also retry the initial load, when no job states are known yet.
-                active = true;
+            if (failedLoad) recordRefreshFailure(message.textContent);
+            else {
+                resetRefreshFailures();
+                active = visibleJobs.some(job => ACTIVE_STATES.has(job.state));
             }
+        } catch (error) {
+            if (!controller.signal.aborted) recordRefreshFailure(error.message);
         } finally {
             if (requestController === controller) {
+                requestController = null;
                 history.setAttribute('aria-busy', 'false');
                 schedule();
             }
@@ -354,15 +423,19 @@ export async function init(context) {
     async function submit(url) {
         if (mutationPending) return;
         mutationPending = true;
+        resetRefreshFailures({ clearMessage: true });
         requestController?.abort();
+        const controller = new AbortController();
+        requestController = controller;
         stopPolling();
         redraw();
         try {
-            const requested = await fetch(url, {
+            const requested = await fetchExportData(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'X-CSRFToken': csrfToken, 'Accept': 'application/json' },
-            }).then(responseData);
+                signal: controller.signal,
+            });
             if (UUID_PATTERN.test(requested.id)) {
                 linkedId = requested.id;
                 linkedJob = requested;
@@ -374,8 +447,9 @@ export async function init(context) {
             message.textContent = 'Your export is queued. We will email you when it is ready.';
             currentUrl = endpoint.href;
         } catch (error) {
-            message.textContent = error.message;
+            if (!controller.signal.aborted) message.textContent = error.message;
         } finally {
+            if (requestController === controller) requestController = null;
             mutationPending = false;
             await refresh();
         }
@@ -392,14 +466,17 @@ export async function init(context) {
         }
     }
     function onPrevious() {
-        if (previousUrl) { currentUrl = previousUrl; void refresh(); }
+        if (previousUrl) { resetRefreshFailures({ clearMessage: true }); currentUrl = previousUrl; void refresh(); }
     }
     function onNext() {
-        if (nextUrl) { currentUrl = nextUrl; void refresh(); }
+        if (nextUrl) { resetRefreshFailures({ clearMessage: true }); currentUrl = nextUrl; void refresh(); }
     }
     function onVisibility() {
         stopPolling();
-        if (!document.hidden) void refresh();
+        if (!document.hidden) {
+            if (refreshFailures) schedule();
+            else void refresh();
+        }
     }
     function onPageHide() {
         pageActive = false;

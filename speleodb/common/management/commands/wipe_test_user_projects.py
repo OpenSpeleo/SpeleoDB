@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
@@ -15,6 +14,7 @@ from django.core.management.base import BaseCommand
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.users.models import User
+from speleodb.utils.confirmation import confirm_command
 
 if TYPE_CHECKING:
     import argparse
@@ -66,18 +66,10 @@ class Command(BaseCommand):
         logger.warning(f"\t- Gitlab Instance: {gl_creds.instance}")
 
         if not skip_user_confirmation:
-            while True:
-                confirmation = input(
-                    "Is this the correct group? (Y/N, default N): "
-                ).strip()
-
-                if confirmation.upper() == "Y":
-                    logger.info("Confirmed. Proceeding with the operation...")
-                    break
-
-                if confirmation.upper() == "N":
-                    logger.info("Operation canceled.")
-                    return
+            if not confirm_command("Is this the correct group? (Y/N, default N): "):
+                logger.info("Operation canceled.")
+                return
+            logger.info("Confirmed. Proceeding with the operation...")
 
         self.stdout.write("")  # Visual Spacing
 
@@ -108,4 +100,3 @@ class Command(BaseCommand):
                 gitproject.delete()  # Gitlab Delete
                 project.delete()  # Django Delete
                 print("Deleted!")  # noqa: T201
-                time.sleep(5)

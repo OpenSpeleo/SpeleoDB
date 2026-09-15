@@ -14,9 +14,15 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
+from unittest.mock import call
+from unittest.mock import patch
 
 import pytest
 
+from speleodb.background_jobs import archive_sources
+from speleodb.background_jobs import git_supervisor
+from speleodb.background_jobs.archive_sources import ArchiveBuildError
 from speleodb.background_jobs.git_supervisor import TIMEOUT_EXIT_CODE
 
 if TYPE_CHECKING:
@@ -59,6 +65,49 @@ os._exit(0)
 SUPERVISOR: Path = Path(__file__).parents[1] / "git_supervisor.py"
 WAIT_SECONDS: int = 15
 MIN_GIT_PROCESSES: int = 3
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("inf"), float("nan")])
+def test_supervisor_rejects_unbounded_deadline(timeout: float) -> None:
+    with (
+        patch("speleodb.background_jobs.git_supervisor.subprocess.Popen") as start,
+        pytest.raises(ValueError, match="finite and positive"),
+    ):
+        git_supervisor.supervise(parent_fd=-1, timeout=timeout, command=["git"])
+    start.assert_not_called()
+
+
+def test_group_cleanup_remains_bounded_after_kill() -> None:
+    process: MagicMock = MagicMock(pid=12345)
+    process.wait.side_effect = subprocess.TimeoutExpired("git", 5)
+    with (
+        patch("speleodb.background_jobs.git_supervisor.os.killpg") as kill_group,
+        pytest.raises(subprocess.TimeoutExpired),
+    ):
+        git_supervisor._terminate_group(process)  # noqa: SLF001
+    assert kill_group.call_args_list == [
+        call(process.pid, signal.SIGTERM),
+        call(process.pid, signal.SIGKILL),
+    ]
+    assert process.wait.call_args_list == [
+        call(timeout=git_supervisor.TERMINATE_SECONDS),
+        call(timeout=git_supervisor.TERMINATE_SECONDS),
+    ]
+
+
+def test_export_waits_for_full_supervisor_cleanup_then_bounds_reaping() -> None:
+    process: MagicMock = MagicMock()
+    process.wait.side_effect = subprocess.TimeoutExpired("supervisor", 5)
+    with pytest.raises(ArchiveBuildError, match="could not be stopped"):
+        archive_sources._stop_supervisor(process)  # noqa: SLF001
+    process.kill.assert_called_once_with()
+    assert process.wait.call_args_list == [
+        call(
+            timeout=2 * git_supervisor.TERMINATE_SECONDS
+            + 2 * archive_sources.GIT_POLL_SECONDS
+        ),
+        call(timeout=git_supervisor.TERMINATE_SECONDS),
+    ]
 
 
 @dataclass(frozen=True)

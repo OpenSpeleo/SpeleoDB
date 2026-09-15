@@ -29,3 +29,22 @@ environment; a running PostgreSQL container does not mean pytest uses it, and
 private test dotenv files may select SQLite. Record these limits before using
 local timings to assess CI behavior. Add a faulthandler stack dump when
 finalized logs contain no blocked-call evidence.
+
+The September 2026 stack confirmed python-gitlab sleeping on a server-directed
+retry delay. Always inspect SDK sleep behavior as well as request timeouts and
+retry counts: a finite count can still mean a multi-hour wait. Reject infinite
+retry sentinels, cap exponential backoff, and bound individual operations and
+post-kill cleanup. Check scheduler-level requeue paths too; resetting counters
+on each sweep recreates an infinite retry loop across otherwise finite tasks.
+
+When extending GitPython process ownership, narrow optional `AutoInterrupt.proc`
+before using/transferring it, and normalize command sequences to the exception
+constructor's declared type. Assert nullable current-attempt IDs before ORM
+lookups in regressions. Any untyped third-party constructor needs a narrowly
+scoped annotation; source review cannot establish that mypy passes when checks
+have not been run.
+
+Include new, unstaged files in direct lint/typecheck coverage: the hook's Git
+file inventory can omit them. For upstream runtime methods missing from stubs,
+document the stub gap instead of claiming a typed override. Mock read-only
+properties with `PropertyMock`, and keep setup outside `pytest.raises` blocks.

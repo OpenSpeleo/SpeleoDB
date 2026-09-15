@@ -15,8 +15,10 @@
       a test, then verify the CI pytest options inside Docker.
 - [x] Verify full-suite collection order and the effective local database
       engine.
-- [ ] Reproduce the exact next test against local PostgreSQL.
-- [ ] Record findings, proposed correction, and verification results.
+- [x] Identify the exact blocked call from the CI stack (supersedes the pending
+      local PostgreSQL reproduction, which the user instructed us not to run).
+- [x] Record findings and the bounded-retry correction; execution remains
+      paused.
 
 ## Evidence and scope
 
@@ -91,3 +93,18 @@ The user requested `-vvv -s` and explicitly instructed us to push without
 further tests. The workflow retains the 60-second stack dump and duration
 summary. No application retry behavior changed. Diagnosis continues from the
 next CI run's uncaptured output and stack evidence.
+
+## Confirmed diagnostic run
+
+Run `34997387739`, job `104476947867`, emitted a 60-second faulthandler dump at
+2026-09-15 16:52:14 UTC. The stack is in `gitlab/utils.py:138`,
+`handle_retry_on_status`, called by project creation in
+`test_upload_auto_compass_bundle_does_not_validate_mak_dat_references`.
+Exploration-lead execution and teardown had completed. The HTTP timeout and
+retry count did not bound the SDK's server-directed sleep. The exact response
+status and header value are not present in that dump.
+
+Implementation and source-review status are tracked in
+[bounded-retries.md](bounded-retries.md). No additional tests or hooks were run
+after the user's no-testing instruction. The earlier local results above do not
+validate the new retry changes.

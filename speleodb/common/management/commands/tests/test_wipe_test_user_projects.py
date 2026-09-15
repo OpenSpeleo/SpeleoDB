@@ -25,11 +25,6 @@ class TestWipeTestUserProjects(BaseProjectTestCaseMixin):
         self.client: MagicMock = MagicMock()
         self.enterContext(patch.object(GitlabManager, "_gl", self.client))
         self.enterContext(patch.object(GitlabManager, "_initialize"))
-        self.enterContext(
-            patch(
-                "speleodb.common.management.commands.wipe_test_user_projects.time.sleep"
-            )
-        )
 
     def _run_command(self) -> None:
         call_command(
@@ -91,3 +86,30 @@ class TestWipeTestUserProjects(BaseProjectTestCaseMixin):
             self._run_command()
 
         assert Project.objects.filter(id=self.project.id).exists()
+
+    def test_empty_or_invalid_confirmation_cancels_without_reprompting(self) -> None:
+        for answer in ("", "invalid", "N", "yes"):
+            with (
+                self.subTest(answer=answer),
+                patch("builtins.input", side_effect=[answer, "Y"]) as prompt,
+            ):
+                call_command("wipe_test_user_projects", user_email=self.user.email)
+
+                prompt.assert_called_once()
+                self.client.projects.get.assert_not_called()
+                assert Project.objects.filter(id=self.project.id).exists()
+
+    def test_closed_confirmation_input_cancels(self) -> None:
+        with patch("builtins.input", side_effect=EOFError):
+            call_command("wipe_test_user_projects", user_email=self.user.email)
+
+        self.client.projects.get.assert_not_called()
+        assert Project.objects.filter(id=self.project.id).exists()
+
+    def test_explicit_confirmation_runs_once(self) -> None:
+        with patch("builtins.input", return_value=" y ") as prompt:
+            call_command("wipe_test_user_projects", user_email=self.user.email)
+
+        prompt.assert_called_once()
+        self.client.projects.get.return_value.delete.assert_called_once_with()
+        assert not Project.objects.filter(id=self.project.id).exists()

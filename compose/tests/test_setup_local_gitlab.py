@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import json
 import sys
+from http import HTTPStatus
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import gitlab
+import pytest
 from gitlab.const import AccessLevel
+from requests import Response
 
+from compose.setup_local_gitlab import HTTP_TIMEOUT_SECONDS
 from compose.setup_local_gitlab import PythonGitLabClient
 from compose.setup_local_gitlab import initialize_env_file
 from compose.setup_local_gitlab import main
@@ -19,11 +25,10 @@ from compose.setup_local_gitlab import read_env_file
 from compose.setup_local_gitlab import resolve_gitlab_setup_url
 from compose.setup_local_gitlab import resolve_s3_custom_domain
 from compose.setup_local_gitlab import update_env_file
+from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 PRIVATE_ENV_MODE = 0o600
@@ -120,7 +125,9 @@ def test_python_gitlab_client_uses_resource_managers(
     admin.groups.create.return_value = group
     group_token_client = MagicMock()
     gitlab_factory = MagicMock(side_effect=[admin, group_token_client])
-    monkeypatch.setattr(gitlab, "Gitlab", gitlab_factory)
+    monkeypatch.setattr(
+        "compose.setup_local_gitlab.BoundedGitlabClient", gitlab_factory
+    )
 
     client = PythonGitLabClient(
         "http://localhost:9080/",
@@ -151,6 +158,13 @@ def test_python_gitlab_client_uses_resource_managers(
         retry_transient_errors=True,
         keep_base_url=True,
     )
+    gitlab_factory.assert_any_call(
+        "http://localhost:9080",
+        private_token="existing-group-token",
+        timeout=15,
+        retry_transient_errors=True,
+        keep_base_url=True,
+    )
     group_token_client.groups.get.assert_called_once_with("7")
     group_access_tokens.list.assert_called_once_with(iterator=True, state="active")
     group_access_tokens.delete.assert_called_once_with("11")
@@ -162,6 +176,51 @@ def test_python_gitlab_client_uses_resource_managers(
             "expires_at": None,
         }
     )
+
+
+@pytest.mark.parametrize(
+    ("status", "headers"),
+    [
+        (HTTPStatus.TOO_MANY_REQUESTS, {"Retry-After": "3600"}),
+        (HTTPStatus.TOO_MANY_REQUESTS, {"RateLimit-Reset": "999999999999"}),
+        (HTTPStatus.TOO_MANY_REQUESTS, {"Retry-After": "not-a-number"}),
+        (HTTPStatus.SERVICE_UNAVAILABLE, {}),
+    ],
+)
+def test_bootstrap_create_has_the_same_finite_retry_policy(
+    status: HTTPStatus, headers: dict[str, str]
+) -> None:
+    client = PythonGitLabClient("http://localhost:9080", "bootstrap-token")
+    assert isinstance(client.admin, BoundedGitlabClient)
+    response = Response()
+    response.status_code = status
+    response.reason = status.phrase
+    response.url = "http://localhost:9080/api/v4/groups"
+    response.headers.update({"Content-Type": "application/json", **headers})
+    response._content = json.dumps(  # noqa: SLF001
+        {"message": "original bootstrap create failure"}
+    ).encode()
+
+    try:
+        with (
+            patch("speleodb.utils.gitlab_client.time.sleep") as sleep,
+            patch.object(client.admin.session, "send", return_value=response) as send,
+            pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
+        ):
+            client.create_group("speleodb")
+
+        expected_delays = [1.0, 2.0, 4.0, 8.0]
+        assert send.call_count == len(expected_delays) + 1
+        assert [call.args[0] for call in sleep.call_args_list] == expected_delays
+        assert all(
+            call.kwargs["timeout"] == HTTP_TIMEOUT_SECONDS
+            for call in send.call_args_list
+        )
+        assert raised.value.response_code == status
+        assert raised.value.error_message == "original bootstrap create failure"
+        assert raised.value.response_body == response.content
+    finally:
+        client.admin.session.close()
 
 
 class FakeGitLabClient:

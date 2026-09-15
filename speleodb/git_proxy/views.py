@@ -70,7 +70,7 @@ UPSTREAM_MAX_RETRY_DELAY_SECONDS = 30
 
 def get_upstream_retry_delay(retry_after: str | None, attempt: int) -> float | None:
     """Honor short server delays; refuse a retry earlier than a long Retry-After."""
-    delay = float(2**attempt)
+    delay: float = min(float(2 ** min(attempt, 5)), UPSTREAM_MAX_RETRY_DELAY_SECONDS)
     if retry_after:
         try:
             requested_delay = float(retry_after)
@@ -92,16 +92,18 @@ def request_git_upstream(
     *, discovery: bool, method: str, **kwargs: Any
 ) -> requests.Response:
     """Retry only discovery GETs, before any upstream body is consumed."""
-    attempts = (
+    attempts: int = (
         settings.DJANGO_GIT_RETRY_ATTEMPTS if discovery and method == "GET" else 1
     )
+    if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts < 1:
+        raise ValueError("Git upstream attempts must be a positive integer")
+    delay: float = 1
     for attempt in range(attempts):
         try:
             response = requests.api.request(method=method, **kwargs)
         except RequestsConnectionError, Timeout:
             if attempt + 1 == attempts:
                 raise
-            delay = float(2**attempt)
         else:
             if (
                 response.status_code not in UPSTREAM_RETRY_STATUSES
@@ -114,8 +116,10 @@ def request_git_upstream(
             if retry_delay is None:
                 return response
             response.close()
-            delay = retry_delay
+            # A server hint can lengthen this retry, but cannot reset backoff.
+            delay = max(delay, retry_delay)
         time.sleep(delay)
+        delay = min(delay * 2, UPSTREAM_MAX_RETRY_DELAY_SECONDS)
     raise RuntimeError("Git upstream retry budget exhausted")
 
 
