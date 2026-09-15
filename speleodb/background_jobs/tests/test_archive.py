@@ -44,6 +44,7 @@ from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.git_engine.client import GitlabClient
 from speleodb.utils.s3_storages import GeoJSONStorage
 
 if TYPE_CHECKING:
@@ -156,13 +157,17 @@ def git_repository(tmp_path: Path) -> tuple[Path, str, str]:
 
 
 @pytest.fixture
-def gitlab_client() -> Generator[gitlab.Gitlab]:
-    client = gitlab.Gitlab(
+def gitlab_client() -> Generator[GitlabClient]:
+    client: GitlabClient = GitlabClient(
         f"{django_settings.GITLAB_HTTP_PROTOCOL}://{django_settings.GITLAB_HOST_URL}",
         private_token=django_settings.GITLAB_TOKEN,
-        timeout=30,
+        keep_base_url=django_settings.GITLAB_HTTP_PROTOCOL == "http",
     )
     try:
+        client.auth()
+        assert client.user is not None
+        group = client.groups.get(str(django_settings.GITLAB_GROUP_ID))
+        assert group.full_path == django_settings.GITLAB_GROUP_NAME
         yield client
     finally:
         client.session.close()

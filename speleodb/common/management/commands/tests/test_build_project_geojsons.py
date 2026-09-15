@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import pathlib
+import shutil
 import uuid
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
-from unittest.mock import MagicMock
-from unittest.mock import PropertyMock
-from unittest.mock import patch
 
 import pytest
 from django.core.management import call_command
@@ -29,6 +29,10 @@ from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
+
+if TYPE_CHECKING:
+    from speleodb.git_engine.core import GitRepo
+
 
 BASE_DIR = (
     pathlib.Path(__file__).parent.parent.parent.parent.parent
@@ -104,152 +108,141 @@ class TestBuildProjectGeoJSONCommand(TestCase):
                 ProjectType.ARIANE,
             )
 
-    @patch.object(Command, "_process_project")
-    def test_all_mode_processes_only_eligible_project_type(
-        self, mock_process_project: MagicMock
-    ) -> None:
-        compass_project = ProjectFactory.create(
+    def _seed_project(self, project: Project) -> str:
+        repo: GitRepo = project.git_repo
+        self.addCleanup(repo.close)
+        assert repo.head.is_valid()
+        return repo.head.commit.hexsha
+
+    def _run_successfully(self, *arguments: str) -> None:
+        # --all logs individual failures and continues. Merely returning or
+        # deleting the local copy must never make a failed GitLab test pass.
+        with self.assertLogs(Command.__module__, level="INFO") as logs:
+            call_command("build_project_geojsons", *arguments)
+        assert all(record.levelno < logging.ERROR for record in logs.records), (
+            logs.output
+        )
+
+    @pytest.mark.skip_if_lighttest
+    def test_all_mode_processes_only_eligible_project_type(self) -> None:
+        compass_project: Project = ProjectFactory.create(
             type=ProjectType.COMPASS,
             exclude_geojson=False,
         )
-        _ = ProjectFactory.create(
+        excluded: Project = ProjectFactory.create(
             type=ProjectType.COMPASS,
             exclude_geojson=True,
         )
+        self._seed_project(self.project)
+        self._seed_project(compass_project)
+        self._seed_project(excluded)
 
-        call_command(
-            "build_project_geojsons",
-            "--all",
-            "--project_type",
-            ProjectType.COMPASS,
+        self._run_successfully("--all", "--project_type", ProjectType.COMPASS)
+
+        assert not compass_project.git_repo_dir.exists()
+        assert self.project.git_repo_dir.is_dir()
+        assert excluded.git_repo_dir.is_dir()
+
+    @pytest.mark.skip_if_lighttest
+    def test_project_mode_processes_only_selected_project(self) -> None:
+        other: Project = ProjectFactory.create(
+            type=ProjectType.COMPASS, exclude_geojson=False
         )
+        self._seed_project(self.project)
+        other_sha: str = self._seed_project(other)
 
-        mock_process_project.assert_called_once_with(
-            compass_project,
-            force_recompute=False,
-        )
-
-    @patch.object(Command, "_process_project")
-    def test_project_mode_processes_only_selected_project(
-        self, mock_process_project: MagicMock
-    ) -> None:
-        _ = ProjectFactory.create(type=ProjectType.COMPASS, exclude_geojson=False)
-
-        call_command(
-            "build_project_geojsons",
+        self._run_successfully(
             "--project",
             str(self.project.id),
             "--fresh",
             "--force_recompute",
         )
 
-        mock_process_project.assert_called_once_with(
-            self.project,
-            force_recompute=True,
-            fresh=True,
+        assert not self.project.git_repo_dir.exists()
+        with other.git_repo as untouched:
+            assert untouched.head.commit.hexsha == other_sha
+
+    @pytest.mark.skip_if_lighttest
+    def test_all_mode_continues_after_project_failure(self) -> None:
+        self._seed_project(self.project)
+        broken: Project = ProjectFactory.create(
+            type=ProjectType.COMPASS, exclude_geojson=False
         )
+        # A nonempty invalid working copy provokes an actual filesystem error;
+        # GitRepo cannot replace it with a repository without losing local files.
+        broken.git_repo_dir.mkdir(parents=True)
+        (broken.git_repo_dir / "not-a-repository").touch()
 
-    @patch.object(Command, "_process_project")
-    def test_all_mode_continues_after_project_failure(
-        self, mock_process_project: MagicMock
-    ) -> None:
-        _ = ProjectFactory.create(type=ProjectType.COMPASS, exclude_geojson=False)
-        mock_process_project.side_effect = [RuntimeError("broken project"), None]
+        with self.assertLogs(Command.__module__, level="ERROR") as logs:
+            call_command("build_project_geojsons", "--all")
 
-        call_command("build_project_geojsons", "--all")
+        assert len(logs.records) == 1, logs.output
+        assert str(broken.id) in logs.records[0].getMessage()
+        assert logs.records[0].exc_info is not None
+        assert isinstance(logs.records[0].exc_info[1], OSError)
+        assert not broken.git_repo_dir.exists()
+        assert not self.project.git_repo_dir.exists()
 
-        assert mock_process_project.call_count == 2  # noqa: PLR2004
+    def test_project_mode_raises_after_project_failure(self) -> None:
+        self.project.git_repo_dir.mkdir(parents=True)
+        (self.project.git_repo_dir / "not-a-repository").touch()
 
-    @patch.object(Command, "_process_project", side_effect=RuntimeError("clone failed"))
-    def test_project_mode_raises_after_project_failure(
-        self, mock_process_project: MagicMock
-    ) -> None:
-        with pytest.raises(CommandError, match="Unable to build GeoJSON"):
-            call_command(
-                "build_project_geojsons",
-                "--project",
-                str(self.project.id),
-            )
+        with pytest.raises(CommandError, match="Unable to build GeoJSON") as raised:
+            call_command("build_project_geojsons", "--project", str(self.project.id))
 
-        mock_process_project.assert_called_once()
+        assert isinstance(raised.value.__cause__, OSError)
+        assert not self.project.git_repo_dir.exists()
 
+    @pytest.mark.skip_if_lighttest
     def test_fresh_removes_existing_copy_before_clone_and_after_processing(
         self,
     ) -> None:
-        command = Command()
-
+        initial_sha: str = self._seed_project(self.project)
+        shutil.rmtree(self.project.git_repo_dir)
+        command: Command = Command()
         for local_copy_exists in (False, True):
-            with (
-                self.subTest(local_copy_exists=local_copy_exists),
-                TemporaryDirectory() as tmp_dir,
-            ):
-                git_projects_dir = pathlib.Path(tmp_dir)
-                with override_settings(DJANGO_GIT_PROJECTS_DIR=git_projects_dir):
-                    git_repo_dir = self.project.git_repo_dir
-                    if local_copy_exists:
-                        git_repo_dir.mkdir(parents=True)
-                        (git_repo_dir / "stale-marker").touch()
+            with self.subTest(local_copy_exists=local_copy_exists):
+                if local_copy_exists:
+                    self.project.git_repo_dir.mkdir(parents=True)
+                    (self.project.git_repo_dir / "stale-marker").touch()
+                with self.assertLogs(Command.__module__, level="INFO") as logs:
+                    command._process_project(  # noqa: SLF001
+                        self.project,
+                        force_recompute=False,
+                        fresh=True,
+                    )
+                assert all(record.levelno < logging.ERROR for record in logs.records)
+                assert not self.project.git_repo_dir.exists()
+                # Actual remote history survives both fresh rebuilds.
+                with self.project.git_repo as restored:
+                    assert restored.head.commit.hexsha == initial_sha
+                shutil.rmtree(self.project.git_repo_dir)
 
-                    git_repo = MagicMock()
-                    git_repo.commits = []
-
-                    def clone_project(
-                        repo_dir: pathlib.Path = git_repo_dir,
-                        repo: MagicMock = git_repo,
-                    ) -> MagicMock:
-                        assert not repo_dir.exists()
-                        repo_dir.mkdir(parents=True)
-                        (repo_dir / "fresh-marker").touch()
-                        return repo
-
-                    with patch.object(
-                        Project,
-                        "git_repo",
-                        new_callable=PropertyMock,
-                        side_effect=clone_project,
-                    ) as mock_git_repo:
-                        command._process_project(  # noqa: SLF001
-                            self.project,
-                            force_recompute=False,
-                            fresh=True,
-                        )
-
-                    mock_git_repo.assert_called_once_with()
-                    assert not git_repo_dir.exists()
-
-    def test_remove_local_copy_surfaces_unexpected_failure(self) -> None:
+    def test_remove_local_copy_surfaces_unexpected_filesystem_failure(self) -> None:
         with (
-            patch(
-                "speleodb.common.management.commands.build_project_geojsons.shutil.rmtree",
-                side_effect=PermissionError("permission denied"),
-            ),
-            pytest.raises(PermissionError, match="permission denied"),
+            TemporaryDirectory() as directory,
+            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory)),
         ):
-            Command._remove_local_copy(self.project)  # noqa: SLF001
+            self.project.git_repo_dir.write_text("not a directory", encoding="utf-8")
+            with pytest.raises(NotADirectoryError):
+                Command._remove_local_copy(self.project)  # noqa: SLF001
+            assert self.project.git_repo_dir.read_text() == "not a directory"
 
     def test_fresh_removal_failure_prevents_repository_access(self) -> None:
-        command = Command()
-
         with (
-            patch.object(
-                command,
-                "_remove_local_copy",
-                side_effect=PermissionError("permission denied"),
-            ),
-            patch.object(
-                Project,
-                "git_repo",
-                new_callable=PropertyMock,
-            ) as mock_git_repo,
-            pytest.raises(PermissionError, match="permission denied"),
+            TemporaryDirectory() as directory,
+            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory)),
         ):
-            command._process_project(  # noqa: SLF001
-                self.project,
-                force_recompute=False,
-                fresh=True,
-            )
-
-        mock_git_repo.assert_not_called()
+            self.project.git_repo_dir.write_text("not a directory", encoding="utf-8")
+            with pytest.raises(NotADirectoryError):
+                Command()._process_project(  # noqa: SLF001
+                    self.project,
+                    force_recompute=False,
+                    fresh=True,
+                )
+            # Accessing Project.git_repo would unlink this file before retrying
+            # provisioning. Its survival proves processing stopped at removal.
+            assert self.project.git_repo_dir.read_text() == "not a directory"
 
 
 @pytest.mark.skip_if_lighttest

@@ -5,8 +5,6 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 from unittest import TestCase
-from unittest.mock import PropertyMock
-from unittest.mock import patch
 
 import git
 import pytest
@@ -14,11 +12,11 @@ from django.conf import settings
 from django.test import override_settings
 from git.exc import GitCommandError
 
+from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.processors.base import BaseFileProcessor
-from speleodb.surveys.models import Project
 
 
 class GitCheckoutTests(TestCase):
@@ -28,7 +26,13 @@ class GitCheckoutTests(TestCase):
         super().setUp()
         self.root: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.branch: str = "configured-main"
-        self.enterContext(override_settings(DJANGO_GIT_BRANCH_NAME=self.branch))
+        self.enterContext(
+            override_settings(
+                DJANGO_GIT_BRANCH_NAME=self.branch,
+                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
+                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
+            )
+        )
         self.actor: git.Actor = git.Actor("Test Author", "test@example.invalid")
         self.remote: git.Repo = git.Repo.init(
             self.root / "remote.git", bare=True, initial_branch=self.branch
@@ -67,13 +71,11 @@ class GitCheckoutTests(TestCase):
         self.addCleanup(repo.close)
         repo.create_remote("origin", str(self.remote.git_dir))
 
-        with (
-            patch.object(git.Remote, "pull", side_effect=AssertionError("empty pull")),
-            patch.object(
-                git.Remote, "fetch", side_effect=AssertionError("empty fetch")
-            ),
-        ):
-            repo.publish_first_commit()
+        # A nonexistent fetch URL proves publication never fetches or pulls.
+        # Git has a separate push URL, pointing at the real bare repository.
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        repo.remotes.origin.set_url(str(self.remote.git_dir), push=True)
+        repo.publish_first_commit()
 
         self._assert_published_initial_commit(repo)
 
@@ -81,13 +83,11 @@ class GitCheckoutTests(TestCase):
         repo: GitRepo = self._clone()
         assert not repo.head.is_valid()
 
-        with (
-            patch.object(git.Remote, "pull", side_effect=AssertionError("empty pull")),
-            patch.object(
-                git.Remote, "fetch", side_effect=AssertionError("empty fetch")
-            ),
-        ):
-            repo.publish_first_commit()
+        # A nonexistent fetch URL proves publication never fetches or pulls.
+        # Git has a separate push URL, pointing at the real bare repository.
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        repo.remotes.origin.set_url(str(self.remote.git_dir), push=True)
+        repo.publish_first_commit()
 
         self._assert_published_initial_commit(repo)
 
@@ -106,16 +106,11 @@ class GitCheckoutTests(TestCase):
         self.addCleanup(repo.close)
         repo.create_remote("origin", str(self.remote.git_dir))
 
-        with (
-            patch.object(
-                git.Git,
-                "push",
-                create=True,
-                side_effect=GitCommandError("push", 128, stderr="503 unavailable"),
-            ),
-            patch("speleodb.utils.helpers.time", autospec=True),
-            pytest.raises(GitBaseError),
-        ):
+        hook: Path = Path(self.remote.git_dir) / "hooks" / "pre-receive"
+        hook.write_text("#!/bin/sh\necho 'publication rejected' >&2\nexit 1\n")
+        hook.chmod(0o755)
+
+        with pytest.raises(GitBaseError, match="publication rejected"):
             repo.publish_first_commit()
 
         assert repo.head.is_valid()
@@ -192,15 +187,8 @@ class GitCheckoutTests(TestCase):
         readme: Path = repo.path / "README.txt"
         readme.write_text("uncommitted changes", encoding="utf-8")
 
-        with (
-            patch.object(
-                git.Remote, "pull", side_effect=AssertionError("unexpected pull")
-            ),
-            patch.object(
-                git.Remote, "fetch", side_effect=AssertionError("unexpected fetch")
-            ),
-            pytest.raises(GitCommandError),
-        ):
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        with pytest.raises(GitCommandError, match="would be overwritten"):
             repo.checkout_default_branch_and_pull()
 
         assert repo.head.is_detached
@@ -214,15 +202,8 @@ class GitCheckoutTests(TestCase):
         readme: Path = repo.path / "README.txt"
         readme.write_text("uncommitted changes", encoding="utf-8")
 
-        with (
-            patch.object(
-                git.Remote, "pull", side_effect=AssertionError("unexpected pull")
-            ),
-            patch.object(
-                git.Remote, "fetch", side_effect=AssertionError("unexpected fetch")
-            ),
-            pytest.raises(GitCommandError),
-        ):
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        with pytest.raises(GitCommandError, match="would be overwritten"):
             repo.checkout_commit(original_sha)
 
         assert repo.active_branch.name == self.branch
@@ -234,15 +215,8 @@ class GitCheckoutTests(TestCase):
         self._push_revision("latest version")
         repo: GitRepo = self._clone()
 
-        with (
-            patch.object(
-                git.Remote, "pull", side_effect=AssertionError("unexpected pull")
-            ),
-            patch.object(
-                git.Remote, "fetch", side_effect=AssertionError("unexpected fetch")
-            ),
-        ):
-            repo.checkout_commit(original_sha)
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        repo.checkout_commit(original_sha)
 
         assert repo.head.is_detached
         assert repo.head.commit.hexsha == original_sha
@@ -257,99 +231,15 @@ class GitCheckoutTests(TestCase):
         assert repo.head.is_detached
         assert repo.head.commit.hexsha == latest_sha
 
-    def test_latest_download_restores_default_branch_and_pulls_updates(self) -> None:
-        original_sha: str = self._push_revision("first version")
-        repo: GitRepo = self._clone()
-        repo.checkout_commit(original_sha)
-        latest_sha: str = self._push_revision("latest version")
-        repo.remotes.origin.set_url(str(self.root / "missing.git"))
-        processor: BaseFileProcessor = BaseFileProcessor(Project(name="Test"))
-        processor.TARGET_SAVE_FILENAME = "README.txt"
-        target: Path = self.root / "download.txt"
-
-        with (
-            patch.object(
-                Project, "git_repo", new_callable=PropertyMock, return_value=repo
-            ),
-            patch.object(
-                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
-            ),
-        ):
-            filename: str = processor.get_filename_for_download(target)
-
-        assert filename == target.name
-        assert target.read_text(encoding="utf-8") == "latest version"
-        assert repo.active_branch.name == self.branch
-        assert repo.head.commit.hexsha == latest_sha
-        assert repo.remotes.origin.url == str(self.remote.git_dir)
-
-    def test_commit_download_fetches_missing_objects_without_moving_head(self) -> None:
-        original_sha: str = self._push_revision("first version")
-        repo: GitRepo = self._clone()
-        repo.checkout_commit(original_sha)
-        latest_sha: str = self._push_revision("latest version")
-        invalid_origin: str = str(self.root / "missing.git")
-        repo.remotes.origin.set_url(invalid_origin)
-        processor: BaseFileProcessor = BaseFileProcessor(Project(name="Test"))
-        processor.TARGET_SAVE_FILENAME = "README.txt"
-        target: Path = self.root / "download.txt"
-
-        with (
-            patch.object(
-                Project, "git_repo", new_callable=PropertyMock, return_value=repo
-            ),
-            patch.object(
-                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
-            ),
-        ):
-            filename: str = processor.get_filename_for_download(
-                target, hexsha=latest_sha
-            )
-
-        assert filename == target.name
-        assert target.read_text(encoding="utf-8") == "latest version"
-        assert repo.head.is_detached
-        assert repo.head.commit.hexsha == original_sha
-        assert (repo.path / "README.txt").read_text(encoding="utf-8") == "first version"
-        assert repo.remotes.origin.url == str(self.remote.git_dir)
-
-        # The fetched commit is now local: another download needs neither
-        # remote configuration repair nor a network request.
-        repo.remotes.origin.set_url(invalid_origin)
-        with (
-            patch.object(
-                Project, "git_repo", new_callable=PropertyMock, return_value=repo
-            ),
-            patch.object(Project, "ensure_git_origin") as repair,
-            patch.object(
-                GitRepo, "fetch", side_effect=AssertionError("unexpected fetch")
-            ),
-            patch.object(
-                GitRepo, "pull", side_effect=AssertionError("unexpected pull")
-            ),
-        ):
-            processor.get_filename_for_download(target, hexsha=latest_sha)
-
-        repair.assert_not_called()
-        assert target.read_text(encoding="utf-8") == "latest version"
-        assert repo.remotes.origin.url == invalid_origin
-        assert repo.head.is_detached
-        assert repo.head.commit.hexsha == original_sha
-
     def test_pull_outage_preserves_existing_branch_and_files(self) -> None:
         original_sha: str = self._push_revision("first version")
         repo: GitRepo = self._clone()
         sentinel: Path = repo.path / "local-work.txt"
         sentinel.write_text("keep me", encoding="utf-8")
 
-        with (
-            patch.object(
-                git.Remote,
-                "pull",
-                side_effect=GitCommandError("pull", 128, stderr="503 unavailable"),
-            ),
-            patch("speleodb.utils.helpers.time", autospec=True),
-            pytest.raises(GitBaseError),
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        with pytest.raises(
+            GitBaseError, match="does not appear to be a git repository"
         ):
             repo.checkout_default_branch_and_pull()
 
@@ -365,14 +255,9 @@ class GitCheckoutTests(TestCase):
         sentinel: Path = repo.path / "local-work.txt"
         sentinel.write_text("keep me", encoding="utf-8")
 
-        with (
-            patch.object(
-                git.Remote,
-                "fetch",
-                side_effect=GitCommandError("fetch", 128, stderr="503 unavailable"),
-            ),
-            patch("speleodb.utils.helpers.time", autospec=True),
-            pytest.raises(GitBaseError),
+        repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        with pytest.raises(
+            GitBaseError, match="does not appear to be a git repository"
         ):
             repo.checkout_default_branch_and_pull()
 
@@ -380,3 +265,73 @@ class GitCheckoutTests(TestCase):
         assert repo.head.commit.hexsha == original_sha
         assert self.branch not in repo.heads
         assert sentinel.read_text(encoding="utf-8") == "keep me"
+
+
+@pytest.mark.skip_if_lighttest
+class GitDownloadCheckoutTests(BaseProjectTestCaseMixin):
+    """Download through the actual project property and configured GitLab."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.root: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.repo: GitRepo = self.project.git_repo
+        self.addCleanup(self.repo.close)
+        self.seed: GitRepo = GitRepo.clone_from(
+            GitlabCredentials.get().project_url(self.project.id),
+            self.root / "seed",
+            branch=settings.DJANGO_GIT_BRANCH_NAME,
+        )
+        self.addCleanup(self.seed.close)
+        self.original_sha: str = self._push_revision("first version")
+        self.repo.checkout_commit(self.original_sha)
+        self.latest_sha: str = self._push_revision("latest version")
+        self.processor: BaseFileProcessor = BaseFileProcessor(self.project)
+        self.processor.TARGET_SAVE_FILENAME = "README.txt"
+        self.target: Path = self.root / "download.txt"
+        self.invalid_origin: str = str(self.root / "missing.git")
+        self.repo.remotes.origin.set_url(self.invalid_origin)
+
+    def _push_revision(self, content: str) -> str:
+        (self.seed.path / "README.txt").write_text(content, encoding="utf-8")
+        result: str | None = self.seed.commit_and_push_project(
+            message=content, author_name=self.user.name, author_email=self.user.email
+        )
+        assert result is not None
+        return result
+
+    def test_latest_download_restores_default_branch_and_pulls_updates(self) -> None:
+        filename: str = self.processor.get_filename_for_download(self.target)
+
+        assert filename == self.target.name
+        assert self.target.read_text(encoding="utf-8") == "latest version"
+        assert self.repo.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
+        assert self.repo.head.commit.hexsha == self.latest_sha
+        assert self.repo.remotes.origin.url == GitlabCredentials.get().project_url(
+            self.project.id
+        )
+
+    def test_commit_download_fetches_missing_objects_without_moving_head(self) -> None:
+        filename: str = self.processor.get_filename_for_download(
+            self.target, hexsha=self.latest_sha
+        )
+
+        assert filename == self.target.name
+        assert self.target.read_text(encoding="utf-8") == "latest version"
+        assert self.repo.head.is_detached
+        assert self.repo.head.commit.hexsha == self.original_sha
+        assert (self.repo.path / "README.txt").read_text(encoding="utf-8") == (
+            "first version"
+        )
+        assert self.repo.remotes.origin.url == GitlabCredentials.get().project_url(
+            self.project.id
+        )
+
+        # A cached commit can be downloaded with an unreachable remote. The
+        # unchanged origin also proves no repair was attempted on this path.
+        self.repo.remotes.origin.set_url(self.invalid_origin)
+        self.processor.get_filename_for_download(self.target, hexsha=self.latest_sha)
+
+        assert self.target.read_text(encoding="utf-8") == "latest version"
+        assert self.repo.remotes.origin.url == self.invalid_origin
+        assert self.repo.head.is_detached
+        assert self.repo.head.commit.hexsha == self.original_sha

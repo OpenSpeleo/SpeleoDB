@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+
+persist_directory() {
+    local source="$1" destination="$2"
+    if [[ -L "$source" ]]; then
+        [[ "$(readlink "$source")" == "$destination" ]]
+        return
+    fi
+    if [[ ! -d "$destination" ]]; then
+        mkdir -p "$destination"
+        cp -a "$source/." "$destination/"
+    fi
+    # This is the image's ephemeral directory; persistent state is above.
+    rm -rf "$source"
+    ln -s "$destination" "$source"
+}
+
+cleanup_runtime_files() {
+    # Upstream's find does not follow our volume symlink. Use its exact bounded
+    # PID/socket selection with -H so an interrupted shutdown can recover too.
+    find -H "$1" -maxdepth 4 \
+        \( -type f -o -type s \) \
+        \( -name pid -o -name '*.pid' -o -name 'socket.?' \) -delete
+}
+
+main() {
+    # Railway provides one volume for configuration secrets, logs and data.
+    if [[ "${RAILWAY_VOLUME_MOUNT_PATH:-}" != /data ]]; then
+        echo "GitLab requires its Railway persistent volume mounted at /data." >&2
+        exit 1
+    fi
+
+    persist_directory /etc/gitlab /data/config
+    persist_directory /var/log/gitlab /data/logs
+    persist_directory /var/opt/gitlab /data/gitlab
+    cleanup_runtime_files /var/opt/gitlab
+    exec /assets/init-container "$@"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

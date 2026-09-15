@@ -1,5 +1,39 @@
 # Task reviews
 
+## CI GitLab quotas and real upload verification
+
+GitLab acquisition now looks up existing projects before creating them, and
+upload error cleanup opens only an existing working tree. Tests require the
+intended Git/GitLab/storage/database failure and verify persisted transaction
+results. Real frontend uploads reach Django and the configured storage service.
+These changes remove redundant creation traffic and prevent unrelated GitLab
+outages from satisfying error-path assertions.
+
+An always-on GitLab CE service is deployed at `https://gitlab-test.speleodb.org`
+in Railway's isolated `test` environment. Authenticated API access, HTTPS
+push/fresh clone, and actual bounded 429 responses were verified. Its database,
+repositories, and configuration share a 5 GB persistent volume. Signup is
+disabled, test project/group creation quotas are disabled, and deleted test data
+has one-day retention. The administrative bootstrap token was revoked and
+removed; CI uses the user-owned `github CI` token in group `github-ci`. GitHub
+secret-update timestamps were verified, but secret plaintext is unavailable and
+no effective Actions run has been verified.
+
+Final deployment `3debd5be-5a0b-4299-af87-e00e6b0ad39a` reached `SUCCESS` at
+21:38:47 UTC. Root login and the private repository persisted; a fresh HTTPS
+clone after restart matched the original SHA and file bytes. Temporary
+verification credentials were revoked and the smoke project scheduled for
+deletion; the user-owned CI token remains active.
+
+Targeted integration groups passed, but full-suite validation remains open. The
+local pytest run stalled at about 77% with four failures and one error and is
+being interrupted for diagnosis and targeted reruns. Do not report the full
+suite as passing.
+
+See [the task review](todos/ci-gitlab-rate-limit.md),
+[the test design](../docs/ci-gitlab-testing.md), and
+[the Railway deployment](../docs/gitlab-test-railway.md).
+
 ## Post-commit timeout test isolation
 
 The hook timeout test's sleep mock intercepted Python subprocess polling via the

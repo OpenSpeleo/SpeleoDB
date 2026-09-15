@@ -3,32 +3,27 @@
 from __future__ import annotations
 
 import pathlib
-import tempfile
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from typing import TYPE_CHECKING
 
-import git
 import pytest
 from django.conf import settings
-from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 from git.exc import GitCommandError
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
+from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v2.tests.base_testcase import PermissionType
-from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
-from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
-from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.users.tests.factories import UserFactory
-from speleodb.utils.exceptions import ProjectNotFound
+
+if TYPE_CHECKING:
+    from speleodb.git_engine.core import GitRepo
+
 
 TEST_FILE = (
     pathlib.Path(__file__).parent.parent.parent
@@ -127,7 +122,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
 
         # Upload file to create commits
         with TEST_FILE.open(mode="rb") as file_data:
-            _ = self.client.put(
+            response = self.client.put(
                 reverse(
                     "api:v2:project-upload",
                     kwargs={
@@ -140,12 +135,15 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
             )
 
-        # Verify at least one commit exists with parent tracking
-        commit = ProjectCommit.objects.filter(project=self.project).first()
-        assert commit is not None
-        # Parent count could be 0 (root) or more
-        # Just verify the parent_ids relationship is accessible
-        _ = len(commit.parent_ids)
+        assert response.status_code == status.HTTP_200_OK
+        commit: ProjectCommit = ProjectCommit.objects.get(
+            project=self.project, message="Test commit"
+        )
+        git_repo: GitRepo = self.project.git_repo
+        assert commit.parent_ids == [
+            parent.hexsha for parent in git_repo.commit(commit.id).parents
+        ]
+        assert len(commit.parent_ids) == 1
 
     def test_construct_git_history_tree_populated(self) -> None:
         """Test that tree field is populated with git ls-tree data."""
@@ -154,7 +152,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         self.project.acquire_mutex(self.user)
 
         with TEST_FILE.open(mode="rb") as file_data:
-            self.client.put(
+            response = self.client.put(
                 reverse(
                     "api:v2:project-upload",
                     kwargs={
@@ -167,19 +165,14 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
             )
 
+        assert response.status_code == status.HTTP_200_OK
         commit = ProjectCommit.objects.get(project=self.project, message="Test commit")
 
         # Verify tree is populated
-        assert commit.tree is not None
         assert isinstance(commit.tree, list)
-
-        # Verify tree entries have correct structure
-        if len(commit.tree) > 0:
-            entry = commit.tree[0]
-            assert "mode" in entry
-            assert "type" in entry
-            assert "object" in entry
-            assert "path" in entry
+        assert commit.tree
+        for entry in commit.tree:
+            assert {"mode", "type", "object", "path"} <= entry.keys()
 
     def test_construct_git_history_idempotency(self) -> None:
         """Test that running construct_git_history twice doesn't create duplicates."""
@@ -189,7 +182,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
 
         # Upload file
         with TEST_FILE.open(mode="rb") as file_data:
-            self.client.put(
+            response = self.client.put(
                 reverse(
                     "api:v2:project-upload",
                     kwargs={
@@ -202,6 +195,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
             )
 
+        assert response.status_code == status.HTTP_200_OK
         # Count commits
         initial_count = ProjectCommit.objects.filter(project=self.project).count()
 
@@ -214,150 +208,87 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         assert initial_count == final_count
 
 
-class TestCheckoutCommitOrDefaultBranch(TestCase):
-    """Test suite for checkout_commit_or_default_branch() method."""
-
-    @patch("speleodb.surveys.models.project.Project.git_repo", new_callable=MagicMock)
-    @patch("speleodb.surveys.models.project.Project.construct_git_history_from_project")
-    def test_checkout_default_branch_calls_construct_history(
-        self, mock_construct: MagicMock, mock_git_repo: MagicMock
-    ) -> None:
-        """Test that checkout without hexsha calls
-        construct_git_history_from_project."""
-
-        user = UserFactory.create()
-        project = ProjectFactory.create(created_by=user.email)
-
-        # Create a mock repo
-        mock_repo_instance = MagicMock()
-        mock_git_repo.__get__ = MagicMock(return_value=mock_repo_instance)
-
-        # Call checkout without hexsha
-        project.checkout_commit_or_default_pull_branch()
-
-        # Verify construct_git_history_from_project was called
-        mock_construct.assert_called_once()
-        # Verify checkout_default_branch_and_pull was called
-        mock_repo_instance.checkout_default_branch_and_pull.assert_called_once()
-
-    @patch("speleodb.surveys.models.project.Project.git_repo", new_callable=MagicMock)
-    @patch("speleodb.surveys.models.project.Project.construct_git_history_from_project")
-    def test_checkout_specific_commit_calls_construct_history(
-        self, mock_construct: MagicMock, mock_git_repo: MagicMock
-    ) -> None:
-        """Test that checkout with hexsha calls construct_git_history_from_project."""
-
-        user = UserFactory.create()
-        project = ProjectFactory.create(created_by=user.email)
-
-        # Create a mock repo
-        mock_repo_instance = MagicMock()
-        mock_git_repo.__get__ = MagicMock(return_value=mock_repo_instance)
-
-        test_sha = "a" * 40
-
-        # Call checkout with hexsha
-        project.checkout_commit_or_default_pull_branch(hexsha=test_sha)
-
-        # Verify construct_git_history_from_project was called
-        mock_construct.assert_called_once()
-        # Verify checkout_commit was called with the SHA
-        mock_repo_instance.checkout_commit.assert_called_once_with(hexsha=test_sha)
-
-    @patch("speleodb.surveys.models.project.Project.git_repo", new_callable=MagicMock)
-    def test_checkout_raises_when_no_git_repo(self, mock_git_repo: MagicMock) -> None:
-        """Test that checkout raises ProjectNotFound when git_repo is None."""
-
-        user = UserFactory.create()
-        project = ProjectFactory.create(created_by=user.email)
-
-        # Make git_repo return None
-        mock_git_repo.__get__ = MagicMock(return_value=None)
-
-        with pytest.raises(ProjectNotFound):
-            project.checkout_commit_or_default_pull_branch()
-
-
-class TestProjectCheckoutPreservesWorktree(TestCase):
-    """Transport failures must not destroy the project's existing working copy."""
+@pytest.mark.skip_if_lighttest
+class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
+    """Assert checkout results and SQL reconstruction using real GitLab."""
 
     def setUp(self) -> None:
         super().setUp()
-        self.root: pathlib.Path = pathlib.Path(
-            self.enterContext(tempfile.TemporaryDirectory())
-        )
-        self.enterContext(
-            override_settings(DJANGO_GIT_PROJECTS_DIR=self.root / "working")
-        )
-        self.project: Project = ProjectFactory.create()
-        self.remote: git.Repo = git.Repo.init(
-            self.root / "remote.git",
-            bare=True,
-            initial_branch=settings.DJANGO_GIT_BRANCH_NAME,
-        )
-        self.repo: GitRepo = GitRepo.init(self.project.git_repo_dir)
-        self.addCleanup(self.remote.close)
+        self.repo: GitRepo = self.project.git_repo
         self.addCleanup(self.repo.close)
-        self.repo.git.symbolic_ref(
-            "HEAD", f"refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}"
+        self.original_sha: str = self.repo.head.commit.hexsha
+        (self.repo.path / "README.txt").write_text("latest version", encoding="utf-8")
+        latest_sha: str | None = self.repo.commit_and_push_project(
+            "Latest revision", author_name=self.user.name, author_email=self.user.email
         )
-        readme: pathlib.Path = self.repo.path / "README.txt"
-        readme.write_text("initial", encoding="utf-8")
-        self.repo.index.add(["README.txt"])
-        actor: git.Actor = git.Actor("Test Author", "test@example.invalid")
-        self.repo.index.commit("initial", author=actor, committer=actor)
-        self.repo.create_remote("origin", str(self.remote.git_dir))
-        self.repo.git.push("origin", self.repo.active_branch.name)
-        self.sentinel: pathlib.Path = self.repo.path / "local-work.txt"
-        self.sentinel.write_text("keep me", encoding="utf-8")
-        self.enterContext(
-            patch.object(
-                GitlabCredentials, "project_url", return_value=str(self.remote.git_dir)
+        assert latest_sha is not None
+        self.latest_sha: str = latest_sha
+        assert not ProjectCommit.objects.filter(project=self.project).exists()
+
+    def test_checkout_default_branch_constructs_history(self) -> None:
+        self.repo.checkout_commit(self.original_sha)
+
+        self.project.checkout_commit_or_default_pull_branch()
+
+        assert self.repo.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
+        assert self.repo.head.commit.hexsha == self.latest_sha
+        assert set(
+            ProjectCommit.objects.filter(project=self.project).values_list(
+                "id", flat=True
             )
-        )
+        ) == {self.original_sha, self.latest_sha}
+
+    def test_checkout_specific_commit_constructs_history(self) -> None:
+        self.project.checkout_commit_or_default_pull_branch(hexsha=self.original_sha)
+
+        assert self.repo.head.is_detached
+        assert self.repo.head.commit.hexsha == self.original_sha
+        assert list(
+            ProjectCommit.objects.filter(project=self.project).values_list(
+                "id", flat=True
+            )
+        ) == [self.original_sha]
+
+    def test_missing_commit_preserves_head_and_does_not_construct_history(self) -> None:
+        with pytest.raises(GitCommandError, match="reference is not a tree"):
+            self.project.checkout_commit_or_default_pull_branch(hexsha="0" * 40)
+
+        assert self.repo.head.commit.hexsha == self.latest_sha
+        assert not ProjectCommit.objects.filter(project=self.project).exists()
 
     def test_checkout_failure_preserves_working_copy_and_skips_reconstruction(
         self,
     ) -> None:
-        for hexsha in (None, self.repo.head.commit.hexsha):
-            operation: str = (
-                "checkout_default_branch_and_pull"
-                if hexsha is None
-                else "checkout_commit"
+        readme: pathlib.Path = self.repo.path / "README.txt"
+        readme.write_text("uncommitted changes", encoding="utf-8")
+        with pytest.raises(GitCommandError, match="would be overwritten"):
+            self.project.checkout_commit_or_default_pull_branch(
+                hexsha=self.original_sha
             )
-            for error in (
-                GitBaseError("upstream unavailable"),
-                GitCommandError("checkout", 128),
-            ):
-                with (
-                    self.subTest(hexsha=hexsha, error=type(error).__name__),
-                    patch.object(GitRepo, operation, side_effect=error),
-                    patch.object(GitlabManager, "create_or_clone_project") as clone,
-                    patch.object(
-                        Project, "construct_git_history_from_project"
-                    ) as construct,
-                    pytest.raises(type(error)),
-                ):
-                    self.project.checkout_commit_or_default_pull_branch(hexsha=hexsha)
-                clone.assert_not_called()
-                construct.assert_not_called()
-                assert self.sentinel.read_text(encoding="utf-8") == "keep me"
-                assert (self.repo.path / ".git" / "HEAD").exists()
 
-    def test_wrong_origin_is_repaired_in_place(self) -> None:
-        original_sha: str = self.repo.head.commit.hexsha
-        self.repo.remotes.origin.set_url("https://invalid.example/nonexistent.git")
+        assert readme.read_text(encoding="utf-8") == "uncommitted changes"
+        assert self.repo.head.commit.hexsha == self.latest_sha
+        assert not ProjectCommit.objects.filter(project=self.project).exists()
 
-        with patch.object(GitlabManager, "create_or_clone_project") as clone:
+    def test_transport_failure_preserves_working_copy_and_skips_reconstruction(
+        self,
+    ) -> None:
+        sentinel: pathlib.Path = self.repo.path / "local-work.txt"
+        sentinel.write_text("keep me", encoding="utf-8")
+        # Git itself refuses the transport through its actual repository config.
+        self.repo.git.config(f"protocol.{settings.GITLAB_HTTP_PROTOCOL}.allow", "never")
+        with (
+            override_settings(
+                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
+                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
+            ),
+            pytest.raises(GitBaseError, match="not allowed"),
+        ):
             self.project.checkout_commit_or_default_pull_branch()
 
-        clone.assert_not_called()
-        assert self.repo.remotes.origin.url == str(self.remote.git_dir)
-        assert self.repo.head.commit.hexsha == original_sha
-        assert self.sentinel.read_text(encoding="utf-8") == "keep me"
-        assert ProjectCommit.objects.filter(
-            project=self.project, id=original_sha
-        ).exists()
+        assert sentinel.read_text(encoding="utf-8") == "keep me"
+        assert self.repo.head.commit.hexsha == self.latest_sha
+        assert not ProjectCommit.objects.filter(project=self.project).exists()
 
 
 @pytest.mark.skip_if_lighttest
@@ -408,10 +339,10 @@ class TestGitRepoRemoteConfigurationRepair(BaseAPIProjectTestCase):
             "set-url", "origin", "https://invalid.example.com/nonexistent.git"
         )
 
-        with patch.object(GitlabManager, "create_or_clone_project") as clone:
-            self.project.checkout_commit_or_default_pull_branch()
+        original_sha: str = git_repo.head.commit.hexsha
+        self.project.checkout_commit_or_default_pull_branch()
 
-        clone.assert_not_called()
+        assert git_repo.head.commit.hexsha == original_sha
         assert sentinel.read_text(encoding="utf-8") == "preserve local work"
         assert git_repo.remotes.origin.url == GitlabCredentials.get().project_url(
             self.project.id

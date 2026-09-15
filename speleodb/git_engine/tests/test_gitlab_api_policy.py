@@ -1,745 +1,293 @@
-# -*- coding: utf-8 -*-
+"""Check real GitLab responses and real unavailable-connection retry boundaries."""
 
 from __future__ import annotations
 
-import json
-import uuid
-from contextvars import Context
+import logging
+import socket
+import time
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 from typing import Any
-from unittest import TestCase
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from uuid import uuid4
 
 import gitlab.exceptions
 import pytest
 from django.conf import settings
-from requests import Response
-from requests.exceptions import ChunkedEncodingError
+from django.test import override_settings
 from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import Timeout
 
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.surveys.models import Project
+from speleodb.git_engine.tests.live_gitlab import (
+    configured_gitlab_fixture,  # noqa: F401
+)
+from speleodb.git_engine.tests.live_gitlab import (
+    disposable_project_fixture,  # noqa: F401
+)
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 
-API_URL = "https://gitlab.example"
-HTTP_TIMEOUT_SECONDS = 30
-PROJECT_NUMERIC_ID = 17
-TEST_GROUP = "test-group"
-TEST_TOKEN = uuid.uuid4().hex
-USER_COMMIT_SHA = "a" * 40
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from pathlib import Path
+
+    from gitlab import Gitlab
+    from requests import Response
+
+    from speleodb.surveys.models import Project
 
 
-def gitlab_response(status: HTTPStatus, payload: Any | None = None) -> Response:
-    """Build a requests response consumed by python-gitlab's real SDK paths."""
-    response = Response()
-    response.status_code = status
-    response.reason = status.phrase
-    response.url = f"{API_URL}/api/v4/projects"
-    response.headers["Content-Type"] = "application/json"
-    if isinstance(payload, list):
-        response.headers.update(
-            {
-                "X-Page": "1",
-                "X-Per-Page": str(max(len(payload), 1)),
-                "X-Next-Page": "",
-                "X-Total": str(len(payload)),
-                "X-Total-Pages": "1",
-            }
+@pytest.fixture
+def unavailable_gitlab_url() -> Generator[str]:
+    # Binding without listening reserves the port while the real OS rejects
+    # connections (or times out on macOS). The transport stays real.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unused_port:
+        unused_port.bind(("127.0.0.1", 0))
+        yield f"http://127.0.0.1:{unused_port.getsockname()[1]}"
+
+
+@pytest.mark.skip_if_lighttest
+def test_real_api_requests_carry_token_and_authenticated_identity(
+    live_gitlab: Gitlab,
+) -> None:
+    responses: list[Response] = []
+
+    def observe(response: Response, **kwargs: Any) -> None:
+        responses.append(response)
+
+    live_gitlab.session.hooks["response"].append(observe)
+    try:
+        identity = live_gitlab.http_get("/user")
+        group = live_gitlab.groups.get(str(settings.GITLAB_GROUP_ID))
+        assert live_gitlab.user is not None
+        assert isinstance(identity, dict)
+        assert identity["id"] == live_gitlab.user.id
+        assert group.full_path == settings.GITLAB_GROUP_NAME
+        assert responses
+        # Avoid putting credentials in pytest's assertion introspection output.
+        authenticated: bool = all(
+            response.request.headers.get("PRIVATE-TOKEN") == settings.GITLAB_TOKEN
+            for response in responses
         )
-    if payload is None:
-        payload = {"message": status.phrase} if status >= HTTPStatus.BAD_REQUEST else {}
-    response._content = json.dumps(payload).encode()  # noqa: SLF001
-    return response
-
-
-def project_payload(
-    project: Project,
-    numeric_id: int = PROJECT_NUMERIC_ID,
-) -> dict[str, Any]:
-    return {
-        "id": numeric_id,
-        "name": str(project.id),
-        "path": str(project.id),
-        "path_with_namespace": f"{TEST_GROUP}/{project.id}",
-    }
-
-
-def commit_payload() -> dict[str, Any]:
-    return {
-        "id": USER_COMMIT_SHA,
-        "message": "User commit",
-        "web_url": f"{API_URL}/{TEST_GROUP}/project/-/commit/{USER_COMMIT_SHA}",
-    }
-
-
-class GitlabClientPolicyTests(TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.client = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(self.client.session.close)
-        self.sleep: MagicMock = self.enterContext(
-            patch("speleodb.utils.gitlab_client.time.sleep")
+        assert authenticated, (
+            "Every real GitLab request must carry the configured token"
         )
+    finally:
+        live_gitlab.session.hooks["response"].remove(observe)
 
-    def test_get_and_head_retry_transient_failures_with_fixed_timeout(self) -> None:
-        for verb in ("GET", "HEAD"):
-            with (
-                self.subTest(verb=verb),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    side_effect=[
-                        gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                        gitlab_response(HTTPStatus.OK),
-                    ],
-                ) as send,
-            ):
-                self.sleep.reset_mock()
-                response = self.client.http_request(verb, "/version")
 
-                assert response.status_code == HTTPStatus.OK
-                assert send.call_count == 2  # noqa: PLR2004
-                assert all(
-                    request.kwargs["timeout"] == HTTP_TIMEOUT_SECONDS
-                    for request in send.call_args_list
-                )
-                self.sleep.assert_called_once()
+@pytest.mark.skip_if_lighttest
+def test_real_unauthorized_response_is_not_retried(live_gitlab: Gitlab) -> None:
+    client: GitlabClient = GitlabClient(
+        live_gitlab.url,
+        private_token=f"invalid-{uuid4()}",
+        keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
+    )
+    responses: list[Response] = []
 
-    def test_read_timeout_recovers_and_exhaustion_is_bounded(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                Timeout("temporary timeout"),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ) as send:
-            assert self.client.http_request("GET", "/version").ok
-            assert send.call_count == 2  # noqa: PLR2004
+    def observe(response: Response, **kwargs: Any) -> None:
+        responses.append(response)
 
-        self.sleep.reset_mock()
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                side_effect=Timeout("persistent timeout"),
-            ) as send,
-            pytest.raises(Timeout, match="persistent timeout"),
-        ):
-            self.client.http_request("GET", "/version")
+    client.session.hooks["response"].append(observe)
+    try:
+        with pytest.raises(gitlab.exceptions.GitlabAuthenticationError) as raised:
+            client.auth()
+        assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
+        assert len(responses) == 1
+        assert raised.value.response_body == responses[0].content
+    finally:
+        client.session.close()
 
-        assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
-        assert self.sleep.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS - 1
 
-    def test_writes_retry_only_with_explicit_opt_in(self) -> None:
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabHttpError),
-        ):
-            self.client.http_request("POST", "/projects", post_data={"name": "p"})
-        send.assert_called_once()
+@pytest.mark.skip_if_lighttest
+def test_real_missing_project_preserves_response_and_is_not_retried(
+    live_gitlab: Gitlab, live_project: Project
+) -> None:
+    responses: list[Response] = []
 
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                gitlab_response(HTTPStatus.CREATED),
-            ],
-        ) as send:
-            response = self.client.http_request(
-                "POST",
-                "/projects",
-                post_data={"name": "p"},
-                retry_transient_errors=True,
+    def observe(response: Response, **kwargs: Any) -> None:
+        responses.append(response)
+
+    live_gitlab.session.hooks["response"].append(observe)
+    try:
+        with pytest.raises(gitlab.exceptions.GitlabGetError) as raised:
+            live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{live_project.id}")
+        assert raised.value.response_code == HTTPStatus.NOT_FOUND
+        assert len(responses) == 1
+        assert raised.value.response_body == responses[0].content
+        assert raised.value.error_message == responses[0].json()["message"]
+    finally:
+        live_gitlab.session.hooks["response"].remove(observe)
+
+
+@pytest.mark.skip_if_lighttest
+def test_missing_project_is_not_cached_after_real_creation(
+    live_project: Project, tmp_path: Path
+) -> None:
+    assert GitlabManager.get_commit_history(live_project) is None
+    assert GitlabManager.get_last_commit_hash(live_project) is None
+    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
+    assert repository is not None
+    try:
+        history = GitlabManager.get_commit_history(live_project)
+        assert history is not None
+        assert [commit["id"] for commit in history] == [repository.head.commit.hexsha]
+        assert all("web_url" not in commit for commit in history)
+        assert GitlabManager.get_last_commit_hash(live_project) == (
+            repository.head.commit.hexsha
+        )
+    finally:
+        repository.close()
+
+
+@pytest.mark.skip_if_lighttest
+def test_real_missing_branch_recovers_after_branch_creation(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
+    assert repository is not None
+    try:
+        branch_name: str = f"integration-{uuid4()}"
+        with override_settings(DJANGO_GIT_BRANCH_NAME=branch_name):
+            assert GitlabManager.get_last_commit_hash(live_project) is None
+            remote = live_gitlab.projects.get(
+                f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
             )
+            remote.branches.create(
+                {"branch": branch_name, "ref": repository.head.commit.hexsha}
+            )
+            assert GitlabManager.get_last_commit_hash(live_project) == (
+                repository.head.commit.hexsha
+            )
+    finally:
+        repository.close()
 
-        assert response.status_code == HTTPStatus.CREATED
-        assert send.call_count == 2  # noqa: PLR2004
 
-    def test_resource_lock_conflicts_keep_the_sdk_transient_retry_policy(self) -> None:
-        for verb, explicit_retry in (("GET", None), ("HEAD", None), ("POST", True)):
-            locked: Response = gitlab_response(HTTPStatus.CONFLICT)
-            locked.reason = "Resource lock"
-            with (
-                self.subTest(verb=verb),
-                patch.object(
-                    self.client.session.get_adapter(API_URL),
-                    "send",
-                    side_effect=[locked, gitlab_response(HTTPStatus.OK)],
-                ) as send,
-            ):
-                self.sleep.reset_mock()
-                response: Response = self.client.http_request(
-                    verb, "/version", retry_transient_errors=explicit_retry
-                )
+@pytest.mark.skip_if_lighttest
+def test_failed_real_reauthentication_clears_project_cache(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
+    assert repository is not None
+    repository.close()
+    assert GitlabManager.get_commit_history(live_project)
+    assert GitlabManager._get_project.cache_info().currsize == 1  # noqa: SLF001
 
-            assert response.ok
-            assert send.call_count == 2  # noqa: PLR2004
-            self.sleep.assert_called_once_with(1.0)
+    with override_settings(GITLAB_TOKEN=f"invalid-{uuid4()}"):
+        GitlabCredentials.get.cache_clear()
+        try:
+            with pytest.raises(gitlab.exceptions.GitlabAuthenticationError) as raised:
+                GitlabManager._initialize()  # noqa: SLF001
+            assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
+            assert GitlabManager._gl is None  # noqa: SLF001
+            assert GitlabManager._get_project.cache_info().currsize == 0  # noqa: SLF001
+        finally:
+            GitlabCredentials.get.cache_clear()
+            GitlabManager._gl = live_gitlab  # noqa: SLF001
 
-    def test_resource_lock_classification_does_not_retry_other_conflicts(self) -> None:
-        for reason, verb, explicit_retry in (
-            ("Conflict", "GET", None),
-            ("Resource lock", "GET", False),
-            ("Resource lock", "POST", None),
-        ):
-            conflict: Response = gitlab_response(HTTPStatus.CONFLICT)
-            conflict.reason = reason
-            with (
-                self.subTest(reason=reason, verb=verb, retry=explicit_retry),
-                patch.object(
-                    self.client.session.get_adapter(API_URL),
-                    "send",
-                    return_value=conflict,
-                ) as send,
-                pytest.raises(gitlab.exceptions.GitlabHttpError) as raised,
-            ):
-                self.client.http_request(
-                    verb, "/version", retry_transient_errors=explicit_retry
-                )
 
-            assert raised.value.response_code == HTTPStatus.CONFLICT
-            send.assert_called_once()
-        self.sleep.assert_not_called()
-
-    def test_resource_lock_classification_is_reset_for_the_next_attempt(self) -> None:
-        locked: Response = gitlab_response(HTTPStatus.CONFLICT)
-        locked.reason = "Resource lock"
-        ordinary: Response = gitlab_response(HTTPStatus.CONFLICT)
+@pytest.mark.parametrize(
+    ("verb", "retry_transient_errors", "max_retries", "expected_attempts"),
+    [
+        ("GET", None, None, 3),
+        ("HEAD", None, None, 3),
+        ("GET", False, None, 1),
+        ("POST", None, None, 1),
+        ("POST", True, None, 3),
+        ("GET", None, 0, 1),
+        ("GET", None, 1, 2),
+        ("GET", None, 100, 3),
+    ],
+)
+def test_unavailable_connections_obey_read_write_and_retry_budgets(
+    *,
+    unavailable_gitlab_url: str,
+    caplog: pytest.LogCaptureFixture,
+    verb: str,
+    retry_transient_errors: bool | None,
+    max_retries: int | None,
+    expected_attempts: int,
+) -> None:
+    client = BoundedGitlabClient(
+        unavailable_gitlab_url,
+        private_token=f"unused-{uuid4()}",
+        max_attempts=3,
+        timeout=1,
+        base_delay=0.01,
+        max_delay=0.02,
+    )
+    started: float = time.monotonic()
+    try:
         with (
-            patch.object(
-                self.client.session.get_adapter(API_URL),
-                "send",
-                side_effect=[locked, ordinary],
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabHttpError) as raised,
+            caplog.at_level(logging.WARNING, logger="speleodb.utils.gitlab_client"),
+            pytest.raises(RequestsConnectionError),
         ):
-            self.client.http_request("GET", "/version")
-
-        assert raised.value.response_code == HTTPStatus.CONFLICT
-        assert send.call_count == 2  # noqa: PLR2004
-        self.sleep.assert_called_once_with(1.0)
-
-    def test_resource_lock_classification_is_isolated_between_contexts(self) -> None:
-        isolated: Context = Context()
-        locked: Response = gitlab_response(HTTPStatus.CONFLICT)
-        locked.reason = "Resource lock"
-
-        def interleave_request(response: Response, **kwargs: Any) -> None:
-            if response is locked:
-                with pytest.raises(gitlab.exceptions.GitlabHttpError) as raised:
-                    isolated.run(self.client.http_request, "GET", "/other-request")
-                assert raised.value.response_code == HTTPStatus.CONFLICT
-
-        self.client.session.hooks["response"].append(interleave_request)
-        with patch.object(
-            self.client.session.get_adapter(API_URL),
-            "send",
-            side_effect=[
-                locked,
-                gitlab_response(HTTPStatus.CONFLICT),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ) as send:
-            response: Response = self.client.http_request("GET", "/version")
-
-        assert response.ok
-        assert send.call_count == 3  # noqa: PLR2004
-        self.sleep.assert_called_once_with(1.0)
-
-    def test_retry_override_cannot_remove_or_expand_the_attempt_limit(self) -> None:
-        with (
-            patch.object(self.client.session, "send") as send,
-            pytest.raises(ValueError, match="max_retries"),
-        ):
-            self.client.http_request("GET", "/version", max_retries=-1)
-        send.assert_not_called()
-        self.sleep.assert_not_called()
-
-        for max_retries, expected_attempts in (
-            (0, 1),
-            (1, 2),
-            (1_000_000, settings.DJANGO_GIT_RETRY_ATTEMPTS),
-        ):
-            self.sleep.reset_mock()
-            with (
-                self.subTest(max_retries=max_retries),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                ) as send,
-                pytest.raises(gitlab.exceptions.GitlabHttpError),
-            ):
-                self.client.http_request("GET", "/version", max_retries=max_retries)
-            assert send.call_count == expected_attempts
-            assert self.sleep.call_count == expected_attempts - 1
-
-    def test_timeout_override_must_be_finite_and_positive(self) -> None:
-        for timeout in (float("inf"), float("-inf"), float("nan"), 0.0, -1.0):
-            with (
-                self.subTest(timeout=timeout),
-                patch.object(self.client.session, "send") as send,
-                pytest.raises(ValueError, match="timeout"),
-            ):
-                self.client.http_request("GET", "/version", timeout=timeout)
-            send.assert_not_called()
-        self.sleep.assert_not_called()
-
-    def test_timeout_override_can_only_reduce_the_configured_limit(self) -> None:
-        for timeout, expected_timeout in (
-            (0.5, 0.5),
-            (3600.0, HTTP_TIMEOUT_SECONDS),
-        ):
-            with (
-                self.subTest(timeout=timeout),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    return_value=gitlab_response(HTTPStatus.OK),
-                ) as send,
-            ):
-                self.client.http_request("GET", "/version", timeout=timeout)
-            assert send.call_args.kwargs["timeout"] == expected_timeout
-
-    def test_transport_failures_follow_the_read_and_write_policy(self) -> None:
-        for exception_type in (RequestsConnectionError, ChunkedEncodingError, Timeout):
-            for verb, explicit_retry, expected_attempts in (
-                ("GET", None, settings.DJANGO_GIT_RETRY_ATTEMPTS),
-                ("HEAD", None, settings.DJANGO_GIT_RETRY_ATTEMPTS),
-                ("GET", False, 1),
-                ("POST", None, 1),
-                ("POST", True, settings.DJANGO_GIT_RETRY_ATTEMPTS),
-            ):
-                failure = exception_type("original transport failure")
-                self.sleep.reset_mock()
-                with (
-                    self.subTest(
-                        exception=exception_type, verb=verb, retry=explicit_retry
-                    ),
-                    patch.object(
-                        self.client.session, "send", side_effect=failure
-                    ) as send,
-                    pytest.raises(exception_type) as raised,
-                ):
-                    self.client.http_request(
-                        verb,
-                        "/version",
-                        retry_transient_errors=explicit_retry,
-                    )
-                assert raised.value is failure
-                assert send.call_count == expected_attempts
-                expected_delays = [1.0, 2.0, 4.0, 8.0][: expected_attempts - 1]
-                actual_delays = [call.args[0] for call in self.sleep.call_args_list]
-                assert actual_delays == expected_delays
-
-    def test_rate_limit_retry_can_be_disabled(self) -> None:
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.TOO_MANY_REQUESTS),
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabHttpError),
-        ):
-            self.client.http_request("GET", "/version", obey_rate_limit=False)
-        send.assert_called_once()
-        self.sleep.assert_not_called()
-
-    def test_read_error_preserves_status_message_and_exact_response_body(self) -> None:
-        for status, expected_attempts in (
-            (HTTPStatus.FORBIDDEN, 1),
-            (HTTPStatus.NOT_FOUND, 1),
-            (HTTPStatus.SERVICE_UNAVAILABLE, settings.DJANGO_GIT_RETRY_ATTEMPTS),
-        ):
-            response = gitlab_response(status, {"message": "original read failure"})
-            self.sleep.reset_mock()
-            with (
-                self.subTest(status=status),
-                patch.object(
-                    self.client.session, "send", return_value=response
-                ) as send,
-                pytest.raises(gitlab.exceptions.GitlabGetError) as raised,
-            ):
-                self.client.projects.get(PROJECT_NUMERIC_ID)
-            assert send.call_count == expected_attempts
-            assert self.sleep.call_count == expected_attempts - 1
-            assert raised.value.response_code == status
-            assert raised.value.error_message == "original read failure"
-            assert raised.value.response_body == response.content
-
-    def test_longer_finite_budget_caps_exponential_delay(self) -> None:
-        max_attempts = 8
-        client = BoundedGitlabClient(
-            API_URL, private_token=TEST_TOKEN, max_attempts=max_attempts
-        )
-        self.addCleanup(client.session.close)
-        with (
-            patch.object(
-                client.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabHttpError),
-        ):
-            client.http_request("GET", "/version")
-        assert send.call_count == max_attempts
-        assert [call.args[0] for call in self.sleep.call_args_list] == [
-            1.0,
-            2.0,
-            4.0,
-            8.0,
-            16.0,
-            30.0,
-            30.0,
+            client.http_request(
+                verb,
+                "/user",
+                retry_transient_errors=retry_transient_errors,
+                max_retries=max_retries,
+            )
+        retry_records: list[logging.LogRecord] = [
+            record
+            for record in caplog.records
+            if record.name == "speleodb.utils.gitlab_client"
         ]
-
-    def test_invalid_constructor_budgets_are_rejected(self) -> None:
-        for max_attempts in (0, -1):
-            with (
-                self.subTest(max_attempts=max_attempts),
-                pytest.raises(ValueError, match="max_attempts"),
-            ):
-                BoundedGitlabClient(
-                    API_URL, private_token=TEST_TOKEN, max_attempts=max_attempts
-                )
-        for field in ("timeout", "base_delay", "max_delay"):
-            for value in (float("inf"), float("nan"), 0.0, -1.0):
-                invalid_options: dict[str, Any] = {field: value}
-                with (
-                    self.subTest(field=field, value=value),
-                    pytest.raises(ValueError, match="finite and positive"),
-                ):
-                    BoundedGitlabClient(
-                        API_URL, private_token=TEST_TOKEN, **invalid_options
-                    )
-
-
-class GitlabManagerReadPolicyTests(TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.credentials = GitlabCredentials(
-            instance="gitlab.example",
-            token=TEST_TOKEN,
-            group_id="1",
-            group_name=TEST_GROUP,
+        assert len(retry_records) == expected_attempts - 1
+        assert all(
+            (
+                "(ConnectionError)" in record.getMessage()
+                or "(ConnectTimeout)" in record.getMessage()
+            )
+            for record in retry_records
         )
-        self.client = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(self.client.session.close)
-        self.project = Project(id=uuid.uuid4())
-        GitlabManager._get_project.cache_clear()  # noqa: SLF001
-        self.addCleanup(GitlabManager._get_project.cache_clear)  # noqa: SLF001
-        self.enterContext(patch.object(GitlabManager, "_gl", self.client))
-        self.enterContext(
-            patch.object(GitlabCredentials, "get", return_value=self.credentials)
-        )
-        self.sleep: MagicMock = self.enterContext(
-            patch("speleodb.utils.gitlab_client.time.sleep")
+        assert time.monotonic() - started < 5  # noqa: PLR2004
+    finally:
+        client.session.close()
+
+
+@pytest.mark.parametrize("max_attempts", [0, -1])
+def test_invalid_attempt_budgets_are_rejected(max_attempts: int) -> None:
+    with pytest.raises(ValueError, match="max_attempts"):
+        BoundedGitlabClient(
+            "http://localhost", private_token=uuid4().hex, max_attempts=max_attempts
         )
 
-    def test_failed_auth_reinitialization_clears_cache_and_client(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            return_value=gitlab_response(
-                HTTPStatus.OK,
-                project_payload(self.project),
-            ),
-        ):
-            GitlabManager._get_project(self.project)  # noqa: SLF001
-        assert GitlabManager._get_project.cache_info().currsize == 1  # noqa: SLF001
 
-        replacement = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(replacement.session.close)
-        with (
-            patch(
-                "speleodb.git_engine.gitlab_manager.GitlabClient",
-                return_value=replacement,
-            ),
-            patch.object(
-                replacement.session,
-                "send",
-                return_value=gitlab_response(
-                    HTTPStatus.UNAUTHORIZED,
-                    {"message": "invalid token"},
-                ),
-            ) as send,
-            patch.object(replacement.session, "close") as close,
-            pytest.raises(gitlab.exceptions.GitlabAuthenticationError),
-        ):
-            GitlabManager._initialize()  # noqa: SLF001
-
-        send.assert_called_once()
-        close.assert_called_once_with()
-        assert GitlabManager._gl is None  # noqa: SLF001
-        assert GitlabManager._get_project.cache_info().currsize == 0  # noqa: SLF001
-
-    def test_auth_read_retries_then_recovers(self) -> None:
-        replacement = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(replacement.session.close)
-        with (
-            patch(
-                "speleodb.git_engine.gitlab_manager.GitlabClient",
-                return_value=replacement,
-            ),
-            patch.object(
-                replacement.session,
-                "send",
-                side_effect=[
-                    gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                    gitlab_response(
-                        HTTPStatus.OK,
-                        {"id": 1, "username": "test-user"},
-                    ),
-                ],
-            ) as send,
-        ):
-            GitlabManager._initialize()  # noqa: SLF001
-
-        assert GitlabManager._gl is replacement  # noqa: SLF001
-        assert send.call_count == 2  # noqa: PLR2004
-        self.sleep.assert_called_once()
-
-    def test_auth_read_exhaustion_leaves_manager_uninitialized(self) -> None:
-        replacement = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(replacement.session.close)
-        with (
-            patch(
-                "speleodb.git_engine.gitlab_manager.GitlabClient",
-                return_value=replacement,
-            ),
-            patch.object(
-                replacement.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-            ) as send,
-            patch.object(replacement.session, "close") as close,
-            pytest.raises(gitlab.exceptions.GitlabGetError),
-        ):
-            GitlabManager._initialize()  # noqa: SLF001
-
-        assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
-        close.assert_called_once_with()
-        assert GitlabManager._gl is None  # noqa: SLF001
-
-    def test_cached_project_does_not_bypass_branch_reauthentication(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            return_value=gitlab_response(
-                HTTPStatus.OK,
-                project_payload(self.project),
-            ),
-        ):
-            GitlabManager._get_project(self.project)  # noqa: SLF001
-
-        replacement = GitlabClient(API_URL, private_token=TEST_TOKEN)
-        self.addCleanup(replacement.session.close)
-        GitlabManager._gl = None  # noqa: SLF001
-        with (
-            patch(
-                "speleodb.git_engine.gitlab_manager.GitlabClient",
-                return_value=replacement,
-            ),
-            patch.object(
-                replacement.session,
-                "send",
-                side_effect=[
-                    gitlab_response(
-                        HTTPStatus.OK,
-                        {"id": 1, "username": "test-user"},
-                    ),
-                    gitlab_response(
-                        HTTPStatus.OK,
-                        project_payload(self.project),
-                    ),
-                    gitlab_response(
-                        HTTPStatus.OK,
-                        {
-                            "name": settings.DJANGO_GIT_BRANCH_NAME,
-                            "commit": {"id": USER_COMMIT_SHA},
-                        },
-                    ),
-                ],
-            ) as send,
-        ):
-            assert GitlabManager.get_last_commit_hash(self.project) == USER_COMMIT_SHA
-
-        assert GitlabManager._gl is replacement  # noqa: SLF001
-        assert send.call_count == 3  # noqa: PLR2004
-
-    def test_project_404_is_not_cached(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.NOT_FOUND),
-                gitlab_response(HTTPStatus.OK, project_payload(self.project)),
-                gitlab_response(HTTPStatus.OK, [commit_payload()]),
-            ],
-        ) as send:
-            assert GitlabManager.get_commit_history(self.project) is None
-            assert GitlabManager.get_commit_history(self.project) == [
-                {"id": USER_COMMIT_SHA, "message": "User commit"}
-            ]
-
-        assert send.call_count == 3  # noqa: PLR2004
-
-    def test_commit_list_retries_and_propagates_exhaustion(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.OK, project_payload(self.project)),
-                gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                gitlab_response(HTTPStatus.OK, [commit_payload()]),
-            ],
-        ) as send:
-            assert GitlabManager.get_commit_history(self.project) == [
-                {"id": USER_COMMIT_SHA, "message": "User commit"}
-            ]
-        assert send.call_count == 3  # noqa: PLR2004
-
-        second_project = Project(id=uuid.uuid4())
-        self.sleep.reset_mock()
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                side_effect=[
-                    gitlab_response(HTTPStatus.OK, project_payload(second_project)),
-                    *[
-                        gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE)
-                        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS)
-                    ],
-                ],
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabListError),
-        ):
-            GitlabManager.get_commit_history(second_project)
-
-        assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS + 1
-
-    def test_commit_list_404_is_empty_but_outage_is_not(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.OK, project_payload(self.project)),
-                gitlab_response(HTTPStatus.NOT_FOUND),
-            ],
-        ):
-            assert GitlabManager.get_commit_history(self.project) is None
-
-        replacement_numeric_id = PROJECT_NUMERIC_ID + 1
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(
-                    HTTPStatus.OK,
-                    project_payload(self.project, replacement_numeric_id),
-                ),
-                gitlab_response(HTTPStatus.OK, [commit_payload()]),
-            ],
-        ) as send:
-            assert GitlabManager.get_commit_history(self.project) == [
-                {"id": USER_COMMIT_SHA, "message": "User commit"}
-            ]
-        assert (
-            f"/projects/{replacement_numeric_id}/repository/commits"
-            in send.call_args_list[-1].args[0].url
+@pytest.mark.parametrize("field", ["timeout", "base_delay", "max_delay"])
+@pytest.mark.parametrize("value", [float("inf"), float("nan"), 0.0, -1.0])
+def test_invalid_delay_budgets_are_rejected(field: str, value: float) -> None:
+    invalid_options: dict[str, Any] = {field: value}
+    with pytest.raises(ValueError, match="finite and positive"):
+        BoundedGitlabClient(
+            "http://localhost", private_token=uuid4().hex, **invalid_options
         )
 
-        second_project = Project(id=uuid.uuid4())
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-            ),
-            pytest.raises(gitlab.exceptions.GitlabGetError),
-        ):
-            _ = second_project.commit_history
 
-    def test_branch_read_retries_and_404_is_empty(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.OK, project_payload(self.project)),
-                gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE),
-                gitlab_response(
-                    HTTPStatus.OK,
-                    {
-                        "name": settings.DJANGO_GIT_BRANCH_NAME,
-                        "commit": {"id": USER_COMMIT_SHA},
-                    },
-                ),
-            ],
-        ) as send:
-            assert GitlabManager.get_last_commit_hash(self.project) == USER_COMMIT_SHA
-        assert send.call_count == 3  # noqa: PLR2004
+@pytest.mark.parametrize("timeout", [float("inf"), float("nan"), 0.0, -1.0])
+def test_invalid_request_timeout_is_rejected(
+    unavailable_gitlab_url: str, timeout: float
+) -> None:
+    client = BoundedGitlabClient(unavailable_gitlab_url, private_token=uuid4().hex)
+    try:
+        with pytest.raises(ValueError, match="timeout"):
+            client.http_request("GET", "/user", timeout=timeout)
+    finally:
+        client.session.close()
 
-        second_project = Project(id=uuid.uuid4())
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.OK, project_payload(second_project)),
-                gitlab_response(HTTPStatus.NOT_FOUND),
-            ],
-        ):
-            assert GitlabManager.get_last_commit_hash(second_project) is None
 
-        replacement_numeric_id = PROJECT_NUMERIC_ID + 1
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(
-                    HTTPStatus.OK,
-                    project_payload(second_project, replacement_numeric_id),
-                ),
-                gitlab_response(
-                    HTTPStatus.OK,
-                    {
-                        "name": settings.DJANGO_GIT_BRANCH_NAME,
-                        "commit": {"id": USER_COMMIT_SHA},
-                    },
-                ),
-            ],
-        ) as send:
-            assert GitlabManager.get_last_commit_hash(second_project) == USER_COMMIT_SHA
-        assert (
-            f"/projects/{replacement_numeric_id}/repository/branches/"
-            in send.call_args_list[-1].args[0].url
-        )
+def test_unbounded_request_retries_are_rejected(unavailable_gitlab_url: str) -> None:
+    client = BoundedGitlabClient(unavailable_gitlab_url, private_token=uuid4().hex)
+    try:
+        with pytest.raises(ValueError, match="max_retries"):
+            client.http_request("GET", "/user", max_retries=-1)
+    finally:
+        client.session.close()
 
-    def test_branch_read_exhaustion_propagates(self) -> None:
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                side_effect=[
-                    gitlab_response(HTTPStatus.OK, project_payload(self.project)),
-                    *[
-                        gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE)
-                        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS)
-                    ],
-                ],
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabGetError),
-        ):
-            GitlabManager.get_last_commit_hash(self.project)
 
-        assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS + 1
+@pytest.mark.parametrize("private_token", ["", " ", "\t\n"])
+def test_blank_credentials_cannot_create_an_anonymous_client(
+    private_token: str,
+) -> None:
+    with pytest.raises(ValueError, match="nonempty GitLab private token"):
+        BoundedGitlabClient("http://localhost", private_token=private_token)

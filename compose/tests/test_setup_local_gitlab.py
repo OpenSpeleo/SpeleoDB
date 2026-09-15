@@ -1,88 +1,104 @@
-# ruff: noqa: S105, S106, S107
+"""Check setup helpers and authenticated access through the real GitLab API."""
 
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 from http import HTTPStatus
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from uuid import uuid4
 
-import gitlab
+import gitlab.exceptions
 import pytest
-from gitlab.const import AccessLevel
-from requests import Response
+from django.conf import settings
 
-from compose.setup_local_gitlab import HTTP_TIMEOUT_SECONDS
 from compose.setup_local_gitlab import PythonGitLabClient
 from compose.setup_local_gitlab import initialize_env_file
-from compose.setup_local_gitlab import main
 from compose.setup_local_gitlab import provision_gitlab
 from compose.setup_local_gitlab import read_env_file
-from compose.setup_local_gitlab import resolve_gitlab_setup_url
-from compose.setup_local_gitlab import resolve_s3_custom_domain
 from compose.setup_local_gitlab import update_env_file
-from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
+    from requests import Response
 
 PRIVATE_ENV_MODE = 0o600
+LOCAL_GITLAB = pytest.mark.skipif(
+    settings.GITLAB_HOST_URL not in {"localhost:9080", "gitlab:9080"},
+    reason="Local infrastructure provisioning applies to the local GitLab service",
+)
 
 
-def test_internal_setup_urls_do_not_replace_browser_addresses(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("GITLAB_SETUP_URL", "http://gitlab:9080")
-    monkeypatch.setenv("AWS_S3_BROWSER_ENDPOINT_URL", "http://localhost:9000")
-    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
-
-    assert resolve_gitlab_setup_url("localhost:9080") == "http://gitlab:9080"
-    assert (
-        resolve_s3_custom_domain(
-            "http://rustfs:9000",
-            "speleodb-user-artifacts-dev",
-        )
-        == "localhost:9000/speleodb-user-artifacts-dev"
+@pytest.fixture
+def setup_client() -> Generator[PythonGitLabClient]:
+    """Require the same authenticated namespace as the integration suite."""
+    client = PythonGitLabClient(
+        f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
+        settings.GITLAB_TOKEN,
     )
+    try:
+        client.admin.auth()
+        assert client.admin.user is not None
+        group = client.admin.groups.get(str(settings.GITLAB_GROUP_ID))
+        assert group.full_path == settings.GITLAB_GROUP_NAME
+        yield client
+    finally:
+        client.admin.session.close()
 
 
-def test_internal_s3_custom_domain_is_repaired(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize(
+    ("environment", "expected"),
+    [
+        (
+            {
+                "GITLAB_SETUP_URL": "http://gitlab:9080",
+                "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
+            },
+            ["http://gitlab:9080", "localhost:9000/dev-bucket"],
+        ),
+        (
+            {
+                "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
+                "AWS_S3_CUSTOM_DOMAIN": "rustfs:9000/dev-bucket",
+            },
+            ["http://localhost:9080", "localhost:9000/dev-bucket"],
+        ),
+        ({}, ["http://localhost:9080", "rustfs:9000/dev-bucket"]),
+    ],
+)
+def test_setup_resolves_internal_and_browser_addresses(
+    environment: dict[str, str], expected: list[str]
 ) -> None:
-    monkeypatch.setenv("AWS_S3_BROWSER_ENDPOINT_URL", "http://localhost:9000")
-    monkeypatch.setenv(
+    child_environment: dict[str, str] = os.environ.copy()
+    for name in (
+        "GITLAB_SETUP_URL",
+        "AWS_S3_BROWSER_ENDPOINT_URL",
         "AWS_S3_CUSTOM_DOMAIN",
-        "rustfs:9000/speleodb-user-artifacts-dev",
+    ):
+        child_environment.pop(name, None)
+    child_environment.update(environment)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json; "
+            "from compose.setup_local_gitlab import "
+            "resolve_gitlab_setup_url, resolve_s3_custom_domain; "
+            "print(json.dumps([resolve_gitlab_setup_url('localhost:9080'), "
+            "resolve_s3_custom_domain('http://rustfs:9000', 'dev-bucket')]))",
+        ],
+        env=child_environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
     )
-
-    assert (
-        resolve_s3_custom_domain(
-            "http://rustfs:9000",
-            "speleodb-user-artifacts-dev",
-        )
-        == "localhost:9000/speleodb-user-artifacts-dev"
-    )
-
-
-def test_setup_urls_default_to_the_original_local_behavior(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("GITLAB_SETUP_URL", raising=False)
-    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
-
-    assert resolve_gitlab_setup_url("localhost:9080") == "http://localhost:9080"
-    assert (
-        resolve_s3_custom_domain(
-            "http://localhost:9000",
-            "speleodb-user-artifacts-dev",
-        )
-        == "localhost:9000/speleodb-user-artifacts-dev"
-    )
+    assert json.loads(result.stdout) == expected
 
 
 def test_private_env_is_copied_from_template_once(tmp_path: Path) -> None:
@@ -100,272 +116,53 @@ def test_private_env_is_copied_from_template_once(tmp_path: Path) -> None:
     assert env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
 
 
-def test_python_gitlab_client_uses_resource_managers(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.skip_if_lighttest
+def test_setup_client_finds_real_group_and_validates_token(
+    setup_client: PythonGitLabClient,
 ) -> None:
-    group_access_tokens = MagicMock()
-    group_access_tokens.list.return_value = [
-        SimpleNamespace(
-            id=11,
-            name="speleodb-local-development",
-            expires_at=None,
-        )
-    ]
-    group_access_tokens.create.return_value = SimpleNamespace(
-        id=12,
-        token="created-group-token",
-    )
-    group = SimpleNamespace(
-        id=7,
-        name="speleodb",
-        access_tokens=group_access_tokens,
-    )
-    admin = MagicMock()
-    admin.groups.get.return_value = group
-    admin.groups.create.return_value = group
-    group_token_client = MagicMock()
-    gitlab_factory = MagicMock(side_effect=[admin, group_token_client])
-    monkeypatch.setattr(
-        "compose.setup_local_gitlab.BoundedGitlabClient", gitlab_factory
-    )
-
-    client = PythonGitLabClient(
-        "http://localhost:9080/",
-        "bootstrap-token",
-    )
-
-    assert client.find_group("speleodb") == {"id": 7, "name": "speleodb"}
-    assert client.create_group("speleodb") == {"id": 7, "name": "speleodb"}
-    assert client.token_can_access_group("7", "existing-group-token") is True
-    assert client.list_group_tokens("7") == [
-        {
-            "id": 11,
-            "name": "speleodb-local-development",
-            "active": True,
-            "expires_at": None,
-        }
-    ]
-    client.revoke_group_token("7", "11")
-    assert client.create_group_token("7", "speleodb-local-development") == {
-        "id": 12,
-        "token": "created-group-token",
-    }
-
-    gitlab_factory.assert_any_call(
-        "http://localhost:9080",
-        private_token="bootstrap-token",
-        timeout=15,
-        retry_transient_errors=True,
-        keep_base_url=True,
-    )
-    gitlab_factory.assert_any_call(
-        "http://localhost:9080",
-        private_token="existing-group-token",
-        timeout=15,
-        retry_transient_errors=True,
-        keep_base_url=True,
-    )
-    group_token_client.groups.get.assert_called_once_with("7")
-    group_access_tokens.list.assert_called_once_with(iterator=True, state="active")
-    group_access_tokens.delete.assert_called_once_with("11")
-    group_access_tokens.create.assert_called_once_with(
-        {
-            "name": "speleodb-local-development",
-            "scopes": ["api", "read_repository", "write_repository"],
-            "access_level": AccessLevel.OWNER,
-            "expires_at": None,
-        }
+    group = setup_client.find_group(settings.GITLAB_GROUP_NAME)
+    assert group is not None
+    assert str(group["id"]) == str(settings.GITLAB_GROUP_ID)
+    assert setup_client.token_can_access_group(
+        str(settings.GITLAB_GROUP_ID), settings.GITLAB_TOKEN
     )
 
 
-@pytest.mark.parametrize(
-    ("status", "headers"),
-    [
-        (HTTPStatus.TOO_MANY_REQUESTS, {"Retry-After": "3600"}),
-        (HTTPStatus.TOO_MANY_REQUESTS, {"RateLimit-Reset": "999999999999"}),
-        (HTTPStatus.TOO_MANY_REQUESTS, {"Retry-After": "not-a-number"}),
-        (HTTPStatus.SERVICE_UNAVAILABLE, {}),
-    ],
-)
-def test_bootstrap_create_has_the_same_finite_retry_policy(
-    status: HTTPStatus, headers: dict[str, str]
+@pytest.mark.skip_if_lighttest
+def test_setup_client_returns_none_only_for_real_missing_group(
+    setup_client: PythonGitLabClient,
 ) -> None:
-    client = PythonGitLabClient("http://localhost:9080", "bootstrap-token")
-    assert isinstance(client.admin, BoundedGitlabClient)
-    response = Response()
-    response.status_code = status
-    response.reason = status.phrase
-    response.url = "http://localhost:9080/api/v4/groups"
-    response.headers.update({"Content-Type": "application/json", **headers})
-    response._content = json.dumps(  # noqa: SLF001
-        {"message": "original bootstrap create failure"}
-    ).encode()
+    assert setup_client.find_group(f"{settings.GITLAB_GROUP_NAME}/{uuid4()}") is None
 
+
+@pytest.mark.skip_if_lighttest
+def test_setup_client_rejects_invalid_group_credential(
+    setup_client: PythonGitLabClient,
+) -> None:
+    assert not setup_client.token_can_access_group(
+        str(settings.GITLAB_GROUP_ID), f"invalid-{uuid4()}"
+    )
+
+
+@pytest.mark.skip_if_lighttest
+def test_setup_create_authentication_error_is_not_retried(
+    setup_client: PythonGitLabClient,
+) -> None:
+    invalid_client = PythonGitLabClient(setup_client.base_url, f"invalid-{uuid4()}")
+    responses: list[Response] = []
+
+    def observe(response: Response, **kwargs: Any) -> None:
+        responses.append(response)
+
+    invalid_client.admin.session.hooks["response"].append(observe)
     try:
-        with (
-            patch("speleodb.utils.gitlab_client.time.sleep") as sleep,
-            patch.object(client.admin.session, "send", return_value=response) as send,
-            pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
-        ):
-            client.create_group("speleodb")
-
-        expected_delays = [1.0, 2.0, 4.0, 8.0]
-        assert send.call_count == len(expected_delays) + 1
-        assert [call.args[0] for call in sleep.call_args_list] == expected_delays
-        assert all(
-            call.kwargs["timeout"] == HTTP_TIMEOUT_SECONDS
-            for call in send.call_args_list
-        )
-        assert raised.value.response_code == status
-        assert raised.value.error_message == "original bootstrap create failure"
-        assert raised.value.response_body == response.content
+        with pytest.raises(gitlab.exceptions.GitlabAuthenticationError) as raised:
+            invalid_client.create_group(f"setup-invalid-{uuid4()}")
+        assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
+        assert len(responses) == 1
+        assert raised.value.response_body == responses[0].content
     finally:
-        client.admin.session.close()
-
-
-class FakeGitLabClient:
-    def __init__(
-        self,
-        *,
-        group: dict[str, Any] | None,
-        token_valid: bool,
-        group_tokens: list[dict[str, Any]] | None = None,
-        created_token: str = "new-group-token",
-    ) -> None:
-        self.group = group
-        self.token_valid = token_valid
-        self.group_tokens = group_tokens or []
-        self.created_token = created_token
-        self.created_groups: list[str] = []
-        self.revoked_tokens: list[tuple[str, str]] = []
-        self.created_tokens: list[tuple[str, str]] = []
-
-    def find_group(self, group_name: str) -> dict[str, Any] | None:
-        return self.group
-
-    def create_group(self, group_name: str) -> dict[str, Any]:
-        self.created_groups.append(group_name)
-        self.group = {"id": 42, "name": group_name}
-        return self.group
-
-    def token_can_access_group(self, group_id: str, token: str) -> bool:
-        return self.token_valid
-
-    def list_group_tokens(self, group_id: str) -> list[dict[str, Any]]:
-        return self.group_tokens
-
-    def revoke_group_token(self, group_id: str, token_id: str) -> None:
-        self.revoked_tokens.append((group_id, token_id))
-
-    def create_group_token(self, group_id: str, token_name: str) -> dict[str, Any]:
-        self.created_tokens.append((group_id, token_name))
-        self.group_tokens.append(
-            {
-                "id": 99,
-                "name": token_name,
-                "active": True,
-                "expires_at": None,
-            }
-        )
-        self.token_valid = True
-        return {"id": 99, "token": self.created_token}
-
-
-def test_existing_group_and_valid_token_are_reused() -> None:
-    client = FakeGitLabClient(
-        group={"id": 7},
-        token_valid=True,
-        group_tokens=[
-            {
-                "id": 10,
-                "name": "speleodb-local-development",
-                "active": True,
-                "expires_at": None,
-            }
-        ],
-    )
-
-    result = provision_gitlab(
-        client,
-        group_name="speleodb",
-        token_name="speleodb-local-development",
-        current_token="existing-token",
-    )
-
-    assert result.group_id == "7"
-    assert result.group_token == "existing-token"
-    assert result.group_created is False
-    assert result.token_created is False
-    assert client.created_groups == []
-    assert client.created_tokens == []
-    assert client.revoked_tokens == []
-
-
-def test_existing_expiring_token_is_replaced() -> None:
-    client = FakeGitLabClient(
-        group={"id": 7},
-        token_valid=True,
-        group_tokens=[
-            {
-                "id": 10,
-                "name": "speleodb-local-development",
-                "active": True,
-                "expires_at": "2027-07-17",
-            }
-        ],
-    )
-
-    result = provision_gitlab(
-        client,
-        group_name="speleodb",
-        token_name="speleodb-local-development",
-        current_token="expiring-token",
-    )
-
-    assert result.group_token == "new-group-token"
-    assert result.token_created is True
-    assert client.revoked_tokens == [("7", "10")]
-    assert client.created_tokens == [("7", "speleodb-local-development")]
-
-
-def test_missing_group_and_token_are_created() -> None:
-    client = FakeGitLabClient(group=None, token_valid=False)
-
-    result = provision_gitlab(
-        client,
-        group_name="speleodb",
-        token_name="speleodb-local-development",
-        current_token=None,
-    )
-
-    assert result.group_id == "42"
-    assert result.group_token == "new-group-token"
-    assert result.group_created is True
-    assert result.token_created is True
-    assert client.created_groups == ["speleodb"]
-    assert client.created_tokens == [("42", "speleodb-local-development")]
-
-
-def test_invalid_named_token_is_revoked_before_replacement() -> None:
-    client = FakeGitLabClient(
-        group={"id": 7},
-        token_valid=False,
-        group_tokens=[
-            {"id": 12, "name": "unrelated", "active": True},
-            {"id": 13, "name": "speleodb-local-development", "active": True},
-        ],
-    )
-
-    result = provision_gitlab(
-        client,
-        group_name="speleodb",
-        token_name="speleodb-local-development",
-        current_token="expired-token",
-    )
-
-    assert result.group_token == "new-group-token"
-    assert client.revoked_tokens == [("7", "13")]
-    assert client.created_tokens == [("7", "speleodb-local-development")]
+        invalid_client.admin.session.close()
 
 
 def test_private_env_update_preserves_user_values_and_is_idempotent(
@@ -373,121 +170,189 @@ def test_private_env_update_preserves_user_values_and_is_idempotent(
 ) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "# Developer overrides\nCUSTOM=value\nGITLAB_TOKEN=old-token\n"
-        "GITLAB_TOKEN=duplicate-old-token\n",
+        "# Developer overrides\nCUSTOM=value\nMANAGED=old\nMANAGED=duplicate\n",
         encoding="utf-8",
     )
-    values = {
-        "GITLAB_GROUP_ID": "42",
-        "GITLAB_TOKEN": "new-token",
-        "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-dev",
-    }
-
+    values: dict[str, str] = {"MANAGED": "new", "AWS_STORAGE_BUCKET_NAME": "dev"}
     assert update_env_file(env_file, values) is True
-    assert read_env_file(env_file) == {
-        "CUSTOM": "value",
-        **values,
-    }
-    assert env_file.read_text(encoding="utf-8").count("GITLAB_TOKEN=") == 1
+    assert read_env_file(env_file) == {"CUSTOM": "value", **values}
+    assert env_file.read_text(encoding="utf-8").count("MANAGED=") == 1
     assert update_env_file(env_file, values) is False
     assert env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
 
 
-def test_setup_provisions_isolated_dev_and_test_resources(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+@pytest.fixture
+def bootstrap_groups() -> Generator[tuple[PythonGitLabClient, list[str]]]:
+    """Use local bootstrap credentials and delete only this test's groups."""
+    client = PythonGitLabClient(
+        f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
+        os.environ["GITLAB_BOOTSTRAP_TOKEN"],
+    )
+    names: list[str] = []
+    try:
+        client.admin.auth()
+        assert client.admin.user is not None
+        assert client.admin.user.is_admin
+        yield client, names
+    finally:
+        for name in names:
+            group = client.find_group(name)
+            if group is not None:
+                client.admin.groups.delete(group["id"])
+        client.admin.session.close()
+
+
+@LOCAL_GITLAB
+@pytest.mark.skip_if_lighttest
+def test_real_group_and_token_are_created_then_reused(
+    bootstrap_groups: tuple[PythonGitLabClient, list[str]],
 ) -> None:
+    client, names = bootstrap_groups
+    group_name: str = f"setup-test-{uuid4()}"
+    token_name: str = f"integration-{uuid4()}"
+    names.append(group_name)
+    assert client.find_group(group_name) is None
+    first = provision_gitlab(
+        client, group_name=group_name, token_name=token_name, current_token=None
+    )
+    assert first.group_created
+    assert first.token_created
+    assert client.token_can_access_group(first.group_id, first.group_token)
+    tokens = client.list_group_tokens(first.group_id)
+    assert len(tokens) == 1
+    repeated = provision_gitlab(
+        client,
+        group_name=group_name,
+        token_name=token_name,
+        current_token=first.group_token,
+    )
+    assert not repeated.group_created
+    assert not repeated.token_created
+    assert repeated.group_id == first.group_id
+    reused_credential: bool = repeated.group_token == first.group_token
+    assert reused_credential
+    assert [token["id"] for token in client.list_group_tokens(first.group_id)] == [
+        tokens[0]["id"]
+    ]
+
+
+@LOCAL_GITLAB
+@pytest.mark.skip_if_lighttest
+def test_invalid_credential_replaces_only_its_named_group_token(
+    bootstrap_groups: tuple[PythonGitLabClient, list[str]],
+) -> None:
+    client, names = bootstrap_groups
+    group_name: str = f"setup-test-{uuid4()}"
+    token_name: str = f"integration-{uuid4()}"
+    names.append(group_name)
+    first = provision_gitlab(
+        client, group_name=group_name, token_name=token_name, current_token=None
+    )
+    original = client.list_group_tokens(first.group_id)[0]
+    unrelated = client.create_group_token(first.group_id, "unrelated")
+    replacement = provision_gitlab(
+        client,
+        group_name=group_name,
+        token_name=token_name,
+        current_token=f"invalid-{uuid4()}",
+    )
+    assert not replacement.group_created
+    assert replacement.token_created
+    assert client.token_can_access_group(first.group_id, replacement.group_token)
+    assert not client.token_can_access_group(first.group_id, first.group_token)
+    active_ids: set[int] = {
+        token["id"] for token in client.list_group_tokens(first.group_id)
+    }
+    assert original["id"] not in active_ids
+    assert unrelated["id"] in active_ids
+
+
+@LOCAL_GITLAB
+@pytest.mark.skip_if_lighttest
+def test_real_setup_cli_provisions_isolated_dev_and_test_resources(
+    bootstrap_groups: tuple[PythonGitLabClient, list[str]], tmp_path: Path
+) -> None:
+    client, names = bootstrap_groups
+    dev_name: str = f"setup-dev-{uuid4()}"
+    test_name: str = f"setup-test-{uuid4()}"
+    names.extend([dev_name, test_name])
     env_template = tmp_path / ".env.dist"
+    test_template = tmp_path / "test.env.dist"
     env_file = tmp_path / ".env"
-    test_env_template = tmp_path / "test.env.dist"
-    test_env_file = tmp_path / "test.env"
-    env_template.write_text(
-        "CUSTOM_DEV=preserved\nGITLAB_TOKEN=<placeholder>\n",
-        encoding="utf-8",
-    )
-    test_env_template.write_text(
-        "DATABASE_URL=sqlite:///test.db\n"
-        "AWS_STORAGE_BUCKET_NAME=test-bucket\n"
-        "GITLAB_GROUP_NAME=<placeholder>\n"
-        "GITLAB_TOKEN=<placeholder>\n",
-        encoding="utf-8",
-    )
-    dev_client = FakeGitLabClient(group={"id": 7}, token_valid=False)
-    test_client = FakeGitLabClient(
-        group=None,
-        token_valid=False,
-        created_token="new-test-group-token",
-    )
-    clients = iter([dev_client, test_client, dev_client, test_client])
-    monkeypatch.setattr(
-        "compose.setup_local_gitlab.PythonGitLabClient",
-        lambda *_args: next(clients),
-    )
-    monkeypatch.setenv("GITLAB_GROUP_NAME", "speleodb")
-    monkeypatch.setenv("GITLAB_TEST_GROUP_NAME", "speleodb-test")
-    monkeypatch.setenv("GITLAB_HOST_URL", "localhost:9080")
-    monkeypatch.setenv("GITLAB_BOOTSTRAP_TOKEN", "bootstrap-token")
-    monkeypatch.setenv("GITLAB_GROUP_TOKEN_NAME", "speleodb-local-development")
-    monkeypatch.setenv("GITLAB_TEST_GROUP_TOKEN_NAME", "speleodb-local-test")
-    monkeypatch.setenv(
-        "LOCAL_AWS_STORAGE_BUCKET_NAME",
-        "speleodb-user-artifacts-dev",
-    )
-    monkeypatch.setenv(
-        "LOCAL_AWS_TEST_STORAGE_BUCKET_NAME",
-        "speleodb-user-artifacts-test",
-    )
-    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://localhost:9000")
-    monkeypatch.delenv("AWS_S3_CUSTOM_DOMAIN", raising=False)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "setup_local_gitlab.py",
-            "--env-file",
-            str(env_file),
-            "--env-template",
-            str(env_template),
-            "--test-env-file",
-            str(test_env_file),
-            "--test-env-template",
-            str(test_env_template),
-        ],
-    )
-
-    main()
-
-    expected_dev_gitlab_values = {
-        "GITLAB_GROUP_ID": "7",
-        "GITLAB_GROUP_NAME": "speleodb",
-        "GITLAB_HOST_URL": "localhost:9080",
-        "GITLAB_TOKEN": "new-group-token",
-    }
-    assert read_env_file(env_file) == {
-        "CUSTOM_DEV": "preserved",
-        **expected_dev_gitlab_values,
-        "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-dev",
+    test_file = tmp_path / "test.env"
+    env_template.write_text("CUSTOM_DEV=preserved\n", encoding="utf-8")
+    test_template.write_text("CUSTOM_TEST=preserved\n", encoding="utf-8")
+    environment: dict[str, str] = {
+        **os.environ,
+        "GITLAB_GROUP_NAME": dev_name,
+        "GITLAB_TEST_GROUP_NAME": test_name,
+        "GITLAB_HOST_URL": settings.GITLAB_HOST_URL,
+        "GITLAB_SETUP_URL": client.base_url,
+        "GITLAB_GROUP_TOKEN_NAME": "integration-dev",
+        "GITLAB_TEST_GROUP_TOKEN_NAME": "integration-test",
+        "LOCAL_AWS_STORAGE_BUCKET_NAME": "dev-bucket",
+        "LOCAL_AWS_TEST_STORAGE_BUCKET_NAME": "test-bucket",
+        "AWS_S3_ENDPOINT_URL": "http://rustfs:9000",
         "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
-        "AWS_S3_CUSTOM_DOMAIN": ("localhost:9000/speleodb-user-artifacts-dev"),
     }
-    assert read_env_file(test_env_file) == {
-        "DATABASE_URL": "sqlite:///test.db",
-        "AWS_STORAGE_BUCKET_NAME": "speleodb-user-artifacts-test",
-        "AWS_S3_BROWSER_ENDPOINT_URL": "http://localhost:9000",
-        "GITLAB_GROUP_ID": "42",
-        "GITLAB_GROUP_NAME": "speleodb-test",
-        "GITLAB_HOST_URL": "localhost:9080",
-        "GITLAB_TOKEN": "new-test-group-token",
-        "AWS_S3_CUSTOM_DOMAIN": "localhost:9000/speleodb-user-artifacts-test",
-        "GIT_CONFIG_COUNT": "1",
-        "GIT_CONFIG_KEY_0": "safe.directory",
-        "GIT_CONFIG_VALUE_0": "*",
-    }
+    environment.pop("AWS_S3_CUSTOM_DOMAIN", None)
+    command: list[str] = [
+        sys.executable,
+        "-m",
+        "compose.setup_local_gitlab",
+        "--env-file",
+        str(env_file),
+        "--env-template",
+        str(env_template),
+        "--test-env-file",
+        str(test_file),
+        "--test-env-template",
+        str(test_template),
+    ]
+    subprocess.run(  # noqa: S603 - fixed module and test-owned paths
+        command,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    )
+    development = read_env_file(env_file)
+    testing = read_env_file(test_file)
+    assert development["CUSTOM_DEV"] == "preserved"
+    assert testing["CUSTOM_TEST"] == "preserved"
+    assert development["GITLAB_GROUP_NAME"] == dev_name
+    assert testing["GITLAB_GROUP_NAME"] == test_name
+    assert development["GITLAB_GROUP_ID"] != testing["GITLAB_GROUP_ID"]
+    separate_credentials: bool = development["GITLAB_TOKEN"] != testing["GITLAB_TOKEN"]
+    assert separate_credentials
+    for values in (development, testing):
+        valid: bool = client.token_can_access_group(
+            values["GITLAB_GROUP_ID"], values["GITLAB_TOKEN"]
+        )
+        assert valid
+    assert not client.token_can_access_group(
+        testing["GITLAB_GROUP_ID"], development["GITLAB_TOKEN"]
+    )
+    assert not client.token_can_access_group(
+        development["GITLAB_GROUP_ID"], testing["GITLAB_TOKEN"]
+    )
+    assert development["AWS_STORAGE_BUCKET_NAME"] == "dev-bucket"
+    assert testing["AWS_STORAGE_BUCKET_NAME"] == "test-bucket"
+    assert development["AWS_S3_CUSTOM_DOMAIN"] == "localhost:9000/dev-bucket"
+    assert testing["AWS_S3_CUSTOM_DOMAIN"] == "localhost:9000/test-bucket"
+    assert testing["GIT_CONFIG_KEY_0"] == "safe.directory"
     assert env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
-    assert test_env_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
-
-    main()
-
-    assert dev_client.created_tokens == [("7", "speleodb-local-development")]
-    assert test_client.created_groups == ["speleodb-test"]
-    assert test_client.created_tokens == [("42", "speleodb-local-test")]
+    assert test_file.stat().st_mode & 0o777 == PRIVATE_ENV_MODE
+    subprocess.run(  # noqa: S603 - fixed module and test-owned paths
+        command,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    )
+    env_unchanged: bool = read_env_file(env_file) == development
+    test_unchanged: bool = read_env_file(test_file) == testing
+    assert env_unchanged
+    assert test_unchanged

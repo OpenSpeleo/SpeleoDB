@@ -2096,19 +2096,12 @@ class TestQueryCountInvariants(BaseAPITestCase):
             )
 
     def test_user_token_collections_query_count_is_bounded(self) -> None:
-        """5 projects + 1 token: queries should be O(1) — token
-        lookup + permission resolution + project list + prefetch.
+        """Preserve the ten application-query budget for five projects.
 
-        Baseline math (5 projects, 1 token):
-        * Token + user select_related — 1 query
-        * Permissions resolution (UserProjectPermission filter) — 1
-        * Projects filter — 1
-        * Geojsons prefetch (one IN-list query) — 1
-        * Auxiliary auth/session middleware — 1-2
-
-        That's ~5 queries baseline. The cap of 10 catches a 5-project
-        N+1 regression (which would be ~10-12 queries) without false
-        positives from session/auth churn.
+        The cold-cache request reads the token/user, two permission sources,
+        projects, prefetched GeoJSONs, and five geometry-source records.
+        Production ATOMIC_REQUESTS additionally creates and releases a savepoint
+        inside TestCase's surrounding transaction: twelve statements total.
 
         Pytest's ``django_assert_max_num_queries`` fixture is unavailable
         inside ``unittest.TestCase`` subclasses — DRF's
@@ -2120,19 +2113,15 @@ class TestQueryCountInvariants(BaseAPITestCase):
             "api:v2:gis-ogc:user-collections",
             kwargs={"key": self.token.key},
         )
-        max_queries = 10
+        max_queries: int = 12
         with CaptureQueriesContext(connection) as ctx:
             resp = self.client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         # Sanity: 5 projects x 2 geometry-typed collections (the
         # mixed fixture has both Points and LineStrings present, so
         # each project produces ``<sha>_points`` + ``<sha>_lines``).
-        # If a future change makes ``list_collections`` enumerate
-        # projects per group via ``_load_geometry_groups_present``
-        # in a way that issues per-project cache misses synchronously,
-        # the query count cap below will catch it (the cap is 10 for
-        # 5 projects: token+user, perms, projects, prefetch, plus
-        # ~6 cache reads — none of which hit the DB).
+        # An additional query per geometry group exceeds the unchanged
+        # application budget; the two transaction statements are fixed overhead.
         assert len(resp.json()["collections"]) == 10  # noqa: PLR2004
         actual = len(ctx.captured_queries)
         assert actual <= max_queries, (

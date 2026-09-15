@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import io
+import logging
 import zipfile
 from decimal import Decimal
 from typing import Any
 
 import gpxpy
 import pytest
+from allauth.account.models import EmailAddress
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.db.models.signals import post_save
+from django.db.utils import DataError
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from speleodb.common.enums import PermissionLevel
@@ -25,6 +31,14 @@ from speleodb.users.models import User
 
 def _streaming_bytes(response: Any) -> bytes:
     return b"".join(response.streaming_content)
+
+
+def _authenticate_import_client(client: APIClient, user: User) -> None:
+    token, _ = Token.objects.get_or_create(user=user)
+    EmailAddress.objects.update_or_create(
+        user=user, email=user.email, defaults={"verified": True, "primary": True}
+    )
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
 
 @pytest.mark.django_db
@@ -751,7 +765,7 @@ class TestLandmarkCollectionAPI:
             collection=owner_personal_collection,
         )
 
-        api_client.force_authenticate(user=owner)
+        _authenticate_import_client(api_client, owner)
         response = api_client.put(
             reverse(url_name),
             {
@@ -792,7 +806,7 @@ class TestLandmarkCollectionAPI:
             level=PermissionLevel.READ_ONLY,
         )
 
-        api_client.force_authenticate(user=reader)
+        _authenticate_import_client(api_client, reader)
         response = api_client.put(
             reverse(url_name),
             {"collection": str(collection.id)},
@@ -835,44 +849,58 @@ class TestLandmarkCollectionAPI:
             ),
         ],
     )
+    @pytest.mark.django_db(transaction=True)
     def test_failed_import_rolls_back_created_landmarks(  # noqa: PLR0917
         self,
         api_client: APIClient,
         owner: User,
         collection: LandmarkCollection,
-        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
         settings: Any,
         url_name: str,
         filename: str,
         content: bytes,
     ) -> None:
         settings.DEBUG = False
-        failure_call_number = 2
-        call_count = 0
-        original_get_or_create = Landmark.objects.get_or_create
+        assert connection.vendor == "postgresql"
+        assert not connection.in_atomic_block
+        written_landmarks: list[Landmark] = []
 
-        def flaky_get_or_create(*args: Any, **kwargs: Any) -> tuple[Landmark, bool]:
-            nonlocal call_count
-            call_count += 1
-            result = original_get_or_create(*args, **kwargs)
-            if call_count == failure_call_number:
-                raise RuntimeError("simulated import failure")
-            return result
+        def record_landmark(instance: Landmark, created: bool, **kwargs: Any) -> None:
+            if created:
+                written_landmarks.append(instance)
 
-        monkeypatch.setattr(Landmark.objects, "get_or_create", flaky_get_or_create)
-
-        api_client.force_authenticate(user=owner)
-        response = api_client.put(
-            reverse(url_name),
-            {
-                "file": SimpleUploadedFile(filename, content),
-                "collection": str(collection.id),
-            },
-            format="multipart",
-        )
+        # The first point reaches SQL; the second violates its actual varchar
+        # constraint. Native model signals observe completed inserts unchanged.
+        content = content.replace(b">Second<", b">" + b"x" * 101 + b"<")
+        post_save.connect(record_landmark, sender=Landmark)
+        _authenticate_import_client(api_client, owner)
+        try:
+            with caplog.at_level(logging.ERROR):
+                response = api_client.put(
+                    reverse(url_name),
+                    {
+                        "file": SimpleUploadedFile(filename, content),
+                        "collection": str(collection.id),
+                    },
+                    format="multipart",
+                )
+        finally:
+            post_save.disconnect(record_landmark, sender=Landmark)
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert call_count == failure_call_number
+        errors: list[BaseException] = [
+            record.exc_info[1]
+            for record in caplog.records
+            if record.exc_info is not None and record.exc_info[1] is not None
+        ]
+        assert len(errors) == 1
+        assert isinstance(errors[0], DataError)
+        assert getattr(errors[0].__cause__, "sqlstate", None) == "22001"
+        assert "character varying(100)" in str(errors[0])
+        assert len(written_landmarks) == 1
+        assert written_landmarks[0].name == "First"
+        assert not connection.in_atomic_block
         assert not Landmark.objects.filter(collection=collection).exists()
 
 

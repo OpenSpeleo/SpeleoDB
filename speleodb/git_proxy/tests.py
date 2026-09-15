@@ -1,713 +1,552 @@
 # -*- coding: utf-8 -*-
 
+"""Exercise the proxy against configured GitLab and actual Git packet traffic.
+
+Read-only cases share one real repository to avoid exhausting project-creation
+limits. Failure cases use real rejected credentials, absent repositories and a
+reserved port with no listener. Arbitrary upstream 5xx responses and truncated
+HTTP chunks are not fabricated; those require faults in an actual service.
+"""
+
 from __future__ import annotations
 
-from datetime import UTC
-from datetime import datetime
+import base64
+import socket
+import tempfile
+import time
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import timedelta
 from email.utils import format_datetime
+from pathlib import Path
 from types import GeneratorType
 from typing import TYPE_CHECKING
 from typing import Any
-from unittest.mock import MagicMock
-from unittest.mock import call
-from unittest.mock import patch
 
+import gitlab.exceptions
 import pytest
+import requests
+from allauth.account.models import EmailAddress
 from django.conf import settings
+from django.http import HttpResponse
+from django.http import StreamingHttpResponse
+from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
-from requests.exceptions import ChunkedEncodingError
+from django.utils import timezone
+from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import RequestException
-from requests.exceptions import Timeout
 from rest_framework import status
+from rest_framework.test import APIClient
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import TokenFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
+from speleodb.git_engine.client import GitlabClient
+from speleodb.git_engine.core import GitFile
+from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
+from speleodb.git_proxy.views import UPSTREAM_MAX_RETRY_DELAY_SECONDS
+from speleodb.git_proxy.views import GitService
+from speleodb.git_proxy.views import UpstreamResponseStream
 from speleodb.git_proxy.views import get_upstream_retry_delay
 from speleodb.git_proxy.views import request_git_upstream
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-    from collections.abc import Mapping
+    from collections.abc import Generator
 
     from django.http.response import HttpResponseBase
+    from gitlab.v4.objects.projects import Project as GitlabProject
+    from rest_framework.authtoken.models import Token
+
+    from speleodb.surveys.models import Project
+    from speleodb.users.models import User
+
+SANITIZED_UPSTREAM_ERROR: bytes = b"SpeleoDB Git service is temporarily unavailable."
+DISCOVERY_FAILURE_MAX_SECONDS: float = 10.0
+SINGLE_REQUEST_MAX_SECONDS: float = 3.0
+# A real blob containing arbitrary bytes catches text decoding or rewriting in
+# both the smart-HTTP response and the pack that a Git client consumes.
+GIT_FILE_CONTENT: bytes = b"GitLab\x00\xffSpeleoDB\xfe\n" + bytes(range(256)) * 64
 
 
-SANITIZED_UPSTREAM_ERROR = b"SpeleoDB Git service is temporarily unavailable."
-UPSTREAM_TOKEN = "upstream-secret-token"  # noqa: S105
-UPSTREAM_TIMEOUT_SECONDS = 30
-REQUEST_ATTEMPTS_WITH_RETRY = 2
+@contextmanager
+def configured_git_credentials(**overrides: Any) -> Generator[None]:
+    """Reload credentials after actual configuration changes, then restore them."""
+    GitlabCredentials.get.cache_clear()
+    try:
+        with override_settings(**overrides):
+            yield
+    finally:
+        GitlabCredentials.get.cache_clear()
 
 
-class TestGitProxyServer(BaseAPIProjectTestCase):
+@contextmanager
+def unavailable_git_port() -> Generator[str]:
+    """Reserve a real local port without listening; connections must be refused."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reserved:
+        reserved.bind(("127.0.0.1", 0))
+        yield f"127.0.0.1:{reserved.getsockname()[1]}"
+
+
+def packet_line(payload: bytes) -> bytes:
+    return f"{len(payload) + 4:04x}".encode("ascii") + payload
+
+
+def response_body(response: HttpResponseBase) -> bytes:
+    if isinstance(response, StreamingHttpResponse):
+        content = response.streaming_content
+        assert isinstance(content, Iterator)
+        return b"".join(content)
+    assert isinstance(response, HttpResponse)
+    return response.content
+
+
+def upstream_stream(response: HttpResponseBase) -> UpstreamResponseStream:
+    """Inspect the actual stream resource registered by StreamingHttpResponse."""
+    assert isinstance(response, StreamingHttpResponse)
+    # Django registers these real resources, but its stubs omit the attribute.
+    for close in response._resource_closers:  # type: ignore[attr-defined]  # noqa: SLF001
+        resource: Any = getattr(close, "__self__", None)
+        if isinstance(resource, UpstreamResponseStream):
+            return resource
+    raise AssertionError("Proxy did not register its upstream stream for cleanup")
+
+
+@pytest.mark.skip_if_lighttest
+class TestGitProxyServer(TestCase):
+    client: APIClient
+    user: User
+    token: Token
+    project: Project
+    credentials: GitlabCredentials
+    repo: GitRepo
+    api: GitlabClient
+    remote_project: GitlabProject
+    head: str
+    project_id: uuid.UUID
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        directory: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(directory.cleanup)
+        overrides: override_settings = override_settings(
+            DJANGO_GIT_PROJECTS_DIR=Path(directory.name)
+        )
+        overrides.enable()
+        cls.addClassCleanup(overrides.disable)
+        super().setUpClass()
+        # Database rows are fresh per test, matching the repository's global
+        # cleanup fixture. Only the read-only remote and local clone are shared.
+        cls.project_id = uuid.uuid4()
+        remote_project_model: Project = ProjectFactory.build(
+            id=cls.project_id, created_by="proxy@example.test"
+        )
+        cls.credentials = GitlabCredentials.get()
+        cls.api = GitlabClient(
+            f"{settings.GITLAB_HTTP_PROTOCOL}://{cls.credentials.instance}",
+            private_token=cls.credentials.token,
+            keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
+        )
+        cls.addClassCleanup(cls.api.session.close)
+        cls.repo = remote_project_model.git_repo
+        cls.addClassCleanup(cls.repo.close)
+        cls.remote_project = cls.api.projects.get(
+            f"{cls.credentials.group_name}/{cls.project_id}"
+        )
+        cls.addClassCleanup(cls.remote_project.delete)
+        file_path: Path = cls.repo.path / "binary.bin"
+        file_path.write_bytes(GIT_FILE_CONTENT)
+        head: str | None = cls.repo.commit_and_push_project(
+            message="Proxy integration binary blob",
+            author_name="Proxy Integration",
+            author_email="proxy@example.test",
+        )
+        assert head is not None
+        cls.head = head
+        assert (
+            cls.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
+                "id"
+            ]
+            == cls.head
+        )
+
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.READ_AND_WRITE,
-            permission_type=PermissionType.USER,
+        self.client = APIClient()
+        self.user = UserFactory.create()
+        self.token = TokenFactory.create(user=self.user)
+        EmailAddress.objects.create(
+            user=self.user, email=self.user.email, verified=True, primary=True
         )
-        self.credentials = GitlabCredentials(
-            instance="gitlab.internal.example",
-            token=UPSTREAM_TOKEN,
-            group_id="42",
-            group_name="speleodb",
+        self.project = ProjectFactory.create(
+            id=self.project_id, created_by=self.user.email
         )
-        self.credentials_patcher = patch(
-            "speleodb.git_proxy.views.GitlabCredentials.get",
-            return_value=self.credentials,
-        )
-        self.credentials_patcher.start()
-        self.addCleanup(self.credentials_patcher.stop)
-        self.sleep: MagicMock = self.enterContext(
-            patch("speleodb.git_proxy.views.time.sleep")
+        UserProjectPermissionFactory.create(
+            target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
         )
 
-    def _info_url(self) -> str:
-        endpoint: str = reverse("git_info", kwargs={"id": self.project.id})
+    @property
+    def auth(self) -> str:
+        return f"Token {self.token.key}"
+
+    def _info_url(self, project: Project | None = None) -> str:
+        endpoint: str = reverse("git_info", kwargs={"id": (project or self.project).id})
         return f"{endpoint}?service=git-upload-pack"
 
-    def _upload_url(self) -> str:
-        return reverse("git_service_read", kwargs={"id": self.project.id})
+    def _service_url(self, service: GitService, project: Project | None = None) -> str:
+        return reverse(
+            "git_service_read" if service == GitService.UPLOAD else "git_service_write",
+            kwargs={"id": (project or self.project).id},
+        )
 
-    def _receive_url(self) -> str:
-        return reverse("git_service_write", kwargs={"id": self.project.id})
+    def _upstream_url(self, path: str, project: Project | None = None) -> str:
+        return (
+            f"{settings.GITLAB_HTTP_PROTOCOL}://{self.credentials.instance}/"
+            f"{self.credentials.group_name}/{(project or self.project).id}.git/{path}"
+        )
 
-    @staticmethod
-    def _upstream_response(
+    def _direct_request(
+        self,
+        method: str,
+        path: str,
         *,
-        status_code: int = status.HTTP_200_OK,
-        content_type: str = "application/x-git-upload-pack-advertisement",
-        chunks: tuple[bytes, ...] = (),
-        reason: str = "OK",
-    ) -> MagicMock:
-        response = MagicMock()
-        response.status_code = status_code
-        response.reason = reason
-        response.headers = {
-            "Content-Type": content_type,
-            "Cache-Control": "no-cache",
-            "X-Request-ID": "upstream-request-id",
-        }
-        response.iter_content.return_value = iter(chunks)
+        project: Project | None = None,
+        data: bytes | None = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
+    ) -> requests.Response:
+        response: requests.Response = requests.request(
+            method,
+            self._upstream_url(path, project),
+            auth=("oauth2", self.credentials.token),
+            headers={"Accept-Encoding": "identity", **(headers or {})},
+            params=params,
+            data=data,
+            timeout=settings.DJANGO_GITLAB_HTTP_TIMEOUT_SECONDS,
+            allow_redirects=False,
+        )
+        self.addCleanup(response.close)
         return response
 
-    @staticmethod
-    def _response_body(response: HttpResponseBase) -> bytes:
-        if response.streaming:
-            return b"".join(response.streaming_content)  # type: ignore[attr-defined]
-        return response.content  # type: ignore[attr-defined,no-any-return]
-
     def _assert_sanitized_bad_gateway(self, response: HttpResponseBase) -> None:
-        assert response.status_code == status.HTTP_502_BAD_GATEWAY
+        body: bytes = response_body(response)
+        diagnostic: str = body.decode(errors="replace")
+        for secret in (self.credentials.token, self.token.key):
+            diagnostic = diagnostic.replace(secret, "<redacted>")
+        assert response.status_code == status.HTTP_502_BAD_GATEWAY, diagnostic
         assert response["Content-Type"].split(";", maxsplit=1)[0] == "text/plain"
         assert response["Cache-Control"] == "no-store"
-        assert self._response_body(response) == SANITIZED_UPSTREAM_ERROR
+        assert body == SANITIZED_UPSTREAM_ERROR
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_info_refs_stream_is_byte_transparent(
-        self, request_mock: MagicMock
-    ) -> None:
-        chunks: tuple[bytes, ...] = (
-            b"001e# service=git-upload-",
-            b"pack\n0000Git",
-            b"Lab\x00\xff",
+    def _assert_no_credentials(self, diagnostic: str) -> None:
+        sensitive_data_detected: bool = any(
+            secret in diagnostic for secret in (self.credentials.token, self.token.key)
         )
-        upstream_response: MagicMock = self._upstream_response(
-            content_type=("Application/X-Git-Upload-Pack-Advertisement; charset=UTF-8"),
-            chunks=chunks,
-        )
-        request_mock.return_value = upstream_response
+        assert not sensitive_data_detected, "Credentials leaked into proxy diagnostics"
 
+    def test_info_refs_stream_is_byte_transparent(self) -> None:
+        direct: requests.Response = self._direct_request(
+            "GET", "info/refs", params={"service": GitService.UPLOAD.value}
+        )
+        assert direct.status_code == status.HTTP_200_OK
         response: HttpResponseBase = self.client.get(
-            self._info_url(),
-            headers={"authorization": self.auth},
+            self._info_url(), headers={"authorization": self.auth}
         )
+        stream: UpstreamResponseStream = upstream_stream(response)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response["Content-Type"] == upstream_response.headers["Content-Type"]
-        assert response["Cache-Control"] == "no-cache"
-        assert self._response_body(response) == b"".join(chunks)
-        upstream_response.iter_content.assert_called_once_with(chunk_size=8192)
-        upstream_response.close.assert_called_once_with()
+        assert response["Content-Type"] == direct.headers["Content-Type"]
+        assert response_body(response) == direct.content
+        assert self.head.encode() in direct.content
+        assert direct.content.startswith(packet_line(b"# service=git-upload-pack\n"))
+        assert stream.is_closed
+        assert stream.response.raw.closed
+        self._assert_no_credentials(str(dict(response.items())))
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_service_result_stream_is_byte_transparent(
-        self, request_mock: MagicMock
-    ) -> None:
-        request_body: bytes = b"0011want GitLab\x00\xff0000"
-        chunks: tuple[bytes, ...] = (b"0008NA", b"K\nGit", b"Lab\x00\xfe")
-        upstream_response: MagicMock = self._upstream_response(
-            content_type="application/x-git-upload-pack-result",
-            chunks=chunks,
+    def test_service_result_stream_contains_a_real_unchanged_git_pack(self) -> None:
+        request_body: bytes = (
+            packet_line(f"want {self.head}\n".encode())
+            + b"0000"
+            + packet_line(b"done\n")
         )
-        request_mock.return_value = upstream_response
-
+        direct: requests.Response = self._direct_request(
+            "POST",
+            GitService.UPLOAD.value,
+            data=request_body,
+            headers={"Content-Type": "application/x-git-upload-pack-request"},
+        )
+        assert direct.status_code == status.HTTP_200_OK
         response: HttpResponseBase = self.client.post(
-            self._upload_url(),
+            self._service_url(GitService.UPLOAD),
             data=request_body,
             content_type="application/x-git-upload-pack-request",
             headers={"authorization": self.auth},
         )
+        stream: UpstreamResponseStream = upstream_stream(response)
+        assert stream.response.request.body == request_body
+        body: bytes = response_body(response)
+        assert body == direct.content
+        assert body.startswith(b"0008NAK\nPACK")
+        assert response["Content-Type"] == "application/x-git-upload-pack-result"
+        directory: str = self.enterContext(tempfile.TemporaryDirectory())
+        unpacked: GitRepo = GitRepo.init(Path(directory) / "unpacked")
+        self.addCleanup(unpacked.close)
+        # Indexing the actual returned pack checks its checksum, objects and blob
+        # content. A response carrying rewritten bytes cannot satisfy this check.
+        with tempfile.TemporaryFile(dir=directory) as pack:
+            pack.write(body[len(b"0008NAK\n") :])
+            pack.seek(0)
+            unpacked.git.index_pack("--stdin", istream=pack)
+        blob = unpacked.commit(self.head).tree["binary.bin"]
+        assert isinstance(blob, GitFile)
+        assert blob.content.getvalue() == GIT_FILE_CONTENT
+        assert stream.is_closed
+        assert stream.response.raw.closed
 
-        assert response.status_code == status.HTTP_200_OK
-        assert self._response_body(response) == b"".join(chunks)
-        assert request_mock.call_args.kwargs["data"] == request_body
-        upstream_response.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_receive_pack_result_uses_receive_media_type(
-        self, request_mock: MagicMock
-    ) -> None:
+    def test_receive_pack_result_uses_receive_media_type(self) -> None:
         self.project.acquire_mutex(self.user)
-        upstream_response: MagicMock = self._upstream_response(
-            content_type="application/x-git-receive-pack-result",
-            chunks=(b"0008NAK\n",),
+        direct: requests.Response = self._direct_request(
+            "POST",
+            GitService.RECEIVE.value,
+            data=b"0000",
+            headers={"Content-Type": "application/x-git-receive-pack-request"},
         )
-        request_mock.return_value = upstream_response
-
+        assert direct.status_code == status.HTTP_200_OK
         response: HttpResponseBase = self.client.post(
-            self._receive_url(),
+            self._service_url(GitService.RECEIVE),
             data=b"0000",
             content_type="application/x-git-receive-pack-request",
             headers={"authorization": self.auth},
         )
-
         assert response.status_code == status.HTTP_200_OK
         assert response["Content-Type"] == "application/x-git-receive-pack-result"
-        assert self._response_body(response) == b"0008NAK\n"
-        upstream_response.close.assert_called_once_with()
+        assert response_body(response) == direct.content
+        assert (
+            self.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
+                "id"
+            ]
+            == self.head
+        )
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
     def test_upstream_request_isolated_from_client_credentials_and_proxy_headers(
-        self, request_mock: MagicMock
+        self,
     ) -> None:
-        upstream_response: MagicMock = self._upstream_response(chunks=(b"0000",))
-        request_mock.return_value = upstream_response
-
         response: HttpResponseBase = self.client.get(
             self._info_url(),
             headers={
                 "authorization": self.auth,
                 "user-agent": "git/2.50",
                 "accept": "application/x-git-upload-pack-advertisement",
-                "content-type": "application/x-git-upload-pack-request",
                 "git-protocol": "version=2",
                 "cache-control": "no-cache",
                 "pragma": "no-cache",
-                "cookie": "session=client-secret",
+                "cookie": "session=client-only-cookie",
                 "x-forwarded-for": "203.0.113.20",
                 "x-untrusted": "must-not-be-forwarded",
             },
         )
-        self._response_body(response)
-
-        call_kwargs: Mapping[str, Any] = request_mock.call_args.kwargs
-        upstream_headers: dict[str, str] = {
-            key.lower(): value for key, value in call_kwargs["headers"].items()
-        }
-        assert upstream_headers == {
-            "accept": "application/x-git-upload-pack-advertisement",
-            "accept-encoding": "identity",
-            "cache-control": "no-cache",
-            "content-type": "application/x-git-upload-pack-request",
-            "git-protocol": "version=2",
-            "pragma": "no-cache",
-            "user-agent": "git/2.50",
-        }
-        assert call_kwargs["url"] == (
-            f"{settings.GITLAB_HTTP_PROTOCOL}://"
-            "gitlab.internal.example/speleodb/"
-            f"{self.project.id}.git/info/refs"
+        upstream: requests.PreparedRequest = upstream_stream(response).response.request
+        expected_auth: requests.PreparedRequest = requests.Request(
+            method="GET",
+            url=self._upstream_url("info/refs"),
+            auth=HTTPBasicAuth("oauth2", self.credentials.token),
+        ).prepare()
+        # Boolean assertions avoid printing either credential if a regression fails.
+        correct_auth: bool = (
+            upstream.headers.get("Authorization")
+            == (expected_auth.headers["Authorization"])
         )
-        assert self.credentials.token not in call_kwargs["url"]
-        assert call_kwargs["auth"] == ("oauth2", self.credentials.token)
-        assert call_kwargs["allow_redirects"] is False
-        assert call_kwargs["stream"] is True
-        assert call_kwargs["timeout"] == UPSTREAM_TIMEOUT_SECONDS
-        assert call_kwargs["method"] == "GET"
-        assert call_kwargs["data"] is None
-        assert call_kwargs["params"]["service"] == "git-upload-pack"
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_html_success_response_becomes_sanitized_bad_gateway(
-        self, request_mock: MagicMock
-    ) -> None:
-        upstream_response: MagicMock = self._upstream_response(
-            content_type="text/html; charset=utf-8",
-            chunks=(b"<!DOCTYPE html><title>GitLab</title>",),
+        assert correct_auth, "Upstream must authenticate using the service credential"
+        self._assert_no_credentials(upstream.url or "")
+        assert upstream.headers["Git-Protocol"] == "version=2"
+        assert upstream.headers["Accept-Encoding"] == "identity"
+        assert upstream.headers["User-Agent"] == "git/2.50"
+        assert upstream.headers["Cache-Control"] == "no-cache"
+        assert upstream.headers["Pragma"] == "no-cache"
+        assert all(
+            header not in upstream.headers
+            for header in ("Cookie", "X-Forwarded-For", "X-Untrusted")
         )
-        request_mock.return_value = upstream_response
+        assert upstream.body is None
+        assert response.status_code == status.HTTP_200_OK
+        assert packet_line(b"version 2\n") in response_body(response)
 
+    def test_basic_git_token_authentication_reaches_the_real_remote(self) -> None:
+        basic_token: str = base64.b64encode(f"oauth2:{self.token.key}".encode()).decode(
+            "ascii"
+        )
         response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
+            self._info_url(), headers={"authorization": f"Basic {basic_token}"}
         )
+        assert response.status_code == status.HTTP_200_OK
+        assert self.head.encode() in response_body(response)
 
-        self._assert_sanitized_bad_gateway(response)
-        upstream_response.iter_content.assert_not_called()
-        upstream_response.close.assert_called_once_with()
-        request_mock.assert_called_once()
-        self.sleep.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_wrong_git_media_type_becomes_sanitized_bad_gateway(
-        self, request_mock: MagicMock
-    ) -> None:
-        upstream_response: MagicMock = self._upstream_response(
-            content_type="application/x-git-receive-pack-advertisement",
-            chunks=(b"0000",),
-        )
-        request_mock.return_value = upstream_response
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
-        self._assert_sanitized_bad_gateway(response)
-        upstream_response.iter_content.assert_not_called()
-        upstream_response.close.assert_called_once_with()
-        request_mock.assert_called_once()
-        self.sleep.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_permanent_upstream_errors_are_not_retried(
-        self, request_mock: MagicMock
-    ) -> None:
-        for status_code, reason in (
-            (status.HTTP_302_FOUND, "Found"),
-            (status.HTTP_401_UNAUTHORIZED, "Unauthorized"),
-            (status.HTTP_403_FORBIDDEN, "Forbidden"),
-            (status.HTTP_400_BAD_REQUEST, "Bad Request"),
-        ):
-            with self.subTest(status_code=status_code):
-                upstream_response: MagicMock = self._upstream_response(
-                    status_code=status_code,
-                    content_type="text/html",
-                    chunks=(b"<!DOCTYPE html><title>GitLab</title>",),
-                    reason=reason,
-                )
-                request_mock.reset_mock()
-                request_mock.return_value = upstream_response
-
-                response: HttpResponseBase = self.client.get(
-                    self._info_url(), headers={"authorization": self.auth}
-                )
-
-                self._assert_sanitized_bad_gateway(response)
-                upstream_response.iter_content.assert_not_called()
-                upstream_response.close.assert_called_once_with()
-                request_mock.assert_called_once()
-                self.sleep.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_transient_discovery_response_is_closed_before_retry(
-        self, request_mock: MagicMock
-    ) -> None:
-        for status_code in (
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            status.HTTP_502_BAD_GATEWAY,
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            status.HTTP_504_GATEWAY_TIMEOUT,
-        ):
-            with self.subTest(status_code=status_code):
-                rejected: MagicMock = self._upstream_response(status_code=status_code)
-                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
-                request_mock.reset_mock()
-                self.sleep.reset_mock()
-                request_mock.side_effect = [rejected, accepted]
-                events: MagicMock = MagicMock()
-                events.attach_mock(request_mock, "request")
-                events.attach_mock(rejected.close, "close_rejected")
-
-                response: HttpResponseBase = self.client.get(
-                    self._info_url(), headers={"authorization": self.auth}
-                )
-
-                assert [entry[0] for entry in events.mock_calls] == [
-                    "request",
-                    "close_rejected",
-                    "request",
-                ]
-                self.sleep.assert_called_once_with(1)
-                rejected.iter_content.assert_not_called()
-                assert self._response_body(response) == b"0000"
-                accepted.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_discovery_status_exhaustion_has_bounded_backoff(
-        self, request_mock: MagicMock
-    ) -> None:
-        responses: list[MagicMock] = [
-            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
-            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS)
-        ]
-        request_mock.side_effect = responses
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
-        self._assert_sanitized_bad_gateway(response)
-        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
-        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)]
-        for upstream_response in responses:
-            upstream_response.close.assert_called_once_with()
-            upstream_response.iter_content.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_discovery_recovers_from_timeout_and_connection_failure(
-        self, request_mock: MagicMock
-    ) -> None:
-        for error_type in (Timeout, RequestsConnectionError):
-            with self.subTest(error_type=error_type.__name__):
-                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
-                request_mock.reset_mock()
-                self.sleep.reset_mock()
-                request_mock.side_effect = [error_type("temporary failure"), accepted]
-
-                response: HttpResponseBase = self.client.get(
-                    self._info_url(), headers={"authorization": self.auth}
-                )
-
-                assert self._response_body(response) == b"0000"
-                assert request_mock.call_count == REQUEST_ATTEMPTS_WITH_RETRY
-                self.sleep.assert_called_once_with(1)
-                accepted.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_discovery_honors_short_retry_after_values(
-        self, request_mock: MagicMock
-    ) -> None:
-        now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
-        for retry_after in (
-            "3",
-            format_datetime(now + timedelta(seconds=3), usegmt=True),
-        ):
-            with self.subTest(retry_after=retry_after):
-                rejected: MagicMock = self._upstream_response(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
-                )
-                rejected.headers["Retry-After"] = retry_after
-                accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
-                request_mock.reset_mock()
-                self.sleep.reset_mock()
-                request_mock.side_effect = [rejected, accepted]
-
-                with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
-                    response: HttpResponseBase = self.client.get(
-                        self._info_url(), headers={"authorization": self.auth}
-                    )
-
-                self.sleep.assert_called_once_with(3)
-                assert self._response_body(response) == b"0000"
-                rejected.close.assert_called_once_with()
-                accepted.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_long_retry_after_is_not_shortened_into_an_early_retry(
-        self, request_mock: MagicMock
-    ) -> None:
-        now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
-        for retry_after in (
-            "31",
-            format_datetime(now + timedelta(seconds=31), usegmt=True),
-        ):
-            with self.subTest(retry_after=retry_after):
-                rejected: MagicMock = self._upstream_response(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
-                )
-                rejected.headers["Retry-After"] = retry_after
-                request_mock.reset_mock()
-                request_mock.return_value = rejected
-
-                with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
-                    response: HttpResponseBase = self.client.get(
-                        self._info_url(), headers={"authorization": self.auth}
-                    )
-
-                self._assert_sanitized_bad_gateway(response)
-                request_mock.assert_called_once()
-                self.sleep.assert_not_called()
-                rejected.close.assert_called_once_with()
-                rejected.iter_content.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_first_404_is_closed_then_repository_is_created_and_retried(
-        self,
-        request_mock: MagicMock,
-        create_or_clone_mock: MagicMock,
-    ) -> None:
-        first_response: MagicMock = self._upstream_response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content_type="text/html",
-            reason="Not Found",
-        )
-        second_response: MagicMock = self._upstream_response(chunks=(b"0000",))
-        request_mock.side_effect = [first_response, second_response]
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
-        assert self._response_body(response) == b"0000"
-        assert request_mock.call_count == REQUEST_ATTEMPTS_WITH_RETRY
-        create_or_clone_mock.assert_called_once_with(self.project)
-        first_response.close.assert_called_once_with()
-        second_response.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_repeated_404_closes_both_responses_and_returns_bad_gateway(
-        self,
-        request_mock: MagicMock,
-        create_or_clone_mock: MagicMock,
-    ) -> None:
-        first_response: MagicMock = self._upstream_response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content_type="text/html",
-            reason="Not Found",
-        )
-        second_response: MagicMock = self._upstream_response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content_type="text/html",
-            reason="Not Found",
-        )
-        request_mock.side_effect = [first_response, second_response]
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
-        self._assert_sanitized_bad_gateway(response)
-        assert request_mock.call_count == REQUEST_ATTEMPTS_WITH_RETRY
-        create_or_clone_mock.assert_called_once_with(self.project)
-        first_response.close.assert_called_once_with()
-        second_response.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_404_recovery_has_a_fresh_bounded_discovery_budget(
-        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
-    ) -> None:
-        failures_before: list[MagicMock] = [
-            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
-            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS - 1)
-        ]
-        missing: MagicMock = self._upstream_response(
-            status_code=status.HTTP_404_NOT_FOUND
-        )
-        failures_after: list[MagicMock] = [
-            self._upstream_response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
-            for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS - 1)
-        ]
-        accepted: MagicMock = self._upstream_response(chunks=(b"0000",))
-        responses: list[MagicMock] = [
-            *failures_before,
-            missing,
-            *failures_after,
-            accepted,
-        ]
-        request_mock.side_effect = responses
-
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
-        assert self._response_body(response) == b"0000"
-        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS * 2
-        create_or_clone_mock.assert_called_once_with(self.project)
-        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)] * 2
-        for upstream_response in responses:
-            upstream_response.close.assert_called_once_with()
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_post_status_failures_are_never_replayed_or_recovered(
-        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
-    ) -> None:
-        self.project.acquire_mutex(self.user)
-        for url, service in (
-            (self._upload_url(), "git-upload-pack"),
-            (self._receive_url(), "git-receive-pack"),
-        ):
-            for status_code in (
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_429_TOO_MANY_REQUESTS,
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                status.HTTP_502_BAD_GATEWAY,
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                status.HTTP_504_GATEWAY_TIMEOUT,
-            ):
-                with self.subTest(service=service, status_code=status_code):
-                    rejected: MagicMock = self._upstream_response(
-                        status_code=status_code
-                    )
-                    request_mock.reset_mock()
-                    request_mock.return_value = rejected
-
-                    response: HttpResponseBase = self.client.post(
-                        url,
-                        data=b"0000",
-                        content_type=f"application/x-{service}-request",
-                        headers={"authorization": self.auth},
-                    )
-
-                    self._assert_sanitized_bad_gateway(response)
-                    request_mock.assert_called_once()
-                    create_or_clone_mock.assert_not_called()
-                    self.sleep.assert_not_called()
-                    rejected.close.assert_called_once_with()
-                    rejected.iter_content.assert_not_called()
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_post_transport_failures_are_not_replayed_or_logged_verbatim(
-        self, request_mock: MagicMock, create_or_clone_mock: MagicMock
-    ) -> None:
-        self.project.acquire_mutex(self.user)
-        for url, service in (
-            (self._upload_url(), "git-upload-pack"),
-            (self._receive_url(), "git-receive-pack"),
-        ):
-            for error_type in (Timeout, RequestsConnectionError):
-                with self.subTest(service=service, error_type=error_type.__name__):
-                    request_mock.reset_mock()
-                    request_mock.side_effect = error_type(
-                        f"private error {UPSTREAM_TOKEN}"
-                    )
-
-                    with self.assertLogs(
-                        "speleodb.git_proxy.views", level="WARNING"
-                    ) as logs:
-                        response: HttpResponseBase = self.client.post(
-                            url,
-                            data=b"0000",
-                            content_type=f"application/x-{service}-request",
-                            headers={"authorization": self.auth},
-                        )
-
-                    self._assert_sanitized_bad_gateway(response)
-                    request_mock.assert_called_once()
-                    create_or_clone_mock.assert_not_called()
-                    self.sleep.assert_not_called()
-                    assert UPSTREAM_TOKEN not in "\n".join(logs.output)
-
-    @patch("speleodb.git_proxy.views.GitlabManager.create_or_clone_project")
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_404_recovery_failure_is_sanitized_and_does_not_log_secret(
-        self,
-        request_mock: MagicMock,
-        create_or_clone_mock: MagicMock,
-    ) -> None:
-        first_response: MagicMock = self._upstream_response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content_type="text/html",
-            reason="Not Found",
-        )
-        request_mock.return_value = first_response
-        create_or_clone_mock.side_effect = RuntimeError(
-            f"clone failed for https://oauth2:{UPSTREAM_TOKEN}@gitlab.example/repo"
-        )
-
-        with self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs:
-            response: HttpResponseBase = self.client.get(
-                self._info_url(), headers={"authorization": self.auth}
-            )
-
-        self._assert_sanitized_bad_gateway(response)
-        assert request_mock.call_count == 1
-        first_response.close.assert_called_once_with()
-        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_connection_timeout_returns_sanitized_bad_gateway(
-        self, request_mock: MagicMock
-    ) -> None:
-        request_mock.side_effect = Timeout(f"upstream timed out {UPSTREAM_TOKEN}")
-
-        with self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs:
-            response: HttpResponseBase = self.client.get(
-                self._info_url(), headers={"authorization": self.auth}
-            )
-
-        self._assert_sanitized_bad_gateway(response)
-        assert request_mock.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
-        assert self.sleep.call_args_list == [call(1), call(2), call(4), call(8)]
-        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_request_exception_returns_sanitized_bad_gateway(
-        self, request_mock: MagicMock
-    ) -> None:
-        request_mock.side_effect = RequestException(
-            f"upstream request failed {UPSTREAM_TOKEN}"
-        )
-
-        with self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs:
-            response: HttpResponseBase = self.client.get(
-                self._info_url(), headers={"authorization": self.auth}
-            )
-
-        self._assert_sanitized_bad_gateway(response)
-        request_mock.assert_called_once()
-        self.sleep.assert_not_called()
-        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_deferred_stream_failure_closes_upstream_response(
-        self, request_mock: MagicMock
-    ) -> None:
-        def broken_stream() -> Iterator[bytes]:
-            yield b"partial GitLab packet"
-            raise ChunkedEncodingError(f"upstream stream ended early {UPSTREAM_TOKEN}")
-
-        upstream_response: MagicMock = self._upstream_response()
-        upstream_response.iter_content.return_value = broken_stream()
-        request_mock.return_value = upstream_response
-        response: HttpResponseBase = self.client.get(
-            self._info_url(), headers={"authorization": self.auth}
-        )
-
+    def test_invalid_upstream_token_returns_sanitized_bad_gateway(self) -> None:
+        invalid_token: str = uuid.uuid4().hex
         with (
-            self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs,
-            pytest.raises(ChunkedEncodingError),
+            configured_git_credentials(GITLAB_TOKEN=invalid_token),
+            self.assertLogs("speleodb.git_proxy.views", level="ERROR") as logs,
         ):
-            self._response_body(response)
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": self.auth}
+            )
+        self._assert_sanitized_bad_gateway(response)
+        diagnostic: str = "\n".join(logs.output)
+        assert "status=401" in diagnostic
+        self._assert_no_credentials(diagnostic)
+        leaked_invalid_token: bool = invalid_token in diagnostic
+        assert not leaked_invalid_token
 
-        upstream_response.close.assert_called_once_with()
-        request_mock.assert_called_once()
-        self.sleep.assert_not_called()
-        assert UPSTREAM_TOKEN not in "\n".join(logs.output)
-
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_partially_consumed_stream_closes_upstream_on_client_disconnect(
-        self, request_mock: MagicMock
-    ) -> None:
-        upstream_response: MagicMock = self._upstream_response(
-            chunks=(b"first packet", b"second packet")
+    def test_first_404_creates_real_repository_and_retries(self) -> None:
+        project: Project = ProjectFactory.create(created_by=self.user.email)
+        UserProjectPermissionFactory.create(
+            target=self.user, project=project, level=PermissionLevel.READ_AND_WRITE
         )
-        request_mock.return_value = upstream_response
+        missing: requests.Response = self._direct_request(
+            "GET",
+            "info/refs",
+            project=project,
+            params={"service": GitService.UPLOAD.value},
+        )
+        assert missing.status_code == status.HTTP_404_NOT_FOUND
+        assert not project.git_repo_dir.exists()
+        response: HttpResponseBase = self.client.get(
+            self._info_url(project), headers={"authorization": self.auth}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        body: bytes = response_body(response)
+        remote: GitlabProject = self.api.projects.get(
+            f"{self.credentials.group_name}/{project.id}"
+        )
+        self.addCleanup(remote.delete)
+        local: GitRepo = GitRepo(project.git_repo_dir)
+        self.addCleanup(local.close)
+        assert local.head.commit.hexsha.encode() in body
+        assert remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"] == (
+            local.head.commit.hexsha
+        )
+
+    def test_missing_repository_post_is_not_recovered(self) -> None:
+        project: Project = ProjectFactory.create(created_by=self.user.email)
+        UserProjectPermissionFactory.create(
+            target=self.user, project=project, level=PermissionLevel.READ_AND_WRITE
+        )
+        request_body: bytes = (
+            packet_line(f"want {self.head}\n".encode())
+            + b"0000"
+            + packet_line(b"done\n")
+        )
+        # A flush-only POST is a successful GitLab no-op even for an absent
+        # repository. Ask for a real object so the service must resolve it.
+        direct: requests.Response = self._direct_request(
+            "POST",
+            GitService.UPLOAD.value,
+            project=project,
+            data=request_body,
+            headers={"Content-Type": "application/x-git-upload-pack-request"},
+        )
+        assert direct.status_code == status.HTTP_404_NOT_FOUND
+        response: HttpResponseBase = self.client.post(
+            self._service_url(GitService.UPLOAD, project),
+            data=request_body,
+            content_type="application/x-git-upload-pack-request",
+            headers={"authorization": self.auth},
+        )
+        self._assert_sanitized_bad_gateway(response)
+        assert not project.git_repo_dir.exists()
+        with pytest.raises(gitlab.exceptions.GitlabGetError) as error:
+            self.api.projects.get(f"{self.credentials.group_name}/{project.id}")
+        assert error.value.response_code == status.HTTP_404_NOT_FOUND
+
+    def test_real_connection_failure_is_sanitized(self) -> None:
+        with (
+            unavailable_git_port() as host,
+            configured_git_credentials(
+                GITLAB_HOST_URL=host,
+                GITLAB_HTTP_PROTOCOL="http",
+                DJANGO_GIT_RETRY_ATTEMPTS=2,
+            ),
+            self.assertLogs("speleodb.git_proxy.views", level="WARNING") as logs,
+        ):
+            started: float = time.monotonic()
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": self.auth}
+            )
+            elapsed: float = time.monotonic() - started
+        self._assert_sanitized_bad_gateway(response)
+        assert elapsed >= 1.0
+        assert elapsed < DISCOVERY_FAILURE_MAX_SECONDS
+        self._assert_no_credentials("\n".join(logs.output))
+
+    def test_partially_consumed_stream_closes_upstream_on_client_disconnect(
+        self,
+    ) -> None:
         response: HttpResponseBase = self.client.get(
             self._info_url(), headers={"authorization": self.auth}
         )
-        response_iterator = (
-            response._iterator  # type: ignore[attr-defined]  # noqa: SLF001
-        )
+        stream: UpstreamResponseStream = upstream_stream(response)
+        assert isinstance(response, StreamingHttpResponse)
+        # The test client's real close-wrapper is absent from Django's stubs.
+        response_iterator = response._iterator  # type: ignore[attr-defined]  # noqa: SLF001
         assert isinstance(response_iterator, GeneratorType)
-
-        assert next(response_iterator) == b"first packet"
-        # Close the test client's stream wrapper so it isolates request_finished
-        # database cleanup exactly as it does after full response consumption.
+        assert next(response_iterator)
         response_iterator.close()
-
-        upstream_response.close.assert_called_once_with()
         assert response.closed
+        assert stream.is_closed
+        assert stream.response.raw.closed
         self.project.refresh_from_db()
+
+    def test_receive_pack_requires_a_real_project_mutex(self) -> None:
+        response: HttpResponseBase = self.client.post(
+            self._service_url(GitService.RECEIVE),
+            data=b"0000",
+            content_type="application/x-git-receive-pack-request",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert b"You did not lock the project" in response_body(response)
+        assert (
+            self.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
+                "id"
+            ]
+            == self.head
+        )
+
+    def test_receive_pack_rejects_a_nondefault_branch(self) -> None:
+        self.project.acquire_mutex(self.user)
+        request_body: bytes = (
+            packet_line(
+                (
+                    f"{self.head} {self.head} "
+                    "refs/heads/rejected-branch\x00report-status\n"
+                ).encode()
+            )
+            + b"0000"
+        )
+        response: HttpResponseBase = self.client.post(
+            self._service_url(GitService.RECEIVE),
+            data=request_body,
+            content_type="application/x-git-receive-pack-request",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert b"Only commits on branch" in response_body(response)
+        with pytest.raises(gitlab.exceptions.GitlabGetError) as error:
+            self.remote_project.branches.get("rejected-branch")
+        assert error.value.response_code == status.HTTP_404_NOT_FOUND
+
+    def test_invalid_service_returns_git_error_without_upstream_request(self) -> None:
+        url: str = reverse("git_info", kwargs={"id": self.project.id})
+        response: HttpResponseBase = self.client.get(
+            f"{url}?service=invalid", headers={"authorization": self.auth}
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert b"Invalid service" in response_body(response)
 
 
 @pytest.mark.parametrize(
@@ -732,90 +571,55 @@ def test_upstream_retry_after_value_policy(
     assert get_upstream_retry_delay(retry_after, attempt=2) == expected
 
 
-@pytest.mark.parametrize(
-    ("seconds", "expected"), [(-5, 0.0), (0, 0.0), (3, 3.0), (30, 30.0), (31, None)]
-)
-def test_upstream_retry_after_date_policy(seconds: int, expected: float | None) -> None:
-    now: datetime = datetime(2026, 9, 9, tzinfo=UTC)
-    retry_after: str = format_datetime(now + timedelta(seconds=seconds), usegmt=True)
-    with patch("speleodb.git_proxy.views.timezone.now", return_value=now):
-        assert get_upstream_retry_delay(retry_after, attempt=0) == expected
+@pytest.mark.parametrize("seconds", [-5, 0, 3, 29, 35])
+def test_upstream_retry_after_date_policy(seconds: int) -> None:
+    requested_time = timezone.now() + timedelta(seconds=seconds)
+    retry_after: str = format_datetime(requested_time, usegmt=True)
+    delay: float | None = get_upstream_retry_delay(retry_after, attempt=0)
+    if seconds > UPSTREAM_MAX_RETRY_DELAY_SECONDS:
+        assert delay is None
+    elif seconds <= 0:
+        assert delay == 0.0
+    else:
+        assert delay is not None
+        # HTTP dates have one-second precision; allow clock advancement while
+        # exercising the application's real clock rather than replacing it.
+        assert max(0, seconds - 2) <= delay <= seconds
+
+
+@pytest.mark.parametrize("attempt", [0, 1, 2, 3, 4, 5, 8, 1000])
+def test_default_retry_backoff_is_capped(attempt: int) -> None:
+    assert get_upstream_retry_delay(None, attempt=attempt) == min(
+        2 ** min(attempt, 5), UPSTREAM_MAX_RETRY_DELAY_SECONDS
+    )
 
 
 @pytest.mark.parametrize(
     ("discovery", "method"),
     [(False, "GET"), (True, "POST"), (False, "POST"), (True, "HEAD")],
 )
-def test_only_discovery_get_is_retryable(discovery: bool, method: str) -> None:
-    with (
-        patch(
-            "speleodb.git_proxy.views.requests.api.request",
-            side_effect=Timeout("timeout"),
-        ) as request_mock,
-        patch("speleodb.git_proxy.views.time.sleep") as sleep,
-        pytest.raises(Timeout),
-    ):
-        request_git_upstream(
-            discovery=discovery, method=method, url="https://gitlab.example/info/refs"
-        )
-    request_mock.assert_called_once()
-    sleep.assert_not_called()
-
-
-@pytest.mark.parametrize("retry_after", ["0", "3"])
-@override_settings(DJANGO_GIT_RETRY_ATTEMPTS=8)
-def test_repeated_server_hints_preserve_capped_exponential_backoff(
-    retry_after: str,
-) -> None:
-    response: MagicMock = MagicMock(
-        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        headers={"Retry-After": retry_after},
-    )
-    with (
-        patch(
-            "speleodb.git_proxy.views.requests.api.request", return_value=response
-        ) as request,
-        patch("speleodb.git_proxy.views.time.sleep") as sleep,
-    ):
-        assert (
+def test_only_discovery_get_waits_to_retry(discovery: bool, method: str) -> None:
+    with unavailable_git_port() as host:
+        started: float = time.monotonic()
+        with pytest.raises(RequestsConnectionError):
             request_git_upstream(
-                discovery=True, method="GET", url="https://gitlab.example/info/refs"
+                discovery=discovery,
+                method=method,
+                url=f"http://{host}/info/refs",
+                timeout=1,
             )
-            is response
-        )
-    assert request.call_count == 8  # noqa: PLR2004
-    expected: list[int] = (
-        [1, 2, 4, 8, 16, 30, 30] if retry_after == "0" else [3, 6, 12, 24, 30, 30, 30]
-    )
-    assert sleep.call_args_list == [call(delay) for delay in expected]
-    assert response.close.call_count == len(expected)
-
-
-@override_settings(DJANGO_GIT_RETRY_ATTEMPTS=8)
-def test_transport_failure_backoff_is_capped() -> None:
-    with (
-        patch(
-            "speleodb.git_proxy.views.requests.api.request", side_effect=Timeout
-        ) as request,
-        patch("speleodb.git_proxy.views.time.sleep") as sleep,
-        pytest.raises(Timeout),
-    ):
-        request_git_upstream(
-            discovery=True, method="GET", url="https://gitlab.example/info/refs"
-        )
-    assert request.call_count == 8  # noqa: PLR2004
-    assert sleep.call_args_list == [call(delay) for delay in [1, 2, 4, 8, 16, 30, 30]]
+        # The default discovery budget waits at least 15 seconds. A generous
+        # real-clock bound detects accidentally applying it to POST/HEAD.
+        assert time.monotonic() - started < SINGLE_REQUEST_MAX_SECONDS
 
 
 @pytest.mark.parametrize("attempts", [-1, 0, True, 1.5])
 def test_upstream_rejects_invalid_attempt_budget(attempts: float) -> None:
     with (
         override_settings(DJANGO_GIT_RETRY_ATTEMPTS=attempts),
-        patch("speleodb.git_proxy.views.requests.api.request") as request,
         pytest.raises(ValueError, match="positive integer"),
     ):
         request_git_upstream(discovery=True, method="GET")
-    request.assert_not_called()
 
 
 class TestGitProxyAccessBoundary(BaseAPIProjectTestCase):
@@ -823,35 +627,45 @@ class TestGitProxyAccessBoundary(BaseAPIProjectTestCase):
         endpoint: str = reverse("git_info", kwargs={"id": self.project.id})
         return f"{endpoint}?service=git-upload-pack"
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_unauthenticated_request_never_reaches_upstream(
-        self, request_mock: MagicMock
+    def test_unauthenticated_request_is_rejected_before_unavailable_upstream(
+        self,
     ) -> None:
-        response: HttpResponseBase = self.client.get(self._info_url())
-
+        with (
+            unavailable_git_port() as host,
+            configured_git_credentials(
+                GITLAB_HOST_URL=host, GITLAB_HTTP_PROTOCOL="http"
+            ),
+        ):
+            response: HttpResponseBase = self.client.get(self._info_url())
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        request_mock.assert_not_called()
+        assert not self.project.git_repo_dir.exists()
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_invalid_authentication_never_reaches_upstream(
-        self, request_mock: MagicMock
+    def test_invalid_authentication_is_rejected_before_unavailable_upstream(
+        self,
     ) -> None:
-        response: HttpResponseBase = self.client.get(
-            self._info_url(),
-            headers={"authorization": "Token invalid-token"},
-        )
-
+        with (
+            unavailable_git_port() as host,
+            configured_git_credentials(
+                GITLAB_HOST_URL=host, GITLAB_HTTP_PROTOCOL="http"
+            ),
+        ):
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": "Token invalid-token"}
+            )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        request_mock.assert_not_called()
+        assert not self.project.git_repo_dir.exists()
 
-    @patch("speleodb.git_proxy.views.requests.api.request")
-    def test_user_without_project_read_permission_never_reaches_upstream(
-        self, request_mock: MagicMock
+    def test_user_without_read_permission_is_rejected_before_unavailable_upstream(
+        self,
     ) -> None:
-        response: HttpResponseBase = self.client.get(
-            self._info_url(),
-            headers={"authorization": self.auth},
-        )
-
+        with (
+            unavailable_git_port() as host,
+            configured_git_credentials(
+                GITLAB_HOST_URL=host, GITLAB_HTTP_PROTOCOL="http"
+            ),
+        ):
+            response: HttpResponseBase = self.client.get(
+                self._info_url(), headers={"authorization": self.auth}
+            )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        request_mock.assert_not_called()
+        assert not self.project.git_repo_dir.exists()

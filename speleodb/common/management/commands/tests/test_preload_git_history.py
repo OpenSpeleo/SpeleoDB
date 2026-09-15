@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
-import git
+import pytest
 from django.conf import settings
 from django.core.management import call_command
 from django.test import override_settings
@@ -15,14 +13,15 @@ from django.test import override_settings
 from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.git_engine.core import GitRepo
-from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 
 
+@pytest.mark.skip_if_lighttest
 class TestPreloadGitHistory(BaseProjectTestCaseMixin):
-    """Exercise real Git history reconstruction without external services."""
+    """Reconstruct SQL history from the configured GitLab service."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -31,56 +30,50 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         ).resolve()
         self.working_dir: Path = self.root / "working"
         self.enterContext(override_settings(DJANGO_GIT_PROJECTS_DIR=self.working_dir))
-        self.clone: MagicMock = self.enterContext(
-            patch.object(
-                GitlabManager,
-                "create_or_clone_project",
-                side_effect=self._clone_local_project,
-            )
-        )
 
     def _seed_remote(
         self, project: Project, messages: tuple[str, ...] = ()
     ) -> list[str]:
-        remote_path: Path = self.root / "remotes" / str(project.id)
-        seed_path: Path = self.root / "seeds" / str(project.id)
-        branch: str = settings.DJANGO_GIT_BRANCH_NAME
-        remote: git.Repo = git.Repo.init(remote_path, bare=True, initial_branch=branch)
-        seed: git.Repo = git.Repo.init(seed_path, initial_branch=branch)
-        self.addCleanup(remote.close)
-        self.addCleanup(seed.close)
-        actor: git.Actor = git.Actor(self.user.name, self.user.email)
-        hashes: list[str] = []
-        for index, message in enumerate(
-            (settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE, *messages)
-        ):
-            # ProjectCommit's primary key is the SHA across all projects.
-            # Make even initial commits unique when created in the same second.
-            (seed_path / "README.txt").write_text(
+        GitlabManager.create_project(project)
+        repo: GitRepo = GitRepo.init(project.git_repo_dir)
+        self.addCleanup(repo.close)
+        repo.create_remote("origin", GitlabCredentials.get().project_url(project.id))
+        # Commit SHA is globally unique in the SQL cache. Distinct initial trees
+        # preserve each project's root even when initialized in the same second.
+        (repo.path / "README.txt").write_text(
+            f"Project {project.id}\n", encoding="utf-8"
+        )
+        repo.publish_first_commit()
+        hashes: list[str] = [repo.head.commit.hexsha]
+        for index, message in enumerate(messages):
+            (repo.path / "README.txt").write_text(
                 f"Project {project.id}, revision {index}\n", encoding="utf-8"
             )
-            seed.index.add(["README.txt"])
-            commit: git.Commit = seed.index.commit(
-                message, author=actor, committer=actor
+            commit: str | None = repo.commit_and_push_project(
+                message, author_name=self.user.name, author_email=self.user.email
             )
-            hashes.append(commit.hexsha)
-        seed.create_remote("origin", str(remote_path))
-        seed.git.push("origin", branch)
+            assert commit is not None
+            hashes.append(commit)
         return hashes
-
-    def _clone_local_project(self, project: Project) -> GitRepo:
-        self.working_dir.mkdir(parents=True, exist_ok=True)
-        return GitRepo.clone_from(
-            url=str(self.root / "remotes" / str(project.id)),
-            to_path=project.git_repo_dir,
-        )
 
     def _assert_history(self, project: Project, hashes: list[str]) -> None:
         commits = ProjectCommit.objects.filter(project=project)
         assert set(commits.values_list("id", flat=True)) == set(hashes)
         # The command owns and removes its working copy, but not the remote.
         assert not project.git_repo_dir.exists()
-        assert (self.root / "remotes" / str(project.id)).exists()
+        # Clone again from GitLab: cleanup must not delete remote history.
+        with tempfile.TemporaryDirectory() as directory:
+            remote: GitRepo = GitRepo.clone_from(
+                GitlabCredentials.get().project_url(project.id),
+                Path(directory),
+                branch=settings.DJANGO_GIT_BRANCH_NAME,
+            )
+            try:
+                assert {commit.hexsha for commit in remote.iter_commits()} == set(
+                    hashes
+                )
+            finally:
+                remote.close()
 
     def test_preload_no_commits(self) -> None:
         """Cache the initial Git commit when there are no user commits."""
@@ -93,7 +86,6 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         assert ProjectCommit.objects.get(id=hashes[0]).message == (
             settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
         )
-        self.clone.assert_called_once()
 
     def test_preload_with_commits(self) -> None:
         """Rebuild deleted cache rows from the remote's complete history."""
@@ -110,7 +102,6 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         assert user_commit.message == "User commit"
         assert user_commit.parent_ids == [hashes[0]]
         assert user_commit.author_email == self.user.email
-        assert self.clone.call_count == 2  # noqa: PLR2004
 
     def test_preload_multiple_projects(self) -> None:
         project2: Project = ProjectFactory.create(created_by=self.user.email)
@@ -136,19 +127,20 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         call_command("preload_git_history")
 
         self._assert_history(self.project, hashes)
-        assert self.clone.call_count == 2  # noqa: PLR2004
 
     def test_preload_continues_after_project_failure(self) -> None:
         broken_project: Project = ProjectFactory.create(created_by=self.user.email)
         hashes: list[str] = self._seed_remote(self.project)
 
-        def clone_with_failure(project: Project) -> GitRepo:
-            if project.id == broken_project.id:
-                project.git_repo_dir.mkdir(parents=True, exist_ok=True)
-                raise GitBaseError("simulated clone failure")
-            return self._clone_local_project(project)
-
-        self.clone.side_effect = clone_with_failure
+        broken_repo: GitRepo = broken_project.git_repo
+        self.addCleanup(broken_repo.close)
+        broken_repo.remotes.origin.set_url(str(self.root / "missing.git"))
+        self.enterContext(
+            override_settings(
+                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
+                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
+            )
+        )
         with self.assertLogs(
             "speleodb.common.management.commands.preload_git_history", level="ERROR"
         ) as logs:
@@ -157,4 +149,4 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         self._assert_history(self.project, hashes)
         assert not broken_project.git_repo_dir.exists()
         assert not ProjectCommit.objects.filter(project=broken_project).exists()
-        assert "simulated clone failure" in "\n".join(logs.output)
+        assert "does not appear to be a git repository" in "\n".join(logs.output)

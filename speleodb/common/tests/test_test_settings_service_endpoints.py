@@ -28,6 +28,7 @@ print(json.dumps({
     "gitlab_host": settings.GITLAB_HOST_URL,
     "gitlab_protocol": settings.GITLAB_HTTP_PROTOCOL,
     "s3_endpoint": settings.AWS_S3_ENDPOINT_URL,
+    "atomic_requests": settings.DATABASES["default"]["ATOMIC_REQUESTS"],
 }))
 """
 
@@ -44,4 +45,5 @@ print(json.dumps({
         "gitlab_host": "gitlab:9080",
         "gitlab_protocol": "http",
         "s3_endpoint": "http://rustfs:9000",
+        "atomic_requests": True,
     }

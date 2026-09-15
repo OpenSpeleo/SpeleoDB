@@ -339,6 +339,8 @@ def main() -> None:
             "GITLAB_GROUP_NAME": test_group_name,
             "GITLAB_HOST_URL": gitlab_host,
             "GITLAB_TOKEN": test_result.group_token,
+            # Administrative provisioning tests only run against local GitLab.
+            "GITLAB_BOOTSTRAP_TOKEN": bootstrap_token,
             "AWS_STORAGE_BUCKET_NAME": test_bucket_name,
             "AWS_S3_BROWSER_ENDPOINT_URL": browser_s3_endpoint,
             "AWS_S3_CUSTOM_DOMAIN": test_s3_custom_domain,

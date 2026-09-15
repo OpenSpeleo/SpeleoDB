@@ -801,8 +801,9 @@ class GitRepo(Repo):
             "max_delay": settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS,
         }
 
-        # Add every file pending
-        retry_with_backoff(self.index.add, "*", **_retry_kwargs)
+        # Match IndexFile.add's inclusion of ignored upload artifacts while
+        # keeping staging inside the supervised CLI and its retryable errors.
+        retry_with_backoff(self.git.add, "--all", "--force", **_retry_kwargs)
 
         # If there are modified files:
         if self.is_dirty() or force_empty_commit:

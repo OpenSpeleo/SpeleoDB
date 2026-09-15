@@ -155,8 +155,18 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
+      - name: Set up Node for real browser upload integration
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install browser test dependencies
+        run: npm ci
+
       - name: Run Tests
         run: |
+          # Validate the real service and write permission before running tests.
+          python manage.py check_gitlab --settings config.settings.test
           python manage.py create_s3_local_buckets --settings config.settings.test
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           # Stream uncaptured output and dump thread stacks after a minute.

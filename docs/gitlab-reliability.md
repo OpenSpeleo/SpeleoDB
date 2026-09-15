@@ -16,6 +16,11 @@ missing commits can be a symptom of an earlier remote failure.
 
 ## Creation and retries
 
+Repository acquisition first looks up the configured namespace/project UUID.
+An existing remote is cloned without a creation POST. Only an explicit HTTP
+404 permits creation; authentication, throttling and other lookup failures
+propagate before the local working directory is changed.
+
 The create endpoint's `GitlabCreateError` does not mean the repository already
 exists. It can also describe validation, permission, throttling, or server
 errors. Treating all such errors as duplicates can trigger repeated attempts
@@ -95,18 +100,18 @@ does not classify authentication or corrupt-object Git stderr as transient.
 
 ## Tests and external dependencies
 
-`test_preload_git_history.py` uses a temporary Git working directory and local
-bare remotes. Only the GitLab repository acquisition boundary is substituted;
-clone, checkout, pull, commit traversal, and database reconstruction execute
-normally. These tests run in light/offline mode and verify reconstruction after
-the command removes its working copies.
+`test_preload_git_history.py` uses temporary Git working directories and real
+GitLab remotes. Clone, checkout, pull, commit traversal, and database
+reconstruction execute normally. The tests verify reconstruction after the
+command removes its working copies, then clone the remote again to prove that
+cleanup preserved its history. They require the live-service test mode.
 
-`test_gitlab_manager.py` exercises the actual python-gitlab client against
-simulated HTTP responses. Coverage includes transient recovery and exhaustion,
-rate-limit delay headers, authorization failures, confirmed conflicts, missing
-repositories, lookup failures, and an ambiguous create followed by a duplicate.
-`test_git_retry.py` verifies clone recovery and sanitized diagnostics in both
-DEBUG retry logs and final tracebacks.
+`test_gitlab_manager.py` exercises the actual python-gitlab client against the
+configured GitLab service. Coverage includes initial publication, existing and
+empty remote repositories, real invalid-namespace and authentication responses,
+and the absence of a duplicate POST when cloning an existing remote.
+`test_git_retry.py` uses actual Git commands to verify retries and sanitized
+diagnostics in both retry logs and final tracebacks.
 
 Existing GitLab integration coverage remains in separate test modules, including
 `speleodb/git_engine/tests/test_tree_to_json.py` and
@@ -132,14 +137,13 @@ local behavior but does not establish the health of CI's remote GitLab service.
 
 ## Performance and limits
 
-Successful creation adds no requests. The existing-repository path adds one
-confirmation GET after the rejected create. Retries add requests and delays
+New creation adds one lookup GET before the POST. An existing repository needs
+one lookup GET and no rejected creation POST. Retries add requests and delays
 only for failures; the API retry budget is separate from the clone budget.
 These are attempt limits, not a total elapsed-time deadline.
 
-The preload tests no longer create external repositories or depend on concurrent
-CI jobs sharing a GitLab group. Other live integration tests still need isolated
-test resources and must not overlap a group-wide cleanup. The retry wrapper
+Preload and other live integration tests create external repositories. They need
+isolated test resources and must not overlap a group-wide cleanup. The retry wrapper
 preserves remote status and body in SDK exceptions. Logs record attempt counts
 and delays without exposing credentials.
 
@@ -153,9 +157,11 @@ local record. This prevents a temporary outage from turning cleanup into
 unintended local data loss. Lookup and deletion have separate error boundaries;
 a failed remote delete also preserves the database record.
 
-Command tests simulate the remote outcomes against a real test database,
-including successful deletion, confirmed absence, permission/transport errors,
-and failed remote deletion. They never invoke live cleanup.
+Command tests use real GitLab repositories and a real test database to check
+successful deletion, confirmed absence, and authentication/transport failures.
+Group-wide cleanup tests create their own disposable subgroup and use real stdin
+pipes to verify confirmation, cancellation, and dry-run behavior. They never
+target the suite's entire shared group.
 
 ## Shared REST policy
 
@@ -182,9 +188,10 @@ invalidate cached numeric project IDs so the same path can be rediscovered
 after repository recreation. A failed authentication never leaves a partially
 initialized client installed on the singleton.
 
-Simulated HTTP regressions exercise the real SDK for request timeouts, bounded
-retries, authentication, history and branch reads, and recovery after a missing
-project. Successful calls add no extra requests. Standalone bootstrap
+Real-service regressions exercise authentication, history and branch reads,
+recovery after a missing project, and token propagation on actual requests.
+Reserved non-listening sockets exercise bounded connection retries. These tests
+do not manufacture HTTP 429/5xx responses or delay headers. Standalone bootstrap
 provisioning uses the same pure-Python client with its existing 15-second request
 timeout and explicit transient-write opt-in. `compose/setup` invokes provisioning
 as a module so it can import this policy without initializing Django.
@@ -197,8 +204,16 @@ The blocked operation was project creation in the first Compass upload test;
 the last visible exploration-lead test and its teardown had completed. The
 installed SDK accepts a server-directed delay outside its HTTP timeout, even
 when the retry count is finite. The stack confirms that waiting path; it does
-not reveal the exact HTTP status or header value. Regression cases now cover
-huge, future, malformed, and repeated delay headers without real sleeps.
+not reveal the exact HTTP status or header value. The application now owns
+bounded retry sleeps. Earlier synthetic delay-header regressions were removed
+when GitLab tests were converted to real services; do not treat connection
+refusal coverage as verification of those HTTP-header sequences.
+
+The later project-creation 429 investigation also removed duplicate creation
+POSTs and lazy repository provisioning during upload cleanup. Upload failure
+tests now require successful real provisioning and assert the intended exception
+and persisted transaction outcome. See [real GitLab integration tests](ci-gitlab-testing.md)
+for the CI service boundary, authentication evidence, and quota uncertainty.
 
 See [bounded retries](bounded-retries.md) for the broader retry audit and
 verification status.

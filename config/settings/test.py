@@ -46,6 +46,8 @@ DATABASES = {"default": env.db("DATABASE_URL")}
 # database, without having the private test dotenv replace that exact address.
 if test_database_url := env.str("TEST_DATABASE_URL", default=""):
     DATABASES = {"default": env.db_url_config(test_database_url)}
+# Replacing the connection mapping above must preserve production transactions.
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 # DATABASES = {
 #     "default": {
 #         "ENGINE": "django.db.backends.sqlite3",

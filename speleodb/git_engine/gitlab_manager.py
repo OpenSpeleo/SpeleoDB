@@ -134,29 +134,20 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
         )
 
     @check_initialized
-    def create_or_clone_project(
-        self,
-        project: Project,
-        base_dir: str | Path | None = None,
-    ) -> GitRepo | None:
-        gitlab_creds = GitlabCredentials.get()
-
-        git_repo_base_dir = (
-            Path(base_dir)
-            if base_dir is not None
-            else Path(settings.DJANGO_GIT_PROJECTS_DIR)
-        )
-
-        project_dir = git_repo_base_dir / str(project.id)
-
-        shutil.rmtree(project_dir, ignore_errors=True)
-
-        project_dir.parent.mkdir(exist_ok=True, parents=True)
-        git_url = gitlab_creds.project_url(project.id)
-
-        git_repo: GitRepo
+    def _ensure_remote_project(self, project: Project) -> bool:
+        """Return whether we created the remote, without POSTing existing paths."""
+        if self._gl is None:
+            raise ValueError("Gitlab API has not been initialized")
+        project_path: str = f"{GitlabCredentials.get().group_name}/{project.id}"
         try:
-            # try to create the repository in Gitlab
+            self._gl.projects.get(project_path)
+        except gitlab.exceptions.GitlabGetError as lookup_error:
+            if lookup_error.response_code != HTTPStatus.NOT_FOUND:
+                raise
+        else:
+            return False
+
+        try:
             self.create_project(project)
         except gitlab.exceptions.GitlabCreateError as create_error:
             # GitLab reports duplicate paths as 400 or 409, but these codes
@@ -168,19 +159,36 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
                 HTTPStatus.CONFLICT,
             }:
                 raise
-            if self._gl is None:
-                raise ValueError(
-                    "Gitlab API has not been initialized"
-                ) from create_error
             try:
-                self._gl.projects.get(
-                    f"{gitlab_creds.group_name}/{project.id}",
-                )
+                self._gl.projects.get(project_path)
             except gitlab.exceptions.GitlabGetError as lookup_error:
                 if lookup_error.response_code == HTTPStatus.NOT_FOUND:
                     raise create_error from None
                 raise
+            return False
+        return True
 
+    @check_initialized
+    def create_or_clone_project(
+        self,
+        project: Project,
+        base_dir: str | Path | None = None,
+    ) -> GitRepo | None:
+        gitlab_creds = GitlabCredentials.get()
+        git_repo_base_dir = (
+            Path(base_dir)
+            if base_dir is not None
+            else Path(settings.DJANGO_GIT_PROJECTS_DIR)
+        )
+        project_dir = git_repo_base_dir / str(project.id)
+        created: bool = self._ensure_remote_project(project)
+
+        shutil.rmtree(project_dir, ignore_errors=True)
+        project_dir.parent.mkdir(exist_ok=True, parents=True)
+        git_url = gitlab_creds.project_url(project.id)
+
+        git_repo: GitRepo
+        if not created:
             git_repo = GitRepo.clone_from(url=git_url, to_path=project_dir)
             if not git_repo.head.is_valid():
                 if git_repo.remotes.origin.refs:

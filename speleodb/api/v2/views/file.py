@@ -41,6 +41,7 @@ from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.api.v2.serializers import UploadSerializer
 from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors import ArianeTMLFileProcessor
@@ -101,9 +102,14 @@ def handle_exception(
     # a transaction.atomic() block here.
     transaction.set_rollback(True)
 
-    # Git working tree cleanup (not covered by DB rollback)
+    # Cleanup must never provision a repository after provisioning itself failed.
+    # Open the existing working copy directly; the lazy project.git_repo property
+    # can create a GitLab project and restart its entire retry budget.
     try:
-        project.git_repo.reset_and_remove_untracked()
+        if project.git_repo_dir.is_dir():
+            git_repo = GitRepo(project.git_repo_dir)
+            with git_repo:
+                git_repo.reset_and_remove_untracked()
     except Exception:
         logger.warning(
             "Failed to reset git working tree for project %s",

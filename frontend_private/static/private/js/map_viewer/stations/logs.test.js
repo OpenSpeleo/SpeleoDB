@@ -72,16 +72,6 @@ vi.mock('../state.js', () => ({
     },
 }));
 
-vi.mock('../components/upload.js', () => ({
-    createProgressBarHTML: vi.fn((id) => `<div id="${id}-container" class="hidden"></div>`),
-    UploadProgressController: vi.fn().mockImplementation(() => ({
-        show: vi.fn(),
-        hide: vi.fn(),
-        update: vi.fn(),
-        upload: vi.fn().mockResolvedValue({}),
-    })),
-}));
-
 describe('StationLogs', () => {
     let container;
 

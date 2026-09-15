@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
+import orjson
 import pytest
-from django.core.files.storage import InMemoryStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -19,22 +18,13 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 
-class SignedInMemoryStorage(InMemoryStorage):
-    def url(self, name: str | None, **kwargs: object) -> str:
-        return super().url(name)
-
-
-@pytest.fixture(autouse=True)
-def _in_memory_storage(monkeypatch: pytest.MonkeyPatch) -> None:
-    storage = SignedInMemoryStorage()
-    monkeypatch.setattr(GISLayer._meta.get_field("source_f"), "storage", storage)  # noqa: SLF001
-    monkeypatch.setattr(GISLayer._meta.get_field("data_f"), "storage", storage)  # noqa: SLF001
+GEOJSON_CONTENT: bytes = b'{ "type": "FeatureCollection", "features": [] }\n'
 
 
 def _geojson() -> SimpleUploadedFile:
     return SimpleUploadedFile(
         "layer.geojson",
-        b'{"type":"FeatureCollection","features":[]}',
+        GEOJSON_CONTENT,
         content_type="application/geo+json",
     )
 
@@ -53,6 +43,15 @@ def _kml() -> SimpleUploadedFile:
 
 @pytest.mark.django_db
 class TestGISLayerAPI(BaseAPITestCase):
+    def tearDown(self) -> None:
+        for layer in GISLayer.objects.filter(created_by=self.user.email):
+            names: set[str] = set()
+            for field in (layer.source_f, layer.data_f):
+                if field.name and field.name not in names:
+                    field.storage.delete(field.name)
+                    names.add(field.name)
+        super().tearDown()
+
     def _create(self, source: SimpleUploadedFile) -> Response:
         return self.client.post(
             reverse("api:v2:gis-layers"),
@@ -62,14 +61,19 @@ class TestGISLayerAPI(BaseAPITestCase):
         )
 
     def test_geojson_is_stored_once_and_rendered_directly(self) -> None:
-        with patch("speleodb.api.v2.views.gis_layer.compile_gis_layer") as compiler:
-            response = self._create(_geojson())
+        response = self._create(_geojson())
 
         assert response.status_code == status.HTTP_201_CREATED
-        compiler.assert_not_called()
         layer = GISLayer.objects.get()
         assert layer.created_by == self.user.email
         assert layer.source_f.name == layer.data_f.name
+        # Preserve the exact original bytes and publish one actual object. This
+        # proves the direct-render contract without replacing the compiler.
+        with layer.source_f.open("rb") as source_file:
+            assert source_file.read() == GEOJSON_CONTENT
+        directories, files = layer.source_f.storage.listdir(str(layer.id))
+        assert directories == []
+        assert files == ["source_layer.geojson"]
         assert response.data["file"]
         assert response.data["source_format"] == "GEOJSON"
         permission = layer.permissions.get(user=self.user)
@@ -86,7 +90,12 @@ class TestGISLayerAPI(BaseAPITestCase):
         assert layer.data_f.name.endswith("data.geojson")
         assert layer.source_f.name != layer.data_f.name
         with layer.data_f.open("rb") as data_file:
-            assert b'"FeatureCollection"' in data_file.read()
+            geojson = orjson.loads(data_file.read())
+        assert geojson["type"] == "FeatureCollection"
+        assert geojson["features"][0]["geometry"]["coordinates"] == [1, 2]
+        directories, files = layer.source_f.storage.listdir(str(layer.id))
+        assert directories == []
+        assert set(files) == {"source_layer.kml", "data.geojson"}
 
     def test_malformed_supported_format_returns_safe_upload_error(self) -> None:
         response = self._create(
@@ -139,3 +148,6 @@ class TestGISLayerAPI(BaseAPITestCase):
         )
 
         assert response.status_code == status.HTTP_302_FOUND
+        assert "source_layer.geojson" in response["Location"]
+        with layer.source_f.open("rb") as source_file:
+            assert source_file.read() == GEOJSON_CONTENT

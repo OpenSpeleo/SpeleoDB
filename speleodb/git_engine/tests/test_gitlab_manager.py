@@ -1,432 +1,151 @@
-# -*- coding: utf-8 -*-
+"""Repository creation and cloning through the configured real GitLab service."""
 
 from __future__ import annotations
 
-import json
-import tempfile
-import traceback
-import uuid
 from http import HTTPStatus
-from pathlib import Path
-from unittest import TestCase
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from typing import TYPE_CHECKING
+from typing import Any
+from uuid import uuid4
 
-import gitlab
+import gitlab.exceptions
 import pytest
 from django.conf import settings
-from git.exc import GitCommandError
-from requests import Response
-from requests.exceptions import Timeout
+from django.test import override_settings
 
-from speleodb.git_engine.client import GitlabClient
-from speleodb.git_engine.core import GitRepo
-from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
+from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.git_engine.gitlab_manager import GitlabManager
+from speleodb.git_engine.tests.live_gitlab import (
+    configured_gitlab_fixture,  # noqa: F401
+)
+from speleodb.git_engine.tests.live_gitlab import (
+    disposable_project_fixture,  # noqa: F401
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from gitlab import Gitlab
+    from requests import Response
+
+    from speleodb.surveys.models import Project
+
+pytestmark = pytest.mark.skip_if_lighttest
 
 
-class CreateOrCloneProjectTests(TestCase):
-    def test_new_project_does_not_fetch_empty_remote(self) -> None:
-        project = MagicMock()
-        project.id = uuid.uuid4()
-        git_repo = MagicMock(spec=GitRepo)
-        origin = MagicMock()
-        git_repo.create_remote.return_value = origin
-        credentials = GitlabCredentials(
-            instance="gitlab.example",
-            token=uuid.uuid4().hex,
-            group_id="1",
-            group_name="test-group",
+def test_new_project_publishes_initial_commit(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
+    assert repository is not None
+    try:
+        assert repository.head.is_valid()
+        assert repository.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
+        remote = live_gitlab.projects.get(
+            f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
         )
-
-        with (
-            tempfile.TemporaryDirectory() as temp_dir,
-            patch.object(GitlabManager, "_gl", MagicMock()),
-            patch.object(GitlabCredentials, "get", return_value=credentials),
-            patch.object(GitlabManager, "create_project") as create_project,
-            patch.object(GitRepo, "init", return_value=git_repo),
-        ):
-            result = GitlabManager.create_or_clone_project(
-                project,
-                base_dir=Path(temp_dir),
-            )
-
-        assert result is git_repo
-        create_project.assert_called_once_with(project)
-        git_repo.create_remote.assert_called_once()
-        origin.fetch.assert_not_called()
-        git_repo.publish_first_commit.assert_called_once_with()
-
-    def test_new_project_remote_configuration_failure_is_sanitized(self) -> None:
-        project = MagicMock()
-        project.id = uuid.uuid4()
-        git_repo = MagicMock(spec=GitRepo)
-        raw_credential = "fake@credential"
-        credentials = GitlabCredentials(
-            instance="gitlab.example",
-            token=raw_credential,
-            group_id="1",
-            group_name="test-group",
+        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+        assert branch.commit["id"] == repository.head.commit.hexsha
+        assert repository.head.commit.message.strip() == (
+            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
         )
-        remote_url = credentials.project_url(project.id)
-        git_repo.create_remote.side_effect = GitCommandError(
-            ["git", "remote", "add", "origin", remote_url],
-            128,
-            stderr=f"remote URL {remote_url}; credential {raw_credential}",
+        assert len(remote.commits.list(get_all=True)) == 1
+    finally:
+        repository.close()
+
+
+def test_existing_remote_is_cloned_without_an_extra_commit(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    original = GitlabManager.create_or_clone_project(live_project, tmp_path / "first")
+    assert original is not None
+    try:
+        original_sha: str = original.head.commit.hexsha
+    finally:
+        original.close()
+
+    requests: list[str] = []
+
+    def observe(response: Response, **kwargs: Any) -> None:
+        requests.append(str(response.request.method))
+
+    live_gitlab.session.hooks["response"].append(observe)
+    try:
+        cloned = GitlabManager.create_or_clone_project(
+            live_project, tmp_path / "second"
         )
-
-        with (
-            tempfile.TemporaryDirectory() as temp_dir,
-            patch.object(GitlabManager, "_gl", MagicMock()),
-            patch.object(GitlabCredentials, "get", return_value=credentials),
-            patch.object(GitlabManager, "create_project"),
-            patch.object(GitRepo, "init", return_value=git_repo),
-            patch("speleodb.utils.helpers.time", autospec=True) as mock_time,
-            self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
-            pytest.raises(
-                GitBaseError,
-                match="Impossible to configure origin for repository",
-            ) as exc_info,
-        ):
-            GitlabManager.create_or_clone_project(
-                project,
-                base_dir=Path(temp_dir),
-            )
-
-        traceback_text = "".join(
-            traceback.format_exception(
-                exc_info.type,
-                exc_info.value,
-                exc_info.tb,
-            )
+    finally:
+        live_gitlab.session.hooks["response"].remove(observe)
+    # A transient server error may require bounded lookup retries. Every
+    # request must still be a lookup; an existing remote never needs a POST.
+    assert requests
+    assert all(method == "GET" for method in requests)
+    assert cloned is not None
+    try:
+        assert cloned.head.commit.hexsha == original_sha
+        assert not cloned.is_dirty(untracked_files=True)
+        remote = live_gitlab.projects.get(
+            f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
         )
-        diagnostic_text = "\n".join([traceback_text, *logs.output])
-        assert raw_credential not in diagnostic_text
-        assert "fake%40credential" not in diagnostic_text
-        assert "oauth2:" not in diagnostic_text
-        assert "gitlab.example/test-group" in diagnostic_text
-        assert exc_info.value.__cause__ is None
-        assert exc_info.value.__context__ is None
-        assert git_repo.create_remote.call_count == 5  # noqa: PLR2004
-        assert [mock_call.args[0] for mock_call in mock_time.sleep.call_args_list] == [
-            1.0,
-            2.0,
-            4.0,
-            8.0,
-        ]
-        git_repo.publish_first_commit.assert_not_called()
+        assert len(remote.commits.list(get_all=True)) == 1
+    finally:
+        cloned.close()
 
 
-def gitlab_response(
-    status: HTTPStatus, message: str = "", *, retry_after: str | None = None
-) -> Response:
-    response: Response = Response()
-    response.status_code = status
-    response.reason = status.phrase
-    response.url = "https://gitlab.example/api/v4/projects"
-    response.headers["Content-Type"] = "application/json"
-    response._content = json.dumps(  # noqa: SLF001
-        {"message": message} if message else {"id": 1}
-    ).encode()
-    if retry_after is not None:
-        response.headers["Retry-After"] = retry_after
-    return response
+def test_existing_empty_remote_gets_initial_commit(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    remote = live_gitlab.projects.create(
+        {"name": str(live_project.id), "namespace_id": settings.GITLAB_GROUP_ID}
+    )
+    assert remote.empty_repo
+
+    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
+    assert repository is not None
+    try:
+        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+        assert branch.commit["id"] == repository.head.commit.hexsha
+        assert len(remote.commits.list(get_all=True)) == 1
+    finally:
+        repository.close()
 
 
-class ProjectCreationFailureTests(TestCase):
-    """Exercise bounded retries through the SDK's real HTTP error mapping."""
+def test_invalid_namespace_does_not_create_local_repository(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    with override_settings(GITLAB_GROUP_ID=f"missing-{uuid4()}"):
+        GitlabCredentials.get.cache_clear()
+        try:
+            with pytest.raises(gitlab.exceptions.GitlabCreateError) as raised:
+                GitlabManager.create_or_clone_project(live_project, tmp_path)
+        finally:
+            GitlabCredentials.get.cache_clear()
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.project: MagicMock = MagicMock(id=uuid.uuid4())
-        self.credentials: GitlabCredentials = GitlabCredentials(
-            instance="gitlab.example",
-            token=uuid.uuid4().hex,
-            group_id="1",
-            group_name="test-group",
-        )
-        self.client: GitlabClient = GitlabClient(
-            "https://gitlab.example", private_token=self.credentials.token
-        )
-        self.addCleanup(self.client.session.close)
-        self.enterContext(patch.object(GitlabManager, "_gl", self.client))
-        self.enterContext(
-            patch.object(GitlabCredentials, "get", return_value=self.credentials)
-        )
-        self.base_dir: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.repo: MagicMock = MagicMock(spec=GitRepo)
-        self.init: MagicMock = self.enterContext(
-            patch.object(GitRepo, "init", return_value=self.repo)
-        )
-        self.clone: MagicMock = self.enterContext(
-            patch.object(GitRepo, "clone_from", return_value=self.repo)
-        )
-        self.sleep: MagicMock = self.enterContext(
-            patch("speleodb.utils.gitlab_client.time.sleep")
-        )
+    assert raised.value.response_code == HTTPStatus.BAD_REQUEST
+    assert "namespace" in str(raised.value.error_message).lower()
+    assert not (tmp_path / str(live_project.id)).exists()
+    with pytest.raises(gitlab.exceptions.GitlabGetError) as absent:
+        live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{live_project.id}")
+    assert absent.value.response_code == HTTPStatus.NOT_FOUND
 
-    def create_or_clone(self) -> GitRepo | None:
-        return GitlabManager.create_or_clone_project(self.project, self.base_dir)
 
-    def test_transient_create_failure_recovers(self) -> None:
-        for status in (
-            HTTPStatus.TOO_MANY_REQUESTS,
-            HTTPStatus.INTERNAL_SERVER_ERROR,
-            HTTPStatus.BAD_GATEWAY,
-            HTTPStatus.SERVICE_UNAVAILABLE,
-            HTTPStatus.GATEWAY_TIMEOUT,
-        ):
-            with (
-                self.subTest(status=status),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    side_effect=[
-                        gitlab_response(status, "temporary failure"),
-                        gitlab_response(HTTPStatus.CREATED),
-                    ],
-                ) as send,
-            ):
-                self.sleep.reset_mock()
-                assert self.create_or_clone() is self.repo
-                assert send.call_count == 2  # noqa: PLR2004
-                self.sleep.assert_called_once()
-        self.clone.assert_not_called()
+def test_invalid_token_fails_before_repository_initialization(
+    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+) -> None:
+    # Authenticate the real configured token in fixture setup before testing a
+    # genuinely invalid credential. An unavailable service cannot satisfy setup.
+    with override_settings(GITLAB_TOKEN=f"invalid-{uuid4()}"):
+        GitlabManager._gl = None  # noqa: SLF001
+        GitlabCredentials.get.cache_clear()
+        try:
+            with pytest.raises(GitlabError) as raised:
+                GitlabManager.create_or_clone_project(live_project, tmp_path)
+        finally:
+            GitlabCredentials.get.cache_clear()
+            GitlabManager._gl = live_gitlab  # noqa: SLF001
 
-    def test_rate_limit_uses_application_delay_instead_of_retry_after(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(
-                    HTTPStatus.TOO_MANY_REQUESTS, "rate limit", retry_after="3"
-                ),
-                gitlab_response(HTTPStatus.CREATED),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.sleep.assert_called_once_with(1.0)
-        self.clone.assert_not_called()
-
-    def test_rate_limit_headers_cannot_extend_the_create_retry_budget(self) -> None:
-        for headers in (
-            {"Retry-After": "3600"},
-            {"RateLimit-Reset": "999999999999"},
-            {"Retry-After": "not-a-number"},
-            {"RateLimit-Reset": "not-a-number"},
-            {"Retry-After": "Wed, 21 Oct 2099 07:28:00 GMT"},
-            {"Retry-After": "-1"},
-        ):
-            response = gitlab_response(
-                HTTPStatus.TOO_MANY_REQUESTS, "original rate limit failure"
-            )
-            response.headers.update(headers)
-            self.sleep.reset_mock()
-            with (
-                self.subTest(headers=headers),
-                patch.object(
-                    self.client.session, "send", return_value=response
-                ) as send,
-                pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
-            ):
-                self.create_or_clone()
-
-            assert send.call_count == settings.DJANGO_GIT_RETRY_ATTEMPTS
-            assert [call.args[0] for call in self.sleep.call_args_list] == [
-                1.0,
-                2.0,
-                4.0,
-                8.0,
-            ]
-            assert raised.value.response_code == HTTPStatus.TOO_MANY_REQUESTS
-            assert raised.value.error_message == "original rate limit failure"
-            assert raised.value.response_body == response.content
-        self.clone.assert_not_called()
-        self.init.assert_not_called()
-
-    def test_create_timeout_recovers(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                Timeout("temporary timeout"),
-                gitlab_response(HTTPStatus.CREATED),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.sleep.assert_called_once()
-        self.clone.assert_not_called()
-
-    def test_failed_creation_never_attempts_clone(self) -> None:
-        for status in (
-            HTTPStatus.FORBIDDEN,
-            HTTPStatus.TOO_MANY_REQUESTS,
-            HTTPStatus.INTERNAL_SERVER_ERROR,
-            HTTPStatus.BAD_GATEWAY,
-            HTTPStatus.SERVICE_UNAVAILABLE,
-            HTTPStatus.GATEWAY_TIMEOUT,
-        ):
-            with (
-                self.subTest(status=status),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    return_value=gitlab_response(status, "original create failure"),
-                ) as send,
-                pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
-            ):
-                self.create_or_clone()
-            assert raised.value.response_code == status
-            assert "original create failure" in str(raised.value)
-            assert (
-                raised.value.response_body
-                == json.dumps({"message": "original create failure"}).encode()
-            )
-            expected_attempts: int = (
-                1
-                if status == HTTPStatus.FORBIDDEN
-                else settings.DJANGO_GIT_RETRY_ATTEMPTS
-            )
-            assert send.call_count == expected_attempts
-        self.clone.assert_not_called()
-        self.init.assert_not_called()
-
-    def test_authentication_failure_is_not_retried(self) -> None:
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                return_value=gitlab_response(HTTPStatus.UNAUTHORIZED, "invalid token"),
-            ) as send,
-            pytest.raises(gitlab.exceptions.GitlabAuthenticationError),
-        ):
-            self.create_or_clone()
-        send.assert_called_once()
-        self.sleep.assert_not_called()
-        self.clone.assert_not_called()
-
-    def test_conflict_requires_confirmed_existing_repository(self) -> None:
-        for status in (HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT):
-            with (
-                self.subTest(status=status),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    side_effect=[
-                        gitlab_response(status, "path already taken"),
-                        gitlab_response(HTTPStatus.OK),
-                    ],
-                ) as send,
-            ):
-                self.clone.reset_mock()
-                assert self.create_or_clone() is self.repo
-                assert [call.args[0].method for call in send.call_args_list] == [
-                    "POST",
-                    "GET",
-                ]
-                assert (
-                    send.call_args_list[-1]
-                    .args[0]
-                    .url.endswith(f"/projects/test-group%2F{self.project.id}")
-                )
-                self.clone.assert_called_once()
-        self.init.assert_not_called()
-        self.repo.publish_first_commit.assert_not_called()
-
-    def test_invalid_create_preserves_error_when_repository_is_absent(self) -> None:
-        for status in (HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT):
-            with (
-                self.subTest(status=status),
-                patch.object(
-                    self.client.session,
-                    "send",
-                    side_effect=[
-                        gitlab_response(status, "original validation failure"),
-                        gitlab_response(HTTPStatus.NOT_FOUND, "not found"),
-                    ],
-                ),
-                pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
-            ):
-                self.create_or_clone()
-            assert raised.value.response_code == status
-            assert "original validation failure" in str(raised.value)
-        self.clone.assert_not_called()
-
-    def test_conflict_lookup_retries_transient_failure(self) -> None:
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
-                gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE, "temporary failure"),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.sleep.assert_called_once()
-        self.clone.assert_called_once()
-
-    def test_create_retry_can_recover_as_confirmed_duplicate(self) -> None:
-        # A failed response can arrive after GitLab created the repository.
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.BAD_GATEWAY, "response lost"),
-                gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.sleep.assert_called_once()
-        self.clone.assert_called_once()
-        self.init.assert_not_called()
-
-    def test_conflict_lookup_failure_does_not_clone(self) -> None:
-        with (
-            patch.object(
-                self.client.session,
-                "send",
-                side_effect=[
-                    gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
-                    *[
-                        gitlab_response(HTTPStatus.SERVICE_UNAVAILABLE, "lookup failed")
-                        for _ in range(settings.DJANGO_GIT_RETRY_ATTEMPTS)
-                    ],
-                ],
-            ),
-            pytest.raises(gitlab.exceptions.GitlabGetError) as raised,
-        ):
-            self.create_or_clone()
-        assert raised.value.response_code == HTTPStatus.SERVICE_UNAVAILABLE
-        self.clone.assert_not_called()
-
-    def test_confirmed_empty_repository_gets_initial_commit(self) -> None:
-        self.repo.head.is_valid.return_value = False
-        self.repo.remotes.origin.refs = []
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.repo.publish_first_commit.assert_called_once_with()
-
-    def test_unset_remote_head_does_not_initialize_over_existing_refs(self) -> None:
-        self.repo.head.is_valid.return_value = False
-        self.repo.remotes.origin.refs = [MagicMock()]
-        with patch.object(
-            self.client.session,
-            "send",
-            side_effect=[
-                gitlab_response(HTTPStatus.BAD_REQUEST, "path already taken"),
-                gitlab_response(HTTPStatus.OK),
-            ],
-        ):
-            assert self.create_or_clone() is self.repo
-        self.repo.publish_first_commit.assert_not_called()
-        self.repo.checkout_default_branch_and_pull.assert_called_once_with()
+    assert isinstance(
+        raised.value.__cause__, gitlab.exceptions.GitlabAuthenticationError
+    )
+    assert raised.value.__cause__.response_code == HTTPStatus.UNAUTHORIZED
+    assert not (tmp_path / str(live_project.id)).exists()

@@ -14,15 +14,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
-from unittest.mock import call
-from unittest.mock import patch
 
 import pytest
 
 from speleodb.background_jobs import archive_sources
 from speleodb.background_jobs import git_supervisor
-from speleodb.background_jobs.archive_sources import ArchiveBuildError
 from speleodb.background_jobs.git_supervisor import TIMEOUT_EXIT_CODE
 
 if TYPE_CHECKING:
@@ -68,46 +64,71 @@ MIN_GIT_PROCESSES: int = 3
 
 
 @pytest.mark.parametrize("timeout", [0, -1, float("inf"), float("nan")])
-def test_supervisor_rejects_unbounded_deadline(timeout: float) -> None:
-    with (
-        patch("speleodb.background_jobs.git_supervisor.subprocess.Popen") as start,
-        pytest.raises(ValueError, match="finite and positive"),
-    ):
-        git_supervisor.supervise(parent_fd=-1, timeout=timeout, command=["git"])
-    start.assert_not_called()
-
-
-def test_group_cleanup_remains_bounded_after_kill() -> None:
-    process: MagicMock = MagicMock(pid=12345)
-    process.wait.side_effect = subprocess.TimeoutExpired("git", 5)
-    with (
-        patch("speleodb.background_jobs.git_supervisor.os.killpg") as kill_group,
-        pytest.raises(subprocess.TimeoutExpired),
-    ):
-        git_supervisor._terminate_group(process)  # noqa: SLF001
-    assert kill_group.call_args_list == [
-        call(process.pid, signal.SIGTERM),
-        call(process.pid, signal.SIGKILL),
+def test_supervisor_rejects_unbounded_deadline(timeout: float, tmp_path: Path) -> None:
+    marker: Path = tmp_path / "command-started"
+    command: list[str] = [
+        sys.executable,
+        "-c",
+        f"from pathlib import Path; Path({str(marker)!r}).touch()",
     ]
-    assert process.wait.call_args_list == [
-        call(timeout=git_supervisor.TERMINATE_SECONDS),
-        call(timeout=git_supervisor.TERMINATE_SECONDS),
-    ]
+    with pytest.raises(ValueError, match="finite and positive"):
+        git_supervisor.supervise(parent_fd=-1, timeout=timeout, command=command)
+    assert not marker.exists()
 
 
-def test_export_waits_for_full_supervisor_cleanup_then_bounds_reaping() -> None:
-    process: MagicMock = MagicMock()
-    process.wait.side_effect = subprocess.TimeoutExpired("supervisor", 5)
-    with pytest.raises(ArchiveBuildError, match="could not be stopped"):
-        archive_sources._stop_supervisor(process)  # noqa: SLF001
-    process.kill.assert_called_once_with()
-    assert process.wait.call_args_list == [
-        call(
-            timeout=2 * git_supervisor.TERMINATE_SECONDS
-            + 2 * archive_sources.GIT_POLL_SECONDS
-        ),
-        call(timeout=git_supervisor.TERMINATE_SECONDS),
-    ]
+def test_group_cleanup_escalates_when_real_process_ignores_term(tmp_path: Path) -> None:
+    marker: Path = tmp_path / "ready"
+    command: str = (
+        "import signal; from pathlib import Path; "
+        "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+        f"Path({str(marker)!r}).touch(); signal.pause()"
+    )
+    with subprocess.Popen(  # noqa: S603
+        [sys.executable, "-c", command],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ) as process:
+        try:
+            deadline: float = time.monotonic() + WAIT_SECONDS
+            while not marker.exists():
+                assert time.monotonic() < deadline, "Process did not become ready"
+                time.sleep(0.01)
+            started: float = time.monotonic()
+            git_supervisor._terminate_group(process)  # noqa: SLF001
+            elapsed: float = time.monotonic() - started
+            assert process.returncode == -signal.SIGKILL
+            assert (
+                git_supervisor.TERMINATE_SECONDS
+                <= elapsed
+                < (2 * git_supervisor.TERMINATE_SECONDS + WAIT_SECONDS)
+            )
+        finally:
+            _cleanup(process, [])
+
+
+def test_export_bounds_reaping_of_a_real_stalled_supervisor() -> None:
+    with subprocess.Popen(
+        [sys.executable, "-c", "import signal; signal.pause()"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    ) as process:
+        try:
+            started: float = time.monotonic()
+            archive_sources._stop_supervisor(process)  # noqa: SLF001
+            elapsed: float = time.monotonic() - started
+            assert process.returncode == -signal.SIGKILL
+            assert (
+                (
+                    2 * git_supervisor.TERMINATE_SECONDS
+                    + 2 * archive_sources.GIT_POLL_SECONDS
+                )
+                <= elapsed
+                < 3 * git_supervisor.TERMINATE_SECONDS + WAIT_SECONDS
+            )
+        finally:
+            _cleanup(process, [])
 
 
 @dataclass(frozen=True)

@@ -1,51 +1,158 @@
 # -*- coding: utf-8 -*-
 
-"""Tests that every API view returning HTTP 500 properly reports to Sentry,
-logs the traceback, and rolls back DB writes when applicable.
+"""Native error reporting from real GitLab, Git, parser, SQL and filesystem faults.
 
-Each test mocks a failure inside the view's try block and verifies
-``sentry_sdk.capture_exception`` is called with the correct exception.
+The SDK's supported event hook observes serialized exceptions. No view, ORM,
+compiler, authentication backend, HTTP client or storage implementation is replaced.
 """
 
 from __future__ import annotations
 
+import errno
+import pathlib
+import shutil
+import tempfile
+import uuid
+from contextlib import contextmanager
+from typing import TYPE_CHECKING
 from typing import Any
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
+import git
+import gitlab.exceptions
 import pytest
+from allauth.account.models import EmailAddress
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.db import connection
+from django.db.models.signals import post_save
+from django.db.utils import DataError
+from django.test import override_settings
 from django.urls import reverse
+from fastkml import config as kml_config
+from git.exc import GitCommandError
+from gpxpy.gpx import GPXXMLSyntaxException
 from rest_framework import status
+from rest_framework.test import APIClient
 
-from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v2.tests.base_testcase import PermissionType
-from speleodb.api.v2.views.gis_view import GISViewDataApiView
-from speleodb.api.v2.views.tools import ToolDMP2JSON
+from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.api.v2.tests.factories import TokenFactory
+from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.tests.test_file_upload_error_handling import BASE_DIR
+from speleodb.api.v2.tests.test_file_upload_error_handling import SentryEventTestCase
 from speleodb.common.enums import PermissionLevel
+from speleodb.common.enums import ProjectType
+from speleodb.gis.models import GISView
 from speleodb.gis.models import Landmark
-from speleodb.git_engine.exceptions import GitBaseError
+from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabError
+from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
+from speleodb.users.tests.factories import UserFactory
 
-# ---------------------------------------------------------------------------
-# FileDownloadView (file.py)
-# ---------------------------------------------------------------------------
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from django.http import FileResponse
+    from gitlab.v4.objects.projects import Project as GitlabProject
+    from rest_framework.response import Response
+
+    from speleodb.git_engine.core import GitRepo
+    from speleodb.surveys.models import Project
+    from speleodb.users.models import User
 
 
-@pytest.mark.skip_if_lighttest
-class FileDownloadSentryTests(BaseAPIProjectTestCase):
-    """FileDownloadView 500 paths must log and report to Sentry."""
+@contextmanager
+def rejected_gitlab_credentials() -> Iterator[None]:
+    """Make the configured GitLab authenticate a real invalid service token."""
+    authenticated_client = GitlabManager._gl  # noqa: SLF001
+    GitlabManager._gl = None  # noqa: SLF001
+    GitlabManager._get_project.cache_clear()  # noqa: SLF001
+    GitlabCredentials.get.cache_clear()
+    try:
+        with override_settings(GITLAB_TOKEN=uuid.uuid4().hex):
+            yield
+    finally:
+        GitlabManager._gl = authenticated_client  # noqa: SLF001
+        GitlabManager._get_project.cache_clear()  # noqa: SLF001
+        GitlabCredentials.get.cache_clear()
+
+
+class AuthenticatedSentryTestCase(SentryEventTestCase):
+    client: APIClient
+    user: User
+    auth: str
 
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(
+        assert not connection.in_atomic_block
+        self.enterContext(override_settings(DEBUG=False))
+        self.user = UserFactory.create()
+        token = TokenFactory.create(user=self.user)
+        EmailAddress.objects.create(
+            user=self.user, email=self.user.email, verified=True, primary=True
+        )
+        self.client = APIClient()
+        self.auth = f"Token {token.key}"
+
+
+class ProjectSentryTestCase(AuthenticatedSentryTestCase):
+    project: Project
+    repo: GitRepo
+    remote: GitlabProject
+    original_head: str
+
+    def setUp(self) -> None:
+        super().setUp()
+        directory: str = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(
+            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory))
+        )
+        self.project = ProjectFactory.create(
+            created_by=self.user.email, type=ProjectType.ARIANE, exclude_geojson=True
+        )
+        UserProjectPermissionFactory.create(
+            target=self.user,
+            project=self.project,
             level=PermissionLevel.READ_AND_WRITE,
-            permission_type=PermissionType.USER,
+        )
+        # Fail setup if the service is unhealthy; a 429 cannot pass an error test.
+        self.repo = self.project.git_repo
+        self.addCleanup(self.repo.close)
+        remote = GitlabManager._get_project(self.project)  # noqa: SLF001
+        assert remote is not None
+        self.remote = remote
+        self.addCleanup(self.remote.delete)
+        target: pathlib.Path = self.repo.path / "ariane.tml"
+        target.write_bytes((BASE_DIR / "test_simple.tml").read_bytes())
+        self.repo.index.add([str(target)])
+        actor: git.Actor = git.Actor("Reporting test", "reporting@example.test")
+        self.repo.index.commit(
+            "Download integration source", author=actor, committer=actor
+        )
+        self.repo.git.push("origin", settings.DJANGO_GIT_BRANCH_NAME)
+        self.original_head = self.repo.head.commit.hexsha
+        assert (
+            self.remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"]
+            == self.original_head
         )
 
-    def _do_download(self) -> Any:
+    def _remove_working_copy(self) -> None:
+        self.repo.close()
+        shutil.rmtree(self.project.git_repo_dir)
+
+    def _assert_gitlab_authentication_error(self) -> None:
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, GitlabError), exception
+        assert isinstance(
+            exception.__cause__, gitlab.exceptions.GitlabAuthenticationError
+        )
+        assert exception.__cause__.response_code == status.HTTP_401_UNAUTHORIZED
+        assert not self.project.git_repo_dir.exists()
+
+
+@pytest.mark.skip_if_lighttest
+class FileDownloadSentryTests(ProjectSentryTestCase):
+    def _download(self) -> Response | FileResponse:
         return self.client.get(
             reverse(
                 "api:v2:project-download",
@@ -54,327 +161,246 @@ class FileDownloadSentryTests(BaseAPIProjectTestCase):
                     "fileformat": FileFormat.ARIANE_TML.label.lower(),
                 },
             ),
-            headers={"authorization": f"{self.header_prefix}{self.token.key}"},
+            headers={"authorization": self.auth},
         )
 
-    @patch(
-        "speleodb.api.v2.views.file.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_download_runtime_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """RuntimeError during download should produce 500 + Sentry event."""
-        with patch(
-            "speleodb.processors.AutoSelector.get_download_processor",
-            side_effect=RuntimeError("simulated download failure"),
-        ):
-            response = self._do_download()
+    def test_download_runtime_error_returns_500_with_sentry(self) -> None:
+        successful: Response | FileResponse = self._download()
+        assert successful.status_code == status.HTTP_200_OK
+        successful.close()
+        assert not self.sentry_events
+        lock: pathlib.Path = pathlib.Path(self.repo.git_dir) / "index.lock"
+        lock.write_text("integration checkout lock\n")
+        self.addCleanup(lock.unlink, missing_ok=True)
+
+        with self.assertLogs("speleodb.api.v2.views.file", level="ERROR") as logs:
+            response: Response | FileResponse = self._download()
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
-        assert isinstance(mock_sentry.call_args[0][0], RuntimeError)
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, RuntimeError), exception
+        assert isinstance(exception.__cause__, GitCommandError), exception
+        assert "index.lock" in str(exception.__cause__)
+        assert any("index.lock" in line for line in logs.output)
+        assert self.repo.head.commit.hexsha == self.original_head
 
-    @patch(
-        "speleodb.api.v2.views.file.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_download_gitlab_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """GitlabError during download should produce 500 + Sentry event."""
-        with patch(
-            "speleodb.processors.AutoSelector.get_download_processor",
-            side_effect=GitlabError("simulated gitlab outage"),
+    def test_download_gitlab_error_returns_500_with_sentry(self) -> None:
+        self._remove_working_copy()
+        with (
+            rejected_gitlab_credentials(),
+            self.assertLogs("speleodb.api.v2.views.file", level="ERROR"),
         ):
-            response = self._do_download()
+            response: Response | FileResponse = self._download()
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
-        assert isinstance(mock_sentry.call_args[0][0], GitlabError)
-
-
-# ---------------------------------------------------------------------------
-# ProjectGitExplorerApiView (project_explorer.py)
-# ---------------------------------------------------------------------------
+        self._assert_gitlab_authentication_error()
 
 
 @pytest.mark.skip_if_lighttest
-class ProjectExplorerSentryTests(BaseAPIProjectTestCase):
-    """ProjectGitExplorerApiView 500 paths must log and report to Sentry."""
+class ProjectExplorerSentryTests(ProjectSentryTestCase):
+    def _explore(self, hexsha: str) -> Response:
+        return self.client.get(
+            reverse(
+                "api:v2:project-gitexplorer",
+                kwargs={"id": self.project.id, "hexsha": hexsha},
+            ),
+            headers={"authorization": self.auth},
+        )
+
+    def test_git_explorer_missing_commit_returns_500_with_sentry(self) -> None:
+        assert self._explore(self.original_head).status_code == status.HTTP_200_OK
+        absent_sha: str = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+        assert (
+            self.repo.git.cat_file(
+                "-e", absent_sha, with_exceptions=False, with_extended_output=True
+            )[0]
+            != 0
+        )
+        with self.assertLogs(
+            "speleodb.api.v2.views.project_explorer", level="ERROR"
+        ) as logs:
+            response: Response = self._explore(absent_sha)
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, ValueError), exception
+        assert absent_sha in str(exception)
+        assert any(absent_sha in line for line in logs.output)
+        assert absent_sha in response.data["error"]
+
+    def test_git_explorer_gitlab_error_returns_500_with_sentry(self) -> None:
+        self._remove_working_copy()
+        with (
+            rejected_gitlab_credentials(),
+            self.assertLogs("speleodb.api.v2.views.project_explorer", level="ERROR"),
+        ):
+            response: Response = self._explore(self.original_head)
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        self._assert_gitlab_authentication_error()
+
+
+class ProjectDetailSentryTests(AuthenticatedSentryTestCase):
+    def test_project_detail_reads_persisted_metadata_without_gitlab(self) -> None:
+        # This serializer reads SQL metadata. Its old forced GitlabError was not
+        # reachable behavior; prove its actual independence from service auth.
+        project: Project = ProjectFactory.create(created_by=self.user.email)
+        UserProjectPermissionFactory.create(
+            project=project, target=self.user, level=PermissionLevel.READ_ONLY
+        )
+        with rejected_gitlab_credentials():
+            response: Response = self.client.get(
+                reverse("api:v2:project-detail", kwargs={"id": project.id}),
+                headers={"authorization": self.auth},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["id"] == str(project.id)
+        assert response.data["name"] == project.name
+        assert not self.sentry_events
+        assert not project.git_repo_dir.exists()
+
+
+class LandmarkImportSentryTestCase(AuthenticatedSentryTestCase):
+    written_landmarks: list[uuid.UUID]
 
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.READ_AND_WRITE,
-            permission_type=PermissionType.USER,
-        )
+        self.written_landmarks = []
+        post_save.connect(self._record_landmark, sender=Landmark)
+        self.addCleanup(post_save.disconnect, self._record_landmark, sender=Landmark)
 
-    @patch(
-        "speleodb.api.v2.views.project_explorer.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_git_explorer_checkout_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
+    def _record_landmark(
+        self, instance: Landmark, created: bool, **kwargs: Any
     ) -> None:
-        """Git checkout error should produce 500 + Sentry event."""
-        fake_sha = "a" * 40
-        with patch.object(
-            type(self.project),
-            "checkout_commit_or_default_pull_branch",
-            side_effect=GitBaseError("simulated checkout failure"),
-        ):
-            response = self.client.get(
-                reverse(
-                    "api:v2:project-gitexplorer",
-                    kwargs={"id": self.project.id, "hexsha": fake_sha},
-                ),
-                headers={"authorization": f"{self.header_prefix}{self.token.key}"},
-            )
+        if created:
+            self.written_landmarks.append(instance.id)
 
+    def _assert_constraint_rollback(self, response: Response) -> None:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
-        assert isinstance(mock_sentry.call_args[0][0], GitBaseError)
-
-    @patch(
-        "speleodb.api.v2.views.project_explorer.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_git_explorer_gitlab_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """GitlabError during explorer should produce 500 + Sentry event."""
-        fake_sha = "b" * 40
-        with patch.object(
-            type(self.project),
-            "checkout_commit_or_default_pull_branch",
-            side_effect=GitlabError("simulated gitlab outage"),
-        ):
-            response = self.client.get(
-                reverse(
-                    "api:v2:project-gitexplorer",
-                    kwargs={"id": self.project.id, "hexsha": fake_sha},
-                ),
-                headers={"authorization": f"{self.header_prefix}{self.token.key}"},
-            )
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, DataError), exception
+        assert getattr(exception.__cause__, "sqlstate", None) == "22001"
+        assert "character varying(100)" in str(exception)
+        # Native post_save proves one INSERT succeeded before the second failed.
+        assert len(self.written_landmarks) == 1
+        assert not connection.in_atomic_block
+        assert not Landmark.objects.filter(created_by=self.user.email).exists()
 
 
-# ---------------------------------------------------------------------------
-# ProjectSpecificApiView (project.py)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skip_if_lighttest
-class ProjectDetailSentryTests(BaseAPIProjectTestCase):
-    """ProjectSpecificApiView 500 paths must report to Sentry."""
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.READ_ONLY,
-            permission_type=PermissionType.USER,
-        )
-
-    @patch(
-        "speleodb.api.v2.views.project.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_project_detail_gitlab_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """GitlabError during project detail should produce 500 + Sentry."""
-        with patch(
-            "speleodb.api.v2.serializers.project.ProjectSerializer.to_representation",
-            side_effect=GitlabError("simulated gitlab outage"),
-        ):
-            response = self.client.get(
-                reverse(
-                    "api:v2:project-detail",
-                    kwargs={"id": self.project.id},
-                ),
-                headers={"authorization": f"{self.header_prefix}{self.token.key}"},
-            )
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# GPX import (gpx_import.py)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skip_if_lighttest
-class GPXImportSentryTests(BaseAPIProjectTestCase):
-    """GPXImportView 500 paths must log, report to Sentry, and rollback."""
-
-    def _do_gpx_import(self, content: bytes = b"bad content") -> Any:
-
-        gpx_file = SimpleUploadedFile(
-            "test.gpx", content, content_type="application/gpx+xml"
-        )
+class GPXImportSentryTests(LandmarkImportSentryTestCase):
+    def _import(self, content: bytes) -> Response:
         return self.client.put(
             reverse("api:v2:gpx-import"),
-            {"file": gpx_file},
+            {
+                "file": SimpleUploadedFile(
+                    "test.gpx", content, content_type="application/gpx+xml"
+                )
+            },
             format="multipart",
-            headers={"authorization": f"{self.header_prefix}{self.token.key}"},
+            headers={"authorization": self.auth},
         )
 
-    @patch(
-        "speleodb.api.v2.views.gpx_import.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_gpx_import_failure_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """An exception during GPX import should produce 500 + Sentry event."""
-        response = self._do_gpx_import(b"not valid gpx")
+    def test_gpx_import_failure_returns_500_with_sentry(self) -> None:
+        with self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"):
+            response: Response = self._import(b"not valid gpx")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
+        assert isinstance(self._reported_exception(), GPXXMLSyntaxException)
+        assert self.written_landmarks == []
 
-    @patch(
-        "speleodb.api.v2.views.gpx_import.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_gpx_import_failure_does_not_commit_partial_landmarks(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """GPX import failure should not commit partial Landmark rows."""
-        landmarks_before = Landmark.objects.count()
+    def test_gpx_import_failure_does_not_commit_partial_landmarks(self) -> None:
+        assert connection.vendor == "postgresql"
+        content: bytes = (
+            '<gpx version="1.1" creator="SpeleoDB" xmlns="http://www.topografix.com/GPX/1/1">'
+            '<wpt lat="20.1" lon="-87.5"><name>First inserted waypoint</name></wpt>'
+            '<wpt lat="20.2" lon="-87.6"><name>' + "x" * 101 + "</name></wpt></gpx>"
+        ).encode()
+        with self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"):
+            response: Response = self._import(content)
 
-        response = self._do_gpx_import(b"not valid gpx")
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert Landmark.objects.count() == landmarks_before
+        self._assert_constraint_rollback(response)
 
 
-# ---------------------------------------------------------------------------
-# KML/KMZ import (kml_kmz_import.py)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.skip_if_lighttest
-class KMLImportSentryTests(BaseAPIProjectTestCase):
-    """KML_KMZ_ImportView 500 paths must log, report to Sentry, and rollback."""
-
-    def _do_kml_import(self, content: bytes = b"bad content") -> Any:
-
-        kml_file = SimpleUploadedFile(
-            "test.kml", content, content_type="application/vnd.google-earth.kml+xml"
-        )
+class KMLImportSentryTests(LandmarkImportSentryTestCase):
+    def _import(self, content: bytes) -> Response:
         return self.client.put(
             reverse("api:v2:kml-kmz-import"),
-            {"file": kml_file},
+            {
+                "file": SimpleUploadedFile(
+                    "test.kml",
+                    content,
+                    content_type="application/vnd.google-earth.kml+xml",
+                )
+            },
             format="multipart",
-            headers={"authorization": f"{self.header_prefix}{self.token.key}"},
+            headers={"authorization": self.auth},
         )
 
-    @patch(
-        "speleodb.api.v2.views.kml_kmz_import.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_kml_import_failure_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """An exception during KML import should produce 500 + Sentry event."""
-        response = self._do_kml_import(b"not valid kml")
+    def test_kml_import_failure_returns_500_with_sentry(self) -> None:
+        with self.assertLogs("speleodb.api.v2.views.kml_kmz_import", level="ERROR"):
+            response: Response = self._import(b"not valid kml")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
+        assert isinstance(self._reported_exception(), kml_config.etree.ParseError)
+        assert self.written_landmarks == []
 
-    @patch(
-        "speleodb.api.v2.views.kml_kmz_import.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_kml_import_failure_does_not_commit_partial_landmarks(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """KML import failure should not commit partial Landmark rows."""
-        landmarks_before = Landmark.objects.count()
+    def test_kml_import_failure_does_not_commit_partial_landmarks(self) -> None:
+        assert connection.vendor == "postgresql"
+        content: bytes = (
+            '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+            "<Placemark><name>First inserted landmark</name><Point>"
+            "<coordinates>-87.5,20.1</coordinates></Point></Placemark>"
+            "<Placemark><name>" + "x" * 101 + "</name><Point>"
+            "<coordinates>-87.6,20.2</coordinates></Point></Placemark></Document></kml>"
+        ).encode()
+        with self.assertLogs("speleodb.api.v2.views.kml_kmz_import", level="ERROR"):
+            response: Response = self._import(content)
 
-        response = self._do_kml_import(b"not valid kml")
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert Landmark.objects.count() == landmarks_before
-
-
-# ---------------------------------------------------------------------------
-# GIS View (gis_view.py)
-# ---------------------------------------------------------------------------
+        self._assert_constraint_rollback(response)
 
 
-class GISViewSentryTests(TestCase):
-    """GISViewDataApiView and PublicGISViewGeoJSONApiView 500 paths
-    must log and report to Sentry."""
-
-    @patch(
-        "speleodb.api.v2.views.gis_view.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_gis_view_data_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """Error in GISViewDataApiView should produce 500 + Sentry event."""
-        with patch(
-            "speleodb.api.v2.views.gis_view.GISViewDataSerializer",
-            side_effect=RuntimeError("serializer failure"),
-        ):
-            view = GISViewDataApiView()
-            mock_request = MagicMock()
-            mock_request.query_params = {}
-
-            mock_gis_view = MagicMock()
-            with patch.object(view, "get_object", return_value=mock_gis_view):
-                response = view.get(mock_request)
-
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
+class GISViewSentryTests(AuthenticatedSentryTestCase):
+    def test_gis_view_data_and_missing_view_use_real_serializer(self) -> None:
+        # The former test forced the serializer constructor to raise. Exercise
+        # actual SQL-backed metadata and missing-object handling instead.
+        gis_view: GISView = GISView.objects.create(
+            name="Reporting integration", owner=self.user, allow_precise_zoom=False
+        )
+        response: Response = self.client.get(
+            reverse("api:v2:gis-view-data", kwargs={"id": gis_view.id}),
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["view_id"] == str(gis_view.id)
+        assert response.data["view_name"] == gis_view.name
+        assert response.data["geojson_files"] == []
+        missing: Response = self.client.get(
+            reverse("api:v2:gis-view-data", kwargs={"id": uuid.uuid4()}),
+            headers={"authorization": self.auth},
+        )
+        assert missing.status_code == status.HTTP_404_NOT_FOUND
+        assert not self.sentry_events
 
 
-# ---------------------------------------------------------------------------
-# Tools (tools.py)
-# ---------------------------------------------------------------------------
-
-
-class ToolsDMPSentryTests(TestCase):
-    """ToolDMP2JSON 500 paths must log and report to Sentry."""
-
-    @patch(
-        "speleodb.api.v2.views.tools.sentry_sdk.capture_exception",
-        autospec=True,
-    )
-    def test_dmp_parse_error_returns_500_with_sentry(
-        self,
-        mock_sentry: MagicMock,
-    ) -> None:
-        """An unexpected error during DMP parsing should produce 500 + Sentry."""
-
-        view = ToolDMP2JSON()
-        mock_request = MagicMock()
-        mock_request.FILES = {
-            "file": SimpleUploadedFile("test.dmp", b"invalid dmp content")
-        }
-
-        with patch(
-            "speleodb.api.v2.views.tools.DMPFile.from_dmp",
-            side_effect=OSError("simulated I/O failure"),
-        ):
-            response = view.post(mock_request)
+class ToolsDMPSentryTests(AuthenticatedSentryTestCase):
+    def test_dmp_filesystem_error_returns_500_with_sentry(self) -> None:
+        # Django limits characters, while the real filesystem limits UTF-8 bytes.
+        # This reaches the actual file write and fails with ENAMETOOLONG.
+        filename: str = "é" * 130 + ".dmp"
+        with self.assertLogs("speleodb.api.v2.views.tools", level="ERROR") as logs:
+            response: Response = self.client.post(
+                reverse("api:v2:tool-dmp2json"),
+                {"file": SimpleUploadedFile(filename, b"nonempty survey file")},
+                format="multipart",
+                headers={"authorization": self.auth},
+            )
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        mock_sentry.assert_called_once()
-        assert isinstance(mock_sentry.call_args[0][0], OSError)
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, OSError), exception
+        assert exception.errno == errno.ENAMETOOLONG
+        assert exception.filename is not None
+        assert pathlib.Path(exception.filename).name == filename
+        assert not pathlib.Path(exception.filename).parent.exists()
+        assert any("File name too long" in line for line in logs.output)

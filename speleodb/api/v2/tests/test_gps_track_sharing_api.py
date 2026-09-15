@@ -108,7 +108,8 @@ class TestGPSTrackAccessibleList(BaseAPITestCase):
             )
         self.client.force_authenticate(user=self.user)
 
-        with self.assertNumQueries(1):
+        # One SELECT plus the request's SAVEPOINT/RELEASE inside TestCase.
+        with self.assertNumQueries(3):
             response = self.client.get(reverse("api:v2:gps-tracks"))
 
         assert response.status_code == status.HTTP_200_OK
@@ -275,7 +276,8 @@ class TestGPSTrackPermissionAPI(BaseAPITestCase):
             )
         self.client.force_authenticate(user=self.user)
 
-        with self.assertNumQueries(3):
+        # Three SELECTs plus the request's SAVEPOINT/RELEASE inside TestCase.
+        with self.assertNumQueries(5):
             response = self.client.get(self.url)
 
         assert response.status_code == status.HTTP_200_OK

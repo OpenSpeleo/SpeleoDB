@@ -24,11 +24,6 @@ vi.mock('../state.js', () => ({
     },
 }));
 
-vi.mock('../components/upload.js', () => ({
-    createProgressBarHTML: vi.fn(() => ''),
-    UploadProgressController: vi.fn(),
-}));
-
 vi.mock('../utils.js', () => {
     const escapeHtml = (text) => {
         if (text === null || text === undefined) return '';

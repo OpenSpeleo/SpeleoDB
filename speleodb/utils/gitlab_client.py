@@ -42,6 +42,8 @@ class BoundedGitlabClient(gitlab.Gitlab):
         max_delay: float = 30,
         retry_transient_errors: bool | None = None,
     ) -> None:
+        if not isinstance(private_token, str) or not private_token.strip():
+            raise ValueError("A nonempty GitLab private token is required")
         if (
             isinstance(max_attempts, bool)
             or not isinstance(max_attempts, int)
