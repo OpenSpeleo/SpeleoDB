@@ -6,6 +6,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import time
 from datetime import timedelta
 from decimal import Decimal
 from http import HTTPStatus
@@ -51,6 +52,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from django.core.files.storage import Storage
+    from gitlab.v4.objects.commits import ProjectCommit as GitlabCommit
+    from gitlab.v4.objects.projects import Project as GitlabProject
     from pytest_django.fixtures import Settings
 
     from speleodb.surveys.models import Project
@@ -58,6 +61,8 @@ if TYPE_CHECKING:
 
 
 type SourceWriter = Callable[[Storage, str, bytes], str]
+
+INITIAL_COMMIT_ATTEMPTS: int = 5
 
 EMPTY_GEOJSON: bytes = b'{"type":"FeatureCollection","features":[]}'
 OLD_GEOJSON: bytes = b'{"type":"FeatureCollection","features":[],"version":"old"}'
@@ -176,20 +181,7 @@ def gitlab_project(
         {"name": str(project.id), "namespace_id": django_settings.GITLAB_GROUP_ID}
     )
     try:
-        initial = remote.commits.create(
-            {
-                "branch": "main",
-                "commit_message": "Historic survey",
-                "actions": [
-                    {
-                        "action": "create",
-                        "file_path": "survey.txt",
-                        "content": "historic data",
-                    }
-                ],
-            }
-        )
-        historical: str = str(initial.id)
+        historical: str = _create_initial_gitlab_commit(remote)
         remote.tags.create({"tag_name": "historic-tag", "ref": historical})
         remote.branches.create({"branch": "survey-branch", "ref": historical})
         latest = remote.commits.create(
@@ -208,6 +200,37 @@ def gitlab_project(
         yield project, historical, str(latest.id)
     finally:
         remote.delete()
+
+
+def _create_initial_gitlab_commit(remote: GitlabProject) -> str:
+    """Allow a newly created project's commit endpoint time to become visible."""
+    attempt: int = 0
+    while True:
+        attempt += 1
+        try:
+            initial: GitlabCommit = remote.commits.create(
+                {
+                    "branch": "main",
+                    "commit_message": "Historic survey",
+                    "actions": [
+                        {
+                            "action": "create",
+                            "file_path": "survey.txt",
+                            "content": "historic data",
+                        }
+                    ],
+                }
+            )
+            return str(initial.id)
+        except gitlab.exceptions.GitlabCreateError as error:
+            # The project was just created successfully. Only an explicit 404
+            # is replayable here; other failures may have applied the commit.
+            if (
+                error.response_code != HTTPStatus.NOT_FOUND
+                or attempt == INITIAL_COMMIT_ATTEMPTS
+            ):
+                raise
+            time.sleep(2 ** (attempt - 1))
 
 
 def _progress(stage: str, completed: int, total: int) -> None:

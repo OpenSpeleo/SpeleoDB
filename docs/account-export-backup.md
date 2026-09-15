@@ -182,6 +182,20 @@ branches/tags after extraction. Zero-commit project tests assert exactly one
 empty marker file and no Git directory. Real download tests verify the filename
 returned to the browser.
 
+The populated GitLab fixture can receive a temporary HTTP 404 when it creates
+the first commit immediately after project creation. Only that initial commit
+is retried, with five attempts and 1/2/4/8-second backoff. A persistent 404 is
+raised with its original details; other HTTP and transport errors propagate
+without this retry because the write may have succeeded. Successful setup adds
+no requests or delay. The production client and later fixture writes retain
+their existing behavior.
+
+`test_gitlab_initial_commit.py` exercises this fixture policy with real HTTP
+responses and the python-gitlab client: immediate success, temporary 404
+recovery, bounded exhaustion, other HTTP failures, and a lost response after
+receiving the write. The live archive test still verifies actual GitLab commits,
+branches, tags, and restored history.
+
 Roll out with creation disabled, deploy one release to web and workers, enable
 the staff pilot, verify a real retention cycle and representative large archive,
 then expand access. Disabling creation leaves existing downloads and cleanup
