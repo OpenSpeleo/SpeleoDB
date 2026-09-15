@@ -160,7 +160,16 @@ production = [
 # ------------------------------------------------------------------------------
 # ==== pytest ====
 [tool.pytest.ini_options]
-norecursedirs = ".uv/*"
+# Discover tests in source roots instead of scanning scratch data and dependencies.
+# Leave norecursedirs unset to retain pytest's default directory exclusions.
+testpaths = [
+    "compose",
+    "frontend_errors",
+    "frontend_private",
+    "frontend_public",
+    "speleodb",
+    "well_known",
+]
 minversion = "6.0"
 # addopts = "--ds=config.settings.test --import-mode=importlib"
 addopts = "--ds=config.settings.test --reuse-db  --create-db --import-mode=importlib"

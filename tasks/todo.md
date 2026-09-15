@@ -1,5 +1,17 @@
 # Task reviews
 
+## Pytest collection scope
+
+Default collection now searches the six source roots and inherits pytest's
+directory exclusions. Docker profiling identified 58,800 `.workdir` directory
+scans as the main cost. Collection fell from 36.80 to 1.83 seconds; the complete
+profiled invocation fell from 39.87 to 3.73 seconds. All 4,619 ordered node IDs
+match after normalizing five existing random parameter labels. Only collection
+ran; test bodies and database setup were not exercised.
+
+See [the collection review](todos/pytest-collection-performance.md) and
+[discovery documentation](../docs/pytest-collection.md).
+
 ## Bounded retries and CI hang
 
 The diagnostic CI stack identified python-gitlab's server-directed retry sleep
