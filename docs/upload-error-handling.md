@@ -51,6 +51,18 @@ ORM cleanup.
 Git working-tree cleanup (`reset_and_remove_untracked()`) is still performed
 because git operations are outside the DB transaction.
 
+### Static public endpoints
+
+Robots and advertising-policy text, icon redirects, and `.well-known` discovery
+responses do not read or write application rows. Their view functions explicitly
+use `transaction.non_atomic_requests` so serving static content does not open a
+database transaction. The decorator belongs on the final view callable, outside
+DRF's `api_view`; URL-level cache wrappers preserve that marker.
+
+Keep `ATOMIC_REQUESTS=True` in production and test settings for database-backed
+APIs. The static endpoint tests intentionally use `SimpleTestCase`, which forbids
+database access and verifies this boundary with SQLite and PostgreSQL alike.
+
 ---
 
 ## Why admin email shows `Traceback: None`

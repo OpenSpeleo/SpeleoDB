@@ -14,12 +14,13 @@ from allauth.account.models import EmailAddress
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db.models.signals import post_save
-from django.db.utils import DataError
+from django.db.utils import IntegrityError
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
+from speleodb.api.v2.tests.database_constraints import unique_import_names
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.landmark_collections import PERSONAL_LANDMARK_COLLECTION_COLOR
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
@@ -862,7 +863,6 @@ class TestLandmarkCollectionAPI:
         content: bytes,
     ) -> None:
         settings.DEBUG = False
-        assert connection.vendor == "postgresql"
         assert not connection.in_atomic_block
         written_landmarks: list[Landmark] = []
 
@@ -870,13 +870,16 @@ class TestLandmarkCollectionAPI:
             if created:
                 written_landmarks.append(instance)
 
-        # The first point reaches SQL; the second violates its actual varchar
+        # The first point reaches SQL; the second violates a real unique
         # constraint. Native model signals observe completed inserts unchanged.
-        content = content.replace(b">Second<", b">" + b"x" * 101 + b"<")
+        content = content.replace(b">Second<", b">First<")
         post_save.connect(record_landmark, sender=Landmark)
         _authenticate_import_client(api_client, owner)
         try:
-            with caplog.at_level(logging.ERROR):
+            with (
+                unique_import_names(Landmark, created_by=owner.email),
+                caplog.at_level(logging.ERROR),
+            ):
                 response = api_client.put(
                     reverse(url_name),
                     {
@@ -895,9 +898,8 @@ class TestLandmarkCollectionAPI:
             if record.exc_info is not None and record.exc_info[1] is not None
         ]
         assert len(errors) == 1
-        assert isinstance(errors[0], DataError)
-        assert getattr(errors[0].__cause__, "sqlstate", None) == "22001"
-        assert "character varying(100)" in str(errors[0])
+        assert isinstance(errors[0], IntegrityError)
+        assert "unique" in str(errors[0]).lower()
         assert len(written_landmarks) == 1
         assert written_landmarks[0].name == "First"
         assert not connection.in_atomic_block

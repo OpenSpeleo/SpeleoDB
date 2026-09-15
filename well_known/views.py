@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     from django.http import HttpResponsePermanentRedirect
 
 
+@transaction.non_atomic_requests
 @extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -55,6 +57,7 @@ def assetlinks(request: HttpRequest) -> JsonResponse:
     )
 
 
+@transaction.non_atomic_requests
 @extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -83,6 +86,7 @@ def apple_app_site_association(request: HttpRequest) -> JsonResponse:
     )
 
 
+@transaction.non_atomic_requests
 @extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -96,6 +100,7 @@ def passkey_endpoints(request: HttpRequest) -> JsonResponse:
     return JsonResponse({}, content_type="application/json")
 
 
+@transaction.non_atomic_requests
 @permission_classes([AllowAny])
 def change_password(request: HttpRequest) -> HttpResponsePermanentRedirect:
     """Helps browser/password managers send users directly to change-password when

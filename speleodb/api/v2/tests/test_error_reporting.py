@@ -25,7 +25,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db.models.signals import post_save
-from django.db.utils import DataError
+from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.urls import reverse
 from fastkml import config as kml_config
@@ -34,6 +34,7 @@ from gpxpy.gpx import GPXXMLSyntaxException
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from speleodb.api.v2.tests.database_constraints import unique_import_names
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
@@ -279,9 +280,8 @@ class LandmarkImportSentryTestCase(AuthenticatedSentryTestCase):
     def _assert_constraint_rollback(self, response: Response) -> None:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         exception: BaseException = self._reported_exception()
-        assert isinstance(exception, DataError), exception
-        assert getattr(exception.__cause__, "sqlstate", None) == "22001"
-        assert "character varying(100)" in str(exception)
+        assert isinstance(exception, IntegrityError), exception
+        assert "unique" in str(exception).lower()
         # Native post_save proves one INSERT succeeded before the second failed.
         assert len(self.written_landmarks) == 1
         assert not connection.in_atomic_block
@@ -310,13 +310,15 @@ class GPXImportSentryTests(LandmarkImportSentryTestCase):
         assert self.written_landmarks == []
 
     def test_gpx_import_failure_does_not_commit_partial_landmarks(self) -> None:
-        assert connection.vendor == "postgresql"
         content: bytes = (
-            '<gpx version="1.1" creator="SpeleoDB" xmlns="http://www.topografix.com/GPX/1/1">'
-            '<wpt lat="20.1" lon="-87.5"><name>First inserted waypoint</name></wpt>'
-            '<wpt lat="20.2" lon="-87.6"><name>' + "x" * 101 + "</name></wpt></gpx>"
-        ).encode()
-        with self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"):
+            b'<gpx version="1.1" creator="SpeleoDB" xmlns="http://www.topografix.com/GPX/1/1">'
+            b'<wpt lat="20.1" lon="-87.5"><name>Duplicate waypoint</name></wpt>'
+            b'<wpt lat="20.2" lon="-87.6"><name>Duplicate waypoint</name></wpt></gpx>'
+        )
+        with (
+            unique_import_names(Landmark, created_by=self.user.email),
+            self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"),
+        ):
             response: Response = self._import(content)
 
         self._assert_constraint_rollback(response)
@@ -346,15 +348,17 @@ class KMLImportSentryTests(LandmarkImportSentryTestCase):
         assert self.written_landmarks == []
 
     def test_kml_import_failure_does_not_commit_partial_landmarks(self) -> None:
-        assert connection.vendor == "postgresql"
         content: bytes = (
-            '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
-            "<Placemark><name>First inserted landmark</name><Point>"
-            "<coordinates>-87.5,20.1</coordinates></Point></Placemark>"
-            "<Placemark><name>" + "x" * 101 + "</name><Point>"
-            "<coordinates>-87.6,20.2</coordinates></Point></Placemark></Document></kml>"
-        ).encode()
-        with self.assertLogs("speleodb.api.v2.views.kml_kmz_import", level="ERROR"):
+            b'<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+            b"<Placemark><name>Duplicate landmark</name><Point>"
+            b"<coordinates>-87.5,20.1</coordinates></Point></Placemark>"
+            b"<Placemark><name>Duplicate landmark</name><Point>"
+            b"<coordinates>-87.6,20.2</coordinates></Point></Placemark></Document></kml>"
+        )
+        with (
+            unique_import_names(Landmark, created_by=self.user.email),
+            self.assertLogs("speleodb.api.v2.views.kml_kmz_import", level="ERROR"),
+        ):
             response: Response = self._import(content)
 
         self._assert_constraint_rollback(response)

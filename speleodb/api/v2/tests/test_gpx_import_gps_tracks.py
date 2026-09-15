@@ -10,11 +10,12 @@ from allauth.account.models import EmailAddress
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db import models
-from django.db.utils import DataError
+from django.db.utils import IntegrityError
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from speleodb.api.v2.tests.database_constraints import unique_import_names
 from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.test_file_upload_error_handling import SentryEventTestCase
 from speleodb.common.enums import PermissionLevel
@@ -105,7 +106,6 @@ class GPXTrackPublicationTests(SentryEventTestCase):
         assert not self.sentry_events
 
     def test_gpx_import_cleans_stored_tracks_when_publication_rolls_back(self) -> None:
-        assert connection.vendor == "postgresql"
         assert not connection.in_atomic_block
         # A successful request proves authentication, storage and permissions work.
         assert self._import().status_code == status.HTTP_200_OK
@@ -131,21 +131,20 @@ class GPXTrackPublicationTests(SentryEventTestCase):
         self.addCleanup(events.unregister, "after-call.s3.PutObject", record_upload)
         self.addCleanup(events.unregister, "after-call.s3.DeleteObject", record_delete)
 
-        name_limit: int | None = GPSTrack._meta.get_field("name").max_length  # noqa: SLF001
-        assert name_limit is not None
         second_track: bytes = GPX_TRACK.split(b"<trk>", 1)[1].split(b"</trk>", 1)[0]
-        second_track = second_track.replace(b"Imported Track", b"x" * (name_limit + 1))
         content: bytes = GPX_TRACK.replace(
             b"</gpx>", b"<trk>" + second_track + b"</trk></gpx>"
-        )
-        with self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"):
+        ).replace(b"Imported Track", b"Duplicate rollback track")
+        with (
+            unique_import_names(GPSTrack, created_by=self.user.email),
+            self.assertLogs("speleodb.api.v2.views.gpx_import", level="ERROR"),
+        ):
             response: Response = self._import(content)
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         exception: BaseException = self._reported_exception()
-        assert isinstance(exception, DataError), exception
-        assert getattr(exception.__cause__, "sqlstate", None) == "22001"
-        assert f"character varying({name_limit})" in str(exception)
+        assert isinstance(exception, IntegrityError), exception
+        assert "unique" in str(exception).lower()
         assert uploads == [status.HTTP_200_OK, status.HTTP_200_OK]
         assert deletions == [status.HTTP_204_NO_CONTENT, status.HTTP_204_NO_CONTENT]
         assert not connection.in_atomic_block

@@ -21,10 +21,10 @@ patched methods, or renamed test doubles as substitutes.
 - When the user chooses a dedicated remote test GitLab, keep it running between
   jobs. Persist configuration secrets as well as repositories and the database;
   an environment name alone does not prove that CI uses the new service.
-- Verify database transaction semantics in the same PostgreSQL backend as CI.
-  Explicitly select `TEST_DATABASE_URL` when a private local dotenv selects
-  SQLite. Coordinate suites sharing the same test database instead of running
-  competing pytest processes.
+- Verify database transaction semantics on local SQLite and CI PostgreSQL. Keep
+  the normal local run, then explicitly select `TEST_DATABASE_URL` for the
+  additional PostgreSQL run. Coordinate suites sharing the same test database
+  instead of running competing pytest processes.
 - When removing test doubles, update coverage claims. Real transport refusal
   proves connection retry behavior; it cannot prove invented 429/5xx sequences.
   Supported observation hooks may inspect real requests/events but must not
@@ -78,3 +78,11 @@ patched methods, or renamed test doubles as substitutes.
   exact one-request assertion would reject supported retry behavior.
 - Keep host and container mypy caches separate when their Python environments
   differ. Verify failures with an isolated cache before changing source code.
+- A diagnostic isolated-cache pass does not verify the user's normal command.
+  Repair its cache configuration and rerun that exact command before completion.
+- Enabling ATOMIC_REQUESTS affects static views as well as write APIs. Preserve
+  database-free endpoint tests with explicit non_atomic_requests on those views;
+  do not globally grant database access to tests or undo upload transactions.
+- SQLite does not enforce VARCHAR length as PostgreSQL does. Use a real portable
+  constraint when testing generic import rollback, and prove both database
+  paths.

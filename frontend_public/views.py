@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.db import transaction
 from django.http import Http404
 from django.http.response import HttpResponse
 from django.http.response import HttpResponsePermanentRedirect
@@ -299,6 +300,7 @@ def redirect_authenticated_user[RT](
     return wrapper
 
 
+@transaction.non_atomic_requests
 @require_GET
 def robots_txt(request: HttpRequest) -> HttpResponse:
     return HttpResponse(
@@ -313,16 +315,19 @@ Disallow: /signup/
     )
 
 
+@transaction.non_atomic_requests
 @require_GET
 def favicon_redirect(request: HttpRequest) -> HttpResponsePermanentRedirect:
     return HttpResponsePermanentRedirect(static("favicon/favicon.ico"))
 
 
+@transaction.non_atomic_requests
 @require_GET
 def apple_touch_icon_redirect(request: HttpRequest) -> HttpResponsePermanentRedirect:
     return HttpResponsePermanentRedirect(static("favicon/apple-touch-icon.png"))
 
 
+@transaction.non_atomic_requests
 @require_GET
 def app_ads_txt(request: HttpRequest) -> HttpResponse:
     return HttpResponse(

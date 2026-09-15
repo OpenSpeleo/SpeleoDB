@@ -74,9 +74,15 @@ status and body. See [GitLab reliability](gitlab-reliability.md).
 - Assert the intended failure itself: an actual Git index lock, rejecting Git
   hook, invalid GitLab credential, malformed input, or SQL constraint violation.
   HTTP 500 alone is insufficient because an unrelated outage can also return it.
-- Use `TransactionTestCase` for upload rollback checks, with PostgreSQL and
-  `ATOMIC_REQUESTS=True`. Query persisted rows after the request transaction
+- Use `TransactionTestCase` for upload rollback checks on SQLite and PostgreSQL,
+  with `ATOMIC_REQUESTS=True`. Query persisted rows after the request transaction
   exits; the surrounding transaction of `TestCase` cannot prove that rollback.
+- Import rollback tests install a temporary, owner-scoped unique-name constraint
+  through Django's schema editor. Two same-name records at different coordinates
+  produce a real second-insert failure on both engines. Native signals prove the
+  first insert succeeded, then database and storage reads prove rollback. The
+  constraint is removed afterward; no model, ORM method, or response is replaced.
+  Do not rely on PostgreSQL-only VARCHAR enforcement for portable failure input.
 - Observe the real Sentry SDK's `before_send` event hook with external delivery
   disabled. This proves exception/event construction, not remote Sentry delivery.
 - Observe real SDK response hooks to check token presence, response bodies,
@@ -126,8 +132,9 @@ command arguments.
 
 ## Validation and performance
 
-Run tests inside the Django Docker container against PostgreSQL, using
-`TEST_DATABASE_URL` when the private local dotenv otherwise selects SQLite.
+Run tests with the normal local SQLite configuration and repeat database-sensitive
+checks against PostgreSQL using `TEST_DATABASE_URL`. Verifying only an overridden
+CI database misses regressions in the supported local configuration.
 Keep suites sharing a database or cleanup namespace serial. Never print the
 database URL, GitLab token, or credential-bearing Git URLs during diagnostics.
 

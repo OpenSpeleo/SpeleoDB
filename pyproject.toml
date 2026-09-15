@@ -212,6 +212,8 @@ ogc_core = [
 # NOTE: mypy's `exclude` is a list of Python regular expressions, not glob
 # patterns. Keep these as anchored regexes (`^name/`, or `\.ext$`).
 [tool.mypy]
+# Keep SQLite cache files off the checkout shared by host and Docker processes.
+cache_dir = "~/.cache/speleodb/mypy"
 exclude = [
     "\\.pyc$",
     "(^|/)node_modules(/|$)",

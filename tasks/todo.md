@@ -1,5 +1,21 @@
 # Task reviews
 
+## Restore local validation after GitLab test migration
+
+Corrected the five PostgreSQL-only rollback tests with temporary owner-scoped
+unique constraints enforced by both SQLite and PostgreSQL. Corrected the 49
+static endpoint failures by opting eight static/discovery views out of request
+transactions, preserving their database-free contract. All 60 targeted cases
+passed on both engines; no reported failure was skipped or weakened to a generic
+response assertion.
+
+Mypy's normal command had raised a malformed SQLite cache error in the shared
+checkout. Cache ownership now follows the invoking user's home outside that
+mount; direct host and container checks pass with cold and warm caches. Ruff and
+formatting pass for the changed Python files. No hooks were run, as explicitly
+requested. See [the regression review](todos/local-test-regressions.md) and
+[cache evidence](../docs/mypy-cache.md).
+
 ## CI GitLab quotas and real upload verification
 
 GitLab acquisition now looks up existing projects before creating them, and
