@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from typing import Any
 
 from django.utils.http import content_disposition_header
 
@@ -20,8 +19,8 @@ def _archive_name(key: str) -> str:
     return key.removeprefix(prefix)
 
 
-def upload_archive(path: Path, *, key: str, filename: str, sha256: str) -> str:
-    return ExportStorage().upload_file(
+def upload_archive(path: Path, *, key: str, filename: str, sha256: str) -> None:
+    ExportStorage().upload_file(
         _archive_name(key),
         path,
         parameters={
@@ -35,20 +34,9 @@ def upload_archive(path: Path, *, key: str, filename: str, sha256: str) -> str:
     )
 
 
-def delete_archive(*, key: str, version: str = "") -> None:
-    ExportStorage().delete_versions(_archive_name(key), version=version)
+def delete_archive(*, key: str) -> None:
+    ExportStorage().delete_file(_archive_name(key))
 
 
-def signed_archive_url(*, key: str, version: str, expires: int, filename: str) -> str:
-    parameters: dict[str, Any] = {
-        "ResponseContentDisposition": content_disposition_header(
-            as_attachment=True, filename=filename
-        )
-        or "attachment",
-        "ResponseCacheControl": "private, no-store",
-    }
-    if version:
-        parameters["VersionId"] = version
-    return ExportStorage().url(
-        _archive_name(key), parameters=parameters, expire=expires
-    )
+def signed_archive_url(*, key: str, expires: int) -> str:
+    return ExportStorage().url(_archive_name(key), expire=expires)

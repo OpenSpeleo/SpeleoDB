@@ -82,7 +82,7 @@ class CreateOrCloneProjectTests(TestCase):
             patch.object(GitlabCredentials, "get", return_value=credentials),
             patch.object(GitlabManager, "create_project"),
             patch.object(GitRepo, "init", return_value=git_repo),
-            patch("speleodb.utils.helpers.time.sleep") as sleep,
+            patch("speleodb.utils.helpers.time", autospec=True) as mock_time,
             self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
             pytest.raises(
                 GitBaseError,
@@ -109,7 +109,7 @@ class CreateOrCloneProjectTests(TestCase):
         assert exc_info.value.__cause__ is None
         assert exc_info.value.__context__ is None
         assert git_repo.create_remote.call_count == 5  # noqa: PLR2004
-        assert [mock_call.args[0] for mock_call in sleep.call_args_list] == [
+        assert [mock_call.args[0] for mock_call in mock_time.sleep.call_args_list] == [
             1.0,
             2.0,
             4.0,

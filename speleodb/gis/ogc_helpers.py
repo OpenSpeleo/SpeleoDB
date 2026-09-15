@@ -33,7 +33,6 @@ import logging
 import math
 import re
 from datetime import UTC
-from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Final
@@ -41,6 +40,7 @@ from urllib.parse import quote
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
+from django.utils import timezone
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -819,7 +819,7 @@ def build_items_envelope(
     self_url = _replace_query(items_url, _items_self_query_params(query))
     # The collection URL is the items URL minus the ``/items`` suffix.
     collection_url = items_url.removesuffix("/items")
-    timestamp = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    timestamp: str = timezone.now().astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     links: list[dict[str, Any]] = [
         {

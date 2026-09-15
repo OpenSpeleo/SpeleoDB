@@ -139,7 +139,7 @@ class ProjectCommitFactory(DjangoModelFactory[ProjectCommit]):
     project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
     author_name: str = Faker("name")  # type: ignore[assignment]
     author_email: str = Faker("email")  # type: ignore[assignment]
-    authored_date: Any = factory.LazyFunction(timezone.now)
+    authored_date: Any = factory.LazyAttribute(lambda _: timezone.now())
     message: str = Faker("sentence")  # type: ignore[assignment]
     tree: list[dict[str, str]] = []
 
@@ -184,8 +184,8 @@ class PublicAnnoucementFactory(DjangoModelFactory[PublicAnnoucement]):
     is_active = True
 
     # Timestamps — allow override in tests if necessary
-    creation_date: Any = factory.LazyFunction(timezone.now)
-    modified_date: Any = factory.LazyFunction(timezone.now)
+    creation_date: Any = factory.LazyAttribute(lambda _: timezone.now())
+    modified_date: Any = factory.LazyAttribute(lambda _: timezone.now())
     expiracy_date: Any = None  # Default: no expiration
 
 
@@ -214,8 +214,8 @@ class PluginReleaseFactory(DjangoModelFactory[PluginRelease]):
 
     download_url: str = Faker("url", schemes="https")  # type: ignore[assignment]
 
-    creation_date = factory.LazyFunction(timezone.now)
-    modified_date = factory.LazyFunction(timezone.now)
+    creation_date: Any = factory.LazyAttribute(lambda _: timezone.now())
+    modified_date: Any = factory.LazyAttribute(lambda _: timezone.now())
 
 
 class ExplorationLeadFactory(DjangoModelFactory[ExplorationLead]):

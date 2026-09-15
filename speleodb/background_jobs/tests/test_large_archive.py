@@ -51,7 +51,6 @@ def test_actual_s3_zip64_archive_has_bounded_memory(user: User, tmp_path: Path) 
     storage = layer.source_f.storage
     source_key: str | None = None
     artifact_key: str = f"exports/large-test-{uuid.uuid4()}.zip"
-    artifact_version: str = ""
     started: float = time.monotonic()
     initial_rss: int = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     try:
@@ -84,7 +83,7 @@ def test_actual_s3_zip64_archive_has_bounded_memory(user: User, tmp_path: Path) 
                     byte_count += len(chunk)
         assert byte_count == MEMBER_BYTES
         assert digest.hexdigest() == member["sha256"]
-        artifact_version = upload_archive(
+        upload_archive(
             destination,
             key=artifact_key,
             filename="large-export.zip",
@@ -100,8 +99,6 @@ def test_actual_s3_zip64_archive_has_bounded_memory(user: User, tmp_path: Path) 
             "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
             "Key": artifact_key,
         }
-        if artifact_version:
-            download_parameters["VersionId"] = artifact_version
         downloaded_digest = hashlib.sha256()
         downloaded_bytes: int = 0
         with contextlib.closing(
@@ -128,7 +125,7 @@ def test_actual_s3_zip64_archive_has_bounded_memory(user: User, tmp_path: Path) 
             ).decode()
         )
     finally:
-        delete_archive(key=artifact_key, version=artifact_version)
+        delete_archive(key=artifact_key)
         if source_key is not None:
             storage.delete(source_key)
         source.unlink(missing_ok=True)

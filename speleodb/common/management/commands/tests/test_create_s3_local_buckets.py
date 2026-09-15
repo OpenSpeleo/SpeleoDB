@@ -20,14 +20,18 @@ import pytest
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 from django.test import override_settings
 
+from speleodb.background_jobs.storage import signed_archive_url
 from speleodb.common.management.commands.create_s3_local_buckets import (
     LOCAL_CORS_CONFIGURATION,
 )
+from speleodb.utils.s3_storages import ExportStorage
+from speleodb.utils.s3_storages import PersonPhotoStorage
 
 if TYPE_CHECKING:
     from typing import Any
@@ -35,6 +39,13 @@ if TYPE_CHECKING:
 
 
 TEST_SECRET_KEY = "not-a-secret"  # noqa: S105
+EXPORT_RETENTION_RULE = {
+    "ID": "SpeleoDBExportsRetention",
+    "Status": "Enabled",
+    "Filter": {"Prefix": "exports/"},
+    "Expiration": {"Days": 2},
+    "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 2},
+}
 
 
 def _client_error(code: str, operation_name: str) -> ClientError:
@@ -111,6 +122,7 @@ class TestPresignedHTTPURLValidation(TestCase):
 class TestCreateS3LocalBucketsCommand(TestCase):
     def setUp(self) -> None:
         self.s3 = MagicMock()
+        self.s3.get_bucket_lifecycle_configuration.return_value = {}
         self.client_patcher = patch(
             "speleodb.common.management.commands.create_s3_local_buckets.boto3.client"
         )
@@ -237,9 +249,166 @@ class TestCreateS3LocalBucketsCommand(TestCase):
         ):
             call_command("create_s3_local_buckets")
 
+    def test_missing_lifecycle_installs_export_retention(
+        self,
+    ) -> None:
+        self.s3.get_bucket_lifecycle_configuration.side_effect = _client_error(
+            "NoSuchLifecycleConfiguration", "GetBucketLifecycleConfiguration"
+        )
+
+        call_command("create_s3_local_buckets")
+
+        assert self.s3.put_bucket_lifecycle_configuration.call_args_list == [
+            call(
+                Bucket=bucket,
+                LifecycleConfiguration={"Rules": [EXPORT_RETENTION_RULE]},
+            )
+            for bucket in [
+                "speleodb-user-artifacts-dev",
+                "speleodb-user-artifacts-test",
+            ]
+        ]
+
+    def test_lifecycle_preserves_unrelated_rules_and_transition_minimum(self) -> None:
+        unrelated: dict[str, Any] = {
+            "ID": "OtherRetention",
+            "Status": "Enabled",
+            "Filter": {"Prefix": "unrelated/"},
+            "Expiration": {"Days": 30},
+        }
+        existing: dict[str, Any] = {
+            "Rules": [unrelated],
+            "TransitionDefaultMinimumObjectSize": "varies_by_storage_class",
+            "ResponseMetadata": {"HTTPStatusCode": 200},
+        }
+        original: str = json.dumps(existing)
+        self.s3.get_bucket_lifecycle_configuration.return_value = existing
+
+        call_command("create_s3_local_buckets")
+
+        for lifecycle_call in self.s3.put_bucket_lifecycle_configuration.call_args_list:
+            assert lifecycle_call.kwargs["LifecycleConfiguration"] == {
+                "Rules": [unrelated, EXPORT_RETENTION_RULE]
+            }
+            assert (
+                lifecycle_call.kwargs["TransitionDefaultMinimumObjectSize"]
+                == "varies_by_storage_class"
+            )
+        assert json.dumps(existing) == original
+
+    def test_lifecycle_removes_old_export_version_retention(self) -> None:
+        previous_rule: dict[str, Any] = {
+            **EXPORT_RETENTION_RULE,
+            "NoncurrentVersionExpiration": {"NoncurrentDays": 2},
+        }
+        self.s3.get_bucket_lifecycle_configuration.return_value = {
+            "Rules": [previous_rule]
+        }
+
+        call_command("create_s3_local_buckets")
+
+        for lifecycle_call in self.s3.put_bucket_lifecycle_configuration.call_args_list:
+            assert lifecycle_call.kwargs["LifecycleConfiguration"] == {
+                "Rules": [EXPORT_RETENTION_RULE]
+            }
+        assert self.s3.put_bucket_lifecycle_configuration.called
+
+    def test_repeated_setup_does_not_rewrite_unchanged_lifecycle(self) -> None:
+        call_command("create_s3_local_buckets")
+        initial_writes: int = self.s3.put_bucket_lifecycle_configuration.call_count
+        assert initial_writes > 0
+        self.s3.get_bucket_lifecycle_configuration.return_value = {
+            "Rules": [EXPORT_RETENTION_RULE]
+        }
+
+        call_command("create_s3_local_buckets")
+
+        assert self.s3.put_bucket_lifecycle_configuration.call_count == initial_writes
+
+    def test_lifecycle_inspection_error_names_the_affected_bucket(self) -> None:
+        self.s3.get_bucket_lifecycle_configuration.side_effect = _client_error(
+            "AccessDenied", "GetBucketLifecycleConfiguration"
+        )
+
+        with pytest.raises(
+            CommandError,
+            match=(
+                "Failed to inspect lifecycle rules for bucket "
+                "'speleodb-user-artifacts-dev'"
+            ),
+        ):
+            call_command("create_s3_local_buckets")
+
+        self.s3.put_bucket_lifecycle_configuration.assert_not_called()
+
+    def test_lifecycle_write_error_names_the_affected_bucket(self) -> None:
+        self.s3.put_bucket_lifecycle_configuration.side_effect = _client_error(
+            "NotImplemented", "PutBucketLifecycleConfiguration"
+        )
+
+        with pytest.raises(
+            CommandError,
+            match=(
+                "Failed to apply lifecycle rules to bucket "
+                "'speleodb-user-artifacts-dev'"
+            ),
+        ):
+            call_command("create_s3_local_buckets")
+
+    def test_lifecycle_rejects_export_rule_id_used_outside_exports(self) -> None:
+        self.s3.get_bucket_lifecycle_configuration.return_value = {
+            "Rules": [{**EXPORT_RETENTION_RULE, "Filter": {"Prefix": "unrelated/"}}]
+        }
+
+        with pytest.raises(CommandError, match="outside the exports prefix"):
+            call_command("create_s3_local_buckets")
+
+        self.s3.put_bucket_lifecycle_configuration.assert_not_called()
+
 
 @pytest.mark.skip_if_lighttest
 class TestRustFSCORSIntegration(TestCase):
+    def test_setup_keeps_exports_private_and_person_photos_public(self) -> None:
+        call_command("create_s3_local_buckets")
+        export_storage: ExportStorage = ExportStorage()
+        photo_storage: PersonPhotoStorage = PersonPhotoStorage()
+        export_name: str = f"setup-access-{uuid.uuid4()}.zip"
+        photo_name: str = f"setup-access-{uuid.uuid4()}.jpg"
+        private_payload: bytes = b"private export contents"
+        public_payload: bytes = b"public photo contents"
+        saved_export: str = ""
+        saved_photo: str = ""
+        try:
+            saved_export = export_storage.save(
+                export_name, ContentFile(private_payload)
+            )
+            saved_photo = photo_storage.save(photo_name, ContentFile(public_payload))
+            signed_url: str = signed_archive_url(
+                key=export_storage.object_key(saved_export),
+                expires=60,
+            )
+            signed_status, signed_body, allow_origin, _ = _request_presigned_http_url(
+                signed_url, "GET"
+            )
+            assert signed_status == HTTPStatus.OK
+            assert signed_body == private_payload
+            assert allow_origin == "*"
+            unsigned_url: str = urlsplit(signed_url)._replace(query="").geturl()
+            unsigned_status, _, _, _ = _request_presigned_http_url(unsigned_url, "GET")
+            assert unsigned_status == HTTPStatus.FORBIDDEN
+            photo_url: str = photo_storage.url(saved_photo)
+            assert not urlsplit(photo_url).query
+            photo_status, photo_body, _, _ = _request_presigned_http_url(
+                photo_url, "GET"
+            )
+            assert photo_status == HTTPStatus.OK
+            assert photo_body == public_payload
+        finally:
+            if saved_export:
+                export_storage.delete_file(saved_export)
+            if saved_photo:
+                photo_storage.delete_file(saved_photo)
+
     def test_presigned_get_and_head_responses_allow_browser_origin(self) -> None:
         call_command("create_s3_local_buckets")
         s3: Any = boto3.client(

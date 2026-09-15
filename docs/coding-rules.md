@@ -109,6 +109,24 @@ the rendering function that documents the contract. See
 
 ## Python / Backend
 
+### Application timestamps
+
+- Use `from django.utils import timezone` and call `timezone.now()` for current
+  application timestamps, including generated API timestamps and epoch seconds
+  (`timezone.now().timestamp()`). Convert to UTC explicitly when a wire format
+  ends in `Z`; use `timezone.localtime()` / `timezone.localdate()` for local
+  presentation and calendar dates.
+- Capture one `now` for related fields in a state transition. Export attempt
+  creation and its initial dispatch eligibility must use the same instant.
+- Django model `default=timezone.now` is a valid fallback, but retains the
+  callable selected when the model is imported. Service transitions that must
+  follow a replaceable clock should pass explicit timestamps. Test factories
+  should resolve `timezone.now()` inside their lazy callback rather than retain
+  the original callable.
+- Test clock-sensitive transitions with a controlled Django clock, including
+  just before and exactly at deadlines. Keep monotonic/performance clocks for
+  elapsed durations and process timeouts; they are not calendar timestamps.
+
 ### Import & Module-Level Code
 
 - **All imports must be at the top of the file.** Never use inline/local imports

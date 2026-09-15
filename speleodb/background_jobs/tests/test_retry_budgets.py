@@ -55,9 +55,12 @@ def test_failed_publications_consume_the_generation_cycle_budget(
         "speleodb.background_jobs.services.current_app.send_task", publish
     )
     job, _ = request_export(user)
+    assert job.created_at == now
     for cycle, delay in ((1, 60), (2, 120), (3, None)):
         assert job.current_attempt_id is not None
         attempt = job.attempts.get(pk=job.current_attempt_id)
+        assert attempt.created_at == now
+        assert attempt.dispatch_after == now
         dispatch_attempt(attempt.pk)
         attempt.refresh_from_db()
         job.refresh_from_db()
@@ -77,9 +80,13 @@ def test_failed_publications_consume_the_generation_cycle_budget(
             assert job.state == JobState.FAILED
             assert job.next_attempt_at is None
     assert job.attempts.count() == settings.EXPORTS_MAX_ATTEMPTS
+    now += timedelta(minutes=1)
     retried = retry_export(job, user)
     assert retried.current_attempt_id is not None
-    assert retried.attempts.get(pk=retried.current_attempt_id).cycle_attempt == 1
+    manual_attempt: JobAttempt = retried.attempts.get(pk=retried.current_attempt_id)
+    assert manual_attempt.cycle_attempt == 1
+    assert manual_attempt.created_at == now
+    assert manual_attempt.dispatch_after == now
 
 
 def test_stale_publication_is_failed_without_republishing_the_same_attempt(
@@ -94,7 +101,19 @@ def test_stale_publication_is_failed_without_republishing_the_same_attempt(
     job, _ = request_export(user)
     attempt = job.attempts.get()
     dispatch_attempt(attempt.pk)
-    now += timedelta(seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS + 1)
+    publish.assert_called_once()
+    attempt.refresh_from_db()
+    assert attempt.dispatched_at == now
+    assert attempt.dispatch_started_at == now
+    assert attempt.dispatch_after == now + timedelta(
+        seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS
+    )
+    now = attempt.dispatch_after - timedelta(microseconds=1)
+    dispatch_attempt(attempt.pk)
+    publish.assert_called_once()
+    attempt.refresh_from_db()
+    assert attempt.state == JobState.QUEUED
+    now += timedelta(microseconds=1)
     dispatch_attempt(attempt.pk)
     publish.assert_called_once()
     attempt.refresh_from_db()
@@ -225,14 +244,12 @@ def _cleanup_subject(
         state=state,
         deadline_at=now - timedelta(minutes=6),
         object_key=f"exports/{uuid.uuid4()}.zip",
-        object_version="version-1",
     )
     if published:
         JobArtifact.objects.create(
             job=job,
             attempt=attempt,
             object_key=attempt.object_key,
-            object_version=attempt.object_version,
             filename="archive.zip",
             size_bytes=20,
             sha256="a" * 64,

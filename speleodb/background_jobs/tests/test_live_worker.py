@@ -274,7 +274,7 @@ def live_worker(tmp_path: Path, transactional_db: None) -> Iterator[LiveWorker]:
                 worker.process.wait(timeout=5)
             # Only delete object keys created in this transaction-isolated test DB.
             for attempt in JobAttempt.objects.exclude(object_key="").iterator():
-                delete_archive(key=attempt.object_key, version=attempt.object_version)
+                delete_archive(key=attempt.object_key)
 
 
 def _verified_user() -> User:

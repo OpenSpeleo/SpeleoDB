@@ -95,7 +95,6 @@ class JobAttempt(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     error = models.TextField(blank=True)
     object_key = models.CharField(max_length=500, blank=True)
-    object_version = models.CharField(max_length=1024, blank=True)
     object_deleted_at = models.DateTimeField(null=True, blank=True)
     cleanup_attempts = models.PositiveSmallIntegerField(default=0)
     cleanup_due_at = models.DateTimeField(null=True, blank=True)
@@ -132,7 +131,6 @@ class JobArtifact(models.Model):
         JobAttempt, related_name="artifact", on_delete=models.CASCADE
     )
     object_key = models.CharField(max_length=500, unique=True)
-    object_version = models.CharField(max_length=1024, blank=True)
     filename = models.CharField(max_length=255)
     size_bytes = models.PositiveBigIntegerField()
     sha256 = models.CharField(max_length=64)

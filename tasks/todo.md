@@ -1,5 +1,37 @@
 # Task reviews
 
+## Post-commit timeout test isolation
+
+The hook timeout test's sleep mock intercepted Python subprocess polling via the
+shared stdlib `time` module. Retry tests now replace only the retry helper's
+module reference; real process cleanup retains its sleep. The hook regression
+also asserts exactly one commit invocation. Application behavior is unchanged.
+All four affected modules passed inside Docker: 70 tests and 31 subtests.
+
+See [the review](todos/post-commit-timeout-sleep.md) and
+[test isolation design](../docs/git-retry-testing.md).
+
+## Plain export files and shared storage managers
+
+This review supersedes the earlier export version-tracking and CloudFront query
+requirements below. Exports overwrite the existing key and use ordinary signed
+URLs. The new migration removes the obsolete fields, and setup removes obsolete
+version permissions and retention rules.
+
+Every S3 backend now shares transport and endpoint handling through
+`BrowserFacingS3Storage`, with common public/private classes. Local and CI
+RustFS use rc.1 to fix stored headers missing from GET responses for all
+backends. Existing file naming and access/cache policies remain with their
+owning classes.
+
+Verification: 256 targeted tests passed, followed by all 5 live Celery tests;
+the eight-backend integration matrix includes actual transfers, overwrites,
+headers, unsigned/private access and cleanup. Full mypy (710 files), Ruff,
+formatting, migration drift checks, YAML checks and policy parity passed. Local
+RustFS was upgraded with its volume preserved and pre-upgrade object integrity
+verified. No production AWS settings were changed. See
+[the completed plan](todos/plain-export-files.md).
+
 ## Pytest collection scope
 
 Default collection now searches the six source roots and inherits pytest's
@@ -107,3 +139,43 @@ variable expressions, all-service consumer inventory, post-deletion equivalence,
 and successful live Redis/PostgreSQL and HTTP checks. The reference correction
 required no restart. A subsequent operator Git push queued web, worker, and Beat
 releases behind GitHub checks, confirming their automatic deployment wiring.
+
+## Django clock consistency
+
+Fixed both reported retry-budget failures: centralized job/attempt creation now
+uses explicit Django timestamps, with the same instant for attempt creation and
+initial dispatch. The repository audit also corrected five captured factory
+callbacks and aligned OGC timestamps, the debug cachebuster, and storage expiry
+assertions with `timezone.now()`.
+
+Verification: 167 distinct tests passed, 1 skipped; the final factory-only rerun
+also passed all three cases. Full mypy checked 708 source files, and Ruff and
+format checks passed. Independent review found no actionable issue. No schema
+migration is needed. See
+[the completed review](todos/retry-budget-test-clock.md).
+
+## Complete shared storage policy and setup
+
+The production storage document now embeds the complete three-statement policy,
+and its JSON example matches exactly. Application version/multipart actions and
+CloudFront version reads extend the existing bucket-wide grants. Production
+setup reuses those grants and removes only recognized obsolete export policies.
+Downloads use the existing shared signed-URL flow. Only retention is scoped to
+exports, keeping other files out of the two-day cleanup rule.
+
+Local setup now merges that same lifecycle fallback while preserving unrelated
+rules, private exports, public photos, and versioning settings. Verification: 40
+production policy/command tests plus 23 local setup and real storage tests
+passed; full mypy checked 708 source files, and Ruff/format checks passed all
+task-owned Python files. Independent review found no actionable issue. No live
+AWS configuration was changed. See
+[the completed review](todos/shared-storage-policy.md).
+
+## Generic AWS policy identifiers
+
+Replaced production account, distribution, IAM identity, and bucket identifiers
+in the full policy documentation/examples with explicit placeholders. Commands
+quote placeholders and the existing example test substitutes fictional values.
+The example test, full mypy (708 files), Ruff, formatting, JSON parity, and the
+repository identifier search passed. See the
+[privacy correction review](todos/shared-storage-policy.md).

@@ -3,6 +3,13 @@
 ## Intent and Ownership
 
 Local development and backend tests use RustFS as an S3-compatible object store.
+Local Compose and CI pin `rustfs/rustfs:1.0.0-rc.1`. This release serves stored
+`Cache-Control` and `Content-Disposition` headers on ordinary object GETs. The
+upstream [GET cache-header fix](https://github.com/rustfs/rustfs/pull/5241) and
+[release notes](https://github.com/rustfs/rustfs/releases/tag/1.0.0-rc.1) document
+the provider fixes; the release also includes the
+[file-metadata compatibility fix](https://github.com/rustfs/rustfs/pull/5689).
+
 Django serves the private and public map viewers from `http://localhost:8000`,
 while RustFS serves signed GeoJSON and GPS-track URLs from
 `http://localhost:9000`. Those browser downloads are cross-origin, so the RustFS
@@ -15,29 +22,44 @@ local management command.
 
 ## Shared backend contract
 
-`speleodb.utils.s3_storages` owns S3 configuration for media, attachments, vector
-files, and exports. `PrivateS3Storage` selects CloudFront signing when its
-configured signer exists, otherwise S3 signing. Bucket/domain settings are read
-when a backend is constructed, so local and production configurations do not
-depend on values captured during module import. Public photo/static backends
-retain their unsigned URL behavior.
+`speleodb.utils.s3_storages` owns S3 configuration for media, photos, attachments,
+vector files, exports, and S3 static files. Every S3 backend inherits the transfer
+and URL behavior of `BrowserFacingS3Storage`. `PrivateS3Storage` selects
+CloudFront signing when its configured signer exists, otherwise S3 signing.
+`PublicS3Storage` keeps photo and static-file URLs unsigned. The default media
+backend is `S3MediaStorage` locally and in production. Django's DEBUG static-file
+backend remains filesystem-based and does not use S3 response handling.
+
+Bucket/domain settings are read when a backend is constructed. For a custom
+domain whose host and port match `AWS_S3_BROWSER_ENDPOINT_URL`, the URL uses that
+endpoint's HTTP or HTTPS scheme. When the browser endpoint is absent, the same
+comparison uses `AWS_S3_ENDPOINT_URL`. Other custom domains retain their
+configured protocol, including production CloudFront HTTPS. This shared behavior
+does not depend on DEBUG, import-time settings, or a particular local hostname.
 
 `BrowserFacingS3Storage` uses the internal endpoint for object operations and
 the browser endpoint only for local signed URLs. It also provides two reusable
 operations for durable jobs: `upload_file(name, path, parameters=...)` streams to
-an already-reserved name and returns its object version; `delete_versions(name,
-version=...)` removes exact versions and unfinished multipart uploads. These
-operations normalize names within the backend's location. Ordinary model
+an already-reserved name, replacing an existing object; `delete_file(name)`
+aborts unfinished multipart uploads for the exact key and deletes the object.
+These operations normalize names within the backend's location. Ordinary model
 uploads continue using Django's `save()` and filename rules.
 
-Exports use `ExportStorage` and the same URL path as other private backends.
+Exports use `ExportStorage.url()` and the same URL path as other private backends.
 Their adapter supplies ZIP metadata and accepts historical stored keys as well
-as new flat `exports/{filename}.zip` keys. Export transfers retain two upload
-threads and 16 MiB parts; signing and cleanup add no full-file memory reads.
+as new flat `exports/{filename}.zip` keys. `ExportStorage.save()` also overwrites
+an existing key. CloudFront downloads use ordinary signed file URLs and uploaded
+object metadata. Ordinary RustFS GETs also return that metadata for signed and
+unsigned requests. Download URLs carry their normal authentication parameters;
+they need no response-header overrides or extra metadata lookup. Export transfers
+retain two upload threads and 16 MiB parts; signing and cleanup add no full-file
+memory reads.
 
-Local regression tests use actual RustFS uploads, browser downloads, multipart
-cleanup, and disposable versioned buckets. CloudFront signature tests use
-ephemeral keys and verify the signatures without contacting AWS. The signing
+Local regression tests exercise every concrete S3 backend using actual `save()`
+and `upload_file()` calls, signed/unsigned browser GETs, stored response headers,
+exact-key overwrite, and ordinary deletion. They also cover abandoned multipart
+cleanup. CloudFront signature tests use ephemeral keys and verify the signatures
+without contacting AWS. The signing
 cases require the existing `production` dependency extra; local-only installs
 run the S3 cases and report explicit skips for those production cases.
 
@@ -52,8 +74,11 @@ configuration. It:
   `speleodb-user-artifacts-test`;
 - creates buckets only after an S3 missing-bucket response;
 - grants anonymous reads only under `media/people/photos/*`;
-- permits cross-origin `GET` and `HEAD` requests from any origin; and
-- reapplies policy and CORS configuration safely when a bucket already exists.
+- permits cross-origin `GET` and `HEAD` requests from any origin;
+- reapplies policy and CORS configuration safely when a bucket already exists;
+- merges the shared two-day `exports/` object-expiration and incomplete-multipart
+  cleanup rule, preserving unrelated lifecycle rules and transition settings; and
+- skips lifecycle writes when the resulting configuration is unchanged.
 
 Those bucket names are a static local-infrastructure contract. The management
 command intentionally does not derive them from `AWS_STORAGE_BUCKET_NAME`, so an
@@ -92,7 +117,8 @@ the test resources from `.envs/test.env`.
 
 The same job then runs `create_s3_local_buckets`. The command creates missing
 RustFS buckets and reapplies the canonical local policy and CORS configuration
-idempotently. It writes `speleodb-user-artifacts-dev` and its concrete custom
+idempotently, then reconciles the same export lifecycle used by production setup.
+It writes `speleodb-user-artifacts-dev` and its concrete custom
 domain to `.env`, and separately writes `speleodb-user-artifacts-test` and its
 custom domain to `.envs/test.env`, before invoking the Django command. Both
 buckets use the local RustFS service but do not share object namespaces.
@@ -189,10 +215,21 @@ treated as missing buckets.
 
 ## Testing and Performance
 
-Unit tests mock the S3 client and lock down bucket creation, policy, CORS, and
-failure behavior. A live RustFS regression uploads a private GeoJSON object,
+Unit tests mock the S3 client and lock down bucket creation, policy, CORS,
+lifecycle merging/idempotence, and failure behavior. A live RustFS regression
+uploads a private GeoJSON object,
 generates SigV4 `GET` and `HEAD` URLs, sends browser `Origin` headers, and
 asserts the returned CORS headers before deleting the object.
+
+`test_shared_storage.py` checks default media, photos, attachments, GeoJSON,
+GPS tracks, GIS layers, exports, and S3 static files against a disposable bucket.
+It verifies stored content type, disposition, and each backend's cache policy
+through ordinary GETs after both model-style saves and exact-key replacements.
+The public cases use unsigned URLs; private cases use only SigV4 authentication
+parameters. The test also checks anonymous access and idempotent deletion.
+`test_private_storage_urls.py` checks browser/internal endpoint selection,
+public HTTP/HTTPS schemes, production CloudFront signing, and both current and
+historical export key layouts.
 
 Provisioning adds a few GitLab and S3 control-plane calls before local services
 start. It adds no Django request-path work, no map feature rescans, and no

@@ -58,8 +58,13 @@ def retry_delay(attempts: int) -> timedelta:
 
 def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
     number = (job.attempts.aggregate(last=Max("number"))["last"] or 0) + 1
+    now: datetime = timezone.now()
     attempt = JobAttempt.objects.create(
-        job=job, number=number, cycle_attempt=cycle_attempt
+        job=job,
+        number=number,
+        cycle_attempt=cycle_attempt,
+        created_at=now,
+        dispatch_after=now,
     )
     job.current_attempt_id = attempt.id
     job.state = JobState.QUEUED
@@ -89,7 +94,7 @@ def request_export(user: User) -> tuple[BackgroundJob, bool]:
         ).first()
         if existing is not None:
             return existing, False
-        job = BackgroundJob.objects.create(requester=user)
+        job = BackgroundJob.objects.create(requester=user, created_at=timezone.now())
         _new_attempt(job)
     return job, True
 
@@ -246,7 +251,6 @@ def publish_artifact(
     filename: str,
     size_bytes: int,
     sha256: str,
-    version: str,
     summary: dict[str, Any],
     partial_result: bool,
 ) -> bool:
@@ -267,7 +271,6 @@ def publish_artifact(
             job=job,
             attempt=attempt,
             object_key=attempt.object_key,
-            object_version=version,
             filename=filename,
             size_bytes=size_bytes,
             sha256=sha256,
@@ -276,8 +279,7 @@ def publish_artifact(
         )
         attempt.state = state
         attempt.finished_at = now
-        attempt.object_version = version
-        attempt.save(update_fields=["state", "finished_at", "object_version"])
+        attempt.save(update_fields=["state", "finished_at"])
         job.state = state
         job.stage = "Ready with omissions" if partial_result else "Ready"
         job.total_items = max(job.total_items, 1)
@@ -299,9 +301,7 @@ def artifact_download_url(job: BackgroundJob, user: User) -> str:
         raise ExportExpiredError("This archive has expired. Request a new export.")
     return signed_archive_url(
         key=artifact.object_key,
-        version=artifact.object_version,
         expires=min(300, remaining),
-        filename=artifact.filename,
     )
 
 

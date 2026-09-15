@@ -1,7 +1,6 @@
-from time import time
-
 from django import template
 from django.conf import settings
+from django.utils import timezone
 
 register = template.Library()
 
@@ -12,5 +11,5 @@ def maybe_debug_version() -> str:
     Returns '?v=<timestamp>' when DEBUG=True, else empty string.
     """
     if settings.DEBUG:
-        return f"?v={int(time())}"
+        return f"?v={int(timezone.now().timestamp())}"
     return ""

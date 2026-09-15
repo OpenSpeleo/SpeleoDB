@@ -43,9 +43,8 @@ def test_upload_download_and_delete_preserve_exact_key_and_metadata(
     digest: str = hashlib.sha256(data).hexdigest()
     storage: ExportStorage = ExportStorage()
     client: Any = storage.connection.meta.client
-    version: str = ""
     try:
-        version = upload_archive(path, key=key, filename=filename, sha256=digest)
+        upload_archive(path, key=key, filename=filename, sha256=digest)
         metadata: dict[str, Any] = client.head_object(
             Bucket=storage.bucket_name, Key=key
         )
@@ -54,15 +53,13 @@ def test_upload_download_and_delete_preserve_exact_key_and_metadata(
         assert metadata["ContentType"] == "application/zip"
         assert metadata["CacheControl"] == "private, no-store"
         assert metadata["ContentDisposition"] == f'attachment; filename="{filename}"'
-        url: str = signed_archive_url(
-            key=key, version=version, expires=180, filename=filename
-        )
+        url: str = signed_archive_url(key=key, expires=180)
         response: requests.Response = requests.get(url, timeout=30)
         assert response.status_code == HTTPStatus.OK
         assert response.content == data
         assert response.headers["Cache-Control"] == "private, no-store"
         assert response.headers["Content-Disposition"] == metadata["ContentDisposition"]
-        delete_archive(key=key, version=version)
+        delete_archive(key=key)
         with pytest.raises(ClientError) as missing:
             client.head_object(Bucket=storage.bucket_name, Key=key)
         assert missing.value.response["Error"]["Code"] in {"404", "NoSuchKey"}
@@ -84,4 +81,4 @@ def test_export_operations_reject_keys_outside_the_export_prefix(
     with pytest.raises(errors):
         delete_archive(key=key)
     with pytest.raises(errors):
-        signed_archive_url(key=key, version="", expires=60, filename=path.name)
+        signed_archive_url(key=key, expires=60)

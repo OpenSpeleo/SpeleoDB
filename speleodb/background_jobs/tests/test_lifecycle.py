@@ -67,7 +67,6 @@ def _publish(attempt: JobAttempt, *, partial: bool = False) -> bool:
         filename="export.zip",
         size_bytes=123,
         sha256="a" * 64,
-        version="version-1",
         summary={"omissions": []},
         partial_result=partial,
     )

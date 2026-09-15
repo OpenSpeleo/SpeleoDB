@@ -261,10 +261,8 @@ class TestUserExports(BaseAPITestCase):
             urlsplit(response["Location"]).query
         )
         assert 0 < int(parameters["X-Amz-Expires"][0]) <= 300  # noqa: PLR2004
-        assert parameters["response-content-disposition"] == [
-            f'attachment; filename="{artifact.filename}"'
-        ]
-        assert parameters["response-cache-control"] == ["private, no-store"]
+        assert all(name.startswith("X-Amz-") for name in parameters)
+        assert urlsplit(response["Location"]).path.endswith(f"/{artifact.object_key}")
 
     def test_settings_page_uses_registered_controller_and_both_navigation_links(
         self,

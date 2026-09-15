@@ -1,4 +1,4 @@
-"""Preview or explicitly apply private export storage configuration."""
+"""Preview or explicitly apply shared storage access and export retention."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def _read_optional(
 
 
 def read_bucket_configuration(client: Any, *, bucket: str) -> BucketConfiguration:
-    """Read without changing policies, lifecycle, versioning, or Object Lock."""
+    """Read policies, lifecycle, and Object Lock without changing the bucket."""
     raw_policy: dict[str, Any] = _read_optional(
         client,
         "get_bucket_policy",
@@ -53,12 +53,6 @@ def read_bucket_configuration(client: Any, *, bucket: str) -> BucketConfiguratio
         bucket=bucket,
         absent_codes=frozenset({"NoSuchLifecycleConfiguration"}),
     )
-    versioning: dict[str, Any] = _read_optional(
-        client,
-        "get_bucket_versioning",
-        bucket=bucket,
-        absent_codes=frozenset(),
-    )
     lock: dict[str, Any] = _read_optional(
         client,
         "get_object_lock_configuration",
@@ -70,7 +64,6 @@ def read_bucket_configuration(client: Any, *, bucket: str) -> BucketConfiguratio
     return BucketConfiguration(
         policy=orjson.loads(raw_policy["Policy"]) if "Policy" in raw_policy else {},
         lifecycle={"Rules": lifecycle.get("Rules", [])},
-        versioning=versioning,
         object_lock=lock.get("ObjectLockConfiguration", {}),
         transition_default_minimum_object_size=lifecycle.get(
             "TransitionDefaultMinimumObjectSize"
@@ -80,7 +73,7 @@ def read_bucket_configuration(client: Any, *, bucket: str) -> BucketConfiguratio
 
 class Command(BaseCommand):
     help = (
-        "Preview private exports/ bucket policy and two-day lifecycle fallback; "
+        "Preview shared bucket access and the exports/ two-day lifecycle fallback; "
         "use --apply to change S3."
     )
 
@@ -93,7 +86,7 @@ class Command(BaseCommand):
             "--reader-arn",
             action="append",
             required=True,
-            help="Exact IAM signer user/role ARN; repeat for each signer.",
+            help="Exact application IAM user/role ARN; repeat for each identity.",
         )
         parser.add_argument(
             "--apply",
@@ -118,7 +111,7 @@ class Command(BaseCommand):
             ):
                 raise CommandError(
                     "CloudFront signed downloads are configured; supply "
-                    "--cloudfront-distribution-arn to avoid blocking them."
+                    "--cloudfront-distribution-arn to configure shared origin access."
                 )
             bucket: str = storage.bucket_name
             client = storage.connection.meta.client
@@ -156,8 +149,8 @@ class Command(BaseCommand):
                 "Bucket configuration changed during this run; preview again."
             )
         try:
-            # Establish private access first. On a later lifecycle failure, keep
-            # this restriction in place and let the operator rerun idempotently.
+            # Apply shared access first; an interrupted lifecycle update can be
+            # retried idempotently after reviewing the resulting configuration.
             client.put_bucket_policy(
                 Bucket=bucket, Policy=orjson.dumps(after.policy).decode()
             )
@@ -172,8 +165,8 @@ class Command(BaseCommand):
             client.put_bucket_lifecycle_configuration(**lifecycle_options)
         except ClientError:
             raise CommandError(
-                "Applying export bucket configuration failed; private access "
-                "may already be installed. Preview and rerun."
+                "Applying bucket configuration failed; shared access "
+                "may already be updated. Preview and rerun."
             ) from None
         verified = read_bucket_configuration(client, bucket=bucket)
         if verified.fingerprint != after.fingerprint:
@@ -182,5 +175,5 @@ class Command(BaseCommand):
                 "inspect before enabling exports."
             )
         self.stdout.write(
-            self.style.SUCCESS("Private export policy and lifecycle fallback verified.")
+            self.style.SUCCESS("Shared storage access and export retention verified.")
         )

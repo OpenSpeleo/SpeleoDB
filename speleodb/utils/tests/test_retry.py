@@ -9,9 +9,9 @@ import pytest
 from speleodb.utils.helpers import retry_with_backoff
 
 
-@patch("speleodb.utils.helpers.time.sleep")
+@patch("speleodb.utils.helpers.time", autospec=True)
 def test_retry_stops_at_attempt_budget_with_capped_exponential_backoff(
-    sleep: MagicMock,
+    mock_time: MagicMock,
 ) -> None:
     failure = ConnectionError("unavailable")
     operation = MagicMock(side_effect=failure)
@@ -27,27 +27,27 @@ def test_retry_stops_at_attempt_budget_with_capped_exponential_backoff(
 
     assert error.value is failure
     assert operation.call_count == 6  # noqa: PLR2004
-    assert [call.args[0] for call in sleep.call_args_list] == [1, 2, 4, 4, 4]
+    assert [call.args[0] for call in mock_time.sleep.call_args_list] == [1, 2, 4, 4, 4]
 
 
-@patch("speleodb.utils.helpers.time.sleep")
-def test_retry_stops_immediately_after_success(sleep: MagicMock) -> None:
+@patch("speleodb.utils.helpers.time", autospec=True)
+def test_retry_stops_immediately_after_success(mock_time: MagicMock) -> None:
     operation = MagicMock(side_effect=[ConnectionError("unavailable"), "ready"])
 
     assert retry_with_backoff(operation, base_delay=0.25) == "ready"
     assert operation.call_count == 2  # noqa: PLR2004
-    sleep.assert_called_once_with(0.25)
+    mock_time.sleep.assert_called_once_with(0.25)
 
 
-@patch("speleodb.utils.helpers.time.sleep")
-def test_retry_does_not_sleep_after_only_attempt(sleep: MagicMock) -> None:
+@patch("speleodb.utils.helpers.time", autospec=True)
+def test_retry_does_not_sleep_after_only_attempt(mock_time: MagicMock) -> None:
     operation = MagicMock(side_effect=ConnectionError("unavailable"))
 
     with pytest.raises(ConnectionError):
         retry_with_backoff(operation, retries=1)
 
     operation.assert_called_once_with()
-    sleep.assert_not_called()
+    mock_time.sleep.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -76,8 +76,8 @@ def test_retry_rejects_invalid_limits_before_calling_operation(
     operation.assert_not_called()
 
 
-@patch("speleodb.utils.helpers.time.sleep")
-def test_retry_caps_growth_without_exponent_overflow(sleep: MagicMock) -> None:
+@patch("speleodb.utils.helpers.time", autospec=True)
+def test_retry_caps_growth_without_exponent_overflow(mock_time: MagicMock) -> None:
     operation = MagicMock(side_effect=ConnectionError("unavailable"))
 
     with pytest.raises(ConnectionError):
@@ -89,4 +89,4 @@ def test_retry_caps_growth_without_exponent_overflow(sleep: MagicMock) -> None:
             max_delay=2.0,
         )
 
-    assert [call.args[0] for call in sleep.call_args_list] == [1.0, 2.0, 2.0]
+    assert [call.args[0] for call in mock_time.sleep.call_args_list] == [1.0, 2.0, 2.0]

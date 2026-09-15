@@ -86,10 +86,8 @@ class CommitAndPushRetryTests(TestCase):
     def tearDown(self) -> None:
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    @patch("speleodb.utils.helpers.time.sleep")
-    def test_index_add_retries_on_git_command_error(
-        self, mock_sleep: MagicMock
-    ) -> None:
+    @patch("speleodb.utils.helpers.time", autospec=True)
+    def test_index_add_retries_on_git_command_error(self, mock_time: MagicMock) -> None:
         """index.add should retry on GitCommandError (e.g. index.lock)."""
         real_add = git.IndexFile.add
         call_count = 0
@@ -116,10 +114,10 @@ class CommitAndPushRetryTests(TestCase):
 
         assert call_count == 2  # noqa: PLR2004
         assert result is None
-        mock_sleep.assert_called_once()
+        mock_time.sleep.assert_called_once()
 
-    @patch("speleodb.utils.helpers.time.sleep")
-    def test_commit_retries_on_git_command_error(self, mock_sleep: MagicMock) -> None:
+    @patch("speleodb.utils.helpers.time", autospec=True)
+    def test_commit_retries_on_git_command_error(self, mock_time: MagicMock) -> None:
         """The supervised commit should retry on GitCommandError."""
         (self.git_path / "newfile.txt").write_text("content")
 
@@ -156,12 +154,10 @@ class CommitAndPushRetryTests(TestCase):
 
         assert call_count == 2  # noqa: PLR2004
         assert result is not None
-        mock_sleep.assert_called_once()
+        mock_time.sleep.assert_called_once()
 
-    @patch("speleodb.utils.helpers.time.sleep")
-    def test_push_retries_sanitized_transient_error(
-        self, mock_sleep: MagicMock
-    ) -> None:
+    @patch("speleodb.utils.helpers.time", autospec=True)
+    def test_push_retries_sanitized_transient_error(self, mock_time: MagicMock) -> None:
         (self.git_path / "pushfile.txt").write_text("content")
 
         with (
@@ -181,7 +177,7 @@ class CommitAndPushRetryTests(TestCase):
 
         assert result is not None
         assert mock_push.call_count == 2  # noqa: PLR2004
-        mock_sleep.assert_called_once_with(1.0)
+        mock_time.sleep.assert_called_once_with(1.0)
         assert_credentials_redacted("\n".join(logs.output))
 
     def test_index_add_raises_after_exhausted_retries(self) -> None:
@@ -192,7 +188,7 @@ class CommitAndPushRetryTests(TestCase):
 
         with (
             patch.object(git.IndexFile, "add", always_fail),
-            patch("speleodb.utils.helpers.time.sleep"),
+            patch("speleodb.utils.helpers.time", autospec=True),
             pytest.raises(GitCommandError),
         ):
             self.repo.commit_and_push_project(
@@ -215,7 +211,7 @@ class CommitAndPushRetryTests(TestCase):
         with (
             patch.object(self.repo, "is_dirty", return_value=True),
             patch.object(GitRepo, "_commit_project", always_fail),
-            patch("speleodb.utils.helpers.time.sleep"),
+            patch("speleodb.utils.helpers.time", autospec=True),
             pytest.raises(GitCommandError),
         ):
             self.repo.commit_and_push_project(
@@ -224,9 +220,9 @@ class CommitAndPushRetryTests(TestCase):
                 author_email="test@test.com",
             )
 
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_push_raises_redacted_error_after_exhausted_retries(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         """After DJANGO_GIT_RETRY_ATTEMPTS push failures, GitBaseError is raised."""
         (self.git_path / "pushfile.txt").write_text("content")
@@ -259,7 +255,7 @@ class CommitAndPushRetryTests(TestCase):
         assert exc_info.value.__cause__ is None
         assert exc_info.value.__context__ is None
         assert mock_push.call_count == 5  # noqa: PLR2004
-        assert_remote_backoff(mock_sleep)
+        assert_remote_backoff(mock_time.sleep)
 
     def test_supervised_commit_preserves_author_and_committer(self) -> None:
         commit = self.repo._commit_project(  # noqa: SLF001
@@ -273,10 +269,12 @@ class CommitAndPushRetryTests(TestCase):
         assert commit.committer == GIT_COMMITTER
 
     @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.5)
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_post_commit_timeout_does_not_retry_completed_commit(
-        self, sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
+        # Patch only the helper's module reference: Popen.wait must retain its
+        # real polling sleep while the killed Git process is being reaped.
         hook: pathlib.Path = pathlib.Path(self.repo.git_dir) / "hooks" / "post-commit"
         hook.write_text(
             f"#!/bin/sh\nexec {shlex.quote(sys.executable)} -c "
@@ -285,7 +283,14 @@ class CommitAndPushRetryTests(TestCase):
         hook.chmod(0o755)
         original_head: str = self.repo.head.commit.hexsha
 
-        with pytest.raises(GitBaseError, match="was created, but its hook failed"):
+        with (
+            patch.object(
+                self.repo,
+                "_commit_project",
+                wraps=self.repo._commit_project,  # noqa: SLF001
+            ) as commit,
+            pytest.raises(GitBaseError, match="was created, but its hook failed"),
+        ):
             self.repo.commit_and_push_project(
                 message="one commit only",
                 author_name="Original Author",
@@ -295,7 +300,11 @@ class CommitAndPushRetryTests(TestCase):
 
         assert self.repo.head.commit.parents[0].hexsha == original_head
         assert self.repo.head.commit.message.strip() == "one commit only"
-        sleep.assert_not_called()
+        commit.assert_called_once_with(
+            "one commit only",
+            author=git.Actor("Original Author", "author@example.org"),
+        )
+        mock_time.sleep.assert_not_called()
 
 
 class PullAndFetchRetryTests(TestCase):
@@ -316,9 +325,9 @@ class PullAndFetchRetryTests(TestCase):
 
         assert self.repo.description == "A project description"
 
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_pull_and_fetch_retry_sanitized_transient_errors(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         for operation_name in ("pull", "fetch"):
             with (
@@ -330,19 +339,19 @@ class PullAndFetchRetryTests(TestCase):
                 ) as remote_operation,
                 self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
             ):
-                mock_sleep.reset_mock()
+                mock_time.sleep.reset_mock()
                 getattr(self.repo, operation_name)()
 
                 assert remote_operation.call_count == 2  # noqa: PLR2004
-                mock_sleep.assert_called_once_with(1.0)
+                mock_time.sleep.assert_called_once_with(1.0)
                 assert_credentials_redacted("\n".join(logs.output))
 
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_pull_and_fetch_raise_redacted_errors_after_exhaustion(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         for operation_name in ("pull", "fetch"):
-            mock_sleep.reset_mock()
+            mock_time.sleep.reset_mock()
             with (
                 self.subTest(operation=operation_name),
                 patch.object(
@@ -369,11 +378,11 @@ class PullAndFetchRetryTests(TestCase):
             assert exc_info.value.__cause__ is None
             assert exc_info.value.__context__ is None
             assert remote_operation.call_count == 5  # noqa: PLR2004
-            assert_remote_backoff(mock_sleep)
+            assert_remote_backoff(mock_time.sleep)
 
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_set_origin_url_raises_redacted_error_after_exhaustion(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         with (
             patch.object(
@@ -400,13 +409,13 @@ class PullAndFetchRetryTests(TestCase):
         assert exc_info.value.__cause__ is None
         assert exc_info.value.__context__ is None
         assert set_url.call_count == 5  # noqa: PLR2004
-        assert_remote_backoff(mock_sleep)
+        assert_remote_backoff(mock_time.sleep)
 
 
 class CloneRetryTests(TestCase):
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_clone_retries_transient_git_command_errors(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         cloned_repo = MagicMock(spec=git.Repo)
         expected_repo = MagicMock(spec=GitRepo)
@@ -427,11 +436,11 @@ class CloneRetryTests(TestCase):
 
         assert result is expected_repo
         assert mock_clone.call_count == 2  # noqa: PLR2004
-        mock_sleep.assert_called_once_with(1.0)
+        mock_time.sleep.assert_called_once_with(1.0)
 
-    @patch("speleodb.utils.helpers.time.sleep")
+    @patch("speleodb.utils.helpers.time", autospec=True)
     def test_clone_raises_git_base_error_after_retries(
-        self, mock_sleep: MagicMock
+        self, mock_time: MagicMock
     ) -> None:
         persistent_error = remote_git_error("clone")
 
@@ -444,7 +453,7 @@ class CloneRetryTests(TestCase):
                     if use_keyword_url
                     else {}
                 )
-                mock_sleep.reset_mock()
+                mock_time.sleep.reset_mock()
                 with (
                     patch.object(
                         git.Repo,
@@ -471,7 +480,7 @@ class CloneRetryTests(TestCase):
                 assert exc_info.value.__cause__ is None
                 assert exc_info.value.__context__ is None
                 assert mock_clone.call_count == 5  # noqa: PLR2004
-                assert_remote_backoff(mock_sleep)
+                assert_remote_backoff(mock_time.sleep)
 
 
 class GitProcessDeadlineTests(TestCase):

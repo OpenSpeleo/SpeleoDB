@@ -206,7 +206,7 @@ services:
       start_period: 15m
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-beta.8
+    image: rustfs/rustfs:1.0.0-rc.1
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_rustfs"
     environment:
       - RUSTFS_ACCESS_KEY=access_key

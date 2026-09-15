@@ -113,7 +113,7 @@ class GitCheckoutTests(TestCase):
                 create=True,
                 side_effect=GitCommandError("push", 128, stderr="503 unavailable"),
             ),
-            patch("speleodb.utils.helpers.time.sleep"),
+            patch("speleodb.utils.helpers.time", autospec=True),
             pytest.raises(GitBaseError),
         ):
             repo.publish_first_commit()
@@ -348,7 +348,7 @@ class GitCheckoutTests(TestCase):
                 "pull",
                 side_effect=GitCommandError("pull", 128, stderr="503 unavailable"),
             ),
-            patch("speleodb.utils.helpers.time.sleep"),
+            patch("speleodb.utils.helpers.time", autospec=True),
             pytest.raises(GitBaseError),
         ):
             repo.checkout_default_branch_and_pull()
@@ -371,7 +371,7 @@ class GitCheckoutTests(TestCase):
                 "fetch",
                 side_effect=GitCommandError("fetch", 128, stderr="503 unavailable"),
             ),
-            patch("speleodb.utils.helpers.time.sleep"),
+            patch("speleodb.utils.helpers.time", autospec=True),
             pytest.raises(GitBaseError),
         ):
             repo.checkout_default_branch_and_pull()

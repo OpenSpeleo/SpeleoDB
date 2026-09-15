@@ -132,18 +132,18 @@ authoritative, including the previous nested layout.
 
 `ExportStorage` uses the shared private backend in `speleodb.utils.s3_storages`.
 Private production files use CloudFront signed URLs; local development uses
-S3 presigning against the browser endpoint. Shared transfer and version-cleanup
+S3 presigning against the browser endpoint. Shared transfer and object-cleanup
 methods use the backend's configured S3 connection, while the export adapter
 provides ZIP metadata and validates the export prefix. Uploads retain bounded
 multipart transfers (two threads, 16 MiB parts) and private/no-store caching.
 Exports are ordinary ZIP files with no password.
 
-Signed downloads preserve the recorded object version, filename, and
-`private, no-store` response headers. The shared URL method translates boto API
-parameter names to S3 HTTP query names when signing a CloudFront URL. The
-`exports/*` CloudFront behavior must require signed viewer requests, forward
-those query parameters, and disable caching. Its OAC has version-read permission;
-anonymous direct S3 reads remain denied. See [the production policy and setup
+Uploads replace an existing object at the same key. Signed downloads address
+that key directly and use the filename and `private, no-store` headers stored as
+upload metadata. The shared private CloudFront behavior requires signed viewer
+requests and honors the object's no-store headers with a zero minimum TTL.
+No export-specific query forwarding is needed. Anonymous direct S3 reads remain
+denied. See [the production policy and setup
 steps](export-storage-policy.md) before deploying this configuration.
 
 After upload and publication, availability lasts 24 hours. Download requests
@@ -151,10 +151,10 @@ require an active owner or superuser; staff status alone does not authorize othe
 users' downloads. Presigned URLs last at most five minutes and never extend the
 availability deadline. A transfer started before expiry can finish afterward.
 
-Beat schedules deletion every five minutes. Exact object versions are removed
-when known; unpublished attempt keys are reconciled across versions. Failed
+Beat schedules deletion every five minutes. Cleanup aborts unfinished multipart
+uploads for the exact attempt key and deletes that object. Failed
 deletions remain tracked and retryable. Prefix-scoped S3 lifecycle rules provide
-a two-day fallback for current objects, noncurrent versions and incomplete
+a two-day fallback for objects and incomplete
 multipart uploads; physical deletion is asynchronous, not precisely 24 hours.
 Application history is retained for 90 days, Celery results for 30 days; records
 needed for pending deletion are preserved.
@@ -184,7 +184,7 @@ See the implementation task for command output and final evidence. Integration
 uses a dedicated test Redis broker, test database, test GitLab group and test
 storage bucket. Real worker tests must cover outbox recovery, duplicate delivery,
 worker interruption, stale publication, email failure, expiry enforcement,
-version deletion, and monitoring outage isolation. Archive tests validate Git
+object deletion, and monitoring outage isolation. Archive tests validate Git
 restoration, source bytes, permissions, GeoJSON/GPX, ZIP integrity and checksums.
 Real GitLab regressions cover never-initialized projects, empty repositories,
 remote history absent from the database index, missing recorded history, and

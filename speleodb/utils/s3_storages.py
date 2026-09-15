@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 from typing import cast
+from urllib.parse import urlsplit
 
 from boto3.s3.transfer import TransferConfig
 from botocore.config import Config
@@ -14,10 +15,9 @@ from django.conf import settings
 from storages.backends.s3 import S3Storage
 from storages.utils import clean_name
 
-_PRIVATE_VECTOR_OBJECT_PARAMETERS = {"CacheControl": "private, no-store"}
+_PRIVATE_OBJECT_PARAMETERS = {"CacheControl": "private, no-store"}
 # Boto accepts API field names; CloudFront forwards S3's HTTP query names.
 _S3_DOWNLOAD_QUERY_NAMES: dict[str, str] = {
-    "VersionId": "versionId",
     "ResponseCacheControl": "response-cache-control",
     "ResponseContentDisposition": "response-content-disposition",
     "ResponseContentEncoding": "response-content-encoding",
@@ -33,11 +33,27 @@ class BrowserFacingS3Storage(S3Storage):
     bucket_name: str
     client_config: Any
     custom_domain: str | bool | None
+    endpoint_url: str | None
+    object_parameters: dict[str, Any]
     querystring_auth: bool
     querystring_expire: int
     region_name: str | None
     use_ssl: bool
     verify: Any
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)  # type: ignore[no-untyped-call]
+        browser_endpoint: str | None = (
+            getattr(settings, "AWS_S3_BROWSER_ENDPOINT_URL", None) or self.endpoint_url
+        )
+        if isinstance(self.custom_domain, str) and browser_endpoint:
+            endpoint = urlsplit(browser_endpoint)
+            domain = urlsplit(f"//{self.custom_domain}")
+            if domain.netloc.lower() == endpoint.netloc.lower() and endpoint.scheme in {
+                "http",
+                "https",
+            }:
+                self.url_protocol = f"{endpoint.scheme}:"
 
     def object_key(self, name: str) -> str:
         """Resolve a storage-relative name without escaping this backend's prefix."""
@@ -52,8 +68,8 @@ class BrowserFacingS3Storage(S3Storage):
         path: Path,
         *,
         parameters: dict[str, Any] | None = None,
-    ) -> str:
-        """Stream to an exact, caller-reserved name and return the stored version.
+    ) -> None:
+        """Stream to an exact, caller-reserved name, overwriting an existing object.
 
         Unlike save(), this preserves names already recorded in a durable job.
         Multipart transfer buffers use this storage's transfer configuration.
@@ -72,15 +88,9 @@ class BrowserFacingS3Storage(S3Storage):
         metadata: dict[str, Any] = client.head_object(Bucket=self.bucket_name, Key=key)
         if metadata["ContentLength"] != path.stat().st_size:
             raise OSError("Uploaded object size does not match the source file.")
-        return str(metadata.get("VersionId", ""))
 
-    def delete_versions(self, name: str, *, version: str = "") -> None:
-        """Abort unfinished uploads and remove an exact version or all key versions.
-
-        Ordinary S3 delete() can leave versions and delete markers behind. This
-        operation permanently reclaims them, including an upload whose version
-        was not recorded before a worker stopped. Neighboring keys are untouched.
-        """
+    def delete_file(self, name: str) -> None:
+        """Abort unfinished uploads and delete the exact key, preserving neighbors."""
         key: str = self.object_key(name)
         client: Any = self.connection.meta.client
         parameters: dict[str, str] = {"Bucket": self.bucket_name, "Key": key}
@@ -97,16 +107,7 @@ class BrowserFacingS3Storage(S3Storage):
                 except ClientError as error:
                     if error.response.get("Error", {}).get("Code") != "NoSuchUpload":
                         raise
-        if version:
-            client.delete_object(**parameters, VersionId=version)
-            return
-        for page in client.get_paginator("list_object_versions").paginate(
-            Bucket=self.bucket_name, Prefix=key
-        ):
-            for record in [*page.get("Versions", []), *page.get("DeleteMarkers", [])]:
-                if record["Key"] == key:
-                    client.delete_object(**parameters, VersionId=record["VersionId"])
-        # A final key-only delete would create another marker on versioned S3.
+        client.delete_object(**parameters)
 
     def url(
         self,
@@ -169,9 +170,15 @@ class PrivateS3Storage(BrowserFacingS3Storage):
     """Use configured CloudFront signing, otherwise private S3 presigned URLs."""
 
     def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)  # type: ignore[no-untyped-call]
+        super().__init__(**kwargs)
         if self.querystring_auth and not self.cloudfront_signer:
             self.custom_domain = False
+
+
+class PublicS3Storage(BrowserFacingS3Storage):
+    """Unsigned public URLs using the shared S3 endpoint handling."""
+
+    querystring_auth = False
 
 
 class BaseS3Storage(BrowserFacingS3Storage):
@@ -191,29 +198,6 @@ class BaseS3Storage(BrowserFacingS3Storage):
         unique_name = f"{uuid.uuid4().hex}_{path.name}"
         return super().get_available_name(unique_name, max_length)  # type: ignore[no-untyped-call]
 
-    if settings.DEBUG:
-
-        def url(
-            self,
-            name: str | None,
-            parameters: dict[str, Any] | None = None,
-            expire: int | None = None,
-            http_method: str | None = None,
-        ) -> str:
-            # Let the parent class build the URL
-            url = super().url(
-                name, parameters=parameters, expire=expire, http_method=http_method
-            )
-
-            # Force HTTP if using a non-SSL endpoint (useful for S3 local dev)
-            if (
-                isinstance(self.custom_domain, str)
-                and "localhost" in self.custom_domain
-            ):
-                return url.replace("https://", "http://", 1)
-
-            return url
-
 
 class S3MediaStorage(BaseS3Storage, PrivateS3Storage):
     """Custom S3 storage for media files."""
@@ -222,7 +206,7 @@ class S3MediaStorage(BaseS3Storage, PrivateS3Storage):
     default_acl = "private"
 
 
-class PersonPhotoStorage(BaseS3Storage):
+class PersonPhotoStorage(BaseS3Storage, PublicS3Storage):
     """
     Custom S3 storage for person photos.
 
@@ -231,7 +215,6 @@ class PersonPhotoStorage(BaseS3Storage):
 
     location = "media/people/photos"
     default_acl: str | None = None  # No ACL - bucket policy handles public access
-    querystring_auth = False  # No signed URLs - relies on bucket policy
 
 
 class AttachmentStorage(PrivateS3Storage):
@@ -287,7 +270,7 @@ class GPSTrackStorage(PrivateS3Storage):
     """
 
     file_overwrite = BaseS3Storage.file_overwrite
-    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
+    object_parameters = _PRIVATE_OBJECT_PARAMETERS
 
     location = "gps_tracks"
     default_acl = "private"
@@ -300,19 +283,20 @@ class GISLayerStorage(PrivateS3Storage):
     """
 
     file_overwrite = BaseS3Storage.file_overwrite
-    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
+    object_parameters = _PRIVATE_OBJECT_PARAMETERS
 
     location = "gis_layers"
     default_acl = "private"
 
 
 class ExportStorage(PrivateS3Storage):
-    """Private immutable export objects using the application's storage settings."""
+    """Private export files using the application's shared storage settings."""
 
     location = "exports"
+    file_overwrite = True
     default_acl = None
     querystring_auth = True
-    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
+    object_parameters = _PRIVATE_OBJECT_PARAMETERS
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -328,10 +312,8 @@ class ExportStorage(PrivateS3Storage):
         )
 
 
-class S3StaticStorage(S3Storage):
+class S3StaticStorage(PublicS3Storage):
     """Public S3 storage for static files with long cache and URL timestamp."""
-
-    querystring_auth = False
 
     # Prefix for all static assets in the bucket
     location = "staticfiles"

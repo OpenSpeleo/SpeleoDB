@@ -61,6 +61,16 @@ cleanup outcomes wait for the fixed owner lease plus exponential cooldown;
 reported failures can schedule their cooldown immediately. All durable export
 delays cap at one hour.
 
+Job and attempt creation explicitly read Django's `timezone.now()`. The shared
+attempt-creation service assigns one instant to both `created_at` and
+`dispatch_after`, so new requests and automatic/manual retries are immediately
+eligible under that same clock. This avoids model default callbacks retaining a
+different clock during controlled-time tests. Lease boundaries and retry budgets
+remain unchanged, with no additional queries or schema migration. Regression
+tests check failed publications across a whole retry cycle and confirm stale
+publications remain queued just before their lease, then fail at the deadline
+without republishing.
+
 Migration `0002_attempt_cleanup_budget` adds the publication marker and per-object
 cleanup fields. Apply it before updated application/worker code. Exhausted
 cleanup retains tracking rows instead of discarding evidence that objects still

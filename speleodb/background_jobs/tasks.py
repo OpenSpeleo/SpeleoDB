@@ -173,16 +173,14 @@ def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
             result = build_archive(user=owner, destination=path, progress=progress)
             progress("Uploading archive", 0, 1)
             filename: str = Path(attempt.object_key).name
-            version = upload_archive(
+            upload_archive(
                 path, key=attempt.object_key, filename=filename, sha256=result.sha256
             )
-            JobAttempt.objects.filter(pk=attempt.id).update(object_version=version)
             published = publish_artifact(
                 attempt.id,
                 filename=filename,
                 size_bytes=result.size_bytes,
                 sha256=result.sha256,
-                version=version,
                 summary={
                     "omissions": result.manifest.get("omissions", []),
                     "notes": result.manifest.get("notes", []),
@@ -469,7 +467,7 @@ def _delete_attempt_object(attempt_id: uuid.UUID, now: datetime) -> None:
         )
     error: str = ""
     try:
-        delete_archive(key=attempt.object_key, version=attempt.object_version)
+        delete_archive(key=attempt.object_key)
     except Exception as failure:  # noqa: BLE001 - Persist a finite per-object retry budget.
         error = f"Deletion failed ({type(failure).__name__})."
     with transaction.atomic():

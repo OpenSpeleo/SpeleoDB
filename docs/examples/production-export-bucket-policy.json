@@ -1,124 +1,55 @@
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowSpeleoDBApplicationAccess",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::520473892271:user/sdb-prod"
-      },
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObjectAcl",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "s3:DeleteObject",
-        "s3:PutObjectAcl"
-      ],
-      "Resource": [
-        "arn:aws:s3:::static.speleodb.org/*",
-        "arn:aws:s3:::static.speleodb.org"
-      ]
-    },
-    {
-      "Sid": "DenyInsecureConnections",
-      "Effect": "Deny",
-      "Principal": "*",
-      "Action": "s3:*",
-      "Resource": [
-        "arn:aws:s3:::static.speleodb.org",
-        "arn:aws:s3:::static.speleodb.org/*"
-      ],
-      "Condition": {
-        "Bool": {
-          "aws:SecureTransport": "false"
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowSpeleoDBApplicationAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "<APPLICATION_IAM_ARN>"
+            },
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObjectAcl",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject",
+                "s3:PutObjectAcl",
+                "s3:AbortMultipartUpload",
+                "s3:ListBucketMultipartUploads"
+            ],
+            "Resource": [
+                "arn:aws:s3:::<S3_BUCKET_NAME>/*",
+                "arn:aws:s3:::<S3_BUCKET_NAME>"
+            ]
+        },
+        {
+            "Sid": "DenyInsecureConnections",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::<S3_BUCKET_NAME>",
+                "arn:aws:s3:::<S3_BUCKET_NAME>/*"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "false"
+                }
+            }
+        },
+        {
+            "Sid": "AllowCloudFrontOACReadOnly",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::<S3_BUCKET_NAME>/*",
+            "Condition": {
+                "ArnLike": {
+                    "AWS:SourceArn": "arn:aws:cloudfront::<AWS_ACCOUNT_ID>:distribution/<CLOUDFRONT_DISTRIBUTION_ID>"
+                }
+            }
         }
-      }
-    },
-    {
-      "Sid": "AllowCloudFrontOACReadOnly",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "cloudfront.amazonaws.com"
-      },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::static.speleodb.org/*",
-      "Condition": {
-        "ArnLike": {
-          "AWS:SourceArn": "arn:aws:cloudfront::520473892271:distribution/E1F0W4EUQJLP0X"
-        }
-      }
-    },
-    {
-      "Sid": "AllowSpeleoDBExportVersionAccess",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::520473892271:user/sdb-prod"
-      },
-      "Action": [
-        "s3:GetObjectVersion",
-        "s3:DeleteObjectVersion",
-        "s3:AbortMultipartUpload"
-      ],
-      "Resource": "arn:aws:s3:::static.speleodb.org/exports/*"
-    },
-    {
-      "Sid": "AllowSpeleoDBExportVersionListing",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::520473892271:user/sdb-prod"
-      },
-      "Action": "s3:ListBucketVersions",
-      "Resource": "arn:aws:s3:::static.speleodb.org",
-      "Condition": {
-        "StringLike": {
-          "s3:prefix": "exports/*"
-        }
-      }
-    },
-    {
-      "Sid": "AllowSpeleoDBExportMultipartListing",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::520473892271:user/sdb-prod"
-      },
-      "Action": "s3:ListBucketMultipartUploads",
-      "Resource": "arn:aws:s3:::static.speleodb.org"
-    },
-    {
-      "Sid": "SpeleoDBExportsCloudFrontRead",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "cloudfront.amazonaws.com"
-      },
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": "arn:aws:s3:::static.speleodb.org/exports/*",
-      "Condition": {
-        "ArnEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::520473892271:distribution/E1F0W4EUQJLP0X"
-        }
-      }
-    },
-    {
-      "Sid": "SpeleoDBExportsPrivateRead",
-      "Effect": "Deny",
-      "Principal": "*",
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": "arn:aws:s3:::static.speleodb.org/exports/*",
-      "Condition": {
-        "ArnNotEquals": {
-          "aws:PrincipalArn": [
-            "arn:aws:iam::520473892271:user/sdb-prod"
-          ],
-          "AWS:SourceArn": "arn:aws:cloudfront::520473892271:distribution/E1F0W4EUQJLP0X"
-        }
-      }
-    }
-  ]
+    ]
 }

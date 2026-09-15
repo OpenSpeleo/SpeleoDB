@@ -40,6 +40,7 @@ from typing import Protocol
 from typing import cast
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 import jsonschema_rs
 import orjson
@@ -628,6 +629,26 @@ class TestOGCHelpers:
         assert sliced == [good]
 
     # ---- envelope builder -------------------------------------------
+
+    @pytest.mark.parametrize("clock_timezone", ["UTC", "America/Cancun"])
+    def test_items_envelope_timestamp_uses_django_clock_in_utc(
+        self, monkeypatch: pytest.MonkeyPatch, clock_timezone: str
+    ) -> None:
+        now: datetime = datetime(
+            2026, 9, 15, 12, 34, 56, 789000, tzinfo=UTC
+        ).astimezone(ZoneInfo(clock_timezone))
+        monkeypatch.setattr(timezone, "now", lambda: now)
+        request = self.factory.get(
+            "/api/v2/gis-ogc/view/TKN/collections/SHA/items", secure=True
+        )
+        with timezone.override("America/Cancun"):
+            envelope: dict[str, Any] = build_items_envelope(
+                features=[],
+                request=cast("Any", request),
+                number_matched=0,
+                query=OGCQuery(),
+            )
+        assert envelope["timeStamp"] == "2026-09-15T12:34:56Z"
 
     def test_items_envelope_emits_required_ogc_fields(self) -> None:
         # ``testserver`` is the host RequestFactory's response uses by

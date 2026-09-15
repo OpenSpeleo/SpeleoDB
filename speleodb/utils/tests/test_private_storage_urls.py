@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import json
-import time
 from dataclasses import dataclass
 from importlib import import_module
 from secrets import token_hex
@@ -17,7 +16,7 @@ from urllib.parse import urlunsplit
 
 import pytest
 from django.test import override_settings
-from django.utils.http import content_disposition_header
+from django.utils import timezone
 
 from speleodb.background_jobs.storage import signed_archive_url
 from speleodb.utils.s3_storages import AttachmentStorage
@@ -28,6 +27,7 @@ from speleodb.utils.s3_storages import GISLayerStorage
 from speleodb.utils.s3_storages import GPSTrackStorage
 from speleodb.utils.s3_storages import PersonPhotoStorage
 from speleodb.utils.s3_storages import PrivateS3Storage
+from speleodb.utils.s3_storages import PublicS3Storage
 from speleodb.utils.s3_storages import S3MediaStorage
 from speleodb.utils.s3_storages import S3StaticStorage
 
@@ -51,6 +51,10 @@ PRIVATE_BACKENDS: tuple[tuple[type[PrivateS3Storage], str], ...] = (
     (GPSTrackStorage, "gps_tracks"),
     (GISLayerStorage, "gis_layers"),
     (ExportStorage, "exports"),
+)
+PUBLIC_BACKENDS: tuple[tuple[type[PublicS3Storage], str], ...] = (
+    (PersonPhotoStorage, "media/people/photos"),
+    (S3StaticStorage, "staticfiles"),
 )
 EXPORT_KEYS: tuple[str, ...] = (
     "exports/user/job/attempt/archive.zip",
@@ -154,7 +158,7 @@ def assert_cloudfront_signature(
     assert query["Key-Pair-Id"] == [CLOUDFRONT_KEY_ID]
     assert "X-Amz-Signature" not in query
     expiry: int = int(query["Expires"][0])
-    assert started_at + expires <= expiry <= int(time.time()) + expires
+    assert started_at + expires <= expiry <= int(timezone.now().timestamp()) + expires
 
     signing_fields: set[str] = {"Expires", "Signature", "Key-Pair-Id"}
     resource_query: str = "&".join(
@@ -191,7 +195,7 @@ def test_private_backends_use_verified_cloudfront_signatures(
     signing_key: SigningKey,
 ) -> None:
     storage: PrivateS3Storage = backend()
-    started_at: int = int(time.time())
+    started_at: int = int(timezone.now().timestamp())
     url: str = storage.url("folder/élève map.zip", expire=URL_TTL)
 
     assert storage.bucket_name == TEST_BUCKET
@@ -232,19 +236,17 @@ def test_cloudfront_translates_download_parameters_before_signing(
     signing_key: SigningKey,
 ) -> None:
     parameters: dict[str, str] = {
-        "VersionId": "version+/=2",
         "ResponseContentDisposition": 'attachment; filename="survey & notes.zip"',
         "ResponseCacheControl": "private, no-store",
     }
     original: dict[str, str] = parameters.copy()
-    started_at: int = int(time.time())
+    started_at: int = int(timezone.now().timestamp())
     url: str = ExportStorage().url("archive.zip", parameters=parameters)
 
     query: dict[str, list[str]] = assert_cloudfront_signature(
         url, signing_key, started_at=started_at
     )
     assert parameters == original
-    assert query["versionId"] == [original["VersionId"]]
     assert query["response-content-disposition"] == [
         original["ResponseContentDisposition"]
     ]
@@ -257,7 +259,6 @@ def test_local_download_parameters_keep_boto_semantics_and_callers_values(
     browser_endpoint: str | None,
 ) -> None:
     parameters: dict[str, str] = {
-        "VersionId": "version+/=2",
         "ResponseContentDisposition": 'attachment; filename="survey & notes.zip"',
         "ResponseCacheControl": "private, no-store",
     }
@@ -267,7 +268,6 @@ def test_local_download_parameters_keep_boto_semantics_and_callers_values(
 
     query: dict[str, list[str]] = parse_qs(urlsplit(url).query)
     assert parameters == original
-    assert query["versionId"] == [original["VersionId"]]
     assert query["response-content-disposition"] == [
         original["ResponseContentDisposition"]
     ]
@@ -278,76 +278,95 @@ def test_local_download_parameters_keep_boto_semantics_and_callers_values(
 
 @pytest.mark.usefixtures("cloudfront_settings")
 @pytest.mark.parametrize("key", EXPORT_KEYS)
-@pytest.mark.parametrize("version", ["version+/=2", ""])
-def test_export_helper_preserves_cloudfront_key_version_and_expiry(
-    key: str, version: str, signing_key: SigningKey
+def test_export_helper_uses_only_cloudfront_signature_parameters(
+    key: str, signing_key: SigningKey
 ) -> None:
-    filename: str = "cave résumé.zip"
-    started_at: int = int(time.time())
-    url: str = signed_archive_url(
-        key=key, version=version, expires=URL_TTL, filename=filename
-    )
+    started_at: int = int(timezone.now().timestamp())
+    url: str = signed_archive_url(key=key, expires=URL_TTL)
 
     query: dict[str, list[str]] = assert_cloudfront_signature(
         url, signing_key, started_at=started_at
     )
     assert urlsplit(url).path == f"/{key}"
-    assert query.get("versionId", []) == ([version] if version else [])
-    assert query["response-content-disposition"] == [
-        content_disposition_header(as_attachment=True, filename=filename)
-    ]
-    assert query["response-cache-control"] == ["private, no-store"]
+    assert set(query) == {"Expires", "Signature", "Key-Pair-Id"}
 
 
 @pytest.mark.parametrize("key", EXPORT_KEYS)
-@pytest.mark.parametrize("version", ["version+/=2", ""])
-def test_export_helper_preserves_local_key_version_and_expiry(
-    key: str, version: str
-) -> None:
-    filename: str = "cave résumé.zip"
-    url: str = signed_archive_url(
-        key=key, version=version, expires=URL_TTL, filename=filename
-    )
+def test_export_helper_uses_only_local_signature_parameters(key: str) -> None:
+    url: str = signed_archive_url(key=key, expires=URL_TTL)
 
     parsed: SplitResult = urlsplit(url)
     query: dict[str, list[str]] = parse_qs(parsed.query)
     assert parsed.netloc == "localhost:9000"
     assert parsed.path == f"/{TEST_BUCKET}/{key}"
-    assert query.get("versionId", []) == ([version] if version else [])
-    assert query["response-content-disposition"] == [
-        content_disposition_header(as_attachment=True, filename=filename)
-    ]
-    assert query["response-cache-control"] == ["private, no-store"]
+    assert all(parameter.startswith("X-Amz-") for parameter in query)
     assert query["X-Amz-Expires"] == [str(URL_TTL)]
     assert query["X-Amz-Signature"]
 
 
 @pytest.mark.usefixtures("cloudfront_settings")
-@pytest.mark.parametrize(
-    ("backend", "prefix"),
-    [(PersonPhotoStorage, "media/people/photos"), (S3StaticStorage, "staticfiles")],
-)
+@pytest.mark.parametrize(("backend", "prefix"), PUBLIC_BACKENDS)
 def test_public_backends_keep_unsigned_cloudfront_urls(
-    backend: type[PersonPhotoStorage | S3StaticStorage], prefix: str
+    backend: type[PublicS3Storage], prefix: str
 ) -> None:
-    storage: PersonPhotoStorage | S3StaticStorage = backend()
+    storage: PublicS3Storage = backend()
     url: str = storage.url("test.jpg")
 
     assert not storage.querystring_auth
     assert url == f"https://{CLOUDFRONT_DOMAIN}/{prefix}/test.jpg"
 
 
-@pytest.mark.parametrize(
-    ("backend", "prefix"),
-    [(PersonPhotoStorage, "media/people/photos"), (S3StaticStorage, "staticfiles")],
-)
+@pytest.mark.parametrize(("backend", "prefix"), PUBLIC_BACKENDS)
 def test_public_backends_keep_unsigned_local_urls(
-    backend: type[PersonPhotoStorage | S3StaticStorage], prefix: str
+    backend: type[PublicS3Storage], prefix: str
 ) -> None:
-    storage: PersonPhotoStorage | S3StaticStorage = backend()
+    storage: PublicS3Storage = backend()
     parsed: SplitResult = urlsplit(storage.url("test.jpg"))
 
     assert not storage.querystring_auth
+    assert parsed.scheme == "http"
     assert parsed.netloc == "localhost:9000"
     assert parsed.path == f"/{TEST_BUCKET}/{prefix}/test.jpg"
     assert not parsed.query
+
+
+@pytest.mark.parametrize(("backend", "prefix"), PUBLIC_BACKENDS)
+@pytest.mark.parametrize(
+    "endpoint", ["http://127.0.0.1:9000", "https://storage.example.test:9443"]
+)
+@pytest.mark.parametrize("use_browser_endpoint", [False, True])
+def test_public_urls_use_matching_endpoint_scheme(
+    backend: type[PublicS3Storage],
+    prefix: str,
+    endpoint: str,
+    *,
+    use_browser_endpoint: bool,
+) -> None:
+    configured_endpoint: SplitResult = urlsplit(endpoint)
+    with override_settings(
+        DEBUG=False,
+        AWS_S3_CUSTOM_DOMAIN=f"{configured_endpoint.netloc}/{TEST_BUCKET}",
+        AWS_S3_BROWSER_ENDPOINT_URL=endpoint if use_browser_endpoint else None,
+        AWS_S3_ENDPOINT_URL="http://rustfs:9000" if use_browser_endpoint else endpoint,
+    ):
+        storage: PublicS3Storage = backend()
+        parsed: SplitResult = urlsplit(storage.url("test.jpg"))
+
+    assert parsed.scheme == configured_endpoint.scheme
+    assert parsed.netloc == configured_endpoint.netloc
+    assert parsed.path == f"/{TEST_BUCKET}/{prefix}/test.jpg"
+    assert not parsed.query
+
+
+@pytest.mark.parametrize(("backend", "prefix"), PUBLIC_BACKENDS)
+def test_local_browser_endpoint_does_not_change_cloudfront_protocol(
+    backend: type[PublicS3Storage], prefix: str
+) -> None:
+    with override_settings(
+        AWS_S3_CUSTOM_DOMAIN=CLOUDFRONT_DOMAIN,
+        AWS_S3_BROWSER_ENDPOINT_URL="http://localhost:9000",
+    ):
+        storage: PublicS3Storage = backend()
+        url: str = storage.url("test.jpg")
+
+    assert url == f"https://{CLOUDFRONT_DOMAIN}/{prefix}/test.jpg"

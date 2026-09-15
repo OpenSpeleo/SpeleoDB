@@ -61,7 +61,7 @@ class PersonBase(models.Model):
     # Photo field with S3 storage
     photo = models.ImageField(
         upload_to="people/photos/",
-        storage=PersonPhotoStorage(),  # type: ignore[no-untyped-call]
+        storage=PersonPhotoStorage(),
         validators=[
             ImageWithHeicSupportValidator(
                 allowed_extensions=["jpg", "jpeg", "png", "webp"]
