@@ -91,7 +91,7 @@ deploy:
 	docker compose -f production.yml --env-file .envs/.production/.django up
 
 wipe_gitlab_test:
-	python manage.py wipe_test_gitlab --accept_danger --skip_user_confirmation
+	python manage.py wipe_test_gitlab --settings=config.settings.test --accept_danger --skip_user_confirmation
 
 wipe_test_user_projects:
 	python manage.py wipe_test_user_projects --user "ariane-plugin-unittest@speleodb.org"

@@ -134,3 +134,48 @@ def test_invalid_token_fails_command_and_preserves_real_project(
     assert result.returncode != 0
     assert "401" in result.stderr
     assert client.projects.get(project.id).id == project.id
+
+
+@pytest.mark.parametrize("valid_token", [True, False])
+def test_make_target_selects_test_settings(
+    cleanup_group: tuple[GitlabClient, Group, Project],
+    tmp_path: Path,
+    valid_token: bool,
+) -> None:
+    client, group, project = cleanup_group
+    # Keep the real test dotenv from overriding the disposable group's ID.
+    # The Make target must also override an inherited settings module.
+    (tmp_path / "manage.py").symlink_to(BASE_DIR / "manage.py")
+    (tmp_path / "speleodb").symlink_to(BASE_DIR / "speleodb", target_is_directory=True)
+    environment: dict[str, str] = os.environ.copy()
+    token: str = settings.GITLAB_TOKEN if valid_token else f"invalid-{uuid4()}"
+    environment.update(
+        {
+            "DJANGO_SETTINGS_MODULE": "inherited_settings_must_not_be_used",
+            "PYTHONPATH": str(BASE_DIR),
+            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}",
+            "GITLAB_GROUP_ID": str(group.id),
+            "GITLAB_GROUP_NAME": str(group.full_path),
+            "GITLAB_HOST_URL": settings.GITLAB_HOST_URL,
+            "GITLAB_TOKEN": token,
+        }
+    )
+    # A scheduled cleanup must also succeed when a prior run marked the project.
+    for _ in range(2 if valid_token else 1):
+        result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
+            ["make", "-f", str(BASE_DIR / "Makefile"), "wipe_gitlab_test"],  # noqa: S607
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        assert token not in result.stdout + result.stderr
+        if valid_token:
+            assert result.returncode == 0, result.stderr
+            assert client.projects.get(project.id).marked_for_deletion_at
+        else:
+            assert result.returncode != 0
+            assert "GitlabAuthenticationError (HTTP 401)" in result.stderr
+            assert not client.projects.get(project.id).marked_for_deletion_at

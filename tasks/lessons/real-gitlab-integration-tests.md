@@ -39,6 +39,14 @@ patched methods, or renamed test doubles as substitutes.
 
 ## Persistent GitLab deployment
 
+- An uploaded Dockerfile build does not attach a Docker image or GitHub source
+  in Railway. When the user wants upstream image updates, connect the official
+  image explicitly, configure and read back the update policy, and give the
+  service a durable startup command. Keep volume initialization/configuration
+  files outside the replaceable image and snapshot them before migration.
+- GitLab minor upgrades have required intermediate stops. Configure patch-only
+  image updates and document the maintenance window; distinguish an enabled
+  policy from observing a future automatic update.
 - Check both public and internal listener ports. Omnibus Puma also defaults to
   TCP port 8080; when Railway-facing NGINX uses 8080, set Puma's optional TCP
   listener to 8081 and retain Workhorse's normal Unix-socket connection.
@@ -92,3 +100,14 @@ patched methods, or renamed test doubles as substitutes.
 - Keep non-secret numeric identifiers in Actions variables. A one-digit secret
   masks that digit throughout CI logs. Publish all consuming workflow changes
   before deleting the old secret to avoid interrupting CI or scheduled cleanup.
+- Exercise management commands through the real Makefile/CLI entrypoint.
+  `manage.py` defaults to local settings, while a test helper selecting test
+  settings can hide protocol/configuration differences. The GitLab hostname
+  excludes the scheme; remote cleanup must select HTTPS before sending writes.
+- A server-side 202 does not prove the SDK accepted the operation: a preceding
+  301 can cause python-gitlab to raise RedirectError afterward. Report safe
+  exception types and HTTP status rather than hiding every failure behind one
+  generic message, and never dump credentials to diagnose redirects.
+- Verify repeated cleanup during GitLab's deletion retention period. A
+  successful DELETE marks the project; repeating it can return HTTP 400. Skip
+  the explicitly marked state rather than swallowing unrelated API failures.

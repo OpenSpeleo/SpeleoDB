@@ -1,5 +1,29 @@
 # Task reviews
 
+## Official GitLab image and patch updates
+
+Connected the existing Railway test GitLab service to the official
+`gitlab/gitlab-ce:19.3.2-ce.0` image. Startup files now persist on its existing
+volume and Railway has an explicit start command. A pre-migration volume backup
+exists; patch-only updates are configured for 09:00–10:00 UTC daily.
+
+Deployment `8fd607fd` reached SUCCESS. HTTPS, the existing repository commit,
+root password, and original CI token records survived. Authenticated API
+create/read/delete verification passed, and its temporary token was revoked.
+Both Linux startup tests passed. See
+[the image migration review](todos/gitlab-official-image.md).
+
+## GitLab cleanup protocol and repeated runs
+
+The test cleanup Makefile target now selects test settings, avoiding local
+settings' forced HTTP and Railway's HTTP-to-HTTPS redirect. The SDK rejected
+that redirect after GitLab accepted the first deletion. Cleanup now reports safe
+error details and skips projects already marked for deletion, which otherwise
+return HTTP 400 on a subsequent run. All 10 real cleanup tests passed, including
+the actual Makefile entrypoint, repeat cleanup, and invalid-token failure.
+Direct Ruff, formatting, and mypy passed; no hooks ran. See
+[the cleanup review](todos/gitlab-cleanup-protocol.md).
+
 ## CI progress masking and portable Git errors
 
 Created the GitLab group-ID Actions variable and updated CI and cleanup to read

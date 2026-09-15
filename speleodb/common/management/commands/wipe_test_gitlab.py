@@ -101,15 +101,28 @@ class Command(BaseCommand):
 
             for project_id, project in enumerate(projects):
                 logger.info(
-                    f"[{project_id + 1}/{len(projects)}] Deleting project: "
+                    f"[{project_id + 1}/{len(projects)}] Processing project: "
                     f"`{project.name}` - {project.web_url}"
                 )
                 if accept_danger:  # Not a dummy run - Actually proceed
-                    project = gl.projects.get(project.id)  # type: ignore[assignment]  # noqa: PLW2901
-                    project.delete()
+                    project_to_delete = gl.projects.get(project.id)
+                    if project_to_delete.attributes.get("marked_for_deletion_at"):
+                        logger.info("Already scheduled for deletion; skipping.")
+                        continue
+                    project_to_delete.delete()
 
-        except gitlab.exceptions.GitlabGetError as e:
-            raise CommandError("Unable to fetch the GitLab group or project.") from e
+        except gitlab.exceptions.RedirectError as e:
+            raise CommandError(
+                "GitLab redirected a write request. Use the final HTTPS URL and "
+                "run this test cleanup with --settings=config.settings.test."
+            ) from e
+
+        except gitlab.exceptions.GitlabError as e:
+            raise CommandError(
+                f"GitLab cleanup failed: {type(e).__name__} (HTTP {e.response_code})."
+            ) from e
 
         except Exception as e:
-            raise CommandError("The GitLab cleanup could not finish.") from e
+            raise CommandError(
+                f"The GitLab cleanup could not finish ({type(e).__name__})."
+            ) from e

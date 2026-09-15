@@ -20,8 +20,11 @@ the GitLab root password remains in the GitLab Railway service variables.
 - Environment: `test` (`6d34d1bb-ba2e-4d36-ab57-216b936f8ce3`).
 - Service: `GitLab` (`6dcb6ffb-5767-4526-a42b-aaa7c629e2f3`).
 - Canonical URL: `https://gitlab-test.speleodb.org`.
-- Docker build context: `compose/gitlab-railway/`.
-- Image: official GitLab CE 19.3.2, pinned by digest in the Dockerfile.
+- Connected Docker image source: `gitlab/gitlab-ce:19.3.2-ce.0`.
+- Start command: `/bin/bash /data/speleodb/start`.
+- Automatic updates: patches only, daily 09:00–10:00 UTC (04:00–05:00 Cancún).
+- Startup/configuration sources: `compose/gitlab-railway/`, installed on the
+  persistent volume under `/data/speleodb`.
 - One replica in US East, sleeping disabled, 4 vCPU / 8 GB resource ceilings.
 - Public TLS terminates at Railway; Omnibus NGINX listens on HTTP port 8080.
 - Puma uses port 8081 for its optional loopback TCP listener. Workhorse reaches
@@ -30,14 +33,50 @@ the GitLab root password remains in the GitLab Railway service variables.
 - Deployment health check: `/users/sign_in`, with a 900-second initial timeout.
 - Shutdown drain: 120 seconds, allowing the official entrypoint to stop services.
 
-Deploy only this build context to the explicit test service:
+The service pulls the official image directly from Docker Hub. Its source,
+start command, and update policy are configured in Railway. It does not require
+a GitHub repository or a custom image build. The original uploaded Dockerfile
+deployment could not receive Railway image-update checks; the connected image
+replaces that deployment path. Do not use `railway up` on this directory for
+normal updates, as that uploads another custom build.
 
-```sh
-railway up compose/gitlab-railway --path-as-root \
-  --project 247e5ad5-c8c4-41c3-9205-3014cc65df86 \
-  --environment 6d34d1bb-ba2e-4d36-ab57-216b936f8ce3 \
-  --service 6dcb6ffb-5767-4526-a42b-aaa7c629e2f3
+The Railway-specific startup files live on the volume so official image updates
+retain them. Their environment variables are:
+
+```text
+GITLAB_OMNIBUS_CONFIG=from_file('/data/speleodb/gitlab.rb')
+GITLAB_POST_RECONFIGURE_SCRIPT=gitlab-rails runner /data/speleodb/bootstrap.rb
+GITLAB_DISABLE_OPENSSH=true
 ```
+
+For changes to those scripts, install the reviewed files on `/data/speleodb`
+before restarting the service. Preserve the existing file permissions: `start`
+is executable (0755), and the Ruby files are readable (0644). A volume restore
+must include this directory alongside the GitLab data and secrets.
+
+Railway's image-update policy is configured as:
+
+```json
+{
+  "type": "patch",
+  "schedule": [
+    {"day": 0, "startHour": 9, "endHour": 10},
+    {"day": 1, "startHour": 9, "endHour": 10},
+    {"day": 2, "startHour": 9, "endHour": 10},
+    {"day": 3, "startHour": 9, "endHour": 10},
+    {"day": 4, "startHour": 9, "endHour": 10},
+    {"day": 5, "startHour": 9, "endHour": 10},
+    {"day": 6, "startHour": 9, "endHour": 10}
+  ]
+}
+```
+
+Patch-only updates avoid jumping over GitLab's required minor-version upgrade
+stops. Minor/major upgrades require checking the upgrade path and completed
+background migrations. Railway documents volume backups before automatic image
+updates. Configuration readback proves the policy is enabled; a future upstream
+release is needed to observe an actual automatic version update, including
+Railway's handling of GitLab's `-ce.0` suffix.
 
 The repository's existing `.railway/railway.ts` manages production services.
 Do not apply that production partial to this environment.
@@ -124,6 +163,28 @@ creates and deletes a uniquely named private project. Authentication failures,
 namespace mistakes, quota errors and missing write permissions stop the job.
 No token values are printed.
 
+### Scheduled cleanup settings
+
+`GITLAB_HOST_URL` is a hostname, such as `gitlab-test.speleodb.org`, without a
+scheme or trailing slash. The client adds the protocol from Django settings.
+`make wipe_gitlab_test` explicitly selects `config.settings.test`: local GitLab
+uses HTTP, while this remote hostname uses HTTPS. The default `manage.py`
+settings are local settings, which force HTTP and must not determine the remote
+cleanup protocol.
+
+Railway redirects HTTP to HTTPS with 301. Reads can appear to work, but
+python-gitlab rejects redirected writes, even after a DELETE received 202 from
+GitLab. Run 35033828799 hit exactly this configuration mismatch. Cleanup now
+reports a specific redirect instruction and includes exception type/HTTP status
+for API failures without printing tokens or raw server response bodies.
+
+Regression coverage invokes the actual Makefile target against a disposable
+subgroup, independently of the caller's Django settings. It checks deletion,
+repeated cleanup, and invalid-token failure through the CLI. Cleanup skips
+projects already marked for deletion; GitLab otherwise rejects a second DELETE
+with HTTP 400 during the retention period. Verification never wipes the shared
+CI group. See [the SDK's redirect guidance](https://python-gitlab.readthedocs.io/en/stable/api-usage.html#gitlab-gitlab-class).
+
 An initial sample measured about 3.789 GB RAM and 0.603 GB of the 5 GB volume.
 These are observations before sustained CI load, not capacity guarantees.
 Monitor actual RAM/CPU and volume usage. Resource ceilings are not reservations;
@@ -134,9 +195,28 @@ upgrades, take a volume backup and follow GitLab's required upgrade stops.
 References: [GitLab container installation](https://docs.gitlab.com/install/docker/installation/),
 [memory tuning](https://docs.gitlab.com/omnibus/settings/memory_constrained_envs/),
 [Railway volumes](https://docs.railway.com/volumes),
-[GitLab project rate limits](https://docs.gitlab.com/rate_limits/api/projects/).
+[GitLab project rate limits](https://docs.gitlab.com/rate_limits/api/projects/),
+[Railway image updates](https://docs.railway.com/deployments/image-auto-updates),
+[GitLab upgrade paths](https://docs.gitlab.com/update/upgrade_paths/).
 
 ## Deployment evidence
+
+### Official image source migration
+
+The September 15 source migration created volume backup
+`2804168c-5d0e-4157-8e3c-7b3eaf971315`, then deployed the official Docker Hub
+image as deployment `8fd607fd-bfd5-43f7-b9f3-9bb2c0ac18e8`. Railway reported
+SUCCESS at 23:24:05 UTC. The source, start command, and daily patch-update
+window were read back from the live service configuration.
+
+HTTPS, the root password, CI group/token records, and an existing repository
+commit survived. A temporary token for the CI bot successfully authenticated,
+read the existing commit, created a disposable private project, read its README,
+and scheduled deletion. The temporary token was revoked. The persistent startup
+files matched their repository hashes, and both startup filesystem tests passed
+in Docker. The application production/staging services were unaffected.
+
+### Original provisioning
 
 Verified during the September 2026 setup:
 
