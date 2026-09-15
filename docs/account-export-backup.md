@@ -123,16 +123,28 @@ timestamps/original GPX files cannot be reconstructed because they are not store
 
 ## Private download and retention
 
-Archive objects live under `exports/<user>/<job>/<attempt>.zip` in the existing
-bucket. Storage and signing use S3 directly, with no CloudFront custom domain.
-Download names are `speleodb-export-YYYY-MM-DDTHH-MM-SSZ-<job-uuid>.zip`; the
-timestamp is UTC and includes seconds. The same name is stored in the artifact
-record, included in the notification, and sent as the S3 download filename.
-Signed downloads explicitly set response filename and `private, no-store`
-headers, including on S3-compatible servers that omit stored response metadata.
-Deployment must deny anonymous access and deny the existing CDN origin access
-to this prefix. Exports are ordinary ZIP files with no password. Uploads inherit
-the bucket's existing storage configuration and use private/no-store caching.
+New archive objects live directly under `exports/{filename}.zip` in the existing
+bucket. Filenames are `speleodb-export-YYYY-MM-DDTHH-MM-SSZ-<attempt-uuid>.zip`;
+the timestamp is UTC at attempt start. The attempt ID prevents retries from
+overwriting earlier objects. The same basename is recorded on the artifact,
+included in notifications, and used for downloads. Historical stored keys remain
+authoritative, including the previous nested layout.
+
+`ExportStorage` uses the shared private backend in `speleodb.utils.s3_storages`.
+Private production files use CloudFront signed URLs; local development uses
+S3 presigning against the browser endpoint. Shared transfer and version-cleanup
+methods use the backend's configured S3 connection, while the export adapter
+provides ZIP metadata and validates the export prefix. Uploads retain bounded
+multipart transfers (two threads, 16 MiB parts) and private/no-store caching.
+Exports are ordinary ZIP files with no password.
+
+Signed downloads preserve the recorded object version, filename, and
+`private, no-store` response headers. The shared URL method translates boto API
+parameter names to S3 HTTP query names when signing a CloudFront URL. The
+`exports/*` CloudFront behavior must require signed viewer requests, forward
+those query parameters, and disable caching. Its OAC has version-read permission;
+anonymous direct S3 reads remain denied. See [the production policy and setup
+steps](export-storage-policy.md) before deploying this configuration.
 
 After upload and publication, availability lasts 24 hours. Download requests
 require an active owner or superuser; staff status alone does not authorize other

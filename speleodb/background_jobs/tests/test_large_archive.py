@@ -19,10 +19,10 @@ from django.core.files.base import File
 
 from speleodb.background_jobs.archive import build_archive
 from speleodb.background_jobs.storage import delete_archive
-from speleodb.background_jobs.storage import export_s3_client
 from speleodb.background_jobs.storage import upload_archive
 from speleodb.gis.models import GISLayer
 from speleodb.gis.models import GISLayerUserPermission
+from speleodb.utils.s3_storages import ExportStorage
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -90,7 +90,7 @@ def test_actual_s3_zip64_archive_has_bounded_memory(user: User, tmp_path: Path) 
             filename="large-export.zip",
             sha256=result.sha256,
         )
-        client = export_s3_client()
+        client = ExportStorage().connection.meta.client
         metadata = client.head_object(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=artifact_key
         )

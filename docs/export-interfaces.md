@@ -14,7 +14,8 @@ access does not qualify. Generation failures affecting individual sources appear
 as explicit omissions in the page and archive manifest.
 Project folders contain readable current files and `.git/` history; zero-commit
 projects contain only the empty `PROJECT IS EMPTY` marker. Downloads are named
-`speleodb-export-YYYY-MM-DDTHH-MM-SSZ-<job-uuid>.zip`, with a UTC timestamp.
+`speleodb-export-YYYY-MM-DDTHH-MM-SSZ-<attempt-uuid>.zip`, with a UTC timestamp.
+New objects use the flat key `exports/{filename}.zip` with that same basename.
 
 ## Public interfaces
 

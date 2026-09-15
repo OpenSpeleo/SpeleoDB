@@ -168,7 +168,9 @@ def claim_attempt(job_id: str, attempt_id: str, task_id: str) -> JobAttempt | No
         attempt.state = JobState.RUNNING
         attempt.started_at = now
         attempt.deadline_at = now + timedelta(seconds=settings.EXPORTS_HARD_TIME_LIMIT)
-        attempt.object_key = f"exports/{job.requester_id}/{job.id}/{attempt.id}.zip"
+        attempt.object_key = (
+            f"exports/speleodb-export-{now:%Y-%m-%dT%H-%M-%SZ}-{attempt.id}.zip"
+        )
         attempt.save()
         job.state = JobState.RUNNING
         job.stage = "Collecting accessible data"

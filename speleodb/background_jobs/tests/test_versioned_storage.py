@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from speleodb.background_jobs.storage import delete_archive
-from speleodb.background_jobs.storage import export_s3_client
+from speleodb.utils.s3_storages import ExportStorage
 
 if TYPE_CHECKING:
     from pytest_django.fixtures import Settings
@@ -33,7 +33,7 @@ def test_cleanup_removes_exact_versions_and_markers(settings: Settings) -> None:
     bucket: str = f"export-versions-{uuid.uuid4().hex}"
     key: str = "exports/attempt.zip"
     neighbor: str = f"{key}.other"
-    client = export_s3_client()
+    client = ExportStorage().connection.meta.client
     client.create_bucket(Bucket=bucket)
     settings.AWS_STORAGE_BUCKET_NAME = bucket
     try:

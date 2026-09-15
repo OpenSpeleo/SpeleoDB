@@ -165,9 +165,7 @@ def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
             path = Path(temporary) / "archive.zip"
             result = build_archive(user=owner, destination=path, progress=progress)
             progress("Uploading archive", 0, 1)
-            filename = (
-                f"speleodb-export-{timezone.now():%Y-%m-%dT%H-%M-%SZ}-{job_id}.zip"
-            )
+            filename: str = Path(attempt.object_key).name
             version = upload_archive(
                 path, key=attempt.object_key, filename=filename, sha256=result.sha256
             )

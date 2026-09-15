@@ -47,7 +47,7 @@ class ProjectGeoJSON(models.Model):
         blank=False,
         null=False,
         editable=True,
-        storage=GeoJSONStorage(),  # type: ignore[no-untyped-call]
+        storage=GeoJSONStorage(),
         validators=[GeoJsonValidator()],
     )
 

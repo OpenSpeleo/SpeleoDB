@@ -97,7 +97,7 @@ class StationResource(models.Model):
         blank=True,
         null=True,
         max_length=255,
-        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
+        storage=AttachmentStorage(),
         validators=[AttachmentValidator()],
     )
 
@@ -107,7 +107,7 @@ class StationResource(models.Model):
         blank=True,
         null=True,
         max_length=255,
-        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
+        storage=AttachmentStorage(),
         help_text="Thumbnail/preview image for the resource",
     )
 

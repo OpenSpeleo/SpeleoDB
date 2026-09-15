@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import copy
+from io import StringIO
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
+import orjson
 import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
 
+from speleodb.background_jobs.bucket_configuration import CLOUDFRONT_POLICY_STATEMENT_ID
 from speleodb.background_jobs.bucket_configuration import LIFECYCLE_RULE_ID
 from speleodb.background_jobs.bucket_configuration import POLICY_STATEMENT_ID
 from speleodb.background_jobs.bucket_configuration import BucketConfiguration
@@ -14,6 +21,7 @@ from speleodb.background_jobs.bucket_configuration import build_bucket_configura
 from speleodb.background_jobs.bucket_configuration import validate_readers
 
 READER: str = "arn:aws:iam::123456789012:role/speleodb-web"
+DISTRIBUTION: str = "arn:aws:cloudfront::123456789012:distribution/E1EXAMPLE"
 
 
 def _current() -> BucketConfiguration:
@@ -132,13 +140,15 @@ def test_object_lock_is_refused_even_without_default_retention() -> None:
         )
 
 
-@pytest.mark.parametrize("collision", ["policy", "lifecycle"])
+@pytest.mark.parametrize("collision", ["policy", "cloudfront_policy", "lifecycle"])
 def test_reserved_identifier_collision_does_not_modify_another_prefix(
     collision: str,
 ) -> None:
     before = _current()
     if collision == "policy":
         before.policy["Statement"][0]["Sid"] = POLICY_STATEMENT_ID
+    elif collision == "cloudfront_policy":
+        before.policy["Statement"][0]["Sid"] = CLOUDFRONT_POLICY_STATEMENT_ID
     else:
         before.lifecycle["Rules"][0]["ID"] = LIFECYCLE_RULE_ID
     with pytest.raises(BucketConfigurationError, match="outside the exports prefix"):
@@ -153,3 +163,145 @@ def test_versioning_disabled_is_preserved() -> None:
         bucket="test-bucket", reader_arns=[READER], current=before
     )
     assert after.versioning == {}
+
+
+def test_cloudfront_exception_grants_only_configured_distribution_export_reads() -> (
+    None
+):
+    before = _current()
+    snapshot = copy.deepcopy(before.as_dict())
+    after = build_bucket_configuration(
+        bucket="test-bucket",
+        reader_arns=[READER],
+        current=before,
+        cloudfront_distribution_arn=DISTRIBUTION,
+    )
+    assert before.as_dict() == snapshot
+    assert after.policy["Statement"][0] == before.policy["Statement"][0]
+    assert after.policy["Statement"][-2] == {
+        "Sid": CLOUDFRONT_POLICY_STATEMENT_ID,
+        "Effect": "Allow",
+        "Principal": {"Service": "cloudfront.amazonaws.com"},
+        "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+        "Resource": "arn:aws:s3:::test-bucket/exports/*",
+        "Condition": {"ArnEquals": {"AWS:SourceArn": DISTRIBUTION}},
+    }
+    assert after.policy["Statement"][-1]["Condition"] == {
+        "ArnNotEquals": {
+            "aws:PrincipalArn": [READER],
+            "AWS:SourceArn": DISTRIBUTION,
+        }
+    }
+    repeated = build_bucket_configuration(
+        bucket="test-bucket",
+        reader_arns=[READER],
+        current=after,
+        cloudfront_distribution_arn=DISTRIBUTION,
+    )
+    assert repeated.fingerprint == after.fingerprint
+
+
+def test_switching_back_to_iam_only_removes_only_the_owned_cloudfront_grant() -> None:
+    before = _current()
+    cloudfront = build_bucket_configuration(
+        bucket="test-bucket",
+        reader_arns=[READER],
+        current=before,
+        cloudfront_distribution_arn=DISTRIBUTION,
+    )
+    iam_only = build_bucket_configuration(
+        bucket="test-bucket", reader_arns=[READER], current=cloudfront
+    )
+    expected = build_bucket_configuration(
+        bucket="test-bucket", reader_arns=[READER], current=before
+    )
+    assert iam_only.as_dict() == expected.as_dict()
+
+
+@pytest.mark.parametrize(
+    "distribution",
+    [
+        "",
+        "*",
+        "arn:aws:cloudfront::123456789012:distribution/*",
+        "arn:aws:cloudfront::123456789012:distribution/",
+        "arn:aws:cloudfront::123456789012:distribution/E1EXAMPLE\n",
+        "arn:aws:cloudfront::123456789012:key-group/E1EXAMPLE",
+        "arn:aws:cloudfront:us-east-1:123456789012:distribution/E1EXAMPLE",
+    ],
+)
+def test_cloudfront_requires_an_exact_distribution_arn(distribution: str) -> None:
+    with pytest.raises(BucketConfigurationError, match="exact distribution ARN"):
+        build_bucket_configuration(
+            bucket="test-bucket",
+            reader_arns=[READER],
+            current=_current(),
+            cloudfront_distribution_arn=distribution,
+        )
+
+
+def test_cloudfront_partition_must_match_readers() -> None:
+    with pytest.raises(BucketConfigurationError, match="same AWS partition"):
+        build_bucket_configuration(
+            bucket="test-bucket",
+            reader_arns=[READER],
+            current=_current(),
+            cloudfront_distribution_arn=DISTRIBUTION.replace("arn:aws:", "arn:aws-cn:"),
+        )
+
+
+def test_command_refuses_to_block_configured_cloudfront_downloads() -> None:
+    storage = MagicMock()
+    storage.custom_domain = "static.example.org"
+    storage.querystring_auth = True
+    with (
+        patch(
+            "speleodb.background_jobs.management.commands.configure_export_bucket.ExportStorage",
+            return_value=storage,
+        ),
+        pytest.raises(CommandError, match="--cloudfront-distribution-arn"),
+    ):
+        call_command("configure_export_bucket", reader_arn=[READER])
+    assert storage.connection.meta.client.mock_calls == []
+
+
+@pytest.mark.parametrize("distribution", [None, DISTRIBUTION])
+def test_command_preview_uses_shared_storage_and_does_not_write(
+    distribution: str | None,
+) -> None:
+    before = _current()
+    storage = MagicMock()
+    storage.bucket_name = "test-bucket"
+    storage.custom_domain = "static.example.org" if distribution else False
+    output = StringIO()
+    with (
+        patch(
+            "speleodb.background_jobs.management.commands.configure_export_bucket.ExportStorage",
+            return_value=storage,
+        ),
+        patch(
+            "speleodb.background_jobs.management.commands.configure_export_bucket.read_bucket_configuration",
+            return_value=before,
+        ) as read_configuration,
+    ):
+        call_command(
+            "configure_export_bucket",
+            reader_arn=[READER],
+            cloudfront_distribution_arn=distribution,
+            stdout=output,
+        )
+    read_configuration.assert_called_once_with(
+        storage.connection.meta.client, bucket="test-bucket"
+    )
+    preview = orjson.loads(output.getvalue())
+    assert preview["mode"] == "preview"
+    assert (
+        preview["after"]
+        == build_bucket_configuration(
+            bucket="test-bucket",
+            reader_arns=[READER],
+            current=before,
+            cloudfront_distribution_arn=distribution,
+        ).as_dict()
+    )
+    assert storage.connection.meta.client.mock_calls == []

@@ -140,7 +140,14 @@ def test_unexpected_task_id_cannot_claim_and_duplicates_cannot_overwrite_results
 
 def test_retry_cycle_is_bounded_and_fresh_attempt_keeps_history(user: User) -> None:
     job, attempt = _running(user)
+    keys: set[str] = set()
     for number in range(1, 4):
+        attempt.refresh_from_db()
+        assert attempt.object_key.startswith("exports/speleodb-export-")
+        assert attempt.object_key.endswith(f"-{attempt.id}.zip")
+        assert attempt.object_key.count("/") == 1
+        assert attempt.object_key not in keys
+        keys.add(attempt.object_key)
         fail_attempt(attempt.pk, "Source unavailable")
         job.refresh_from_db()
         attempt.refresh_from_db()

@@ -81,7 +81,7 @@ class GISLayer(models.Model):
         blank=False,
         null=False,
         editable=False,
-        storage=GISLayerStorage(),  # type: ignore[no-untyped-call]
+        storage=GISLayerStorage(),
         validators=[FileExtensionValidator(GIS_LAYER_SOURCE_EXTENSIONS)],
     )
 
@@ -91,7 +91,7 @@ class GISLayer(models.Model):
         blank=False,
         null=False,
         editable=False,
-        storage=GISLayerStorage(),  # type: ignore[no-untyped-call]
+        storage=GISLayerStorage(),
         validators=[FileExtensionValidator(GIS_LAYER_DATA_EXTENSIONS)],
     )
 

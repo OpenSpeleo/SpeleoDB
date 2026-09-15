@@ -7,36 +7,28 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 
+from boto3.s3.transfer import TransferConfig
+from botocore.config import Config
+from botocore.exceptions import ClientError
 from django.conf import settings
 from storages.backends.s3 import S3Storage
 from storages.utils import clean_name
 
-# ---------------------------------------------------------------------------
-# CloudFront signed-URL support
-# ---------------------------------------------------------------------------
-# In production the CloudFront signing keys are present, so private storage
-# classes keep the custom domain and let django-storages generate CloudFront
-# signed URLs.  In local dev (S3 bucket) there are no CloudFront keys, so private
-# storage classes disable the custom domain to fall back to S3 presigned URLs.
-_CLOUDFRONT_SIGNING_ENABLED: bool = bool(
-    getattr(settings, "AWS_CLOUDFRONT_KEY", None)
-    and getattr(settings, "AWS_CLOUDFRONT_KEY_ID", None)
-)
-
-# Custom domain to use for private storage classes that need signed URLs.
-#   Production (CloudFront configured) → CloudFront domain → CloudFront signed URLs
-#   Local dev  (no CloudFront)         → False             → S3 presigned URLs
-_PRIVATE_CUSTOM_DOMAIN = (
-    settings.AWS_S3_CUSTOM_DOMAIN
-    if _CLOUDFRONT_SIGNING_ENABLED
-    or not getattr(settings, "AWS_QUERYSTRING_AUTH", True)
-    else False
-)
 _PRIVATE_VECTOR_OBJECT_PARAMETERS = {"CacheControl": "private, no-store"}
+# Boto accepts API field names; CloudFront forwards S3's HTTP query names.
+_S3_DOWNLOAD_QUERY_NAMES: dict[str, str] = {
+    "VersionId": "versionId",
+    "ResponseCacheControl": "response-cache-control",
+    "ResponseContentDisposition": "response-content-disposition",
+    "ResponseContentEncoding": "response-content-encoding",
+    "ResponseContentLanguage": "response-content-language",
+    "ResponseContentType": "response-content-type",
+    "ResponseExpires": "response-expires",
+}
 
 
 class BrowserFacingS3Storage(S3Storage):
-    """Use a separate endpoint only when signing URLs for a local browser."""
+    """Shared S3 transfers and URLs for CloudFront or a local browser endpoint."""
 
     bucket_name: str
     client_config: Any
@@ -47,6 +39,75 @@ class BrowserFacingS3Storage(S3Storage):
     use_ssl: bool
     verify: Any
 
+    def object_key(self, name: str) -> str:
+        """Resolve a storage-relative name without escaping this backend's prefix."""
+        return cast(
+            "str",
+            self._normalize_name(clean_name(name)),  # type: ignore[no-untyped-call]
+        )
+
+    def upload_file(
+        self,
+        name: str,
+        path: Path,
+        *,
+        parameters: dict[str, Any] | None = None,
+    ) -> str:
+        """Stream to an exact, caller-reserved name and return the stored version.
+
+        Unlike save(), this preserves names already recorded in a durable job.
+        Multipart transfer buffers use this storage's transfer configuration.
+        """
+        key: str = self.object_key(name)
+        options: dict[str, Any] = self._get_write_parameters(key)  # type: ignore[no-untyped-call]
+        options.update(parameters or {})
+        client: Any = self.connection.meta.client
+        client.upload_file(
+            str(path),
+            self.bucket_name,
+            key,
+            ExtraArgs=options,
+            Config=self.transfer_config,
+        )
+        metadata: dict[str, Any] = client.head_object(Bucket=self.bucket_name, Key=key)
+        if metadata["ContentLength"] != path.stat().st_size:
+            raise OSError("Uploaded object size does not match the source file.")
+        return str(metadata.get("VersionId", ""))
+
+    def delete_versions(self, name: str, *, version: str = "") -> None:
+        """Abort unfinished uploads and remove an exact version or all key versions.
+
+        Ordinary S3 delete() can leave versions and delete markers behind. This
+        operation permanently reclaims them, including an upload whose version
+        was not recorded before a worker stopped. Neighboring keys are untouched.
+        """
+        key: str = self.object_key(name)
+        client: Any = self.connection.meta.client
+        parameters: dict[str, str] = {"Bucket": self.bucket_name, "Key": key}
+        for page in client.get_paginator("list_multipart_uploads").paginate(
+            Bucket=self.bucket_name, Prefix=key
+        ):
+            for upload in page.get("Uploads", []):
+                if upload["Key"] != key:
+                    continue
+                try:
+                    client.abort_multipart_upload(
+                        **parameters, UploadId=upload["UploadId"]
+                    )
+                except ClientError as error:
+                    if error.response.get("Error", {}).get("Code") != "NoSuchUpload":
+                        raise
+        if version:
+            client.delete_object(**parameters, VersionId=version)
+            return
+        for page in client.get_paginator("list_object_versions").paginate(
+            Bucket=self.bucket_name, Prefix=key
+        ):
+            for record in [*page.get("Versions", []), *page.get("DeleteMarkers", [])]:
+                if record["Key"] == key:
+                    client.delete_object(**parameters, VersionId=record["VersionId"])
+        # A final key-only delete would create another marker on versioned S3.
+
     def url(
         self,
         name: str | None,
@@ -54,6 +115,11 @@ class BrowserFacingS3Storage(S3Storage):
         expire: int | None = None,
         http_method: str | None = None,
     ) -> str:
+        if self.custom_domain and parameters:
+            parameters = {
+                _S3_DOWNLOAD_QUERY_NAMES.get(key, key): value
+                for key, value in parameters.items()
+            }
         browser_endpoint = getattr(settings, "AWS_S3_BROWSER_ENDPOINT_URL", None)
         if (
             name is None
@@ -99,11 +165,18 @@ class BrowserFacingS3Storage(S3Storage):
         )
 
 
+class PrivateS3Storage(BrowserFacingS3Storage):
+    """Use configured CloudFront signing, otherwise private S3 presigned URLs."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)  # type: ignore[no-untyped-call]
+        if self.querystring_auth and not self.cloudfront_signer:
+            self.custom_domain = False
+
+
 class BaseS3Storage(BrowserFacingS3Storage):
     """Base class for S3 storage configurations."""
 
-    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-    custom_domain = settings.AWS_S3_CUSTOM_DOMAIN  # Use Cloudfront/S3 Domain
     file_overwrite = False
 
     # Cache control for performance
@@ -142,13 +215,11 @@ class BaseS3Storage(BrowserFacingS3Storage):
             return url
 
 
-class S3MediaStorage(BaseS3Storage):
+class S3MediaStorage(BaseS3Storage, PrivateS3Storage):
     """Custom S3 storage for media files."""
 
     location = "media/default"  # Base location for media files
     default_acl = "private"
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
 
 class PersonPhotoStorage(BaseS3Storage):
@@ -163,7 +234,7 @@ class PersonPhotoStorage(BaseS3Storage):
     querystring_auth = False  # No signed URLs - relies on bucket policy
 
 
-class AttachmentStorage(BrowserFacingS3Storage):
+class AttachmentStorage(PrivateS3Storage):
     """Private S3 storage for Station Resources uploads.
 
     Files are stored under the "attachments/" prefix; the model's
@@ -172,7 +243,6 @@ class AttachmentStorage(BrowserFacingS3Storage):
 
     """Custom S3 storage specifically for attachments."""
 
-    bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
 
     # Cache control for performance
@@ -181,18 +251,14 @@ class AttachmentStorage(BrowserFacingS3Storage):
     location = "attachments"
     default_acl = "private"  # Keep files private for security
 
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
-
-class BaseGeoJSONStorage(BrowserFacingS3Storage):
+class BaseGeoJSONStorage(PrivateS3Storage):
     """Private S3 storage for GeoJSON uploads."""
 
     # NOTE: This class can **not** inherit from BaseS3Storage because it uses a
     # different `get_available_name()` that generates a path based on the project ID
     # and commit SHA.
 
-    bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
 
     # Cache control for performance
@@ -200,59 +266,66 @@ class BaseGeoJSONStorage(BrowserFacingS3Storage):
 
     default_acl = "private"
 
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
-
-class GeoJSONStorage(BrowserFacingS3Storage):
+class GeoJSONStorage(PrivateS3Storage):
     """
     Files are stored under the "geojson/" prefix; the model's upload_to
     callable should place them into "project.id/commit.sha/" subfolder.
     """
 
-    bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
     object_parameters = BaseS3Storage.object_parameters
 
     location = "geojson"
     default_acl = "private"
 
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
-
-class GPSTrackStorage(BrowserFacingS3Storage):
+class GPSTrackStorage(PrivateS3Storage):
     """
     Files are stored under the "gps_tracks/" prefix; the model's upload_to
     callable should place them directly into the folder.
     """
 
-    bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
     object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
 
     location = "gps_tracks"
     default_acl = "private"
 
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
 
-
-class GISLayerStorage(BrowserFacingS3Storage):
+class GISLayerStorage(PrivateS3Storage):
     """
     Files are stored under the "gis_layers/" prefix; the model's upload_to
     callable should place them directly into the folder.
     """
 
-    bucket_name = BaseS3Storage.bucket_name
     file_overwrite = BaseS3Storage.file_overwrite
     object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
 
     location = "gis_layers"
     default_acl = "private"
 
-    # Use CloudFront signed URLs (production) or S3 presigned URLs (local dev)
-    custom_domain = _PRIVATE_CUSTOM_DOMAIN
+
+class ExportStorage(PrivateS3Storage):
+    """Private immutable export objects using the application's storage settings."""
+
+    location = "exports"
+    default_acl = None
+    querystring_auth = True
+    object_parameters = _PRIVATE_VECTOR_OBJECT_PARAMETERS
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.client_config = self.client_config.merge(
+            Config(  # type: ignore[no-untyped-call]
+                connect_timeout=5,
+                read_timeout=60,
+                retries={"max_attempts": 3, "mode": "standard"},
+            )
+        )
+        self.transfer_config = TransferConfig(  # type: ignore[no-untyped-call]
+            max_concurrency=2, multipart_chunksize=16 * 1024 * 1024
+        )
 
 
 class S3StaticStorage(S3Storage):

@@ -10,11 +10,11 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 
 from speleodb.background_jobs.storage import delete_archive
-from speleodb.background_jobs.storage import export_s3_client
+from speleodb.utils.s3_storages import ExportStorage
 
 
 def test_delete_archive_aborts_only_exact_key_multipart_uploads() -> None:
-    client = export_s3_client()
+    client = ExportStorage().connection.meta.client
     prefix: str = f"exports/test-multipart-{uuid.uuid4()}/"
     key: str = f"{prefix}archive.zip"
     neighbor: str = f"{key}.other"

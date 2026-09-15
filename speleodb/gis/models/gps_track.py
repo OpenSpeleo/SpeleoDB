@@ -51,7 +51,7 @@ class GPSTrack(models.Model):
         blank=False,
         null=False,
         editable=True,
-        storage=GPSTrackStorage(),  # type: ignore[no-untyped-call]
+        storage=GPSTrackStorage(),
         validators=[GeoJsonValidator()],
     )
 

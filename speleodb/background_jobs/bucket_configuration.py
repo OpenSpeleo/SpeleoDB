@@ -11,10 +11,14 @@ from typing import Any
 import orjson
 
 POLICY_STATEMENT_ID: str = "SpeleoDBExportsPrivateRead"
+CLOUDFRONT_POLICY_STATEMENT_ID: str = "SpeleoDBExportsCloudFrontRead"
 LIFECYCLE_RULE_ID: str = "SpeleoDBExportsRetention"
 EXPORT_PREFIX: str = "exports/"
 READER_ARN_PATTERN: re.Pattern[str] = re.compile(
     r"arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:(?:user|role)/[A-Za-z0-9+=,.@_/-]+"
+)
+CLOUDFRONT_ARN_PATTERN: re.Pattern[str] = re.compile(
+    r"arn:(aws|aws-cn|aws-us-gov):cloudfront::[0-9]{12}:distribution/[A-Z0-9]+"
 )
 
 
@@ -70,6 +74,7 @@ def build_bucket_configuration(
     bucket: str,
     reader_arns: list[str],
     current: BucketConfiguration,
+    cloudfront_distribution_arn: str | None = None,
 ) -> BucketConfiguration:
     """Preserve all unrelated configuration and replace only our owned entries."""
     readers: list[str] = validate_readers(reader_arns)
@@ -83,6 +88,15 @@ def build_bucket_configuration(
             "an unlocked bucket for timely deletion."
         )
     partition: str = readers[0].split(":")[1]
+    if cloudfront_distribution_arn is not None:
+        if CLOUDFRONT_ARN_PATTERN.fullmatch(cloudfront_distribution_arn) is None:
+            raise BucketConfigurationError(
+                "CloudFront must use an exact distribution ARN without wildcards."
+            )
+        if cloudfront_distribution_arn.split(":")[1] != partition:
+            raise BucketConfigurationError(
+                "CloudFront and reader ARNs must use the same AWS partition."
+            )
     resource: str = f"arn:{partition}:s3:::{bucket}/{EXPORT_PREFIX}*"
     policy: dict[str, Any] = copy.deepcopy(current.policy)
     policy.setdefault("Version", "2012-10-17")
@@ -97,13 +111,33 @@ def build_bucket_configuration(
         )
     retained_statements: list[dict[str, Any]] = []
     for statement in statements:
-        if statement.get("Sid") != POLICY_STATEMENT_ID:
+        if statement.get("Sid") not in {
+            POLICY_STATEMENT_ID,
+            CLOUDFRONT_POLICY_STATEMENT_ID,
+        }:
             retained_statements.append(statement)
         elif statement.get("Resource") not in (resource, [resource]):
             raise BucketConfigurationError(
                 "The export policy statement ID is already used "
                 "outside the exports prefix."
             )
+    excluded_principals: dict[str, list[str] | str] = {"aws:PrincipalArn": readers}
+    if cloudfront_distribution_arn is not None:
+        # The two negated keys are ANDed: deny only when neither the IAM reader
+        # nor the configured distribution matches. Missing keys remain denied.
+        excluded_principals["AWS:SourceArn"] = cloudfront_distribution_arn
+        retained_statements.append(
+            {
+                "Sid": CLOUDFRONT_POLICY_STATEMENT_ID,
+                "Effect": "Allow",
+                "Principal": {"Service": "cloudfront.amazonaws.com"},
+                "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+                "Resource": resource,
+                "Condition": {
+                    "ArnEquals": {"AWS:SourceArn": cloudfront_distribution_arn}
+                },
+            }
+        )
     policy["Statement"] = [
         *retained_statements,
         {
@@ -112,7 +146,7 @@ def build_bucket_configuration(
             "Principal": "*",
             "Action": ["s3:GetObject", "s3:GetObjectVersion"],
             "Resource": resource,
-            "Condition": {"ArnNotEquals": {"aws:PrincipalArn": readers}},
+            "Condition": {"ArnNotEquals": excluded_principals},
         },
     ]
     lifecycle: dict[str, Any] = copy.deepcopy(current.lifecycle)

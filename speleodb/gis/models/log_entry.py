@@ -83,7 +83,7 @@ class StationLogEntry(models.Model):
         upload_to=get_log_entry_path,
         blank=True,
         null=True,
-        storage=AttachmentStorage(),  # type: ignore[no-untyped-call]
+        storage=AttachmentStorage(),
         validators=[AttachmentValidator()],
         help_text="Any relevant file (sketch, lab sheet, sensor data, etc.).",
     )

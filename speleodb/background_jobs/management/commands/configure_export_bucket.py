@@ -7,7 +7,6 @@ from typing import Any
 
 import orjson
 from botocore.exceptions import ClientError
-from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
 
@@ -15,7 +14,7 @@ from speleodb.background_jobs.bucket_configuration import BucketConfiguration
 from speleodb.background_jobs.bucket_configuration import BucketConfigurationError
 from speleodb.background_jobs.bucket_configuration import build_bucket_configuration
 from speleodb.background_jobs.bucket_configuration import validate_readers
-from speleodb.background_jobs.storage import export_s3_client
+from speleodb.utils.s3_storages import ExportStorage
 
 if TYPE_CHECKING:
     from django.core.management.base import CommandParser
@@ -87,6 +86,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
+            "--cloudfront-distribution-arn",
+            help="Exact CloudFront distribution ARN used for signed export downloads.",
+        )
+        parser.add_argument(
             "--reader-arn",
             action="append",
             required=True,
@@ -105,8 +108,20 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         try:
             readers: list[str] = validate_readers(options["reader_arn"])
-            bucket: str = settings.AWS_STORAGE_BUCKET_NAME
-            client = export_s3_client()
+            storage = ExportStorage()
+            distribution_arn: str | None = options["cloudfront_distribution_arn"]
+            if (
+                storage.custom_domain
+                and storage.querystring_auth
+                and storage.cloudfront_signer
+                and distribution_arn is None
+            ):
+                raise CommandError(
+                    "CloudFront signed downloads are configured; supply "
+                    "--cloudfront-distribution-arn to avoid blocking them."
+                )
+            bucket: str = storage.bucket_name
+            client = storage.connection.meta.client
             before = read_bucket_configuration(client, bucket=bucket)
             expected: str | None = options["expected_fingerprint"]
             if expected is not None and expected != before.fingerprint:
@@ -114,7 +129,10 @@ class Command(BaseCommand):
                     "Bucket configuration changed since the reviewed preview."
                 )
             after = build_bucket_configuration(
-                bucket=bucket, reader_arns=readers, current=before
+                bucket=bucket,
+                reader_arns=readers,
+                current=before,
+                cloudfront_distribution_arn=distribution_arn,
             )
         except BucketConfigurationError as error:
             raise CommandError(str(error)) from None

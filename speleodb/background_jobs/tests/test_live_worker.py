@@ -43,9 +43,9 @@ from speleodb.background_jobs.models import JobState
 from speleodb.background_jobs.services import GENERATION_TASK
 from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.storage import delete_archive
-from speleodb.background_jobs.storage import export_s3_client
 from speleodb.users.tasks import get_users_count
 from speleodb.users.tests.factories import UserFactory
+from speleodb.utils.s3_storages import ExportStorage
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -207,7 +207,7 @@ def live_worker(tmp_path: Path, transactional_db: None) -> Iterator[LiveWorker]:
         "rustfs",
     }, "Use the local RustFS test bucket."
     database_url: str = _test_database_url()
-    export_s3_client().head_bucket(Bucket=TEST_BUCKET)
+    ExportStorage().connection.meta.client.head_bucket(Bucket=TEST_BUCKET)
     hostname: str = f"exports-integration-{uuid.uuid4()}@localhost"
     environment: dict[str, str] = os.environ.copy()
     environment.update(
@@ -314,9 +314,10 @@ def test_live_export_download_notification_and_expiration(
     artifact: JobArtifact = JobArtifact.objects.get(job=job)
     assert artifact.expires_at - artifact.ready_at == timedelta(hours=24)
     prefix: str = "speleodb-export-"
-    suffix: str = f"-{job.id}.zip"
+    suffix: str = f"-{artifact.attempt_id}.zip"
     assert artifact.filename.startswith(prefix)
     assert artifact.filename.endswith(suffix)
+    assert artifact.object_key == f"exports/{artifact.filename}"
     generated_at: datetime = datetime.strptime(
         artifact.filename.removeprefix(prefix).removesuffix(suffix),
         "%Y-%m-%dT%H-%M-%SZ",
@@ -364,7 +365,9 @@ def test_live_export_download_notification_and_expiration(
     artifact.refresh_from_db()
     assert artifact.deleted_at is not None
     with pytest.raises(ClientError) as missing:
-        export_s3_client().head_object(Bucket=TEST_BUCKET, Key=artifact.object_key)
+        ExportStorage().connection.meta.client.head_object(
+            Bucket=TEST_BUCKET, Key=artifact.object_key
+        )
     assert missing.value.response["Error"]["Code"] in {"404", "NoSuchKey", "NotFound"}
 
 
@@ -460,5 +463,7 @@ def test_live_worker_death_recovers_with_a_new_attempt(live_worker: LiveWorker) 
     assert artifact.attempt_id == replacement.pk
     assert artifact.object_key != abandoned.object_key
     with pytest.raises(ClientError) as missing:
-        export_s3_client().head_object(Bucket=TEST_BUCKET, Key=abandoned.object_key)
+        ExportStorage().connection.meta.client.head_object(
+            Bucket=TEST_BUCKET, Key=abandoned.object_key
+        )
     assert missing.value.response["Error"]["Code"] in {"404", "NoSuchKey", "NotFound"}

@@ -13,6 +13,34 @@ Production does not use this bootstrap path. Private production files use
 CloudFront signed URLs, and production bucket/CDN policy remains external to the
 local management command.
 
+## Shared backend contract
+
+`speleodb.utils.s3_storages` owns S3 configuration for media, attachments, vector
+files, and exports. `PrivateS3Storage` selects CloudFront signing when its
+configured signer exists, otherwise S3 signing. Bucket/domain settings are read
+when a backend is constructed, so local and production configurations do not
+depend on values captured during module import. Public photo/static backends
+retain their unsigned URL behavior.
+
+`BrowserFacingS3Storage` uses the internal endpoint for object operations and
+the browser endpoint only for local signed URLs. It also provides two reusable
+operations for durable jobs: `upload_file(name, path, parameters=...)` streams to
+an already-reserved name and returns its object version; `delete_versions(name,
+version=...)` removes exact versions and unfinished multipart uploads. These
+operations normalize names within the backend's location. Ordinary model
+uploads continue using Django's `save()` and filename rules.
+
+Exports use `ExportStorage` and the same URL path as other private backends.
+Their adapter supplies ZIP metadata and accepts historical stored keys as well
+as new flat `exports/{filename}.zip` keys. Export transfers retain two upload
+threads and 16 MiB parts; signing and cleanup add no full-file memory reads.
+
+Local regression tests use actual RustFS uploads, browser downloads, multipart
+cleanup, and disposable versioned buckets. CloudFront signature tests use
+ephemeral keys and verify the signatures without contacting AWS. The signing
+cases require the existing `production` dependency extra; local-only installs
+run the S3 cases and report explicit skips for those production cases.
+
 ## Provisioning Contract
 
 `create_s3_local_buckets` is the single owner of local bucket creation and
@@ -34,8 +62,8 @@ bucket.
 
 The wildcard CORS origin is deliberately limited to local/test buckets. CORS
 controls whether browser JavaScript may read a response; it does not grant S3
-authorization. Private GeoJSON, GPS tracks, attachments, and default media still
-require a valid presigned URL.
+authorization. Private GeoJSON, GPS tracks, attachments, default media, and
+exports still require a valid presigned URL.
 
 Local and test settings explicitly select S3 Signature Version 4. Current boto3
 and django-storages versions already default to SigV4, but making the choice

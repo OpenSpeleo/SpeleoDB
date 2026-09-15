@@ -1,5 +1,22 @@
 # Task reviews
 
+## Export storage reuse and flat filenames
+
+Exports now use the shared private storage backend: CloudFront signing in
+production, browser-facing S3 signing locally, and generic streaming upload and
+version cleanup operations. New keys are flat exports/{filename}.zip and use
+unique attempt IDs; historical nested keys remain supported. Existing public
+backends retain their unsigned URLs. No schema migration is needed.
+
+Validation completed with 139 targeted tests passed, 1 skipped, full mypy, and
+Ruff on task-owned files. Independent review found no actionable regression.
+The complete production policy and CloudFront configuration steps are prepared.
+Live reads proved missing version/cleanup permissions and dropped version query
+parameters; production rollout requires those external AWS settings first.
+
+See [the storage review](todos/export-shared-storage.md) for verification scope,
+live evidence, and deployment prerequisites.
+
 ## CI Compose test environment
 
 Fixed missing runner-side PostgreSQL administrator variables and the reloader

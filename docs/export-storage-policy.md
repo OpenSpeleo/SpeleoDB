@@ -1,9 +1,82 @@
 # Private export storage policy
 
-Exports share the existing bucket under `exports/`. Their objects must remain
-private even if the bucket already has a CloudFront origin policy or public
-photo permissions. Application downloads go directly to S3 through short-lived
-presigned URLs after Django authorizes the requester.
+Exports share the existing bucket under `exports/` and use the same private
+storage backend as other protected files. Django authorizes the requester before
+issuing a short-lived signed download URL. Production uses the configured
+CloudFront domain and signing key; local RustFS uses its browser endpoint and S3
+presigning. Uploads, metadata checks, version deletion, and multipart cleanup use
+the backend's S3 connection in both environments.
+
+New archive keys use the flat `exports/{filename}.zip` layout, with an attempt
+UUID in the filename for uniqueness. Previously stored nested export keys remain
+readable and eligible for cleanup; the prefix-scoped policy covers both layouts.
+
+The object prefix has its own access and retention rules because an export can
+contain private project data. S3 origin authorization and CloudFront viewer
+authorization are separate requirements: an OAC bucket grant alone does not
+require viewers to have a signed URL.
+
+## Required production configuration
+
+For the supplied `static.speleodb.org` bucket policy, keep the existing application,
+TLS, and CloudFront statements. Add these runtime grants for `sdb-prod`:
+
+| Resource | Additional permissions |
+| --- | --- |
+| `arn:aws:s3:::static.speleodb.org/exports/*` | `s3:GetObjectVersion`, `s3:DeleteObjectVersion`, `s3:AbortMultipartUpload` |
+| Bucket, with `s3:prefix` matching `exports/*` | `s3:ListBucketVersions` |
+| Bucket | `s3:ListBucketMultipartUploads` |
+
+AWS distinguishes version-specific reads/deletes from ordinary object operations.
+Multipart upload creation, upload, and completion use the existing `s3:PutObject`
+grant. The cleanup implementation does not call `ListParts`, so it does not need
+`s3:ListMultipartUploadParts`. See the
+[S3 API permission mapping](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-policy-actions.html).
+
+`ListBucketMultipartUploads` does not support the `s3:prefix` condition; its grant
+must be separate from the prefix-constrained version listing grant. The cleanup
+request still supplies the exact attempt key as its prefix and verifies key
+equality before aborting uploads. See the
+[S3 action and condition reference](https://docs.aws.amazon.com/service-authorization/latest/reference/list_s3.html).
+
+The complete policy in
+[`examples/production-export-bucket-policy.json`](examples/production-export-bucket-policy.json)
+preserves the three supplied statements and adds these permissions, the exact
+CloudFront distribution's version-read grant, and the private export restriction.
+It targets account `520473892271`, user `sdb-prod`, bucket `static.speleodb.org`,
+and distribution `E1F0W4EUQJLP0X`. Review it against the live policy before replacing
+the policy; another operator may have added unrelated statements since the
+supplied snapshot. Existing IAM grants may already supply some of the additional
+permissions, but the supplied bucket policy alone does not.
+
+In CloudFront, the cache behavior that matches `exports/*` must:
+
+- Use the existing S3 REST origin and OAC with request signing enabled.
+- Require HTTPS and signed URLs using the trusted key group/signing identity
+  corresponding to the application's existing CloudFront key.
+- Use the managed `CachingDisabled` cache policy (minimum, default, and maximum
+  TTL all zero), preserving the object's `Cache-Control: private, no-store`
+  metadata.
+- Forward `versionId`, `response-content-disposition`, and
+  `response-cache-control` query strings to S3. With `CachingDisabled`, configure
+  this allowlist in the origin request policy. If caching is enabled later,
+  include these values in the cache key as well.
+
+An earlier matching public behavior must not capture `exports/*`. CloudFront's
+[cache behavior settings](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior.html)
+control viewer restrictions and minimum TTL. Its
+[query string configuration](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/QueryStringParameters.html)
+controls forwarding; the CloudFront authentication parameters are consumed at
+the edge. Without forwarding `versionId`, S3 would serve the current object
+instead of the recorded version.
+
+Configure the CloudFront behavior and bucket grants before deploying the
+version-aware storage change. The application changes do not modify AWS
+configuration automatically. Verify a signed export download, unsigned
+CloudFront rejection, anonymous S3 rejection, and an unrelated existing public
+asset after applying the configuration. A signed request for a nonexistent
+`versionId` must fail; success would show that a cache or origin request policy
+is still dropping the version parameter.
 
 ## Preview and apply
 
@@ -18,27 +91,40 @@ reader ARNs for local RustFS root credentials.
 
 ```sh
 python manage.py configure_export_bucket \
-  --reader-arn arn:aws:iam::123456789012:role/speleodb-web
+  --reader-arn arn:aws:iam::520473892271:user/sdb-prod \
+  --cloudfront-distribution-arn arn:aws:cloudfront::520473892271:distribution/E1F0W4EUQJLP0X
 ```
 
 The default command performs only reads. Its JSON output includes before/after
-configuration and a fingerprint. Review the bucket, allowed readers, and changes
-to the two SpeleoDB-owned entries. Then apply the reviewed configuration:
+configuration and a fingerprint. Review the bucket, allowed readers,
+distribution, and changes to the SpeleoDB-owned entries. Then apply the reviewed
+configuration:
 
 ```sh
 python manage.py configure_export_bucket \
-  --reader-arn arn:aws:iam::123456789012:role/speleodb-web \
+  --reader-arn arn:aws:iam::520473892271:user/sdb-prod \
+  --cloudfront-distribution-arn arn:aws:cloudfront::520473892271:distribution/E1F0W4EUQJLP0X \
   --expected-fingerprint <fingerprint-from-preview> \
   --apply
 ```
 
-Repeat `--reader-arn` for every intended signer. Wildcards, account-root ARNs,
+Repeat `--reader-arn` for every intended S3 signer. The distribution argument
+accepts one exact ARN, not a hostname, key ID, or wildcard. It must use the same
+AWS partition as the IAM readers. Wildcards, account-root reader ARNs,
 STS session ARNs, and mixed AWS partitions are rejected. An optional expected
 fingerprint prevents applying over configuration changed since review. The
 command also checks for concurrent changes immediately before writing and
 reads the resulting configuration back after applying. S3 does not provide an
 atomic transaction across bucket policy and lifecycle writes; run this while
 other bucket configuration changes are paused.
+
+Omit the distribution argument only in an environment explicitly configured for
+direct S3 signed URLs. The command refuses to install an IAM-only deny when its
+storage backend has active CloudFront signing, because that would block all
+CloudFront export downloads. It preserves existing unrelated CloudFront grants
+and owns only `SpeleoDBExportsPrivateRead`, `SpeleoDBExportsCloudFrontRead`, and
+the export lifecycle rule. It does not install the application's runtime IAM
+grants or change CloudFront cache behaviors.
 
 The command requires bucket policy, lifecycle, versioning, and Object Lock read
 permissions. Applying additionally requires `s3:PutBucketPolicy` and
@@ -47,19 +133,25 @@ changes Object Lock, or changes public-access-block settings.
 
 Runtime application credentials need `s3:PutObject`, `s3:GetObject`,
 `s3:GetObjectVersion`, `s3:DeleteObject`, `s3:DeleteObjectVersion`, and
-`s3:AbortMultipartUpload` on `exports/*`, plus `s3:ListBucketVersions` and
-`s3:ListBucketMultipartUploads` on the bucket. Scope the bucket listing grants to
-the export prefix where supported. Cleanup aborts only uploads with the exact
-attempt-owned key, including when the worker died before obtaining a Version ID.
+`s3:AbortMultipartUpload` on `exports/*`, plus the two bucket listing grants shown
+above. Cleanup aborts only uploads with the exact attempt-owned key, including
+when the worker died before obtaining a Version ID.
 
 ## Access policy
 
 The `SpeleoDBExportsPrivateRead` statement explicitly denies `s3:GetObject` and
-`s3:GetObjectVersion` for `exports/*` unless `aws:PrincipalArn` matches one of the
-listed readers. The explicit deny overrides existing public and CloudFront
-allows. Anonymous requests and CloudFront OAI/OAC requests do not match the
-application signer allowlist. Allowed readers still need their ordinary IAM
-permissions; this exception to a deny does not itself grant access.
+`s3:GetObjectVersion` for `exports/*` unless either `aws:PrincipalArn` matches one
+of the listed readers or `AWS:SourceArn` matches the configured CloudFront
+distribution. Both negated conditions must be true for the deny to apply.
+Anonymous direct S3 requests match neither exception and remain denied. Without
+a distribution argument, the policy retains the original IAM-only restriction.
+
+`SpeleoDBExportsCloudFrontRead` separately allows `cloudfront.amazonaws.com` to
+read both current and specific export versions, conditioned on the exact
+distribution ARN. This follows AWS's
+[OAC origin policy pattern](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html).
+Other distributions and OAI identities remain excluded. IAM readers still need
+their ordinary permissions; an exception to a deny does not grant access.
 
 AWS documents that signed role requests expose their IAM role ARN in
 [`aws:PrincipalArn`](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalarn),
@@ -73,9 +165,9 @@ invalidates its existing download URLs. The policy does not affect other object
 prefixes. An identifier collision with an existing entry outside `exports/`
 causes the command to refuse the change.
 
-After applying, verify direct presigned download as the configured application
-signer, anonymous S3 denial, anonymous CloudFront denial, and an unrelated public
-photo URL. If `exports/` was ever publicly cached, invalidate those existing
+After applying, verify the configured signed download route, anonymous S3 denial,
+unsigned CloudFront denial, and an unrelated public photo URL. If `exports/` was
+ever publicly cached, invalidate those existing
 CloudFront paths before enabling downloads; changing the origin policy cannot
 remove an already cached response.
 
@@ -103,11 +195,12 @@ rules remain in force and must be reviewed for overlap with `exports/`.
 
 ## Verification
 
-Pure builder tests exercise idempotence, reader validation, input immutability,
-reserved-ID collisions, Object Lock rejection, and preservation of unrelated
-configuration. Run them inside Docker. The deployment smoke test validates the
-actual S3 and CloudFront access policy; builder tests do not substitute for AWS
-policy evaluation.
+Pure builder and command tests exercise IAM-only and CloudFront configurations,
+exact reader/distribution validation, idempotence, input immutability,
+reserved-ID collisions, Object Lock rejection, preservation of unrelated
+configuration, the missing-distribution guard, and read-only previews. Run them
+inside Docker. The deployment smoke test validates the actual S3 and CloudFront
+access policy; builder tests do not substitute for AWS policy evaluation.
 
 The large-file check is opt-in because it transfers and stores several GiB in
 the isolated test bucket. It requires at least 16 GiB free in Docker's backing
