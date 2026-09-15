@@ -172,7 +172,7 @@ jobs:
           # Keep normal output capture, hang diagnostics, and the slowest tests.
           pytest -o faulthandler_timeout=60 --durations=20
         env:
-          GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
+          GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}

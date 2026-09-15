@@ -59,7 +59,7 @@ jobs:
       - name: Clean Gitlab Test Database
         run: make wipe_gitlab_test
         env:
-          GITLAB_GROUP_ID: ${{ secrets.GITLAB_GROUP_ID }}
+          GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}

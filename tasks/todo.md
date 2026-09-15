@@ -1,5 +1,15 @@
 # Task reviews
 
+## CI progress masking and portable Git errors
+
+Created the GitLab group-ID Actions variable and updated CI and cleanup to read
+it. Deleted the obsolete secret at the user's explicit request; the local commit
+must be pushed before the next CI or cleanup run. The checkout regression
+accepts both observed missing-tree messages while checking the exact failed
+operation, SHA, exit status, and unchanged history. All five real
+checkout/history tests passed, alongside Ruff, formatting, and mypy. See
+[the migration review](todos/ci-progress-and-git-diagnostics.md).
+
 ## Restore local validation after GitLab test migration
 
 Corrected the five PostgreSQL-only rollback tests with temporary owner-scoped

@@ -105,6 +105,14 @@ a successful remote smoke test do not establish which values a job loaded.
 
 ## Verification and maintenance
 
+Store `GITLAB_GROUP_ID` as an Actions repository variable and read it with
+`${{ vars.GITLAB_GROUP_ID }}` in both CI and scheduled cleanup. The test group's
+ID is `3`; storing this ordinary identifier as a secret causes GitHub to mask
+that digit throughout logs, including pytest's `3%` and `13%` progress output.
+Keep the GitLab access token in Actions secrets. When migrating an existing
+configuration, create the variable, publish both workflow updates, then remove
+the obsolete group-ID secret so existing workflows never lose their namespace.
+
 Deployment completion requires Railway `SUCCESS`, valid HTTPS, authenticated
 API identity, project creation, and actual Git push/clone. Repeat those checks
 after redeployment to prove persistence of repositories and credentials.

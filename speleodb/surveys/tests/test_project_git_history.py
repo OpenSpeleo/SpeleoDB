@@ -250,9 +250,16 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
         ) == [self.original_sha]
 
     def test_missing_commit_preserves_head_and_does_not_construct_history(self) -> None:
-        with pytest.raises(GitCommandError, match="reference is not a tree"):
-            self.project.checkout_commit_or_default_pull_branch(hexsha="0" * 40)
+        missing_sha: str = "0" * 40
+        # Git versions use either diagnostic for an absent tree object.
+        with pytest.raises(
+            GitCommandError, match=r"reference is not a tree|unable to read tree"
+        ) as error:
+            self.project.checkout_commit_or_default_pull_branch(hexsha=missing_sha)
 
+        assert error.value.status == 128  # noqa: PLR2004
+        assert error.value.command[-2:] == ["checkout", missing_sha]
+        assert missing_sha in error.value.stderr
         assert self.repo.head.commit.hexsha == self.latest_sha
         assert not ProjectCommit.objects.filter(project=self.project).exists()
 

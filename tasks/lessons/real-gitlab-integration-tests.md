@@ -86,3 +86,9 @@ patched methods, or renamed test doubles as substitutes.
 - SQLite does not enforce VARCHAR length as PostgreSQL does. Use a real portable
   constraint when testing generic import rollback, and prove both database
   paths.
+- Git diagnostics can differ across installed versions. Accept the observed
+  equivalent missing-tree messages while asserting the operation, requested SHA,
+  exit status, and preserved repository/database state.
+- Keep non-secret numeric identifiers in Actions variables. A one-digit secret
+  masks that digit throughout CI logs. Publish all consuming workflow changes
+  before deleting the old secret to avoid interrupting CI or scheduled cleanup.
