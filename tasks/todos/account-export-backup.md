@@ -183,7 +183,7 @@ Production acceptance remains pending while deployment is paused for review.
 - [ ] Inventory live Railway configuration, reconcile references/ownership,
       preview the IaC plan, deploy the reviewed commit, and record deployment
       IDs.
-- [ ] Complete staff pilot and production acceptance before enabling all users.
+- [ ] Complete production acceptance using ordinary account exports.
 
 ## Verification and rollout
 
@@ -194,9 +194,10 @@ verification.
 Use real isolated PostgreSQL/Redis/storage/Git repositories for integration.
 Verify duplicate dispatch, worker loss, stale publication, notification failure,
 24-hour access enforcement, version-aware deletion, unauthorized access, and
-Kanchi outage isolation. Deployment is additive, uses one application commit,
-starts with creation disabled, then staff-only. Record exact deployment IDs and
-results; keep cleanup and existing downloads available if creation is disabled.
+Kanchi outage isolation. Deployment is additive and uses one application commit.
+Verify exports from an ordinary active account, and record exact deployment IDs
+and results. Preserve cleanup and existing downloads during compatible
+rollbacks.
 
 ### Next container commands
 

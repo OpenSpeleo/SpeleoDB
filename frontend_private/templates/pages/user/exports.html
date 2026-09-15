@@ -68,8 +68,7 @@
             {% csrf_token %}
             <button type="submit"
                     class="exports-button exports-button-primary"
-                    id="export-create"
-                    {% if not can_request_export %}disabled{% endif %}>
+                    id="export-create">
               <svg class="exports-icon"
                    aria-hidden="true"
                    viewBox="0 0 24 24"
@@ -231,7 +230,6 @@
           <p><strong>Available for 24 hours</strong><span>Download your archive before it expires.</span></p>
         </div>
       </div>
-      {% if not can_request_export %}<p class="exports-notice exports-notice-warning">New exports are temporarily unavailable. Existing downloads remain available until they expire.</p>{% endif %}
       <p id="export-message"
          class="exports-notice exports-message"
          role="status"
@@ -280,8 +278,7 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="user-exports">
     {
-      "endpoint": "{% url 'api:v2:user-exports' %}",
-      "canRequest": {{ can_request_export|yesno:"true,false" }}
+      "endpoint": "{% url 'api:v2:user-exports' %}"
     }
   </script>
 {% endblock inline_extra_js %}

@@ -5,6 +5,7 @@ import { mergeExportJobs } from './user-exports.js';
 import { exportRefreshDelay } from './user-exports.js';
 import { requestedExportId } from './user-exports.js';
 import { loadExportPage } from './user-exports.js';
+import { init } from './user-exports.js';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const ENDPOINT = '/api/v2/user/exports/';
@@ -213,11 +214,8 @@ describe('Export history presentation', () => {
         expect(history.textContent).toContain(`${label} · Expires`);
     });
 
-    it('gives empty-state guidance that respects export availability', () => {
+    it('gives empty-state guidance for generating an export', () => {
         expect(render([]).textContent).toContain('Generate an export above.');
-        const unavailable = render([], { canRequest: false });
-        expect(unavailable.textContent).toContain('New exports are temporarily unavailable.');
-        expect(unavailable.textContent).not.toContain('Generate an export above.');
     });
 
     it('keeps action labels readable while hiding decorative icons from assistive technology', () => {
@@ -309,18 +307,72 @@ describe('Export history presentation', () => {
         expect(exportRefreshDelay([], false, NOW)).toBeNull();
     });
 
-    it('allows a failed export retry and prevents concurrent or disabled retries', () => {
+    it('allows a failed export retry and prevents concurrent retries', () => {
         const failed = job({ state: 'failed' });
         expect(render([failed]).querySelector('[data-export-retry]').disabled).toBe(false);
         expect(render([failed, job({ id: '22222222-2222-4222-8222-222222222222' })])
             .querySelector('[data-export-retry]').disabled).toBe(true);
         expect(render([failed], { busy: true }).querySelector('[data-export-retry]').disabled).toBe(true);
-        expect(render([failed], { canRequest: false }).querySelector('[data-export-retry]')).toBeNull();
     });
 
     it('never displays a worker exception as public failed-state content', () => {
         const container = render([job({ state: 'failed', summary: { error: 'private/internal/location' } })]);
         expect(container.textContent).toContain('Export failed');
         expect(container.textContent).not.toContain('private/internal/location');
+    });
+
+    it('initializes and submits an export using only the endpoint context', async () => {
+        const requests = [];
+        let requested = false;
+        const server = createServer((request, response) => {
+            requests.push({ method: request.method, path: request.url, csrf: request.headers['x-csrftoken'] });
+            if (request.method === 'POST') requested = true;
+            const detail = request.url === `${ENDPOINT}${ID}/`;
+            const data = request.method === 'POST' || detail
+                ? job()
+                : { results: requested ? [job()] : [], previous: null, next: null };
+            response.writeHead(request.method === 'POST' ? 202 : 200, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify(data));
+        });
+        await new Promise((resolve, reject) => {
+            server.once('error', reject);
+            server.listen(0, '127.0.0.1', resolve);
+        });
+        const originalUrl = window.location.href;
+        const root = document.createElement('div');
+        root.id = 'user-exports';
+        root.innerHTML = `
+            <form id="export-request-form">
+                <input name="csrfmiddlewaretoken" value="export-test-csrf">
+                <button id="export-create" type="submit"><span id="export-create-label"></span></button>
+            </form>
+            <div id="export-message"></div>
+            <div id="export-history"></div>
+            <button id="export-previous"></button>
+            <button id="export-next"></button>
+        `;
+        document.body.append(root);
+        globalThis.jsdom.reconfigure({ url: `http://127.0.0.1:${server.address().port}/exports/` });
+        try {
+            await init({ endpoint: ENDPOINT });
+            const create = root.querySelector('#export-create');
+            expect(create.disabled).toBe(false);
+            root.querySelector('form').requestSubmit();
+            await vi.waitFor(() => {
+                expect(root.querySelector('[data-export-id]')?.dataset.exportId).toBe(ID);
+                expect(root.querySelector('#export-history').getAttribute('aria-busy')).toBe('false');
+            });
+            expect(requests.filter(request => request.method === 'POST')).toEqual([
+                { method: 'POST', path: ENDPOINT, csrf: 'export-test-csrf' },
+            ]);
+            expect(root.querySelector('#export-message').textContent).toContain('We will email you when it is ready.');
+            expect(create.disabled).toBe(true);
+        } finally {
+            window.dispatchEvent(new Event('pagehide'));
+            root.remove();
+            globalThis.jsdom.reconfigure({ url: originalUrl });
+            server.closeAllConnections();
+            await new Promise(resolve => server.close(resolve));
+        }
     });
 });

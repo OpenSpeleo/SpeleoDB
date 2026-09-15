@@ -139,5 +139,4 @@ CELERY_BROKER_URL = env.str("TEST_CELERY_BROKER_URL", default="memory://")
 # Celery reads this environment key before its app configuration. Override the
 # inherited development broker so test settings actually isolate every publisher.
 os.environ["CELERY_BROKER_URL"] = CELERY_BROKER_URL
-EXPORTS_MODE = "all"
 EXPORTS_PUBLIC_BASE_URL = "http://testserver"

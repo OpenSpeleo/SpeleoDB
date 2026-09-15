@@ -34,8 +34,9 @@ projects contain only the empty `PROJECT IS EMPTY` marker. Downloads are named
   expired exports return `410`. Redirects use `private, no-store` caching.
 
 Account history and details remain owner-only for staff. An active superuser can
-use the protected download route for another user's archive. Existing history
-and downloads remain accessible when new export requests are disabled.
+use the protected download route for another user's archive. Export creation and
+retry are available to every authenticated active account through the normal
+account and resource permissions. No separate enablement setting is required.
 
 ## Browser behavior and safety
 

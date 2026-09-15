@@ -93,12 +93,12 @@ existing minimum-transition-object-size setting are preserved.
 
 Object Lock-enabled buckets are refused, including those without a default
 retention rule: per-object retention or legal holds would prevent the promised
-cleanup. Use an unlocked bucket before enabling this feature.
+cleanup. Use an unlocked bucket before deploying this feature.
 
 The private-read policy is applied before lifecycle changes. If lifecycle
 configuration fails, the private-read restriction stays installed; preview and
-rerun the idempotent command. Keep exports disabled until configuration readback
-and actual signed/anonymous download checks pass. Existing broader lifecycle
+rerun the idempotent command. Complete configuration readback and actual
+signed/anonymous download checks before deployment. Existing broader lifecycle
 rules remain in force and must be reviewed for overlap with `exports/`.
 
 ## Verification

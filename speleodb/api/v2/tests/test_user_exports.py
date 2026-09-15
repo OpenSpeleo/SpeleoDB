@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from speleodb.users.models import User
 
 
-@override_settings(EXPORTS_MODE="all")
 class TestUserExports(BaseAPITestCase):
     def _job(
         self, state: str = JobState.QUEUED, *, requester: User | None = None
@@ -66,6 +65,8 @@ class TestUserExports(BaseAPITestCase):
         )
 
     def test_request_is_durable_and_duplicate_requests_share_one_attempt(self) -> None:
+        assert self.user.is_active
+        assert not self.user.is_staff
         url: str = reverse("api:v2:user-exports")
         other: User = UserFactory.create()
         first = self.client.post(
@@ -264,16 +265,6 @@ class TestUserExports(BaseAPITestCase):
             f'attachment; filename="{artifact.filename}"'
         ]
         assert parameters["response-cache-control"] == ["private, no-store"]
-
-    @override_settings(EXPORTS_MODE="disabled")
-    def test_disabled_requests_preserve_history(self) -> None:
-        self._job(JobState.FAILED)
-        url: str = reverse("api:v2:user-exports")
-        response = self.client.post(url, headers={"authorization": self.auth})
-        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-        history = self.client.get(url, headers={"authorization": self.auth})
-        assert history.status_code == status.HTTP_200_OK
-        assert history.data["count"] == 1
 
     def test_settings_page_uses_registered_controller_and_both_navigation_links(
         self,

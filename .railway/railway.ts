@@ -79,7 +79,6 @@ export default defineRailway((ctx) => {
       ...Object.fromEntries(preservedWebVariables.map((key) => [key, preserve()])),
       CELERY_BROKER_URL: brokerUrl,
       KANCHI_URL: ctx.shared.KANCHI_URL,
-      EXPORTS_MODE: ctx.shared.EXPORTS_MODE,
     },
     domains: [{ domain: publicHostname, port: 8080 }],
     networking: { privateNetworkEndpoint: "speleodb" },

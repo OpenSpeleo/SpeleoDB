@@ -34,7 +34,7 @@ one-minute maintenance sweep. Unclaimed messages can be republished after ten
 minutes; duplicate deliveries are ignored without overwriting Celery results.
 
 A worker atomically claims the current queued attempt using its expected Celery
-task UUID. It records a 30-minute execution deadline and a unique artifact key
+task UUID. It records an execution deadline from `EXPORTS_HARD_TIME_LIMIT` and a unique artifact key
 before touching storage. Progress and publication updates require ownership of
 that current attempt. Old or replayed invocations cannot publish results.
 
@@ -196,7 +196,7 @@ recovery, bounded exhaustion, other HTTP failures, and a lost response after
 receiving the write. The live archive test still verifies actual GitLab commits,
 branches, tags, and restored history.
 
-Roll out with creation disabled, deploy one release to web and workers, enable
-the staff pilot, verify a real retention cycle and representative large archive,
-then expand access. Disabling creation leaves existing downloads and cleanup
-operational. See `background-jobs-operations.md` for Compose and Railway details.
+Deploy one reviewed release to web and workers after checking storage access and
+retention configuration. Verify exports from an ordinary active account, a real
+retention cycle, and a representative large archive. See
+`background-jobs-operations.md` for Compose and Railway details.

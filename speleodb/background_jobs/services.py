@@ -44,16 +44,6 @@ class ExportExpiredError(ValueError):
     """An archive's availability window has ended."""
 
 
-def can_request_export(user: User) -> bool:
-    return bool(
-        user.is_active
-        and (
-            settings.EXPORTS_MODE == "all"
-            or (settings.EXPORTS_MODE == "staff" and user.is_staff)
-        )
-    )
-
-
 def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
     number = (job.attempts.aggregate(last=Max("number"))["last"] or 0) + 1
     attempt = JobAttempt.objects.create(
@@ -77,8 +67,8 @@ def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
 
 
 def request_export(user: User) -> tuple[BackgroundJob, bool]:
-    if not can_request_export(user):
-        raise ExportUnavailableError("Export requests are currently unavailable.")
+    if not user.is_active:
+        raise ExportUnavailableError("This account is inactive.")
     with transaction.atomic():
         # Serialize request/retry by requester, including the no-existing-row case.
         User.objects.select_for_update().get(pk=user.pk)
@@ -104,8 +94,6 @@ def _lock_existing_job(job_id: uuid.UUID) -> BackgroundJob:
 def retry_export(job: BackgroundJob, user: User) -> BackgroundJob:
     if not user.is_active or not (user.is_staff or job.requester_id == user.pk):
         raise PermissionDenied
-    if not can_request_export(user):
-        raise ExportUnavailableError("Export requests are currently unavailable.")
     with transaction.atomic():
         owner = User.objects.select_for_update().get(pk=job.requester_id)
         if not owner.is_active:

@@ -10,7 +10,6 @@ REDIS_URL=redis://localhost:6379/0
 # Celery
 # ------------------------------------------------------------------------------
 # CELERY_BROKER_URL is interpolated from the private root .env in local.yml.
-EXPORTS_MODE=all
 
 # GitLab (local Compose service)
 # ------------------------------------------------------------------------------

@@ -81,7 +81,12 @@ def _emit_progress(
 
 def _clean_scratch(root: Path) -> None:
     """Reclaim abandoned directories on this worker, never another active attempt."""
-    cutoff = timezone.now() - timedelta(minutes=35)
+    # Wait a full attempt budget plus the existing worker-recovery grace.
+    cutoff = (
+        timezone.now()
+        - timedelta(seconds=settings.EXPORTS_HARD_TIME_LIMIT)
+        - timedelta(minutes=5)
+    )
     for directory in root.glob("attempt-*"):
         if directory.is_symlink() or not directory.is_dir():
             continue
@@ -104,8 +109,8 @@ def _clean_scratch(root: Path) -> None:
     track_started=False,
     acks_late=True,
     reject_on_worker_lost=True,
-    soft_time_limit=25 * 60,
-    time_limit=30 * 60,
+    soft_time_limit=settings.EXPORTS_SOFT_TIME_LIMIT,
+    time_limit=settings.EXPORTS_HARD_TIME_LIMIT,
 )
 def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
     attempt = claim_attempt(job_id, attempt_id, str(self.request.id))

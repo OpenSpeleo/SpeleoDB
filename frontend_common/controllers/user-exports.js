@@ -134,7 +134,7 @@ export function exportRefreshDelay(jobs, active = false, now = Date.now()) {
  * [data-export-retry] identifies its retry control. Styles use classes only.
  * All API strings are assigned through textContent.
  */
-export function renderExportHistory(container, jobs, { endpoint, canRequest = true, busy = false, linkedJob = null, focusId = null, now = Date.now() } = {}) {
+export function renderExportHistory(container, jobs, { endpoint, busy = false, linkedJob = null, focusId = null, now = Date.now() } = {}) {
     const visibleJobs = mergeExportJobs(jobs, linkedJob, now);
     const active = visibleJobs.some(job => ACTIVE_STATES.has(job.state));
     const previousFocus = document.activeElement;
@@ -150,9 +150,7 @@ export function renderExportHistory(container, jobs, { endpoint, canRequest = tr
         const symbol = element('div', '', 'exports-empty-icon');
         symbol.append(icon('archive'));
         empty.append(symbol, element('h4', 'No current exports'));
-        empty.append(element('p', canRequest
-            ? 'Generate an export above. Your archive will appear here when it’s ready to download.'
-            : 'Available archives will appear here. New exports are temporarily unavailable.'));
+        empty.append(element('p', 'Generate an export above. Your archive will appear here when it’s ready to download.'));
         container.append(empty);
         return false;
     }
@@ -205,7 +203,7 @@ export function renderExportHistory(container, jobs, { endpoint, canRequest = tr
                 link.href = `${endpoint}${job.id}/download/`;
                 actions.append(link);
             }
-            if (job.state === 'failed' && canRequest) {
+            if (job.state === 'failed') {
                 const retry = action('button', 'Retry export', 'retry', 'exports-button-secondary');
                 retry.type = 'button';
                 retry.dataset.exportRetry = job.id;
@@ -263,12 +261,11 @@ export async function init(context) {
     }
 
     function redraw(now = Date.now()) {
-        create.disabled = !context.canRequest || mutationPending || active;
+        create.disabled = mutationPending || active;
         createLabel.textContent = mutationPending ? 'Requesting export…' : 'Generate export';
         create.setAttribute('aria-busy', String(mutationPending));
         const focused = renderExportHistory(history, jobs, {
             endpoint: endpointPath,
-            canRequest: context.canRequest,
             busy: mutationPending || active,
             linkedJob,
             focusId: focusLinkedExport ? linkedId : null,
@@ -355,7 +352,7 @@ export async function init(context) {
     }
 
     async function submit(url) {
-        if (mutationPending || !context.canRequest) return;
+        if (mutationPending) return;
         mutationPending = true;
         requestController?.abort();
         stopPolling();

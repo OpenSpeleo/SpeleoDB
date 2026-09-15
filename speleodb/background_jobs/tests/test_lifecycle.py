@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import socket
 import uuid
 from datetime import timedelta
@@ -26,6 +27,7 @@ from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
 from speleodb.background_jobs.services import ExportConflictError
 from speleodb.background_jobs.services import ExportExpiredError
+from speleodb.background_jobs.services import ExportUnavailableError
 from speleodb.background_jobs.services import artifact_download_url
 from speleodb.background_jobs.services import claim_attempt
 from speleodb.background_jobs.services import fail_attempt
@@ -34,12 +36,15 @@ from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_due_jobs
 from speleodb.background_jobs.services import retry_export
+from speleodb.background_jobs.tasks import _clean_scratch
 from speleodb.background_jobs.tasks import generate_export
 from speleodb.background_jobs.tasks import maintain_background_jobs
 from speleodb.background_jobs.tasks import send_export_notification
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pytest_django.fixtures import Settings
 
     from speleodb.users.models import User
@@ -76,6 +81,48 @@ def test_database_rejects_two_active_jobs(user: User) -> None:
     assert not created_again
     with pytest.raises(IntegrityError), transaction.atomic():
         BackgroundJob.objects.create(requester=user)
+
+
+def test_inactive_account_cannot_request_an_export(user: User) -> None:
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    with pytest.raises(ExportUnavailableError, match="account is inactive"):
+        request_export(user)
+    assert not BackgroundJob.objects.filter(requester=user).exists()
+
+
+def test_celery_generation_limits_match_export_settings(settings: Settings) -> None:
+    assert generate_export.soft_time_limit == settings.EXPORTS_SOFT_TIME_LIMIT
+    assert generate_export.time_limit == settings.EXPORTS_HARD_TIME_LIMIT
+
+
+@pytest.mark.parametrize("hard_limit", [13, 73])
+def test_attempt_deadline_and_scratch_cleanup_follow_configured_hard_limit(
+    user: User, settings: Settings, tmp_path: Path, hard_limit: int
+) -> None:
+    settings.EXPORTS_HARD_TIME_LIMIT = hard_limit
+    _job, attempt = _running(user)
+    assert attempt.deadline_at is not None
+    assert attempt.started_at is not None
+    assert attempt.deadline_at - attempt.started_at == timedelta(seconds=hard_limit)
+
+    abandoned: Path = tmp_path / f"attempt-{uuid.uuid4()}_old"
+    current: Path = tmp_path / f"attempt-{uuid.uuid4()}_current"
+    active: Path = tmp_path / f"attempt-{attempt.pk}_active"
+    old_timestamp: float = (
+        timezone.now() - timedelta(seconds=hard_limit) - timedelta(minutes=6)
+    ).timestamp()
+    for directory in (abandoned, current, active):
+        directory.mkdir()
+        (directory / "archive.zip").write_bytes(b"export data")
+    for directory in (abandoned, active):
+        os.utime(directory, (old_timestamp, old_timestamp))
+
+    _clean_scratch(tmp_path)
+
+    assert not abandoned.exists()
+    assert (current / "archive.zip").read_bytes() == b"export data"
+    assert (active / "archive.zip").read_bytes() == b"export data"
 
 
 def test_unexpected_task_id_cannot_claim_and_duplicates_cannot_overwrite_results(

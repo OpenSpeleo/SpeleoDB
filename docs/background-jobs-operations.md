@@ -111,8 +111,8 @@ docker compose -f local.yml up -d --scale celery-worker=2 celery-worker
 Every replica consumes both queues. Keep Beat at one replica; its database lock
 also protects against scheduler overlap during restarts.
 
-Local Compose enables export creation for all local accounts through
-`EXPORTS_MODE=all`; production remains disabled until its reviewed rollout.
+Exports are available to every authenticated active account using the normal
+account and resource permissions in both local Compose and production.
 Exports use ordinary ZIP files with no password and inherit the bucket's existing
 storage configuration. The application does not add an export encryption policy
 or encryption-specific environment variables. S3 checksum validation remains
@@ -265,7 +265,7 @@ Production deployment and pushes are paused for collaborative review; review
 commits are authorized after the required container checks.
 The consolidated read-only plan has seven safe changes and zero removals: create
 `Celery-Worker`, `Celery-Beat`, and `Kanchi`; update the web service's broker,
-feature flag, dashboard link, and deployment commands/settings. This preview
+dashboard link, and deployment commands/settings. This preview
 does not provision services or validate missing shared values. Generate a fresh
 plan against the reviewed release commit before any authorized apply.
 
@@ -287,8 +287,6 @@ Provision these shared Railway variables during the reviewed rollout:
   `healthcheck.railway.app`.
 - `KANCHI_ALLOWED_ORIGINS`, containing the exact HTTPS origin.
 - `KANCHI_URL`, the authenticated dashboard's HTTPS URL.
-- `EXPORTS_MODE=disabled` initially, until storage privacy and the rollout checks
-  are complete.
 
 The IaC file references the existing web service's runtime variables for Django
 worker and Beat. Inventory those variable names before applying; optional deployment
@@ -321,17 +319,16 @@ Deployment order:
    ownership before applying an IaC file that manages that service.
 3. Validate durability and eviction settings on shared Redis; provision only the
    Kanchi database/user on existing PostgreSQL, then set the shared variables.
-4. Deploy additive application migrations with export creation disabled, then
-   install the intended periodic schedules.
+4. Verify storage configuration and signed/anonymous download behavior. Deploy
+   additive application migrations, then install the intended periodic schedules.
 5. Deploy the shared worker, Beat, and Kanchi. Confirm all application
    services use the intended commit and Kanchi uses the intended image digest.
 6. Check each exact deployment ID reaches `SUCCESS`, then verify queue
    consumption from both queues, distinct replica node names, singleton Beat,
    authentication, and actual Kanchi task ingestion.
-7. Enable staff-only creation. Verify complete and partial archives, historical
+7. Verify complete and partial archives from an ordinary account, historical
    Git restoration, email, authenticated download, recovery, large-archive memory
    and disk usage, and a real 24-hour expiry/deletion cycle.
-8. Enable all users only after those pilot results are recorded.
 
 Set a 120-second deployment termination grace and verify forced interruption
 recovery. Audit existing Beat schedules before enabling the scheduler; enabling
@@ -339,9 +336,10 @@ this feature must not silently start obsolete application tasks.
 Confirm worker saturation only delays notification and physical cleanup; the
 download expiry guard must continue rejecting expired artifacts immediately.
 
-Rollback starts by disabling new requests. Retain published downloads and
-artifact cleanup, preserve additive tables and history, and return application
-services to a compatible release. Roll back Kanchi independently.
+For rollback, return application services to a compatible release while
+preserving additive tables and history. Keep artifact cleanup and published
+downloads available where supported by that release. Roll back Kanchi
+independently.
 
 ## Sources
 

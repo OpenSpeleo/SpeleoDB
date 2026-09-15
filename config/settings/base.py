@@ -549,20 +549,43 @@ CELERY_TASK_ROUTES = {
     "celery.backend_cleanup": {"queue": "background_control"},
 }
 
-# Export creation is enabled explicitly during rollout. Downloads and cleanup
-# remain available when creation is disabled. Beat owns all scheduling; Railway
-# runs long-lived services and never configures a cron job for these tasks.
-EXPORTS_MODE = env.str("EXPORTS_MODE", default="disabled")
-EXPORTS_HARD_TIME_LIMIT = 30 * 60
-EXPORTS_SOFT_TIME_LIMIT = 25 * 60
+# Beat owns all scheduling; Railway runs long-lived services and never
+# configures a cron job for these tasks.
+
+# Maximum seconds per export attempt before Celery terminates it. Also sets the
+# database deadline used to reject late results and recover stalled attempts.
+EXPORTS_HARD_TIME_LIMIT = 8 * 60
+
+# Seconds before Celery raises a soft timeout so generation can fail cleanly
+# and release temporary files before the hard limit terminates the process.
+EXPORTS_SOFT_TIME_LIMIT = 5 * 60
+
+# Total automatic generation attempts per request/retry cycle, including the
+# first attempt. A manual retry starts a fresh cycle and keeps earlier history.
 EXPORTS_MAX_ATTEMPTS = 3
-# The worker creates this directory with mode 0700 and uses private mkdtemp
-# subdirectories for individual archives.
+
+# Local workspace for cloned repositories, downloaded sources, and ZIP creation.
+# The worker creates it with mode 0700 and private per-attempt subdirectories.
 EXPORTS_SCRATCH_DIR = env.str("EXPORTS_SCRATCH_DIR", default="/tmp/speleodb-exports")  # noqa: S108
+
+# Public application origin used in notification email links. Empty falls back
+# to HTTPS with the current Django Site domain.
 EXPORTS_PUBLIC_BASE_URL = env.str("EXPORTS_PUBLIC_BASE_URL", default="")
+
+# Free disk space reserved during archive generation, in bytes. Writes must
+# leave at least this much space available in the temporary filesystem.
 EXPORT_MIN_FREE_BYTES = env.int("EXPORT_MIN_FREE_BYTES", default=64 * 1024 * 1024)
+
+# Maximum source GeoJSON size, in bytes, for deriving a GPS track's GPX file.
+# Above this limit, the export retains GeoJSON and reports the GPX omission.
 EXPORT_GPX_MAX_BYTES = env.int("EXPORT_GPX_MAX_BYTES", default=16 * 1024 * 1024)
+
+# Maximum coordinate positions per GPS track for GPX conversion. Larger tracks
+# retain their GeoJSON, with the GPX omission reported in the export manifest.
 EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
+
+# Kanchi dashboard URL shown in Django job administration. Empty means no
+# dashboard link; this setting does not configure Kanchi or its credentials.
 KANCHI_URL = env.str("KANCHI_URL", default="")
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended
 CELERY_RESULT_EXTENDED = True

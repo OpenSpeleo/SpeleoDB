@@ -1,5 +1,20 @@
 # Export source availability and one presentation per request
 
+Follow the user's latest verification scope. An explicit request for only tests
+and a commit overrides earlier pre-commit instructions; do not add service
+restarts or further checks afterward.
+
+Do not add a feature enablement or staff-only rollout switch without a user
+requirement. Exports use ordinary active-account and resource permissions. When
+removing an unrequested switch, remove its UI context and submission guards,
+environment settings, deployment references, tests, and rollout copy together;
+leaving a missing context field can silently disable all requests.
+
+Keep generation time limits in Django settings. Celery's task options, recorded
+attempt deadlines, and scratch-retention timing must derive from those settings
+so changing a limit updates all consumers. Keep independent recovery grace and
+operation-specific timeouts distinct from the generation budget.
+
 A successful Git clone does not prove the remote still contains the expected
 history. If a project has recorded commits but its cloned remote is empty,
 report an omission instead of substituting an empty-project marker.
