@@ -123,6 +123,13 @@ repos:
         pass_filenames: false
         require_serial: true
         types_or: [python, pyi]
+      - id: typecheck-railway
+        name: Type-check Railway infrastructure
+        entry: npm run typecheck:railway
+        language: system
+        files: ^\.railway/.*\.ts$
+        pass_filenames: false
+        require_serial: true
 
   # ========================================================================= #
   #                               URL STABILITY                               #

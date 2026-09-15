@@ -20,6 +20,7 @@ from django.urls import reverse
         ("private:user_authtoken", "auth-token/", None),
         ("private:user_feedback", "feedback/", None),
         ("private:user_preferences", "preferences/", None),
+        ("private:user_exports", "exports/", None),
         # Teams routes
         ("private:teams", "teams/", None),
         ("private:team_new", "team/new/", None),

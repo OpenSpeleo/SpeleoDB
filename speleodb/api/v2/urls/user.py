@@ -13,8 +13,26 @@ from speleodb.api.v2.views.user import UserAutocompleteView
 from speleodb.api.v2.views.user import UserInfo
 from speleodb.api.v2.views.user import UserPasswordChangeView
 from speleodb.api.v2.views.user_dashboard import UserDashboardStatsView
+from speleodb.api.v2.views.user_export import UserExportDetailView
+from speleodb.api.v2.views.user_export import UserExportDownloadView
+from speleodb.api.v2.views.user_export import UserExportListView
+from speleodb.api.v2.views.user_export import UserExportRetryView
 
 urlpatterns: list[URLPattern] = [
+    path("exports/", UserExportListView.as_view(), name="user-exports"),
+    path(
+        "exports/<uuid:id>/", UserExportDetailView.as_view(), name="user-export-detail"
+    ),
+    path(
+        "exports/<uuid:id>/retry/",
+        UserExportRetryView.as_view(),
+        name="user-export-retry",
+    ),
+    path(
+        "exports/<uuid:id>/download/",
+        UserExportDownloadView.as_view(),
+        name="user-export-download",
+    ),
     path("", UserInfo.as_view(), name="user-detail"),
     path("auth-token/", UserAuthTokenView.as_view(), name="user-auth-token"),
     path("password/", UserPasswordChangeView.as_view(), name="user-password-update"),

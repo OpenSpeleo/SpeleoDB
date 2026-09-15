@@ -7,37 +7,44 @@ volumes:
   speleodb_local_gitlab_data: {}
   # speleodb_local_minio_data: {}
   speleodb_local_rustfs_data: {}
+  speleodb_local_redis_data: {}
+
+x-django: &django
+  build:
+    context: .
+    dockerfile: ./compose/Dockerfile
+    args:
+      - DOCKER_BUILDKIT=1
+  image: speleodb_local_django
+  user: dev-user
+  depends_on:
+    setup:
+      condition: service_completed_successfully
+  volumes:
+    - .:/app:z
+    - type: volume
+      source: speleodb_local_web_node_modules
+      target: /app/node_modules
+      volume:
+        nocopy: true
+  env_file:
+    - ./.envs/.django
+    - ./.envs/.postgres
+  environment:
+    # Compose reads the developer-owned root .env for interpolation. Keep the
+    # tracked Django env file free of placeholder values that would shadow it.
+    MAPBOX_API_TOKEN: "${MAPBOX_API_TOKEN:-}"
+    CELERY_BROKER_URL: "${CELERY_BROKER_URL:-redis://localhost:6379/1}"
+    KANCHI_URL: "${KANCHI_URL:-http://localhost:8765/ui}"
+    GITLAB_GROUP_NAME: "${GITLAB_GROUP_NAME:-speleodb}"
+  ports: []
+  command: sleep infinity
+  network_mode: "host"
 
 services:
-  django: &django
-    build:
-      context: .
-      dockerfile: ./compose/Dockerfile
-      args:
-        - DOCKER_BUILDKIT=1
-    image: speleodb_local_django
+  django:
+    <<: *django
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
-    user: dev-user
-    depends_on:
-      setup:
-        condition: service_completed_successfully
-    volumes:
-      - .:/app:z
-      - type: volume
-        source: speleodb_local_web_node_modules
-        target: /app/node_modules
-        volume:
-          nocopy: true
-    env_file:
-      - ./.envs/.django
-      - ./.envs/.postgres
-    environment:
-      # Compose reads the developer-owned root .env for interpolation. Keep the
-      # tracked Django env file free of placeholder values that would shadow it.
-      MAPBOX_API_TOKEN: "${MAPBOX_API_TOKEN:-}"
-    ports: []
-    command: sleep infinity
-    network_mode: "host"
 
   postgres:
     build:
@@ -65,10 +72,14 @@ services:
       retries: 20
 
   redis:
-    image: docker.io/redis:6
+    image: redis:7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_redis"
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - speleodb_local_redis_data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -81,33 +92,80 @@ services:
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django_webserver"
     command: /start
 
-  # celeryworker:
-  #   <<: *django
-  #   image: speleodb_local_celeryworker
-  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celeryworker"
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #   ports: []
-  #   command: /start-celeryworker
+  celery-worker: &celery-worker
+    <<: *django
+    # No fixed container name: --scale celery-worker=N creates unique replicas.
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    command: /start-celeryworker
+    stop_grace_period: 120s
+    restart: unless-stopped
 
-  # celerybeat:
-  #   <<: *django
-  #   image: speleodb_local_celerybeat
-  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celerybeat"
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #   ports: []
-  #   command: /start-celerybeat
+  celery-beat:
+    <<: *celery-worker
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_beat"
+    command: /start-celerybeat
 
-  # flower:
-  #   <<: *django
-  #   image: speleodb_local_flower
-  #   container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_flower"
-  #   ports:
-  #     - "5555:5555"
-  #   command: /start-flower
+  kanchi:
+    image: getkanchi/kanchi:2.0.1@sha256:96e799547cce75b9f23e11cde00823a5e2752bc9f4f4135933b392551d703e28
+    restart: unless-stopped
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_kanchi"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    environment:
+      # Kanchi uses Compose DNS and its own database. Never inherit Django's
+      # entrypoint, source mount, storage, GitLab, or email credentials here.
+      CELERY_BROKER_URL: "${KANCHI_CELERY_BROKER_URL:-redis://redis:6379/1}"
+      DATABASE_URL: "postgresql+psycopg://kanchi:${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}@postgres:5432/kanchi"
+      WS_HOST: "0.0.0.0"
+      WS_PORT: "8765"
+      AUTH_ENABLED: "true"
+      AUTH_BASIC_ENABLED: "true"
+      AUTH_GOOGLE_ENABLED: "false"
+      AUTH_GITHUB_ENABLED: "false"
+      BASIC_AUTH_USERNAME: "${KANCHI_USERNAME:-kanchi-local}"
+      BASIC_AUTH_PASSWORD: "${KANCHI_PASSWORD:-kanchi-local-only}"
+      SESSION_SECRET_KEY: "${KANCHI_SESSION_SECRET_KEY:-speleodb-local-session-secret-not-for-production}"
+      TOKEN_SECRET_KEY: "${KANCHI_TOKEN_SECRET_KEY:-speleodb-local-token-secret-not-for-production}"
+      ALLOWED_EMAIL_PATTERNS: "${KANCHI_USERNAME:-kanchi-local}"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,kanchi"
+      ALLOWED_ORIGINS: "http://localhost:8765,http://127.0.0.1:8765"
+      ENABLE_PICKLE_SERIALIZATION: "false"
+    ports:
+      - "127.0.0.1:8765:8765"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8765/api/health', timeout=5)"
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  # A different Redis process isolates Pub/Sub events and remote-control traffic,
+  # which Redis logical database numbers alone do not isolate.
+  celery-test-redis:
+    image: redis:7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_test_celery_redis"
+    profiles: ["integration-test"]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   gitlab:
     image: gitlab/gitlab-ce:latest
@@ -119,7 +177,7 @@ services:
       GITLAB_ROOT_USERNAME: root
       GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
       GITLAB_BOOTSTRAP_TOKEN_NAME: speleodb-local-bootstrap
-      GITLAB_GROUP_NAME: speleodb
+      GITLAB_GROUP_NAME: "${GITLAB_GROUP_NAME:-speleodb}"
       GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'http://localhost:9080'
@@ -180,6 +238,8 @@ services:
       gitlab:
         condition: service_healthy
     environment:
+      KANCHI_POSTGRES_PASSWORD: "${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}"
+      GITLAB_GROUP_NAME: "${GITLAB_GROUP_NAME:-speleodb}"
       GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
       GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
       GITLAB_TEST_GROUP_NAME: speleodb-test

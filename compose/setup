@@ -5,6 +5,7 @@ set -o nounset
 set -o pipefail
 
 bash /app/compose/prepare_node_modules
+python compose/setup_kanchi_database.py
 
 python compose/setup_local_gitlab.py \
     --env-file /app/.env \
@@ -16,5 +17,6 @@ if [[ "$(id -u)" == "0" ]]; then
     chown --reference=/app /app/.envs/test.env
 fi
 python manage.py create_s3_local_buckets
-python manage.py migrate || echo "Failed to apply django migrations ..."
+python manage.py migrate
+python manage.py install_background_schedules
 python manage.py ensure_local_superuser

@@ -28,6 +28,11 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["*"]
 
+# Git/test scratch files are data, not application code. Docker bind mounts also
+# expose watchdog/inotify races when those directories are removed during tests.
+RUNSERVERPLUS_POLLER_RELOADER_TYPE: str = "stat"
+RUNSERVER_PLUS_EXCLUDE_PATTERNS: list[str] = ["*/.workdir/*"]
+
 # GITLAB
 # ------------------------------------------------------------------------------
 GITLAB_HTTP_PROTOCOL = "http"

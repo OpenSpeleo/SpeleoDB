@@ -85,7 +85,7 @@ project and container prefix:
 
 ```bash
 COMPOSE_INSTANCE_PREFIX=speleodb_fresh \
-  docker compose -p speleodb_fresh -f local.yml up --build django-webserver
+  docker compose -p speleodb_fresh -f local.yml up --build
 ```
 
 Compose creates new project-prefixed volumes. The old stack must be stopped so

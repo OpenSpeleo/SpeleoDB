@@ -1314,6 +1314,30 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/user/exports/",
+        "module": "speleodb.api.v2.views.user_export.UserExportListView",
+        "name": "api:v1:user-exports",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/exports/<uuid:id>/",
+        "module": "speleodb.api.v2.views.user_export.UserExportDetailView",
+        "name": "api:v1:user-export-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/exports/<uuid:id>/download/",
+        "module": "speleodb.api.v2.views.user_export.UserExportDownloadView",
+        "name": "api:v1:user-export-download",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/user/exports/<uuid:id>/retry/",
+        "module": "speleodb.api.v2.views.user_export.UserExportRetryView",
+        "name": "api:v1:user-export-retry",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/user/gis_views/",
         "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementListApiView",
         "name": "api:v1:gis-views",
@@ -2178,6 +2202,30 @@
         "decorators": ""
     },
     {
+        "url": "/api/v2/user/exports/",
+        "module": "speleodb.api.v2.views.user_export.UserExportListView",
+        "name": "api:v2:user-exports",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/exports/<uuid:id>/",
+        "module": "speleodb.api.v2.views.user_export.UserExportDetailView",
+        "name": "api:v2:user-export-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/exports/<uuid:id>/download/",
+        "module": "speleodb.api.v2.views.user_export.UserExportDownloadView",
+        "name": "api:v2:user-export-download",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/user/exports/<uuid:id>/retry/",
+        "module": "speleodb.api.v2.views.user_export.UserExportRetryView",
+        "name": "api:v2:user-export-retry",
+        "decorators": ""
+    },
+    {
         "url": "/api/v2/user/gis_views/",
         "module": "speleodb.api.v2.views.gis_view_management.GISViewManagementListApiView",
         "name": "api:v2:gis-views",
@@ -2397,6 +2445,12 @@
         "url": "/private/experiments/",
         "module": "frontend_private.views.experiments.ExperimentListingView",
         "name": "private:experiments",
+        "decorators": ""
+    },
+    {
+        "url": "/private/exports/",
+        "module": "frontend_private.views.user.ExportsView",
+        "name": "private:user_exports",
         "decorators": ""
     },
     {

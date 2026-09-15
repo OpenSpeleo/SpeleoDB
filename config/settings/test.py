@@ -11,6 +11,7 @@ Test Django settings for SpeleoDB project.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -41,6 +42,10 @@ from .base import env  # noqa: E402
 
 # Have to overwrite because of `USE_DOCKER` in base.py
 DATABASES = {"default": env.db("DATABASE_URL")}
+# A real Celery child process must connect to pytest's already-created PostgreSQL
+# database, without having the private test dotenv replace that exact address.
+if test_database_url := env.str("TEST_DATABASE_URL", default=""):
+    DATABASES = {"default": env.db_url_config(test_database_url)}
 # DATABASES = {
 #     "default": {
 #         "ENGINE": "django.db.backends.sqlite3",
@@ -127,3 +132,12 @@ INSTALLED_APPS += ["django_extensions"]
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# Real worker tests opt into an isolated broker explicitly. Ordinary tests use
+# an in-process transport that cannot reach development workers or Kanchi.
+CELERY_BROKER_URL = env.str("TEST_CELERY_BROKER_URL", default="memory://")
+# Celery reads this environment key before its app configuration. Override the
+# inherited development broker so test settings actually isolate every publisher.
+os.environ["CELERY_BROKER_URL"] = CELERY_BROKER_URL
+EXPORTS_MODE = "all"
+EXPORTS_PUBLIC_BASE_URL = "http://testserver"

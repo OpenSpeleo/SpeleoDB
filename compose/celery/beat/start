@@ -2,7 +2,8 @@
 
 set -o errexit
 set -o nounset
+set -o pipefail
 
-
-rm -f './celerybeat.pid'
-exec watchfiles --filter python celery.__main__.main --args '-A config.celery_app beat -l INFO'
+# The management command holds a PostgreSQL advisory lock for its lifetime.
+# Its PID file is container-local; no shared source-tree PID is deleted.
+exec python manage.py run_background_beat

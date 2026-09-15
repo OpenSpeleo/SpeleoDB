@@ -89,10 +89,10 @@ dependencies = [
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
-    "celery==5.6.3",             # https://github.com/celery/celery
-    "django-celery-beat==2.9.0", # https://github.com/celery/django-celery-beat
-    "flower==2.1.0",             # https://github.com/mher/flower
-    "watchfiles==1.2.0",         # https://github.com/samuelcolvin/watchfiles
+    "celery==5.6.3",               # https://github.com/celery/celery
+    "django-celery-beat==2.9.0",    # https://github.com/celery/django-celery-beat
+    "django-celery-results==2.6.0", # https://github.com/celery/django-celery-results
+    "watchfiles==1.2.0",           # https://github.com/samuelcolvin/watchfiles
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------

@@ -84,6 +84,7 @@ from frontend_private.views import ToolDMP2Json
 from frontend_private.views import ToolDMPDoctor
 from frontend_private.views import ToolXLSToArianeDMP
 from frontend_private.views import ToolXLSToCompass
+from frontend_private.views.user import ExportsView
 
 app_name = "private"
 
@@ -315,6 +316,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("feedback/", FeedbackView.as_view(), name="user_feedback"),
     path("password/", PassWordView.as_view(), name="user_password"),
     path("preferences/", PreferencesView.as_view(), name="user_preferences"),
+    path("exports/", ExportsView.as_view(), name="user_exports"),
     path("station_tags/", StationTagsView.as_view(), name="station_tags"),
     # Teams URLs
     path("teams/", TeamListingView.as_view(), name="teams"),

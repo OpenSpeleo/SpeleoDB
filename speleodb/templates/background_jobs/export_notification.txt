@@ -1,0 +1,13 @@
+{% load tz %}{% autoescape off %}{{ subject }}
+
+{{ message }}
+{% if has_artifact %}
+Archive: {{ filename }}
+Size: {{ size_bytes|filesizeformat }} ({{ size_bytes }} bytes)
+Available until {{ expires_at|timezone:"UTC"|date:"Y-m-d H:i" }} UTC.
+{% endif %}
+Sign in to your account:
+{{ url }}
+
+Downloads require login and are available for 24 hours after generation completes.
+{% endautoescape %}

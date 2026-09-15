@@ -7,14 +7,13 @@ from decimal import InvalidOperation
 from typing import Any
 from typing import ClassVar
 
-from geojson import Feature  # type: ignore[attr-defined]
-from geojson import Point  # type: ignore[attr-defined]
 from rest_framework import serializers
 
 from speleodb.api.v2.landmark_access import user_has_collection_access
 from speleodb.api.v2.landmark_access import user_has_landmark_access
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
+from speleodb.gis.landmark_geojson import landmark_geojson_feature
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.utils.gps_utils import format_coordinate
@@ -210,22 +209,6 @@ class LandmarkGeoJSONSerializer(serializers.ModelSerializer[Landmark]):
             else False
         )
 
-        return Feature(  # type: ignore[no-untyped-call]
-            id=str(instance.id),
-            geometry=Point((float(instance.longitude), float(instance.latitude))),  # type: ignore[no-untyped-call]
-            properties={
-                "name": instance.name,
-                "description": instance.description,
-                "collection": str(instance.collection_id),
-                "collection_name": instance.collection.name,
-                "collection_type": instance.collection.collection_type,
-                "collection_color": instance.collection.color,
-                "is_personal_collection": instance.collection.is_personal,
-                "can_write": can_write,
-                "can_delete": can_write,
-                "created_by": instance.created_by,
-                "creation_date": instance.creation_date.isoformat()
-                if instance.creation_date
-                else None,
-            },
-        )
+        feature = landmark_geojson_feature(instance)
+        feature["properties"].update(can_write=can_write, can_delete=can_write)
+        return feature

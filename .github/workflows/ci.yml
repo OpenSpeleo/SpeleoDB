@@ -122,6 +122,12 @@ jobs:
       CELERY_BROKER_URL: "redis://localhost:6379/0"
       # postgres://user:password@host:port/database
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      # Provisioning tests connect directly; service env is not inherited here.
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
 
     steps:
       - name: Checkout Code Repository

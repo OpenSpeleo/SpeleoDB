@@ -103,10 +103,6 @@ COPY ./compose/celery/beat/start /start-celerybeat
 RUN sed -i 's/\r$//g' /start-celerybeat
 RUN chmod +x /start-celerybeat
 
-COPY ./compose/celery/flower/start /start-flower
-RUN sed -i 's/\r$//g' /start-flower
-RUN chmod +x /start-flower
-
 # Create devcontainer user and add it to sudoers
 RUN groupadd --gid 1000 dev-user \
     && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \

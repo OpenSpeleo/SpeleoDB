@@ -18,11 +18,16 @@
     // VS Code tunnel only: Docker still uses host networking and publishes no
     // container port. This makes port 8000 appear automatically in Ports.
     "forwardPorts": [
-        8000
+        8000,
+        8765
     ],
     "portsAttributes": {
         "8000": {
             "label": "SpeleoDB Django",
+            "onAutoForward": "notify"
+        },
+        "8765": {
+            "label": "Kanchi task dashboard",
             "onAutoForward": "notify"
         }
     },

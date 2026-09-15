@@ -2,6 +2,11 @@
 
 set -o errexit
 set -o nounset
+set -o pipefail
 
-
-exec watchfiles --filter python celery.__main__.main --args '-A config.celery_app worker -l INFO'
+# Explicit restarts preserve long-running export attempts during development.
+# Host-networked Compose replicas share %h, so each worker needs its own name.
+read -r worker_id < /proc/sys/kernel/random/uuid
+exec celery -A config.celery_app worker --loglevel INFO --events \
+    --queues exports,background_control --concurrency 1 --prefetch-multiplier 1 \
+    --hostname "worker-${worker_id}@%h"

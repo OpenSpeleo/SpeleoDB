@@ -7,6 +7,7 @@
 {% endblock extra_css %}
 
 {% block content %}
+{% block account_welcome %}
 <!-- Welcome banner -->
 <div class="relative bg-indigo-200 bg-indigo-500 p-4 sm:p-6 rounded-xs overflow-hidden mb-8">
 
@@ -59,6 +60,7 @@
     </div>
 
 </div>
+{% endblock account_welcome %}
 <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x -mt-8">
 
@@ -66,7 +68,7 @@
         <div class="mb-8">
 
             <!-- Title -->
-            <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Account Settings ✨</h1>
+            <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">{% block account_heading %}Account Settings ✨{% endblock account_heading %}</h1>
 
         </div>
 
@@ -76,13 +78,13 @@
                 <!-- Mobile Dropdown Menu -->
                 <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
                     <div class="relative">
-                        <button
+                        <button type="button"
                             @click="open = !open"
                             :class="open ? 'open' : ''"
                             class="settings-dropdown-trigger">
                             <span>Account Settings</span>
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
 
@@ -149,6 +151,19 @@
                                         <path d="M18 9v11" />
                                     </svg>
                                     <span>My Preferences</span>
+                                </a>
+                            </div>
+
+                            <!-- Backup Section -->
+                            <div class="settings-dropdown-section">
+                                <div class="settings-dropdown-section-title">Backup your data</div>
+                                <a href="{% url 'private:user_exports' %}" class="settings-dropdown-item {% if request.url_name == 'user_exports' %}active{% endif %}">
+                                    <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
+                                        <path d="M12 13l0 9" />
+                                        <path d="M9 19l3 3l3 -3" />
+                                    </svg>
+                                    <span>Export / Backup</span>
                                 </a>
                             </div>
 
@@ -275,7 +290,26 @@
                             </li>
                         </ul>
                     </div>
+
                     <!-- Group 2 -->
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Backup your data</div>
+                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                            <!-- Accont Info -->
+                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                                <a class="flex items-center px-2.5 py-2 rounded-sm text-sm font-medium {% if request.url_name == 'user_exports' %}bg-srgb-indigo-500-30 text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}" href="{% url 'private:user_exports' %}">
+                                    <svg class="w-4 h-4 mr-2 shrink-0 fill-none stroke-current {% if request.url_name == 'user_exports' %}text-indigo-400{% else %}text-slate-500{% endif %}" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
+                                        <path d="M12 13l0 9" />
+                                        <path d="M9 19l3 3l3 -3" />
+                                    </svg>
+                                    <span>Export / Backup</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Group 3 -->
                     <div>
                         <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
                         <ul class="flex flex-nowrap md:block mr-3 md:mr-0">

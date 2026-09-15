@@ -9,11 +9,13 @@ REDIS_URL=redis://localhost:6379/0
 
 # Celery
 # ------------------------------------------------------------------------------
+# CELERY_BROKER_URL is interpolated from the private root .env in local.yml.
+EXPORTS_MODE=all
 
 # GitLab (local Compose service)
 # ------------------------------------------------------------------------------
-GITLAB_GROUP_NAME=speleodb
 GITLAB_HOST_URL=localhost:9080
+# GITLAB_GROUP_NAME is interpolated from the private root .env in local.yml.
 # GITLAB_GROUP_ID and GITLAB_TOKEN are provisioned into the ignored .env file.
 
 # RustFS / S3-compatible local object storage
@@ -24,11 +26,6 @@ AWS_S3_REGION_NAME=us-east-1
 AWS_S3_ENDPOINT_URL=http://localhost:9000
 AWS_S3_CUSTOM_DOMAIN=localhost:9000/speleodb-user-artifacts-dev
 # AWS_STORAGE_BUCKET_NAME is provisioned into the ignored .env file.
-
-# Flower
-# ------------------------------------------------------------------------------
-CELERY_FLOWER_USER=debug
-CELERY_FLOWER_PASSWORD=debug
 
 # Django
 # -------------------------------------------------------------------------------

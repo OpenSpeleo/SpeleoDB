@@ -24,8 +24,6 @@ jobs:
     env:
       DJANGO_DEBUG: True
       USE_DOCKER: yes
-      CELERY_FLOWER_USER: debug
-      CELERY_FLOWER_PASSWORD: debug
       # no effect. This job does not access the DB
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
       POSTGRES_HOST: localhost

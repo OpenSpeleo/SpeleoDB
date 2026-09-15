@@ -140,6 +140,7 @@ THIRD_PARTY_APPS = [
     "allauth.account",
     "allauth.headless",
     "django_celery_beat",
+    "django_celery_results",
     # DRF
     "corsheaders",
     "drf_spectacular",
@@ -173,6 +174,7 @@ LOCAL_APPS = [
     "speleodb.git_proxy",
     # Object Apps
     "speleodb.common",
+    "speleodb.background_jobs",
     "speleodb.gis",
     "speleodb.permissions",
     "speleodb.plugins",
@@ -527,9 +529,41 @@ if USE_TZ:
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = ""  # env("CELERY_BROKER_URL")
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379/1")
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_RESULT_EXPIRES = 30 * 24 * 60 * 60
+CELERY_BROKER_CONNECTION_TIMEOUT = 3
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": 3600,
+    "socket_connect_timeout": 3,
+    "socket_timeout": 5,
+}
+CELERY_VISIBILITY_TIMEOUT = 3600
+CELERY_TASK_DEFAULT_QUEUE = "background_control"
+CELERY_TASK_ROUTES = {
+    "speleodb.background_jobs.tasks.generate_export": {"queue": "exports"},
+    "speleodb.background_jobs.tasks.*": {"queue": "background_control"},
+    "celery.backend_cleanup": {"queue": "background_control"},
+}
+
+# Export creation is enabled explicitly during rollout. Downloads and cleanup
+# remain available when creation is disabled. Beat owns all scheduling; Railway
+# runs long-lived services and never configures a cron job for these tasks.
+EXPORTS_MODE = env.str("EXPORTS_MODE", default="disabled")
+EXPORTS_HARD_TIME_LIMIT = 30 * 60
+EXPORTS_SOFT_TIME_LIMIT = 25 * 60
+EXPORTS_MAX_ATTEMPTS = 3
+# The worker creates this directory with mode 0700 and uses private mkdtemp
+# subdirectories for individual archives.
+EXPORTS_SCRATCH_DIR = env.str("EXPORTS_SCRATCH_DIR", default="/tmp/speleodb-exports")  # noqa: S108
+EXPORTS_PUBLIC_BASE_URL = env.str("EXPORTS_PUBLIC_BASE_URL", default="")
+EXPORT_MIN_FREE_BYTES = env.int("EXPORT_MIN_FREE_BYTES", default=64 * 1024 * 1024)
+EXPORT_GPX_MAX_BYTES = env.int("EXPORT_GPX_MAX_BYTES", default=16 * 1024 * 1024)
+EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
+KANCHI_URL = env.str("KANCHI_URL", default="")
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended
 CELERY_RESULT_EXTENDED = True
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-backend-always-retry

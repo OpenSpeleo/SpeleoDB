@@ -10,10 +10,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.background_jobs.services import can_request_export
 
 if TYPE_CHECKING:
     from django.http import HttpResponse
 
+    from speleodb.users.models import User
     from speleodb.utils.requests import AuthenticatedHttpRequest
 
 
@@ -62,6 +64,16 @@ class FeedbackView(AuthenticatedTemplateView):
 
 class PreferencesView(AuthenticatedTemplateView):
     template_name = "pages/user/preferences.html"
+
+
+class ExportsView(AuthenticatedTemplateView):
+    template_name = "pages/user/exports.html"
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context: dict[str, Any] = super().get_context_data(**kwargs)
+        user: User = self.request.user  # type: ignore[assignment]
+        context["can_request_export"] = can_request_export(user)
+        return context
 
 
 class StationTagsView(AuthenticatedTemplateView):
