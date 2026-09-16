@@ -22,8 +22,11 @@ FileUploadView.put()
   └─ return SuccessResponse
 ```
 
-Every step above can fail. The view catches broad exception categories and
-converts them to `ErrorResponse(status=500)`.
+Every step above can fail. The view preserves the appropriate client response
+(including 400, 415, and 500) while reporting upload input, file-processing, and
+Git failures to Sentry. Optional GeoJSON generation may fail after the source
+commit succeeds; those failures are reported without changing the successful
+upload response.
 
 ---
 
@@ -67,37 +70,82 @@ database access and verifies this boundary with SQLite and PostgreSQL alike.
 
 ## Why admin email shows `Traceback: None`
 
-Django 6.0's `BaseHandler.get_response()` calls `log_response()` for all
+Django's `BaseHandler.get_response()` calls `log_response()` for all
 responses with `status_code >= 400`. This `log_response` call does **not** pass
 `exc_info` because there is no active Python exception at that point (the view
-already caught it). The `django.request` logger fires at ERROR level →
-`AdminEmailHandler` → `ExceptionReporter` with no traceback →
+already caught it). For 5xx responses, the `django.request` logger fires at
+ERROR level → `AdminEmailHandler` → `ExceptionReporter` with no traceback →
 `Traceback (most recent call last): None`.
+
+For 4xx responses, Django logs at WARNING instead. Production's admin-email
+handler requires ERROR, and application loggers use the console handler, so an
+upload's application ERROR log does not itself send an admin email. Sentry issue
+reporting is a separate path; the upload reporting policy below does not change
+admin-email configuration.
 
 ---
 
-## Why Sentry didn't capture these errors
+## How caught exceptions reach Sentry
 
-Sentry's `DjangoIntegration` hooks into the `got_request_exception` signal. That
-signal is only emitted by `response_for_exception()`, which is only called from
-`convert_exception_to_response()` when an **uncaught** exception propagates out
-of the view/middleware chain.
+Sentry's `DjangoIntegration` observes unhandled request exceptions. A view that
+catches an exception and returns an error response does not emit Django's
+`got_request_exception` signal for that exception, so response status alone does
+not guarantee an exception event.
 
-Additionally, the `django.request` logger in production had `propagate: False`,
-so Sentry's `LoggingIntegration` never saw the error-level log records either.
+Production also enables `LoggingIntegration(event_level=logging.ERROR)`, which
+captures application ERROR logs, including `logger.exception(...)`. The SDK
+patches `logging.Logger.callHandlers`; `propagate=False` does **not** prevent
+that capture. `DjangoIntegration` explicitly ignores `django.request` and
+`django.server` for logging events to avoid duplicate framework reports.
 
-### The fix
+Previously, upload `handle_exception()` explicitly captured only 5xx failures.
+A caught `BadZipFile` returned 400 and skipped that call. Its application ERROR
+log should still have produced an event when production's logging integration
+was active, so the status guard alone cannot establish why a particular
+production issue or alert was absent.
 
-1. `handle_exception()` now calls `logger.exception(...)` (full traceback to
-   console/Railway logs) and `sentry_sdk.capture_exception(...)` (explicit
-   Sentry event).
-2. `DRFWrapResponseMiddleware` does the same in its `except Exception` block,
-   catching anything that escapes the view layer. Note that this middleware only
-   runs for the legacy `/api/v1/` path — all `/api/v2/` responses are returned
-   verbatim without any wrapping or exception re-handling, so v2 views rely on
-   their own `handle_exception()` hooks.
-3. The `django.request` logger now includes the `console` handler so error
-   records appear in stdout.
+### Upload reporting policy
+
+HTTP status describes the client's outcome; it does not decide whether an
+operator needs a report. Reporting stays in the project-upload view so other
+API endpoints retain their existing policies.
+
+- `handle_exception()` logs the original traceback and calls
+  `sentry_sdk.capture_exception(...)` for every handled upload failure,
+  including 400 validation/parser errors, 415 rejected files, and 500 Git or
+  internal failures. Transaction rollback and existing-checkout cleanup retain
+  their existing behavior.
+- `upload_input_error()` uses `capture_message(..., level="error")` for direct
+  validation responses, such as missing files or messages, unsupported formats,
+  and file-count/size limits. These branches have no raised exception, so they
+  report the validation message without manufacturing a traceback.
+- `FileUploadView.handle_exception()` captures DRF parsing, media-type, and
+  validation exceptions that escape `put()`, then delegates to DRF to preserve
+  response behavior. Unexpected exceptions that propagate beyond DRF retain
+  Django's normal unhandled-exception reporting. Ordinary authentication and
+  permission rejections are outside this processing policy.
+- Caught optional GeoJSON conversion and S3 failures are captured even when the
+  uploaded source has already been committed successfully. A secondary Git
+  cleanup failure is captured independently of the original upload failure.
+- Normal no-op outcomes remain unchanged: duplicate or unchanged files, absent
+  GPS anchors, empty surveys, excluded GeoJSON generation, and an incomplete
+  Compass bundle without a MAK file. They do not become processing failures.
+
+The default SDK deduplication integration prevents the same exception object
+from producing duplicate events when both logging and explicit capture run.
+Reporting adds no database queries, file rescans, or Git operations; validation
+reports do not invoke upload rollback or repository cleanup.
+
+`DRFWrapResponseMiddleware` remains a legacy `/api/v1/` backstop. It logs and
+explicitly captures caught internal exceptions. It returns `/api/v2/` responses
+verbatim, so it does not provide reporting for v2 uploads.
+
+Local tests observe real SDK event construction through `before_send`, with an
+empty DSN to prevent external delivery. They verify capture policy and exception
+identity, not remote ingestion or alert delivery. Production DSN/integration
+state, transport failures, issue grouping, filters, and alert rules require
+separate runtime evidence; remote ingestion and alert delivery have not been
+verified by these tests.
 
 ---
 
@@ -162,15 +210,17 @@ status >= 500 **must** follow this protocol:
    before the error. Tells Django's `ATOMIC_REQUESTS` to roll back the entire
    transaction.
 
-Views that return 4xx for user-input errors (e.g. `BadZipFile`,
-`ValidationError`, `FileNotFoundError`) do **not** need Sentry capture or
-rollback — those are expected outcomes, not internal failures.
+For project uploads, the reporting policy above also applies to 4xx input and
+processing failures. Other endpoints retain their own expected-input-error
+policies. Rollback depends on whether failed work may have written database
+rows, not on whether the response is 4xx or 5xx; upload `handle_exception()`
+always rolls back.
 
 ### Files covered by this protocol
 
 | File                  | View                          | Sentry | Rollback | Notes                                                                                                                                            |
 | --------------------- | ----------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `file.py`             | `FileUploadView`              | Yes    | Yes      | via `handle_exception()`                                                                                                                         |
+| `file.py`             | `FileUploadView`              | Yes    | Yes      | all upload processing failures; rollback through `handle_exception()`, separate reporting for input validation and optional conversion failures |
 | `file.py`             | `FileDownloadView`            | Yes    | No       | read-only, no DB writes                                                                                                                          |
 | `gpx_import.py`       | `GPXImportView`               | Yes    | Yes      | `Landmark` + `GPSTrack` writes                                                                                                                   |
 | `kml_kmz_import.py`   | `KML_KMZ_ImportView`          | Yes    | Yes      | `Landmark` writes                                                                                                                                |
@@ -227,13 +277,17 @@ except IntegrityError:
 
 ## Running the tests
 
+Use the already-running application container and run suites serially. Upload
+integration tests use real GitLab repositories and must follow the shared pool
+and audit requirements in [the GitLab testing contract](ci-gitlab-testing.md).
+
 ```bash
 # Git retry tests (no DB, no network)
-pytest speleodb/git_engine/tests/test_git_retry.py -v
+docker exec -w /app speleodb_local_django pytest speleodb/git_engine/tests/test_git_retry.py -v
 
-# Upload error-handling tests (requires DB)
-pytest speleodb/api/v2/tests/test_file_upload_error_handling.py -v
+# Upload error-handling tests (requires DB and real GitLab)
+docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_file_upload_error_handling.py -v
 
 # All error-reporting tests (Sentry capture across all views)
-pytest speleodb/api/v2/tests/test_error_reporting.py -v
+docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_error_reporting.py -v
 ```

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import io
 import pathlib
 import shutil
 import tempfile
@@ -11,13 +12,17 @@ import uuid
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import cast
+from zipfile import BadZipFile
+from zipfile import ZipFile
 
 import git
 import gitlab.exceptions
 import pytest
 import sentry_sdk
 from allauth.account.models import EmailAddress
+from compass_lib.geojson import NoKnownAnchorError as CompassNoKnownAnchorError
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db import transaction
@@ -30,9 +35,13 @@ from django.urls import reverse
 from django.views.static import serve
 from git.exc import GitCommandError
 from rest_framework import status
+from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import UnsupportedMediaType
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.test import APIClient
+from sentry_sdk.integrations.dedupe import DedupeIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import TokenFactory
@@ -50,6 +59,8 @@ from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.users.tests.factories import UserFactory
+from speleodb.utils.exceptions import FileRejectedError
+from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -94,11 +105,11 @@ class SentryEventTestCase(TransactionTestCase):
         self.sentry_events.append((event, hint))
         return event
 
-    def _reported_exception(self) -> BaseException:
-        assert len(self.sentry_events) == 1, self.sentry_events
+    def _reported_exception(self, *, index: int = 0, count: int = 1) -> BaseException:
+        assert len(self.sentry_events) == count, self.sentry_events
         event: Event
         hint: Hint
-        event, hint = self.sentry_events[0]
+        event, hint = self.sentry_events[index]
         assert event.get("exception"), event
         exc_info = hint.get("exc_info")
         assert exc_info is not None
@@ -122,6 +133,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        self.enterContext(override_settings(DEBUG=False))
         assert connection.settings_dict["ATOMIC_REQUESTS"] is True
         assert not connection.in_atomic_block
         project_directory: str = self.enterContext(tempfile.TemporaryDirectory())
@@ -175,10 +187,17 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             ]
         )
 
-    def _do_upload(self, filename: str = "test_simple.tml") -> Response:
+    def _do_upload(
+        self,
+        filename: str = "test_simple.tml",
+        *,
+        content: bytes | None = None,
+        message: str = "integration failure upload",
+        fileformat: FileFormat = FileFormat.ARIANE_TML,
+    ) -> Response:
         artifact: SimpleUploadedFile = SimpleUploadedFile(
             filename,
-            (BASE_DIR / "test_simple.tml").read_bytes(),
+            (BASE_DIR / "test_simple.tml").read_bytes() if content is None else content,
             content_type="application/octet-stream",
         )
         response = self.client.put(
@@ -186,10 +205,10 @@ class UploadErrorHandlingTests(SentryEventTestCase):
                 "api:v2:project-upload",
                 kwargs={
                     "id": self.project.id,
-                    "fileformat": FileFormat.ARIANE_TML.label.lower(),
+                    "fileformat": fileformat.label.lower(),
                 },
             ),
-            {"artifact": artifact, "message": "integration failure upload"},
+            {"artifact": artifact, "message": message},
             format="multipart",
             headers={"authorization": f"Token {self.token.key}"},
         )
@@ -222,9 +241,12 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             response: Response = self._do_upload()
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        exception: BaseException = self._reported_exception()
+        exception: BaseException = self._reported_exception(count=2)
         assert isinstance(exception, GitCommandError), exception
         assert "index.lock" in str(exception)
+        cleanup_error: BaseException = self._reported_exception(index=1, count=2)
+        assert isinstance(cleanup_error, GitCommandError), cleanup_error
+        assert "index.lock" in str(cleanup_error)
         assert any("index.lock" in entry for entry in logs.output)
         assert self.repo.head.commit.hexsha == self.original_head
         self._assert_no_upload_writes()
@@ -287,21 +309,184 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         assert not self.project.git_repo_dir.exists()
         self._assert_no_upload_writes()
 
-    def test_file_rejected_error_returns_415_without_sentry(self) -> None:
+    def test_file_rejected_error_returns_415_with_sentry(self) -> None:
         response: Response = self._do_upload(filename="unsafe.sh")
 
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         assert "rejected for security reasons" in str(response.data)
-        assert not self.sentry_events
+        assert isinstance(self._reported_exception(), FileRejectedError)
         self._assert_no_upload_writes()
 
-    def test_validation_error_returns_400_without_sentry(self) -> None:
+    def test_validation_error_returns_400_with_sentry(self) -> None:
         response: Response = self._do_upload(filename="unsupported.invalid")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Invalid file extension" in str(response.data)
-        assert not self.sentry_events
+        assert isinstance(self._reported_exception(), ValidationError)
         self._assert_no_upload_writes()
+
+    def test_bad_zip_returns_400_with_sentry_and_rollback(self) -> None:
+        response: Response = self._do_upload(content=b"This is not a ZIP archive.")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, BadZipFile), exception
+        assert str(exception) == "File is not a zip file"
+        event: Event = self.sentry_events[0][0]
+        assert (
+            event["exception"]["values"][-1]["stacktrace"]["frames"][-1]["function"]
+            == "_RealGetContents"
+        )
+        self._assert_no_upload_writes()
+        assert not self.repo.is_dirty(untracked_files=True)
+
+    def test_bad_zip_reports_once_with_sentry_logging_enabled(self) -> None:
+        sentry_client: sentry_sdk.Client = sentry_sdk.Client(
+            dsn="",
+            default_integrations=False,
+            auto_enabling_integrations=False,
+            integrations=[LoggingIntegration(), DedupeIntegration()],
+            before_send=self._record_sentry_event,
+        )
+        self.addCleanup(sentry_client.close)
+        scope: sentry_sdk.Scope = self.enterContext(sentry_sdk.isolation_scope())
+        scope.set_client(sentry_client)
+
+        response: Response = self._do_upload(content=b"This is not a ZIP archive.")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert isinstance(self._reported_exception(), BadZipFile)
+        self._assert_no_upload_writes()
+
+    def test_missing_message_reports_input_error_without_upload_writes(self) -> None:
+        response: Response = self._do_upload(message="")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert len(self.sentry_events) == 1
+        event: Event = self.sentry_events[0][0]
+        assert event["level"] == "error"
+        assert "Empty or no `message`" in event["message"]
+        self._assert_no_upload_writes()
+
+    def test_invalid_compass_zip_extension_reports_input_error(self) -> None:
+        response: Response = self._do_upload(fileformat=FileFormat.COMPASS_ZIP)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert len(self.sentry_events) == 1
+        assert "'.zip' extension" in self.sentry_events[0][0]["message"]
+        self._assert_no_upload_writes()
+
+    def test_malformed_json_reports_parser_exception(self) -> None:
+        response = self.client.put(
+            reverse(
+                "api:v2:project-upload",
+                kwargs={
+                    "id": self.project.id,
+                    "fileformat": FileFormat.ARIANE_TML.label.lower(),
+                },
+            ),
+            b'{"message":',
+            content_type="application/json",
+            headers={"authorization": f"Token {self.token.key}"},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert isinstance(self._reported_exception(), ParseError)
+        self._assert_no_upload_writes()
+
+    def test_unsupported_request_media_type_reports_parser_exception(self) -> None:
+        response = self.client.put(
+            reverse(
+                "api:v2:project-upload",
+                kwargs={
+                    "id": self.project.id,
+                    "fileformat": FileFormat.ARIANE_TML.label.lower(),
+                },
+            ),
+            b"invalid request body",
+            content_type="application/octet-stream",
+            headers={"authorization": f"Token {self.token.key}"},
+        )
+
+        assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+        assert isinstance(self._reported_exception(), UnsupportedMediaType)
+        self._assert_no_upload_writes()
+
+    def test_geojson_parser_failure_reports_after_source_upload(self) -> None:
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["exclude_geojson"])
+        content: io.BytesIO = io.BytesIO()
+        with ZipFile(content, "w") as archive:
+            archive.writestr("unrelated.txt", "Archive without Ariane survey data")
+
+        response: Response = self._do_upload(content=content.getvalue())
+
+        assert response.status_code == status.HTTP_200_OK
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, OSError), exception
+        assert "specified file not found in archive" in str(exception)
+        assert self._remote_head() != self.original_head
+        assert Format.objects.filter(project=self.project).exists()
+        assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
+
+    def test_compass_conversion_failure_reports_after_source_upload(self) -> None:
+        self.project.type = ProjectType.COMPASS
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["type", "exclude_geojson"])
+
+        response: Response = self._do_upload(
+            filename="sample.mak",
+            content=(BASE_DIR / "sample.mak").read_bytes(),
+            fileformat=FileFormat.AUTO,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        exception: BaseException = self._reported_exception()
+        assert isinstance(exception, GeoJSONGenerationError), exception
+        assert isinstance(exception.__cause__, CompassNoKnownAnchorError)
+        assert "no shots available" in str(exception.__cause__)
+        assert self._remote_head() != self.original_head
+        assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
+
+    def test_incomplete_compass_bundle_does_not_report_an_error(self) -> None:
+        self.project.type = ProjectType.COMPASS
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["type", "exclude_geojson"])
+
+        response: Response = self._do_upload(
+            filename="sample-1.dat",
+            content=(BASE_DIR / "sample-1.dat").read_bytes(),
+            fileformat=FileFormat.AUTO,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert not self.sentry_events
+
+    def test_successful_and_unchanged_uploads_do_not_report_errors(self) -> None:
+        response: Response = self._do_upload()
+        assert response.status_code == status.HTTP_200_OK
+        unchanged = self.client.put(
+            reverse(
+                "api:v2:project-upload",
+                kwargs={
+                    "id": self.project.id,
+                    "fileformat": FileFormat.ARIANE_TML.label.lower(),
+                },
+            ),
+            {
+                "artifact": SimpleUploadedFile(
+                    "test_simple.tml",
+                    (BASE_DIR / "test_simple.tml").read_bytes(),
+                    content_type="application/octet-stream",
+                ),
+                "message": "unchanged upload",
+            },
+            format="multipart",
+            headers={"authorization": f"Token {self.token.key}"},
+        )
+
+        assert unchanged.status_code == status.HTTP_304_NOT_MODIFIED
+        assert not self.sentry_events
 
 
 class ConstructGitHistorySavepointTests(TransactionTestCase):

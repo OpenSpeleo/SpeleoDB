@@ -32,6 +32,9 @@ from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
 from rest_framework import status
+from rest_framework.exceptions import ParseError
+from rest_framework.exceptions import UnsupportedMediaType
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v2.permissions import SDB_ReadAccess
@@ -78,6 +81,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def upload_input_error(data: dict[str, str], *, status: int) -> ErrorResponse:
+    """Report rejected upload input even when validation did not raise."""
+    sentry_sdk.capture_message(data["error"], level="error")
+    return ErrorResponse(data, status=status)
+
+
 def handle_exception(
     exception: Exception,
     message: str,
@@ -90,8 +99,8 @@ def handle_exception(
         status_code,
         exception,
     )
-    if status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
-        sentry_sdk.capture_exception(exception)
+    # HTTP status describes the client response, not whether operators need a report.
+    sentry_sdk.capture_exception(exception)
 
     # Roll back the entire DB transaction so no partial writes (Format
     # rows, ProjectCommit rows, etc.) survive a failed upload.  This is
@@ -110,12 +119,13 @@ def handle_exception(
             git_repo = GitRepo(project.git_repo_dir)
             with git_repo:
                 git_repo.reset_and_remove_untracked()
-    except Exception:
+    except Exception as cleanup_error:
         logger.warning(
             "Failed to reset git working tree for project %s",
             project.id,
             exc_info=True,
         )
+        sentry_sdk.capture_exception(cleanup_error)
 
     error_msg = message.format(exception)
     return ErrorResponse({"error": error_msg}, status=status_code)
@@ -146,6 +156,13 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    def handle_exception(self, exc: Exception) -> Response:
+        # DRF handles parser errors before Django can emit got_request_exception.
+        # Authentication/permission failures are outside upload processing.
+        if isinstance(exc, (ParseError, UnsupportedMediaType, DRFValidationError)):
+            sentry_sdk.capture_exception(exc)
+        return super().handle_exception(exc)
+
     @extend_schema(operation_id="v2_projects_upload")
     def put(
         self,
@@ -162,8 +179,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                 if fileformat_f.label.lower() not in FileFormat.upload_choices:
                     msg = f"The format: {fileformat_f} is not supported for upload"
-                    logger.exception(f"{msg}, expected: {FileFormat.upload_choices}")
-                    return ErrorResponse(
+                    return upload_input_error(
                         {"error": msg},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
@@ -175,7 +191,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                 try:
                     files = request.FILES.getlist("artifact")
                 except KeyError:
-                    return ErrorResponse(
+                    return upload_input_error(
                         {"error": "Uploaded file(s) `artifact` is/are missing."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
@@ -188,14 +204,14 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             f"Empty or no `message` received: `{commit_message}`."
                         )
                     }
-                    return ErrorResponse(data, status=status.HTTP_400_BAD_REQUEST)
+                    return upload_input_error(data, status=status.HTTP_400_BAD_REQUEST)
 
                 # Remove front and back `\n\r and spaces and in the middle`
                 commit_message = re.sub(r"(?:\s*\n\s*)+", ". ", commit_message.strip())
 
                 # Verify there's at least one file
                 if not files:
-                    return ErrorResponse(
+                    return upload_input_error(
                         {"error": "No files uploaded"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
@@ -203,7 +219,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                 # Verify there's a maximum of `DJANGO_UPLOAD_TOTAL_FILES_LIMIT` files
                 # uploaded in one API call.
                 if len(files) > settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT:
-                    return ErrorResponse(
+                    return upload_input_error(
                         {
                             "error": (
                                 f"Too many files uploaded. Received {len(files)} "
@@ -218,7 +234,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                 # Only one file allowed for Compass ZIP uploads
                 if fileformat_f == FileFormat.COMPASS_ZIP:
                     if len(files) != 1:
-                        return ErrorResponse(
+                        return upload_input_error(
                             {
                                 "error": (
                                     "Only one file upload is allowed for "
@@ -240,7 +256,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         * 1024
                         * 1024
                     ):
-                        return ErrorResponse(
+                        return upload_input_error(
                             {
                                 "error": (
                                     f"The file size for `{file.name}` "
@@ -255,7 +271,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     if not isinstance(
                         file, (InMemoryUploadedFile, TemporaryUploadedFile)
                     ):
-                        return ErrorResponse(
+                        return upload_input_error(
                             {"error": f"Unknown artifact received: `{file.name}`"},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
@@ -264,7 +280,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     total_filesize
                     > settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT * 1024 * 1204
                 ):
-                    return ErrorResponse(
+                    return upload_input_error(
                         {
                             "error": (
                                 f"The total file size submitted: "
@@ -325,7 +341,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                         if fileformat_f == FileFormat.COMPASS_ZIP:
                             # Verify .zip extension (case-insensitive)
                             if not file.name.lower().endswith(".zip"):
-                                return ErrorResponse(
+                                return upload_input_error(
                                     {
                                         "error": (
                                             f"Compass ZIP upload must have a "
@@ -433,8 +449,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     )
                                     continue
 
-                                except Exception:
+                                except Exception as conversion_error:
                                     logger.exception("Error converting to GeoJSON")
+                                    sentry_sdk.capture_exception(conversion_error)
                                     continue
 
                                 try:
@@ -444,8 +461,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                         geojson_data=geojson_data,
                                     )
                                     generated_geojson = True
-                                except ClientError:
+                                except ClientError as storage_error:
                                     logger.exception("Error uploading GeoJSON to S3.")
+                                    sentry_sdk.capture_exception(storage_error)
                                     continue
 
                                 # There can be only one file called `ariane.tml`
@@ -479,17 +497,20 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                         "Compass project files are incomplete for "
                                         f"project `{project.id}`. Skipping GeoJSON..."
                                     )
-                                except GeoJSONGenerationError:
+                                except GeoJSONGenerationError as conversion_error:
                                     logger.info(
                                         "Compass GeoJSON generation failed for "
                                         f"project `{project.id}`. Skipping GeoJSON..."
                                     )
-                                except ClientError:
+                                    sentry_sdk.capture_exception(conversion_error)
+                                except ClientError as storage_error:
                                     logger.exception("Error uploading GeoJSON to S3.")
-                                except Exception:
+                                    sentry_sdk.capture_exception(storage_error)
+                                except Exception as conversion_error:
                                     logger.exception(
                                         "Error converting Compass to GeoJSON"
                                     )
+                                    sentry_sdk.capture_exception(conversion_error)
 
                     with timed_section("HTTP Success Response Construction"):
                         # Refresh the `modified_date` field

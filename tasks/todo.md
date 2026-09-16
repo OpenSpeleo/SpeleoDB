@@ -271,3 +271,17 @@ quote placeholders and the existing example test substitutes fictional values.
 The example test, full mypy (708 files), Ruff, formatting, JSON parity, and the
 repository identifier search passed. See the
 [privacy correction review](todos/shared-storage-policy.md).
+
+## Upload Sentry reporting review
+
+Git, file-processing, and input-processing failures now explicitly report to
+Sentry regardless of HTTP status. Input rejection messages, DRF parsing errors,
+optional conversion/storage failures, and Git cleanup errors are covered while
+preserving response and rollback behavior.
+
+Container verification: 33 tests passed, one existing PostgreSQL-only test
+skipped; Ruff/formatting and full mypy (725 files) passed. The final GitLab
+audit recorded two creations/two POSTs, zero violations or unresolved outcomes,
+and both repositories marked for deletion by session cleanup. Independent review
+completed. Production ingestion/alert delivery remains unverified; no deployment
+was performed. See the [completed review](todos/upload-error-reports.md).
