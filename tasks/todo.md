@@ -1,5 +1,26 @@
 # Task reviews
 
+## Django tests reuse four GitLab repositories
+
+Ordinary Git integration tests now reuse four canonical project identities with
+isolated database rows and local checkouts. Five self-contained lifecycles
+retain creation/deletion coverage. A mandatory transport guard enforces nine
+cumulative creations, tracks each request through subprocesses, and publishes
+cleanup evidence. CI preflight is read-only, and CI shares a concurrency key
+with scheduled cleanup.
+
+The final Python suite in the existing container passed **4,526 tests**, with
+178 configured skips, creating **nine repositories across ten POSTs**. The extra
+POST was an intentional HTTP 400. There were zero violations or unresolved
+outcomes, and all nine repositories had verified deletion marks. PostgreSQL
+rollback/pool checks, all five live-worker tests, 1,010 JavaScript tests, mypy,
+and Ruff within the existing CI scope also passed. AGENTS.md now preserves this
+contract. See
+[the analysis and measured review](todos/gitlab-test-repository-budget.md) and
+[the test architecture](../docs/ci-gitlab-testing.md). The
+[adversarial review](todos/gitlab-budget-adversarial-review.md) fixed
+lost-response cleanup and failed-reset isolation; all pre-commit hooks passed.
+
 ## Official GitLab image and patch updates
 
 Connected the existing Railway test GitLab service to the official

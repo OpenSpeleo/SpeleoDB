@@ -17,6 +17,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from speleodb.testing.gitlab_audit import LEDGER_ENV
+from speleodb.testing.gitlab_audit import install_guard
+
+if LEDGER_ENV in os.environ:
+    install_guard()
+
 
 def load_env_files_from_pyproject() -> None:
     for env_file in [".envs/test.env"]:

@@ -8,10 +8,9 @@ from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
 
-from speleodb.api.v2.tests.factories import ProjectFactory
-from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.users.tests.factories import UserFactory
+from speleodb.testing.gitlab_pool import canonical_user
+from speleodb.testing.gitlab_pool import project_matrix
 
 
 class TestWebViewerRestrictions(TestCase):
@@ -21,33 +20,12 @@ class TestWebViewerRestrictions(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.user = UserFactory.create()
-        self.project_webviewer = ProjectFactory.create(created_by=self.user.email)
-        self.project_readonly = ProjectFactory.create(created_by=self.user.email)
-        self.project_readwrite = ProjectFactory.create(created_by=self.user.email)
-        self.project_admin = ProjectFactory.create(created_by=self.user.email)
-
-        # Create permissions
-        UserProjectPermissionFactory.create(
-            target=self.user,
-            project=self.project_webviewer,
-            level=PermissionLevel.WEB_VIEWER,
-        )
-        UserProjectPermissionFactory.create(
-            target=self.user,
-            project=self.project_readonly,
-            level=PermissionLevel.READ_ONLY,
-        )
-        UserProjectPermissionFactory.create(
-            target=self.user,
-            project=self.project_readwrite,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-        UserProjectPermissionFactory.create(
-            target=self.user,
-            project=self.project_admin,
-            level=PermissionLevel.ADMIN,
-        )
+        self.user = canonical_user("A")
+        projects = project_matrix()
+        self.project_webviewer = projects[PermissionLevel.WEB_VIEWER]
+        self.project_readonly = projects[PermissionLevel.READ_ONLY]
+        self.project_readwrite = projects[PermissionLevel.READ_AND_WRITE]
+        self.project_admin = projects[PermissionLevel.ADMIN]
 
         self.client.force_login(self.user)
 

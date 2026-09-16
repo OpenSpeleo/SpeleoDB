@@ -10,15 +10,16 @@ from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
-from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import FileFormat
+from speleodb.testing.gitlab_pool import get_pool
 
 TEST_FILE = (
     pathlib.Path(__file__).parent.parent.parent
     / "api/v2/tests/artifacts"
     / "test_simple.tml"
 )
+
 
 @pytest.mark.skip_if_lighttest
 class TestTreeToJson(BaseAPIProjectTestCase):
@@ -30,6 +31,7 @@ class TestTreeToJson(BaseAPIProjectTestCase):
             level=PermissionLevel.ADMIN,
             permission_type=PermissionType.USER,
         )
+        get_pool().prepare(self.project)
 
     def test_tree_to_json_basic_structure(self) -> None:
         """Test that tree_to_json returns correct structure."""
@@ -168,11 +170,8 @@ class TestTreeToJson(BaseAPIProjectTestCase):
 
     def test_tree_to_json_empty_commit(self) -> None:
         """Test tree_to_json on initial/empty commit."""
-        # Create a new project with git repo
-
-        new_project = ProjectFactory.create(created_by=self.user.email)
-
-        git_repo = new_project.git_repo
+        # The pool restores this project's empty initial commit between tests.
+        git_repo = self.project.git_repo
 
         # Try to get commits - may be empty for new repo
         commits = list(git_repo.iter_commits("HEAD"))

@@ -2,8 +2,8 @@
 
 """Exercise the proxy against configured GitLab and actual Git packet traffic.
 
-Read-only cases share one real repository to avoid exhausting project-creation
-limits. Failure cases use real rejected credentials, absent repositories and a
+Cases lease the shared read/write repository and restore it between tests.
+Failure cases use real rejected credentials, absent repositories and a
 reserved port with no listener. Arbitrary upstream 5xx responses and truncated
 HTTP chunks are not fabricated; those require faults in an actual service.
 """
@@ -45,7 +45,6 @@ from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
-from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.core import GitFile
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
@@ -54,7 +53,12 @@ from speleodb.git_proxy.views import GitService
 from speleodb.git_proxy.views import UpstreamResponseStream
 from speleodb.git_proxy.views import get_upstream_retry_delay
 from speleodb.git_proxy.views import request_git_upstream
-from speleodb.users.tests.factories import UserFactory
+from speleodb.testing.gitlab_audit import creation_allocation
+from speleodb.testing.gitlab_lifecycle import assert_make_cleanup_lifecycle
+from speleodb.testing.gitlab_lifecycle import isolated_gitlab_group
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import canonical_user
+from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -63,6 +67,7 @@ if TYPE_CHECKING:
     from gitlab.v4.objects.projects import Project as GitlabProject
     from rest_framework.authtoken.models import Token
 
+    from speleodb.git_engine.client import GitlabClient
     from speleodb.surveys.models import Project
     from speleodb.users.models import User
 
@@ -130,64 +135,41 @@ class TestGitProxyServer(TestCase):
     head: str
     project_id: uuid.UUID
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        directory: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
-        cls.addClassCleanup(directory.cleanup)
-        overrides: override_settings = override_settings(
-            DJANGO_GIT_PROJECTS_DIR=Path(directory.name)
+    def setUp(self) -> None:
+        super().setUp()
+        self.client = APIClient()
+        self.user = canonical_user("A")
+        self.token = TokenFactory.create(user=self.user)
+        EmailAddress.objects.get_or_create(
+            user=self.user, email=self.user.email, verified=True, primary=True
         )
-        overrides.enable()
-        cls.addClassCleanup(overrides.disable)
-        super().setUpClass()
-        # Database rows are fresh per test, matching the repository's global
-        # cleanup fixture. Only the read-only remote and local clone are shared.
-        cls.project_id = uuid.uuid4()
-        remote_project_model: Project = ProjectFactory.build(
-            id=cls.project_id, created_by="proxy@example.test"
+        self.project = canonical_project(PermissionLevel.READ_AND_WRITE)
+        self.project_id = self.project.id
+        UserProjectPermissionFactory.create(
+            target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
         )
-        cls.credentials = GitlabCredentials.get()
-        cls.api = GitlabClient(
-            f"{settings.GITLAB_HTTP_PROTOCOL}://{cls.credentials.instance}",
-            private_token=cls.credentials.token,
-            keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
+        get_pool().prepare(self.project)
+        self.credentials = GitlabCredentials.get()
+        self.api = get_pool().client
+        self.repo = self.project.git_repo
+        self.addCleanup(self.repo.close)
+        self.remote_project = self.api.projects.get(
+            f"{self.credentials.group_name}/{self.project_id}"
         )
-        cls.addClassCleanup(cls.api.session.close)
-        cls.repo = remote_project_model.git_repo
-        cls.addClassCleanup(cls.repo.close)
-        cls.remote_project = cls.api.projects.get(
-            f"{cls.credentials.group_name}/{cls.project_id}"
-        )
-        cls.addClassCleanup(cls.remote_project.delete)
-        file_path: Path = cls.repo.path / "binary.bin"
+        file_path: Path = self.repo.path / "binary.bin"
         file_path.write_bytes(GIT_FILE_CONTENT)
-        head: str | None = cls.repo.commit_and_push_project(
+        head: str | None = self.repo.commit_and_push_project(
             message="Proxy integration binary blob",
             author_name="Proxy Integration",
             author_email="proxy@example.test",
         )
         assert head is not None
-        cls.head = head
+        self.head = head
         assert (
-            cls.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
+            self.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
                 "id"
             ]
-            == cls.head
-        )
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.client = APIClient()
-        self.user = UserFactory.create()
-        self.token = TokenFactory.create(user=self.user)
-        EmailAddress.objects.create(
-            user=self.user, email=self.user.email, verified=True, primary=True
-        )
-        self.project = ProjectFactory.create(
-            id=self.project_id, created_by=self.user.email
-        )
-        UserProjectPermissionFactory.create(
-            target=self.user, project=self.project, level=PermissionLevel.READ_AND_WRITE
+            == self.head
         )
 
     @property
@@ -403,6 +385,8 @@ class TestGitProxyServer(TestCase):
         assert not leaked_invalid_token
 
     def test_first_404_creates_real_repository_and_retries(self) -> None:
+        group = self.enterContext(isolated_gitlab_group(self.api))
+        self.credentials = GitlabCredentials.get()
         project: Project = ProjectFactory.create(created_by=self.user.email)
         UserProjectPermissionFactory.create(
             target=self.user, project=project, level=PermissionLevel.READ_AND_WRITE
@@ -415,21 +399,25 @@ class TestGitProxyServer(TestCase):
         )
         assert missing.status_code == status.HTTP_404_NOT_FOUND
         assert not project.git_repo_dir.exists()
-        response: HttpResponseBase = self.client.get(
-            self._info_url(project), headers={"authorization": self.auth}
-        )
+        with creation_allocation(
+            "proxy-new", namespace_id=group.id, path=str(project.id)
+        ):
+            response: HttpResponseBase = self.client.get(
+                self._info_url(project), headers={"authorization": self.auth}
+            )
         assert response.status_code == status.HTTP_200_OK
         body: bytes = response_body(response)
         remote: GitlabProject = self.api.projects.get(
             f"{self.credentials.group_name}/{project.id}"
         )
-        self.addCleanup(remote.delete)
         local: GitRepo = GitRepo(project.git_repo_dir)
         self.addCleanup(local.close)
         assert local.head.commit.hexsha.encode() in body
         assert remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"] == (
             local.head.commit.hexsha
         )
+        cleanup_directory: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        assert_make_cleanup_lifecycle(self.api, group, remote, cleanup_directory)
 
     def test_missing_repository_post_is_not_recovered(self) -> None:
         project: Project = ProjectFactory.create(created_by=self.user.email)

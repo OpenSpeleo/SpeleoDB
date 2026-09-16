@@ -62,6 +62,8 @@ from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.surveys.models import UserProjectPermission
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -110,6 +112,12 @@ class TokenFactory(DjangoModelFactory[Token]):
 
 
 class ProjectFactory(DjangoModelFactory[Project]):
+    """Create a distinct database-only project for explicit identity/cardinality tests.
+
+    Ordinary fixtures use ``canonical_project``; this factory never grants a
+    GitLab creation allocation.
+    """
+
     name = factory.Sequence(lambda n: f"Test Cave {n:04d}")
     description: str = factory.LazyAttribute(
         lambda obj: f"Project description for `{obj.name}`"
@@ -130,13 +138,42 @@ class ProjectFactory(DjangoModelFactory[Project]):
         model = Project
 
 
+class CanonicalProjectFactory(DjangoModelFactory[Project]):
+    """Reuse canonical state on create, and keep build database-free.
+
+    Identity belongs to the session pool. Use ``ProjectFactory`` when the
+    scenario requires a distinct project instead of a canonical role.
+    """
+
+    class Meta:
+        model = Project
+
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs: Any) -> dict[str, Any]:
+        if "id" in kwargs or "pk" in kwargs:
+            raise ValueError("Use ProjectFactory for explicit project identities")
+        return kwargs
+
+    @classmethod
+    def _create(cls, model_class: type[Project], *args: Any, **kwargs: Any) -> Project:
+        return canonical_project(**kwargs)
+
+    @classmethod
+    def _build(cls, model_class: type[Project], *args: Any, **kwargs: Any) -> Project:
+        role: PermissionLevel = kwargs.pop("role", PermissionLevel.ADMIN)
+        project: Project = get_pool().model(role)
+        for name, value in kwargs.items():
+            setattr(project, name, value)
+        return project
+
+
 class ProjectCommitFactory(DjangoModelFactory[ProjectCommit]):
     """Factory for creating ProjectCommit instances."""
 
     id: str = factory.LazyFunction(  # type: ignore[assignment]
         lambda: hashlib.sha1(random.randbytes(32), usedforsecurity=False).hexdigest()
     )
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
     author_name: str = Faker("name")  # type: ignore[assignment]
     author_email: str = Faker("email")  # type: ignore[assignment]
     authored_date: Any = factory.LazyAttribute(lambda _: timezone.now())
@@ -150,7 +187,7 @@ class ProjectCommitFactory(DjangoModelFactory[ProjectCommit]):
 class UserProjectPermissionFactory(DjangoModelFactory[UserProjectPermission]):
     level = PermissionLevel.READ_AND_WRITE
     target: User = factory.SubFactory(UserFactory)  # type: ignore[assignment]
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
 
     class Meta:
         model = UserProjectPermission
@@ -159,7 +196,7 @@ class UserProjectPermissionFactory(DjangoModelFactory[UserProjectPermission]):
 class TeamProjectPermissionFactory(DjangoModelFactory[TeamProjectPermission]):
     level = PermissionLevel.READ_AND_WRITE
     target: SurveyTeam = factory.SubFactory(SurveyTeamFactory)  # type: ignore[assignment]
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
 
     class Meta:
         model = TeamProjectPermission
@@ -222,7 +259,7 @@ class ExplorationLeadFactory(DjangoModelFactory[ExplorationLead]):
     """Factory for creating ExplorationLead instances."""
 
     id = factory.LazyFunction(uuid.uuid4)
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
     description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
     longitude: float = factory.Faker("longitude")  # type: ignore[assignment]
@@ -240,7 +277,7 @@ class SubSurfaceStationFactory(DjangoModelFactory[SubSurfaceStation]):
     """
 
     id = factory.LazyFunction(uuid.uuid4)
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
     name = factory.Sequence(lambda n: f"ST{n:03d}")
     description: str = factory.Faker("text", max_nb_chars=200)  # type: ignore[assignment]
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
@@ -902,7 +939,7 @@ class CylinderInstallFactory(DjangoModelFactory[CylinderInstall]):
         model = CylinderInstall
 
     cylinder: Cylinder = factory.SubFactory(CylinderFactory)  # type: ignore[assignment]
-    project: Project = factory.SubFactory(ProjectFactory)  # type: ignore[assignment]
+    project: Project = factory.SubFactory(CanonicalProjectFactory)  # type: ignore[assignment]
     location_name: str = factory.Faker("city")  # type: ignore[assignment]
     latitude: float = factory.Faker("latitude")  # type: ignore[assignment]
     longitude: float = factory.Faker("longitude")  # type: ignore[assignment]

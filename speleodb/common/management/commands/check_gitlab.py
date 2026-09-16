@@ -1,7 +1,8 @@
-"""Fail CI before the suite when its actual GitLab credentials cannot write."""
+"""Verify GitLab identity and namespace, optionally testing repository writes."""
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
@@ -11,9 +12,19 @@ from django.core.management.base import CommandError
 
 from speleodb.git_engine.client import GitlabClient
 
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
+
 
 class Command(BaseCommand):
     help = "Verify GitLab identity, namespace, and real project creation/deletion."
+
+    def add_arguments(self, parser: ArgumentParser) -> None:
+        parser.add_argument(
+            "--read-only",
+            action="store_true",
+            help="Verify identity and namespace without creating a repository.",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         client = GitlabClient(
@@ -35,6 +46,11 @@ class Command(BaseCommand):
                 f"user={client.user.username} (id={client.user.id}) "
                 f"group={group.full_path} (id={group.id})"
             )
+            if options["read_only"]:
+                self.stdout.write(
+                    self.style.SUCCESS("GitLab authenticated read-only check passed.")
+                )
+                return
             project = client.projects.create(
                 {
                     "name": f"ci-preflight-{uuid4().hex}",

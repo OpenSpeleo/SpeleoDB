@@ -8,6 +8,9 @@ on:
 jobs:
   nightly-job:
     runs-on: ubuntu-latest
+    concurrency:
+      group: speleodb-gitlab-integration-namespace
+      cancel-in-progress: false
 
     services:
       redis:

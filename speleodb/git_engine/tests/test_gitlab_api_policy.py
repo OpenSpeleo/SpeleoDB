@@ -25,6 +25,7 @@ from speleodb.git_engine.tests.live_gitlab import (
 from speleodb.git_engine.tests.live_gitlab import (
     disposable_project_fixture,  # noqa: F401
 )
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 if TYPE_CHECKING:
@@ -121,29 +122,11 @@ def test_real_missing_project_preserves_response_and_is_not_retried(
 
 
 @pytest.mark.skip_if_lighttest
-def test_missing_project_is_not_cached_after_real_creation(
-    live_project: Project, tmp_path: Path
-) -> None:
-    assert GitlabManager.get_commit_history(live_project) is None
-    assert GitlabManager.get_last_commit_hash(live_project) is None
-    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
-    assert repository is not None
-    try:
-        history = GitlabManager.get_commit_history(live_project)
-        assert history is not None
-        assert [commit["id"] for commit in history] == [repository.head.commit.hexsha]
-        assert all("web_url" not in commit for commit in history)
-        assert GitlabManager.get_last_commit_hash(live_project) == (
-            repository.head.commit.hexsha
-        )
-    finally:
-        repository.close()
-
-
-@pytest.mark.skip_if_lighttest
 def test_real_missing_branch_recovers_after_branch_creation(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+    live_gitlab: Gitlab, tmp_path: Path
 ) -> None:
+    live_project: Project = get_pool().model()
+    get_pool().prepare(live_project)
     repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
     assert repository is not None
     try:
@@ -165,8 +148,10 @@ def test_real_missing_branch_recovers_after_branch_creation(
 
 @pytest.mark.skip_if_lighttest
 def test_failed_real_reauthentication_clears_project_cache(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+    live_gitlab: Gitlab, tmp_path: Path
 ) -> None:
+    live_project: Project = get_pool().model()
+    get_pool().prepare(live_project)
     repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
     assert repository is not None
     repository.close()

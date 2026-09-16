@@ -34,6 +34,7 @@ from rest_framework.authtoken.models import Token
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.api.v2.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
@@ -107,7 +108,9 @@ class TestProjectTeamPermissionList(BaseAPIProjectTestCase):
 
         # Noise: team perm on another project, and a soft-deleted perm on
         # this project. Neither should appear in the response.
-        other_team_other_project = TeamProjectPermissionFactory.create()
+        other_team_other_project = TeamProjectPermissionFactory.create(
+            project=ProjectFactory.create()
+        )
         sd_team = SurveyTeamFactory.create()
         soft_deleted = TeamProjectPermissionFactory.create(
             target=sd_team, project=self.project, level=PermissionLevel.READ_ONLY

@@ -17,6 +17,7 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import FileFormat
+from speleodb.testing.gitlab_pool import get_pool
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
 ARIANE_TEST_FILE = BASE_DIR / "test_simple.tml"
@@ -35,6 +36,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             level=PermissionLevel.READ_AND_WRITE,
             permission_type=PermissionType.USER,
         )
+        get_pool().prepare(self.project)
 
     def _upload_files(
         self,

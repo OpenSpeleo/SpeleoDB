@@ -11,12 +11,13 @@ from django.core.management import call_command
 from django.test import override_settings
 
 from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
-from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.common.enums import PermissionLevel
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
-from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import get_pool
 
 
 @pytest.mark.skip_if_lighttest
@@ -34,16 +35,10 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
     def _seed_remote(
         self, project: Project, messages: tuple[str, ...] = ()
     ) -> list[str]:
-        GitlabManager.create_project(project)
-        repo: GitRepo = GitRepo.init(project.git_repo_dir)
+        get_pool().prepare(project)
+        repo: GitRepo = project.git_repo
         self.addCleanup(repo.close)
-        repo.create_remote("origin", GitlabCredentials.get().project_url(project.id))
-        # Commit SHA is globally unique in the SQL cache. Distinct initial trees
-        # preserve each project's root even when initialized in the same second.
-        (repo.path / "README.txt").write_text(
-            f"Project {project.id}\n", encoding="utf-8"
-        )
-        repo.publish_first_commit()
+        # Each pooled remote has a distinct initial commit restored after use.
         hashes: list[str] = [repo.head.commit.hexsha]
         for index, message in enumerate(messages):
             (repo.path / "README.txt").write_text(
@@ -104,7 +99,7 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         assert user_commit.author_email == self.user.email
 
     def test_preload_multiple_projects(self) -> None:
-        project2: Project = ProjectFactory.create(created_by=self.user.email)
+        project2: Project = canonical_project(PermissionLevel.READ_AND_WRITE)
         hashes1: list[str] = self._seed_remote(self.project, ("Project 1 Commit",))
         hashes2: list[str] = self._seed_remote(project2, ("Project 2 Commit",))
 
@@ -129,9 +124,10 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         self._assert_history(self.project, hashes)
 
     def test_preload_continues_after_project_failure(self) -> None:
-        broken_project: Project = ProjectFactory.create(created_by=self.user.email)
+        broken_project: Project = canonical_project(PermissionLevel.READ_AND_WRITE)
         hashes: list[str] = self._seed_remote(self.project)
 
+        get_pool().prepare(broken_project)
         broken_repo: GitRepo = broken_project.git_repo
         self.addCleanup(broken_repo.close)
         broken_repo.remotes.origin.set_url(str(self.root / "missing.git"))

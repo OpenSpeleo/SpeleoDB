@@ -48,7 +48,9 @@ from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
-from speleodb.users.tests.factories import UserFactory
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import canonical_user
+from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -87,9 +89,9 @@ class AuthenticatedSentryTestCase(SentryEventTestCase):
         super().setUp()
         assert not connection.in_atomic_block
         self.enterContext(override_settings(DEBUG=False))
-        self.user = UserFactory.create()
+        self.user = canonical_user("A")
         token = TokenFactory.create(user=self.user)
-        EmailAddress.objects.create(
+        EmailAddress.objects.get_or_create(
             user=self.user, email=self.user.email, verified=True, primary=True
         )
         self.client = APIClient()
@@ -108,8 +110,10 @@ class ProjectSentryTestCase(AuthenticatedSentryTestCase):
         self.enterContext(
             override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory))
         )
-        self.project = ProjectFactory.create(
-            created_by=self.user.email, type=ProjectType.ARIANE, exclude_geojson=True
+        self.project = canonical_project(
+            role=PermissionLevel.READ_AND_WRITE,
+            type=ProjectType.ARIANE,
+            exclude_geojson=True,
         )
         UserProjectPermissionFactory.create(
             target=self.user,
@@ -117,12 +121,12 @@ class ProjectSentryTestCase(AuthenticatedSentryTestCase):
             level=PermissionLevel.READ_AND_WRITE,
         )
         # Fail setup if the service is unhealthy; a 429 cannot pass an error test.
+        get_pool().prepare(self.project)
         self.repo = self.project.git_repo
         self.addCleanup(self.repo.close)
         remote = GitlabManager._get_project(self.project)  # noqa: SLF001
         assert remote is not None
         self.remote = remote
-        self.addCleanup(self.remote.delete)
         target: pathlib.Path = self.repo.path / "ariane.tml"
         target.write_bytes((BASE_DIR / "test_simple.tml").read_bytes())
         self.repo.index.add([str(target)])

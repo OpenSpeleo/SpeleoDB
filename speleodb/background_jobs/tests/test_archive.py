@@ -45,6 +45,12 @@ from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.client import GitlabClient
+from speleodb.testing.gitlab_audit import creation_allocation
+from speleodb.testing.gitlab_lifecycle import assert_initial_commit_lifecycle
+from speleodb.testing.gitlab_lifecycle import assert_remote_deleted
+from speleodb.testing.gitlab_lifecycle import cleanup_remote_on_exit
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.s3_storages import GeoJSONStorage
 
 if TYPE_CHECKING:
@@ -176,35 +182,38 @@ def gitlab_client() -> Generator[GitlabClient]:
 @pytest.fixture
 def gitlab_project(
     user: User, gitlab_client: gitlab.Gitlab
-) -> Generator[tuple[Project, str, str]]:
-    """Provision a disposable repository in the existing test GitLab group."""
-    project: Project = ProjectFactory.create(created_by=user.email)
+) -> tuple[Project, str, str]:
+    """Lease existing history; never provision a repository for each export."""
+    project: Project = canonical_project(PermissionLevel.READ_ONLY)
     UserProjectPermissionFactory.create(
         target=user, project=project, level=PermissionLevel.READ_ONLY
     )
-    remote = gitlab_client.projects.create(
-        {"name": str(project.id), "namespace_id": django_settings.GITLAB_GROUP_ID}
+    get_pool().prepare(project)
+    remote = gitlab_client.projects.get(
+        f"{django_settings.GITLAB_GROUP_NAME}/{project.id}"
     )
-    try:
-        historical: str = _create_initial_gitlab_commit(remote)
-        remote.tags.create({"tag_name": "historic-tag", "ref": historical})
-        remote.branches.create({"branch": "survey-branch", "ref": historical})
-        latest = remote.commits.create(
-            {
-                "branch": "main",
-                "commit_message": "Current survey",
-                "actions": [
-                    {
-                        "action": "update",
-                        "file_path": "survey.txt",
-                        "content": "current data",
-                    }
-                ],
-            }
-        )
-        yield project, historical, str(latest.id)
-    finally:
-        remote.delete()
+    remote.branches.create(
+        {"branch": "main", "ref": django_settings.DJANGO_GIT_BRANCH_NAME}
+    )
+    historical: str = _create_initial_gitlab_commit(remote)
+    remote.tags.create({"tag_name": "historic-tag", "ref": historical})
+    remote.branches.create({"branch": "survey-branch", "ref": historical})
+    latest = remote.commits.create(
+        {
+            "branch": "main",
+            "commit_message": "Current survey",
+            "actions": [
+                {
+                    "action": "update",
+                    "file_path": "survey.txt",
+                    "content": "current data",
+                }
+            ],
+        }
+    )
+    remote.default_branch = "main"
+    remote.save()
+    return project, historical, str(latest.id)
 
 
 def _create_initial_gitlab_commit(remote: GitlabProject) -> str:
@@ -818,37 +827,6 @@ def test_uninitialized_project_exports_empty_marker_without_creating_remote(
 
 @pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
-@pytest.mark.parametrize("repository_access", ["enabled", "private"])
-def test_existing_empty_gitlab_repository_is_exported_without_a_commit(
-    user: User,
-    tmp_path: Path,
-    gitlab_client: gitlab.Gitlab,
-    repository_access: str,
-) -> None:
-    project = _project_without_history(user)
-    remote = gitlab_client.projects.create(
-        {
-            "name": str(project.id),
-            "namespace_id": django_settings.GITLAB_GROUP_ID,
-            "repository_access_level": repository_access,
-            "merge_requests_access_level": repository_access,
-            "builds_access_level": repository_access,
-        }
-    )
-    try:
-        assert remote.empty_repo is True
-        _assert_empty_project_export(
-            user, project, tmp_path / "export.zip", state="empty"
-        )
-        remote.refresh()
-        assert remote.empty_repo is True
-        assert remote.branches.list(get_all=True) == []
-    finally:
-        remote.delete()
-
-
-@pytest.mark.django_db
-@pytest.mark.skip_if_lighttest
 def test_missing_remote_with_recorded_history_remains_an_omission(
     user: User, tmp_path: Path, gitlab_client: gitlab.Gitlab
 ) -> None:
@@ -865,51 +843,6 @@ def test_missing_remote_with_recorded_history_remains_an_omission(
     assert project.commits.count() == 1
     assert not project.git_repo_dir.exists()
     _assert_remote_absent(gitlab_client, project)
-
-
-@pytest.mark.django_db
-@pytest.mark.skip_if_lighttest
-def test_empty_remote_with_recorded_history_remains_an_omission(
-    user: User, tmp_path: Path, gitlab_client: gitlab.Gitlab
-) -> None:
-    project = _project_without_history(user)
-    ProjectCommitFactory.create(project=project)
-    _collection(user)
-    remote = gitlab_client.projects.create(
-        {"name": str(project.id), "namespace_id": django_settings.GITLAB_GROUP_ID}
-    )
-    try:
-        destination: Path = tmp_path / "export.zip"
-        result = build_archive(user=user, destination=destination, progress=_progress)
-        assert result.partial
-        assert result.manifest["omissions"] == [
-            {
-                "category": "projects",
-                "id": str(project.id),
-                "name": project.name,
-                "reason": (
-                    "The Git repository is empty despite recorded project history."
-                ),
-            }
-        ]
-        assert result.manifest["resources"][0]["outcome"] == "OMITTED"
-        assert result.manifest["resources"][1]["outcome"] == "OK"
-        with ZipFile(destination) as archive:
-            assert not any(
-                name.startswith("projects/") and name != "projects/"
-                for name in archive.namelist()
-            )
-            assert any(
-                name.startswith("landmarks/") and name.endswith(".geojson")
-                for name in archive.namelist()
-            )
-        assert project.commits.count() == 1
-        assert not project.git_repo_dir.exists()
-        remote.refresh()
-        assert remote.empty_repo is True
-        assert remote.branches.list(get_all=True) == []
-    finally:
-        remote.delete()
 
 
 @pytest.mark.django_db
@@ -962,28 +895,103 @@ def test_unverified_gitlab_access_cannot_become_an_empty_export(
 
 @pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
-def test_disabled_git_repository_cannot_become_an_empty_export(
+def test_empty_archive_and_initial_commit_lifecycle(
     user: User, tmp_path: Path, gitlab_client: gitlab.Gitlab
 ) -> None:
-    project = _project_without_history(user)
-    remote = gitlab_client.projects.create(
-        {
-            "name": str(project.id),
-            "namespace_id": django_settings.GITLAB_GROUP_ID,
-            "repository_access_level": "disabled",
-            "merge_requests_access_level": "disabled",
-            "builds_access_level": "disabled",
-        }
-    )
-    try:
-        with pytest.raises(ArchiveBuildError):
-            build_archive(
-                user=user, destination=tmp_path / "export.zip", progress=_progress
+    """All genuinely empty states precede the first commit in one allocation."""
+
+    class CleanupBoundaryError(Exception):
+        """Stop the lifecycle without passing a remote object to its cleanup."""
+
+    project: Project = _project_without_history(user)
+    remote: GitlabProject | None = None
+
+    def exercise_lifecycle() -> None:
+        nonlocal remote
+        with cleanup_remote_on_exit(
+            gitlab_client, f"{django_settings.GITLAB_GROUP_NAME}/{project.id}"
+        ):
+            with creation_allocation(
+                "empty-archive", django_settings.GITLAB_GROUP_ID, str(project.id)
+            ):
+                remote = gitlab_client.projects.create(
+                    {
+                        "name": str(project.id),
+                        "namespace_id": django_settings.GITLAB_GROUP_ID,
+                        "merge_requests_access_level": "disabled",
+                        "builds_access_level": "disabled",
+                    }
+                )
+            for access in ("enabled", "private"):
+                remote.repository_access_level = access
+                remote.save()
+                directory: Path = tmp_path / access
+                directory.mkdir()
+                assert remote.empty_repo is True
+                _assert_empty_project_export(
+                    user, project, directory / "export.zip", state="empty"
+                )
+                remote.refresh()
+                assert remote.empty_repo is True
+                assert remote.branches.list(get_all=True) == []
+
+            ProjectCommitFactory.create(project=project)
+            _collection(user)
+            destination: Path = tmp_path / "recorded-history.zip"
+            result = build_archive(
+                user=user, destination=destination, progress=_progress
             )
-        assert not project.commits.exists()
-        assert not project.git_repo_dir.exists()
-    finally:
-        remote.delete()
+            assert result.partial
+            assert result.manifest["omissions"] == [
+                {
+                    "category": "projects",
+                    "id": str(project.id),
+                    "name": project.name,
+                    "reason": (
+                        "The Git repository is empty despite recorded project history."
+                    ),
+                }
+            ]
+            assert result.manifest["resources"][0]["outcome"] == "OMITTED"
+            assert result.manifest["resources"][1]["outcome"] == "OK"
+            with ZipFile(destination) as archive:
+                assert not any(
+                    name.startswith("projects/") and name != "projects/"
+                    for name in archive.namelist()
+                )
+                assert any(
+                    name.startswith("landmarks/") and name.endswith(".geojson")
+                    for name in archive.namelist()
+                )
+            assert project.commits.count() == 1
+            assert not project.git_repo_dir.exists()
+            remote.refresh()
+            assert remote.empty_repo is True
+            assert remote.branches.list(get_all=True) == []
+            project.commits.all().delete()
+
+            remote.repository_access_level = "disabled"
+            remote.save()
+            with pytest.raises(ArchiveBuildError):
+                build_archive(
+                    user=user, destination=tmp_path / "disabled.zip", progress=_progress
+                )
+            assert not project.commits.exists()
+            assert not project.git_repo_dir.exists()
+            remote.repository_access_level = "enabled"
+            remote.save()
+            assert_initial_commit_lifecycle(
+                remote,
+                gitlab_client,
+                create_initial_commit=_create_initial_gitlab_commit,
+                max_attempts=INITIAL_COMMIT_ATTEMPTS,
+            )
+            raise CleanupBoundaryError
+
+    with pytest.raises(CleanupBoundaryError):
+        exercise_lifecycle()
+    assert remote is not None
+    assert_remote_deleted(gitlab_client, int(remote.id))
 
 
 def test_s3_download_preserves_complete_multichunk_source(

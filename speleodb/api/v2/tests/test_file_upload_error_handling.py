@@ -58,7 +58,9 @@ from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Format
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.users.tests.factories import UserFactory
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import canonical_user
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import GeoJSONGenerationError
 
@@ -141,13 +143,13 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(project_directory))
         )
         self.client = APIClient(enforce_csrf_checks=False)
-        self.user = UserFactory.create()
+        self.user = canonical_user("A")
         self.token = TokenFactory.create(user=self.user)
-        EmailAddress.objects.create(
+        EmailAddress.objects.get_or_create(
             user=self.user, email=self.user.email, verified=True, primary=True
         )
-        self.project = ProjectFactory.create(
-            created_by=self.user.email,
+        self.project = canonical_project(
+            role=PermissionLevel.READ_AND_WRITE,
             type=ProjectType.ARIANE,
             exclude_geojson=True,
         )
@@ -160,6 +162,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
 
         # Any real provisioning/authentication failure fails setup. It cannot
         # accidentally satisfy a later assertion that an upload returned 500.
+        get_pool().prepare(self.project)
         self.repo = self.project.git_repo
         self.addCleanup(self.repo.close)
         remote_project: GitlabProject | None = GitlabManager._get_project(  # noqa: SLF001
@@ -167,7 +170,6 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         )
         assert remote_project is not None
         self.remote_project = remote_project
-        self.addCleanup(self.remote_project.delete)
         self.original_head = self.repo.head.commit.hexsha
         assert self._remote_head() == self.original_head
         self.project.construct_git_history_from_project(self.repo)

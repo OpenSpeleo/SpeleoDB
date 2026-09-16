@@ -29,6 +29,8 @@ from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from speleodb.git_engine.core import GitRepo
@@ -52,7 +54,7 @@ COMPASS_TEST_FILES = [
 class TestBuildProjectGeoJSONCommand(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.project = ProjectFactory.create(
+        self.project = canonical_project(
             type=ProjectType.ARIANE,
             exclude_geojson=False,
         )
@@ -109,6 +111,7 @@ class TestBuildProjectGeoJSONCommand(TestCase):
             )
 
     def _seed_project(self, project: Project) -> str:
+        get_pool().prepare(project)
         repo: GitRepo = project.git_repo
         self.addCleanup(repo.close)
         assert repo.head.is_valid()
@@ -125,11 +128,13 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
     @pytest.mark.skip_if_lighttest
     def test_all_mode_processes_only_eligible_project_type(self) -> None:
-        compass_project: Project = ProjectFactory.create(
+        compass_project: Project = canonical_project(
+            PermissionLevel.READ_AND_WRITE,
             type=ProjectType.COMPASS,
             exclude_geojson=False,
         )
-        excluded: Project = ProjectFactory.create(
+        excluded: Project = canonical_project(
+            PermissionLevel.READ_ONLY,
             type=ProjectType.COMPASS,
             exclude_geojson=True,
         )
@@ -145,8 +150,10 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
     @pytest.mark.skip_if_lighttest
     def test_project_mode_processes_only_selected_project(self) -> None:
-        other: Project = ProjectFactory.create(
-            type=ProjectType.COMPASS, exclude_geojson=False
+        other: Project = canonical_project(
+            PermissionLevel.READ_AND_WRITE,
+            type=ProjectType.COMPASS,
+            exclude_geojson=False,
         )
         self._seed_project(self.project)
         other_sha: str = self._seed_project(other)
@@ -253,6 +260,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
             level=PermissionLevel.READ_AND_WRITE,
             permission_type=PermissionType.USER,
         )
+        get_pool().prepare(self.project)
 
     def _upload_files(
         self,

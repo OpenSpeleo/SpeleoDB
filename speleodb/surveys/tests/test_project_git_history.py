@@ -20,6 +20,7 @@ from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import ProjectCommit
+from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from speleodb.git_engine.core import GitRepo
@@ -42,6 +43,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
             level=PermissionLevel.ADMIN,
             permission_type=PermissionType.USER,
         )
+        get_pool().prepare(self.project)
 
     def test_construct_git_history_after_upload(self) -> None:
         """Test that git history is constructed correctly after file upload."""
@@ -214,6 +216,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
 
     def setUp(self) -> None:
         super().setUp()
+        get_pool().prepare(self.project)
         self.repo: GitRepo = self.project.git_repo
         self.addCleanup(self.repo.close)
         self.original_sha: str = self.repo.head.commit.hexsha
@@ -308,6 +311,7 @@ class TestGitRepoRemoteConfigurationRepair(BaseAPIProjectTestCase):
             level=PermissionLevel.ADMIN,
             permission_type=PermissionType.USER,
         )
+        get_pool().prepare(self.project)
 
     def test_checkout_recovers_from_broken_remote(self) -> None:
         """Restore the configured remote before pulling, without losing local files."""

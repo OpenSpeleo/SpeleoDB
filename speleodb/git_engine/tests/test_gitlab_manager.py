@@ -21,6 +21,8 @@ from speleodb.git_engine.tests.live_gitlab import (
 from speleodb.git_engine.tests.live_gitlab import (
     disposable_project_fixture,  # noqa: F401
 )
+from speleodb.testing.gitlab_audit import creation_allocation
+from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,30 +35,11 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.skip_if_lighttest
 
 
-def test_new_project_publishes_initial_commit(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
-) -> None:
-    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
-    assert repository is not None
-    try:
-        assert repository.head.is_valid()
-        assert repository.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
-        remote = live_gitlab.projects.get(
-            f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
-        )
-        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
-        assert branch.commit["id"] == repository.head.commit.hexsha
-        assert repository.head.commit.message.strip() == (
-            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
-        )
-        assert len(remote.commits.list(get_all=True)) == 1
-    finally:
-        repository.close()
-
-
 def test_existing_remote_is_cloned_without_an_extra_commit(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+    live_gitlab: Gitlab, tmp_path: Path
 ) -> None:
+    live_project: Project = get_pool().model()
+    get_pool().prepare(live_project)
     original = GitlabManager.create_or_clone_project(live_project, tmp_path / "first")
     assert original is not None
     try:
@@ -92,37 +75,26 @@ def test_existing_remote_is_cloned_without_an_extra_commit(
         cloned.close()
 
 
-def test_existing_empty_remote_gets_initial_commit(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
-) -> None:
-    remote = live_gitlab.projects.create(
-        {"name": str(live_project.id), "namespace_id": settings.GITLAB_GROUP_ID}
-    )
-    assert remote.empty_repo
-
-    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
-    assert repository is not None
-    try:
-        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
-        assert branch.commit["id"] == repository.head.commit.hexsha
-        assert len(remote.commits.list(get_all=True)) == 1
-    finally:
-        repository.close()
-
-
 def test_invalid_namespace_does_not_create_local_repository(
     live_gitlab: Gitlab, live_project: Project, tmp_path: Path
 ) -> None:
-    with override_settings(GITLAB_GROUP_ID=f"missing-{uuid4()}"):
+    namespace: str = "-1"
+    with override_settings(GITLAB_GROUP_ID=namespace):
         GitlabCredentials.get.cache_clear()
         try:
-            with pytest.raises(gitlab.exceptions.GitlabCreateError) as raised:
+            with (
+                creation_allocation(
+                    "invalid-namespace", namespace, str(live_project.id), negative=True
+                ),
+                pytest.raises(gitlab.exceptions.GitlabCreateError) as raised,
+            ):
                 GitlabManager.create_or_clone_project(live_project, tmp_path)
         finally:
             GitlabCredentials.get.cache_clear()
 
     assert raised.value.response_code == HTTPStatus.BAD_REQUEST
-    assert "namespace" in str(raised.value.error_message).lower()
+    # GitLab versions describe invalid namespace IDs with different error payloads.
+    assert raised.value.error_message
     assert not (tmp_path / str(live_project.id)).exists()
     with pytest.raises(gitlab.exceptions.GitlabGetError) as absent:
         live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{live_project.id}")

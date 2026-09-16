@@ -16,7 +16,7 @@ on:
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   linter:
@@ -94,6 +94,9 @@ jobs:
   pytest:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    concurrency:
+      group: speleodb-gitlab-integration-namespace
+      cancel-in-progress: false
 
     services:
       redis:
@@ -165,8 +168,8 @@ jobs:
 
       - name: Run Tests
         run: |
-          # Validate the real service and write permission before running tests.
-          python manage.py check_gitlab --settings config.settings.test
+          # Repository writes belong to pytest's audited nine-repository budget.
+          python manage.py check_gitlab --read-only --settings config.settings.test
           python manage.py create_s3_local_buckets --settings config.settings.test
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
@@ -183,3 +186,11 @@ jobs:
           AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
           AWS_S3_ENDPOINT_URL: "http://localhost:9000"
           AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
+
+      - name: Upload GitLab creation audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitlab-creation-audit
+          path: .artifacts/gitlab/
+          include-hidden-files: true

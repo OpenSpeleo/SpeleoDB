@@ -26,6 +26,7 @@ from rest_framework.authtoken.models import Token
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import UserProjectPermission
@@ -96,7 +97,9 @@ class TestProjectUserPermissionList(BaseAPIProjectTestCase):
         # Noise: a third user with a perm on a DIFFERENT project, plus a
         # soft-deleted perm on this project. Neither should appear.
         noise_user = UserFactory.create(email=_unique_email("noise"))
-        unrelated_project_perm = UserProjectPermissionFactory.create(target=noise_user)
+        unrelated_project_perm = UserProjectPermissionFactory.create(
+            target=noise_user, project=ProjectFactory.create()
+        )
         soft_deleted = UserProjectPermissionFactory.create(
             target=UserFactory.create(email=_unique_email("sd")),
             project=self.project,

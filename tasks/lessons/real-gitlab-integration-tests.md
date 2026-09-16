@@ -5,6 +5,22 @@ September 2026 CI investigation. Use real GitLab, Git subprocesses, and database
 transactions for the affected integration tests. Do not introduce HTTP fakes,
 patched methods, or renamed test doubles as substitutes.
 
+The later repository-budget correction supersedes any earlier recommendation to
+give each test a disposable UUID remote. Reuse the four canonical projects per
+invocation and reserve the five named lifecycle allocations for operations that
+require creation or deletion. Additional database-only projects remain valid.
+See [the budget lesson](gitlab-test-repository-budget.md) and
+[the testing contract](../../docs/ci-gitlab-testing.md).
+
+- Observe real transport and deny unauthorized provisioning before it occurs.
+  The mandatory test-only Requests wrapper forwards authorized traffic; it must
+  never fabricate a response or substitute for the real integration boundary.
+- Count cumulative creation, not final group size. A deleted repository still
+  consumed a creation allocation; retries and failed creation POSTs need their
+  own request accounting.
+- Run all tests inside the existing application container and coordinate serial
+  suites. A host-side or parallel run is not an acceptable substitute.
+
 - A generic HTTP 500 and rollback flag do not establish which operation failed.
   Assert the actual failure cause and observable effects; verify prerequisites
   succeed before provoking the intended failure.

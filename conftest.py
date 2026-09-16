@@ -16,6 +16,12 @@ if TYPE_CHECKING:
     from _pytest.nodes import Item
 
 
+pytest_plugins: tuple[str, ...] = (
+    "speleodb.testing.pytest_gitlab",
+    "speleodb.testing.gitlab_fixtures",
+)
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(items: list[Item]) -> None:
     from django_countries import countries  # noqa: PLC0415

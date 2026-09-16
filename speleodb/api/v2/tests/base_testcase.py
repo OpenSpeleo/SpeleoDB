@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-import random
 from enum import Enum
 from typing import TYPE_CHECKING
 
 import pytest
-from allauth.account.models import EmailAddress
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v2.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v2.tests.factories import TokenFactory
-from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
-from speleodb.users.tests.factories import UserFactory
+from speleodb.surveys.models import UserProjectPermission
+from speleodb.testing.gitlab_pool import canonical_project
+from speleodb.testing.gitlab_pool import canonical_user
 
 if TYPE_CHECKING:
     from rest_framework.authtoken.models import Token
@@ -40,11 +38,8 @@ class BaseUserTestCaseMixin(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.user = UserFactory.create()
+        self.user = canonical_user("A")
         self.token = TokenFactory.create(user=self.user)
-        EmailAddress.objects.create(
-            user=self.user, email=self.user.email, verified=True, primary=True
-        )
 
 
 class BaseAPITestCase(BaseUserTestCaseMixin):
@@ -65,7 +60,10 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
 
     def setUp(self) -> None:
         super().setUp()
-        self.project = ProjectFactory.create(created_by=self.user.email)
+        level: PermissionLevel = PermissionLevel(
+            getattr(self, "level", PermissionLevel.ADMIN)
+        )
+        self.project = canonical_project(level)
 
     def set_test_project_permission(
         self, level: PermissionLevel, permission_type: PermissionType
@@ -75,12 +73,10 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
 
         match permission_type:
             case PermissionType.USER:
-                # Update or create permission to avoid duplicates
-                # UserPermission.objects.update_or_create(
-                #     target=self.user, project=self.project, defaults={"level": level}
-                # )
-                _ = UserProjectPermissionFactory(
-                    target=self.user, level=level, project=self.project
+                UserProjectPermission.objects.update_or_create(
+                    target=self.user,
+                    project=self.project,
+                    defaults={"level": level, "is_active": True},
                 )
 
             case PermissionType.TEAM:
@@ -93,7 +89,7 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
                 _ = SurveyTeamMembershipFactory.create(
                     user=self.user,
                     team=team,
-                    role=random.choice(SurveyTeamMembershipRole.values),
+                    role=SurveyTeamMembershipRole.MEMBER,
                 )
 
                 # Give the newly created permission to the project

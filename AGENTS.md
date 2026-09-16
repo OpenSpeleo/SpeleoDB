@@ -219,15 +219,62 @@ valid.
 
 ## Testing Requirements
 
+Run **every test inside the already-running application container**. Do not run
+tests on the host or start another stack for verification. The current local
+container is `speleodb_local_django`, with the repository mounted at `/app`.
+
 For frontend (public or private) changes, validate tests:
 
-- `npm run test:js`
+- `docker exec -w /app speleodb_local_django npm run test:js`
 
 Backend/API changes should also run relevant `pytest` targets:
 
-- `pytest`
+- Full suite: `docker exec -w /app speleodb_local_django make test-py`
+- Focused suite: `docker exec -w /app speleodb_local_django pytest <targets>`
 
 New tests should respects coding existing structures
+
+### Django GitLab repository contract
+
+- Read `docs/ci-gitlab-testing.md` before modifying Git-related fixtures. A test
+  invocation may create **at most nine GitLab projects cumulatively**, including
+  repositories deleted during the run. Never increase the budget to accommodate
+  a new test.
+- Ordinary tests reuse the four run-scoped canonical identities: **ADMIN
+  Project**, **Read and Write Project**, **Read only Project**, and **Webviewer
+  Project**. A leads ADMIN; B leads the other three and A receives the named
+  access level. Use `canonical_project()`, `canonical_user()`, and
+  `project_matrix()` from `speleodb.testing.gitlab_pool`.
+- Database rows are materialized within each test's transaction. Additional
+  `ProjectFactory` rows are permitted when distinct identities/cardinality are
+  required; they are database-only and must not provision GitLab. Pass projects
+  explicitly into child factories when building without database access.
+- Permission grants remain explicit for no-access, inactive, team-only, and
+  permission-count cases. `canonical_project()` supplies metadata, not hidden
+  access. Do not give a team test a direct grant that could mask a regression.
+- Git consumers explicitly call `get_pool().prepare(project)`; the shared
+  fixture isolates checkout directories and restores acquired leases. A heavy
+  test marker does not provision GitLab. Tests never delete pooled repositories;
+  session cleanup owns them. Preserve fresh local checkouts, baseline SHA
+  restoration, all-refs history checks, and transaction rollback coverage. Use
+  real local bare Git repositories for Git-only behavior.
+- Only the fixed lifecycle allocations `manager-new`, `proxy-new`,
+  `empty-archive`, `manager-empty`, and `write-check` may create additional
+  repositories. Keep absent/empty/create/delete assertions in self-contained
+  lifecycles; do not depend on test execution order or recreate a deleted slot.
+- The normal full-suite budget is nine successful creations and ten creation
+  POSTs: the extra POST is the intentional invalid-namespace HTTP 400. Retries
+  remain bound to the same allocated namespace/path and existing retry policy.
+  Never bypass the audit, disable its guard, or replace real SDK responses with
+  mocks to satisfy the limit.
+- The root pytest plugin audits creation before transport and propagates its
+  ledger to subprocesses. Preserve inherited audit environment variables.
+  Inspect `.artifacts/gitlab/<run-id>/summary.json` and `events.jsonl`; any
+  violation or unresolved creation fails the run, even if application code
+  caught the exception. Deletion does not refund a creation allocation.
+- Keep pytest serial and CI preflight `check_gitlab --read-only`. Do not run
+  group-wide cleanup concurrently with an active suite. Report actual audit
+  counts and verified cleanup alongside test results.
 
 ## Linter
 

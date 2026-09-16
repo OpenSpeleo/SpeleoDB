@@ -273,6 +273,7 @@ dump.rdb
 speleodb/media/
 
 .pytest_cache/
+.artifacts/
 .ipython/
 .env
 .envs/.production/*

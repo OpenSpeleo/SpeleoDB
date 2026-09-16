@@ -10,11 +10,11 @@ from django.apps import apps
 from django.test.client import Client
 from dotenv import load_dotenv
 
-from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
+from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ def staff_client(staff_user: User) -> Client:
 
 @pytest.fixture
 def project(db: None, user: User) -> Project:
-    return ProjectFactory.create(created_by=user.email)
+    return canonical_project(created_by=user.email)
 
 
 @pytest.fixture

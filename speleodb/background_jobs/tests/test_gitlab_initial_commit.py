@@ -18,9 +18,7 @@ from speleodb.background_jobs.tests.test_archive import _create_initial_gitlab_c
 from speleodb.git_engine.tests.live_gitlab import (
     configured_gitlab_fixture,  # noqa: F401
 )
-from speleodb.git_engine.tests.live_gitlab import (
-    disposable_project_fixture,  # noqa: F401
-)
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 if TYPE_CHECKING:
@@ -35,13 +33,10 @@ pytestmark = pytest.mark.skip_if_lighttest
 
 
 @pytest.fixture
-def remote_project(
-    live_gitlab: gitlab.Gitlab,
-    live_project: Project,
-) -> GitlabProject:
-    return live_gitlab.projects.create(
-        {"name": str(live_project.id), "namespace_id": settings.GITLAB_GROUP_ID}
-    )
+def remote_project(live_gitlab: gitlab.Gitlab) -> GitlabProject:
+    project: Project = get_pool().model()
+    get_pool().prepare(project)
+    return live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{project.id}")
 
 
 @pytest.fixture
@@ -62,30 +57,6 @@ def commit_responses(live_gitlab: gitlab.Gitlab) -> Generator[list[Response]]:
         live_gitlab.session.hooks["response"].remove(observe)
 
 
-def test_initial_commit_creates_expected_remote_content(
-    remote_project: GitlabProject,
-    commit_responses: list[Response],
-) -> None:
-    initial_sha: str = _create_initial_gitlab_commit(remote_project)
-
-    assert 1 <= len(commit_responses) <= INITIAL_COMMIT_ATTEMPTS
-    assert commit_responses[-1].status_code == HTTPStatus.CREATED
-    assert all(
-        response.status_code == HTTPStatus.NOT_FOUND
-        for response in commit_responses[:-1]
-    )
-    assert all(
-        "PRIVATE-TOKEN" in response.request.headers for response in commit_responses
-    )
-    initial = remote_project.commits.get(initial_sha)
-    assert initial.message.strip() == "Historic survey"
-    assert remote_project.branches.get("main").commit["id"] == initial_sha
-    assert remote_project.files.get("survey.txt", ref=initial_sha).decode() == (
-        b"historic data"
-    )
-    assert len(remote_project.commits.list(get_all=True)) == 1
-
-
 def test_initial_commit_preserves_404_after_bounded_attempts(
     live_gitlab: gitlab.Gitlab,
     commit_responses: list[Response],
@@ -101,24 +72,6 @@ def test_initial_commit_preserves_404_after_bounded_attempts(
     assert all(
         response.status_code == HTTPStatus.NOT_FOUND for response in commit_responses
     )
-
-
-def test_initial_commit_preserves_duplicate_file_error(
-    remote_project: GitlabProject,
-    commit_responses: list[Response],
-) -> None:
-    initial_sha: str = _create_initial_gitlab_commit(remote_project)
-    commit_responses.clear()
-
-    with pytest.raises(gitlab.exceptions.GitlabCreateError) as raised:
-        _create_initial_gitlab_commit(remote_project)
-
-    assert raised.value.response_code == HTTPStatus.BAD_REQUEST
-    assert len(commit_responses) == 1
-    assert "already exists" in str(raised.value.error_message).lower()
-    assert [commit.id for commit in remote_project.commits.list(get_all=True)] == [
-        initial_sha
-    ]
 
 
 def test_initial_commit_preserves_invalid_token_error(

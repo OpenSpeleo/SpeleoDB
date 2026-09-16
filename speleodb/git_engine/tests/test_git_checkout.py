@@ -17,6 +17,7 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.processors.base import BaseFileProcessor
+from speleodb.testing.gitlab_pool import get_pool
 
 
 class GitCheckoutTests(TestCase):
@@ -274,6 +275,7 @@ class GitDownloadCheckoutTests(BaseProjectTestCaseMixin):
     def setUp(self) -> None:
         super().setUp()
         self.root: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        get_pool().prepare(self.project)
         self.repo: GitRepo = self.project.git_repo
         self.addCleanup(self.repo.close)
         self.seed: GitRepo = GitRepo.clone_from(

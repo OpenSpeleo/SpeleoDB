@@ -26,6 +26,7 @@ from speleodb.api.v2.tests.utils import is_valid_git_sha
 from speleodb.common.enums import PermissionLevel
 from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.surveys.models import FileFormat
+from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.test_utils import named_product
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
@@ -51,6 +52,7 @@ class FileViewTests(BaseAPIProjectTestCase):
         extra_artifacts: list[SimpleUploadedFile] | None = None,
         commit_message: str = "Valid commit message",
     ) -> HttpResponse:
+        get_pool().prepare(self.project)
         with contextlib.ExitStack() as stack:
             opened_files = [
                 stack.enter_context(path.open(mode="rb")) for path in artifact_paths
@@ -129,7 +131,7 @@ class FileViewTests(BaseAPIProjectTestCase):
             level=uploader_access_level,
             permission_type=permission_type,
         )
-
+        get_pool().prepare(self.project)
         self.project.acquire_mutex(self.user)
 
         fileformat = None
