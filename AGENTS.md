@@ -153,7 +153,10 @@ The repository now uses a single Node workspace at the repo root.
 
 - Dev container/webserver bootstrap: `compose/start` (root npm commands).
 - Railpack image build: `railpack.json` (Node 24, `npm ci && npm run build`).
-- Railway predeploy: `railway.toml` (migrations and `collectstatic` only).
+- Railway service configuration: `.railway/railway.ts` is the sole authority;
+  predeploy runs migrations, `install_background_schedules`, and
+  `collectstatic`. Do not reintroduce legacy `railway.toml` or `railway.json`
+  files.
 - CI jobs: `.github/workflows/ci.yml` (root npm install + test/lint paths).
 - Pre-commit hooks: `.pre-commit-config.yaml` (root npm scripts).
 

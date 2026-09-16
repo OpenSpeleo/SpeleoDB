@@ -306,3 +306,16 @@ audit recorded two creations/two POSTs, zero violations or unresolved outcomes,
 and both repositories marked for deletion by session cleanup. Independent review
 completed. Production ingestion/alert delivery remains unverified; no deployment
 was performed. See the [completed review](todos/upload-error-reports.md).
+
+## Railway configuration authority review
+
+Removed the deprecated `railway.toml` and its Docker build-context exception.
+`.railway/railway.ts` is now the sole service configuration in the repository;
+`railpack.json` retains image-build ownership. Updated operational documentation
+and agent guidance while preserving existing commands and IaC ownership.
+
+Container Railway TypeScript validation and `git diff --check` passed. Read-only
+live configuration checks found no custom legacy config path for the managed
+production services or staging web service. No deployment or infrastructure
+mutation was performed. See the
+[completed review](todos/railway-config-authority.md).

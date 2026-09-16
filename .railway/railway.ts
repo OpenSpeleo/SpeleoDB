@@ -8,8 +8,8 @@ import {
   service,
 } from "railway/iac";
 
-// Last resort for a per-service CaC repo. Prefer one .railway file for the
-// project and drop this if you later combine services into that file.
+// Sole Railway service configuration for this repository. Keep this existing
+// ownership name: databases and other services remain managed outside this file.
 export const partial = "SpeleoDB-Prod";
 
 export default defineRailway(() => {

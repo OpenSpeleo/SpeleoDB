@@ -275,10 +275,16 @@ connection logs, worker heartbeats, and an actual application's task in the UI.
 ## Railway deployment
 
 Use the Railway skill to inspect the actual production project/environment
-before mutation. Preserve the existing `.railway/railway.ts` named partial and
-its current web service. New services use Infrastructure as Code; do not add a
-second legacy `railway.toml` configuration or take ownership of unrelated
-services by importing/applying an incomplete whole-project graph.
+before mutation. `.railway/railway.ts` is the sole Railway service configuration
+for this repository. The deprecated `railway.toml` was removed to avoid competing
+deployment settings. Preserve the existing named partial and its current web
+service; do not recreate legacy TOML/JSON service configuration or take ownership
+of unrelated services by importing/applying an incomplete whole-project graph.
+`railpack.json` separately owns image construction, including dependencies and
+frontend assets. Service configuration changes require a reviewed `railway config
+plan` and `railway config apply`; application Git pushes alone do not apply IaC
+edits. Consolidating these settings has no application runtime or performance
+effect.
 
 The root Node manifest and lockfile pin `railway@3.11.0`, TypeScript, and Node
 type definitions. `npm run typecheck:railway` validates the authoring file and

@@ -513,6 +513,7 @@ the public custom stylesheet. Production builds use `--minify`.
 - **Pre-commit hooks** (`.pre-commit-config.yaml`): Run `npm run pre-commit`,
   which performs the clean production Vite build.
 - **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
-- **Railway deploy** (`railway.toml`): Production build via root npm commands.
+- **Railway deploy** (`.railway/railway.ts`): Service and deployment settings;
+  `railpack.json` owns the production asset build via root npm commands.
 - **Django**: Templates reference the bundled output files in `dist/`
   directories.
