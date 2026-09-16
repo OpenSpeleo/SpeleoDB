@@ -113,6 +113,12 @@ private variants are class-controlled. Public roots deliberately do not gain
 that class: the unified bundle contains the private class-controlled variants,
 and activating them would change the public cascade.
 
+The rendered-document tests inspect HTML metadata attributes and their order
+before stylesheets, accepting either spelling of void tags (`>` or `/>`). They
+also retain the private/public root class distinction and unified stylesheet
+count and cascade checks. This keeps the theme contract independent of template
+formatter output.
+
 ## Candidate migration rules
 
 Legacy opacity utilities, `flex-shrink`/`flex-grow`, ellipsis, decoration,

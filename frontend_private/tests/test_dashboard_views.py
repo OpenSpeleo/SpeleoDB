@@ -154,7 +154,11 @@ class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
             assert f'id="{stat_id}"' in self.html, f"Missing heatmap stat: {stat_id}"
 
     def test_activity_skeleton_has_avatar_placeholders(self) -> None:
-        assert "border-radius:50%" in self.html
+        self.assertInHTML(
+            '<div class="w-8 h-8 rounded-full! shrink-0 skeleton-pulse"></div>',
+            self.html,
+            count=3,
+        )
 
     def test_error_callback_text_in_template(self) -> None:
         assert "Failed to load activity" in self.controller_js
@@ -378,14 +382,20 @@ class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
         assert 'id="projects-chart-empty"' in self.html
 
     def test_commits_chart_has_responsive_container(self) -> None:
-        chart_pos = self.html.find('id="commits-chart"')
-        preceding = self.html[max(0, chart_pos - 300) : chart_pos]
-        assert "position:relative" in preceding
+        self._assert_responsive_chart_container("commits-chart")
 
     def test_projects_chart_has_responsive_container(self) -> None:
-        chart_pos = self.html.find('id="projects-chart"')
-        preceding = self.html[max(0, chart_pos - 300) : chart_pos]
-        assert "position:relative" in preceding
+        self._assert_responsive_chart_container("projects-chart")
+
+    def _assert_responsive_chart_container(self, chart_id: str) -> None:
+        container: re.Match[str] | None = re.search(
+            r'<div\b[^>]*\bclass="([^"]*)"[^>]*>\s*'
+            rf'<canvas\b[^>]*\bid="{re.escape(chart_id)}"',
+            self.html,
+        )
+        assert container is not None, f"Missing container for {chart_id}"
+        classes: set[str] = set(container.group(1).split())
+        assert {"relative", "h-[280px]"} <= classes
 
     def test_js_creates_line_chart(self) -> None:
         assert "buildCommitsChartConfig" in self.controller_js

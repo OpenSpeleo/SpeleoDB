@@ -1,5 +1,15 @@
 # Task reviews
 
+## CI dashboard and dark document assertions
+
+Updated stale inline-style assertions to check dashboard utility classes and
+replaced exact meta-tag strings with parsed HTML contract checks. All 84 tests
+in the affected Python modules and all 1,040 JavaScript tests pass in the
+existing application container. JavaScript lint, focused Ruff/formatting, mypy,
+and diff checks pass. GitLab audit: zero creations/POSTs, violations, or
+unresolved outcomes; no cleanup required. See
+[the review](todos/ci-template-contracts.md).
+
 ## Pytest concurrency across branches
 
 Pytest uses a branch-specific job concurrency group with cancellation disabled.

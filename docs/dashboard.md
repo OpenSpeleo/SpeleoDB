@@ -79,6 +79,12 @@ The old profile page lives at:
 
 ## Testing
 
+Template checks follow the utility-based layout: all three activity avatar
+placeholders must be square, fully rounded skeletons, and each chart canvas must
+sit directly inside a relatively positioned, fixed-height container. Assert the
+current classes rather than historical inline styles; this preserves coverage
+when formatting changes without adding runtime work.
+
 Three test files cover the dashboard exhaustively:
 
 | File                                                         | Scope                    | Tests                                                                                                                                  |

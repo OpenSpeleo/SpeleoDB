@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import re
 from http import HTTPStatus
 from typing import Any
 
 from django.template.loader import render_to_string
 from django.test import TestCase
+from django.test.html import Element
+from django.test.html import parse_html
 from django.urls import reverse
 
 from speleodb.gis.models import GISView
@@ -22,29 +23,51 @@ class DarkDocumentThemeContractTests(TestCase):
         expects_dark_class: bool,
         expects_app_stylesheet: bool = True,
     ) -> None:
-        color_scheme_position: int = html.index(
-            '<meta name="color-scheme" content="dark">'
+        document: Element = parse_html(html)
+        assert document.name == "html"
+        head: Element = next(
+            child
+            for child in document.children
+            if isinstance(child, Element) and child.name == "head"
         )
-        darkreader_lock_position: int = html.index('<meta name="darkreader-lock">')
-        first_stylesheet_position: int = html.index('rel="stylesheet"')
+        head_elements: list[Element] = [
+            child for child in head.children if isinstance(child, Element)
+        ]
+        color_scheme: Element = next(
+            element
+            for element in head_elements
+            if element.name == "meta"
+            and dict(element.attributes).get("name") == "color-scheme"
+        )
+        assert dict(color_scheme.attributes).get("content") == "dark"
+        darkreader_lock: Element = next(
+            element
+            for element in head_elements
+            if element.name == "meta"
+            and dict(element.attributes).get("name") == "darkreader-lock"
+        )
+        stylesheets: list[Element] = [
+            element
+            for element in head_elements
+            if element.name == "link"
+            and "stylesheet" in (dict(element.attributes).get("rel") or "").split()
+        ]
+        assert stylesheets
+        first_stylesheet_position: int = head_elements.index(stylesheets[0])
+        assert head_elements.index(color_scheme) < first_stylesheet_position
+        assert head_elements.index(darkreader_lock) < first_stylesheet_position
 
-        assert color_scheme_position < first_stylesheet_position
-        assert darkreader_lock_position < first_stylesheet_position
-
-        html_element: re.Match[str] | None = re.search(r"<html\b[^>]*>", html)
-        assert html_element is not None
-        class_attribute: re.Match[str] | None = re.search(
-            r'\bclass="([^"]*)"', html_element.group(0)
-        )
-        classes: set[str] = (
-            set(class_attribute.group(1).split())
-            if class_attribute is not None
-            else set()
-        )
+        classes: set[str] = set((dict(document.attributes).get("class") or "").split())
         assert ("dark" in classes) is expects_dark_class
 
         expected_count: int = 1 if expects_app_stylesheet else 0
-        assert html.count(self.app_stylesheet) == expected_count
+        assert (
+            sum(
+                self.app_stylesheet in (dict(element.attributes).get("href") or "")
+                for element in stylesheets
+            )
+            == expected_count
+        )
 
     def test_public_root_declares_dark_without_private_variant(self) -> None:
         response: Any = self.client.get(reverse("home"))
