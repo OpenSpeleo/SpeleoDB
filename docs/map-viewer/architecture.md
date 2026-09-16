@@ -451,8 +451,8 @@ clicks use the Map Viewer's single global interaction dispatcher. The active
 fill and point layer IDs live in `State.gisLayerClickableLayerIds`; one rendered
 feature query selects Mapbox's topmost result across every GIS Layer. Replacing
 a source updates that ID set, while a destructive style rebuild clears it, so
-there are no per-layer handlers to accumulate. The popup owns presentation
-only; it does not introduce a second data-loading lifecycle.
+there are no per-layer handlers to accumulate. The popup owns presentation only;
+it does not introduce a second data-loading lifecycle.
 
 The GIS panel is an isolated sibling positioned below the existing GPS panel in
 the left-side stack. It copies the GPS card, toggle, loading, and minimize

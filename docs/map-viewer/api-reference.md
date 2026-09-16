@@ -189,12 +189,12 @@ collection object/export/permission routes return 404.
 
 **URL file:** `speleodb/api/v2/urls/gps_track.py`
 
-| Method | URL Pattern                | Name               | Description                 |
-| ------ | -------------------------- | ------------------ | --------------------------- |
-| GET    | `/api/v2/gps_tracks/`      | `gps-tracks`       | List readable GPS tracks    |
-| GET/PUT/PATCH/DELETE | `/api/v2/gps_tracks/<id>/` | `gps-track-detail` | Permission-gated metadata CRUD |
-| GET/POST/PUT/DELETE | `/api/v2/gps_tracks/<id>/permissions/` | `gps-track-permissions` | Direct-user access control |
-| GET    | `/api/v2/gps_tracks/<id>/export/gpx/` | `gps-track-export-gpx` | Download GPX 1.1 |
+| Method               | URL Pattern                            | Name                    | Description                    |
+| -------------------- | -------------------------------------- | ----------------------- | ------------------------------ |
+| GET                  | `/api/v2/gps_tracks/`                  | `gps-tracks`            | List readable GPS tracks       |
+| GET/PUT/PATCH/DELETE | `/api/v2/gps_tracks/<id>/`             | `gps-track-detail`      | Permission-gated metadata CRUD |
+| GET/POST/PUT/DELETE  | `/api/v2/gps_tracks/<id>/permissions/` | `gps-track-permissions` | Direct-user access control     |
+| GET                  | `/api/v2/gps_tracks/<id>/export/gpx/`  | `gps-track-export-gpx`  | Download GPX 1.1               |
 
 GPS Tracks use READ_ONLY, READ_AND_WRITE, and ADMIN access. The list returns
 signed GeoJSON URLs for every active track the caller can read, so shared tracks
@@ -204,10 +204,10 @@ use the same private map loading path as creator-owned tracks.
 
 **URL file:** `speleodb/api/v2/urls/file_import.py`
 
-| Method | URL Pattern               | Name             | Description              |
-| ------ | ------------------------- | ---------------- | ------------------------ |
+| Method | URL Pattern               | Name             | Description                              |
+| ------ | ------------------------- | ---------------- | ---------------------------------------- |
 | PUT    | `/api/v2/import/gpx/`     | `gpx-import`     | Import GPX and create owner ADMIN access |
-| PUT    | `/api/v2/import/kml_kmz/` | `kml-kmz-import` | Import KML/KMZ file      |
+| PUT    | `/api/v2/import/kml_kmz/` | `kml-kmz-import` | Import KML/KMZ file                      |
 
 ### 2.7 Cylinder Installs
 

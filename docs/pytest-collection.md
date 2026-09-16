@@ -6,8 +6,8 @@
 limits default discovery from the repository root to the six source roots:
 `compose`, `frontend_errors`, `frontend_private`, `frontend_public`, `speleodb`,
 and `well_known`. Keep these roots broad enough to include both test directories
-and standalone `tests.py` modules, such as `speleodb/git_proxy/tests.py`.
-Add a root here when introducing tests in a new top-level package.
+and standalone `tests.py` modules, such as `speleodb/git_proxy/tests.py`. Add a
+root here when introducing tests in a new top-level package.
 
 Leave `norecursedirs` unset so pytest maintains its default exclusions for
 hidden directories, `node_modules`, and build output. Assigning this option
@@ -40,8 +40,8 @@ A temporary pytest plugin timed `pytest_make_collect_report`, grouped directory
 collectors by their top-level root, and recorded session node IDs. The before
 and after lists match in order and identity, with only the five existing
 `test_random_hashes_with_hashlib` parameter labels normalized because their
-inputs come from `os.urandom` during import. Their multiplicity remains five.
-An intermediate CLI-override run also collected the same tests in 1.96 seconds.
+inputs come from `os.urandom` during import. Their multiplicity remains five. An
+intermediate CLI-override run also collected the same tests in 1.96 seconds.
 
 Measurements were sequential after the competing test run stopped. These are
 local samples, not cold-cache guarantees; timings vary with Docker memory

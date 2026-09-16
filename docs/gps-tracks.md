@@ -16,11 +16,11 @@ and collaborator behavior follows the same permission model.
 GPS Tracks use the three direct-user collaboration levels. `WEB_VIEWER` is not
 valid because GPS Tracks have no public viewer or tokenized public endpoint.
 
-| Level            | View/map/export | Rename/recolor | Manage users | Delete |
-| ---------------- | :-------------: | :------------: | :----------: | :----: |
-| READ_ONLY        |       Yes       |       No       |      No      |   No   |
-| READ_AND_WRITE   |       Yes       |      Yes       |      No      |   No   |
-| ADMIN            |       Yes       |      Yes       |     Yes      |  Yes   |
+| Level          | View/map/export | Rename/recolor | Manage users | Delete |
+| -------------- | :-------------: | :------------: | :----------: | :----: |
+| READ_ONLY      |       Yes       |       No       |      No      |   No   |
+| READ_AND_WRITE |       Yes       |      Yes       |      No      |   No   |
+| ADMIN          |       Yes       |      Yes       |     Yes      |  Yes   |
 
 Every new track receives an active ADMIN permission for its creator. The data
 migration establishes the same invariant for legacy tracks. Permission revokes

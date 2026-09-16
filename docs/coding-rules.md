@@ -137,13 +137,15 @@ the rendering function that documents the contract. See
 # BAD — inline import inside a method
 def test_something(self) -> None:
     from speleodb.common.enums import ProjectType  # PLC0415!
+
     ...
+
 
 # GOOD — import at the top of the file
 from speleodb.common.enums import ProjectType
 
-def test_something(self) -> None:
-    ...
+
+def test_something(self) -> None: ...
 ```
 
 - **Never place executable statements (assignments, function calls) between

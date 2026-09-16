@@ -56,8 +56,8 @@ make the toolbar available outside local `DEBUG` settings.
 
 ## Verification
 
-The focused settings test launches an isolated local-settings process and
-checks that:
+The focused settings test launches an isolated local-settings process and checks
+that:
 
 - the application, middleware, URL route, configuration, and callback exist;
 - the canonical panel list is non-empty;

@@ -22,19 +22,20 @@ This counts all successful creations, including repositories deleted during the
 run. Deleting a project does not refund its allocation. Ordinary integration
 tests reuse four repositories with fresh UUIDs for each invocation:
 
-| Project | Leader | User A's ordinary direct access |
-| --- | --- | --- |
-| ADMIN Project | A | ADMIN |
-| Read and Write Project | B | READ_AND_WRITE |
-| Read only Project | B | READ_ONLY |
-| Webviewer Project | B | WEB_VIEWER |
+| Project                | Leader | User A's ordinary direct access |
+| ---------------------- | ------ | ------------------------------- |
+| ADMIN Project          | A      | ADMIN                           |
+| Read and Write Project | B      | READ_AND_WRITE                  |
+| Read only Project      | B      | READ_ONLY                       |
+| Webviewer Project      | B      | WEB_VIEWER                      |
 
 `speleodb/testing/gitlab_pool.py` owns the identifiers, remote client, initial
-commit SHAs, leases, and final cleanup. It retains no session-scoped Django model
-instances. `canonical_user()` and `canonical_project()` materialize database rows
-inside the requesting test's transaction, including after `TransactionTestCase`
-flushes. Database-only tests do not contact GitLab. `project_matrix()` explicitly
-creates the complete A/B ownership and permission matrix.
+commit SHAs, leases, and final cleanup. It retains no session-scoped Django
+model instances. `canonical_user()` and `canonical_project()` materialize
+database rows inside the requesting test's transaction, including after
+`TransactionTestCase` flushes. Database-only tests do not contact GitLab.
+`project_matrix()` explicitly creates the complete A/B ownership and permission
+matrix.
 
 The base API cases select the canonical project for their tested permission
 level. Grants remain explicit: `canonical_project()` does not silently grant A
@@ -55,13 +56,13 @@ The remaining allocations cover operations whose correctness depends on a
 genuinely absent, empty, or disposable remote. Each lifecycle is self-contained;
 pytest collection order never determines whether a project is ready or deleted.
 
-| Allocation | Coverage sharing the repository |
-| --- | --- |
-| `manager-new` | Missing lookup, new-project initialization, cache recovery, user cleanup failure and deletion |
-| `proxy-new` | First-404 provisioning and retry, Make cleanup with invalid credentials, successful deletion and repeated cleanup |
-| `empty-archive` | Empty/disabled archive behavior, recorded-history inconsistency, initial API commit and duplicate-file rejection |
-| `manager-empty` | Initialization of an existing empty remote, subgroup confirmation, dry run, authentication failure and deletion |
-| `write-check` | The management command's real authenticated create/delete check |
+| Allocation      | Coverage sharing the repository                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `manager-new`   | Missing lookup, new-project initialization, cache recovery, user cleanup failure and deletion                     |
+| `proxy-new`     | First-404 provisioning and retry, Make cleanup with invalid credentials, successful deletion and repeated cleanup |
+| `empty-archive` | Empty/disabled archive behavior, recorded-history inconsistency, initial API commit and duplicate-file rejection  |
+| `manager-empty` | Initialization of an existing empty remote, subgroup confirmation, dry run, authentication failure and deletion   |
+| `write-check`   | The management command's real authenticated create/delete check                                                   |
 
 The healthy full-suite target is **nine creations and ten creation POSTs**. The
 tenth POST is the separately authorized invalid-namespace request, which must
@@ -98,8 +99,9 @@ Reports live under `.artifacts/gitlab/<run-id>/`:
 - `ledger.sqlite3`: durable accounting across DB rollbacks and subprocesses.
 - `events.jsonl`: allocation, creation, response, cleanup, and violation events,
   including the initiating stack and pytest phase.
-- `summary.json` and `summary.txt`: cumulative creations, POST attempts, allocation
-  identities, violations, unresolved outcomes, and verified cleanup per allocation.
+- `summary.json` and `summary.txt`: cumulative creations, POST attempts,
+  allocation identities, violations, unresolved outcomes, and verified cleanup
+  per allocation.
 
 The audit omits credentials, request/response bodies, and credential-bearing
 URLs. GitHub Actions uploads these artifacts even when tests fail. The CI
@@ -110,20 +112,20 @@ so cleanup cannot delete active test repositories.
 ## Isolation when reusing a remote
 
 Each test gets a fresh local checkout directory. Git consumers explicitly call
-`get_pool().prepare(project)` to acquire a remote lease. A
-`skip_if_lighttest` marker does not provision or authorize GitLab: media-only
-tests also use that marker. The lease restores the original default-branch SHA,
-removes additional public branches and tags, and restores the pool's repository
-settings. Both the current branch SHA and extra-ref inventory come from
-`git ls-remote`, because GitLab's REST branch metadata can lag a push. The lease
-then verifies the entire REST history with `all=True`, not just the default branch.
+`get_pool().prepare(project)` to acquire a remote lease. A `skip_if_lighttest`
+marker does not provision or authorize GitLab: media-only tests also use that
+marker. The lease restores the original default-branch SHA, removes additional
+public branches and tags, and restores the pool's repository settings. Both the
+current branch SHA and extra-ref inventory come from `git ls-remote`, because
+GitLab's REST branch metadata can lag a push. The lease then verifies the entire
+REST history with `all=True`, not just the default branch.
 
 Pool repositories disable GitLab builds and merge requests before initial
 publication, and tests do not create GitLab notes. Those GitLab features can
 retain hidden references after a public branch is reset. The initial empty
 commits use project-specific author identities so their SHAs remain distinct:
-`ProjectCommit.id` is globally unique across survey projects. A dirty lease fails
-instead of silently replacing the repository. Restoration attempts every
+`ProjectCommit.id` is globally unique across survey projects. A dirty lease
+fails instead of silently replacing the repository. Restoration attempts every
 borrowed role even when another reset fails, and failed roles remain pending
 until their reset succeeds. Preparing such a role must complete restoration
 before granting the next lease; preparing an already healthy active lease does
@@ -132,11 +134,11 @@ repositories without a GitLab lease.
 
 Individual tests must never delete pooled repositories. Session cleanup owns
 them. Destructive command checks use isolated subgroups or an explicitly
-allocated sacrificial project. Cleanup accepts a real 404 or a verified
-deletion mark; it does not turn authentication or availability errors into
-success. Subgroup cleanup verifies remaining children individually before
-requesting deletion of the group. GitLab may retain projects marked for delayed
-deletion, so a successful cleanup does not claim physical removal from storage.
+allocated sacrificial project. Cleanup accepts a real 404 or a verified deletion
+mark; it does not turn authentication or availability errors into success.
+Subgroup cleanup verifies remaining children individually before requesting
+deletion of the group. GitLab may retain projects marked for delayed deletion,
+so a successful cleanup does not claim physical removal from storage.
 
 Register `cleanup_remote_on_exit()` with the preallocated full project path
 before creating a sacrificial remote or invoking the write-check command. It
@@ -151,16 +153,16 @@ Keep real upload rollback tests on `TransactionTestCase` with
 ## What the September 2026 failure established
 
 The supplied GitHub job log contains a real HTTP 429 response to project
-creation. CI used GitLab.com, while the local Compose service was GitLab
-18.7.0. These are different servers with different service policies and load.
-A passing local run therefore did not establish that the CI endpoint had
-remaining capacity.
+creation. CI used GitLab.com, while the local Compose service was GitLab 18.7.0.
+These are different servers with different service policies and load. A passing
+local run therefore did not establish that the CI endpoint had remaining
+capacity.
 
 Two application behaviors amplified the failure:
 
 1. Repository acquisition attempted project creation even when the remote
-   already existed. A rejected duplicate POST still consumes server work and
-   can count against a creation quota.
+   already existed. A rejected duplicate POST still consumes server work and can
+   count against a creation quota.
 2. Upload error cleanup accessed the lazy `project.git_repo` property. After
    creation failed, cleanup attempted creation again, with a fresh retry budget.
 
@@ -168,18 +170,20 @@ Five attempts with 1/2/4/8-second delays cannot resolve a quota whose window is
 longer than that retry budget. Increasing retries adds traffic and delays.
 GitLab documents a project-creation limiter introduced in 19.3 behind
 `namespace_create_rate_limit`, with a default of 200 requests per day per user.
-Its creation check and response wording are consistent with the observed
-error, but the supplied log does not identify GitLab.com's enabled flag or
-effective threshold. Do not present that exact quota as confirmed for the
-failed job. Response headers, a request ID and server-side evidence are needed
-to identify the effective limiter. See [GitLab project API rate limits](https://docs.gitlab.com/rate_limits/api/projects/)
-and [the implementation change](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/245318).
+Its creation check and response wording are consistent with the observed error,
+but the supplied log does not identify GitLab.com's enabled flag or effective
+threshold. Do not present that exact quota as confirmed for the failed job.
+Response headers, a request ID and server-side evidence are needed to identify
+the effective limiter. See
+[GitLab project API rate limits](https://docs.gitlab.com/rate_limits/api/projects/)
+and
+[the implementation change](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/245318).
 
-Authentication does not exempt a caller from rate limits. Production API
-clients pass the configured token, and the real-service regression verifies
-that outgoing requests carry it and that `/user` returns the authenticated
-identity. That verifies the tested configuration; it does not reveal a GitHub
-secret's value or prove the historical job's identity.
+Authentication does not exempt a caller from rate limits. Production API clients
+pass the configured token, and the real-service regression verifies that
+outgoing requests carry it and that `/user` returns the authenticated identity.
+That verifies the tested configuration; it does not reveal a GitHub secret's
+value or prove the historical job's identity.
 
 ## Repository and cleanup boundaries
 
@@ -208,19 +212,22 @@ status and body. See [GitLab reliability](gitlab-reliability.md).
   hook, invalid GitLab credential, malformed input, or SQL constraint violation.
   HTTP 500 alone is insufficient because an unrelated outage can also return it.
 - Use `TransactionTestCase` for upload rollback checks on SQLite and PostgreSQL,
-  with `ATOMIC_REQUESTS=True`. Query persisted rows after the request transaction
-  exits; the surrounding transaction of `TestCase` cannot prove that rollback.
+  with `ATOMIC_REQUESTS=True`. Query persisted rows after the request
+  transaction exits; the surrounding transaction of `TestCase` cannot prove that
+  rollback.
 - Import rollback tests install a temporary, owner-scoped unique-name constraint
   through Django's schema editor. Two same-name records at different coordinates
   produce a real second-insert failure on both engines. Native signals prove the
   first insert succeeded, then database and storage reads prove rollback. The
-  constraint is removed afterward; no model, ORM method, or response is replaced.
-  Do not rely on PostgreSQL-only VARCHAR enforcement for portable failure input.
+  constraint is removed afterward; no model, ORM method, or response is
+  replaced. Do not rely on PostgreSQL-only VARCHAR enforcement for portable
+  failure input.
 - Observe the real Sentry SDK's `before_send` event hook with external delivery
-  disabled. This proves exception/event construction, not remote Sentry delivery.
+  disabled. This proves exception/event construction, not remote Sentry
+  delivery.
 - Observe real SDK response hooks to check token presence, response bodies,
-  request counts, and the absence of a duplicate creation POST. Observation
-  must not replace or manufacture responses.
+  request counts, and the absence of a duplicate creation POST. Observation must
+  not replace or manufacture responses.
 - Exercise transport refusal through a reserved, non-listening local socket.
   This validates actual connection errors and bounded retry attempts. It does
   not claim coverage for synthetic 429/5xx response sequences or server headers.
@@ -243,9 +250,9 @@ test service; ordinary authenticated integration checks still run there.
 
 `test_frontend_upload_integration.py` starts Django's real live server with a
 database-backed authenticated session, then invokes
-`scripts/test-frontend-uploads.mjs`. The script loads the rendered GIS-layer page,
-uses its actual CSRF token and the vendored jQuery library, and imports the
-production upload modules. JSDOM supplies its unmodified XMLHttpRequest and
+`scripts/test-frontend-uploads.mjs`. The script loads the rendered GIS-layer
+page, uses its actual CSRF token and the vendored jQuery library, and imports
+the production upload modules. JSDOM supplies its unmodified XMLHttpRequest and
 FormData implementations; requests reach Django and persist files in the
 configured S3-compatible service. Python reads those files back to verify exact
 bytes and checks the database for unexpected writes.
@@ -292,11 +299,12 @@ mutation/restoration, transaction flushes, direct SDK guard rejection, inherited
 subprocess accounting, and positive and negative permission paths. Each full
 invocation has its own fresh identifiers and nine-project limit.
 
-Run tests with the normal local SQLite configuration and repeat database-sensitive
-checks against PostgreSQL using `TEST_DATABASE_URL`. Verifying only an overridden
-CI database misses regressions in the supported local configuration.
-Keep suites sharing a database or cleanup namespace serial. Never print the
-database URL, GitLab token, or credential-bearing Git URLs during diagnostics.
+Run tests with the normal local SQLite configuration and repeat
+database-sensitive checks against PostgreSQL using `TEST_DATABASE_URL`.
+Verifying only an overridden CI database misses regressions in the supported
+local configuration. Keep suites sharing a database or cleanup namespace serial.
+Never print the database URL, GitLab token, or credential-bearing Git URLs
+during diagnostics.
 
 Relevant targets include the GitLab API-policy, manager and lifecycle suites,
 upload error handling, proxy, archive initialization, preload history, cleanup

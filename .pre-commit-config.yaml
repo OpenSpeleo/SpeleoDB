@@ -1,5 +1,4 @@
-exclude: "^bin/|^docs/|/migrations/|devcontainer.json|.*.html|.*.css|.*.js|.*.s\
-  vg|.*.dist"
+exclude: "^bin/|/migrations/|.*.html|.*.dist|.workdir/|.uv/|.venv/"
 
 default_language_version:
   python: python3.14
@@ -15,8 +14,13 @@ repos:
       - id: trailing-whitespace
         exclude: ^speleodb/api/v2/tests/artifacts/
       - id: end-of-file-fixer
-        exclude: ^speleodb/api/v2/tests/artifacts/
+        exclude: |
+          (?x)^(
+            speleodb/api/v2/tests/artifacts/|
+            speleodb/common/tests/url_config.json
+          )
       - id: check-json
+        exclude: ^.devcontainer/devcontainer.json
       - id: check-toml
       - id: check-xml
       - id: check-yaml

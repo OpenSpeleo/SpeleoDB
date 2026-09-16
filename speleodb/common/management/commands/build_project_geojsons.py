@@ -164,9 +164,7 @@ class Command(BaseCommand):
 
                     obj.delete()
 
-                logger.info(
-                    "Processing commit: %s - %s", commit.hexsha, commit.date_dt
-                )
+                logger.info("Processing commit: %s - %s", commit.hexsha, commit.date_dt)
 
                 try:
                     with TemporaryDirectory() as tmp_dir:

@@ -1,12 +1,12 @@
 # Git retry test isolation
 
 The Git retry tests combine real local repositories and subprocess deadlines
-with mocked remote operations and retry delays. Keeping process cleanup real
-is necessary to verify that a hanging hook is terminated and reaped, and that
-a commit already created before the timeout is not repeated.
+with mocked remote operations and retry delays. Keeping process cleanup real is
+necessary to verify that a hanging hook is terminated and reaped, and that a
+commit already created before the timeout is not repeated.
 
-Patch `speleodb.utils.helpers.time`, then assert against `mock_time.sleep`.
-Do not patch `speleodb.utils.helpers.time.sleep`: the helper imports the shared
+Patch `speleodb.utils.helpers.time`, then assert against `mock_time.sleep`. Do
+not patch `speleodb.utils.helpers.time.sleep`: the helper imports the shared
 stdlib `time` module, so changing its `sleep` attribute also changes the sleep
 used by Python's subprocess implementation.
 

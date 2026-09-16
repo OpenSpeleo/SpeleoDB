@@ -2,9 +2,9 @@
 
 ## Intent
 
-SpeleoDB exposes Git smart-HTTP endpoints for project repositories while
-keeping the backing GitLab deployment private. The proxy has two independent
-security responsibilities:
+SpeleoDB exposes Git smart-HTTP endpoints for project repositories while keeping
+the backing GitLab deployment private. The proxy has two independent security
+responsibilities:
 
 - SpeleoDB authentication and project permissions decide whether the requesting
   user may fetch from or push to a project.
@@ -20,8 +20,8 @@ separate Git remote credential ownership in `GitlabManager`.
 ## Request Boundary
 
 The proxy constructs a credential-free GitLab repository URL and supplies the
-internal OAuth token through Requests' explicit Basic Authentication support.
-It forwards only headers needed by Git smart HTTP:
+internal OAuth token through Requests' explicit Basic Authentication support. It
+forwards only headers needed by Git smart HTTP:
 
 - `User-Agent`
 - `Accept`
@@ -31,21 +31,21 @@ It forwards only headers needed by Git smart HTTP:
 - `Pragma`
 
 `Accept-Encoding` is forced to `identity` so streamed bytes do not require
-proxy-side content decoding. Client authorization, cookies, host, and
-edge/proxy headers are not forwarded.
+proxy-side content decoding. Client authorization, cookies, host, and edge/proxy
+headers are not forwarded.
 
 Automatic redirects are disabled. A redirect can indicate an authentication,
-canonical-host, or infrastructure problem; following it could turn that
-problem into a successful HTML response that is invalid Git protocol data.
+canonical-host, or infrastructure problem; following it could turn that problem
+into a successful HTML response that is invalid Git protocol data.
 
-Only discovery GETs may be replayed. Before consuming any body, discovery retries
-connection/timeouts and HTTP 429, 500, 502, 503, or 504 up to
+Only discovery GETs may be replayed. Before consuming any body, discovery
+retries connection/timeouts and HTTP 429, 500, 502, 503, or 504 up to
 `DJANGO_GIT_RETRY_ATTEMPTS` attempts (currently five), with 1/2/4/8-second
-backoff. Numeric and HTTP-date `Retry-After` headers are honored up to 30 seconds.
-A longer requested delay ends the request with the controlled 502 instead of
-retrying too early or holding a worker indefinitely. Malformed headers fall back
-to backoff. Authorization failures, redirects, and invalid successful content
-types are not retried.
+backoff. Numeric and HTTP-date `Retry-After` headers are honored up to 30
+seconds. A longer requested delay ends the request with the controlled 502
+instead of retrying too early or holding a worker indefinitely. Malformed
+headers fall back to backoff. Authorization failures, redirects, and invalid
+successful content types are not retried.
 
 For a missing repository, discovery retains one recovery: after the first
 upstream `404`, SpeleoDB asks `GitlabManager` to create or clone the project,
@@ -60,25 +60,25 @@ returned. The client can initiate a fresh discovery safely.
 A successful upstream response must have HTTP status `200` and the content type
 for the requested smart-HTTP phase:
 
-| Request | Expected content type |
-| --- | --- |
-| `GET .../info/refs?service=<service>` | `application/x-<service>-advertisement` |
-| `POST .../git-upload-pack` or `git-receive-pack` | `application/x-<service>-result` |
+| Request                                          | Expected content type                   |
+| ------------------------------------------------ | --------------------------------------- |
+| `GET .../info/refs?service=<service>`            | `application/x-<service>-advertisement` |
+| `POST .../git-upload-pack` or `git-receive-pack` | `application/x-<service>-result`        |
 
 Content-type comparison is case-insensitive and ignores media-type parameters
 such as `charset`. Redirects, non-`200` statuses, and unexpected content types
 are rejected before streaming begins. This prevents HTML login/error documents
 and other non-Git payloads from being mistaken for pkt-line data.
 
-Once validated, a successful response is byte-transparent. The proxy yields
-each non-empty upstream chunk unchanged; it does not decode, parse, reframe, or
+Once validated, a successful response is byte-transparent. The proxy yields each
+non-empty upstream chunk unchanged; it does not decode, parse, reframe, or
 rewrite pkt-lines. In particular, branding text inside a payload is not
 modified. This preserves arbitrary chunk boundaries and binary data while
 keeping memory use constant: repository responses are never buffered in full.
 
 The upstream Requests response remains open for the lifetime of the Django
-stream and is closed in a `finally` block on normal completion, read failure,
-or client disconnect. A deferred read error is logged and re-raised. Because
+stream and is closed in a `finally` block on normal completion, read failure, or
+client disconnect. A deferred read error is logged and re-raised. Because
 headers may already have been sent when a stream fails, the proxy cannot safely
 replace that partial response with a new HTTP status at that point.
 
@@ -123,8 +123,8 @@ Automated tests should mock GitLab and cover:
   and disabled redirects.
 - First-`404` recovery followed by success, repeated-`404` failure, and response
   closure on every branch.
-- Bounded transient discovery recovery/exhaustion, numeric/date rate-limit delays,
-  and refusal to replay POSTs or partially delivered responses.
+- Bounded transient discovery recovery/exhaustion, numeric/date rate-limit
+  delays, and refusal to replay POSTs or partially delivered responses.
 - Connection timeouts, request failures, deferred stream failures, and public
   endpoint authentication and permission enforcement.
 
@@ -144,9 +144,9 @@ uv run pytest
 ```
 
 Operational verification should run `git ls-remote` through SpeleoDB and a
-credential-safe direct `info/refs` diagnostic from the deployed environment.
-A request must produce either valid Git smart-HTTP output or the controlled
-`502`; it must never expose HTML as a successful Git response. Use the safe log
+credential-safe direct `info/refs` diagnostic from the deployed environment. A
+request must produce either valid Git smart-HTTP output or the controlled `502`;
+it must never expose HTML as a successful Git response. Use the safe log
 metadata to check the configured GitLab host and group and the internal token's
 scope and expiry.
 
@@ -154,9 +154,9 @@ scope and expiry.
 
 Successful bodies are streamed in bounded chunks, so memory use is independent
 of repository size. Response validation uses status and headers only and does
-not scan or buffer the body. Successful requests add no calls or delays. A failed
-discovery has at most five attempts per phase, or ten across the single 404
-recovery; the manager's API/Git recovery has a separate budget. Each request
+not scan or buffer the body. Successful requests add no calls or delays. A
+failed discovery has at most five attempts per phase, or ten across the single
+404 recovery; the manager's API/Git recovery has a separate budget. Each request
 retains its 30-second timeout. These limits are not an end-to-end deadline:
 backoff and repository recovery add elapsed time. No retry occurs after a stream
 has been handed to Django, even if failure happens on its first read.

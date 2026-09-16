@@ -63,18 +63,19 @@ database transaction. The decorator belongs on the final view callable, outside
 DRF's `api_view`; URL-level cache wrappers preserve that marker.
 
 Keep `ATOMIC_REQUESTS=True` in production and test settings for database-backed
-APIs. The static endpoint tests intentionally use `SimpleTestCase`, which forbids
-database access and verifies this boundary with SQLite and PostgreSQL alike.
+APIs. The static endpoint tests intentionally use `SimpleTestCase`, which
+forbids database access and verifies this boundary with SQLite and PostgreSQL
+alike.
 
 ---
 
 ## Why admin email shows `Traceback: None`
 
-Django's `BaseHandler.get_response()` calls `log_response()` for all
-responses with `status_code >= 400`. This `log_response` call does **not** pass
-`exc_info` because there is no active Python exception at that point (the view
-already caught it). For 5xx responses, the `django.request` logger fires at
-ERROR level → `AdminEmailHandler` → `ExceptionReporter` with no traceback →
+Django's `BaseHandler.get_response()` calls `log_response()` for all responses
+with `status_code >= 400`. This `log_response` call does **not** pass `exc_info`
+because there is no active Python exception at that point (the view already
+caught it). For 5xx responses, the `django.request` logger fires at ERROR level
+→ `AdminEmailHandler` → `ExceptionReporter` with no traceback →
 `Traceback (most recent call last): None`.
 
 For 4xx responses, Django logs at WARNING instead. Production's admin-email
@@ -98,8 +99,8 @@ patches `logging.Logger.callHandlers`; `propagate=False` does **not** prevent
 that capture. `DjangoIntegration` explicitly ignores `django.request` and
 `django.server` for logging events to avoid duplicate framework reports.
 
-Previously, upload `handle_exception()` explicitly captured only 5xx failures.
-A caught `BadZipFile` returned 400 and skipped that call. Its application ERROR
+Previously, upload `handle_exception()` explicitly captured only 5xx failures. A
+caught `BadZipFile` returned 400 and skipped that call. Its application ERROR
 log should still have produced an event when production's logging integration
 was active, so the status guard alone cannot establish why a particular
 production issue or alert was absent.
@@ -107,8 +108,8 @@ production issue or alert was absent.
 ### Upload reporting policy
 
 HTTP status describes the client's outcome; it does not decide whether an
-operator needs a report. Reporting stays in the project-upload view so other
-API endpoints retain their existing policies.
+operator needs a report. Reporting stays in the project-upload view so other API
+endpoints retain their existing policies.
 
 - `handle_exception()` logs the original traceback and calls
   `sentry_sdk.capture_exception(...)` for every handled upload failure,
@@ -183,8 +184,8 @@ retry_with_backoff(
     *args,
     retries=5,
     exc_types=(GitCommandError,),
-    base_delay=0.1,      # first retry after 0.1s
-    backoff_factor=2.0,   # then 0.2s, 0.4s, 0.8s ...
+    base_delay=0.1,  # first retry after 0.1s
+    backoff_factor=2.0,  # then 0.2s, 0.4s, 0.8s ...
     **kwargs,
 )
 ```
@@ -220,7 +221,7 @@ always rolls back.
 
 | File                  | View                          | Sentry | Rollback | Notes                                                                                                                                            |
 | --------------------- | ----------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `file.py`             | `FileUploadView`              | Yes    | Yes      | all upload processing failures; rollback through `handle_exception()`, separate reporting for input validation and optional conversion failures |
+| `file.py`             | `FileUploadView`              | Yes    | Yes      | all upload processing failures; rollback through `handle_exception()`, separate reporting for input validation and optional conversion failures  |
 | `file.py`             | `FileDownloadView`            | Yes    | No       | read-only, no DB writes                                                                                                                          |
 | `gpx_import.py`       | `GPXImportView`               | Yes    | Yes      | `Landmark` + `GPSTrack` writes                                                                                                                   |
 | `kml_kmz_import.py`   | `KML_KMZ_ImportView`          | Yes    | Yes      | `Landmark` writes                                                                                                                                |

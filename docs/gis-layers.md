@@ -56,8 +56,8 @@ The opened layer uses the standard responsive settings workflow:
 - Danger Zone is administrator-only and invokes the existing soft deletion.
 
 GIS Layers and GPS Tracks share the settings shell, Details, User Access, and
-Danger Zone templates. The pages reuse the common entity CRUD, permission
-modal, danger-zone, and list-loader controllers.
+Danger Zone templates. The pages reuse the common entity CRUD, permission modal,
+danger-zone, and list-loader controllers.
 
 ## API
 

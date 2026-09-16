@@ -203,9 +203,9 @@ Validation:
 
 Loads the shared `attachUserAutocomplete` helper for the Add form.
 
-Used by Project and by the shared entity User Access template for GIS Layer,
-GPS Track, Surface Network, Experiment, Cylinder Fleet, Sensor Fleet, and
-Landmark Collection.
+Used by Project and by the shared entity User Access template for GIS Layer, GPS
+Track, Surface Network, Experiment, Cylinder Fleet, Sensor Fleet, and Landmark
+Collection.
 
 For `team/memberships.html` (which renames the DOM nodes to `#membership_modal`,
 `.btn_open_edit_membership`, etc. and uses `role` instead of `level`) pass a
@@ -408,10 +408,10 @@ attachGisViewForm({
 
 ### `tagged_entity_list.js` - `attachTaggedEntityList(options)`
 
-Generic loader and optional CRUD scaffold for named and colored list pages.
-Rows are loaded via GET and rendered into both a desktop table and a mobile
-cards grid. Callers may configure per-row edit/delete modals or use list-only
-mode and link each row to a standard settings workflow.
+Generic loader and optional CRUD scaffold for named and colored list pages. Rows
+are loaded via GET and rendered into both a desktop table and a mobile cards
+grid. Callers may configure per-row edit/delete modals or use list-only mode and
+link each row to a standard settings workflow.
 
 Every caller supplies `renderList`. Mutation callers also supply the relevant
 domain callbacks and selectors; list-only callers omit all modal configuration.
@@ -452,9 +452,9 @@ const listApi = attachTaggedEntityList({
 
 Compatible settings pages live under
 `frontend_private/templates/pages/shared/entity_settings/`. They centralize the
-same responsive navigation, Details form, User Access cards/table and modal,
-and Danger Zone used across entity types. A view supplies domain data and URLs;
-it must not copy the shared markup into a model-specific template.
+same responsive navigation, Details form, User Access cards/table and modal, and
+Danger Zone used across entity types. A view supplies domain data and URLs; it
+must not copy the shared markup into a model-specific template.
 
 The shared templates accept these context contracts:
 

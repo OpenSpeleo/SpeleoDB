@@ -14,18 +14,18 @@ header user dropdown.
 
 ## Metrics Displayed
 
-| Metric                | Source                               | Query                                                                                        |
-| --------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Total Projects        | `user.permissions`                   | Count of accessible projects (best permission per project)                                   |
-| Total Teams           | `user.teams`                         | Active team memberships                                                                      |
-| Your Commits          | `ProjectCommit`                      | `author_email=user.email` on accessible projects                                             |
-| Stations Created      | `SubSurfaceStation`                  | `created_by=user.email`                                                                      |
-| Landmarks             | User's personal `LandmarkCollection` | Collection-scoped count                                                                      |
-| GPS Tracks            | `user.gps_tracks.filter(is_active=True)` | Active tracks created by the user; shared-only tracks are intentionally excluded         |
-| Projects by Level     | `user.permissions`                   | Breakdown by ADMIN / READ_AND_WRITE / READ_ONLY                                              |
-| Commits Over Time     | `ProjectCommit`                      | TruncMonth aggregation in Django's configured local timezone, 12-month window, total vs user |
-| Contribution Calendar | `ProjectCommit`                      | Raw per-commit ISO timestamps for user, last 365 days (client groups by local date)          |
-| Recent Activity       | `ProjectCommit`                      | Last 15 commits across all accessible projects                                               |
+| Metric                | Source                                   | Query                                                                                        |
+| --------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Total Projects        | `user.permissions`                       | Count of accessible projects (best permission per project)                                   |
+| Total Teams           | `user.teams`                             | Active team memberships                                                                      |
+| Your Commits          | `ProjectCommit`                          | `author_email=user.email` on accessible projects                                             |
+| Stations Created      | `SubSurfaceStation`                      | `created_by=user.email`                                                                      |
+| Landmarks             | User's personal `LandmarkCollection`     | Collection-scoped count                                                                      |
+| GPS Tracks            | `user.gps_tracks.filter(is_active=True)` | Active tracks created by the user; shared-only tracks are intentionally excluded             |
+| Projects by Level     | `user.permissions`                       | Breakdown by ADMIN / READ_AND_WRITE / READ_ONLY                                              |
+| Commits Over Time     | `ProjectCommit`                          | TruncMonth aggregation in Django's configured local timezone, 12-month window, total vs user |
+| Contribution Calendar | `ProjectCommit`                          | Raw per-commit ISO timestamps for user, last 365 days (client groups by local date)          |
+| Recent Activity       | `ProjectCommit`                          | Last 15 commits across all accessible projects                                               |
 
 ## API Endpoint
 

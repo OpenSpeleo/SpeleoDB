@@ -11,8 +11,8 @@ link before exposing it in page context.
 
 This boundary has two goals:
 
-- Keep the download button working with both URL variants emitted by the
-  Sidecar release workflow.
+- Keep the download button working with both URL variants emitted by the Sidecar
+  release workflow.
 - Prevent a compromised or malformed metadata document from turning the public
   page into an arbitrary external redirect.
 
@@ -40,8 +40,8 @@ MSI through SpeleoDB.
 Accepted direct links must satisfy all of these conditions:
 
 - Scheme is `https` and host is exactly `github.com`.
-- The path belongs to
-  `/OpenSpeleo/speleodb_compass_sidecar/releases/download/` and ends in `.msi`.
+- The path belongs to `/OpenSpeleo/speleodb_compass_sidecar/releases/download/`
+  and ends in `.msi`.
 - Decoded path segments contain no dot traversal, backslashes, or ASCII control
   characters that a client could normalize into a different route.
 - The URL has no embedded username or password, query string, or fragment.

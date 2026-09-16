@@ -21,13 +21,13 @@ of their heads locally, and then consolidate overlaps in the manifests. Run
 `npx --yes npm-check-updates -u --peer` for direct JavaScript releases and
 `uv lock --upgrade` for the complete Python graph. Finally inspect
 `uv tree --outdated --depth 1`; an older direct dependency is acceptable only
-when the resolver proves a concrete upstream constraint, which must be logged
-in `AGENTS.md` in the form `Can't update A until X is satisfied`.
+when the resolver proves a concrete upstream constraint, which must be logged in
+`AGENTS.md` in the form `Can't update A until X is satisfied`.
 
-Run `prek update` and review all hook changes as part of the same refresh.
-Hooks that wrap project tools, including ruff and djLint, must remain aligned
-with the versions installed from `pyproject.toml`; otherwise local direct runs
-and commit-time validation enforce different rule sets.
+Run `prek update` and review all hook changes as part of the same refresh. Hooks
+that wrap project tools, including ruff and djLint, must remain aligned with the
+versions installed from `pyproject.toml`; otherwise local direct runs and
+commit-time validation enforce different rule sets.
 
 ## Lockfile invariants
 
@@ -40,27 +40,26 @@ into the root metadata and package keys.
 
 The generated npm lockfile must meet all of these conditions:
 
-- every package key is either the empty root key or starts with
-  `node_modules/`;
+- every package key is either the empty root key or starts with `node_modules/`;
 - root dependencies exactly match `package.json`;
 - every registry-backed node retains its `resolved` URL and `integrity`
   checksum;
 - a clean install does not rewrite the committed graph.
 
-`uv.lock` is regenerated with all project extras in one resolution. Direct
-pins that make the combined graph unsatisfiable are reverted to the newest
-compatible release and recorded as blockers; unrelated constraints are not
-weakened merely to make a candidate version resolve.
+`uv.lock` is regenerated with all project extras in one resolution. Direct pins
+that make the combined graph unsatisfiable are reverted to the newest compatible
+release and recorded as blockers; unrelated constraints are not weakened merely
+to make a candidate version resolve.
 
 ## Compatibility and performance
 
-The Node engine range follows the intersection required by the installed
-tooling graph and the Node releases exercised by CI/deployment. Major updates to
-test environments, compilers, framework packages, serializers, database
-clients, or geospatial/media bindings require the same full-suite evidence as a
-source change. Dependency updates must not add runtime queries, frontend work,
-or new services; any performance change should come only from the selected
-upstream implementations.
+The Node engine range follows the intersection required by the installed tooling
+graph and the Node releases exercised by CI/deployment. Major updates to test
+environments, compilers, framework packages, serializers, database clients, or
+geospatial/media bindings require the same full-suite evidence as a source
+change. Dependency updates must not add runtime queries, frontend work, or new
+services; any performance change should come only from the selected upstream
+implementations.
 
 The DRF 3.18 typing contract accurately models parsed request data as either a
 JSON object or array. Object-only handlers narrow that shape through

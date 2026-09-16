@@ -4,15 +4,15 @@
 
 GitHub Actions and local development exercise real GitLab behavior. GitLab.com
 applies hosted-service quotas to authenticated callers; a large integration
-suite can consume project-creation quotas even when every token is correct.
-CI therefore uses an always-on GitLab CE instance in Railway's `test`
-environment. Its embedded PostgreSQL, Redis, and Gitaly run in one container.
-Jobs do not install GitLab or repeat instance/group provisioning.
+suite can consume project-creation quotas even when every token is correct. CI
+therefore uses an always-on GitLab CE instance in Railway's `test` environment.
+Its embedded PostgreSQL, Redis, and Gitaly run in one container. Jobs do not
+install GitLab or repeat instance/group provisioning.
 
 This is disposable test infrastructure, separate from SpeleoDB production
-repositories and credentials. Public account registration is disabled. CI gets
-a group-scoped token with API/read-repository/write-repository permissions;
-the GitLab root password remains in the GitLab Railway service variables.
+repositories and credentials. Public account registration is disabled. CI gets a
+group-scoped token with API/read-repository/write-repository permissions; the
+GitLab root password remains in the GitLab Railway service variables.
 
 ## Deployment
 
@@ -31,11 +31,12 @@ the GitLab root password remains in the GitLab Railway service variables.
   Puma through its Unix socket; leaving Puma on its default port 8080 prevents
   NGINX from binding the public listener.
 - Deployment health check: `/users/sign_in`, with a 900-second initial timeout.
-- Shutdown drain: 120 seconds, allowing the official entrypoint to stop services.
+- Shutdown drain: 120 seconds, allowing the official entrypoint to stop
+  services.
 
-The service pulls the official image directly from Docker Hub. Its source,
-start command, and update policy are configured in Railway. It does not require
-a GitHub repository or a custom image build. The original uploaded Dockerfile
+The service pulls the official image directly from Docker Hub. Its source, start
+command, and update policy are configured in Railway. It does not require a
+GitHub repository or a custom image build. The original uploaded Dockerfile
 deployment could not receive Railway image-update checks; the connected image
 replaces that deployment path. Do not use `railway up` on this directory for
 normal updates, as that uploads another custom build.
@@ -60,13 +61,13 @@ Railway's image-update policy is configured as:
 {
   "type": "patch",
   "schedule": [
-    {"day": 0, "startHour": 9, "endHour": 10},
-    {"day": 1, "startHour": 9, "endHour": 10},
-    {"day": 2, "startHour": 9, "endHour": 10},
-    {"day": 3, "startHour": 9, "endHour": 10},
-    {"day": 4, "startHour": 9, "endHour": 10},
-    {"day": 5, "startHour": 9, "endHour": 10},
-    {"day": 6, "startHour": 9, "endHour": 10}
+    { "day": 0, "startHour": 9, "endHour": 10 },
+    { "day": 1, "startHour": 9, "endHour": 10 },
+    { "day": 2, "startHour": 9, "endHour": 10 },
+    { "day": 3, "startHour": 9, "endHour": 10 },
+    { "day": 4, "startHour": 9, "endHour": 10 },
+    { "day": 5, "startHour": 9, "endHour": 10 },
+    { "day": 6, "startHour": 9, "endHour": 10 }
   ]
 }
 ```
@@ -78,30 +79,31 @@ updates. Configuration readback proves the policy is enabled; a future upstream
 release is needed to observe an actual automatic version update, including
 Railway's handling of GitLab's `-ce.0` suffix.
 
-The repository's existing `.railway/railway.ts` manages production services.
-Do not apply that production partial to this environment.
+The repository's existing `.railway/railway.ts` manages production services. Do
+not apply that production partial to this environment.
 
 ## Persistence
 
-Railway mounts the 5 GB `gitlab-volume` at `/data`. The startup wrapper establishes:
+Railway mounts the 5 GB `gitlab-volume` at `/data`. The startup wrapper
+establishes:
 
-| Omnibus directory | Persistent directory | Contents |
-| --- | --- | --- |
-| `/etc/gitlab` | `/data/config` | Configuration, encryption secrets, host keys |
-| `/var/opt/gitlab` | `/data/gitlab` | PostgreSQL, Redis, repositories, application data |
-| `/var/log/gitlab` | `/data/logs` | Application and service logs |
+| Omnibus directory | Persistent directory | Contents                                          |
+| ----------------- | -------------------- | ------------------------------------------------- |
+| `/etc/gitlab`     | `/data/config`       | Configuration, encryption secrets, host keys      |
+| `/var/opt/gitlab` | `/data/gitlab`       | PostgreSQL, Redis, repositories, application data |
+| `/var/log/gitlab` | `/data/logs`         | Application and service logs                      |
 
 Persisting only repository/database data is insufficient: losing
 `gitlab-secrets.json` breaks decryption of stored credentials on redeployment.
 The wrapper seeds image directories only on first boot and preserves existing
 volume contents on later boots. A missing Railway volume is a startup error.
 
-The wrapper also removes stale runtime PID files and sockets before invoking
-the official entrypoint. Omnibus's original cleanup does not follow the
+The wrapper also removes stale runtime PID files and sockets before invoking the
+official entrypoint. Omnibus's original cleanup does not follow the
 `/var/opt/gitlab` symlink. The wrapper uses `find -H` with the same bounded
-depth and filename selection, so an interrupted shutdown cannot leave a PID
-file that prevents PostgreSQL or another bundled service from restarting.
-Persistent database contents and configuration are preserved.
+depth and filename selection, so an interrupted shutdown cannot leave a PID file
+that prevents PostgreSQL or another bundled service from restarting. Persistent
+database contents and configuration are preserved.
 
 Runtime variables include `RAILWAY_RUN_UID=0`,
 `RAILWAY_SHM_SIZE_BYTES=268435456`, `PORT=8080`, `GITLAB_EXTERNAL_URL`, and a
@@ -113,17 +115,17 @@ Never store these secret values in source control or deployment logs.
 
 The post-reconfigure bootstrap applies these settings on every boot:
 
-| Setting | Value | Intent |
-| --- | --- | --- |
-| `signup_enabled` | `false` | Only explicitly provisioned users can sign in |
-| `project_create_limit` | `0` | Disable the per-user project-creation quota for integration tests |
-| `group_create_limit` | `0` | Disable the per-user group-creation quota for disposable test groups |
-| `deletion_adjourned_period` | `1` | Retain deleted test resources for the minimum one-day period |
+| Setting                     | Value   | Intent                                                               |
+| --------------------------- | ------- | -------------------------------------------------------------------- |
+| `signup_enabled`            | `false` | Only explicitly provisioned users can sign in                        |
+| `project_create_limit`      | `0`     | Disable the per-user project-creation quota for integration tests    |
+| `group_create_limit`        | `0`     | Disable the per-user group-creation quota for disposable test groups |
+| `deletion_adjourned_period` | `1`     | Retain deleted test resources for the minimum one-day period         |
 
 These limits are disabled only on this dedicated test instance. Correct
-credentials do not exempt callers from hosted GitLab quotas. Removing
-redundant project-creation requests and keeping retries bounded remain useful
-regardless of this instance policy.
+credentials do not exempt callers from hosted GitLab quotas. Removing redundant
+project-creation requests and keeping retries bounded remain useful regardless
+of this instance policy.
 
 The user created the private CI group `github-ci` (ID `3`) and owns the active
 group token named `github CI` (ID `4`), created at 21:30:17 UTC. Its scopes are
@@ -139,8 +141,8 @@ token was revoked. The intended GitHub test configuration is:
 The user updated the GitHub CI environment manually. GitHub secret metadata
 confirms host/group updates at 21:27 UTC and the token update at 21:30:43 UTC.
 The API does not return secret plaintext, and a GitHub Actions run against that
-effective configuration has not yet been independently verified. Metadata and
-a successful remote smoke test do not establish which values a job loaded.
+effective configuration has not yet been independently verified. Metadata and a
+successful remote smoke test do not establish which values a job loaded.
 
 ## Verification and maintenance
 
@@ -152,16 +154,16 @@ Keep the GitLab access token in Actions secrets. When migrating an existing
 configuration, create the variable, publish both workflow updates, then remove
 the obsolete group-ID secret so existing workflows never lose their namespace.
 
-Deployment completion requires Railway `SUCCESS`, valid HTTPS, authenticated
-API identity, project creation, and actual Git push/clone. Repeat those checks
-after redeployment to prove persistence of repositories and credentials.
-The public sign-in health check alone does not prove the CI token can write.
+Deployment completion requires Railway `SUCCESS`, valid HTTPS, authenticated API
+identity, project creation, and actual Git push/clone. Repeat those checks after
+redeployment to prove persistence of repositories and credentials. The public
+sign-in health check alone does not prove the CI token can write.
 
 CI additionally runs `manage.py check_gitlab` before pytest. It prints the host,
 authenticated username/ID and group path/ID, checks namespace consistency, then
 creates and deletes a uniquely named private project. Authentication failures,
-namespace mistakes, quota errors and missing write permissions stop the job.
-No token values are printed.
+namespace mistakes, quota errors and missing write permissions stop the job. No
+token values are printed.
 
 ### Scheduled cleanup settings
 
@@ -183,7 +185,8 @@ subgroup, independently of the caller's Django settings. It checks deletion,
 repeated cleanup, and invalid-token failure through the CLI. Cleanup skips
 projects already marked for deletion; GitLab otherwise rejects a second DELETE
 with HTTP 400 during the retention period. Verification never wipes the shared
-CI group. See [the SDK's redirect guidance](https://python-gitlab.readthedocs.io/en/stable/api-usage.html#gitlab-gitlab-class).
+CI group. See
+[the SDK's redirect guidance](https://python-gitlab.readthedocs.io/en/stable/api-usage.html#gitlab-gitlab-class).
 
 An initial sample measured about 3.789 GB RAM and 0.603 GB of the 5 GB volume.
 These are observations before sustained CI load, not capacity guarantees.
@@ -192,7 +195,8 @@ GitLab's baseline memory consumption dominates idle cost. Increase volume
 capacity before it fills, and keep test-project cleanup enabled. Before image
 upgrades, take a volume backup and follow GitLab's required upgrade stops.
 
-References: [GitLab container installation](https://docs.gitlab.com/install/docker/installation/),
+References:
+[GitLab container installation](https://docs.gitlab.com/install/docker/installation/),
 [memory tuning](https://docs.gitlab.com/omnibus/settings/memory_constrained_envs/),
 [Railway volumes](https://docs.railway.com/volumes),
 [GitLab project rate limits](https://docs.gitlab.com/rate_limits/api/projects/),
@@ -245,8 +249,8 @@ HTTPS clone after restart matched the original commit SHA and file bytes,
 verifying repository and credential persistence across this deployment.
 
 That final clone used a separate temporary verification group token, which was
-revoked with HTTP 204 afterward. The agent-owned smoke project was scheduled
-for deletion with HTTP 202. The user's active CI token was preserved.
+revoked with HTTP 204 afterward. The agent-owned smoke project was scheduled for
+deletion with HTTP 202. The user's active CI token was preserved.
 
 Full-suite validation remains pending. The local pytest run stalled around 77%
 with four failures and one error and is being interrupted to inspect the
