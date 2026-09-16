@@ -331,3 +331,24 @@ unresolved allocations; no remote cleanup needed. Fixed invalid nesting and
 preserved permissions, form actions, model colors, modal visibility, and map
 controls. See [the completed plan](todos/djlint-template-review.md) and
 [template linting design](../docs/template-linting.md).
+
+## Current logo asset documentation review
+
+Updated `docs/logo-assets.md` to name `logo-sdb-dark.svg` and
+`logo-sdb-light.svg`, both with blue `#3852fc`. Their lettering and icons are
+white (`#ffffff`) and almost-black grey (`#111111`), respectively. Container
+verification confirmed documented colors, dimensions, path geometry, and
+embedded-icon filtering. Artwork was unchanged. See
+[the completed review](todos/logo-assets-current-palette.md).
+
+## USAH Institute logo review
+
+Created `logo-usah-dark.svg` and `logo-usah-light.svg` with the original Meedori
+Sans Light typography. `USAH` uses white/almost-black and `Institute` uses the
+shared blue `#3852fc`. Existing icon and tagline artwork is preserved; the
+canvas is wider to fit the new wording. Both browser previews were inspected,
+container SVG checks passed, and all 1,032 JavaScript tests passed before the
+A/H correction. The A and H now use complete letterforms; tests were not rerun
+for this correction, per user request. See
+[the completed plan](todos/usah-logos.md) and
+[asset documentation](../docs/logo-assets.md).
