@@ -1,6 +1,6 @@
 /**
  * Shared helpers for the project lock / unlock buttons on
- * `project/mutex_history.html`.
+ * the project banner and `project/mutex_history.html`.
  *
  * Usage:
  *   attachMutexLock({
@@ -20,7 +20,9 @@
 import { showAjaxErrorModal } from './ajax_errors.js';
 import { FormModals } from './modals.js';
 
-function _postMutexAction(url, successMessage, reloadDelayMs) {
+function _postMutexAction(url, successMessage, reloadDelayMs, button) {
+    if (button.disabled) return;
+    button.disabled = true;
     var csrftoken = $('input[name^=csrfmiddlewaretoken]').val();
     $('#error_div').hide();
     $('#success_div').hide();
@@ -35,10 +37,15 @@ function _postMutexAction(url, successMessage, reloadDelayMs) {
             return true;
         },
         success: function () {
+            if (reloadDelayMs === 0) {
+                window.location.reload();
+                return;
+            }
             FormModals.showSuccess(successMessage);
             window.setTimeout(function () { window.location.reload(); }, reloadDelayMs);
         },
         error: function (xhr) {
+            button.disabled = false;
             showAjaxErrorModal(xhr);
         },
     });
@@ -55,14 +62,14 @@ export function attachMutexLock(options) {
 
     if (unlockUrl) {
         $('.btn_unlock').click(function () {
-            _postMutexAction(unlockUrl, unlockMessage, reloadDelayMs);
+            _postMutexAction(unlockUrl, unlockMessage, reloadDelayMs, this);
             return false;
         });
     }
 
     if (lockUrl) {
         $('#btn_lock_project').click(function () {
-            _postMutexAction(lockUrl, lockMessage, reloadDelayMs);
+            _postMutexAction(lockUrl, lockMessage, 0, this);
             return false;
         });
     }

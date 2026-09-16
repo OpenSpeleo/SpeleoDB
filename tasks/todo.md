@@ -352,3 +352,21 @@ A/H correction. The A and H now use complete letterforms; tests were not rerun
 for this correction, per user request. See
 [the completed plan](todos/usah-logos.md) and
 [asset documentation](../docs/logo-assets.md).
+
+## Project edition and upload controls review
+
+Enable Project Edition now acquires the lock directly and immediately reloads
+the current page after success. The shared mutex helper prevents duplicate
+pending actions; all project pages share one error modal. Upload Revision and
+Enter use the same native form submission handler, preserving files/title on
+validation or API errors.
+
+Container verification: 1,040 JavaScript tests and 57 focused Django tests
+passed, along with root JavaScript lint, focused Ruff/mypy, template
+formatting/lint, and a clean Vite build. Verified all 99 manifest outputs and
+exact changed-controller bytes served by Django. Restored the development
+watcher after production asset verification. GitLab audit recorded zero
+creations/POSTs/violations/unresolved allocations; no remote cleanup needed.
+JSDOM covers submit/reload calls rather than actual browser Enter/navigation.
+See [the completed plan](todos/project-edition-upload-controls.md) and
+[feature design](../docs/project-edition-and-upload.md).

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import re
+from typing import TYPE_CHECKING
+
+from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -10,6 +15,9 @@ from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from django.http import HttpResponseBase
 
 AMBER_BORDER = "border-srgb-amber-500-60"
 SLATE_BORDER = "border-srgb-slate-500-50"
@@ -70,12 +78,65 @@ class TestBannerNoLockWriteAccess(ProjectLockBannerTestBase):
         html = self._get_page("project_details")
         assert ENABLE_EDITION_LINK_TEXT in html
 
-    def test_enable_edition_link_points_to_mutex_page(self) -> None:
-        html = self._get_page("project_details")
-        expected_url = reverse(
-            "private:project_mutexes", kwargs={"project_id": self.project.id}
+    def test_enable_edition_button_acquires_and_reloads_current_page(self) -> None:
+        self.client = Client(enforce_csrf_checks=True)
+        html: str = self._get_page("project_details")
+        button: re.Match[str] | None = re.search(
+            r'<button\b[^>]*id="btn_lock_project"[^>]*>', html
         )
-        assert expected_url in html
+        assert button is not None
+        assert 'type="button"' in button.group()
+        assert "href=" not in button.group()
+        controller: re.Match[str] | None = re.search(
+            r'<script\b[^>]*data-speleodb-controller="mutex-lock"[^>]*>'
+            r"(.*?)</script>",
+            html,
+            re.DOTALL,
+        )
+        assert controller is not None
+        context: dict[str, str] = json.loads(controller.group(1))
+        assert context["lockUrl"] == reverse(
+            "api:v2:project-acquire", kwargs={"id": self.project.id}
+        )
+        response: HttpResponseBase = self.client.post(
+            context["lockUrl"],
+            content_type="application/json",
+            headers={"X-CSRFToken": self.client.cookies["csrftoken"].value},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        self.project.refresh_from_db()
+        assert self.project.mutex_owner == self.user
+        reloaded_html: str = self._get_page("project_details")
+        assert EDITION_ENABLED_TEXT in reloaded_html
+        assert UPLOAD_LINK_TEXT in reloaded_html
+        assert 'id="btn_lock_project"' not in reloaded_html
+
+    def test_banner_acquisition_requires_csrf(self) -> None:
+        self.client = Client(enforce_csrf_checks=True)
+        self._get_page("project_details")
+        response: HttpResponseBase = self.client.post(
+            reverse("api:v2:project-acquire", kwargs={"id": self.project.id}),
+            content_type="application/json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        self.project.refresh_from_db()
+        assert self.project.active_mutex is None
+
+    def test_acquisition_preserves_a_lock_taken_after_page_load(self) -> None:
+        self._get_page("project_details")
+        UserProjectPermissionFactory.create(
+            target=self.other_user,
+            project=self.project,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+        self.project.acquire_mutex(user=self.other_user)
+        response: HttpResponseBase = self.client.post(
+            reverse("api:v2:project-acquire", kwargs={"id": self.project.id}),
+            content_type="application/json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        self.project.refresh_from_db()
+        assert self.project.mutex_owner == self.other_user
 
     def test_no_emerald_banner(self) -> None:
         html = self._get_page("project_details")
@@ -112,6 +173,17 @@ class TestBannerNoLockReadOnly(ProjectLockBannerTestBase):
     def test_no_enable_edition_link(self) -> None:
         html = self._get_page("project_details")
         assert ENABLE_EDITION_LINK_TEXT not in html
+        assert 'data-speleodb-controller="mutex-lock"' not in html
+
+    def test_readonly_user_cannot_acquire_via_api(self) -> None:
+        self._get_page("project_details")
+        response: HttpResponseBase = self.client.post(
+            reverse("api:v2:project-acquire", kwargs={"id": self.project.id}),
+            content_type="application/json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        self.project.refresh_from_db()
+        assert self.project.active_mutex is None
 
     def test_no_amber_banner(self) -> None:
         html = self._get_page("project_details")
@@ -295,6 +367,10 @@ class TestBannerConsistencyAcrossPages(ProjectLockBannerTestBase):
             assert EDITION_NOT_ENABLED_TEXT in html, (
                 f"Edition-not-enabled text missing on {view_name}"
             )
+            assert html.count('id="btn_lock_project"') == 1, view_name
+            assert html.count('data-speleodb-controller="mutex-lock"') == 1, view_name
+            assert html.count('id="modal_error"') == 1, view_name
+            assert 'name="csrfmiddlewaretoken"' in html, view_name
 
     def test_emerald_banner_on_all_subpages_when_editing(self) -> None:
         self.project.acquire_mutex(user=self.user)

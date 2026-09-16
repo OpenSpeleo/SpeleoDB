@@ -62,14 +62,14 @@
         <div class="flex self-end">
           <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
              href="{% url 'private:project_details' project_id=project.id %}">Cancel</a>
-          <button type="button"
+          <button type="submit"
+                  form="file_upload_form"
                   id="btn_submit"
                   class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Upload Revision</button>
         </div>
       </div>
     </footer>
     {% include "snippets/modal_success.html" %}
-    {% include "snippets/modal_error.html" %}
   </div>
   <div id="loading_spinner" class="loading initially-hidden"></div>
 {% endblock right_panel %}

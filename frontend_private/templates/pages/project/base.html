@@ -36,13 +36,23 @@
             </svg>
             <p class="text-sm text-slate-300">
               Project edition is not enabled.{% if request.url_name != "project_mutexes" %}
-              <a href="{% url 'private:project_mutexes' project_id=project.id %}"
-                 class="ml-1 font-medium text-amber-400 underline decoration-srgb-amber-400-40 underline-offset-2 hover:text-amber-300 hover:decoration-srgb-amber-300-60 transition-colors">
+              <button type="button"
+                      id="btn_lock_project"
+                      class="ml-1 font-medium text-amber-400 underline decoration-srgb-amber-400-40 underline-offset-2 hover:text-amber-300 hover:decoration-srgb-amber-300-60 transition-colors">
                 Enable Project Edition
-              </a>
+              </button>
         {% endif %}
         </p>
         </div>
+        {% if request.url_name != "project_mutexes" %}
+          {% csrf_token %}
+          {% vite_preload 'controller-mutex-lock' %}
+          <script type="application/json" data-speleodb-controller="mutex-lock">
+            {
+              "lockUrl": "{% url 'api:v2:project-acquire' id=project.id %}"
+            }
+          </script>
+        {% endif %}
       {% else %}
         <div class="mb-6 flex items-center gap-3 rounded-lg border-l-4 border-srgb-slate-500-50 bg-slate-500/[0.07] px-4 py-3">
           <svg class="w-5 h-5 shrink-0 text-slate-400"
@@ -531,4 +541,5 @@
 </div>
 </div>
 </main>
+{% include "snippets/modal_error.html" %}
 {% endblock content %}

@@ -120,7 +120,9 @@ export async function init(context) {
                 $(this).removeClass('border-rose-600');
             });
 
-            $('#btn_submit').click(function() {
+            $('#file_upload_form').on('submit', function(event) {
+              event.preventDefault();
+
               if ($('#message').val().trim() === "") {
                 $("#modal_error_txt").text("The revision title cannot be empty.");
                 $("#modal_error").css('display', 'flex');
