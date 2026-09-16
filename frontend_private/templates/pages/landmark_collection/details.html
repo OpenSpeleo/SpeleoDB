@@ -1,261 +1,324 @@
 {% extends "pages/landmark_collection/base.html" %}
+
 {% load static %}
 {% load project_colors %}
 {% load vite_assets %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-{% vite_styles 'style-shared-modal' %}
-{% vite_preload 'controller-landmark-details' 'controller-entity-crud' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-landmark-collection-details' %}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+  {% vite_styles 'style-shared-modal' %}
+  {% vite_preload 'controller-landmark-details' 'controller-entity-crud' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-landmark-collection-details' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
-    <div class="hidden" aria-hidden="true">
-        {% csrf_token %}
-    </div>
+  <div class="grow">
+    <div class="hidden" aria-hidden="true">{% csrf_token %}</div>
     {% if not collection.is_personal %}
-    <form id="landmark_collection_details_form" autocomplete="off">
+      <form id="landmark_collection_details_form" autocomplete="off">
         <fieldset {% if not has_write_access %}disabled{% endif %}>
-            {% csrf_token %}
-            <div class="p-6 flow-y-8">
-                <h2 class="text-2xl text-slate-100 font-bold">Collection Settings</h2>
-
-                <div class="flow-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="name">Collection Name <span class="text-rose-500">*</span></label>
-                        <input id="name" name="name" type="text" value="{{ collection.name }}"
-                               class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition" />
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="description">Description</label>
-                        <textarea id="description" name="description" rows="4"
-                                  class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition resize-y">{% if collection.description %}{{ collection.description }}{% endif %}</textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Collection Color</label>
-                        <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
-                            <div class="flex items-center gap-3 mb-3">
-                                <div id="color-preview" class="w-9 h-9 rounded-lg border-2 border-slate-500 shrink-0 shadow-inner" style="background-color: {{ collection.color }}"></div>
-                                {% if has_write_access %}
-                                <button type="button" id="color-picker-btn" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-slate-700" title="Custom color">
-                                    <img src="{% static 'private/media/color-picker.svg' %}" class="w-5 h-5 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
-                                </button>
-                                {% endif %}
-                                <input type="color" id="color-picker" value="{{ collection.color }}" class="sr-only">
-                                <input type="hidden" name="color" id="color-value" value="{{ collection.color }}">
-                                <div class="flex items-stretch">
-                                    <span class="inline-flex items-center px-2.5 text-sm font-mono text-slate-400 bg-slate-700 border border-r-0 border-slate-600 rounded-l-lg select-none">#</span>
-                                    <input type="text" id="color-hex-input" value="{{ collection.color|cut:'#' }}" maxlength="6"
-                                           class="w-[5rem] text-sm text-slate-200 font-mono bg-srgb-slate-900-40 border border-slate-600 rounded-r-lg px-2.5 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition"
-                                           spellcheck="false" {% if not has_write_access %}disabled{% endif %}>
-                                </div>
-                            </div>
-                            {% if has_write_access %}
-                            <div class="flex flex-wrap gap-2">
-                                {% get_project_color_palette as palette %}
-                                {% for c in palette %}
-                                <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == collection.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}" style="background-color: {{ c }}" data-color="{{ c }}"></button>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <footer>
-                <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-700">
-                    <a href="{% url 'private:landmark_collections' %}"
-                       class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 hover:text-white transition shadow-xs">
-                        Cancel
-                    </a>
+          {% csrf_token %}
+          <div class="p-6 flow-y-8">
+            <h2 class="text-2xl text-slate-100 font-bold">Collection Settings</h2>
+            <div class="flow-y-6">
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="name">Collection Name <span class="text-rose-500">*</span></label>
+                <input id="name"
+                       name="name"
+                       type="text"
+                       value="{{ collection.name }}"
+                       class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="description">Description</label>
+                <textarea id="description"
+                          name="description"
+                          rows="4"
+                          class="block w-full rounded-lg bg-srgb-slate-900-40 border border-slate-600 text-slate-100 text-sm px-4 py-2.5 placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition resize-y">{% if collection.description %}{{ collection.description }}{% endif %}</textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Collection Color</label>
+                <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
+                  <div class="flex items-center gap-3 mb-3">
+                    {# Model/palette color is supplied by Django and cannot live in a static stylesheet. #}
+                    <!-- djlint:off H021 -->
+                    <div id="color-preview"
+                         class="w-9 h-9 rounded-lg border-2 border-slate-500 shrink-0 shadow-inner"
+                         style="background-color: {{ collection.color }}"></div>
+                    <!-- djlint:on -->
                     {% if has_write_access %}
-                    <button id="btn_submit"
-                            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-srgb-indigo-400-30 bg-indigo-500 text-white hover:bg-indigo-600 transition shadow-xs">
-                        Save Changes
-                    </button>
+                      <button type="button"
+                              id="color-picker-btn"
+                              class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-slate-700"
+                              title="Custom color">
+                        <img src="{% static 'private/media/color-picker.svg' %}"
+                             class="w-5 h-5 invert opacity-60 hover:opacity-100 transition-opacity"
+                             alt="Pick color" />
+                      </button>
                     {% endif %}
+                    <input type="color"
+                           id="color-picker"
+                           value="{{ collection.color }}"
+                           class="sr-only" />
+                    <input type="hidden"
+                           name="color"
+                           id="color-value"
+                           value="{{ collection.color }}" />
+                    <div class="flex items-stretch">
+                      <span class="inline-flex items-center px-2.5 text-sm font-mono text-slate-400 bg-slate-700 border border-r-0 border-slate-600 rounded-l-lg select-none">#</span>
+                      <input type="text"
+                             id="color-hex-input"
+                             value="{{ collection.color|cut:'#' }}"
+                             maxlength="6"
+                             class="w-[5rem] text-sm text-slate-200 font-mono bg-srgb-slate-900-40 border border-slate-600 rounded-r-lg px-2.5 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-hidden transition"
+                             spellcheck="false"
+                             {% if not has_write_access %}disabled{% endif %} />
+                    </div>
+                  </div>
+                  {% if has_write_access %}
+                    <div class="flex flex-wrap gap-2">
+                      {% get_project_color_palette as palette %}
+                      {% for c in palette %}
+                        {# Model/palette color is supplied by Django and cannot live in a static stylesheet. #}
+                        <!-- djlint:off H021 -->
+                        <button type="button"
+                                class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == collection.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}"
+                                style="background-color: {{ c }}"
+                                data-color="{{ c }}"></button>
+                        <!-- djlint:on -->
+                      {% endfor %}
+                    </div>
+                  {% endif %}
                 </div>
-            </footer>
-        </fieldset>
-    </form>
-    {% endif %}
-
-    <section class="p-6{% if not collection.is_personal %} border-t border-slate-700{% endif %} relative">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-            <h2 class="text-lg font-semibold text-slate-100">Landmarks in this Collection</h2>
-            <div class="flex flex-wrap items-center gap-2">
-                {% if has_write_access %}
-                <button id="add-landmark-btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    New Landmark
-                </button>
-                {% endif %}
-                <a href="{% url 'api:v2:landmark-collection-landmarks-export-excel' collection_id=collection.id %}"
-                    class="btn-sm bg-srgb-green-500-80 hover:bg-green-500 text-white border border-srgb-green-600-50">
-                    Export Excel
-                </a>
-                <a href="{% url 'api:v2:landmark-collection-landmarks-export-gpx' collection_id=collection.id %}"
-                    class="btn-sm bg-srgb-cyan-500-80 hover:bg-cyan-500 text-white border border-srgb-cyan-600-50">
-                    Export GPX
-                </a>
+              </div>
             </div>
+          </div>
+          <footer>
+            <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-700">
+              <a href="{% url 'private:landmark_collections' %}"
+                 class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-600 bg-slate-700 text-slate-200 hover:bg-slate-600 hover:text-white transition shadow-xs">
+                Cancel
+              </a>
+              {% if has_write_access %}
+                <button type="submit"
+                        id="btn_submit"
+                        class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-lg border border-srgb-indigo-400-30 bg-indigo-500 text-white hover:bg-indigo-600 transition shadow-xs">
+                  Save Changes
+                </button>
+              {% endif %}
+            </div>
+          </footer>
+        </fieldset>
+      </form>
+    {% endif %}
+    <section class="p-6{% if not collection.is_personal %} border-t border-slate-700{% endif %} relative">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+        <h2 class="text-lg font-semibold text-slate-100">Landmarks in this Collection</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          {% if has_write_access %}
+            <button type="button"
+                    id="add-landmark-btn"
+                    class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              New Landmark
+            </button>
+          {% endif %}
+          <a href="{% url 'api:v2:landmark-collection-landmarks-export-excel' collection_id=collection.id %}"
+             class="btn-sm bg-srgb-green-500-80 hover:bg-green-500 text-white border border-srgb-green-600-50">
+            Export Excel
+          </a>
+          <a href="{% url 'api:v2:landmark-collection-landmarks-export-gpx' collection_id=collection.id %}"
+             class="btn-sm bg-srgb-cyan-500-80 hover:bg-cyan-500 text-white border border-srgb-cyan-600-50">
+            Export GPX
+          </a>
         </div>
-
-        {% if landmarks %}
+      </div>
+      {% if landmarks %}
         {% if has_write_access %}
-        <p id="landmarks-selection-hint" class="text-sm text-slate-300 -mt-2 mb-3">Select landmarks to batch transfer or delete</p>
+          <p id="landmarks-selection-hint"
+             class="text-sm text-slate-300 -mt-2 mb-3">Select landmarks to batch transfer or delete</p>
         {% endif %}
         <div class="bg-srgb-slate-900-20 rounded-lg border border-slate-700 overflow-hidden">
-            <table id="collection_landmarks_table" class="table-auto w-full">
-                <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-40">
-                    <tr>
-                        {% if has_write_access %}
-                        <th class="px-3 py-3 w-10"><input type="checkbox" id="collection_landmarks_table_select_all" title="Select all"></th>
-                        {% endif %}
-                        <th class="px-4 py-3 text-center">Name</th>
-                        <th class="px-4 py-3 text-center">Longitude</th>
-                        <th class="px-4 py-3 text-center">Latitude</th>
-                        <th class="px-4 py-3 text-center">Created By</th>
-                        <th class="px-4 py-3 text-center w-28">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm row-divide-y row-divide-slate-700" id="collection_landmarks_table_body">
-                    {% for landmark in landmarks %}
-                    <tr class="landmark-row hover:bg-srgb-slate-700-30 transition-colors" data-landmark-id="{{ landmark.id }}">
-                        {% if has_write_access %}
-                        <td class="px-3 py-3 text-center">
-                            <input type="checkbox" class="landmark-row-select" data-landmark-id="{{ landmark.id }}">
-                        </td>
-                        {% endif %}
-                        <td class="px-4 py-3 text-center">
-                            <div class="font-medium text-slate-100">{{ landmark.name }}</div>
-                            {% if landmark.description %}
-                            <div class="text-xs text-slate-400 mt-0.5">{{ landmark.description|truncatewords:8 }}</div>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-3 text-center text-sm text-slate-300 font-mono landmark-coord-cell" data-coord="{{ landmark.longitude }}" title="Click to copy">
-                            {{ landmark.longitude }}
-                        </td>
-                        <td class="px-4 py-3 text-center text-sm text-slate-300 font-mono landmark-coord-cell" data-coord="{{ landmark.latitude }}" title="Click to copy">
-                            {{ landmark.latitude }}
-                        </td>
-                        <td class="px-4 py-3 text-center text-sm text-slate-300">
-                            {{ landmark.created_by }}
-                        </td>
-                        <td class="px-4 py-3 text-center">
-                            <div class="flex items-center justify-center gap-1">
-                                <a href="{% url 'private:map_viewer' %}?goto={{ landmark.latitude }},{{ landmark.longitude }}"
-                                    class="landmark-action-btn locate landmark-locate-btn" title="Locate on map">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
-                                </a>
-                                {% if has_write_access %}
-                                <button class="landmark-action-btn edit landmark-edit-btn" data-landmark-id="{{ landmark.id }}" title="Edit landmark">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </button>
-                                <button class="landmark-action-btn delete landmark-delete-btn" data-landmark-id="{{ landmark.id }}" title="Delete landmark">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+          <table id="collection_landmarks_table" class="table-auto w-full">
+            <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-40">
+              <tr>
+                {% if has_write_access %}
+                  <th class="px-3 py-3 w-10">
+                    <input type="checkbox"
+                           id="collection_landmarks_table_select_all"
+                           title="Select all" />
+                  </th>
+                {% endif %}
+                <th class="px-4 py-3 text-center">Name</th>
+                <th class="px-4 py-3 text-center">Longitude</th>
+                <th class="px-4 py-3 text-center">Latitude</th>
+                <th class="px-4 py-3 text-center">Created By</th>
+                <th class="px-4 py-3 text-center w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="text-sm row-divide-y row-divide-slate-700"
+                   id="collection_landmarks_table_body">
+              {% for landmark in landmarks %}
+                <tr class="landmark-row hover:bg-srgb-slate-700-30 transition-colors"
+                    data-landmark-id="{{ landmark.id }}">
+                  {% if has_write_access %}
+                    <td class="px-3 py-3 text-center">
+                      <input type="checkbox"
+                             class="landmark-row-select"
+                             data-landmark-id="{{ landmark.id }}" />
+                    </td>
+                  {% endif %}
+                  <td class="px-4 py-3 text-center">
+                    <div class="font-medium text-slate-100">{{ landmark.name }}</div>
+                    {% if landmark.description %}
+                      <div class="text-xs text-slate-400 mt-0.5">{{ landmark.description|truncatewords:8 }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-300 font-mono landmark-coord-cell"
+                      data-coord="{{ landmark.longitude }}"
+                      title="Click to copy">{{ landmark.longitude }}</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-300 font-mono landmark-coord-cell"
+                      data-coord="{{ landmark.latitude }}"
+                      title="Click to copy">{{ landmark.latitude }}</td>
+                  <td class="px-4 py-3 text-center text-sm text-slate-300">{{ landmark.created_by }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                      <a href="{% url 'private:map_viewer' %}?goto={{ landmark.latitude }},{{ landmark.longitude }}"
+                         class="landmark-action-btn locate landmark-locate-btn"
+                         title="Locate on map">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </a>
+                      {% if has_write_access %}
+                        <button type="button"
+                                class="landmark-action-btn edit landmark-edit-btn"
+                                data-landmark-id="{{ landmark.id }}"
+                                title="Edit landmark">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button type="button"
+                                class="landmark-action-btn delete landmark-delete-btn"
+                                data-landmark-id="{{ landmark.id }}"
+                                title="Delete landmark">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-
         <div class="mt-3 text-sm text-slate-400">
-            Total landmarks: <span class="font-semibold text-slate-300" id="landmark_count">{{ landmarks|length }}</span>
+          Total landmarks: <span class="font-semibold text-slate-300" id="landmark_count">{{ landmarks|length }}</span>
         </div>
-
         {% if has_write_access %}
-        {# Floating batch action bar -- slides up when items are selected #}
-        <div id="landmarks-bulk-action-bar" hidden
-             class="flex items-center justify-between gap-4 mt-4 px-4 py-3 bg-srgb-slate-700-90 backdrop-blur-sm border border-slate-600 rounded-lg shadow-xl">
+          {# Floating batch action bar -- slides up when items are selected #}
+          <div id="landmarks-bulk-action-bar"
+               hidden
+               class="flex items-center justify-between gap-4 mt-4 px-4 py-3 bg-srgb-slate-700-90 backdrop-blur-sm border border-slate-600 rounded-lg shadow-xl">
             <div class="flex items-center gap-2 text-sm text-slate-200">
-                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-bold" id="landmarks-selection-count">0</span>
-                <span>selected</span>
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-bold"
+                    id="landmarks-selection-count">0</span>
+              <span>selected</span>
             </div>
             <div class="flex items-center gap-2">
-                <button id="landmarks-bulk-transfer-btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1.5" title="Transfer selected landmarks to another collection">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                    Transfer
-                </button>
-                <button id="landmarks-bulk-delete-btn" class="btn-sm bg-srgb-red-500-80 hover:bg-red-500 text-white flex items-center gap-1.5" title="Delete selected landmarks">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Delete
-                </button>
-                <button id="landmarks-bulk-clear-btn" class="btn-sm bg-slate-600 hover:bg-slate-500 text-slate-200" title="Clear selection">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+              <button type="button"
+                      id="landmarks-bulk-transfer-btn"
+                      class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1.5"
+                      title="Transfer selected landmarks to another collection">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Transfer
+              </button>
+              <button type="button"
+                      id="landmarks-bulk-delete-btn"
+                      class="btn-sm bg-srgb-red-500-80 hover:bg-red-500 text-white flex items-center gap-1.5"
+                      title="Delete selected landmarks">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+              <button type="button"
+                      id="landmarks-bulk-clear-btn"
+                      class="btn-sm bg-slate-600 hover:bg-slate-500 text-slate-200"
+                      title="Clear selection">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-        </div>
+          </div>
         {% endif %}
-
-        {% else %}
+      {% else %}
         {# Empty state #}
         <div class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 center-x text-slate-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-            <p class="text-slate-500 mb-4">No landmarks in this collection yet</p>
-            {% if has_write_access %}
-            <button id="add-first-landmark-btn" class="btn bg-indigo-500 hover:bg-indigo-600 text-white inline-flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Add your first Landmark
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-12 w-12 center-x text-slate-600 mb-3"
+               fill="none"
+               viewBox="0 0 24 24"
+               stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p class="text-slate-500 mb-4">No landmarks in this collection yet</p>
+          {% if has_write_access %}
+            <button type="button"
+                    id="add-first-landmark-btn"
+                    class="btn bg-indigo-500 hover:bg-indigo-600 text-white inline-flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add your first Landmark
             </button>
-            {% endif %}
+          {% endif %}
         </div>
-        {% endif %}
+      {% endif %}
     </section>
-
     {% if not collection.is_personal %}
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
+      {% include "snippets/modal_success.html" %}
+      {% include "snippets/modal_error.html" %}
     {% endif %}
-</div>
-
-{# Inline JSON data for the details_main.js bundle #}
-{{ landmarks_data|json_script:"landmark_table_data" }}
-{{ collection_data|json_script:"landmark_collection_context" }}
+  </div>
+  {# Inline JSON data for the details_main.js bundle #}
+  {{ landmarks_data|json_script:"landmark_table_data" }}
+  {{ collection_data|json_script:"landmark_collection_context" }}
 {% endblock right_panel %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-{% if not collection.is_personal %}
-<script type="application/json" data-speleodb-controller="entity-crud">
-{
-    "formId": "landmark_collection_details_form",
-    "endpoint": "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
-    "method": "PUT",
-    "successMessage": "The landmark collection has been updated.",
-    "requiredField": "name",
-    "requiredMessage": "Collection name is required.",
-    "reloadOnSuccess": true,
-    "colorPicker": {% if has_write_access %}true{% else %}false{% endif %}
-}
-</script>
-{% endif %}
-<script type="application/json" data-speleodb-controller="landmark-details">
-{
-    "canWrite": {% if has_write_access %}true{% else %}false{% endif %}
-}
-</script>
+  {% if not collection.is_personal %}
+    <script type="application/json" data-speleodb-controller="entity-crud">
+      {
+        "formId": "landmark_collection_details_form",
+        "endpoint": "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
+        "method": "PUT",
+        "successMessage": "The landmark collection has been updated.",
+        "requiredField": "name",
+        "requiredMessage": "Collection name is required.",
+        "reloadOnSuccess": true,
+        "colorPicker": {% if has_write_access %}true{% else %}false{% endif %}
+      }
+    </script>
+  {% endif %}
+  <script type="application/json" data-speleodb-controller="landmark-details">
+    {
+      "canWrite": {% if has_write_access %}true{% else %}false{% endif %}
+    }
+  </script>
 {% endblock inline_extra_js %}

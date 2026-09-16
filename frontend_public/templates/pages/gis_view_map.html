@@ -1,89 +1,79 @@
 {% extends "base.html" %}
+
 {% load static %}
 {% load vite_assets %}
 
 {% block title %}{{ gis_view.name }}{% endblock title %}
-
 {% block extra_css %}
-{# Resource hints: warm cross-origin connections on the map load path so the #}
-{# Mapbox style/tiles, raster glyphs and ESRI tiles fetch faster. #}
-<link rel="preconnect" href="https://api.mapbox.com" crossorigin>
-<link rel="preconnect" href="https://fonts.openmaptiles.org" crossorigin>
-<link rel="preconnect" href="https://services.arcgisonline.com">
-<link rel="preconnect" href="https://server.arcgisonline.com">
-<link rel="dns-prefetch" href="https://api.mapbox.com">
-<link rel="dns-prefetch" href="https://fonts.openmaptiles.org">
-<link rel="dns-prefetch" href="https://services.arcgisonline.com">
-<link rel="dns-prefetch" href="https://server.arcgisonline.com">
-{% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}
-{% vite_preload 'controller-public-gis' %}
-<link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
+  {# Resource hints: warm cross-origin connections on the map load path so the #}
+  {# Mapbox style/tiles, raster glyphs and ESRI tiles fetch faster. #}
+  <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.openmaptiles.org" crossorigin />
+  <link rel="preconnect" href="https://services.arcgisonline.com" />
+  <link rel="preconnect" href="https://server.arcgisonline.com" />
+  <link rel="dns-prefetch" href="https://api.mapbox.com" />
+  <link rel="dns-prefetch" href="https://fonts.openmaptiles.org" />
+  <link rel="dns-prefetch" href="https://services.arcgisonline.com" />
+  <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
+  {% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}
+  {% vite_preload 'controller-public-gis' %}
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css'
+        rel='stylesheet' />
 {% endblock extra_css %}
-
 {% block content %}
-
-{% include "snippets/welcome_modal.html" %}
-
-<main class="grow pt-20">
+  {% include "snippets/welcome_modal.html" %}
+  <main class="grow pt-20">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    {{ gis_view.name }}
-                </h1>
-                {% if gis_view.description %}
-                <p class="text-slate-400 mt-1">{{ gis_view.description }}</p>
-                {% endif %}
-            </div>
-
-            <!-- Right: Actions -->
-            <div id="page-actions" class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
-
-                <!-- Color Mode Toggle: button-sized, explicit label -->
-                <button id="color-mode-button" class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2" type="button">
-                    <label class="toggle-switch m-0">
-                        <input id="color-mode-toggle" type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
-                </button>
-
-            </div>
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">{{ gis_view.name }}</h1>
+          {% if gis_view.description %}
+            <p class="text-slate-400 mt-1">{{ gis_view.description }}</p>
+          {% endif %}
         </div>
+        <!-- Right: Actions -->
+        <div id="page-actions"
+             class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+          <!-- Color mode checkbox with a full-size clickable label. -->
+          <label id="color-mode-button"
+                 class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2"
+                 for="color-mode-toggle">
+            <span class="toggle-switch m-0">
+              <input id="color-mode-toggle" type="checkbox" aria-label="Color by depth" />
+              <span class="toggle-slider"></span>
+            </span>
+            <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
+          </label>
+        </div>
+      </div>
+      <!-- Map Container -->
+      <div class="bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700 relative flex flex-col min-h-[600px]">
         <!-- Map Container -->
-        <div class="bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700 relative flex flex-col" style="min-height: 600px;">
-            <!-- Map Container -->
-            <div id='map' class="w-full rounded-xs relative" style="flex-grow: 1; height: 100%; width: 100%;"></div>
-
-            <!-- Loading Overlay -->
-            <div id="loading-overlay" class="loading-overlay">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Loading Survey Data</div>
-                <div class="loading-subtext">Downloading and processing GeoJSON data...</div>
-            </div>
-
+        <div id="map" class="map-canvas w-full rounded-xs relative grow"></div>
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading Survey Data</div>
+          <div class="loading-subtext">Downloading and processing GeoJSON data...</div>
         </div>
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}
-
 {% block extra_js %}
-<script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
-<script src="{% url 'url_reverse.js' %}"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="public-gis">
-{
-    "csrfToken": "{{ csrf_token|escapejs }}",
-    "mapboxToken": "{{ mapbox_api_token|escapejs }}",
-    "viewMode": "public",
-    "gisToken": "{{ gis_token|escapejs }}",
-    "allowPreciseZoom": {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
-}
-</script>
+  <script type="application/json" data-speleodb-controller="public-gis">
+    {
+      "csrfToken": "{{ csrf_token|escapejs }}",
+      "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+      "viewMode": "public",
+      "gisToken": "{{ gis_token|escapejs }}",
+      "allowPreciseZoom": {{ gis_view.allow_precise_zoom|yesno:"true,false" }}
+    }
+  </script>
 {% endblock inline_extra_js %}

@@ -1,5 +1,11 @@
 /* Map Viewer Styles */
 
+/* Preserve the authored initial height over the mobile fallback below.
+   Runtime inline sizing must remain free to fit the viewport. */
+#map.map-canvas {
+    height: 100%;
+}
+
 /* Hide number input spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

@@ -1,401 +1,419 @@
 {% extends "base.html" %}
+
 {% load static %}
 
 {% block content %}
-
-<div class="relative">
-
+  <div class="relative">
     <!-- Particles animation -->
     <div class="absolute inset-0 -z-10" aria-hidden="true">
-        <canvas data-particle-animation data-particle-quantity="50"></canvas>
+      <canvas data-particle-animation data-particle-quantity="50"></canvas>
     </div>
-
     <!-- Hero -->
     <section>
-        <div class="relative max-w-12xl center-x px-4 sm:px-6 min-h-screen">
-
-            <!-- Illustration -->
-            <div class="absolute inset-0 -z-10 -mx-28 rounded-b-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
-                <div class="absolute left-1/2 static-translate-x-half bottom-0 -z-10">
-                     <div style="position: absolute;
-                        top: calc(50% - 20px);
-                        left: calc(50% - 20px);
-                        width: 0;
-                        height: 0;
-                        border-radius: 50%;
-                        background-color: rgb(156,80,231,.4);
-                        box-shadow:
-                            0 0 60px 30px rgb(156,80,231,.4),
-                            0 0 100px 60px rgb(156,80,231,.4),
-                            0 0 200px 200px rgb(156,80,231,.4);">
-                    </div>
-                </div>
-            </div>
-
-            <div class="min-h-screen flex items-center justify-center pt-32 pb-16 md:pb-32">
-
-                <!-- Hero content -->
-                <div class="max-w-3xl center-x text-center ">
-
-                    <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4" data-aos="fade-down">
-                       <div>SpeleoDB</div>
-                    </h1>
-                    <hr>
-                    <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4 pt-4" data-aos="fade-down">
-                        Explore as One<span class="hidden sm:inline">-</span><br class="sm:hidden">Survey as Many
-                    </h2 >
-                    <p class="text-lg/8">
-                        We are a US-registered 501c3 non-profit organization aiming to provide an intuitive and easy way to manage survey data. <br>We believe in team dynamics and synergies applied to cave survey. We created SpeleoDB to foster and simplify team survey and collaboration.
-                    </p>
-                    <div class="max-w-2xl center-x" data-aos="fade-down" data-aos-delay="400">
-                        <div class="my-8">
-                            <a class="site-btn h-12 w-48 text-slate-900 gradient-srgb-to-r gradient-from-srgb-white-80 gradient-via-srgb-white gradient-to-srgb-white-80 hover:bg-white transition duration-150 ease-in-out group" {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
-                                Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
-                            </a>
-                        </div>
-                        <div class="pt-6">
-                            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                                <a
-                                    class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
-                                    href="{{ play_store_url }}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Download SpeleoDB for Android on Google Play"
-                                >
-                                    <img src="{% static 'media/download_android.svg' %}" class="h-16 w-auto" alt="Get it on Google Play">
-                                </a>
-                                <a
-                                    class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
-                                    href="{{ app_store_url }}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label="Download CavesGo for iPhone on the App Store"
-                                >
-                                    <img src="{% static 'media/download_ios.svg' %}" class="h-16 w-auto" alt="Download on the App Store">
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
+      <div class="relative max-w-12xl center-x px-4 sm:px-6 min-h-screen">
+        <!-- Illustration -->
+        <div class="absolute inset-0 -z-10 -mx-28 rounded-b-[3rem] pointer-events-none overflow-hidden"
+             aria-hidden="true">
+          <div class="absolute left-1/2 static-translate-x-half bottom-0 -z-10">
+            <div class="home-halo"></div>
+          </div>
         </div>
+        <div class="min-h-screen flex items-center justify-center pt-32 pb-16 md:pb-32">
+          <!-- Hero content -->
+          <div class="max-w-3xl center-x text-center">
+            <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4"
+                data-aos="fade-down">
+              <div>SpeleoDB</div>
+            </h1>
+            <hr />
+            <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4 pt-4"
+                data-aos="fade-down">
+              Explore as One<span class="hidden sm:inline">-</span>
+              <br class="sm:hidden" />
+              Survey as Many
+            </h2>
+            <p class="text-lg/8">
+              We are a US-registered 501c3 non-profit organization aiming to provide an intuitive and easy way to manage survey data.
+              <br />
+              We believe in team dynamics and synergies applied to cave survey. We created SpeleoDB to foster and simplify team survey and collaboration.
+            </p>
+            <div class="max-w-2xl center-x" data-aos="fade-down" data-aos-delay="400">
+              <div class="my-8">
+                <a class="site-btn h-12 w-48 text-slate-900 gradient-srgb-to-r gradient-from-srgb-white-80 gradient-via-srgb-white gradient-to-srgb-white-80 hover:bg-white transition duration-150 ease-in-out group"
+                   {% if request.user.is_authenticated %} href="{% url 'private:user_dashboard' %}" {% else %} href="{% url 'account_login' %}" {% endif %}>
+                  Get Started <span class="tracking-normal text-purple-500 group-hover:translate-x-0.5 transition-transform duration-150 ease-in-out ml-1">-&gt;</span>
+                </a>
+              </div>
+              <div class="pt-6">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <a class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
+                     href="{{ play_store_url }}"
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     aria-label="Download SpeleoDB for Android on Google Play">
+                    <img src="{% static 'media/download_android.svg' %}"
+                         class="h-16 w-auto"
+                         alt="Get it on Google Play" />
+                  </a>
+                  <a class="inline-flex hover:scale-[1.02] transition duration-150 ease-in-out"
+                     href="{{ app_store_url }}"
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     aria-label="Download CavesGo for iPhone on the App Store">
+                    <img src="{% static 'media/download_ios.svg' %}"
+                         class="h-16 w-auto"
+                         alt="Download on the App Store" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
-
     <!-- Features -->
     <section>
-        <div class="relative max-w-6xl center-x px-4 sm:px-6  min-h-screen">
-
-            <!-- Illustration -->
-            <div class="absolute inset-0 -z-10 -mx-28 rounded-t-[3rem] pointer-events-none overflow-hidden" aria-hidden="true">
-                <div class="absolute left-1/2 static-translate-x-half top-0 -z-10">
-                    <div style="position: absolute;
-                        top: calc(50% - 20px);
-                        left: calc(50% - 20px);
-                        width: 0;
-                        height: 0;
-                        border-radius: 50%;
-                        background-color: rgb(156,80,231,.4);
-                        box-shadow:
-                            0 0 60px 30px rgb(156,80,231,.4),
-                            0 0 100px 60px rgb(156,80,231,.4),
-                            0 0 200px 200px rgb(156,80,231,.4);">
-                    </div>
-                </div>
-            </div>
-
-            <div class="min-h-screen flex items-center justify-center">
-
-                <div x-data="{ tab: '1' }">
-
-                    <!-- Section content -->
-                    <div class="max-w-xl center-x md:max-w-none flex flex-col md:flex-row md:flow-x-8 lg:flow-x-16 xl:flow-x-20 flow-y-8 flow-y-reverse md:flow-y-0">
-
-                        <!-- Content -->
-                        <div class="md:w-7/12 lg:w-1/2 order-1 md:order-none max-md:text-center" data-aos="fade-down">
-                            <!-- Content #1 -->
-                            <div>
-                                <div class="inline-flex font-medium bg-clip-text text-transparent-static gradient-purple-r pb-3">The platform designed for collaborative survey</div>
-                            </div>
-                            <h3 class="site-h3 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-3">
-                                By and For Cave Divers
-                            </h3>
-                            <p class="text-lg text-slate-400 mb-4">
-                                Standing on the shoulders of giants to deliver you the most simple and intuitive experience
-                            </p>
-                            <hr>
-                            <p class="text-lg text-slate-400 mt-4 mb-8">
-                                Built on top of the state-of-the-art software <a class="ulink" href="https://git-scm.com/" target="_blank">git</a> to save, manage, version, and collaborate on survey data
-                            </p>
-                            <div class="mt-8 max-w-xs max-md:center-x flow-y-2">
-                                <span
-                                    class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25"
-                                >
-                                    <img style="height: 16px" src="{% static 'media/git.svg' %}" class="shrink-0 fill-slate-300 mr-3"/>
-                                    <span>Powered by: <a href="https://git-scm.com/" class="ulink" target="_blank">Git</a></span>
-                                </span>
-                                <span
-                                    class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25"
-                                >
-                                    <img style="height: 16px" src="{% static 'media/django.svg' %}" class="shrink-0 fill-slate-300 mr-3"/>
-                                    <span>Based on proven software: <a href="https://www.djangoproject.com/" class="ulink" target="_blank">Django</a></span>
-                                </span>
-                                <span
-                                    class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25"
-                                >
-                                    <img style="height: 16px" src="{% static 'media/github.svg' %}" class="shrink-0 fill-slate-300 mr-3"/>
-                                    <span>Fully Open-Source on: <a href="https://github.com/" class="ulink" target="_blank">Github</a></span>
-                                </span>
-                                <span
-                                    class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25"
-                                >
-                                    <img style="height: 16px" src="{% static 'media/application.svg' %}" class="shrink-0 fill-slate-300 mr-3"/>
-                                    <span>Cloud or self-hosted service</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Image -->
-                        <div class="md:w-5/12 lg:w-1/2" data-aos="fade-up" data-aos-delay="100">
-                            <div class="relative py-24 -mt-12">
-
-                                <!-- Particles animation -->
-                                <div class="absolute inset-0 -z-10">
-                                    <canvas data-particle-animation data-particle-quantity="8" data-particle-staticity="30"></canvas>
-                                </div>
-
-                                <div class="flex items-center justify-center">
-                                    <div class="relative w-48 h-48 flex justify-center items-center">
-                                        <!-- Halo effect -->
-                                        <svg class="absolute inset-0 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 will-change-transform pointer-events-none blur-md" width="480" height="480" viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
-                                            <defs>
-                                                <linearGradient id="pulse-a" x1="50%" x2="50%" y1="100%" y2="0%">
-                                                    <stop offset="0%" stop-color="#A855F7" />
-                                                    <stop offset="76.382%" stop-color="#FAF5FF" />
-                                                    <stop offset="100%" stop-color="#6366F1" />
-                                                </linearGradient>
-                                            </defs>
-                                            <g fill-rule="evenodd">
-                                                <path class="pulse" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
-                                                <path class="pulse pulse-1" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
-                                                <path class="pulse pulse-2" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
-                                            </g>
-                                        </svg>
-                                        <!-- Grid -->
-                                        <div class="absolute inset-0 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-[500px] h-[500px] rounded-full overflow-hidden [mask-image:_radial-gradient(black,_transparent_60%)]">
-                                            <div class="h-[200%] animate-endless">
-                                                <div class="absolute inset-0 grid-pattern-white-y blur-[2px] opacity-20"></div>
-                                                <div class="absolute inset-0 grid-pattern-purple-y"></div>
-                                                <div class="absolute inset-0 grid-pattern-white-x blur-[2px] opacity-20"></div>
-                                                <div class="absolute inset-0 grid-pattern-purple-x"></div>
-                                            </div>
-                                        </div>
-                                        <!-- Icons -->
-                                        <div>
-                                            <div class="relative flex items-center justify-center w-16 h-16 border border-transparent rounded-2xl shadow-2xl [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-2xl">
-                                                <img style="height: 50px" src="{% static 'media/cave.svg' %}" class="rounded-md"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
+      <div class="relative max-w-6xl center-x px-4 sm:px-6 min-h-screen">
+        <!-- Illustration -->
+        <div class="absolute inset-0 -z-10 -mx-28 rounded-t-[3rem] pointer-events-none overflow-hidden"
+             aria-hidden="true">
+          <div class="absolute left-1/2 static-translate-x-half top-0 -z-10">
+            <div class="home-halo"></div>
+          </div>
         </div>
+        <div class="min-h-screen flex items-center justify-center">
+          <div x-data="{ tab: '1' }">
+            <!-- Section content -->
+            <div class="max-w-xl center-x md:max-w-none flex flex-col md:flex-row md:flow-x-8 lg:flow-x-16 xl:flow-x-20 flow-y-8 flow-y-reverse md:flow-y-0">
+              <!-- Content -->
+              <div class="md:w-7/12 lg:w-1/2 order-1 md:order-none max-md:text-center"
+                   data-aos="fade-down">
+                <!-- Content #1 -->
+                <div>
+                  <div class="inline-flex font-medium bg-clip-text text-transparent-static gradient-purple-r pb-3">The platform designed for collaborative survey</div>
+                </div>
+                <h3 class="site-h3 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-3">
+                  By and For Cave Divers
+                </h3>
+                <p class="text-lg text-slate-400 mb-4">
+                  Standing on the shoulders of giants to deliver you the most simple and intuitive experience
+                </p>
+                <hr />
+                <p class="text-lg text-slate-400 mt-4 mb-8">
+                  Built on top of the state-of-the-art software <a class="ulink" href="https://git-scm.com/" target="_blank">git</a> to save, manage, version, and collaborate on survey data
+                </p>
+                <div class="mt-8 max-w-xs max-md:center-x flow-y-2">
+                  <span class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25">
+                    <img alt=""
+                         src="{% static 'media/git.svg' %}"
+                         class="h-4 shrink-0 fill-slate-300 mr-3" />
+                    <span>Powered by: <a href="https://git-scm.com/" class="ulink" target="_blank">Git</a></span>
+                  </span>
+                  <span class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25">
+                    <img alt=""
+                         src="{% static 'media/django.svg' %}"
+                         class="h-4 shrink-0 fill-slate-300 mr-3" />
+                    <span>Based on proven software: <a href="https://www.djangoproject.com/"
+    class="ulink"
+    target="_blank">Django</a></span>
+                  </span>
+                  <span class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25">
+                    <img alt=""
+                         src="{% static 'media/github.svg' %}"
+                         class="h-4 shrink-0 fill-slate-300 mr-3" />
+                    <span>Fully Open-Source on: <a href="https://github.com/"
+    class="ulink"
+    target="_blank">Github</a></span>
+                  </span>
+                  <span class="flex items-center text-sm font-medium text-slate-50 rounded-sm border bg-srgb-slate-800-25 w-full px-3 py-2 transition duration-150 ease-in-out border-purple-700 site-shadow-sm-purple-25">
+                    <img alt=""
+                         src="{% static 'media/application.svg' %}"
+                         class="h-4 shrink-0 fill-slate-300 mr-3" />
+                    <span>Cloud or self-hosted service</span>
+                  </span>
+                </div>
+              </div>
+              <!-- Image -->
+              <div class="md:w-5/12 lg:w-1/2" data-aos="fade-up" data-aos-delay="100">
+                <div class="relative py-24 -mt-12">
+                  <!-- Particles animation -->
+                  <div class="absolute inset-0 -z-10">
+                    <canvas data-particle-animation
+                            data-particle-quantity="8"
+                            data-particle-staticity="30"></canvas>
+                  </div>
+                  <div class="flex items-center justify-center">
+                    <div class="relative w-48 h-48 flex justify-center items-center">
+                      <!-- Halo effect -->
+                      <svg class="absolute inset-0 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 will-change-transform pointer-events-none blur-md"
+                           width="480"
+                           height="480"
+                           viewBox="0 0 480 480"
+                           xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                        <linearGradient id="pulse-a" x1="50%" x2="50%" y1="100%" y2="0%">
+                        <stop offset="0%" stop-color="#A855F7" />
+                        <stop offset="76.382%" stop-color="#FAF5FF" />
+                        <stop offset="100%" stop-color="#6366F1" />
+                        </linearGradient>
+                        </defs>
+                        <g fill-rule="evenodd">
+                        <path class="pulse" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
+                        <path class="pulse pulse-1" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
+                        <path class="pulse pulse-2" fill="url(#pulse-a)" fill-rule="evenodd" d="M240,0 C372.5484,0 480,107.4516 480,240 C480,372.5484 372.5484,480 240,480 C107.4516,480 0,372.5484 0,240 C0,107.4516 107.4516,0 240,0 Z M240,88.8 C156.4944,88.8 88.8,156.4944 88.8,240 C88.8,323.5056 156.4944,391.2 240,391.2 C323.5056,391.2 391.2,323.5056 391.2,240 C391.2,156.4944 323.5056,88.8 240,88.8 Z" />
+                        </g>
+                      </svg>
+                      <!-- Grid -->
+                      <div class="absolute inset-0 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-[500px] h-[500px] rounded-full overflow-hidden [mask-image:_radial-gradient(black,_transparent_60%)]">
+                        <div class="h-[200%] animate-endless">
+                          <div class="absolute inset-0 grid-pattern-white-y blur-[2px] opacity-20"></div>
+                          <div class="absolute inset-0 grid-pattern-purple-y"></div>
+                          <div class="absolute inset-0 grid-pattern-white-x blur-[2px] opacity-20"></div>
+                          <div class="absolute inset-0 grid-pattern-purple-x"></div>
+                        </div>
+                      </div>
+                      <!-- Icons -->
+                      <div>
+                        <div class="relative flex items-center justify-center w-16 h-16 border border-transparent rounded-2xl shadow-2xl [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] before:absolute before:inset-0 before:bg-srgb-slate-800-30 before:rounded-2xl">
+                          <img alt=""
+                               src="{% static 'media/cave.svg' %}"
+                               class="rounded-md h-[50px]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
-
     <!-- Features #2 -->
     <section class="relative">
-        <div class="max-w-6xl center-x px-4 sm:px-6 min-h-screen">
-            <div class="pt-16 md:pt-32 pb-16 md:pb-32">
-
-                <!-- Section header -->
-                <div class="max-w-3xl center-x text-center pb-12 md:pb-20">
-                    <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4 text-3xl grid md:grid-cols-3 items-center text-center">
-						<div>Transparency</div>
-						<div>Distributed Future</div>
-                        <div>Data Privacy</div>
-                    </h2>
-                    <p class="text-lg text-slate-400 text-justify">
-                        <b>SpeleoDB</b>, developed by the Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/" class="underline">USAH Institute</a>), is a platform designed to address the unique needs of the cave survey and data collection community. We understand the critical importance of data privacy, ownership, and attribution. Our open-source platform is built on a foundation of transparency, allowing anyone to review the code. SpeleoDB leverages proven solutions like GIT for survey data versioning and champions an open file format standard to promote cross-software compatibility. With a technical steering committee guiding its evolution, the platform emphasizes a decentralized future through a newly developed protocol: SpeleoPUB, fostering seamless collaboration while respecting individual control over data.
-                    </p>
-                </div>
-
-                <!-- Highlighted boxes -->
-                <div class="relative pb-12 md:pb-20">
-                    <!-- Blurred shape -->
-                    <div class="absolute bottom-0 -mb-20 left-1/2 -translate-x-1/2 blur-2xl opacity-50 pointer-events-none" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="434" height="427">
-                            <defs>
-                                <linearGradient id="bs2-a" x1="19.609%" x2="50%" y1="14.544%" y2="100%">
-                                    <stop offset="0%" stop-color="#6366F1" />
-                                    <stop offset="100%" stop-color="#6366F1" stop-opacity="0" />
-                                </linearGradient>
-                            </defs>
-                            <path fill="url(#bs2-a)" fill-rule="evenodd" d="m346 898 461 369-284 58z" transform="translate(-346 -898)" />
-                        </svg>
-                    </div>
-                    <!-- Grid -->
-                    <div class="grid md:grid-cols-12 gap-6 group" data-highlighter>
-                        <!-- Box #1 -->
-                        <div class="md:col-span-6" data-aos="fade-down">
-                            <div class="relative h-full bg-slate-800 rounded-3xl p-px before:absolute before:w-96 before:h-96 before:-left-48 before:-top-48 before:bg-purple-500 before:rounded-full before:opacity-0 before:pointer-events-none before:transition-opacity before:duration-500 before:translate-x-[var(--mouse-x)] before:translate-y-[var(--mouse-y)] hover:before:opacity-20 before:z-30 before:blur-[100px] after:absolute after:inset-0 after:rounded-[inherit] after:opacity-0 after:transition-opacity after:duration-500 after:[background:_radial-gradient(250px_circle_at_var(--mouse-x)_var(--mouse-y),var(--color-slate-400),transparent)] group-hover:after:opacity-100 after:z-10 overflow-hidden">
-                                <div class="relative h-full bg-slate-900 rounded-[inherit] z-20 overflow-hidden">
-                                    <div class="flex flex-col">
-                                        <!-- Radial gradient -->
-                                        <div class="absolute bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-1/2 aspect-square" aria-hidden="true">
-                                            <div class="absolute inset-0 translate-z-0 bg-slate-800 rounded-full blur-[80px]"></div>
-                                        </div>
-                                        <!-- Text -->
-                                        <div class="shrink-0 order-1 md:order-none p-6  md:p-8">
-                                            <div>
-                                                <h3 class="inline-flex text-xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-1">Data Privacy</h3>
-                                                <p class="text-slate-400 text-justify">
-                                                    At <b>SpeleoDB</b>, data privacy is our top priority. We understand the community's need for absolute control over their data. Our platform ensures that users maintain ownership and control over their information, with robust privacy measures in place to prevent unauthorized access. By prioritizing data privacy, we provide users with the confidence that their data is protected and handled with the utmost care.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Box #2 -->
-                        <div class="md:col-span-6" data-aos="fade-down">
-                            <div class="relative h-full bg-slate-800 rounded-3xl p-px before:absolute before:w-96 before:h-96 before:-left-48 before:-top-48 before:bg-purple-500 before:rounded-full before:opacity-0 before:pointer-events-none before:transition-opacity before:duration-500 before:translate-x-[var(--mouse-x)] before:translate-y-[var(--mouse-y)] hover:before:opacity-20 before:z-30 before:blur-[100px] after:absolute after:inset-0 after:rounded-[inherit] after:opacity-0 after:transition-opacity after:duration-500 after:[background:_radial-gradient(250px_circle_at_var(--mouse-x)_var(--mouse-y),var(--color-slate-400),transparent)] group-hover:after:opacity-100 after:z-10 overflow-hidden">
-                                <div class="relative h-full bg-slate-900 rounded-[inherit] z-20 overflow-hidden">
-                                    <div class="flex flex-col">
-                                        <!-- Radial gradient -->
-                                        <div class="absolute bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-1/2 aspect-square" aria-hidden="true">
-                                            <div class="absolute inset-0 translate-z-0 bg-slate-800 rounded-full blur-[80px]"></div>
-                                        </div>
-                                        <!-- Text -->
-                                        <div class="shrink-0 order-1 md:order-none p-6  md:p-8">
-                                            <div>
-                                                <h3 class="inline-flex text-xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-1">Transparency</h3>
-                                                <p class="text-slate-400 text-justify">
-                                                    <b>SpeleoDB</b> is committed to transparency in all aspects of its operation. As an open-source platform, our code is accessible for anyone to review, ensuring that our practices are open and accountable. This transparency fosters trust within the community, as users can see firsthand how their data is managed and safeguarded. By being transparent, we build a foundation of trust and integrity in our platform.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Features list -->
-                <div class="grid md:grid-cols-3 gap-8 md:gap-12">
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tools" class="shrink-0 fill-slate-300" stroke-width="2" stroke="#cbd5e1" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="2.25 2.25 19.5 19.5" width="16" height="16">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" />
-                                <path d="M14.5 5.5l4 4" />
-                                <path d="M12 8l-5 -5l-4 4l5 5" />
-                                <path d="M7 8l-1.5 1.5" />
-                                <path d="M16 12l5 5l-4 4l-5 -5" />
-                                <path d="M16 17l-1.5 1.5" />
-                                </svg>
-                            <h4 class="font-medium text-slate-50">Powered by GIT</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            SpeleoDB leverages GIT to version every survey, file, or information, ensuring that all changes are tracked and recoverable, making collaboration seamless and reliable.
-                        </p>
-                    </div>
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg class="shrink-0 fill-slate-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-                                <path d="M11 0c1.3 0 2.6.5 3.5 1.5 1 .9 1.5 2.2 1.5 3.5 0 1.3-.5 2.6-1.4 3.5l-1.2 1.2c-.2.2-.5.3-.7.3-.2 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l1.1-1.2c.6-.5.9-1.3.9-2.1s-.3-1.6-.9-2.2C12 1.7 10 1.7 8.9 2.8L7.7 4c-.4.4-1 .4-1.4 0-.4-.4-.4-1 0-1.4l1.2-1.1C8.4.5 9.7 0 11 0ZM8.3 12c.4-.4 1-.5 1.4-.1.4.4.4 1 0 1.4l-1.2 1.2C7.6 15.5 6.3 16 5 16c-1.3 0-2.6-.5-3.5-1.5C.5 13.6 0 12.3 0 11c0-1.3.5-2.6 1.5-3.5l1.1-1.2c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4L2.9 8.9c-.6.5-.9 1.3-.9 2.1s.3 1.6.9 2.2c1.1 1.1 3.1 1.1 4.2 0L8.3 12Zm1.1-6.8c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-4.2 4.2c-.2.2-.5.3-.7.3-.2 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l4.2-4.2Z" />
-                            </svg>
-                            <h4 class="font-medium text-slate-50">Forever Recoverable</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            Each modification is automatically versioned, allowing users to revert to any previous state, ensuring data integrity and historical accuracy.
-                        </p>
-                    </div>
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tools" class="shrink-0 fill-slate-300" stroke-width="2" stroke="#cbd5e1" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="3.25 2.25 17.5 19.5" width="16" height="16">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" />
-                                <path d="M4 6v6a8 3 0 0 0 16 0v-6" />
-                                <path d="M4 12v6a8 3 0 0 0 16 0v-6" />
-                              </svg>
-                            <h4 class="font-medium text-slate-50">Secure Backups</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            All data is backed up across multiple datacenters, providing robust protection against loss and ensuring accessibility whenever needed.
-                        </p>
-                    </div>
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg class="shrink-0 fill-slate-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-                                <path d="M14.3.3c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-8 8c-.2.2-.4.3-.7.3-.3 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l8-8ZM15 7c.6 0 1 .4 1 1 0 4.4-3.6 8-8 8s-8-3.6-8-8 3.6-8 8-8c.6 0 1 .4 1 1s-.4 1-1 1C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6c0-.6.4-1 1-1Z" />
-                            </svg>
-                            <h4 class="font-medium text-slate-50">Open Source Governance</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            SpeleoDB operates under an open-source model, welcoming contributions from anyone. Join our community and help shape the future of cave surveying and survey collaboration.
-                        </p>
-                    </div>
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tools" class="shrink-0 fill-slate-300" stroke-width="2" stroke="#cbd5e1" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="3.25 2.25 17.5 19.5" width="16" height="16">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M20 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
-                                <path d="M8 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
-                                <path d="M8 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
-                                <path d="M20 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
-                                <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
-                                <path d="M6 8v8" />
-                                <path d="M18 16v-8" />
-                                <path d="M8 6h8" />
-                                <path d="M16 18h-8" />
-                                <path d="M7.5 7.5l3 3" />
-                                <path d="M13.5 13.5l3 3" />
-                                <path d="M16.5 7.5l-3 3" />
-                                <path d="M10.5 13.5l-3 3" />
-                              </svg>
-                            <h4 class="font-medium text-slate-50">Decentralized Future</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            We aim towards a decentralized future with SpeleoPUB. Run your own server, ensuring data ownership and promoting collaboration across platforms.
-                        </p>
-                    </div>
-                    <!-- Feature -->
-                    <div>
-                        <div class="flex items-center flow-x-2 mb-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tools" class="shrink-0 fill-slate-300" stroke-width="2" stroke="#cbd5e1" fill="none" stroke-linecap="round" stroke-linejoin="round" viewBox="2.25 2.25 19.5 19.5" width="16" height="16">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-                                <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
-                              </svg>
-                            <h4 class="font-medium text-slate-50">Enhanced Survey Workflows</h4>
-                        </div>
-                        <p class="text-sm text-slate-400 text-justify">
-                            Our platform and tools are designed to streamline and accelerate survey workflows, optimizing collaboration and enhancing efficiency for the entire community.
-                        </p>
-                    </div>
-                </div>
-
+      <div class="max-w-6xl center-x px-4 sm:px-6 min-h-screen">
+        <div class="pt-16 md:pt-32 pb-16 md:pb-32">
+          <!-- Section header -->
+          <div class="max-w-3xl center-x text-center pb-12 md:pb-20">
+            <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4 text-3xl grid md:grid-cols-3 items-center text-center">
+              <div>Transparency</div>
+              <div>Distributed Future</div>
+              <div>Data Privacy</div>
+            </h2>
+            <p class="text-lg text-slate-400 text-justify">
+              <b>SpeleoDB</b>, developed by the Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/" class="underline">USAH Institute</a>), is a platform designed to address the unique needs of the cave survey and data collection community. We understand the critical importance of data privacy, ownership, and attribution. Our open-source platform is built on a foundation of transparency, allowing anyone to review the code. SpeleoDB leverages proven solutions like GIT for survey data versioning and champions an open file format standard to promote cross-software compatibility. With a technical steering committee guiding its evolution, the platform emphasizes a decentralized future through a newly developed protocol: SpeleoPUB, fostering seamless collaboration while respecting individual control over data.
+            </p>
+          </div>
+          <!-- Highlighted boxes -->
+          <div class="relative pb-12 md:pb-20">
+            <!-- Blurred shape -->
+            <div class="absolute bottom-0 -mb-20 left-1/2 -translate-x-1/2 blur-2xl opacity-50 pointer-events-none"
+                 aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="434" height="427">
+                <defs>
+                <linearGradient id="bs2-a" x1="19.609%" x2="50%" y1="14.544%" y2="100%">
+                <stop offset="0%" stop-color="#6366F1" />
+                <stop offset="100%" stop-color="#6366F1" stop-opacity="0" />
+                </linearGradient>
+                </defs>
+                <path fill="url(#bs2-a)" fill-rule="evenodd" d="m346 898 461 369-284 58z" transform="translate(-346 -898)" />
+              </svg>
             </div>
+            <!-- Grid -->
+            <div class="grid md:grid-cols-12 gap-6 group" data-highlighter>
+              <!-- Box #1 -->
+              <div class="md:col-span-6" data-aos="fade-down">
+                <div class="relative h-full bg-slate-800 rounded-3xl p-px before:absolute before:w-96 before:h-96 before:-left-48 before:-top-48 before:bg-purple-500 before:rounded-full before:opacity-0 before:pointer-events-none before:transition-opacity before:duration-500 before:translate-x-[var(--mouse-x)] before:translate-y-[var(--mouse-y)] hover:before:opacity-20 before:z-30 before:blur-[100px] after:absolute after:inset-0 after:rounded-[inherit] after:opacity-0 after:transition-opacity after:duration-500 after:[background:_radial-gradient(250px_circle_at_var(--mouse-x)_var(--mouse-y),var(--color-slate-400),transparent)] group-hover:after:opacity-100 after:z-10 overflow-hidden">
+                  <div class="relative h-full bg-slate-900 rounded-[inherit] z-20 overflow-hidden">
+                    <div class="flex flex-col">
+                      <!-- Radial gradient -->
+                      <div class="absolute bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-1/2 aspect-square"
+                           aria-hidden="true">
+                        <div class="absolute inset-0 translate-z-0 bg-slate-800 rounded-full blur-[80px]"></div>
+                      </div>
+                      <!-- Text -->
+                      <div class="shrink-0 order-1 md:order-none p-6 md:p-8">
+                        <div>
+                          <h3 class="inline-flex text-xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-1">Data Privacy</h3>
+                          <p class="text-slate-400 text-justify">
+                            At <b>SpeleoDB</b>, data privacy is our top priority. We understand the community's need for absolute control over their data. Our platform ensures that users maintain ownership and control over their information, with robust privacy measures in place to prevent unauthorized access. By prioritizing data privacy, we provide users with the confidence that their data is protected and handled with the utmost care.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Box #2 -->
+              <div class="md:col-span-6" data-aos="fade-down">
+                <div class="relative h-full bg-slate-800 rounded-3xl p-px before:absolute before:w-96 before:h-96 before:-left-48 before:-top-48 before:bg-purple-500 before:rounded-full before:opacity-0 before:pointer-events-none before:transition-opacity before:duration-500 before:translate-x-[var(--mouse-x)] before:translate-y-[var(--mouse-y)] hover:before:opacity-20 before:z-30 before:blur-[100px] after:absolute after:inset-0 after:rounded-[inherit] after:opacity-0 after:transition-opacity after:duration-500 after:[background:_radial-gradient(250px_circle_at_var(--mouse-x)_var(--mouse-y),var(--color-slate-400),transparent)] group-hover:after:opacity-100 after:z-10 overflow-hidden">
+                  <div class="relative h-full bg-slate-900 rounded-[inherit] z-20 overflow-hidden">
+                    <div class="flex flex-col">
+                      <!-- Radial gradient -->
+                      <div class="absolute bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-1/2 aspect-square"
+                           aria-hidden="true">
+                        <div class="absolute inset-0 translate-z-0 bg-slate-800 rounded-full blur-[80px]"></div>
+                      </div>
+                      <!-- Text -->
+                      <div class="shrink-0 order-1 md:order-none p-6 md:p-8">
+                        <div>
+                          <h3 class="inline-flex text-xl font-bold bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-1">Transparency</h3>
+                          <p class="text-slate-400 text-justify">
+                            <b>SpeleoDB</b> is committed to transparency in all aspects of its operation. As an open-source platform, our code is accessible for anyone to review, ensuring that our practices are open and accountable. This transparency fosters trust within the community, as users can see firsthand how their data is managed and safeguarded. By being transparent, we build a foundation of trust and integrity in our platform.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Features list -->
+          <div class="grid md:grid-cols-3 gap-8 md:gap-12">
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="icon icon-tabler icon-tabler-tools shrink-0"
+                     stroke-width="2"
+                     stroke="#cbd5e1"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     viewBox="2.25 2.25 19.5 19.5"
+                     width="16"
+                     height="16">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" />
+                  <path d="M14.5 5.5l4 4" />
+                  <path d="M12 8l-5 -5l-4 4l5 5" />
+                  <path d="M7 8l-1.5 1.5" />
+                  <path d="M16 12l5 5l-4 4l-5 -5" />
+                  <path d="M16 17l-1.5 1.5" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Powered by GIT</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                SpeleoDB leverages GIT to version every survey, file, or information, ensuring that all changes are tracked and recoverable, making collaboration seamless and reliable.
+              </p>
+            </div>
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg class="shrink-0 fill-slate-300"
+                     xmlns="http://www.w3.org/2000/svg"
+                     width="16"
+                     height="16">
+                  <path d="M11 0c1.3 0 2.6.5 3.5 1.5 1 .9 1.5 2.2 1.5 3.5 0 1.3-.5 2.6-1.4 3.5l-1.2 1.2c-.2.2-.5.3-.7.3-.2 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l1.1-1.2c.6-.5.9-1.3.9-2.1s-.3-1.6-.9-2.2C12 1.7 10 1.7 8.9 2.8L7.7 4c-.4.4-1 .4-1.4 0-.4-.4-.4-1 0-1.4l1.2-1.1C8.4.5 9.7 0 11 0ZM8.3 12c.4-.4 1-.5 1.4-.1.4.4.4 1 0 1.4l-1.2 1.2C7.6 15.5 6.3 16 5 16c-1.3 0-2.6-.5-3.5-1.5C.5 13.6 0 12.3 0 11c0-1.3.5-2.6 1.5-3.5l1.1-1.2c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4L2.9 8.9c-.6.5-.9 1.3-.9 2.1s.3 1.6.9 2.2c1.1 1.1 3.1 1.1 4.2 0L8.3 12Zm1.1-6.8c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-4.2 4.2c-.2.2-.5.3-.7.3-.2 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l4.2-4.2Z" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Forever Recoverable</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                Each modification is automatically versioned, allowing users to revert to any previous state, ensuring data integrity and historical accuracy.
+              </p>
+            </div>
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="icon icon-tabler icon-tabler-tools shrink-0"
+                     stroke-width="2"
+                     stroke="#cbd5e1"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     viewBox="3.25 2.25 17.5 19.5"
+                     width="16"
+                     height="16">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" />
+                  <path d="M4 6v6a8 3 0 0 0 16 0v-6" />
+                  <path d="M4 12v6a8 3 0 0 0 16 0v-6" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Secure Backups</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                All data is backed up across multiple datacenters, providing robust protection against loss and ensuring accessibility whenever needed.
+              </p>
+            </div>
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg class="shrink-0 fill-slate-300"
+                     xmlns="http://www.w3.org/2000/svg"
+                     width="16"
+                     height="16">
+                  <path d="M14.3.3c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-8 8c-.2.2-.4.3-.7.3-.3 0-.5-.1-.7-.3-.4-.4-.4-1 0-1.4l8-8ZM15 7c.6 0 1 .4 1 1 0 4.4-3.6 8-8 8s-8-3.6-8-8 3.6-8 8-8c.6 0 1 .4 1 1s-.4 1-1 1C4.7 2 2 4.7 2 8s2.7 6 6 6 6-2.7 6-6c0-.6.4-1 1-1Z" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Open Source Governance</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                SpeleoDB operates under an open-source model, welcoming contributions from anyone. Join our community and help shape the future of cave surveying and survey collaboration.
+              </p>
+            </div>
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="icon icon-tabler icon-tabler-tools shrink-0"
+                     stroke-width="2"
+                     stroke="#cbd5e1"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     viewBox="3.25 2.25 17.5 19.5"
+                     width="16"
+                     height="16">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M20 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M8 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M8 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M20 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M6 8v8" />
+                  <path d="M18 16v-8" />
+                  <path d="M8 6h8" />
+                  <path d="M16 18h-8" />
+                  <path d="M7.5 7.5l3 3" />
+                  <path d="M13.5 13.5l3 3" />
+                  <path d="M16.5 7.5l-3 3" />
+                  <path d="M10.5 13.5l-3 3" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Decentralized Future</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                We aim towards a decentralized future with SpeleoPUB. Run your own server, ensuring data ownership and promoting collaboration across platforms.
+              </p>
+            </div>
+            <!-- Feature -->
+            <div>
+              <div class="flex items-center flow-x-2 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="icon icon-tabler icon-tabler-tools shrink-0"
+                     stroke-width="2"
+                     stroke="#cbd5e1"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     viewBox="2.25 2.25 19.5 19.5"
+                     width="16"
+                     height="16">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                  <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+                </svg>
+                <h4 class="font-medium text-slate-50">Enhanced Survey Workflows</h4>
+              </div>
+              <p class="text-sm text-slate-400 text-justify">
+                Our platform and tools are designed to streamline and accelerate survey workflows, optimizing collaboration and enhancing efficiency for the entire community.
+              </p>
+            </div>
+          </div>
         </div>
-
+      </div>
     </section>
-
-</div>
+  </div>
 {% endblock %}

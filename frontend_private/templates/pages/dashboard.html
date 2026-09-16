@@ -1,223 +1,257 @@
 {% extends "base_private.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-dashboard' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-dashboard' %}
+  {% vite_preload 'controller-dashboard' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-dashboard' %}
 {% endblock extra_css %}
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page Header + Quick Actions -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Dashboard</h1>
-            </div>
-            <div class="flex flex-col sm:flex-row flex-wrap gap-2">
-                <a href="{% url 'private:project_new' %}" class="quick-action-btn">
-                    <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Create New Project
-                </a>
-                <a href="{% url 'private:projects' %}" class="quick-action-btn">
-                    <svg class="w-5 h-5 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                    </svg>
-                    View All Projects
-                </a>
-                <a href="{% url 'private:map_viewer' %}" class="quick-action-btn">
-                    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                    </svg>
-                    Open Survey Map
-                </a>
-            </div>
+      <!-- Page Header + Quick Actions -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Dashboard</h1>
         </div>
-
-        <!-- Stat Cards -->
-        <div id="stat-cards" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-projects"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">Projects</div>
-            </div>
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-teams"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">Teams</div>
-            </div>
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-commits"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">Your Contributions</div>
-            </div>
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-stations"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">Stations Created</div>
-            </div>
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-landmarks"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">Landmarks</div>
-            </div>
-            <div class="stat-card">
-                <div class="flex items-center gap-3 mb-2">
-                    <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                    </svg>
-                </div>
-                <div class="stat-value" id="stat-gps-tracks"><div class="skeleton-pulse" style="width:48px;height:32px"></div></div>
-                <div class="stat-label">GPS Tracks</div>
-            </div>
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+          <a href="{% url 'private:project_new' %}" class="quick-action-btn">
+            <svg class="w-5 h-5 text-indigo-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create New Project
+          </a>
+          <a href="{% url 'private:projects' %}" class="quick-action-btn">
+            <svg class="w-5 h-5 text-sky-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            View All Projects
+          </a>
+          <a href="{% url 'private:map_viewer' %}" class="quick-action-btn">
+            <svg class="w-5 h-5 text-emerald-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Open Survey Map
+          </a>
         </div>
-
-        <!-- Charts Row -->
-        <div class="flex flex-col md:flex-row gap-6 mb-8">
-            <!-- Contributions Over Time -->
-            <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 flex-1 md:w-2/3">
-                <h2 class="text-lg font-semibold text-slate-100 mb-4">Contributions Over Time</h2>
-                <div style="position:relative; height:280px;">
-                    <canvas id="commits-chart" role="img" aria-label="Line chart showing contributions over the last 12 months"></canvas>
-                </div>
-            </div>
-            <!-- Projects by Software -->
-            <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 md:w-one-third">
-                <h2 class="text-lg font-semibold text-slate-100 mb-4">Projects by Software</h2>
-                <div style="position:relative; height:280px;" class="flex items-center justify-center">
-                    <canvas id="projects-chart" role="img" aria-label="Doughnut chart showing projects by software type"></canvas>
-                    <div id="projects-chart-empty" class="hidden text-slate-500 text-sm text-center absolute">No projects yet</div>
-                </div>
-            </div>
+      </div>
+      <!-- Stat Cards -->
+      <div id="stat-cards"
+           class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-indigo-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-projects">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">Projects</div>
         </div>
-
-        <!-- Contribution Heatmap -->
-        <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 mb-8 heatmap-section-desktop">
-            <div class="flex items-baseline justify-between mb-3">
-                <h2 class="text-sm text-slate-100">
-                    <span id="heatmap-total-count" class="font-semibold">0</span>
-                    contributions in the last year
-                </h2>
-            </div>
-
-            <!-- Heatmap graph rendered as a <table> for perfect alignment -->
-            <div class="mb-3">
-                <table id="contribution-heatmap" class="heatmap-table" aria-label="Contribution activity">
-                    <!-- JS renders thead (months) + 7 tbody rows (Sun..Sat) -->
-                </table>
-            </div>
-
-            <div class="flex items-center justify-end gap-1.5 text-xs text-slate-500 mb-5">
-                <span>Less</span>
-                <span class="hm-legend-cell hm-level-0"></span>
-                <span class="hm-legend-cell hm-level-1"></span>
-                <span class="hm-legend-cell hm-level-2"></span>
-                <span class="hm-legend-cell hm-level-3"></span>
-                <span class="hm-legend-cell hm-level-4"></span>
-                <span>More</span>
-            </div>
-
-            <!-- Summary stats row -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="hm-stat-card">
-                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This week</div>
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-xl font-bold text-slate-100" id="heatmap-week-count">0</span>
-                        <span class="text-xs text-slate-500">contributions</span>
-                    </div>
-                </div>
-                <div class="hm-stat-card">
-                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This month</div>
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-xl font-bold text-slate-100" id="heatmap-month-count">0</span>
-                        <span class="text-xs text-slate-500">contributions</span>
-                    </div>
-                </div>
-                <div class="hm-stat-card">
-                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Busiest day</div>
-                    <div class="text-sm font-semibold text-slate-200" id="heatmap-busiest-day">--</div>
-                    <div class="text-xs text-slate-500" id="heatmap-busiest-count">&nbsp;</div>
-                </div>
-                <div class="hm-stat-card">
-                    <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Current streak</div>
-                    <div class="flex items-baseline gap-1.5">
-                        <span class="text-xl font-bold text-slate-100" id="heatmap-streak-count">0</span>
-                        <span class="text-xs text-slate-500">days</span>
-                    </div>
-                </div>
-            </div>
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-purple-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-teams">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">Teams</div>
         </div>
-
-        <!-- Recent Activity -->
-        <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5">
-            <h2 class="text-lg font-semibold text-slate-100 mb-4">Recent Activity</h2>
-            <div id="recent-activity">
-                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
-                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
-                    <div class="flex-1">
-                        <div class="skeleton-pulse" style="width:60%;height:14px;margin-bottom:6px"></div>
-                        <div class="skeleton-pulse" style="width:40%;height:12px"></div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
-                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
-                    <div class="flex-1">
-                        <div class="skeleton-pulse" style="width:50%;height:14px;margin-bottom:6px"></div>
-                        <div class="skeleton-pulse" style="width:35%;height:12px"></div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 py-2.5 px-3" style="height:52px">
-                    <div class="skeleton-pulse" style="width:32px;height:32px;border-radius:50%;flex-shrink:0"></div>
-                    <div class="flex-1">
-                        <div class="skeleton-pulse" style="width:55%;height:14px;margin-bottom:6px"></div>
-                        <div class="skeleton-pulse" style="width:45%;height:12px"></div>
-                    </div>
-                </div>
-            </div>
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-emerald-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-commits">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">Your Contributions</div>
         </div>
-
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-sky-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-stations">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">Stations Created</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-amber-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-landmarks">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">Landmarks</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex items-center gap-3 mb-2">
+            <svg class="w-5 h-5 text-rose-400 shrink-0"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </div>
+          <div class="stat-value" id="stat-gps-tracks">
+            <div class="w-12 h-8 skeleton-pulse"></div>
+          </div>
+          <div class="stat-label">GPS Tracks</div>
+        </div>
+      </div>
+      <!-- Charts Row -->
+      <div class="flex flex-col md:flex-row gap-6 mb-8">
+        <!-- Contributions Over Time -->
+        <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 flex-1 md:w-2/3">
+          <h2 class="text-lg font-semibold text-slate-100 mb-4">Contributions Over Time</h2>
+          <div class="relative h-[280px]">
+            <canvas id="commits-chart"
+                    role="img"
+                    aria-label="Line chart showing contributions over the last 12 months"></canvas>
+          </div>
+        </div>
+        <!-- Projects by Software -->
+        <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 md:w-one-third">
+          <h2 class="text-lg font-semibold text-slate-100 mb-4">Projects by Software</h2>
+          <div class="relative h-[280px] flex items-center justify-center">
+            <canvas id="projects-chart"
+                    role="img"
+                    aria-label="Doughnut chart showing projects by software type"></canvas>
+            <div id="projects-chart-empty"
+                 class="hidden text-slate-500 text-sm text-center absolute">No projects yet</div>
+          </div>
+        </div>
+      </div>
+      <!-- Contribution Heatmap -->
+      <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5 mb-8 heatmap-section-desktop">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="text-sm text-slate-100">
+            <span id="heatmap-total-count" class="font-semibold">0</span>
+            contributions in the last year
+          </h2>
+        </div>
+        <!-- Heatmap graph rendered as a <table> for perfect alignment -->
+        <div class="mb-3">
+          <table id="contribution-heatmap"
+                 class="heatmap-table"
+                 aria-label="Contribution activity">
+            <!-- JS renders thead (months) + 7 tbody rows (Sun..Sat) -->
+          </table>
+        </div>
+        <div class="flex items-center justify-end gap-1.5 text-xs text-slate-500 mb-5">
+          <span>Less</span>
+          <span class="hm-legend-cell hm-level-0"></span>
+          <span class="hm-legend-cell hm-level-1"></span>
+          <span class="hm-legend-cell hm-level-2"></span>
+          <span class="hm-legend-cell hm-level-3"></span>
+          <span class="hm-legend-cell hm-level-4"></span>
+          <span>More</span>
+        </div>
+        <!-- Summary stats row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="hm-stat-card">
+            <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This week</div>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl font-bold text-slate-100" id="heatmap-week-count">0</span>
+              <span class="text-xs text-slate-500">contributions</span>
+            </div>
+          </div>
+          <div class="hm-stat-card">
+            <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">This month</div>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl font-bold text-slate-100" id="heatmap-month-count">0</span>
+              <span class="text-xs text-slate-500">contributions</span>
+            </div>
+          </div>
+          <div class="hm-stat-card">
+            <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Busiest day</div>
+            <div class="text-sm font-semibold text-slate-200" id="heatmap-busiest-day">--</div>
+            <div class="text-xs text-slate-500" id="heatmap-busiest-count">&nbsp;</div>
+          </div>
+          <div class="hm-stat-card">
+            <div class="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">Current streak</div>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl font-bold text-slate-100" id="heatmap-streak-count">0</span>
+              <span class="text-xs text-slate-500">days</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Recent Activity -->
+      <div class="bg-slate-800 rounded-xs shadow-lg border border-slate-700 p-5">
+        <h2 class="text-lg font-semibold text-slate-100 mb-4">Recent Activity</h2>
+        <div id="recent-activity">
+          <div class="h-[52px] flex items-center gap-3 py-2.5 px-3">
+            <div class="w-8 h-8 rounded-full! shrink-0 skeleton-pulse"></div>
+            <div class="flex-1">
+              <div class="w-3/5 h-[14px] mb-1.5 skeleton-pulse"></div>
+              <div class="w-2/5 h-3 skeleton-pulse"></div>
+            </div>
+          </div>
+          <div class="h-[52px] flex items-center gap-3 py-2.5 px-3">
+            <div class="w-8 h-8 rounded-full! shrink-0 skeleton-pulse"></div>
+            <div class="flex-1">
+              <div class="w-1/2 h-[14px] mb-1.5 skeleton-pulse"></div>
+              <div class="w-[35%] h-3 skeleton-pulse"></div>
+            </div>
+          </div>
+          <div class="h-[52px] flex items-center gap-3 py-2.5 px-3">
+            <div class="w-8 h-8 rounded-full! shrink-0 skeleton-pulse"></div>
+            <div class="flex-1">
+              <div class="w-[55%] h-[14px] mb-1.5 skeleton-pulse"></div>
+              <div class="w-[45%] h-3 skeleton-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
-{% if debug %}
-<script src="{% static 'private/js/vendors/chart.js' %}"></script>
-{% else %}
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.umd.min.js"
-    integrity="sha512-TJ7U6JRJx5IpyvvO9atNnBzwJIoZDaQnQhb0Wmw32Rj5BQHAmJG16WzaJbDns2Wk5VG6gMt4MytZApZG47rCdg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-{% endif %}
+  <script src="{% url 'url_reverse.js' %}"></script>
+  {% if debug %}
+    <script src="{% static 'private/js/vendors/chart.js' %}"></script>
+  {% else %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.umd.min.js" integrity="sha512-TJ7U6JRJx5IpyvvO9atNnBzwJIoZDaQnQhb0Wmw32Rj5BQHAmJG16WzaJbDns2Wk5VG6gMt4MytZApZG47rCdg==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+  {% endif %}
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="dashboard">{}</script>
+  <script type="application/json" data-speleodb-controller="dashboard">
+    {}
+  </script>
 {% endblock inline_extra_js %}

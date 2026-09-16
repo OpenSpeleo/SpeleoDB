@@ -1,37 +1,45 @@
 {% extends "base.html" %}
+
 {% load static %}
 
 {% block content %}
-<!-- Content -->
-<section class="relative">
+  <!-- Content -->
+  <section class="relative">
     <!-- Radial gradient -->
-    <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square" aria-hidden="true">
-        <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
-        <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
+    <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square"
+         aria-hidden="true">
+      <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
+      <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
     </div>
     <!-- Particles animation -->
     <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
-        <canvas data-particle-animation data-particle-quantity="15"></canvas>
+      <canvas data-particle-animation data-particle-quantity="15"></canvas>
     </div>
     <!-- Illustration -->
-    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
-        <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
+    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10"
+         aria-hidden="true">
+      <img src="{% static 'media/page-illustration.svg' %}"
+           class="max-w-none"
+           width="1440"
+           height="427"
+           alt="Page Illustration" />
     </div>
     <div class="max-w-6xl center-x px-4 sm:px-6">
-        <div class="pt-32 pb-12 md:pt-40 md:pb-20">
-            <!-- Page header -->
-            <div class="text-center pb-12 md:pb-20">
-                <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Roadmap</h1>
-                <div class="max-w-3xl center-x">
-                    <p class="text-lg text-slate-400">Future Updates and Improvements to SpeleoDB</p>
-                </div>
-            </div>
-
-            <div class="">
-                <div class="text-center px-4">
-                    <img src="{% static 'media/work_in_progress.png' %}" class="object-contain center-x" alt="Work in progress">
-                </div>
-                {% comment %}
+      <div class="pt-32 pb-12 md:pt-40 md:pb-20">
+        <!-- Page header -->
+        <div class="text-center pb-12 md:pb-20">
+          <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-4">Roadmap</h1>
+          <div class="max-w-3xl center-x">
+            <p class="text-lg text-slate-400">Future Updates and Improvements to SpeleoDB</p>
+          </div>
+        </div>
+        <div>
+          <div class="text-center px-4">
+            <img src="{% static 'media/work_in_progress.png' %}"
+                 class="object-contain center-x"
+                 alt="Work in progress" />
+          </div>
+          {% comment %}
                 <div class="max-w-3xl m-auto mt-8">
                     <!-- Posts -->
                     <div>
@@ -253,14 +261,10 @@
                                     </ul>
                                 </div>
                             </div>
-                        </article> {% endcomment %}
-
-                    </div>
-                </div>
-            </div>
-
+          </article> {% endcomment %}
         </div>
+      </div>
     </div>
-</section>
-{% include "pages/call_to_action.html" %}
+  </section>
+  {% include "pages/call_to_action.html" %}
 {% endblock %}

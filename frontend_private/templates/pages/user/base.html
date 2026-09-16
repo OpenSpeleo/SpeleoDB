@@ -1,346 +1,366 @@
 {% extends "base_private.html" %}
+
 {% load vite_assets %}
 {% load static %}
 
 {% block extra_css %}
-{% vite_styles 'style-template-frontend-private-templates-pages-user-base' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-user-base' %}
 {% endblock extra_css %}
-
 {% block content %}
-{% block account_welcome %}
-<!-- Welcome banner -->
-<div class="relative bg-indigo-200 bg-indigo-500 p-4 sm:p-6 rounded-xs overflow-hidden mb-8">
-
-    <!-- Background illustration -->
-    <div class="absolute right-0 top-0 -mt-4 mr-16 pointer-events-none hidden xl:block" aria-hidden="true">
+  {% block account_welcome %}
+    <!-- Welcome banner -->
+    <div class="relative bg-indigo-200 bg-indigo-500 p-4 sm:p-6 rounded-xs overflow-hidden mb-8">
+      <!-- Background illustration -->
+      <div class="absolute right-0 top-0 -mt-4 mr-16 pointer-events-none hidden xl:block"
+           aria-hidden="true">
         <svg width="319" height="198" xmlns:xlink="http://www.w3.org/1999/xlink">
-            <defs>
-                <path id="welcome-a" d="M64 0l64 128-64-20-64 20z" />
-                <path id="welcome-e" d="M40 0l40 80-40-12.5L0 80z" />
-                <path id="welcome-g" d="M40 0l40 80-40-12.5L0 80z" />
-                <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="welcome-b">
-                    <stop stop-color="#A5B4FC" offset="0%" />
-                    <stop stop-color="#818CF8" offset="100%" />
-                </linearGradient>
-                <linearGradient x1="50%" y1="24.537%" x2="50%" y2="100%" id="welcome-c">
-                    <stop stop-color="#4338CA" offset="0%" />
-                    <stop stop-color="#6366F1" stop-opacity="0" offset="100%" />
-                </linearGradient>
-            </defs>
-            <g fill="none" fill-rule="evenodd">
-                <g transform="rotate(64 36.592 105.604)">
-                    <mask id="welcome-d" fill="#fff">
-                        <use xlink:href="#welcome-a" />
-                    </mask>
-                    <use fill="url(#welcome-b)" xlink:href="#welcome-a" />
-                    <path fill="url(#welcome-c)" mask="url(#welcome-d)" d="M64-24h80v152H64z" />
-                </g>
-                <g transform="rotate(-51 91.324 -105.372)">
-                    <mask id="welcome-f" fill="#fff">
-                        <use xlink:href="#welcome-e" />
-                    </mask>
-                    <use fill="url(#welcome-b)" xlink:href="#welcome-e" />
-                    <path fill="url(#welcome-c)" mask="url(#welcome-f)" d="M40.333-15.147h50v95h-50z" />
-                </g>
-                <g transform="rotate(44 61.546 392.623)">
-                    <mask id="welcome-h" fill="#fff">
-                        <use xlink:href="#welcome-g" />
-                    </mask>
-                    <use fill="url(#welcome-b)" xlink:href="#welcome-g" />
-                    <path fill="url(#welcome-c)" mask="url(#welcome-h)" d="M40.333-15.147h50v95h-50z" />
-                </g>
-            </g>
+          <defs>
+          <path id="welcome-a" d="M64 0l64 128-64-20-64 20z" />
+          <path id="welcome-e" d="M40 0l40 80-40-12.5L0 80z" />
+          <path id="welcome-g" d="M40 0l40 80-40-12.5L0 80z" />
+          <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="welcome-b">
+          <stop stop-color="#A5B4FC" offset="0%" />
+          <stop stop-color="#818CF8" offset="100%" />
+          </linearGradient>
+          <linearGradient x1="50%" y1="24.537%" x2="50%" y2="100%" id="welcome-c">
+          <stop stop-color="#4338CA" offset="0%" />
+          <stop stop-color="#6366F1" stop-opacity="0" offset="100%" />
+          </linearGradient>
+          </defs>
+          <g fill="none" fill-rule="evenodd">
+          <g transform="rotate(64 36.592 105.604)">
+          <mask id="welcome-d" fill="#fff">
+          <use xlink:href="#welcome-a" />
+          </mask>
+          <use fill="url(#welcome-b)" xlink:href="#welcome-a" />
+          <path fill="url(#welcome-c)" mask="url(#welcome-d)" d="M64-24h80v152H64z" />
+          </g>
+          <g transform="rotate(-51 91.324 -105.372)">
+          <mask id="welcome-f" fill="#fff">
+          <use xlink:href="#welcome-e" />
+          </mask>
+          <use fill="url(#welcome-b)" xlink:href="#welcome-e" />
+          <path fill="url(#welcome-c)" mask="url(#welcome-f)" d="M40.333-15.147h50v95h-50z" />
+          </g>
+          <g transform="rotate(44 61.546 392.623)">
+          <mask id="welcome-h" fill="#fff">
+          <use xlink:href="#welcome-g" />
+          </mask>
+          <use fill="url(#welcome-b)" xlink:href="#welcome-g" />
+          <path fill="url(#welcome-c)" mask="url(#welcome-h)" d="M40.333-15.147h50v95h-50z" />
+          </g>
+          </g>
         </svg>
-    </div>
-
-    <!-- Content -->
-    <div class="relative">
+      </div>
+      <!-- Content -->
+      <div class="relative">
         <h1 class="text-2xl md:text-3xl text-slate-100 font-bold mb-1">Hi {{ user.name }} 👋</h1>
         <p class="text-indigo-200">Let's quickly review how your survey projects are doing.</p>
+      </div>
     </div>
-
-</div>
-{% endblock account_welcome %}
-<main class="grow">
+  {% endblock account_welcome %}
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x -mt-8">
-
-        <!-- Page header -->
-        <div class="mb-8">
-
-            <!-- Title -->
-            <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">{% block account_heading %}Account Settings ✨{% endblock account_heading %}</h1>
-
-        </div>
-
-        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
-            <div class="flex flex-col md:flex-row md:-mr-px">
-
-                <!-- Mobile Dropdown Menu -->
-                <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
-                    <div class="relative">
-                        <button type="button"
-                            @click="open = !open"
-                            :class="open ? 'open' : ''"
-                            class="settings-dropdown-trigger">
-                            <span>Account Settings</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="open"
-                            @click.outside="open = false"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 -translate-y-2"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-2"
-                            class="settings-dropdown-menu"
-                            x-cloak>
-
-                            <!-- Account Settings Section -->
-                            <div class="settings-dropdown-section">
-                                <div class="settings-dropdown-section-title">Account Settings</div>
-                                <a href="{% url 'private:user_profile' %}" class="settings-dropdown-item {% if request.url_name == 'user_profile' %}active{% endif %}" @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current fill-none stroke-width-2" viewBox="2.25 2.25 19.5 19.51">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-                                        <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                                        <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
-                                    </svg>
-                                    <span>My Account</span>
-                                </a>
-                                <a href="{% url 'private:user_password' %}" class="settings-dropdown-item {% if request.url_name == 'user_password' %}active{% endif %}" @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current fill-none stroke-width-2" viewBox="2.25 2.25 19.5 19.50">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M12 17v4" />
-                                        <path d="M10 20l4 -2" />
-                                        <path d="M10 18l4 2" />
-                                        <path d="M5 17v4" />
-                                        <path d="M3 20l4 -2" />
-                                        <path d="M3 18l4 2" />
-                                        <path d="M19 17v4" />
-                                        <path d="M17 20l4 -2" />
-                                        <path d="M17 18l4 2" />
-                                        <path d="M9 6a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-                                        <path d="M7 14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2" />
-                                    </svg>
-                                    <span>Password Management</span>
-                                </a>
-                                <a href="{% url 'private:user_authtoken' %}" class="settings-dropdown-item {% if request.url_name == 'user_authtoken' %}active{% endif %}" @click="open = false">
-                                    <svg class="w-4 h-4 fill-none stroke-current stroke-width-2" viewBox="2.25 2.25 19.5 19.5">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
-                                        <path d="M15 9h.01" />
-                                    </svg>
-                                    <span>Application Token</span>
-                                </a>
-                                <a href="{% url 'private:user_preferences' %}" class="settings-dropdown-item {% if request.url_name == 'user_preferences' %}active{% endif %}" @click="open = false">
-                                    <svg class="w-4 h-4 fill-none stroke-current stroke-width-2" viewBox="3.25 3.25 17.5 17.5">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M6 4v4" />
-                                        <path d="M6 12v8" />
-                                        <path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M12 4v10" />
-                                        <path d="M12 18v2" />
-                                        <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M18 4v1" />
-                                        <path d="M18 9v11" />
-                                    </svg>
-                                    <span>My Preferences</span>
-                                </a>
-                            </div>
-
-                            <!-- Backup Section -->
-                            <div class="settings-dropdown-section">
-                                <div class="settings-dropdown-section-title">Backup your data</div>
-                                <a href="{% url 'private:user_exports' %}" class="settings-dropdown-item {% if request.url_name == 'user_exports' %}active{% endif %}">
-                                    <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
-                                        <path d="M12 13l0 9" />
-                                        <path d="M9 19l3 3l3 -3" />
-                                    </svg>
-                                    <span>Export / Backup</span>
-                                </a>
-                            </div>
-
-                            <!-- Feedback Section -->
-                            <div class="settings-dropdown-section">
-                                <div class="settings-dropdown-section-title">Any Question or Feedback?</div>
-                                <a href="{% url 'private:user_feedback' %}" class="settings-dropdown-item {% if request.url_name == 'user_feedback' %}active{% endif %}" @click="open = false">
-                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
-                                        <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
-                                    </svg>
-                                    <span>Give Feedback</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+      <!-- Page header -->
+      <div class="mb-8">
+        <!-- Title -->
+        <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">{% block account_heading %}Account Settings ✨{% endblock account_heading %}</h1>
+      </div>
+      <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
+        <div class="flex flex-col md:flex-row md:-mr-px">
+          <!-- Mobile Dropdown Menu -->
+          <div class="md:hidden px-4 py-4 border-b border-slate-700"
+               x-data="{ open: false }">
+            <div class="relative">
+              <button type="button"
+                      @click="open = !open"
+                      :class="open ? 'open' : ''"
+                      class="settings-dropdown-trigger">
+                <span>Account Settings</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div x-show="open"
+                   @click.outside="open = false"
+                   x-transition:enter="transition ease-out duration-200"
+                   x-transition:enter-start="opacity-0 -translate-y-2"
+                   x-transition:enter-end="opacity-100 translate-y-0"
+                   x-transition:leave="transition ease-in duration-150"
+                   x-transition:leave-start="opacity-100 translate-y-0"
+                   x-transition:leave-end="opacity-0 -translate-y-2"
+                   class="settings-dropdown-menu"
+                   x-cloak>
+                <!-- Account Settings Section -->
+                <div class="settings-dropdown-section">
+                  <div class="settings-dropdown-section-title">Account Settings</div>
+                  <a href="{% url 'private:user_profile' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_profile' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current fill-none stroke-width-2"
+                         viewBox="2.25 2.25 19.5 19.51">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                      <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                      <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
+                    </svg>
+                    <span>My Account</span>
+                  </a>
+                  <a href="{% url 'private:user_password' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_password' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current fill-none stroke-width-2"
+                         viewBox="2.25 2.25 19.5 19.50">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 17v4" />
+                      <path d="M10 20l4 -2" />
+                      <path d="M10 18l4 2" />
+                      <path d="M5 17v4" />
+                      <path d="M3 20l4 -2" />
+                      <path d="M3 18l4 2" />
+                      <path d="M19 17v4" />
+                      <path d="M17 20l4 -2" />
+                      <path d="M17 18l4 2" />
+                      <path d="M9 6a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                      <path d="M7 14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2" />
+                    </svg>
+                    <span>Password Management</span>
+                  </a>
+                  <a href="{% url 'private:user_authtoken' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_authtoken' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 fill-none stroke-current stroke-width-2"
+                         viewBox="2.25 2.25 19.5 19.5">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
+                      <path d="M15 9h.01" />
+                    </svg>
+                    <span>Application Token</span>
+                  </a>
+                  <a href="{% url 'private:user_preferences' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_preferences' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 fill-none stroke-current stroke-width-2"
+                         viewBox="3.25 3.25 17.5 17.5">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M6 4v4" />
+                      <path d="M6 12v8" />
+                      <path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M12 4v10" />
+                      <path d="M12 18v2" />
+                      <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M18 4v1" />
+                      <path d="M18 9v11" />
+                    </svg>
+                    <span>My Preferences</span>
+                  </a>
                 </div>
-
-                <!-- Desktop Sidebar -->
-                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
-                    <!-- Group 1 -->
-                    <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Account Settings</div>
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-                            <!-- Accont Info -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_profile' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_profile' %}">
-                                    {% if request.url_name == 'user_profile' %}
-                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="2.25 2.25 19.5 19.51">
-                                    {% else %}
-                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500" viewBox="2.25 2.25 19.5 19.51">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-                                        <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                                        <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
-                                      </svg>
-                                    {% if request.url_name == 'user_profile' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        My Account
-                                    </span>
-                                </a>
-                            </li>
-                            <!-- Password Management -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_password' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_password' %}">
-                                    {% if request.url_name == 'user_password' %}
-                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400" viewBox="2.25 2.25 19.5 19.50">
-                                    {% else %}
-                                        <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500" viewBox="2.25 2.25 19.5 19.50">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M12 17v4" />
-                                        <path d="M10 20l4 -2" />
-                                        <path d="M10 18l4 2" />
-                                        <path d="M5 17v4" />
-                                        <path d="M3 20l4 -2" />
-                                        <path d="M3 18l4 2" />
-                                        <path d="M19 17v4" />
-                                        <path d="M17 20l4 -2" />
-                                        <path d="M17 18l4 2" />
-                                        <path d="M9 6a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
-                                        <path d="M7 14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2" />
-                                      </svg>
-                                    {% if request.url_name == 'user_password' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Password Management
-                                    </span>
-                                </a>
-                            </li>
-                            <!-- Auth Token -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_authtoken' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_authtoken' %}">
-                                    {% if request.url_name == 'user_authtoken' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2" viewBox="2.25 2.25 19.5 19.5">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-slate-500 mr-2" viewBox="2.25 2.25 19.5 19.5">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
-                                        <path d="M15 9h.01" />
-                                      </svg>
-                                    {% if request.url_name == 'user_authtoken' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Application Token
-                                    </span>
-                                </a>
-                            </li>
-                            <!-- Accont Preferences -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_preferences' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_preferences' %}">
-                                    {% if request.url_name == 'user_preferences' %}
-                                    <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2" viewBox="3.25 3.25 17.5 17.5">
-                                {% else %}
-                                    <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-slate-500 mr-2" viewBox="3.25 3.25 17.5 17.5">
-                                {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M6 4v4" />
-                                        <path d="M6 12v8" />
-                                        <path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M12 4v10" />
-                                        <path d="M12 18v2" />
-                                        <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M18 4v1" />
-                                        <path d="M18 9v11" />
-                                      </svg>
-                                    {% if request.url_name == 'user_preferences' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        My Preferences
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Group 2 -->
-                    <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Backup your data</div>
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-                            <!-- Accont Info -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm text-sm font-medium {% if request.url_name == 'user_exports' %}bg-srgb-indigo-500-30 text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}" href="{% url 'private:user_exports' %}">
-                                    <svg class="w-4 h-4 mr-2 shrink-0 fill-none stroke-current {% if request.url_name == 'user_exports' %}text-indigo-400{% else %}text-slate-500{% endif %}" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
-                                        <path d="M12 13l0 9" />
-                                        <path d="M9 19l3 3l3 -3" />
-                                    </svg>
-                                    <span>Export / Backup</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Group 3 -->
-                    <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_feedback' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:user_feedback' %}">
-                                    {% if request.url_name == 'user_feedback' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2" viewBox="0 0 16 16">
-                                    {% endif %}
-                                        <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
-                                    </svg>
-                                    {% if request.url_name == 'user_feedback' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Give Feedback
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                <!-- Backup Section -->
+                <div class="settings-dropdown-section">
+                  <div class="settings-dropdown-section-title">Backup your data</div>
+                  <a href="{% url 'private:user_exports' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_exports' %}active{% endif %}">
+                    <svg class="w-4 h-4 fill-none stroke-current"
+                         stroke-width="2.5"
+                         viewBox="0 0 24 24"
+                         aria-hidden="true">
+                      <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
+                      <path d="M12 13l0 9" />
+                      <path d="M9 19l3 3l3 -3" />
+                    </svg>
+                    <span>Export / Backup</span>
+                  </a>
                 </div>
-
-                {% block right_panel %}
-                {% endblock right_panel %}
-
+                <!-- Feedback Section -->
+                <div class="settings-dropdown-section">
+                  <div class="settings-dropdown-section-title">Any Question or Feedback?</div>
+                  <a href="{% url 'private:user_feedback' %}"
+                     class="settings-dropdown-item {% if request.url_name == 'user_feedback' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
+                      <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
+                    </svg>
+                    <span>Give Feedback</span>
+                  </a>
+                </div>
+              </div>
             </div>
+          </div>
+          <!-- Desktop Sidebar -->
+          <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
+            <!-- Group 1 -->
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Account Settings</div>
+              <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                <!-- Accont Info -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_profile' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:user_profile' %}">
+                    {% if request.url_name == "user_profile" %}
+                      <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400"
+                           viewBox="2.25 2.25 19.5 19.51">
+                    {% else %}
+                      <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500"
+                           viewBox="2.25 2.25 19.5 19.51">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                      <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                      <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
+                    </svg>
+                    {% if request.url_name == "user_profile" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      My Account
+                    </span>
+                  </a>
+                </li>
+                <!-- Password Management -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_password' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:user_password' %}">
+                    {% if request.url_name == "user_password" %}
+                      <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400"
+                           viewBox="2.25 2.25 19.5 19.50">
+                    {% else %}
+                      <svg class="w-4 h-4 mr-2 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500"
+                           viewBox="2.25 2.25 19.5 19.50">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 17v4" />
+                      <path d="M10 20l4 -2" />
+                      <path d="M10 18l4 2" />
+                      <path d="M5 17v4" />
+                      <path d="M3 20l4 -2" />
+                      <path d="M3 18l4 2" />
+                      <path d="M19 17v4" />
+                      <path d="M17 20l4 -2" />
+                      <path d="M17 18l4 2" />
+                      <path d="M9 6a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                      <path d="M7 14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2" />
+                    </svg>
+                    {% if request.url_name == "user_password" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Password Management
+                    </span>
+                  </a>
+                </li>
+                <!-- Auth Token -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_authtoken' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:user_authtoken' %}">
+                    {% if request.url_name == "user_authtoken" %}
+                      <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2"
+                           viewBox="2.25 2.25 19.5 19.5">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-slate-500 mr-2"
+                           viewBox="2.25 2.25 19.5 19.5">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
+                      <path d="M15 9h.01" />
+                    </svg>
+                    {% if request.url_name == "user_authtoken" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Application Token
+                    </span>
+                  </a>
+                </li>
+                <!-- Accont Preferences -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_preferences' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:user_preferences' %}">
+                    {% if request.url_name == "user_preferences" %}
+                      <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-indigo-400 mr-2"
+                           viewBox="3.25 3.25 17.5 17.5">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 fill-none stroke-current stroke-width-2 text-slate-500 mr-2"
+                           viewBox="3.25 3.25 17.5 17.5">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M6 4v4" />
+                      <path d="M6 12v8" />
+                      <path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M12 4v10" />
+                      <path d="M12 18v2" />
+                      <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M18 4v1" />
+                      <path d="M18 9v11" />
+                    </svg>
+                    {% if request.url_name == "user_preferences" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      My Preferences
+                    </span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <!-- Group 2 -->
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Backup your data</div>
+              <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                <!-- Accont Info -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm text-sm font-medium {% if request.url_name == 'user_exports' %}bg-srgb-indigo-500-30 text-indigo-400{% else %}text-slate-300 hover:text-slate-200{% endif %}"
+                     href="{% url 'private:user_exports' %}">
+                    <svg class="w-4 h-4 mr-2 shrink-0 fill-none stroke-current {% if request.url_name == 'user_exports' %}text-indigo-400{% else %}text-slate-500{% endif %}"
+                         stroke-width="2.5"
+                         viewBox="0 0 24 24"
+                         aria-hidden="true">
+                      <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" />
+                      <path d="M12 13l0 9" />
+                      <path d="M9 19l3 3l3 -3" />
+                    </svg>
+                    <span>Export / Backup</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <!-- Group 3 -->
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase mt-4 mb-2">Any Question or Feedback ?</div>
+              <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'user_feedback' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:user_feedback' %}">
+                    {% if request.url_name == "user_feedback" %}
+                      <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2"
+                           viewBox="0 0 16 16">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2"
+                           viewBox="0 0 16 16">
+                    {% endif %}
+                      <path d="M7.001 3h2v4h-2V3zm1 7a1 1 0 110-2 1 1 0 010 2zM15 16a1 1 0 01-.6-.2L10.667 13H1a1 1 0 01-1-1V1a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1zM2 11h9a1 1 0 01.6.2L14 13V2H2v9z" />
+                    </svg>
+                    {% if request.url_name == "user_feedback" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Give Feedback
+                    </span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          {% block right_panel %}
+          {% endblock right_panel %}
         </div>
-
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}

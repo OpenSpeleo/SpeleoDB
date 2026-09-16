@@ -319,3 +319,15 @@ live configuration checks found no custom legacy config path for the managed
 production services or staging web service. No deployment or infrastructure
 mutation was performed. See the
 [completed review](todos/railway-config-authority.md).
+
+## djLint template review
+
+Reviewed, repaired, and individually staged 108 changed templates after enabling
+HTML pre-commit checks. All 112 tracked HTML files pass both djLint hooks and
+Django compilation. Container validation: 1,032 JavaScript tests, 19 Django
+render tests, JavaScript lint, Python test lint/type checks, and a clean Vite
+production build passed. GitLab audit: zero requests/creations, violations, or
+unresolved allocations; no remote cleanup needed. Fixed invalid nesting and
+preserved permissions, form actions, model colors, modal visibility, and map
+controls. See [the completed plan](todos/djlint-template-review.md) and
+[template linting design](../docs/template-linting.md).

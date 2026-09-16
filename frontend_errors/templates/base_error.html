@@ -1,35 +1,45 @@
-
 {% load static %}
 {% load vite_assets %}
+
 <!DOCTYPE html>
 <html lang="en-us">
-    <head>
-        <meta name="color-scheme" content="dark">
-        <meta name="darkreader-lock">
-        <title>SpeleoDB | {% block title %}ERROR{% endblock title %}</title>
-        {% vite_styles 'style-error-page' %}
-        {% vite_preload 'app' 'controller-error-page' %}
-
-        <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
-        <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
-    </head>
-    <body class="permission_denied">
-        <div id="tsparticles"></div>
-        <h1>{% block error_code %}{% endblock error_code %}</h1>
-        <div class="denied__wrapper">
-            <h3>LOST IN <span>SPACE</span> SpeleoDB?</h3>
-            {% block content %}{% endblock content %}
-            <img id="astronaut" src="{% static 'media/astronaut.svg' %}" />
-            <img id="planet" src="{% static 'media/planet.svg' %}" />
-            <a href="{% url 'home' %}"><button class="denied__link">Beam me Up to Safety Scotty</button></a>
-        </div>
-        <script
-            type="text/javascript"
-            src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"
-            ></script>
-        <script type="application/json" data-speleodb-controller="error-page">{}</script>
-        {% vite_script 'app' %}
-    </body>
+  <head>
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <title>SpeleoDB | {% block title %}ERROR{% endblock title %}</title>
+    {% vite_styles 'style-error-page' %}
+    {% vite_preload 'app' 'controller-error-page' %}
+    <link rel="apple-touch-icon"
+          sizes="180x180"
+          href="{% static 'favicon/apple-touch-icon.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="{% static 'favicon/favicon-32x32.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="{% static 'favicon/favicon-16x16.png' %}" />
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}" />
+  </head>
+  <body class="permission_denied">
+    <div id="tsparticles"></div>
+    <h1>
+      {% block error_code %}
+      {% endblock error_code %}
+    </h1>
+    <div class="denied__wrapper">
+      <h3>LOST IN <span>SPACE</span> SpeleoDB?</h3>
+      {% block content %}
+      {% endblock content %}
+      <img id="astronaut" alt="" src="{% static 'media/astronaut.svg' %}" />
+      <img id="planet" alt="" src="{% static 'media/planet.svg' %}" />
+      <a href="{% url 'home' %}" class="denied__link">Beam me Up to Safety Scotty</a>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <script type="application/json" data-speleodb-controller="error-page">
+      {}
+    </script>
+    {% vite_script 'app' %}
+  </body>
 </html>

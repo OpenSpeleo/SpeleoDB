@@ -1,360 +1,388 @@
 {% extends "base_private.html" %}
+
 {% load vite_assets %}
 {% load static %}
-
 {% load is_in_list %}
 {% load set_var %}
 
 {% block extra_css %}
-{% vite_styles 'style-template-frontend-private-templates-pages-cylinder-fleet-base' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-cylinder-fleet-base' %}
 {% endblock extra_css %}
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Cylinder Fleet: {{ cylinder_fleet.name }}
-                </h1>
-            </div>
-
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Cylinder Fleet: {{ cylinder_fleet.name }}</h1>
         </div>
-
-        <!-- Cylinder Fleet Details -->
-        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
-            <div class="flex flex-col md:flex-row md:-mr-px">
-
-                <!-- Mobile Dropdown Menu -->
-                <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
-                    <div class="relative">
-                        <button
-                            @click="open = !open"
-                            :class="open ? 'open' : ''"
-                            class="cylinder-fleet-dropdown-trigger">
-                            <span>Fleet Settings</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="open"
-                            @click.outside="open = false"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 -translate-y-2"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-2"
-                            class="cylinder-fleet-dropdown-menu"
-                            x-cloak>
-
-                            <!-- Settings Section -->
-                            <div class="cylinder-fleet-dropdown-section">
-                                <div class="cylinder-fleet-dropdown-section-title">Settings</div>
-
-                                <a href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_details' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="0 0 22 22">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                                        <path d="M12 10.5v1.5" />
-                                        <path d="M12 16v1.5" />
-                                        <path d="M15.031 12.25l-1.299 .75" />
-                                        <path d="M10.268 15l-1.3 .75" />
-                                        <path d="M15 15.803l-1.285 -.773" />
-                                        <path d="M10.285 12.97l-1.285 -.773" />
-                                        <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                                    </svg>
-                                    <span>Fleet Details & Cylinders</span>
-                                </a>
-
-                                <a href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_user_permissions' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
-                                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                                    </svg>
-                                    <span>User Access Control</span>
-                                </a>
-
-                            </div>
-
-                            <!-- Management Section -->
-                            <div class="cylinder-fleet-dropdown-section">
-                                <div class="cylinder-fleet-dropdown-section-title">Management</div>
-                                <a href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_history' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
-                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
-                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
-                                    </svg>
-                                    <span>Cylinder Activity History</span>
-                                </a>
-
-                                <a href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_watchlist' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 6v6l3 3" />
-                                        <path d="M12 3a9 9 0 1 0 9 9" />
-                                    </svg>
-                                    <span>Cylinders Watchlist</span>
-                                </a>
-
-                                <a href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_hydro' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
-                                        <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                                    </svg>
-                                    <span>Needs Hydro Test</span>
-                                </a>
-
-                                <a href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_visual' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                        <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
-                                    </svg>
-                                    <span>Needs Visual Inspection</span>
-                                </a>
-                            </div>
-
-                            {% if has_admin_access %}
-                            <!-- Administration Section -->
-                            <div class="cylinder-fleet-dropdown-section">
-                                <div class="cylinder-fleet-dropdown-section-title">Administration</div>
-                                <a href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}"
-                                   class="cylinder-fleet-dropdown-item danger {% if request.url_name == 'cylinder_fleet_danger_zone' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
-                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
-                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
-                                    </svg>
-                                    <span>Danger Zone</span>
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+      </div>
+      <!-- Cylinder Fleet Details -->
+      <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
+        <div class="flex flex-col md:flex-row md:-mr-px">
+          <!-- Mobile Dropdown Menu -->
+          <div class="md:hidden px-4 py-4 border-b border-slate-700"
+               x-data="{ open: false }">
+            <div class="relative">
+              <button type="button"
+                      @click="open = !open"
+                      :class="open ? 'open' : ''"
+                      class="cylinder-fleet-dropdown-trigger">
+                <span>Fleet Settings</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div x-show="open"
+                   @click.outside="open = false"
+                   x-transition:enter="transition ease-out duration-200"
+                   x-transition:enter-start="opacity-0 -translate-y-2"
+                   x-transition:enter-end="opacity-100 translate-y-0"
+                   x-transition:leave="transition ease-in duration-150"
+                   x-transition:leave-start="opacity-100 translate-y-0"
+                   x-transition:leave-end="opacity-0 -translate-y-2"
+                   class="cylinder-fleet-dropdown-menu"
+                   x-cloak>
+                <!-- Settings Section -->
+                <div class="cylinder-fleet-dropdown-section">
+                  <div class="cylinder-fleet-dropdown-section-title">Settings</div>
+                  <a href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_details' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current"
+                         stroke-width="2"
+                         fill="none"
+                         viewBox="0 0 22 22">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                      <path d="M12 10.5v1.5" />
+                      <path d="M12 16v1.5" />
+                      <path d="M15.031 12.25l-1.299 .75" />
+                      <path d="M10.268 15l-1.3 .75" />
+                      <path d="M15 15.803l-1.285 -.773" />
+                      <path d="M10.285 12.97l-1.285 -.773" />
+                      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                      <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                    </svg>
+                    <span>Fleet Details & Cylinders</span>
+                  </a>
+                  <a href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_user_permissions' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
+                      <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                    </svg>
+                    <span>User Access Control</span>
+                  </a>
                 </div>
-
-                <!-- Desktop Sidebar -->
-                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
-                    <!-- Group 1 -->
-                    <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Fleet Details -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_details' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_details' %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
-                                    {% else %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% endif %}
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                            <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                                            <path d="M12 10.5v1.5" />
-                                            <path d="M12 16v1.5" />
-                                            <path d="M15.031 12.25l-1.299 .75" />
-                                            <path d="M10.268 15l-1.3 .75" />
-                                            <path d="M15 15.803l-1.285 -.773" />
-                                            <path d="M10.285 12.97l-1.285 -.773" />
-                                            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                                            <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                                        </svg>
-                                    {% if request.url_name == 'cylinder_fleet_details' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Fleet Details & Cylinders
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- User Permissions -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_user_permissions' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_user_permissions' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2" viewBox="0 0 16 16">
-                                    {% endif %}
-                                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                                    </svg>
-                                    {% if request.url_name == 'cylinder_fleet_user_permissions' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        User Access Control
-                                    </span>
-                                </a>
-                            </li>
-
-                        </ul>
-                    </div>
-
-
-                    <!-- Group 2 -->
-                    <div>
-                        <hr class="my-4" style="border-color: rgb(255 255 255 / 40%);">
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Management</div>
-
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Cylinders Watchlist -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_watchlist' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_watchlist' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="1.5 2.17 21 18.33" fill="none" stroke-width="2">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="1.5 2.17 21 18.33" fill="none" stroke-width="2">
-                                    {% endif %}
-                                            <path d="M12 9v4"></path>
-                                            <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"></path>
-                                            <path d="M12 16h.01"></path>
-                                        </svg>
-                                    {% if request.url_name == 'cylinder_fleet_watchlist' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Cylinders Watchlist
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Needs Hydro Test -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_hydro' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_needs_hydro' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                    {% endif %}
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                            <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
-                                            <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-                                        </svg>
-                                    {% if request.url_name == 'cylinder_fleet_needs_hydro' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Needs Hydro Test
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Needs Visual Inspection -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_visual' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_needs_visual' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                    {% endif %}
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                            <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                                            <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
-                                        </svg>
-                                    {% if request.url_name == 'cylinder_fleet_needs_visual' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Needs Visual Inspection
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Cylinder Activity History -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_history' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_history' %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="2.55 2.41 18.95 19" stroke-width="2" fill="none">
-                                    {% else %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="2.55 2.41 18.95 19" stroke-width="2" fill="none">
-                                    {% endif %}
-                                            <path d="M12 8l0 4l2 2"></path>
-                                            <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
-                                        </svg>
-                                    {% if request.url_name == 'cylinder_fleet_history' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Cylinder Activity History
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {% if has_admin_access %}
-                    <!-- Group 3 -->
-                    <div>
-                        <hr class="my-4" style="border-color: rgb(255 255 255 / 40%);">
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Administration</div>
-
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Danger Zone -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_danger_zone' %}bg-srgb-rose-500-30{% endif %}" href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}">
-                                    {% if request.url_name == 'cylinder_fleet_danger_zone' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
-                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
-                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
-                                      </svg>
-                                    {% if request.url_name == 'cylinder_fleet_danger_zone' %}
-                                        <span class="text-sm font-medium text-rose-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Danger Zone
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                <!-- Management Section -->
+                <div class="cylinder-fleet-dropdown-section">
+                  <div class="cylinder-fleet-dropdown-section-title">Management</div>
+                  <a href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_history' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current"
+                         viewBox="0 0 22 22"
+                         fill="none"
+                         stroke-width="2">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                      <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                      <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
+                    </svg>
+                    <span>Cylinder Activity History</span>
+                  </a>
+                  <a href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_watchlist' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current"
+                         viewBox="0 0 22 22"
+                         fill="none"
+                         stroke-width="2">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 6v6l3 3" />
+                      <path d="M12 3a9 9 0 1 0 9 9" />
+                    </svg>
+                    <span>Cylinders Watchlist</span>
+                  </a>
+                  <a href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_hydro' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current"
+                         viewBox="0 0 22 22"
+                         fill="none"
+                         stroke-width="2">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
+                      <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                    </svg>
+                    <span>Needs Hydro Test</span>
+                  </a>
+                  <a href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}"
+                     class="cylinder-fleet-dropdown-item {% if request.url_name == 'cylinder_fleet_needs_visual' %}active{% endif %}"
+                     @click="open = false">
+                    <svg class="w-4 h-4 stroke-current"
+                         viewBox="0 0 22 22"
+                         fill="none"
+                         stroke-width="2">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                    </svg>
+                    <span>Needs Visual Inspection</span>
+                  </a>
+                </div>
+                {% if has_admin_access %}
+                  <!-- Administration Section -->
+                  <div class="cylinder-fleet-dropdown-section">
+                    <div class="cylinder-fleet-dropdown-section-title">Administration</div>
+                    <a href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}"
+                       class="cylinder-fleet-dropdown-item danger {% if request.url_name == 'cylinder_fleet_danger_zone' %}active{% endif %}"
+                       @click="open = false">
+                      <svg class="w-4 h-4 stroke-current"
+                           viewBox="0 0 22 22"
+                           fill="none"
+                           stroke-width="2">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
+                      </svg>
+                      <span>Danger Zone</span>
+                    </a>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- Desktop Sidebar -->
+          <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
+            <!-- Group 1 -->
+            <div>
+              <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
+              <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                <!-- Fleet Details -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_details' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_details' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_details" %}
+                      <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                           viewBox="0 0 22 22"
+                           stroke-width="2"
+                           fill="none">
+                    {% else %}
+                      <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                           viewBox="0 0 22 22"
+                           stroke-width="2"
+                           fill="none">
                     {% endif %}
-                </div>
-
-                <!-- Right Panel -->
-                {% block right_panel %}
-                {% endblock right_panel %}
-
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                      <path d="M12 10.5v1.5" />
+                      <path d="M12 16v1.5" />
+                      <path d="M15.031 12.25l-1.299 .75" />
+                      <path d="M10.268 15l-1.3 .75" />
+                      <path d="M15 15.803l-1.285 -.773" />
+                      <path d="M10.285 12.97l-1.285 -.773" />
+                      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                      <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_details" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Fleet Details & Cylinders
+                    </span>
+                  </a>
+                </li>
+                <!-- User Permissions -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_user_permissions' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_user_permissions' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_user_permissions" %}
+                      <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2"
+                           viewBox="0 0 16 16">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2"
+                           viewBox="0 0 16 16">
+                    {% endif %}
+                      <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_user_permissions" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      User Access Control
+                    </span>
+                  </a>
+                </li>
+              </ul>
             </div>
+            <!-- Group 2 -->
+            <div>
+              <hr class="my-4 border-white/40" />
+              <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Management</div>
+              <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                <!-- Cylinders Watchlist -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_watchlist' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_watchlist' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_watchlist" %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                           viewBox="1.5 2.17 21 18.33"
+                           fill="none"
+                           stroke-width="2">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                           viewBox="1.5 2.17 21 18.33"
+                           fill="none"
+                           stroke-width="2">
+                    {% endif %}
+                      <path d="M12 9v4" />
+                      <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+                      <path d="M12 16h.01" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_watchlist" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Cylinders Watchlist
+                    </span>
+                  </a>
+                </li>
+                <!-- Needs Hydro Test -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_hydro' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_needs_hydro' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_needs_hydro" %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                           viewBox="0 0 22 22"
+                           fill="none"
+                           stroke-width="2">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                           viewBox="0 0 22 22"
+                           fill="none"
+                           stroke-width="2">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M12 3l5 5a7.071 7.071 0 0 1 -10 10l-5 -5a7.071 7.071 0 0 1 10 -10z" />
+                      <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_needs_hydro" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Needs Hydro Test
+                    </span>
+                  </a>
+                </li>
+                <!-- Needs Visual Inspection -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_needs_visual' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_needs_visual' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_needs_visual" %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                           viewBox="0 0 22 22"
+                           fill="none"
+                           stroke-width="2">
+                    {% else %}
+                      <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                           viewBox="0 0 22 22"
+                           fill="none"
+                           stroke-width="2">
+                    {% endif %}
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                      <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_needs_visual" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Needs Visual Inspection
+                    </span>
+                  </a>
+                </li>
+                <!-- Cylinder Activity History -->
+                <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                  <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_history' %}bg-srgb-indigo-500-30{% endif %}"
+                     href="{% url 'private:cylinder_fleet_history' fleet_id=cylinder_fleet.id %}">
+                    {% if request.url_name == "cylinder_fleet_history" %}
+                      <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                           viewBox="2.55 2.41 18.95 19"
+                           stroke-width="2"
+                           fill="none">
+                    {% else %}
+                      <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                           viewBox="2.55 2.41 18.95 19"
+                           stroke-width="2"
+                           fill="none">
+                    {% endif %}
+                      <path d="M12 8l0 4l2 2" />
+                      <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+                    </svg>
+                    {% if request.url_name == "cylinder_fleet_history" %}
+                      <span class="text-sm font-medium text-indigo-400">
+                    {% else %}
+                      <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                    {% endif %}
+                      Cylinder Activity History
+                    </span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            {% if has_admin_access %}
+              <!-- Group 3 -->
+              <div>
+                <hr class="my-4 border-white/40" />
+                <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Administration</div>
+                <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+                  <!-- Danger Zone -->
+                  <li class="mr-0.5 md:mr-0 md:mb-0.5">
+                    <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'cylinder_fleet_danger_zone' %}bg-srgb-rose-500-30{% endif %}"
+                       href="{% url 'private:cylinder_fleet_danger_zone' fleet_id=cylinder_fleet.id %}">
+                      {% if request.url_name == "cylinder_fleet_danger_zone" %}
+                        <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2"
+                             viewBox="0 0 22 22"
+                             fill="none"
+                             stroke-width="2">
+                      {% else %}
+                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                             viewBox="0 0 22 22"
+                             fill="none"
+                             stroke-width="2">
+                      {% endif %}
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
+                      </svg>
+                      {% if request.url_name == "cylinder_fleet_danger_zone" %}
+                        <span class="text-sm font-medium text-rose-400">
+                      {% else %}
+                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                      {% endif %}
+                        Danger Zone
+                      </span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            {% endif %}
+          </div>
+          <!-- Right Panel -->
+          {% block right_panel %}
+          {% endblock right_panel %}
         </div>
-
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}

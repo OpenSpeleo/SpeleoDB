@@ -1,273 +1,257 @@
 {% load static %}
 {% load static debug_version %}
 {% load vite_assets %}
-
 {% load is_in_list %}
 {% load set_var %}
 
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth" style="color-scheme: dark;">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="color-scheme" content="dark">
-    <meta name="darkreader-lock">
+<html lang="en" class="dark scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
     <title>SpeleoDB</title>
-
     <meta property="og:locale" content="en_US" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
+    <meta name="description"
+          content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
-
     {% vite_styles 'style-app' 'style-private-shell' %}
     {% vite_preload 'app' %}
-
-{% vite_styles 'style-template-frontend-private-templates-base-private' %}
-
-    {% block extra_css %}{% endblock extra_css %}
-
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
-    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
-
-</head>
-
-<body
-    class="font-inter antialiased bg-slate-900 text-slate-400"
-    x-data="{ sidebarOpen: false }"
->
-
-
+    {% vite_styles 'style-template-frontend-private-templates-base-private' %}
+    {% block extra_css %}
+    {% endblock extra_css %}
+    <link rel="apple-touch-icon"
+          sizes="180x180"
+          href="{% static 'favicon/apple-touch-icon.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="{% static 'favicon/favicon-32x32.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="{% static 'favicon/favicon-16x16.png' %}" />
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}" />
+  </head>
+  <body class="font-inter antialiased bg-slate-900 text-slate-400"
+        x-data="{ sidebarOpen: false }">
     <!-- Page wrapper -->
     <div class="flex h-[100dvh] overflow-hidden">
-
+      <!-- Sidebar -->
+      <div class="min-w-fit">
+        <!-- Sidebar backdrop (mobile only) -->
+        <div class="fixed inset-0 bg-srgb-slate-900-30 z-40 lg:hidden lg:z-auto transition-opacity duration-200"
+             :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+             aria-hidden="true"
+             x-cloak></div>
         <!-- Sidebar -->
-        <div class="min-w-fit">
-            <!-- Sidebar backdrop (mobile only) -->
-            <div
-                class="fixed inset-0 bg-srgb-slate-900-30 z-40 lg:hidden lg:z-auto transition-opacity duration-200"
-                :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-                aria-hidden="true"
-                x-cloak
-            ></div>
-
-            <!-- Sidebar -->
-            <div
-                id="sidebar"
-                class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:w-64! shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
-                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
-                @click.outside="sidebarOpen = false"
-                @keydown.escape.window="sidebarOpen = false"
-                x-cloak="lg"
-            >
-
-                <!-- Sidebar header -->
-                <div class="flex justify-between mb-10 mt-3">
-                    <!-- Close button -->
-                    <button class="lg:hidden text-slate-100 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg p-2 transition-all" @click.stop="sidebarOpen = !sidebarOpen" aria-controls="sidebar" :aria-expanded="sidebarOpen">
-                        <span class="sr-only">Close sidebar</span>
-                        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10.7 18.7l1.4-1.4L7.8 13H20v-2H7.8l4.3-4.3-1.4-1.4L4 12z" />
+        <div id="sidebar"
+             class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:w-64! shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
+             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
+             @click.outside="sidebarOpen = false"
+             @keydown.escape.window="sidebarOpen = false"
+             x-cloak="lg">
+          <!-- Sidebar header -->
+          <div class="flex justify-between mb-10 mt-3">
+            <!-- Close button -->
+            <button type="button"
+                    class="lg:hidden text-slate-100 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg p-2 transition-all"
+                    @click.stop="sidebarOpen = !sidebarOpen"
+                    aria-controls="sidebar"
+                    :aria-expanded="sidebarOpen">
+              <span class="sr-only">Close sidebar</span>
+              <svg class="w-6 h-6 fill-current"
+                   viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.7 18.7l1.4-1.4L7.8 13H20v-2H7.8l4.3-4.3-1.4-1.4L4 12z" />
+              </svg>
+            </button>
+            <!-- Logo -->
+            <a class="block" href="{% url 'home' %}">
+              <img src="{% static 'media/logo.svg' %}"
+                   class="xs:logo-img"
+                   alt="SpeleoDB" />
+            </a>
+          </div>
+          <!-- Links -->
+          <div class="flow-y-8">
+            <!-- Pages group -->
+            <div>
+              <h3 class="text-xs uppercase text-slate-500 font-semibold pl-3">
+                <span class="hidden text-center w-6" aria-hidden="true">•••</span>
+              </h3>
+              <ul class="mt-3">
+                <!-- User Dashboard -->
+                {% if request.url_name == "user_dashboard" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:user_dashboard' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-{{ stroke_color }}-500" d="M12 0C5.383 0 0 5.383 0 12s5.383 12 12 12 12-5.383 12-12S18.617 0 12 0z" />
+                          <path class="fill-current text-{{ stroke_color }}-600" d="M12 3c-4.963 0-9 4.037-9 9s4.037 9 9 9 9-4.037 9-9-4.037-9-9-9z" />
+                          <path class="fill-current text-{{ stroke_color }}-200" d="M12 15c-1.654 0-3-1.346-3-3 0-.462.113-.894.3-1.285L6 6l4.714 3.301A2.973 2.973 0 0112 9c1.654 0 3 1.346 3 3s-1.346 3-3 3z" />
                         </svg>
-                    </button>
-                    <!-- Logo -->
-                    <a class="block" href="{% url 'home' %}">
-                        <img src="{% static 'media/logo.svg' %}" class"xs:logo-img" alt="SpeleoDB">
-                    </a>
-                </div>
-
-                <!-- Links -->
-                <div class="flow-y-8">
-                    <!-- Pages group -->
-                    <div>
-                        <h3 class="text-xs uppercase text-slate-500 font-semibold pl-3">
-                            <span class="hidden text-center w-6" aria-hidden="true">•••</span>
-                        </h3>
-                        <ul class="mt-3">
-                            <!-- User Dashboard -->
-                            {% if request.url_name == 'user_dashboard' %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_dashboard' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                                <path class="fill-current text-{{stroke_color}}-500" d="M12 0C5.383 0 0 5.383 0 12s5.383 12 12 12 12-5.383 12-12S18.617 0 12 0z" />
-                                                <path class="fill-current text-{{stroke_color}}-600" d="M12 3c-4.963 0-9 4.037-9 9s4.037 9 9 9 9-4.037 9-9-4.037-9-9-9z" />
-                                                <path class="fill-current text-{{stroke_color}}-200" d="M12 15c-1.654 0-3-1.346-3-3 0-.462.113-.894.3-1.285L6 6l4.714 3.301A2.973 2.973 0 0112 9c1.654 0 3 1.346 3 3s-1.346 3-3 3z" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">Dashboard</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- Profile -->
-                            {% if request.url_name|is_in_list:"user_profile,user_password,user_authtoken,user_preferences,user_feedback,user_exports" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_profile' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_profile' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="5 2 14 20">
-                                                <path class="fill-current text-{{stroke_color}}-400" d="M12 2a5 5 0 1 1 -5 5l.005 -.217a5 5 0 0 1 4.995 -4.783z"></path>
-                                                <path class="fill-current text-{{stroke_color}}-400" d="M14 14a5 5 0 0 1 5 5v1a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-1a5 5 0 0 1 5 -5h4z"></path>
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">Profile</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- My Teams -->
-                            {% if request.url_name|is_in_list:"teams,team_new,team_details,team_memberships,team_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:teams' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:teams' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                                <path class="fill-current text-{{stroke_color}}-600" d="M18.974 8H22a2 2 0 012 2v6h-2v5a1 1 0 01-1 1h-2a1 1 0 01-1-1v-5h-2v-6a2 2 0 012-2h.974zM20 7a2 2 0 11-.001-3.999A2 2 0 0120 7zM2.974 8H6a2 2 0 012 2v6H6v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5H0v-6a2 2 0 012-2h.974zM4 7a2 2 0 11-.001-3.999A2 2 0 014 7z" />
-                                                <path class="fill-current text-{{stroke_color}}-400" d="M12 6a3 3 0 110-6 3 3 0 010 6zm2 18h-4a1 1 0 01-1-1v-6H6v-6a3 3 0 013-3h6a3 3 0 013 3v6h-3v6a1 1 0 01-1 1z" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">My Teams</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- My GPS Tracks -->
-                            {% if request.url_name|is_in_list:"gps_tracks,gps_track_details,gps_track_user_permissions,gps_track_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gps_tracks' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 fill-current text-{{stroke_color}}-400" viewBox="0 13.8 297 269.5">
-                                                <path d="M198.5 155.4a290 290 0 0 1-33.5 37.4 24.9 24.9 0 0 1-33 0 290 290 0 0 1-33.5-37.4H40.8a10 10 0 0 0-9.6
+                        <span class="text-sm font-medium ml-3 duration-200">Dashboard</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- Profile -->
+                {% if request.url_name|is_in_list:"user_profile,user_password,user_authtoken,user_preferences,user_feedback,user_exports" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:user_profile' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="5 2 14 20">
+                          <path class="fill-current text-{{ stroke_color }}-400" d="M12 2a5 5 0 1 1 -5 5l.005 -.217a5 5 0 0 1 4.995 -4.783z" />
+                          <path class="fill-current text-{{ stroke_color }}-400" d="M14 14a5 5 0 0 1 5 5v1a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-1a5 5 0 0 1 5 -5h4z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">Profile</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- My Teams -->
+                {% if request.url_name|is_in_list:"teams,team_new,team_details,team_memberships,team_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:teams' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-{{ stroke_color }}-600" d="M18.974 8H22a2 2 0 012 2v6h-2v5a1 1 0 01-1 1h-2a1 1 0 01-1-1v-5h-2v-6a2 2 0 012-2h.974zM20 7a2 2 0 11-.001-3.999A2 2 0 0120 7zM2.974 8H6a2 2 0 012 2v6H6v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5H0v-6a2 2 0 012-2h.974zM4 7a2 2 0 11-.001-3.999A2 2 0 014 7z" />
+                          <path class="fill-current text-{{ stroke_color }}-400" d="M12 6a3 3 0 110-6 3 3 0 010 6zm2 18h-4a1 1 0 01-1-1v-6H6v-6a3 3 0 013-3h6a3 3 0 013 3v6h-3v6a1 1 0 01-1 1z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My Teams</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- My GPS Tracks -->
+                {% if request.url_name|is_in_list:"gps_tracks,gps_track_details,gps_track_user_permissions,gps_track_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:gps_tracks' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 fill-current text-{{ stroke_color }}-400"
+                             viewBox="0 13.8 297 269.5">
+                          <path d="M198.5 155.4a290 290 0 0 1-33.5 37.4 24.9 24.9 0 0 1-33 0 290 290 0 0 1-33.5-37.4H40.8a10 10 0 0 0-9.6
                                                          7.2L.4 270.6a10 10 0 0 0 9.6 12.6h277a10 10 0 0 0 9.6-12.7l-30.8-107.9a10 10 0 0 0-9.6-7.2h-57.7zM72
                                                          233.2a8 8 0 0 1-11.3 0 8 8 0 0 1 0-11.3 8 8 0 0 1 11.3 0 8 8 0 0 1 0 11.3zm16.4-9.5a8 8 0 1 1-5.2-15 8
                                                          8 0 0 1 5.2 15zM108 221h-.3a8 8 0 1 1 .3 0zm29.5-.4a8 8 0 1 1-15-5.7 8 8 0 0 1 15 5.7zm19.1 12a8 8 0 1
                                                          1-13.4-8.5 8 8 0 0 1 13.4 8.6zm22 5.2a8 8 0 1 1-15.7-2.5 8 8 0 0 1 15.8 2.5zm16.7 5-2.1.3a8 8 0 0
                                                          1-2.1-15.7 8 8 0 1 1 4.2 15.4zm22.7-10.5a8 8 0 0 1-11-2.3 8 8 0 1 1 11 2.3zm18.5-15.6a8 8 0 0 1-11.3 0
                                                          8 8 0 0 1-2.4-5.6 8 8 0 0 1 13.6-5.6 8 8 0 0 1 0 11.2z" />
-                                                <path d="M142.6 180.8a9 9 0 0 0 11.8 0c2.4-2 58-51.7 58-103a64 64 0 0 0-127.9 0c0 51.3 55.7 101 58 103zm-18-103a24
+                          <path d="M142.6 180.8a9 9 0 0 0 11.8 0c2.4-2 58-51.7 58-103a64 64 0 0 0-127.9 0c0 51.3 55.7 101 58 103zm-18-103a24
                                                          24 0 0 1 23.9-24 24 24 0 0 1 0 48 24 24 0 0 1-23.8-24z" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">My GPS Tracks</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- My GIS Layers -->
-                            {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_layers' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_layers' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{stroke_color}}-400" viewBox="0 0 24 24" stroke-width="1.8">
-                                                <path d="M12 3l8 4-8 4-8-4 8-4z"></path>
-                                                <path d="M4 12l8 4 8-4"></path>
-                                                <path d="M4 17l8 4 8-4"></path>
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- My Survey Projects -->
-                            {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone,project_git_instructions" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:projects' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:projects' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                                <path class="fill-current text-{{stroke_color}}-600" d="M19.714 14.7l-7.007 7.007-1.414-1.414 7.007-7.007c-.195-.4-.298-.84-.3-1.286a3 3 0 113 3 2.969 2.969 0 01-1.286-.3z" />
-                                                <path class="fill-current text-{{stroke_color}}-400" d="M10.714 18.3c.4-.195.84-.298 1.286-.3a3 3 0 11-3 3c.002-.446.105-.885.3-1.286l-6.007-6.007 1.414-1.414 6.007 6.007z" />
-                                                <path class="fill-current text-{{stroke_color}}-600" d="M5.7 10.714c.195.4.298.84.3 1.286a3 3 0 11-3-3c.446.002.885.105 1.286.3l7.007-7.007 1.414 1.414L5.7 10.714z" />
-                                                <path class="fill-current text-{{stroke_color}}-400" d="M19.707 9.292a3.012 3.012 0 00-1.415 1.415L13.286 5.7c-.4.195-.84.298-1.286.3a3 3 0 113-3 2.969 2.969 0 01-.3 1.286l5.007 5.006z" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">My Survey Projects</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- Tools -->
-                            {% if 'tool-' in request.url_name %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:tool-xls2dmp' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400 fill-none" viewBox="2.41 2.41 19.21 19.21">
-                                                <path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">Survey Tools</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
-
-                            <!-- GIS Cylinders -->
-                            {% if request.url_name|is_in_list:"cylinder_fleets,cylinder_fleet_new,cylinder_fleet_details,cylinder_fleet_danger_zone,cylinder_fleet_user_permissions,cylinder_fleet_history,cylinder_fleet_watchlist" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:cylinder_fleets' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:cylinder_fleets' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 fill-current stroke-current text-{{stroke_color}}-400" viewBox="2.44 17 506.56 479">
-                                                <path d="M382 17h3c12 1 22 15 30 23l6 7c4 0 6-3 9-5 4-2 8-3 13-2 7 2 11 6 14 12 2 5 2 9 0 14l-4 5-1 4c0 5 3 7 6
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My GPS Tracks</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- My GIS Layers -->
+                {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:gis_layers' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
+                             viewBox="0 0 24 24"
+                             stroke-width="1.8">
+                          <path d="M12 3l8 4-8 4-8-4 8-4z" />
+                          <path d="M4 12l8 4 8-4" />
+                          <path d="M4 17l8 4 8-4" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- My Survey Projects -->
+                {% if request.url_name|is_in_list:"projects,project_new,project_details,project_upload,project_user_permissions,project_team_permissions,project_mutexes,project_revisions,project_revision_explorer,project_danger_zone,project_git_instructions" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:projects' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-{{ stroke_color }}-600" d="M19.714 14.7l-7.007 7.007-1.414-1.414 7.007-7.007c-.195-.4-.298-.84-.3-1.286a3 3 0 113 3 2.969 2.969 0 01-1.286-.3z" />
+                          <path class="fill-current text-{{ stroke_color }}-400" d="M10.714 18.3c.4-.195.84-.298 1.286-.3a3 3 0 11-3 3c.002-.446.105-.885.3-1.286l-6.007-6.007 1.414-1.414 6.007 6.007z" />
+                          <path class="fill-current text-{{ stroke_color }}-600" d="M5.7 10.714c.195.4.298.84.3 1.286a3 3 0 11-3-3c.446.002.885.105 1.286.3l7.007-7.007 1.414 1.414L5.7 10.714z" />
+                          <path class="fill-current text-{{ stroke_color }}-400" d="M19.707 9.292a3.012 3.012 0 00-1.415 1.415L13.286 5.7c-.4.195-.84.298-1.286.3a3 3 0 113-3 2.969 2.969 0 01-.3 1.286l5.007 5.006z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My Survey Projects</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- Tools -->
+                {% if "tool-" in request.url_name %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:tool-xls2dmp' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400 fill-none"
+                             viewBox="2.41 2.41 19.21 19.21">
+                          <path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">Survey Tools</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <hr class="mt-5 mb-5 border-white/30 border-dotted" />
+                <!-- GIS Cylinders -->
+                {% if request.url_name|is_in_list:"cylinder_fleets,cylinder_fleet_new,cylinder_fleet_details,cylinder_fleet_danger_zone,cylinder_fleet_user_permissions,cylinder_fleet_history,cylinder_fleet_watchlist" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:cylinder_fleets' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 fill-current stroke-current text-{{ stroke_color }}-400"
+                             viewBox="2.44 17 506.56 479">
+                          <path d="M382 17h3c12 1 22 15 30 23l6 7c4 0 6-3 9-5 4-2 8-3 13-2 7 2 11 6 14 12 2 5 2 9 0 14l-4 5-1 4c0 5 3 7 6
                                                          10 4 3 7 2 11 1l5 1 6 7 4 4 13 13 11 10 1 4c0 7-4 10-9 14l-8 9-3 2-4 5c-6 6-6 6-11
                                                          7l-8-4-2-1-5-5v-2l-2-1-7-5-2-3-3-3-3-3-8-9v-2c1-6 1-9-2-13l-8-7c-3 1-4 2-6 5l2 3c15 27 20 56 12 87-6
                                                          22-19 39-36 56l-2 2-12 12-10 10a629 629 0 0 1-32 31l-17 16-5 6-16 17-7 7-4 4-79 79-2 2a7968 7968 0 0
@@ -280,505 +264,448 @@
                                                          2a9117 9117 0 0 1-56 56l-1 1c-3 3-5 5-5 9 1 8 11 16 17 21a12075 12075 0 0 1 86 87c7 7 7 7 16 12 5-1 8-5
                                                          12-8l1-1 20-20c5-7 11-12 17-18a2961 2961 0 0 0 10-10l2-2 9-8 11-11 2-2a3324 3324 0 0 0 25-25l17-19a16481
                                                          16481 0 0 0 115-113c9-9 16-18 22-30l1-2a89 89 0 0 0-7-86c-3-5-3-8-3-13v-7h-3c-16 1-16 1-22-4-53-35-100
-                                                         7-136 43Zm219-31c0 5 0 9 3 14l7 6 2 2 6 6c6-4 6-4 10-10l-2-2-11-12c-4-4-7-4-13-4h-2Z">
-                                                </path>
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Cylinder Fleets</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- GIS Experiments -->
-                            {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:experiments' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:experiments' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="4.5 2.5 16 19">
-                                                <path d="M5 21h14"></path>
-                                                <path d="M6 18h2"></path>
-                                                <path d="M7 18v3"></path>
-                                                <path d="M9 11l3 3l6 -6l-3 -3z"></path>
-                                                <path d="M10.5 12.5l-1.5 1.5"></path>
-                                                <path d="M17 3l3 3"></path>
-                                                <path d="M12 21a6 6 0 0 0 3.715 -10.712"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Experiments</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-
-
-                            <!-- GIS Landmark Collections -->
-                            {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:landmark_collections' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 h-6 w-6 text-{{stroke_color}}-400 fill-current" viewBox="531 240 1138 1720">
-                                                <path d="M1669 809c0 424-404 661-544 949a28 28 0 0 1-50 0c-140-288-544-525-544-949a569 569 0 0 1 1138 0m-955 0a387 387 0 1 0 773 0 387 387 0 1 0-773 0m108 0a279 279 0 1 0 557 0 279 279 0 1 0-557 0m511 877q-56-14-114-20l-22 32q83 15 156 57c12 7 38 25 36 40q-3 7-11 15l-13 9c-77 44-260 49-351 42q-63-4-125-21-28-8-54-22c-8-5-25-16-24-26 2-15 23-30 36-38q72-39 156-55l-23-34q-57 6-113 21c-52 16-120 46-123 109-2 46 36 80 72 100 84 48 189 63 284 65 98 1 198-16 284-65 36-21 73-55 72-100-2-63-71-94-123-109"/>
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Landmark Collections</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- GIS Sensors -->
-                            {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:sensor_fleets' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="2.5 2.5 19 19">
-                                                <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z"></path>
-                                                <path d="M9 9h6v6h-6z"></path>
-                                                <path d="M3 10h2"></path>
-                                                <path d="M3 14h2"></path>
-                                                <path d="M10 3v2"></path>
-                                                <path d="M14 3v2"></path>
-                                                <path d="M21 10h-2"></path>
-                                                <path d="M21 14h-2"></path>
-                                                <path d="M14 21v-2"></path>
-                                                <path d="M10 21v-2"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Sensor Fleets</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- Station Tag Editor -->
-                            {% if request.url_name == 'station_tags' %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:station_tags' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:station_tags' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Station Tags</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- GIS Surface Monitoring -->
-                            {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions,surface_network_gis_integration,surface_network_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:surface_networks' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:surface_networks' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-none fill-current text-{{stroke_color}}-400" viewBox="1 2.1 14 12.9">
-                                                <path d="M8.5 14V8.5H9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.5V14H1v1h14v-1ZM7 5.5h2v2H7Z"/>
-                                                <path d="M4.7 9.1a3.5 3.5 0 0 1 0-5.2l.6.7a2.5 2.5 0 0 0 0 3.8Zm6.6 0-.6-.7a2.5 2.5 0 0 0 0-3.8l.6-.7a3.5 3.5 0 0 1 0 5.2Z"/>
-                                                <path d="M3.2 10.9a5.5 5.5 0 0 1 0-8.8l.6.8a4.5 4.5 0 0 0 0 7.2Zm9.6 0-.6-.8a4.5 4.5 0 0 0 0-7.2l.6-.8a5.5 5.5 0 0 1 0 8.8Z"/>
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Surface Monitoring</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- GIS Views -->
-                            {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:gis_views' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:gis_views' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Views</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- Survey Map -->
-                            {% if request.url_name == 'map_viewer' %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:map_viewer' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:map_viewer' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6 stroke-current text-{{stroke_color}}-400" fill="none" viewBox="2.5 2.5 19 19.01">
-                                                <path d="M8 16l2 -6l6 -2l-2 6l-6 2"></path>
-                                                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
-                                                <path d="M12 3l0 2"></path>
-                                                <path d="M12 19l0 2"></path>
-                                                <path d="M3 12l2 0"></path>
-                                                <path d="M19 12l2 0"></path>
-                                            </svg>
-
-                                            <span class="text-sm font-medium ml-3 duration-200">GIS Survey Map</span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <hr class="mt-5 mb-5" style="border-color: rgb(255 255 255 / 30%); border-style: dotted;">
-
-                            <!-- Feedback -->
-                            {% if request.url_name == 'user_feedback' %}
-                            {% set stroke_color = 'indigo' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 bg-slate-900">
-                                <a class="block text-slate-200 truncate transition duration-150" href="{% url 'private:user_feedback' %}">
-                            {% else %}
-                            {% set stroke_color = 'slate' %}
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'private:user_feedback' %}">
-                            {% endif %}
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                                <path class="stroke-current stroke-width-2 text-{{stroke_color}}-400" style="stroke: currentColor" d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3 duration-200">
-                                                Give us Feedback
-                                            </span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- Mobile-only navigation items (hidden on desktop) -->
-                            <hr class="mt-5 mb-5 lg:hidden" style="border-color: rgb(255 255 255 / 40%);">
-
-                            <!-- Home (mobile only) -->
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'home' %}">
-                                    <div class="flex items-center">
-                                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                            <path class="fill-current text-slate-600" d="M20 20h-4v-8h-4v8H8v-8H4v8H0v-2h2v-8l10-6 10 6v8h2v2z" />
-                                            <path class="fill-current text-slate-400" d="M22 22H2a2 2 0 01-2-2v-6c0-1.1.9-2 2-2h3V8l8-5 8 5v4h3c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2z" />
-                                        </svg>
-                                        <span class="text-sm font-medium ml-3">Home</span>
-                                    </div>
-                                </a>
-                            </li>
-
-                            {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
-                            <!-- API Schema (mobile only) -->
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-schema' %}">
-                                    <div class="flex items-center">
-                                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                            <path class="fill-current text-slate-600" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
-                                            <path class="fill-current text-slate-400" d="M14 2v6h6" />
-                                        </svg>
-                                        <span class="text-sm font-medium ml-3">API Schema</span>
-                                    </div>
-                                </a>
-                            </li>
-
-                            <!-- API Docs (mobile only) -->
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'api-docs' %}" target="_blank">
-                                    <div class="flex items-center">
-                                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                            <path class="fill-current text-slate-600" d="M4 4h2v16H4zM20 4h-2v16h2z" />
-                                            <path class="fill-current text-slate-400" d="M8 7h8v2H8zM8 11h8v2H8zM8 15h6v2H8z" />
-                                        </svg>
-                                        <span class="text-sm font-medium ml-3">API Docs</span>
-                                    </div>
-                                </a>
-                            </li>
-                            {% endif %}
-
-                            {% if user.is_staff or user.is_superuser %}
-                            <!-- Admin Panel (mobile only) -->
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
-                                <a class="block text-slate-200 hover:text-white truncate transition duration-150" href="{% url 'admin:index' %}">
-                                    <div class="flex items-center">
-                                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                            <path class="fill-current text-slate-600" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-.42-.639C16.447 13.045 17 12.065 17 11a6 6 0 00-12 0c0 1.065.553 2.045 1.401 2.765a6.006 6.006 0 00-.42.639l-2.388.477a2 2 0 00-1.021.547l-1.575 1.575A2 2 0 001 17.414V20a2 2 0 002 2h14a2 2 0 002-2v-2.586a2 2 0 00-.597-1.414l-1.575-1.575z" />
-                                            <path class="fill-current text-slate-400" d="M12 6a3 3 0 110 6 3 3 0 010-6z" />
-                                        </svg>
-                                        <span class="text-sm font-medium ml-3">Admin Panel</span>
-                                    </div>
-                                </a>
-                            </li>
-                            {% endif %}
-
-                            {% if request.impersonator %}
-                            <!-- Stop Debug Mode (mobile only, if hijacked) -->
-                            <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
-                                <form action="{% url 'hijack:release' %}" method="POST" style="margin: 0;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}">
-                                    <button type="submit" class="w-full text-left block text-red-400 hover:text-red-300 truncate transition duration-150">
-                                        <div class="flex items-center">
-                                            <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                                                <path class="fill-current text-red-600" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                                                <path class="fill-current text-red-400" d="M11 7h2v6h-2zM11 15h2v2h-2z" />
-                                            </svg>
-                                            <span class="text-sm font-medium ml-3">Stop Debug Mode</span>
-                                        </div>
-                                    </button>
-                                </form>
-                            </li>
-                            {% endif %}
-
-                        </ul>
+                                                         7-136 43Zm219-31c0 5 0 9 3 14l7 6 2 2 6 6c6-4 6-4 10-10l-2-2-11-12c-4-4-7-4-13-4h-2Z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Cylinder Fleets</span>
+                      </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Content area -->
-        <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-
-            <!-- Site header -->
-            <header class="sticky top-0 bg-[#182235] border-b border-slate-200 border-slate-700 z-30">
-                <div class="px-4 sm:px-6 lg:px-8">
-                    <div class="flex items-center justify-between h-16 -mb-px">
-
-                        <!-- Header: Left side -->
-                        <div class="flex">
-                            <!-- Hamburger button -->
-                            <button
-                                class="text-slate-500 hover:text-slate-600 lg:hidden"
-                                @click.stop="sidebarOpen = !sidebarOpen"
-                                aria-controls="sidebar"
-                                :aria-expanded="sidebarOpen"
-                            >
-                                <span class="sr-only">Open sidebar</span>
-                                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="4" y="5" width="16" height="2" />
-                                    <rect x="4" y="11" width="16" height="2" />
-                                    <rect x="4" y="17" width="16" height="2" />
-                                </svg>
-                            </button>
-
+                  </a>
+                </li>
+                <!-- GIS Experiments -->
+                {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:experiments' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="4.5 2.5 16 19">
+                          <path d="M5 21h14" />
+                          <path d="M6 18h2" />
+                          <path d="M7 18v3" />
+                          <path d="M9 11l3 3l6 -6l-3 -3z" />
+                          <path d="M10.5 12.5l-1.5 1.5" />
+                          <path d="M17 3l3 3" />
+                          <path d="M12 21a6 6 0 0 0 3.715 -10.712" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Experiments</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- GIS Landmark Collections -->
+                {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:landmark_collections' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="shrink-0 h-6 w-6 text-{{ stroke_color }}-400 fill-current"
+                             viewBox="531 240 1138 1720">
+                          <path d="M1669 809c0 424-404 661-544 949a28 28 0 0 1-50 0c-140-288-544-525-544-949a569 569 0 0 1 1138 0m-955 0a387 387 0 1 0 773 0 387 387 0 1 0-773 0m108 0a279 279 0 1 0 557 0 279 279 0 1 0-557 0m511 877q-56-14-114-20l-22 32q83 15 156 57c12 7 38 25 36 40q-3 7-11 15l-13 9c-77 44-260 49-351 42q-63-4-125-21-28-8-54-22c-8-5-25-16-24-26 2-15 23-30 36-38q72-39 156-55l-23-34q-57 6-113 21c-52 16-120 46-123 109-2 46 36 80 72 100 84 48 189 63 284 65 98 1 198-16 284-65 36-21 73-55 72-100-2-63-71-94-123-109" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Landmark Collections</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- GIS Sensors -->
+                {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:sensor_fleets' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="2.5 2.5 19 19">
+                          <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" />
+                          <path d="M9 9h6v6h-6z" />
+                          <path d="M3 10h2" />
+                          <path d="M3 14h2" />
+                          <path d="M10 3v2" />
+                          <path d="M14 3v2" />
+                          <path d="M21 10h-2" />
+                          <path d="M21 14h-2" />
+                          <path d="M14 21v-2" />
+                          <path d="M10 21v-2" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Sensor Fleets</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- Station Tag Editor -->
+                {% if request.url_name == "station_tags" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:station_tags' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Station Tags</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- GIS Surface Monitoring -->
+                {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions,surface_network_gis_integration,surface_network_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:surface_networks' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-none fill-current text-{{ stroke_color }}-400"
+                             viewBox="1 2.1 14 12.9">
+                          <path d="M8.5 14V8.5H9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.5V14H1v1h14v-1ZM7 5.5h2v2H7Z" />
+                          <path d="M4.7 9.1a3.5 3.5 0 0 1 0-5.2l.6.7a2.5 2.5 0 0 0 0 3.8Zm6.6 0-.6-.7a2.5 2.5 0 0 0 0-3.8l.6-.7a3.5 3.5 0 0 1 0 5.2Z" />
+                          <path d="M3.2 10.9a5.5 5.5 0 0 1 0-8.8l.6.8a4.5 4.5 0 0 0 0 7.2Zm9.6 0-.6-.8a4.5 4.5 0 0 0 0-7.2l.6-.8a5.5 5.5 0 0 1 0 8.8Z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Surface Monitoring</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- GIS Views -->
+                {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:gis_views' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Views</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- Survey Map -->
+                {% if request.url_name == "map_viewer" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:map_viewer' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="2.5 2.5 19 19.01">
+                          <path d="M8 16l2 -6l6 -2l-2 6l-6 2" />
+                          <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                          <path d="M12 3l0 2" />
+                          <path d="M12 19l0 2" />
+                          <path d="M3 12l2 0" />
+                          <path d="M19 12l2 0" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">GIS Survey Map</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <hr class="mt-5 mb-5 border-white/30 border-dotted" />
+                <!-- Feedback -->
+                {% if request.url_name == "user_feedback" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:user_feedback' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="stroke-current stroke-width-2 text-{{ stroke_color }}-400" d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">Give us Feedback</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- Mobile-only navigation items (hidden on desktop) -->
+                <hr class="mt-5 mb-5 lg:hidden border-white/40" />
+                <!-- Home (mobile only) -->
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
+                  <a class="block text-slate-200 hover:text-white truncate transition duration-150"
+                     href="{% url 'home' %}">
+                    <div class="flex items-center">
+                      <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                        <path class="fill-current text-slate-600" d="M20 20h-4v-8h-4v8H8v-8H4v8H0v-2h2v-8l10-6 10 6v8h2v2z" />
+                        <path class="fill-current text-slate-400" d="M22 22H2a2 2 0 01-2-2v-6c0-1.1.9-2 2-2h3V8l8-5 8 5v4h3c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2z" />
+                      </svg>
+                      <span class="text-sm font-medium ml-3">Home</span>
+                    </div>
+                  </a>
+                </li>
+                {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
+                  <!-- API Schema (mobile only) -->
+                  <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
+                    <a class="block text-slate-200 hover:text-white truncate transition duration-150"
+                       href="{% url 'api-schema' %}">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-slate-600" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+                          <path class="fill-current text-slate-400" d="M14 2v6h6" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3">API Schema</span>
+                      </div>
+                    </a>
+                  </li>
+                  <!-- API Docs (mobile only) -->
+                  <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
+                    <a class="block text-slate-200 hover:text-white truncate transition duration-150"
+                       href="{% url 'api-docs' %}"
+                       target="_blank">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-slate-600" d="M4 4h2v16H4zM20 4h-2v16h2z" />
+                          <path class="fill-current text-slate-400" d="M8 7h8v2H8zM8 11h8v2H8zM8 15h6v2H8z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3">API Docs</span>
+                      </div>
+                    </a>
+                  </li>
+                {% endif %}
+                {% if user.is_staff or user.is_superuser %}
+                  <!-- Admin Panel (mobile only) -->
+                  <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
+                    <a class="block text-slate-200 hover:text-white truncate transition duration-150"
+                       href="{% url 'admin:index' %}">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                          <path class="fill-current text-slate-600" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-.42-.639C16.447 13.045 17 12.065 17 11a6 6 0 00-12 0c0 1.065.553 2.045 1.401 2.765a6.006 6.006 0 00-.42.639l-2.388.477a2 2 0 00-1.021.547l-1.575 1.575A2 2 0 001 17.414V20a2 2 0 002 2h14a2 2 0 002-2v-2.586a2 2 0 00-.597-1.414l-1.575-1.575z" />
+                          <path class="fill-current text-slate-400" d="M12 6a3 3 0 110 6 3 3 0 010-6z" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3">Admin Panel</span>
+                      </div>
+                    </a>
+                  </li>
+                {% endif %}
+                {% if request.impersonator %}
+                  <!-- Stop Debug Mode (mobile only, if hijacked) -->
+                  <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0 lg:hidden">
+                    <form action="{% url 'hijack:release' %}" method="post" class="m-0">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}" />
+                      <button type="submit"
+                              class="w-full text-left block text-red-400 hover:text-red-300 truncate transition duration-150">
+                        <div class="flex items-center">
+                          <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
+                            <path class="fill-current text-red-600" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                            <path class="fill-current text-red-400" d="M11 7h2v6h-2zM11 15h2v2h-2z" />
+                          </svg>
+                          <span class="text-sm font-medium ml-3">Stop Debug Mode</span>
                         </div>
-
-                        <!-- Header: Right side -->
-                        <div class="flex items-center flow-x-3">
-
-                            <!-- Home button (desktop only) -->
-                            <div class="relative hidden lg:inline-flex">
-                                <button class="inline-flex justify-center items-center group">
-                                    <div class="flex items-center truncate">
-                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200" href="{% url 'home' %}">
-                                            Home
-                                        </a>
-                                    </div>
-                                </button>
-                            </div>
-
-                            {% if user.is_hijacked %}
-                            <!-- Divider (desktop only) -->
-                            <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
-
-                            <!-- Stop Debug Mode button (desktop only) -->
-                            <div class="relative hidden lg:inline-flex">
-                                <form action="{% url 'hijack:release' %}" method="POST">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}">
-                                    <button class="inline-flex justify-center items-center group" type="submit">
-                                        <div class="flex items-center truncate">
-                                            <span class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200">
-                                                Stop Debug Mode
-                                            </span>
-                                        </div>
-                                    </button>
-                                </form>
-                            </div>
-
-                            {% endif %}
-
-                            {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
-                            <!-- Divider (desktop only) -->
-                            <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
-
-                            <!-- API Schema button (desktop only) -->
-                            <div class="relative hidden lg:inline-flex">
-                                <button class="inline-flex justify-center items-center group">
-                                    <div class="flex items-center truncate">
-                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200" href="{% url 'api-schema' %}">
-                                            API Schema
-                                        </a>
-                                    </div>
-                                </button>
-                            </div>
-
-                            <!-- API Docs button (desktop only) -->
-                            <div class="relative hidden lg:inline-flex">
-                                <button class="inline-flex justify-center items-center group">
-                                    <div class="flex items-center truncate">
-                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200" target="_blank" href="{% url 'api-docs' %}">
-                                            API Docs
-                                        </a>
-                                    </div>
-                                </button>
-                            </div>
-                            {% endif %}
-
-                            {% if user.is_staff or user.is_superuser %}
-                            <!-- Divider (desktop only) -->
-                            <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
-
-                            <!-- Admin Panel button (desktop only) -->
-                            <div class="relative hidden lg:inline-flex">
-                                <button class="inline-flex justify-center items-center group">
-                                    <div class="flex items-center truncate">
-                                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200" href="{% url 'admin:index' %}">
-                                            Admin Panel
-                                        </a>
-                                    </div>
-                                </button>
-                            </div>
-                            {% endif %}
-
-                            <!-- Divider (desktop only) -->
-                            <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
-
-                            <!-- User button -->
-                            <div class="relative inline-flex" x-data="{ open: false }">
-                                <button
-                                    class="inline-flex justify-center items-center group"
-                                    aria-haspopup="true"
-                                    @click.prevent="open = !open"
-                                    :aria-expanded="open"
-                                >
-                                    <div class="flex items-center truncate">
-                                        <svg class="w-4 h-4 shrink-0 fill-current" viewBox="0 0 16 16">
-                                            <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0
+                      </button>
+                    </form>
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Content area -->
+      <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+        <!-- Site header -->
+        <header class="sticky top-0 bg-[#182235] border-b border-slate-200 border-slate-700 z-30">
+          <div class="px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 -mb-px">
+              <!-- Header: Left side -->
+              <div class="flex">
+                <!-- Hamburger button -->
+                <button type="button"
+                        class="text-slate-500 hover:text-slate-600 lg:hidden"
+                        @click.stop="sidebarOpen = !sidebarOpen"
+                        aria-controls="sidebar"
+                        :aria-expanded="sidebarOpen">
+                  <span class="sr-only">Open sidebar</span>
+                  <svg class="w-6 h-6 fill-current"
+                       viewBox="0 0 24 24"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="5" width="16" height="2" />
+                    <rect x="4" y="11" width="16" height="2" />
+                    <rect x="4" y="17" width="16" height="2" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Header: Right side -->
+              <div class="flex items-center flow-x-3">
+                <!-- Home button (desktop only) -->
+                <div class="relative hidden lg:inline-flex">
+                  <div class="inline-flex justify-center items-center group">
+                    <div class="flex items-center truncate">
+                      <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200"
+                         href="{% url 'home' %}">Home</a>
+                    </div>
+                  </div>
+                </div>
+                {% if user.is_hijacked %}
+                  <!-- Divider (desktop only) -->
+                  <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
+                  <!-- Stop Debug Mode button (desktop only) -->
+                  <div class="relative hidden lg:inline-flex">
+                    <form action="{% url 'hijack:release' %}" method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{% url 'private:user_dashboard' %}" />
+                      <button class="inline-flex justify-center items-center group" type="submit">
+                        <div class="flex items-center truncate">
+                          <span class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200">Stop Debug Mode</span>
+                        </div>
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
+                {% if user.is_staff or user.is_superuser or user.has_api_doc_access %}
+                  <!-- Divider (desktop only) -->
+                  <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
+                  <!-- API Schema button (desktop only) -->
+                  <div class="relative hidden lg:inline-flex">
+                    <div class="inline-flex justify-center items-center group">
+                      <div class="flex items-center truncate">
+                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200"
+                           href="{% url 'api-schema' %}">API Schema</a>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- API Docs button (desktop only) -->
+                  <div class="relative hidden lg:inline-flex">
+                    <div class="inline-flex justify-center items-center group">
+                      <div class="flex items-center truncate">
+                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200"
+                           target="_blank"
+                           href="{% url 'api-docs' %}">API Docs</a>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+                {% if user.is_staff or user.is_superuser %}
+                  <!-- Divider (desktop only) -->
+                  <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
+                  <!-- Admin Panel button (desktop only) -->
+                  <div class="relative hidden lg:inline-flex">
+                    <div class="inline-flex justify-center items-center group">
+                      <div class="flex items-center truncate">
+                        <a class="truncate mr-2 ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200"
+                           href="{% url 'admin:index' %}">Admin Panel</a>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+                <!-- Divider (desktop only) -->
+                <hr class="hidden lg:block w-px h-6 bg-slate-700 border-none" />
+                <!-- User button -->
+                <div class="relative inline-flex" x-data="{ open: false }">
+                  <button type="button"
+                          class="inline-flex justify-center items-center group"
+                          aria-haspopup="true"
+                          @click.prevent="open = !open"
+                          :aria-expanded="open">
+                    <div class="flex items-center truncate">
+                      <svg class="w-4 h-4 shrink-0 fill-current" viewBox="0 0 16 16">
+                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0
                                                      1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001
                                                      13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2
                                                      2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607
                                                      1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                                        </svg>
-                                        <span class="truncate ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200">
-                                            {{ user.name }}
-                                        </span>
-                                        <svg class="w-3 h-3 shrink-0 ml-1 fill-current text-slate-400" viewBox="0 0 12 12">
-                                            <path d="M5.9 11.4L.5 6l1.4-1.4 4 4 4-4L11.3 6z" />
-                                        </svg>
-                                    </div>
-                                </button>
-                                <div
-                                    class="origin-top-right z-10 absolute top-full right-0 min-w-44 bg-slate-800 border border-slate-200 border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1"
-                                    @click.outside="open = false"
-                                    @keydown.escape.window="open = false"
-                                    x-show="open"
-                                    x-transition:enter="transition ease-out duration-200 transform"
-                                    x-transition:enter-start="opacity-0 -translate-y-2"
-                                    x-transition:enter-end="opacity-100 translate-y-0"
-                                    x-transition:leave="transition ease-out duration-200"
-                                    x-transition:leave-start="opacity-100"
-                                    x-transition:leave-end="opacity-0"
-                                    x-cloak
-                                >
-                                    <div class="pt-0.5 pb-2 px-3 mb-1 border-b border-slate-200 border-slate-700">
-                                        <div class="font-medium text-slate-100">{{ user.name }}</div>
-                                    </div>
-                                    <ul>
-                                        <li>
-                                            <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3" href="{% url 'private:user_profile' %}">Profile</a>
-                                        </li>
-                                        <li>
-                                            <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3" href="{% url 'account_logout' %}">Sign Out</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                        </div>
-
+                      </svg>
+                      <span class="truncate ml-2 text-sm font-medium text-slate-300 group-hover:text-slate-200">{{ user.name }}</span>
+                      <svg class="w-3 h-3 shrink-0 ml-1 fill-current text-slate-400"
+                           viewBox="0 0 12 12">
+                        <path d="M5.9 11.4L.5 6l1.4-1.4 4 4 4-4L11.3 6z" />
+                      </svg>
                     </div>
+                  </button>
+                  <div class="origin-top-right z-10 absolute top-full right-0 min-w-44 bg-slate-800 border border-slate-200 border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1"
+                       @click.outside="open = false"
+                       @keydown.escape.window="open = false"
+                       x-show="open"
+                       x-transition:enter="transition ease-out duration-200 transform"
+                       x-transition:enter-start="opacity-0 -translate-y-2"
+                       x-transition:enter-end="opacity-100 translate-y-0"
+                       x-transition:leave="transition ease-out duration-200"
+                       x-transition:leave-start="opacity-100"
+                       x-transition:leave-end="opacity-0"
+                       x-cloak>
+                    <div class="pt-0.5 pb-2 px-3 mb-1 border-b border-slate-200 border-slate-700">
+                      <div class="font-medium text-slate-100">{{ user.name }}</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3"
+                           href="{% url 'private:user_profile' %}">Profile</a>
+                      </li>
+                      <li>
+                        <a class="font-medium text-sm text-indigo-500 hover:text-indigo-400 flex items-center py-1 px-3"
+                           href="{% url 'account_logout' %}">Sign Out</a>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
-            </header>
-
-            <main class="grow">
-                <div class="px-4 sm:px-6 lg:px-8 py-8 sm:py-0 w-full max-w-9xl center-x">
-
-                    {% block content %}{% endblock content %}
-
-                </div>
-            </main>
-
-            {% include "footer.html" %}
-
-        </div>
-
+              </div>
+            </div>
+          </div>
+        </header>
+        <main class="grow">
+          <div class="px-4 sm:px-6 lg:px-8 py-8 sm:py-0 w-full max-w-9xl center-x">
+            {% block content %}
+            {% endblock content %}
+          </div>
+        </main>
+        {% include "footer.html" %}
+      </div>
     </div>
-
     {% if debug %}
-    <script src="{% static 'js/vendors/jquery-3.7.1.js' %}"></script>
-    <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
+      <script src="{% static 'js/vendors/jquery-3.7.1.js' %}"></script>
+      <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
     {% else %}
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js"
-        integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q=="
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer">
+      </script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js" integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q==" crossorigin="anonymous" referrerpolicy="no-referrer">
+      </script>
     {% endif %}
-
-    {% block extra_js %}{% endblock extra_js %}
-
-    {% block inline_extra_js %}{% endblock inline_extra_js %}
-
+    {% block extra_js %}
+    {% endblock extra_js %}
+    {% block inline_extra_js %}
+    {% endblock inline_extra_js %}
     {% vite_script 'app' %}
-
     <!--end::Javascript-->
-
-</body>
-
+  </body>
 </html>

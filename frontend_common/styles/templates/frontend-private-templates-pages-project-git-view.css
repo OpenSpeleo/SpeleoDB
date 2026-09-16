@@ -71,3 +71,10 @@
             white-space: normal !important;
         }
     }
+
+/* Clones become visible when the controller removes their template IDs. */
+#row-template-currentdir,
+#row-template-folder,
+#row-template-file {
+    display: none;
+}

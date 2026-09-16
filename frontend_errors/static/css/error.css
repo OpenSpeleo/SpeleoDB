@@ -74,6 +74,7 @@
 }
 
 .denied__link {
+  text-decoration: none;
   background: #b94242;
   color: #fff;
   padding: 12px 0px 10px 0px;

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 const configMock = {
     loadProjects: vi.fn(),
     loadNetworks: vi.fn(),
@@ -192,6 +194,27 @@ describe('private map viewer entrypoint', () => {
         vi.restoreAllMocks();
         document.body.innerHTML = '';
         delete window.MAPVIEWER_CONTEXT;
+    });
+
+    it('toggles landmarks once from the native label or checkbox', async () => {
+        const template = document.createElement('template');
+        template.innerHTML = readFileSync(
+            'frontend_private/templates/pages/map_viewer.html', 'utf8',
+        );
+        const control = template.content.querySelector('#landmarks-toggle-button');
+        document.body.append(control);
+        const toggle = control.querySelector('#landmarks-toggle');
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+
+        control.click();
+        expect(toggle.checked).toBe(false);
+        expect(layersMock.toggleLandmarkVisibility).toHaveBeenCalledExactlyOnceWith(false);
+
+        layersMock.toggleLandmarkVisibility.mockClear();
+        toggle.click();
+        expect(toggle.checked).toBe(true);
+        expect(layersMock.toggleLandmarkVisibility).toHaveBeenCalledExactlyOnceWith(true);
     });
 
     it('does not reload private map data for non-destructive map source changes', async () => {

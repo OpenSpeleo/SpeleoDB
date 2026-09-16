@@ -1,467 +1,534 @@
 {% extends "base_private.html" %}
+
 {% load vite_assets %}
 {% load static %}
-
 {% load is_in_list %}
 {% load set_var %}
 
 {% block extra_css %}
-{% vite_styles 'style-template-frontend-private-templates-pages-project-base' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-project-base' %}
 {% endblock extra_css %}
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Project: {{ project.name }}
-                </h1>
-            </div>
-
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Project: {{ project.name }}</h1>
         </div>
-
-        {% if not project.active_mutex %}
+      </div>
+      {% if not project.active_mutex %}
         <!-- Lock status: edition not enabled -->
-            {% if has_write_access %}
-        <div class="mb-6 flex items-center gap-3 rounded-lg border-l-4 border-srgb-amber-500-60 bg-amber-500/[0.07] px-4 py-3">
-            <svg class="w-5 h-5 shrink-0 text-amber-400" viewBox="0 0 24 24" stroke-width="1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+        {% if has_write_access %}
+          <div class="mb-6 flex items-center gap-3 rounded-lg border-l-4 border-srgb-amber-500-60 bg-amber-500/[0.07] px-4 py-3">
+            <svg class="w-5 h-5 shrink-0 text-amber-400"
+                 viewBox="0 0 24 24"
+                 stroke-width="1.75"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+              <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+              <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
             </svg>
             <p class="text-sm text-slate-300">
-                Project edition is not enabled.{% if request.url_name != 'project_mutexes' %}
-                <a href="{% url 'private:project_mutexes' project_id=project.id %}"
-                   class="ml-1 font-medium text-amber-400 underline decoration-srgb-amber-400-40 underline-offset-2 hover:text-amber-300 hover:decoration-srgb-amber-300-60 transition-colors">
-                    Enable Project Edition
-                </a>{% endif %}
-            </p>
+              Project edition is not enabled.{% if request.url_name != "project_mutexes" %}
+              <a href="{% url 'private:project_mutexes' project_id=project.id %}"
+                 class="ml-1 font-medium text-amber-400 underline decoration-srgb-amber-400-40 underline-offset-2 hover:text-amber-300 hover:decoration-srgb-amber-300-60 transition-colors">
+                Enable Project Edition
+              </a>
+        {% endif %}
+        </p>
         </div>
-            {% else %}
+      {% else %}
         <div class="mb-6 flex items-center gap-3 rounded-lg border-l-4 border-srgb-slate-500-50 bg-slate-500/[0.07] px-4 py-3">
-            <svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" stroke-width="1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <svg class="w-5 h-5 shrink-0 text-slate-400"
+               viewBox="0 0 24 24"
+               stroke-width="1.75"
+               fill="none"
+               stroke="currentColor"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+            <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+            <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+          </svg>
+          <p class="text-sm text-slate-400">Read-only — You do not have edit access to this project.</p>
+        </div>
+      {% endif %}
+{% elif project.mutex_owner != user %}
+  <!-- Lock status: being edited by another user -->
+  <div class="mb-6 flex items-center justify-between gap-3 rounded-lg border-l-4 border-srgb-sky-500-60 bg-sky-500/[0.07] px-4 py-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <svg class="w-5 h-5 shrink-0 text-sky-400"
+           viewBox="0 0 24 24"
+           stroke-width="1.75"
+           fill="none"
+           stroke="currentColor"
+           stroke-linecap="round"
+           stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" />
+        <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" />
+        <path d="M16 5l3 3" />
+      </svg>
+      <p class="text-sm text-slate-300 truncate">
+        Currently being edited by
+        <span class="font-semibold text-sky-300">{{ project.mutex_owner.name }}</span>
+      </p>
+    </div>
+    <span class="shrink-0 rounded-full bg-srgb-sky-500-20 px-2.5 py-0.5 text-xs font-semibold text-sky-300 inset-ring-srgb-sky-400-30-1">Read-only</span>
+  </div>
+{% else %}
+  <!-- Lock status: current user is editing -->
+  <div class="mb-6 flex items-center justify-between gap-3 rounded-lg border-l-4 border-srgb-emerald-500-60 bg-emerald-500/[0.07] px-4 py-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <svg class="w-5 h-5 shrink-0 text-emerald-400"
+           viewBox="0 0 24 24"
+           stroke-width="1.75"
+           fill="none"
+           stroke="currentColor"
+           stroke-linecap="round"
+           stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+        <path d="M8 11v-5a4 4 0 0 1 8 0" />
+      </svg>
+      <p class="text-sm text-slate-300">
+        Project edition is enabled.{% if request.url_name != "project_upload" %}
+        <a href="{% url 'private:project_upload' project_id=project.id %}"
+           class="ml-1 font-medium text-emerald-400 underline decoration-srgb-emerald-400-40 underline-offset-2 hover:text-emerald-300 hover:decoration-srgb-emerald-300-60 transition-colors">
+          Upload new Revision
+        </a>
+{% endif %}
+</p>
+</div>
+<span class="shrink-0 rounded-full bg-srgb-emerald-500-20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300 inset-ring-srgb-emerald-400-30-1">Editing</span>
+</div>
+{% endif %}
+<!-- Project Details -->
+<div class="bg-slate-800 shadow-lg rounded-xs mb-8">
+  <div class="flex flex-col md:flex-row md:-mr-px">
+    <!-- Mobile Dropdown Menu -->
+    <div class="md:hidden px-4 py-4 border-b border-slate-700"
+         x-data="{ open: false }">
+      <div class="relative">
+        <button type="button"
+                @click="open = !open"
+                :class="open ? 'open' : ''"
+                class="project-dropdown-trigger">
+          <span>Project Settings</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div x-show="open"
+             @click.outside="open = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             class="project-dropdown-menu"
+             x-cloak>
+          <!-- Settings Section -->
+          <div class="project-dropdown-section">
+            <div class="project-dropdown-section-title">Settings</div>
+            <a href="{% url 'private:project_details' project_id=project.id %}"
+               class="project-dropdown-item {% if request.url_name == 'project_details' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 stroke-current"
+                   stroke-width="2"
+                   fill="none"
+                   viewBox="0 0 22 22">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                <path d="M12 10.5v1.5" />
+                <path d="M12 16v1.5" />
+                <path d="M15.031 12.25l-1.299 .75" />
+                <path d="M10.268 15l-1.3 .75" />
+                <path d="M15 15.803l-1.285 -.773" />
+                <path d="M10.285 12.97l-1.285 -.773" />
+                <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+              </svg>
+              <span>Project Details</span>
+            </a>
+            {% if project.active_mutex and project.active_mutex.user == user %}
+              <a href="{% url 'private:project_upload' project_id=project.id %}"
+                 class="project-dropdown-item {% if request.url_name == 'project_upload' %}active{% endif %}"
+                 @click="open = false">
+                <svg class="w-4 h-4 stroke-current"
+                     stroke-width="2"
+                     fill="none"
+                     viewBox="1.55 4.2 21.7 17.55">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" />
+                  <path d="M9 15l3 -3l3 3" />
+                  <path d="M12 12l0 9" />
+                </svg>
+                <span>Upload new Revision</span>
+              </a>
+            {% endif %}
+            <a href="{% url 'private:project_user_permissions' project_id=project.id %}"
+               class="project-dropdown-item {% if request.url_name == 'project_user_permissions' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
+                <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+              </svg>
+              <span>User Access Control</span>
+            </a>
+            <a href="{% url 'private:project_team_permissions' project_id=project.id %}"
+               class="project-dropdown-item {% if request.url_name == 'project_team_permissions' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 fill-current" viewBox="666.09 614.6 26.01 25.9">
+                <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
+                <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
+              </svg>
+              <span>Team Access Control</span>
+            </a>
+            <a href="{% url 'private:project_mutexes' project_id=project.id %}"
+               class="project-dropdown-item {% if request.url_name == 'project_mutexes' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 stroke-current"
+                   stroke-width="2"
+                   fill="none"
+                   viewBox="0 0 22 22">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                 <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
                 <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
                 <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-            </svg>
-            <p class="text-sm text-slate-400">Read-only — You do not have edit access to this project.</p>
-        </div>
-            {% endif %}
-        {% elif project.mutex_owner != user %}
-        <!-- Lock status: being edited by another user -->
-        <div class="mb-6 flex items-center justify-between gap-3 rounded-lg border-l-4 border-srgb-sky-500-60 bg-sky-500/[0.07] px-4 py-3">
-            <div class="flex items-center gap-3 min-w-0">
-                <svg class="w-5 h-5 shrink-0 text-sky-400" viewBox="0 0 24 24" stroke-width="1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" />
-                    <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" />
-                    <path d="M16 5l3 3" />
+              </svg>
+              <span>Lock Management</span>
+            </a>
+            <a href="{% url 'private:project_revisions' project_id=project.id %}"
+               class="project-dropdown-item {% if request.url_name|is_in_list:'project_revisions,project_revision_explorer' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 stroke-current"
+                   stroke-width="2"
+                   fill="none"
+                   viewBox="0 0 22 22">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 8l0 4l2 2" />
+                <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+              </svg>
+              <span>Revision History</span>
+            </a>
+          </div>
+          <!-- Nerd-Zone Section -->
+          <div class="project-dropdown-section">
+            <div class="project-dropdown-section-title">Nerd-Zone: Go Away !</div>
+            <a href="{% url 'private:project_git_instructions' project_id=project.id %}"
+               class="project-dropdown-item warning {% if request.url_name == 'project_git_instructions' %}active{% endif %}"
+               @click="open = false">
+              <svg class="w-4 h-4 stroke-current"
+                   fill="none"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   stroke-width="2"
+                   viewBox="1 1.67 22 19.33">
+                <path d="M12 9v4" />
+                <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+                <path d="M12 16h.01" />
+              </svg>
+              <span>Git Access</span>
+            </a>
+          </div>
+          {% if is_project_admin %}
+            <!-- Administration Section -->
+            <div class="project-dropdown-section">
+              <div class="project-dropdown-section-title">Administration</div>
+              <a href="{% url 'private:project_danger_zone' project_id=project.id %}"
+                 class="project-dropdown-item danger {% if request.url_name == 'project_danger_zone' %}active{% endif %}"
+                 @click="open = false">
+                <svg class="w-4 h-4 stroke-current"
+                     viewBox="0 0 22 22"
+                     fill="none"
+                     stroke-width="2">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                  <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                  <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
                 </svg>
-                <p class="text-sm text-slate-300 truncate">
-                    Currently being edited by
-                    <span class="font-semibold text-sky-300">{{ project.mutex_owner.name }}</span>
-                </p>
+                <span>Danger Zone</span>
+              </a>
             </div>
-            <span class="shrink-0 rounded-full bg-srgb-sky-500-20 px-2.5 py-0.5 text-xs font-semibold text-sky-300 inset-ring-srgb-sky-400-30-1">Read-only</span>
+          {% endif %}
         </div>
-        {% else %}
-        <!-- Lock status: current user is editing -->
-        <div class="mb-6 flex items-center justify-between gap-3 rounded-lg border-l-4 border-srgb-emerald-500-60 bg-emerald-500/[0.07] px-4 py-3">
-            <div class="flex items-center gap-3 min-w-0">
-                <svg class="w-5 h-5 shrink-0 text-emerald-400" viewBox="0 0 24 24" stroke-width="1.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                    <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                    <path d="M8 11v-5a4 4 0 0 1 8 0" />
-                </svg>
-                <p class="text-sm text-slate-300">
-                    Project edition is enabled.{% if request.url_name != 'project_upload' %}
-                    <a href="{% url 'private:project_upload' project_id=project.id %}"
-                       class="ml-1 font-medium text-emerald-400 underline decoration-srgb-emerald-400-40 underline-offset-2 hover:text-emerald-300 hover:decoration-srgb-emerald-300-60 transition-colors">
-                        Upload new Revision
-                    </a>{% endif %}
-                </p>
-            </div>
-            <span class="shrink-0 rounded-full bg-srgb-emerald-500-20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300 inset-ring-srgb-emerald-400-30-1">Editing</span>
-        </div>
-        {% endif %}
-
-        <!-- Project Details -->
-        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
-            <div class="flex flex-col md:flex-row md:-mr-px">
-
-                <!-- Mobile Dropdown Menu -->
-                <div class="md:hidden px-4 py-4 border-b border-slate-700" x-data="{ open: false }">
-                    <div class="relative">
-                        <button
-                            @click="open = !open"
-                            :class="open ? 'open' : ''"
-                            class="project-dropdown-trigger">
-                            <span>Project Settings</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="open"
-                            @click.outside="open = false"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 -translate-y-2"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-2"
-                            class="project-dropdown-menu"
-                            x-cloak>
-
-                            <!-- Settings Section -->
-                            <div class="project-dropdown-section">
-                                <div class="project-dropdown-section-title">Settings</div>
-
-                                <a href="{% url 'private:project_details' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name == 'project_details' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="0 0 22 22">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                                        <path d="M12 10.5v1.5" />
-                                        <path d="M12 16v1.5" />
-                                        <path d="M15.031 12.25l-1.299 .75" />
-                                        <path d="M10.268 15l-1.3 .75" />
-                                        <path d="M15 15.803l-1.285 -.773" />
-                                        <path d="M10.285 12.97l-1.285 -.773" />
-                                        <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                                    </svg>
-                                    <span>Project Details</span>
-                                </a>
-
-                                {% if project.active_mutex and project.active_mutex.user == user %}
-                                <a href="{% url 'private:project_upload' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name == 'project_upload' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="1.55 4.2 21.7 17.55">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" />
-                                        <path d="M9 15l3 -3l3 3" />
-                                        <path d="M12 12l0 9" />
-                                    </svg>
-                                    <span>Upload new Revision</span>
-                                </a>
-                                {% endif %}
-
-                                <a href="{% url 'private:project_user_permissions' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name == 'project_user_permissions' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 16 16">
-                                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                                    </svg>
-                                    <span>User Access Control</span>
-                                </a>
-
-                                <a href="{% url 'private:project_team_permissions' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name == 'project_team_permissions' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 fill-current" viewBox="666.09 614.6 26.01 25.9">
-                                        <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
-                                        <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
-                                    </svg>
-                                    <span>Team Access Control</span>
-                                </a>
-
-                                <a href="{% url 'private:project_mutexes' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name == 'project_mutexes' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="0 0 22 22">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-                                    </svg>
-                                    <span>Lock Management</span>
-                                </a>
-
-                                <a href="{% url 'private:project_revisions' project_id=project.id %}"
-                                   class="project-dropdown-item {% if request.url_name|is_in_list:'project_revisions,project_revision_explorer' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" stroke-width="2" fill="none" viewBox="0 0 22 22">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 8l0 4l2 2" />
-                                        <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
-                                    </svg>
-                                    <span>Revision History</span>
-                                </a>
-                            </div>
-
-                            <!-- Nerd-Zone Section -->
-                            <div class="project-dropdown-section">
-                                <div class="project-dropdown-section-title">Nerd-Zone: Go Away !</div>
-                                <a href="{% url 'private:project_git_instructions' project_id=project.id %}"
-                                   class="project-dropdown-item warning {% if request.url_name == 'project_git_instructions' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="1 1.67 22 19.33">
-                                        <path d="M12 9v4" />
-                                        <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
-                                        <path d="M12 16h.01" />
-                                    </svg>
-                                    <span>Git Access</span>
-                                </a>
-                            </div>
-
-                            {% if is_project_admin %}
-                            <!-- Administration Section -->
-                            <div class="project-dropdown-section">
-                                <div class="project-dropdown-section-title">Administration</div>
-                                <a href="{% url 'private:project_danger_zone' project_id=project.id %}"
-                                   class="project-dropdown-item danger {% if request.url_name == 'project_danger_zone' %}active{% endif %}"
-                                   @click="open = false">
-                                    <svg class="w-4 h-4 stroke-current" viewBox="0 0 22 22" fill="none" stroke-width="2">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
-                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
-                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
-                                    </svg>
-                                    <span>Danger Zone</span>
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Desktop Sidebar -->
-                <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
-                    <!-- Group 1 -->
-                    <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Project Details -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_details' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_details' project_id=project.id %}">
-                                    {% if request.url_name == 'project_details' %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" viewBox="0 0 22 22"  stroke-width="2" fill="none">
-                                    {% else %}
-                                        <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% endif %}
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                            <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                                            <path d="M12 10.5v1.5" />
-                                            <path d="M12 16v1.5" />
-                                            <path d="M15.031 12.25l-1.299 .75" />
-                                            <path d="M10.268 15l-1.3 .75" />
-                                            <path d="M15 15.803l-1.285 -.773" />
-                                            <path d="M10.285 12.97l-1.285 -.773" />
-                                            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                                            <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                                        </svg>
-                                    {% if request.url_name == 'project_details' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Project Details
-                                    </span>
-                                </a>
-                            </li>
-
-                            {% if project.active_mutex and project.active_mutex.user == user %}
-                            <!-- Project Upload -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_upload' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_upload' project_id=project.id %}">
-                                    {% if request.url_name == 'project_upload' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400 mr-2" viewBox="1.55 4.2 21.7 17.55">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500 mr-2" viewBox="1.55 4.2 21.7 17.55">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" />
-                                        <path d="M9 15l3 -3l3 3" />
-                                        <path d="M12 12l0 9" />
-                                    </svg>
-                                    {% if request.url_name == 'project_upload' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Upload new Revision
-                                    </span>
-                                </a>
-                            </li>
-                            {% endif %}
-
-                            <!-- Project User Permissions -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_user_permissions' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_user_permissions' project_id=project.id %}">
-                                    {% if request.url_name == 'project_user_permissions' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="0 0 16 16">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2" viewBox="0 0 16 16">
-                                    {% endif %}
-                                        <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
-                                    </svg>
-                                    {% if request.url_name == 'project_user_permissions' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        User Access Control
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Project Team Permissions -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_team_permissions' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_team_permissions' project_id=project.id %}">
-                                    {% if request.url_name == 'project_team_permissions' %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2" viewBox="666.09 614.6 26.01 25.9">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2" viewBox="666.09 614.6 26.01 25.9">
-                                    {% endif %}
-                                        <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
-                                        <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
-                                    </svg>
-                                    {% if request.url_name == 'project_team_permissions' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Team Access Control
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Project Edition History -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_mutexes' project_id=project.id %}">
-                                    {% if request.url_name == 'project_mutexes' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
-                                        <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
-                                        <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
-                                      </svg>
-                                    {% if request.url_name == 'project_mutexes' %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Lock Management
-                                    </span>
-                                </a>
-                            </li>
-
-                            <!-- Project Revision History -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                              {% if request.url_name|is_in_list:"project_revisions,project_revision_explorer" %}
-                                {% set is_active = True %}
-                                {% endif %}
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if is_active %}bg-srgb-indigo-500-30{% endif %}" href="{% url 'private:project_revisions' project_id=project.id %}">
-                                    {% if is_active %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" width="16" height="16" viewBox="0 0 22 22" stroke-width="2" fill="none">
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M12 8l0 4l2 2" />
-                                        <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
-                                      </svg>
-                                    {% if is_active %}
-                                        <span class="text-sm font-medium text-indigo-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Revision History
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Group 2 -->
-                    <div>
-                        <hr class="my-4" style="border-color: rgb(255 255 255 / 40%);">
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Nerd-Zone: Go Away !</div>
-
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Project Git Clone -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_git_instructions' %}bg-srgb-amber-500-30{% endif %}" href="{% url 'private:project_git_instructions' project_id=project.id %}">
-                                    {% if request.url_name == 'project_git_instructions' %}
-                                    <svg class="w-4 h-4 shrink-0 stroke-current text-amber-500 mr-2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="1 1.67 22 19.33">
-                                    {% else %}
-                                    <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="1 1.67 22 19.33">
-                                    {% endif %}
-                                        <path d="M12 9v4" />
-                                        <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
-                                        <path d="M12 16h.01" />
-                                    </svg>
-                                    {% if request.url_name == 'project_git_instructions' %}
-                                        <span class="text-sm font-medium text-amber-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Git Access
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {% if is_project_admin %}
-                    <!-- Group 3 -->
-                    <div>
-                        <hr class="my-4" style="border-color: rgb(255 255 255 / 40%);">
-                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Administration</div>
-
-                        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
-
-                            <!-- Project Danger Zone -->
-                            <li class="mr-0.5 md:mr-0 md:mb-0.5">
-                                <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-srgb-rose-500-30{% endif %}" href="{% url 'private:project_danger_zone' project_id=project.id %}">
-                                    {% if request.url_name == 'project_danger_zone' %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2" viewBox="0 0 22 22" fill="none" stroke-width=2>
-                                    {% else %}
-                                        <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2" viewBox="0 0 22 22" fill="none"  stroke-width=2>
-                                    {% endif %}
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                        <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
-                                        <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
-                                        <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
-                                      </svg>
-                                    {% if request.url_name == 'project_danger_zone' %}
-                                        <span class="text-sm font-medium text-rose-400">
-                                    {% else %}
-                                        <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
-                                    {% endif %}
-                                        Danger Zone
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- Right Panel -->
-                {% block right_panel %}
-                {% endblock right_panel %}
-
-            </div>
-        </div>
-
+      </div>
     </div>
+    <!-- Desktop Sidebar -->
+    <div class="hidden md:block px-3 py-6 border-r border-slate-700 min-w-60 flow-y-3">
+      <!-- Group 1 -->
+      <div>
+        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Settings</div>
+        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+          <!-- Project Details -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_details' %}bg-srgb-indigo-500-30{% endif %}"
+               href="{% url 'private:project_details' project_id=project.id %}">
+              {% if request.url_name == "project_details" %}
+                <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% else %}
+                <svg class="icon icon-tabler icon-tabler-adjustments w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% endif %}
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                <path d="M12 10.5v1.5" />
+                <path d="M12 16v1.5" />
+                <path d="M15.031 12.25l-1.299 .75" />
+                <path d="M10.268 15l-1.3 .75" />
+                <path d="M15 15.803l-1.285 -.773" />
+                <path d="M10.285 12.97l-1.285 -.773" />
+                <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+              </svg>
+              {% if request.url_name == "project_details" %}
+                <span class="text-sm font-medium text-indigo-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                Project Details
+              </span>
+            </a>
+          </li>
+          {% if project.active_mutex and project.active_mutex.user == user %}
+            <!-- Project Upload -->
+            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+              <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_upload' %}bg-srgb-indigo-500-30{% endif %}"
+                 href="{% url 'private:project_upload' project_id=project.id %}">
+                {% if request.url_name == "project_upload" %}
+                  <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-indigo-400 mr-2"
+                       viewBox="1.55 4.2 21.7 17.55">
+                {% else %}
+                  <svg class="w-4 h-4 shrink-0 stroke-current fill-none stroke-width-2 text-slate-500 mr-2"
+                       viewBox="1.55 4.2 21.7 17.55">
+                {% endif %}
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" />
+                  <path d="M9 15l3 -3l3 3" />
+                  <path d="M12 12l0 9" />
+                </svg>
+                {% if request.url_name == "project_upload" %}
+                  <span class="text-sm font-medium text-indigo-400">
+                {% else %}
+                  <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                {% endif %}
+                  Upload new Revision
+                </span>
+              </a>
+            </li>
+          {% endif %}
+          <!-- Project User Permissions -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_user_permissions' %}bg-srgb-indigo-500-30{% endif %}"
+               href="{% url 'private:project_user_permissions' project_id=project.id %}">
+              {% if request.url_name == "project_user_permissions" %}
+                <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2"
+                     viewBox="0 0 16 16">
+              {% else %}
+                <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2"
+                     viewBox="0 0 16 16">
+              {% endif %}
+                <path d="M12.311 9.527c-1.161-.393-1.85-.825-2.143-1.175A3.991 3.991 0 0012 5V4c0-2.206-1.794-4-4-4S4 1.794 4 4v1c0 1.406.732 2.639 1.832 3.352-.292.35-.981.782-2.142 1.175A3.942 3.942 0 001 13.26V16h14v-2.74c0-1.69-1.081-3.19-2.689-3.733zM6 4c0-1.103.897-2 2-2s2 .897 2 2v1c0 1.103-.897 2-2 2s-2-.897-2-2V4zm7 10H3v-.74c0-.831.534-1.569 1.33-1.838 1.845-.624 3-1.436 3.452-2.422h.436c.452.986 1.607 1.798 3.453 2.422A1.943 1.943 0 0113 13.26V14z" />
+              </svg>
+              {% if request.url_name == "project_user_permissions" %}
+                <span class="text-sm font-medium text-indigo-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                User Access Control
+              </span>
+            </a>
+          </li>
+          <!-- Project Team Permissions -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_team_permissions' %}bg-srgb-indigo-500-30{% endif %}"
+               href="{% url 'private:project_team_permissions' project_id=project.id %}">
+              {% if request.url_name == "project_team_permissions" %}
+                <svg class="w-4 h-4 shrink-0 fill-current text-indigo-400 mr-2"
+                     viewBox="666.09 614.6 26.01 25.9">
+              {% else %}
+                <svg class="w-4 h-4 shrink-0 fill-current text-slate-500 mr-2"
+                     viewBox="666.09 614.6 26.01 25.9">
+              {% endif %}
+                <path d="M683.4 627.4a10 10 0 0 0-6.4 2 7.3 7.3 0 0 0-2.7 5.8v5.3h17.8v-5.2c0-2.8-1.2-4.8-3-6a10 10 0 0 0-5.7-1.9zm0 1.5c1.6 0 3.5.5 4.9 1.5 1.4 1 2.3 2.6 2.3 4.8v3.8H676v-3.8c0-2 .8-3.6 2-4.6 1.4-1 3.3-1.7 5.5-1.7zm0-14.3a5.7 5.7 0 1 0 0 11.5 5.7 5.7 0 0 0 0-11.5zm0 1.5a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 1 1 0-8.4z" />
+                <path d="M674 628c-2.3 0-4.3.6-5.7 1.9a7 7 0 0 0-2.2 5.4v5.2h7v-1.6h-5.5v-3.6c0-2 .6-3.3 1.7-4.3 1-1 2.7-1.5 4.6-1.5h1l1-1.3h-.7c-.4-.2-.8-.2-1.2-.2zm-.1-11.5a5.2 5.2 0 0 0-5.2 5.2 5.2 5.2 0 0 0 8.8 3.6l.4-.3-1-1.2-.3.4-.4.3a3.7 3.7 0 0 1-6-2.8 3.7 3.7 0 0 1 5.4-3.2l.7.4.5-1.4-.4-.3c-.8-.4-1.7-.7-2.5-.7z" />
+              </svg>
+              {% if request.url_name == "project_team_permissions" %}
+                <span class="text-sm font-medium text-indigo-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                Team Access Control
+              </span>
+            </a>
+          </li>
+          <!-- Project Edition History -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_mutexes' %}bg-srgb-indigo-500-30{% endif %}"
+               href="{% url 'private:project_mutexes' project_id=project.id %}">
+              {% if request.url_name == "project_mutexes" %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                     width="16"
+                     height="16"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% else %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                     width="16"
+                     height="16"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% endif %}
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+              </svg>
+              {% if request.url_name == "project_mutexes" %}
+                <span class="text-sm font-medium text-indigo-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                Lock Management
+              </span>
+            </a>
+          </li>
+          <!-- Project Revision History -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            {% if request.url_name|is_in_list:"project_revisions,project_revision_explorer" %}
+              {% set is_active = True %}
+            {% endif %}
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if is_active %}bg-srgb-indigo-500-30{% endif %}"
+               href="{% url 'private:project_revisions' project_id=project.id %}">
+              {% if is_active %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-indigo-400 mr-2"
+                     width="16"
+                     height="16"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% else %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                     width="16"
+                     height="16"
+                     viewBox="0 0 22 22"
+                     stroke-width="2"
+                     fill="none">
+              {% endif %}
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 8l0 4l2 2" />
+                <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+              </svg>
+              {% if is_active %}
+                <span class="text-sm font-medium text-indigo-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                Revision History
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <!-- Group 2 -->
+      <div>
+        <hr class="my-4 border-white/40" />
+        <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Nerd-Zone: Go Away !</div>
+        <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+          <!-- Project Git Clone -->
+          <li class="mr-0.5 md:mr-0 md:mb-0.5">
+            <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_git_instructions' %}bg-srgb-amber-500-30{% endif %}"
+               href="{% url 'private:project_git_instructions' project_id=project.id %}">
+              {% if request.url_name == "project_git_instructions" %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-amber-500 mr-2"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     stroke-width="2"
+                     viewBox="1 1.67 22 19.33">
+              {% else %}
+                <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                     fill="none"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     stroke-width="2"
+                     viewBox="1 1.67 22 19.33">
+              {% endif %}
+                <path d="M12 9v4" />
+                <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+                <path d="M12 16h.01" />
+              </svg>
+              {% if request.url_name == "project_git_instructions" %}
+                <span class="text-sm font-medium text-amber-400">
+              {% else %}
+                <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+              {% endif %}
+                Git Access
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% if is_project_admin %}
+        <!-- Group 3 -->
+        <div>
+          <hr class="my-4 border-white/40" />
+          <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Administration</div>
+          <ul class="flex flex-nowrap md:block mr-3 md:mr-0">
+            <!-- Project Danger Zone -->
+            <li class="mr-0.5 md:mr-0 md:mb-0.5">
+              <a class="flex items-center px-2.5 py-2 rounded-sm whitespace-nowrap {% if request.url_name == 'project_danger_zone' %}bg-srgb-rose-500-30{% endif %}"
+                 href="{% url 'private:project_danger_zone' project_id=project.id %}">
+                {% if request.url_name == "project_danger_zone" %}
+                  <svg class="w-4 h-4 shrink-0 stroke-current text-rose-500 mr-2"
+                       viewBox="0 0 22 22"
+                       fill="none"
+                       stroke-width="2">
+                {% else %}
+                  <svg class="w-4 h-4 shrink-0 stroke-current text-slate-500 mr-2"
+                       viewBox="0 0 22 22"
+                       fill="none"
+                       stroke-width="2">
+                {% endif %}
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M13.5 14.6l3 5.19a9 9 0 0 0 4.5 -7.79h-6a3 3 0 0 1 -1.5 2.6" />
+                  <path d="M13.5 9.4l3 -5.19a9 9 0 0 0 -9 0l3 5.19a3 3 0 0 1 3 0" />
+                  <path d="M10.5 14.6l-3 5.19a9 9 0 0 1 -4.5 -7.79h6a3 3 0 0 0 1.5 2.6" />
+                </svg>
+                {% if request.url_name == "project_danger_zone" %}
+                  <span class="text-sm font-medium text-rose-400">
+                {% else %}
+                  <span class="text-sm font-medium text-slate-300 hover:text-slate-200">
+                {% endif %}
+                  Danger Zone
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+    <!-- Right Panel -->
+    {% block right_panel %}
+    {% endblock right_panel %}
+  </div>
+</div>
+</div>
 </main>
 {% endblock content %}

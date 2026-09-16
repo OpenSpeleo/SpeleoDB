@@ -78,3 +78,9 @@
             display: none;
         }
     }
+
+/* Clones become visible when the controller removes their template IDs. */
+#commit-template,
+#format-download-template {
+    display: none;
+}

@@ -35,3 +35,23 @@
 .form_helptext {
   color: rgb(203 213 225 / 79%);
 }
+
+.cave-diver-modal {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+/* Shared glow behind the home page hero and feature sections. */
+.home-halo {
+  position: absolute;
+  top: calc(50% - 20px);
+  left: calc(50% - 20px);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background-color: rgb(156 80 231 / 40%);
+  box-shadow: 0 0 60px 30px rgb(156 80 231 / 40%),
+    0 0 100px 60px rgb(156 80 231 / 40%),
+    0 0 200px 200px rgb(156 80 231 / 40%);
+}

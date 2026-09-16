@@ -1,287 +1,297 @@
 {% extends "pages/cylinder_fleet/base.html" %}
+
 {% load static vite_assets %}
 
-{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
-
+{% block extra_css %}
+  {% vite_preload 'controller-fleet' %}
+{% endblock extra_css %}
 {% block right_panel %}
-<div class="grow">
-
-    <form id="watchlist_form" method="GET" autocomplete="off">
-        {% csrf_token %}
-
-        <!-- Panel body -->
-        <div class="p-6 flow-y-6">
-            <h2 class="text-2xl text-slate-100 font-bold mb-5">{{ page_title }}</h2>
-
-            {% if show_days_filter %}
-            <!-- Time Parameter Control (only for installed watchlist) -->
-            <section>
-                <div class="flex flex-wrap gap-4 mb-6">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-sm font-medium mb-1" for="days">
-                            Installed longer than (days):<span class="text-rose-600"> *</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <input
-                                id="days"
-                                name="days"
-                                type="number"
-                                min="0"
-                                value="{{ days|default:60 }}"
-                                class="form-input flex-1"
-                                required />
-                            <button type="submit" id="btn_update_watchlist"
-                                class="btn bg-indigo-500 hover:bg-indigo-600 text-white whitespace-nowrap">
-                                Update Watchlist
-                            </button>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">
-                            Show cylinders installed for more than N days (default: 60 days)
-                        </p>
-                    </div>
+  <div class="grow">
+    <form id="watchlist_form" method="get" autocomplete="off">
+      {% csrf_token %}
+      <!-- Panel body -->
+      <div class="p-6 flow-y-6">
+        <h2 class="text-2xl text-slate-100 font-bold mb-5">{{ page_title }}</h2>
+        {% if show_days_filter %}
+          <!-- Time Parameter Control (only for installed watchlist) -->
+          <section>
+            <div class="flex flex-wrap gap-4 mb-6">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium mb-1" for="days">
+                  Installed longer than (days):<span class="text-rose-600"> *</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <input id="days"
+                         name="days"
+                         type="number"
+                         min="0"
+                         value="{{ days|default:60 }}"
+                         class="form-input flex-1"
+                         required />
+                  <button type="submit"
+                          id="btn_update_watchlist"
+                          class="btn bg-indigo-500 hover:bg-indigo-600 text-white whitespace-nowrap">
+                    Update Watchlist
+                  </button>
                 </div>
-            </section>
-            {% endif %}
-
-            <!-- Cylinders Watchlist Table -->
-            <section>
-                <div class="{% if show_days_filter %}mt-8{% endif %}">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-slate-100">{{ section_title }}</h3>
-                        {% if show_days_filter %}
-                        <div class="flex gap-2">
-                            <a href="#" id="btn_export_excel"
-                                class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
-                                    <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-                                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
-                                    <path d="M8 11h8v7h-8z"></path>
-                                    <path d="M8 15h8"></path>
-                                    <path d="M11 11v7"></path>
-                                </svg>
-                                Export to Excel
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Cylinders List -->
-                    <div id="cylinders_container">
-                        {% include 'snippets/cylinder_table.html' with cylinders=cylinders table_id='watchlist_cylinders_table' show_actions=False show_edit=True has_write_access=has_write_access show_count=True empty_message=empty_message %}
-                    </div>
-                </div>
-            </section>
-
-        </div>
-
-    </form>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-    {% if has_write_access %}
-    <!-- Edit Cylinder Modal -->
-    <div id="cylinder_modal"
-        class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4"
-        style="display: none;">
-        <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
-            <!-- Modal header -->
-            <div class="px-6 py-4 border-b border-slate-700">
-                <div class="flex items-center justify-between">
-                    <h3 id="cylinder_modal_title" class="text-xl font-semibold text-slate-100">Edit Cylinder</h3>
-                    <button id="cylinder_modal_close_x" class="text-slate-400 hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
+                <p class="text-xs text-slate-400 mt-1">Show cylinders installed for more than N days (default: 60 days)</p>
+              </div>
             </div>
-
-            <!-- Modal body -->
-            <div class="px-6 py-4 flow-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Cylinder Name -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_name">
-                            Cylinder Name
-                        </label>
-                        <input type="text" id="modal_cylinder_name"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="e.g., Cylinder #023">
-                    </div>
-                    <!-- Serial -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_serial">
-                            Serial
-                        </label>
-                        <input type="text" id="modal_cylinder_serial"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Serial number">
-                    </div>
-                    <!-- Brand -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_brand">
-                            Brand
-                        </label>
-                        <input type="text" id="modal_cylinder_brand"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Luxfer, Catalina...">
-                    </div>
-                    <!-- Owner -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_owner">
-                            Owner
-                        </label>
-                        <input type="text" id="modal_cylinder_owner"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Owner name">
-                    </div>
-                    <!-- Type -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_type">
-                            Type
-                        </label>
-                        <input type="text" id="modal_cylinder_type"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="AL80, AL40...">
-                    </div>
-                    <!-- Status -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_status">
-                            Status <span class="text-rose-500">*</span>
-                        </label>
-                        <select id="modal_cylinder_status"
-                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                            <option value="functional">✓ Functional</option>
-                            <option value="needs_service">🧰 Needs Service</option>
-                            <option value="broken">✗ Broken</option>
-                            <option value="lost">⚠ Lost</option>
-                            <option value="abandoned">⊘ Abandoned</option>
-                        </select>
-                    </div>
+          </section>
+        {% endif %}
+        <!-- Cylinders Watchlist Table -->
+        <section>
+          <div class="{% if show_days_filter %}mt-8{% endif %}">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold text-slate-100">{{ section_title }}</h3>
+              {% if show_days_filter %}
+                <div class="flex gap-2">
+                  <a href="#"
+                     id="btn_export_excel"
+                     class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                         fill="none"
+                         stroke="#000000"
+                         stroke-width="1"
+                         stroke-linecap="round"
+                         stroke-linejoin="round"
+                         viewBox="4.5 2.5 15 19">
+                      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                      <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                      <path d="M8 11h8v7h-8z" />
+                      <path d="M8 15h8" />
+                      <path d="M11 11v7" />
+                    </svg>
+                    Export to Excel
+                  </a>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- O2 -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_o2">
-                            O2 % <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_o2" min="0" max="100" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="21">
-                    </div>
-                    <!-- He -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_he">
-                            He % <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_he" min="0" max="100" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="0">
-                    </div>
-                    <!-- Pressure -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_pressure">
-                            Pressure <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_pressure" min="0" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="3000">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <!-- Unit System -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_unit_system">
-                            Unit System <span class="text-rose-500">*</span>
-                        </label>
-                        <select id="modal_cylinder_unit_system"
-                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                            <option value="imperial">Imperial (PSI)</option>
-                            <option value="metric">Metric (BAR)</option>
-                        </select>
-                    </div>
-                    <!-- Manufactured Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_manufactured_date">
-                            Manufactured
-                        </label>
-                        <input type="month" id="modal_cylinder_manufactured_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <!-- Visual Inspection -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_visual_date">
-                            Last Visual
-                        </label>
-                        <input type="month" id="modal_cylinder_visual_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <!-- Hydro Test -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_hydro_date">
-                            Last Hydro
-                        </label>
-                        <input type="month" id="modal_cylinder_hydro_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" id="modal_cylinder_use_anode" class="form-checkbox">
-                    <label class="text-sm text-slate-300" for="modal_cylinder_use_anode">Uses anode protection</label>
-                </div>
-
-                <!-- Notes -->
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_notes">
-                        Notes
-                    </label>
-                    <textarea id="modal_cylinder_notes" rows="3"
+              {% endif %}
+            </div>
+            <!-- Cylinders List -->
+            <div id="cylinders_container">
+              {% include "snippets/cylinder_table.html" with cylinders=cylinders table_id="watchlist_cylinders_table" show_actions=False show_edit=True has_write_access=has_write_access show_count=True empty_message=empty_message %}
+            </div>
+          </div>
+        </section>
+      </div>
+    </form>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+    {% if has_write_access %}
+      <!-- Edit Cylinder Modal -->
+      <div id="cylinder_modal"
+           class="initially-hidden hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4">
+        <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
+          <!-- Modal header -->
+          <div class="px-6 py-4 border-b border-slate-700">
+            <div class="flex items-center justify-between">
+              <h3 id="cylinder_modal_title"
+                  class="text-xl font-semibold text-slate-100">Edit Cylinder</h3>
+              <button type="button"
+                      id="cylinder_modal_close_x"
+                      class="text-slate-400 hover:text-slate-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <!-- Modal body -->
+          <div class="px-6 py-4 flow-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Cylinder Name -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_name">Cylinder Name</label>
+                <input type="text"
+                       id="modal_cylinder_name"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="e.g., Cylinder #023" />
+              </div>
+              <!-- Serial -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_serial">Serial</label>
+                <input type="text"
+                       id="modal_cylinder_serial"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="Serial number" />
+              </div>
+              <!-- Brand -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_brand">Brand</label>
+                <input type="text"
+                       id="modal_cylinder_brand"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="Luxfer, Catalina..." />
+              </div>
+              <!-- Owner -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_owner">Owner</label>
+                <input type="text"
+                       id="modal_cylinder_owner"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="Owner name" />
+              </div>
+              <!-- Type -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_type">Type</label>
+                <input type="text"
+                       id="modal_cylinder_type"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="AL80, AL40..." />
+              </div>
+              <!-- Status -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_status">
+                  Status <span class="text-rose-500">*</span>
+                </label>
+                <select id="modal_cylinder_status"
+                        class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                  <option value="functional">✓ Functional</option>
+                  <option value="needs_service">🧰 Needs Service</option>
+                  <option value="broken">✗ Broken</option>
+                  <option value="lost">⚠ Lost</option>
+                  <option value="abandoned">⊘ Abandoned</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- O2 -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_o2">
+                  O2 % <span class="text-rose-500">*</span>
+                </label>
+                <input type="number"
+                       id="modal_cylinder_o2"
+                       min="0"
+                       max="100"
+                       required
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="21" />
+              </div>
+              <!-- He -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_he">
+                  He % <span class="text-rose-500">*</span>
+                </label>
+                <input type="number"
+                       id="modal_cylinder_he"
+                       min="0"
+                       max="100"
+                       required
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="0" />
+              </div>
+              <!-- Pressure -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_pressure">
+                  Pressure <span class="text-rose-500">*</span>
+                </label>
+                <input type="number"
+                       id="modal_cylinder_pressure"
+                       min="0"
+                       required
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                       placeholder="3000" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <!-- Unit System -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_unit_system">
+                  Unit System <span class="text-rose-500">*</span>
+                </label>
+                <select id="modal_cylinder_unit_system"
+                        class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                  <option value="imperial">Imperial (PSI)</option>
+                  <option value="metric">Metric (BAR)</option>
+                </select>
+              </div>
+              <!-- Manufactured Date -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_manufactured_date">Manufactured</label>
+                <input type="month"
+                       id="modal_cylinder_manufactured_date"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              </div>
+              <!-- Visual Inspection -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_visual_date">Last Visual</label>
+                <input type="month"
+                       id="modal_cylinder_visual_date"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              </div>
+              <!-- Hydro Test -->
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2"
+                       for="modal_cylinder_hydro_date">Last Hydro</label>
+                <input type="month"
+                       id="modal_cylinder_hydro_date"
+                       class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="modal_cylinder_use_anode" class="form-checkbox" />
+              <label class="text-sm text-slate-300" for="modal_cylinder_use_anode">Uses anode protection</label>
+            </div>
+            <!-- Notes -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_notes">Notes</label>
+              <textarea id="modal_cylinder_notes"
+                        rows="3"
                         class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                         placeholder="Optional notes about this cylinder"></textarea>
-                </div>
             </div>
-
-            <!-- Modal footer -->
-            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" id="cylinder_modal_cancel"
+          </div>
+          <!-- Modal footer -->
+          <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+            <button type="button"
+                    id="cylinder_modal_cancel"
                     class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                    Cancel
-                </button>
-                <button type="button" id="cylinder_modal_save"
+              Cancel
+            </button>
+            <button type="button"
+                    id="cylinder_modal_save"
                     class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
-                    Save Cylinder
-                </button>
-            </div>
+              Save Cylinder
+            </button>
+          </div>
         </div>
-    </div>
+      </div>
     {% endif %}
-
-</div>
+  </div>
 {% endblock right_panel %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="fleet">
-{
-    "kind": "cylinder",
-    "mode": "watchlist",
-    "fleetId": "{{ cylinder_fleet.id }}",
-    "tableSelector": "#watchlist_cylinders_table",
-    "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
-    "showDaysFilter": {% if show_days_filter %}true{% else %}false{% endif %},
-    "exportRoute": "api:v2:cylinder-fleet-watchlist-export",
-    "entityCrud": {% if has_write_access %}true{% else %}false{% endif %},
-    "detailRoute": "api:v2:cylinder-detail"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="fleet">
+    {
+      "kind": "cylinder",
+      "mode": "watchlist",
+      "fleetId": "{{ cylinder_fleet.id }}",
+      "tableSelector": "#watchlist_cylinders_table",
+      "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
+      "showDaysFilter": {% if show_days_filter %}true{% else %}false{% endif %},
+      "exportRoute": "api:v2:cylinder-fleet-watchlist-export",
+      "entityCrud": {% if has_write_access %}true{% else %}false{% endif %},
+      "detailRoute": "api:v2:cylinder-detail"
+    }
+  </script>
 {% endblock inline_extra_js %}

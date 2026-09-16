@@ -1,85 +1,82 @@
 {% extends "pages/user/base.html" %}
-{% load static vite_assets %}
 
+{% load static vite_assets %}
 {% load countries %}
 
 {% block extra_css %}
-{{ block.super }}
-{% vite_preload 'controller-entity-crud' %}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-user-dashboard' %}
+  {{ block.super }}
+  {% vite_preload 'controller-entity-crud' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-user-dashboard' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<!-- Panel -->
-<div class="grow">
-
+  <!-- Panel -->
+  <div class="grow">
     <!-- Panel body -->
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Personal Profile</h2>
-
-        <form id="update_user_info_form" autocomplete="off">
-
-            <!-- Full Name -->
-            <section>
-                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
-                        <input id="name" name="name" class="form-input max-w-full w-128" type="text" value="{{ user.name }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Email -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="email">Email:</label>
-                        <input id="email" name="email" class="form-input max-w-full w-128" type="email" value="{{ user.email }}" />
-                    </div>
-                </div>
-            </section>
-
-            <!-- Country -->
-            <section>
-                <div class="flex flex-wrap mt-5">
-                    <div class="mr-2">
-                        <label class="block text-sm font-medium mb-1" for="country">Country:</label>
-                        <select id="country" name="country" class="form-select max-w-full w-128">
-                        {% get_countries as countries %}
-                        {% for country in countries %}
-                            <option value="{{ country.code }}" {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
-                <div class="flex self-end">
-                    {% csrf_token %}
-                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-                </div>
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Personal Profile</h2>
+      <form id="update_user_info_form" autocomplete="off">
+        <!-- Full Name -->
+        <section>
+          <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+            <div class="w-full">
+              <label class="block text-sm font-medium mb-1" for="name">Full Name:</label>
+              <input id="name"
+                     name="name"
+                     class="form-input max-w-full w-128"
+                     type="text"
+                     value="{{ user.name }}" />
             </div>
-
-        </form>
-
+          </div>
+        </section>
+        <!-- Email -->
+        <section>
+          <div class="flex flex-wrap mt-5">
+            <div class="mr-2">
+              <label class="block text-sm font-medium mb-1" for="email">Email:</label>
+              <input id="email"
+                     name="email"
+                     class="form-input max-w-full w-128"
+                     type="email"
+                     value="{{ user.email }}" />
+            </div>
+          </div>
+        </section>
+        <!-- Country -->
+        <section>
+          <div class="flex flex-wrap mt-5">
+            <div class="mr-2">
+              <label class="block text-sm font-medium mb-1" for="country">Country:</label>
+              <select id="country" name="country" class="form-select max-w-full w-128">
+                {% get_countries as countries %}
+                {% for country in countries %}
+                  <option value="{{ country.code }}"
+                          {% if country.code == user.country %} selected {% endif %}>{{ country.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </section>
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-8">
+          <div class="flex self-end">
+            {% csrf_token %}
+            <button type="submit"
+                    id="btn_submit"
+                    class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+          </div>
+        </div>
+      </form>
     </div>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+  </div>
 {% endblock right_panel %}
-
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="entity-crud">
-{
-    "formId": "update_user_info_form",
-    "endpoint": "{% url 'api:v2:user-detail' %}",
-    "method": "PATCH",
-    "successMessage": "Success your information has been updated.<br>If you modified your email address, please check your emails."
-}
-</script>
+  <script type="application/json" data-speleodb-controller="entity-crud">
+    {
+      "formId": "update_user_info_form",
+      "endpoint": "{% url 'api:v2:user-detail' %}",
+      "method": "PATCH",
+      "successMessage": "Success your information has been updated.<br>If you modified your email address, please check your emails."
+    }
+  </script>
 {% endblock inline_extra_js %}

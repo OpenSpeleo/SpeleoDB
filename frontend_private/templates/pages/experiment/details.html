@@ -1,257 +1,273 @@
 {% extends "pages/experiment/base.html" %}
+
 {% load static vite_assets %}
 
 {% block right_panel %}
-<div class="grow">
-
+  <div class="grow">
     <form id="experiment_details_form" autocomplete="off">
-
-        <fieldset {% if not has_write_access %}disabled{% endif %}>
-
+      <fieldset {% if not has_write_access %}disabled{% endif %}>
         {% csrf_token %}
-
         <!-- Panel body -->
         <div class="p-6 flow-y-6">
-            <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings: {{ has_write_access }}</h2>
-
-            <!-- Experiment Name -->
-            <section>
-                <div class="flex flex-wrap mt-5 gap-4">
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="name">Experiment Name:<span class="text-rose-600"> *</span></label>
-                        <input id="name" name="name" class="form-input max-w-full w-full" type="text" value="{{ experiment.name }}" />
-                    </div>
-
-                    <div class="w-full lg:flex-1">
-                        <div class="flex flex-wrap gap-4">
-                            <div class="w-full lg:flex-1">
-                                <label class="block text-sm font-medium mb-1" for="code">Experiment Code:</label>
-                                <input id="code" name="code" class="form-input max-w-full w-full" type="text" placeholder="[Optional]" value="{% if experiment.code %}{{ experiment.code }}{% endif %}" />
-                            </div>
-                            <div class="w-full lg:flex-1">
-                                <label class="block text-sm font-medium mb-1" for="start_date">Start Date</label>
-                                <input type="date" id="start_date" name="start_date" class="form-input max-w-full w-full" value="{% if experiment.start_date %}{{ experiment.start_date|date:'Y-m-d' }}{% endif %}">
-                            </div>
-                            <div class="w-full lg:flex-1">
-                                <label class="block text-sm font-medium mb-1" for="end_date">End Date</label>
-                                <input type="date" id="end_date" name="end_date" class="form-input max-w-full w-full" value="{% if experiment.end_date %}{{ experiment.end_date|date:'Y-m-d' }}{% endif %}">
-                            </div>
-                        </div>
-                    </div>
+          <h2 class="text-2xl text-slate-100 font-bold mb-5">Experiment Settings: {{ has_write_access }}</h2>
+          <!-- Experiment Name -->
+          <section>
+            <div class="flex flex-wrap mt-5 gap-4">
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1"
+                       for="name">Experiment Name:<span class="text-rose-600"> *</span></label>
+                <input id="name"
+                       name="name"
+                       class="form-input max-w-full w-full"
+                       type="text"
+                       value="{{ experiment.name }}" />
+              </div>
+              <div class="w-full lg:flex-1">
+                <div class="flex flex-wrap gap-4">
+                  <div class="w-full lg:flex-1">
+                    <label class="block text-sm font-medium mb-1" for="code">Experiment Code:</label>
+                    <input id="code"
+                           name="code"
+                           class="form-input max-w-full w-full"
+                           type="text"
+                           placeholder="[Optional]"
+                           value="{% if experiment.code %}{{ experiment.code }}{% endif %}" />
+                  </div>
+                  <div class="w-full lg:flex-1">
+                    <label class="block text-sm font-medium mb-1" for="start_date">Start Date</label>
+                    <input type="date"
+                           id="start_date"
+                           name="start_date"
+                           class="form-input max-w-full w-full"
+                           value="{% if experiment.start_date %}{{ experiment.start_date|date:'Y-m-d' }}{% endif %}" />
+                  </div>
+                  <div class="w-full lg:flex-1">
+                    <label class="block text-sm font-medium mb-1" for="end_date">End Date</label>
+                    <input type="date"
+                           id="end_date"
+                           name="end_date"
+                           class="form-input max-w-full w-full"
+                           value="{% if experiment.end_date %}{{ experiment.end_date|date:'Y-m-d' }}{% endif %}" />
+                  </div>
                 </div>
-            </section>
-
-            <!-- Description -->
-            <section>
-                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                        <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{% if experiment.description %}{{ experiment.description }}{% endif %}</textarea>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Data Collection Fields -->
-            <section>
-                <div class="mt-5">
-                    <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
-                    <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Existing fields cannot be modified, but you can add new ones.</p>
-
-                    <!-- All Fields Container (Sortable) -->
-                    <div id="all_fields_container" class="flow-y-3 mb-6">
-                        {% if experiment_fields_with_json %}
-                        <h4 class="text-sm font-medium text-slate-300 mb-3">Existing Fields
-                            <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Name editable • Type & Required immutable)</span>
-                        </h4>
-
-                        {% for field_id, field_data in experiment_fields_with_json.items %}
-                        {% if field_id in mandatory_field_uuids %}
-                            <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 existing-field-item"
-                                 data-field-id="{{ field_id }}"
-                                 data-field-type="{{ field_data.type }}"
-                                 data-field-required="{{ field_data.required|lower }}"
-                                 {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
-                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                                    <!-- Drag Handle -->
-                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">
-                                            Field Name
-                                            <span class="text-amber-400">🔒 Mandatory - Not Editable</span>
-                                        </label>
-                                        <input type="text"
-                                               value="{{ field_data.name }}"
-                                               class="existing-field-name form-input w-full bg-slate-600 opacity-60 cursor-not-allowed"
-                                               disabled
-                                               placeholder="Enter field name" />
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">
-                                            Field Type
-                                            <span class="text-slate-500">🔒 Immutable</span>
-                                        </label>
-                                        <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
-                                    </div>
-                                    <div class="flex items-center mt-5 sm:mt-0">
-                                        <label class="flex items-center cursor-not-allowed opacity-60">
-                                            <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
-                                            <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% if field_data.options %}
-                                <div class="mt-3 pt-3 border-t border-slate-600">
-                                    <label class="block text-xs font-medium text-slate-400 mb-2">
-                                        Options
-                                        <span class="text-slate-500 text-xs">🔒 Immutable</span>
-                                    </label>
-                                    <div class="flex flex-wrap gap-2">
-                                        {% for option in field_data.options %}
-                                        <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                                            {{ option }}
-                                        </span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        {% else %}
-                            <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-slate-600 existing-field-item"
-                                 data-field-id="{{ field_id }}"
-                                 data-field-type="{{ field_data.type }}"
-                                 data-field-required="{{ field_data.required|lower }}"
-                                 {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
-                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                                    <!-- Drag Handle -->
-                                    <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0" title="Drag to reorder">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">
-                                            Field Name
-                                            <span class="text-emerald-400">✏️ Editable</span>
-                                        </label>
-                                        <input type="text"
-                                               value="{{ field_data.name }}"
-                                               class="existing-field-name form-input w-full {% if not has_write_access %}bg-slate-600 opacity-60 cursor-not-allowed{% endif %}"
-                                               {% if not has_write_access %}disabled{% endif %}
-                                               placeholder="Enter field name" />
-                                    </div>
-                                    <div class="flex-1">
-                                        <label class="block text-xs font-medium text-slate-400 mb-1">
-                                            Field Type
-                                            <span class="text-slate-500">🔒 Immutable</span>
-                                        </label>
-                                        <input type="text" value="{{ field_data.type|title }}" class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed" disabled />
-                                    </div>
-                                    <div class="flex items-center mt-5 sm:mt-0">
-                                        <label class="flex items-center cursor-not-allowed opacity-60">
-                                            <input type="checkbox" {% if field_data.required %}checked{% endif %} disabled class="form-checkbox" />
-                                            <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% if field_data.options %}
-                                <div class="mt-3 pt-3 border-t border-slate-600">
-                                    <label class="block text-xs font-medium text-slate-400 mb-2">
-                                        Options
-                                        <span class="text-slate-500 text-xs">🔒 Immutable</span>
-                                    </label>
-                                    <div class="flex flex-wrap gap-2">
-                                        {% for option in field_data.options %}
-                                        <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
-                                            {{ option }}
-                                        </span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                        {% endfor %}
-                        {% endif %}
-
-                        <!-- New custom fields will be dynamically added here via JavaScript -->
-                    </div>
-                    <!-- End of all_fields_container -->
-
-                    <!-- Add Field Button and Message -->
-                    {% if has_write_access %}
-                    <div class="mt-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-sm font-medium text-slate-300">Add New Custom Fields</h4>
-                            <button type="button" id="add_field_btn" class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
-                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" viewBox="0 0 16 16">
-                                    <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
-                                </svg>
-                                Add Field
-                            </button>
+              </div>
+            </div>
+          </section>
+          <!-- Description -->
+          <section>
+            <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+              <div class="w-full">
+                <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                <textarea id="description"
+                          name="description"
+                          class="form-textarea max-w-full w-full focus:border-slate-300"
+                          rows="4">{% if experiment.description %}{{ experiment.description }}{% endif %}</textarea>
+              </div>
+            </div>
+          </section>
+          <!-- Data Collection Fields -->
+          <section>
+            <div class="mt-5">
+              <h3 class="text-lg font-semibold text-slate-100 mb-4">Data Collection Fields</h3>
+              <p class="text-sm text-slate-400 mb-4">Drag and drop to reorder fields. Existing fields cannot be modified, but you can add new ones.</p>
+              <!-- All Fields Container (Sortable) -->
+              <div id="all_fields_container" class="flow-y-3 mb-6">
+                {% if experiment_fields_with_json %}
+                  <h4 class="text-sm font-medium text-slate-300 mb-3">
+                    Existing Fields
+                    <span class="text-xs text-slate-400 font-normal ml-2">(Drag to reorder • Name editable • Type & Required immutable)</span>
+                  </h4>
+                  {% for field_id, field_data in experiment_fields_with_json.items %}
+                    {% if field_id in mandatory_field_uuids %}
+                      <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-srgb-amber-600-50 existing-field-item"
+                           data-field-id="{{ field_id }}"
+                           data-field-type="{{ field_data.type }}"
+                           data-field-required="{{ field_data.required|lower }}"
+                           {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <!-- Drag Handle -->
+                          <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0"
+                               title="Drag to reorder">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
+                            </svg>
+                          </div>
+                          <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                              Field Name
+                              <span class="text-amber-400">🔒 Mandatory - Not Editable</span>
+                            </label>
+                            <input type="text"
+                                   value="{{ field_data.name }}"
+                                   class="existing-field-name form-input w-full bg-slate-600 opacity-60 cursor-not-allowed"
+                                   disabled
+                                   placeholder="Enter field name" />
+                          </div>
+                          <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                              Field Type
+                              <span class="text-slate-500">🔒 Immutable</span>
+                            </label>
+                            <input type="text"
+                                   value="{{ field_data.type|title }}"
+                                   class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed"
+                                   disabled />
+                          </div>
+                          <div class="flex items-center mt-5 sm:mt-0">
+                            <label class="flex items-center cursor-not-allowed opacity-60">
+                              <input type="checkbox"
+                                     {% if field_data.required %}checked{% endif %}
+                                     disabled
+                                     class="form-checkbox" />
+                              <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
+                            </label>
+                          </div>
                         </div>
-
-                        <div id="no_fields_message" class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
-                            No new fields to add. Click "Add Field" to create one.
+                        {% if field_data.options %}
+                          <div class="mt-3 pt-3 border-t border-slate-600">
+                            <label class="block text-xs font-medium text-slate-400 mb-2">
+                              Options
+                              <span class="text-slate-500 text-xs">🔒 Immutable</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2">
+                              {% for option in field_data.options %}
+                                <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                  {{ option }}
+                                </span>
+                              {% endfor %}
+                            </div>
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <div class="bg-srgb-slate-700-50 rounded-lg p-4 border border-slate-600 existing-field-item"
+                           data-field-id="{{ field_id }}"
+                           data-field-type="{{ field_data.type }}"
+                           data-field-required="{{ field_data.required|lower }}"
+                           {% if field_data.options_json %}data-field-options='{{ field_data.options_json }}'{% endif %}>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <!-- Drag Handle -->
+                          <div class="drag-handle cursor-move text-slate-400 hover:text-slate-200 shrink-0"
+                               title="Drag to reorder">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
+                            </svg>
+                          </div>
+                          <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                              Field Name
+                              <span class="text-emerald-400">✏️ Editable</span>
+                            </label>
+                            <input type="text"
+                                   value="{{ field_data.name }}"
+                                   class="existing-field-name form-input w-full {% if not has_write_access %}bg-slate-600 opacity-60 cursor-not-allowed{% endif %}"
+                                   {% if not has_write_access %}disabled{% endif %}
+                                   placeholder="Enter field name" />
+                          </div>
+                          <div class="flex-1">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">
+                              Field Type
+                              <span class="text-slate-500">🔒 Immutable</span>
+                            </label>
+                            <input type="text"
+                                   value="{{ field_data.type|title }}"
+                                   class="form-input w-full bg-slate-600 opacity-60 cursor-not-allowed"
+                                   disabled />
+                          </div>
+                          <div class="flex items-center mt-5 sm:mt-0">
+                            <label class="flex items-center cursor-not-allowed opacity-60">
+                              <input type="checkbox"
+                                     {% if field_data.required %}checked{% endif %}
+                                     disabled
+                                     class="form-checkbox" />
+                              <span class="text-sm ml-2 text-slate-400">Required 🔒</span>
+                            </label>
+                          </div>
                         </div>
-                    </div>
+                        {% if field_data.options %}
+                          <div class="mt-3 pt-3 border-t border-slate-600">
+                            <label class="block text-xs font-medium text-slate-400 mb-2">
+                              Options
+                              <span class="text-slate-500 text-xs">🔒 Immutable</span>
+                            </label>
+                            <div class="flex flex-wrap gap-2">
+                              {% for option in field_data.options %}
+                                <span class="inline-flex items-center px-3 py-1 bg-srgb-indigo-500-20 border border-indigo-500 text-indigo-100 rounded-full text-sm">
+                                  {{ option }}
+                                </span>
+                              {% endfor %}
+                            </div>
+                          </div>
+                        {% endif %}
+                      </div>
                     {% endif %}
+                  {% endfor %}
+                {% endif %}
+                <!-- New custom fields will be dynamically added here via JavaScript -->
+              </div>
+              <!-- End of all_fields_container -->
+              <!-- Add Field Button and Message -->
+              {% if has_write_access %}
+                <div class="mt-4">
+                  <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-sm font-medium text-slate-300">Add New Custom Fields</h4>
+                    <button type="button"
+                            id="add_field_btn"
+                            class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                      <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                           viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                      </svg>
+                      Add Field
+                    </button>
+                  </div>
+                  <div id="no_fields_message"
+                       class="text-center py-8 text-slate-500 border-2 border-dashed border-slate-600 rounded-lg">
+                    No new fields to add. Click "Add Field" to create one.
+                  </div>
                 </div>
-            </section>
-
+              {% endif %}
+            </div>
+          </section>
         </div>
-
         <!-- Panel footer -->
         <footer>
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                <div class="flex self-end">
-                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:experiments' %}">Cancel</a>
-                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-                </div>
+          <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+            <div class="flex self-end">
+              <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                 href="{% url 'private:experiments' %}">Cancel</a>
+              <button type="submit"
+                      id="btn_submit"
+                      class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
             </div>
+          </div>
         </footer>
-
-        </fieldset>
-
+      </fieldset>
     </form>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+  </div>
 {% endblock right_panel %}
-
 {% block extra_css %}
-{% vite_preload 'controller-experiment-form' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-experiment-details' %}
+  {% vite_preload 'controller-experiment-form' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-experiment-details' %}
 {% endblock extra_css %}
-
 {% block extra_js %}
-
-{% if debug %}
-<script src="{% static 'private/js/vendors/Sortable.min.js' %}"></script>
-{% else %}
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"
-    integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-{% endif %}
-
+  {% if debug %}
+    <script src="{% static 'private/js/vendors/Sortable.min.js' %}"></script>
+  {% else %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js" integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+  {% endif %}
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="experiment-form">
-{
-    "mode": "edit",
-    "formId": "experiment_details_form",
-    "endpoint": "{% url 'api:v2:experiment-detail' id=experiment.id %}",
-    "method": "PUT",
-    "successMessage": "The experiment has been updated."
-}
-</script>
+  <script type="application/json" data-speleodb-controller="experiment-form">
+    {
+      "mode": "edit",
+      "formId": "experiment_details_form",
+      "endpoint": "{% url 'api:v2:experiment-detail' id=experiment.id %}",
+      "method": "PUT",
+      "successMessage": "The experiment has been updated."
+    }
+  </script>
 {% endblock inline_extra_js %}

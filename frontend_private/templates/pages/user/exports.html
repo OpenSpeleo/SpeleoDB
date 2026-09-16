@@ -2,9 +2,9 @@
 
 {% load vite_assets %}
 
-{% block account_welcome %}{% endblock account_welcome %}
+{% block account_welcome %}
+{% endblock account_welcome %}
 {% block account_heading %}Account Settings{% endblock account_heading %}
-
 {% block extra_css %}
   {{ block.super }}
   {% vite_styles 'style-template-frontend-private-templates-pages-user-exports' %}

@@ -1,114 +1,117 @@
 {% extends "base.html" %}
+
 {% load static %}
 
 {% block content %}
-
-    <!-- Hero -->
-    <section class="relative">
-
-        <!-- Radial gradient -->
-        <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square" aria-hidden="true">
-            <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
-            <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
-        </div>
-
-        <!-- Particles animation -->
-        <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
-            <canvas data-particle-animation data-particle-quantity="15"></canvas>
-        </div>
-
-        <!-- Illustration -->
-        <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10" aria-hidden="true">
-            <img src="{% static 'media/page-illustration.svg' %}" class="max-w-none" width="1440" height="427" alt="Page Illustration">
-        </div>
-
-        <div class="max-w-6xl center-x px-4 sm:px-6">
-            <div class="pt-32 pb-10 md:pt-40">
-
-                <!-- Hero content -->
-                <div class="text-center">
-                    <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent-static bg-linear-to-r/srgb from-purple-300 to-purple-50 pb-3">
-                        The folks behind the SpeleoDB
-                    </div>
-                    <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-6">
-                        Towards a more collaborative future
-                    </h1>
-                    <!-- Rings illustration -->
-                    <div class="inline-flex items-center justify-center relative">
-                        <!-- Particles animation -->
-                        <div class="absolute inset-0 -z-10" aria-hidden="true">
-                            <canvas data-particle-animation data-particle-quantity="10"></canvas>
-                        </div>
-                        <div class="inline-flex [mask-image:_radial-gradient(circle_at_bottom,transparent_15%,black_70%)]">
-                            <img src="{% static 'media/about-illustration.svg' %}" width="446" height="446" alt="About illustration" />
-                        </div>
-                        <img class="absolute mt-[30%] drop-shadow-lg animate-float" src="{% static 'media/about-icon.svg' %}" width="72" height="72" alt="About icon" />
-                    </div>
-                </div>
-
+  <!-- Hero -->
+  <section class="relative">
+    <!-- Radial gradient -->
+    <div class="absolute flex items-center justify-center top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none -z-10 w-[800px] aspect-square"
+         aria-hidden="true">
+      <div class="absolute inset-0 translate-z-0 bg-purple-500 rounded-full blur-[120px] opacity-30"></div>
+      <div class="absolute w-64 h-64 translate-z-0 bg-purple-400 rounded-full blur-[80px] opacity-70"></div>
+    </div>
+    <!-- Particles animation -->
+    <div class="absolute inset-0 h-96 -z-10" aria-hidden="true">
+      <canvas data-particle-animation data-particle-quantity="15"></canvas>
+    </div>
+    <!-- Illustration -->
+    <div class="md:block absolute left-1/2 -translate-x-1/2 -mt-16 blur-2xl opacity-90 pointer-events-none -z-10"
+         aria-hidden="true">
+      <img src="{% static 'media/page-illustration.svg' %}"
+           class="max-w-none"
+           width="1440"
+           height="427"
+           alt="Page Illustration" />
+    </div>
+    <div class="max-w-6xl center-x px-4 sm:px-6">
+      <div class="pt-32 pb-10 md:pt-40">
+        <!-- Hero content -->
+        <div class="text-center">
+          <div class="inline-flex font-medium text-2xl bg-clip-text text-transparent-static bg-linear-to-r/srgb from-purple-300 to-purple-50 pb-3">
+            The folks behind the SpeleoDB
+          </div>
+          <h1 class="site-h1 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60 pb-6">
+            Towards a more collaborative future
+          </h1>
+          <!-- Rings illustration -->
+          <div class="inline-flex items-center justify-center relative">
+            <!-- Particles animation -->
+            <div class="absolute inset-0 -z-10" aria-hidden="true">
+              <canvas data-particle-animation data-particle-quantity="10"></canvas>
             </div>
-        </div>
-
-    </section>
-
-    <!-- Story -->
-    <section class="relative">
-
-        <!-- Blurred shape -->
-        <div class="absolute top-0 -mt-32 left-1/2 -translate-x-1/2 ml-10 blur-2xl opacity-70 pointer-events-none -z-10" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="434" height="427">
-                <defs>
-                    <linearGradient id="bs4-a" x1="19.609%" x2="50%" y1="14.544%" y2="100%">
-                        <stop offset="0%" stop-color="#A855F7"></stop>
-                        <stop offset="100%" stop-color="#6366F1" stop-opacity="0"></stop>
-                    </linearGradient>
-                </defs>
-                <path fill="url(#bs4-a)" fill-rule="evenodd" d="m0 0 461 369-284 58z" transform="matrix(1 0 0 -1 0 427)" />
-            </svg>
-        </div>
-
-        <div class="px-4 sm:px-6">
-            <div class="max-w-6xl center-x">
-                <div class="pb-12 md:pb-20">
-
-                    <!-- Section header -->
-                    <div class="center-x text-center pb-12 md:pb-20">
-                        <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60">Our story</h2>
-                    </div>
-
-                    <div class="lg:flex lg:justify-between  gap-6 md:gap-8 lg:gap-14 max-w-2xl center-x lg:max-w-none">
-                        <figure class="md:min-w-[240px] shrink-0">
-                            <img class="sticky top-8 center-x mb-12 lg:mb-0 rounded-lg -rotate-[4deg]" src="{% static 'media/hoyo_negro_survey.jpg' %}" width="420" height="280" alt="Team" />
-                        </figure>
-                        <div class="flex-1">
-                            <div class="text-slate-200 flow-y-6 text-justify">
-                                <p>
-                                    We came together over a shared excitement about building a product that could solve a problem dear to our hearts, a product to help teams of cave explorers and surveyors map the underground world.
-                                </p>
-                                <p>
-                                    The Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/" class="underline">USAH Institute</a>) was founded with a mission to enhance collaboration and innovation in the field of cave survey and data collection. Recognizing the community's challenges with (often outdated) tools, proprietary file formats, and the scarcity of collaborative platforms, we set out to create a solution that addresses these issues and respects deep-seated concerns about data privacy and ownership.
-                                </p>
-                                <p>
-                                    Our journey began with the realization that the cave survey community needed a modern, open-source platform that prioritizes data integrity and collaboration. Inspired by proven solutions in other fields, such as GIT for version control and open-source governance, we envisioned a platform that would empower users to take full control of their data. Thus, SpeleoDB was born.
-                                </p>
-                                <p>
-                                    From the outset, our goal was to build a platform that is not only technologically advanced but also transparent and inclusive. SpeleoDB leverages open file format standards to ensure compatibility across different software, and our open-source code invites scrutiny and contributions from the community. We believe that a collaborative approach is essential for the platform's continuous improvement and alignment with the community's needs.
-                                </p>
-                                <p>
-                                    As we move forward, we remain committed to a decentralized future. With the development of the SpeleoPUB protocol, we aim to enable users to run their own servers, fostering a truly distributed network that enhances both collaboration and data security. Our technical steering committee, comprising members from various backgrounds within the cave survey community, ensures that the evolution of SpeleoDB is guided by collective wisdom and shared goals.
-                                </p>
-                                <p>
-                                    At SpeleoDB, we are driven by our dedication to innovation, transparency, and community. Our story is one of collaboration and progress, as we work together to transform the landscape of cave survey and data collection for the good of the cave diving community.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
+            <div class="inline-flex [mask-image:_radial-gradient(circle_at_bottom,transparent_15%,black_70%)]">
+              <img src="{% static 'media/about-illustration.svg' %}"
+                   width="446"
+                   height="446"
+                   alt="About illustration" />
             </div>
+            <img class="absolute mt-[30%] drop-shadow-lg animate-float"
+                 src="{% static 'media/about-icon.svg' %}"
+                 width="72"
+                 height="72"
+                 alt="About icon" />
+          </div>
         </div>
-    </section>
-
-    {% include "pages/call_to_action.html" %}
-
+      </div>
+    </div>
+  </section>
+  <!-- Story -->
+  <section class="relative">
+    <!-- Blurred shape -->
+    <div class="absolute top-0 -mt-32 left-1/2 -translate-x-1/2 ml-10 blur-2xl opacity-70 pointer-events-none -z-10"
+         aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="434" height="427">
+        <defs>
+        <linearGradient id="bs4-a" x1="19.609%" x2="50%" y1="14.544%" y2="100%">
+        <stop offset="0%" stop-color="#A855F7"></stop>
+        <stop offset="100%" stop-color="#6366F1" stop-opacity="0"></stop>
+        </linearGradient>
+        </defs>
+        <path fill="url(#bs4-a)" fill-rule="evenodd" d="m0 0 461 369-284 58z" transform="matrix(1 0 0 -1 0 427)" />
+      </svg>
+    </div>
+    <div class="px-4 sm:px-6">
+      <div class="max-w-6xl center-x">
+        <div class="pb-12 md:pb-20">
+          <!-- Section header -->
+          <div class="center-x text-center pb-12 md:pb-20">
+            <h2 class="site-h2 bg-clip-text text-transparent-static gradient-srgb-to-r gradient-from-srgb-slate-200-60 gradient-via-srgb-slate-200 gradient-to-srgb-slate-200-60">Our story</h2>
+          </div>
+          <div class="lg:flex lg:justify-between gap-6 md:gap-8 lg:gap-14 max-w-2xl center-x lg:max-w-none">
+            <figure class="md:min-w-[240px] shrink-0">
+              <img class="sticky top-8 center-x mb-12 lg:mb-0 rounded-lg -rotate-[4deg]"
+                   src="{% static 'media/hoyo_negro_survey.jpg' %}"
+                   width="420"
+                   height="280"
+                   alt="Team" />
+            </figure>
+            <div class="flex-1">
+              <div class="text-slate-200 flow-y-6 text-justify">
+                <p>
+                  We came together over a shared excitement about building a product that could solve a problem dear to our hearts, a product to help teams of cave explorers and surveyors map the underground world.
+                </p>
+                <p>
+                  The Underwater Speleological and Archaeological Heritage Institute (<a href="https://www.usahinstitute.org/" class="underline">USAH Institute</a>) was founded with a mission to enhance collaboration and innovation in the field of cave survey and data collection. Recognizing the community's challenges with (often outdated) tools, proprietary file formats, and the scarcity of collaborative platforms, we set out to create a solution that addresses these issues and respects deep-seated concerns about data privacy and ownership.
+                </p>
+                <p>
+                  Our journey began with the realization that the cave survey community needed a modern, open-source platform that prioritizes data integrity and collaboration. Inspired by proven solutions in other fields, such as GIT for version control and open-source governance, we envisioned a platform that would empower users to take full control of their data. Thus, SpeleoDB was born.
+                </p>
+                <p>
+                  From the outset, our goal was to build a platform that is not only technologically advanced but also transparent and inclusive. SpeleoDB leverages open file format standards to ensure compatibility across different software, and our open-source code invites scrutiny and contributions from the community. We believe that a collaborative approach is essential for the platform's continuous improvement and alignment with the community's needs.
+                </p>
+                <p>
+                  As we move forward, we remain committed to a decentralized future. With the development of the SpeleoPUB protocol, we aim to enable users to run their own servers, fostering a truly distributed network that enhances both collaboration and data security. Our technical steering committee, comprising members from various backgrounds within the cave survey community, ensures that the evolution of SpeleoDB is guided by collective wisdom and shared goals.
+                </p>
+                <p>
+                  At SpeleoDB, we are driven by our dedication to innovation, transparency, and community. Our story is one of collaboration and progress, as we work together to transform the landscape of cave survey and data collection for the good of the cave diving community.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% include "pages/call_to_action.html" %}
 {% endblock %}

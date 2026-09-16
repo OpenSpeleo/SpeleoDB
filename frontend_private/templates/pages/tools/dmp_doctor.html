@@ -1,203 +1,198 @@
 {% extends "pages/tools/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-dmp-doctor' %}
-{{ block.super }}
-{% vite_styles 'style-template-frontend-private-templates-pages-tools-dmp-doctor' %}
+  {% vite_preload 'controller-dmp-doctor' %}
+  {{ block.super }}
+  {% vite_styles 'style-template-frontend-private-templates-pages-tools-dmp-doctor' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
+  <div class="grow">
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Mnemo DMP Doctor</h2>
-
-        <p class="text-slate-300 mb-6">
-            This tool helps you <strong class="text-orange-300">correct an Mnemo Survey file</strong> after a dive if you mis-calibrated or mis-managed your Mnemo device. Instead of re-diving, you can apply corrections to fix common survey errors.
-        </p>
-
-        <div class="my-4 text-orange-300">
-            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Mnemo DMP Doctor</h2>
+      <p class="text-slate-300 mb-6">
+        This tool helps you <strong class="text-orange-300">correct an Mnemo Survey file</strong> after a dive if you mis-calibrated or mis-managed your Mnemo device. Instead of re-diving, you can apply corrections to fix common survey errors.
+      </p>
+      <div class="my-4 text-orange-300">
+        <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <!-- Tab Navigation -->
+      <div class="tabs-container">
+        <div class="tab-navigation">
+          <button type="button" class="tab-button active" data-tab="uncorrupt">Un-Corrupt Mnemo DMP</button>
+          <button type="button" class="tab-button" data-tab="date">Date Correction</button>
+          <button type="button" class="tab-button" data-tab="length">Shot Length Correction</button>
+          <button type="button" class="tab-button" data-tab="compass">Compass Correction</button>
+          <button type="button" class="tab-button" data-tab="depth">Depth Correction</button>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <!-- Tab Navigation -->
-        <div class="tabs-container">
-            <div class="tab-navigation">
-                <button class="tab-button active" data-tab="uncorrupt">Un-Corrupt Mnemo DMP</button>
-                <button class="tab-button" data-tab="date">Date Correction</button>
-                <button class="tab-button" data-tab="length">Shot Length Correction</button>
-                <button class="tab-button" data-tab="compass">Compass Correction</button>
-                <button class="tab-button" data-tab="depth">Depth Correction</button>
+        <!-- Un-Corrupt Tab -->
+        <div class="tab-content active" id="tab-uncorrupt">
+          <div class="context-box">
+            <h4>Fix Corrupted DMP Files</h4>
+            <p>This feature automatically repairs corrupted or malformed Mnemo DMP files that fail to import properly into Ariane survey software.</p>
+            <p><strong>Enable this option</strong> if your DMP file won't import into Ariane or shows errors during the import process.</p>
+          </div>
+          <div class="max-w-[700px] form-row horizontal">
+            <div class="max-w-[400px] form-group">
+              <label>Fix my DMP File</label>
+              <div class="unit-toggle">
+                <span class="unit-label active" id="fixDmpNoLabel">No</span>
+                <label class="switch">
+                  <input type="checkbox" id="fixDmpSwitch" />
+                  <span class="slider"></span>
+                </label>
+                <span class="unit-label" id="fixDmpYesLabel">Yes</span>
+              </div>
             </div>
-
-            <!-- Un-Corrupt Tab -->
-            <div class="tab-content active" id="tab-uncorrupt">
-                <div class="context-box">
-                    <h4>Fix Corrupted DMP Files</h4>
-                    <p>This feature automatically repairs corrupted or malformed Mnemo DMP files that fail to import properly into Ariane survey software.</p>
-                    <p><strong>Enable this option</strong> if your DMP file won't import into Ariane or shows errors during the import process.</p>
-                </div>
-
-                <div class="form-row horizontal" style="max-width: 700px;">
-                    <div class="form-group" style="max-width: 400px;">
-                        <label>Fix my DMP File</label>
-                        <div class="unit-toggle">
-                            <span class="unit-label active" id="fixDmpNoLabel">No</span>
-                            <label class="switch">
-                                <input type="checkbox" id="fixDmpSwitch">
-                                <span class="slider"></span>
-                            </label>
-                            <span class="unit-label" id="fixDmpYesLabel">Yes</span>
-                        </div>
-                    </div>
-                    <div class="form-group" style="max-width: 400px;">
-                        <label for="surveyDateUncorrupt">New Survey Date</label>
-                        <input type="date" id="surveyDateUncorrupt" class="date-input">
-                    </div>
-                </div>
-
+            <div class="max-w-[400px] form-group">
+              <label for="surveyDateUncorrupt">New Survey Date</label>
+              <input type="date" id="surveyDateUncorrupt" class="date-input" />
             </div>
-
-            <!-- Date Tab -->
-            <div class="tab-content" id="tab-date">
-                <div class="context-box">
-                    <h4>About Date Correction</h4>
-                    <p>Change the survey date if it was incorrectly set on your Mnemo device.</p>
-                    <p>This is useful when you forgot to update the date on your device or if the date was lost due to battery issues.</p>
-                </div>
-
-                <div class="form-row horizontal" style="max-width: 700px;">
-                    <div class="form-group" style="max-width: 400px;">
-                        <label for="surveyDate">New Survey Date</label>
-                        <input type="date" id="surveyDate" class="date-input">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Length Tab -->
-            <div class="tab-content" id="tab-length">
-                <div class="context-box">
-                    <h4>About Shot Length Correction</h4>
-                    <p>Correct systematic measurement errors in shot lengths due to calibration issues.</p>
-                    <p><strong>Example:</strong> If you measured a known 100ft distance and the Mnemo recorded 104ft, calculate the scaling factor:</p>
-                    <p><code>(100ft ÷ 104ft) × 100 = 96.15%</code></p>
-                    <p>This will proportionally scale all shot lengths in your survey.</p>
-                </div>
-
-                <div class="form-row horizontal" style="max-width: 700px;">
-                    <div class="form-group" style="max-width: 400px;">
-                        <label for="lengthScaling">Shot Length Scaling</label>
-                        <div class="input-with-suffix">
-                            <input type="number" id="lengthScaling" class="number-input"
-                                value="100" step="1" min="1" placeholder="100">
-                            <span class="input-suffix">%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Compass Tab -->
-            <div class="tab-content" id="tab-compass">
-                <div class="context-box">
-                    <h4>About Compass Correction</h4>
-                    <p>Adjust for compass calibration errors or magnetic interference.</p>
-                    <p><strong>Offset Example:</strong> If a passage should be 190° but was measured as 205°, apply an offset: <code>190° - 205° = -15°</code></p>
-                    <p>This offset will be applied to all compass readings. Positive values rotate right, negative values rotate left.</p>
-                    <p><strong>Reverse Direction:</strong> Use this to fix surveys done in the wrong direction (In vs Out). This applies a 180° compass offset, essentially flipping the direction of the entire survey.</p>
-                </div>
-                <div class="form-row horizontal" style="max-width: 700px;">
-                    <div class="form-group">
-                        <label for="compassOffset">Compass Offset <small>(Positive = right • Negative = left)</small></label>
-                        <div class="input-with-suffix">
-                            <input type="number" id="compassOffset" class="number-input"
-                                   value="0" step="1" min="-359" max="359" placeholder="0">
-                            <span class="input-suffix">°</span>
-                        </div>
-                    </div>
-                    <div class="form-group compact">
-                        <label>Reverse Survey Direction</label>
-                        <div class="unit-toggle">
-                            <span class="unit-label active" id="reverseOffLabel">Off</span>
-                            <label class="switch">
-                                <input type="checkbox" id="reverseDirectionSwitch">
-                                <span class="slider"></span>
-                            </label>
-                            <span class="unit-label" id="reverseOnLabel">On</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Depth Tab -->
-            <div class="tab-content" id="tab-depth">
-                <div class="context-box">
-                    <h4>About Depth Correction</h4>
-                    <p>Compensate for depth calibration errors in your Mnemo.</p>
-                    <p><strong>Example:</strong> If at 100ft actual depth the Mnemo measured 104ft, calculate the offset: <code>100ft - 104ft = -4ft</code></p>
-                    <p>Positive offsets make all depths deeper, negative offsets make them shallower.</p>
-                </div>
-                <div class="form-row horizontal" style="max-width: 700px;">
-                    <div class="form-group">
-                        <label for="depthOffset">Depth Offset <small>(Positive = deeper • Negative = shallower)</small></label>
-                        <div class="input-with-suffix">
-                            <input type="number" id="depthOffset" class="number-input"
-                                   value="0" step="1" min="-1000" max="1000" placeholder="0">
-                            <span class="input-suffix" id="depthUnitSuffix">ft</span>
-                        </div>
-                    </div>
-                    <div class="form-group compact">
-                        <label>Depth Unit</label>
-                        <div class="unit-toggle">
-                            <span class="unit-label" id="metersLabel">Meters</span>
-                            <label class="switch">
-                                <input type="checkbox" id="depthUnitSwitch" checked>
-                                <span class="slider"></span>
-                            </label>
-                            <span class="unit-label active" id="feetLabel">Feet</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="file-upload-container">
-            <div class="file-drop-zone" id="fileDropZone">
-                <div class="file-drop-icon">📁</div>
-                <div class="file-drop-text">Drag and drop your DMP file here</div>
-                <div class="file-drop-hint">or click to browse</div>
-                <div class="file-name-display" id="fileNameDisplay" style="display: none;"></div>
-                <div class="file-error-display" id="fileErrorDisplay" style="display: none;"></div>
+        <!-- Date Tab -->
+        <div class="tab-content" id="tab-date">
+          <div class="context-box">
+            <h4>About Date Correction</h4>
+            <p>Change the survey date if it was incorrectly set on your Mnemo device.</p>
+            <p>This is useful when you forgot to update the date on your device or if the date was lost due to battery issues.</p>
+          </div>
+          <div class="max-w-[700px] form-row horizontal">
+            <div class="max-w-[400px] form-group">
+              <label for="surveyDate">New Survey Date</label>
+              <input type="date" id="surveyDate" class="date-input" />
             </div>
-            <input type="file" id="fileInput" accept=".dmp,.DMP">
+          </div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="controls my-6">
-            <button class="tool-action" id="resetFormBtn">Reset Form</button>
-            <button class="tool-action" id="downloadBtn" disabled>Download as DMP</button>
-            <div class="spinner" id="downloadSpinner"></div>
-            <div id="status" style="margin-left:12px;"></div>
+        <!-- Length Tab -->
+        <div class="tab-content" id="tab-length">
+          <div class="context-box">
+            <h4>About Shot Length Correction</h4>
+            <p>Correct systematic measurement errors in shot lengths due to calibration issues.</p>
+            <p><strong>Example:</strong> If you measured a known 100ft distance and the Mnemo recorded 104ft, calculate the scaling factor:</p>
+            <p><code>(100ft ÷ 104ft) × 100 = 96.15%</code></p>
+            <p>This will proportionally scale all shot lengths in your survey.</p>
+          </div>
+          <div class="max-w-[700px] form-row horizontal">
+            <div class="max-w-[400px] form-group">
+              <label for="lengthScaling">Shot Length Scaling</label>
+              <div class="input-with-suffix">
+                <input type="number"
+                       id="lengthScaling"
+                       class="number-input"
+                       value="100"
+                       step="1"
+                       min="1"
+                       placeholder="100" />
+                <span class="input-suffix">%</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {% csrf_token %}
-
+        <!-- Compass Tab -->
+        <div class="tab-content" id="tab-compass">
+          <div class="context-box">
+            <h4>About Compass Correction</h4>
+            <p>Adjust for compass calibration errors or magnetic interference.</p>
+            <p><strong>Offset Example:</strong> If a passage should be 190° but was measured as 205°, apply an offset: <code>190° - 205° = -15°</code></p>
+            <p>This offset will be applied to all compass readings. Positive values rotate right, negative values rotate left.</p>
+            <p><strong>Reverse Direction:</strong> Use this to fix surveys done in the wrong direction (In vs Out). This applies a 180° compass offset, essentially flipping the direction of the entire survey.</p>
+          </div>
+          <div class="max-w-[700px] form-row horizontal">
+            <div class="form-group">
+              <label for="compassOffset">Compass Offset <small>(Positive = right • Negative = left)</small></label>
+              <div class="input-with-suffix">
+                <input type="number"
+                       id="compassOffset"
+                       class="number-input"
+                       value="0"
+                       step="1"
+                       min="-359"
+                       max="359"
+                       placeholder="0" />
+                <span class="input-suffix">°</span>
+              </div>
+            </div>
+            <div class="form-group compact">
+              <label>Reverse Survey Direction</label>
+              <div class="unit-toggle">
+                <span class="unit-label active" id="reverseOffLabel">Off</span>
+                <label class="switch">
+                  <input type="checkbox" id="reverseDirectionSwitch" />
+                  <span class="slider"></span>
+                </label>
+                <span class="unit-label" id="reverseOnLabel">On</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Depth Tab -->
+        <div class="tab-content" id="tab-depth">
+          <div class="context-box">
+            <h4>About Depth Correction</h4>
+            <p>Compensate for depth calibration errors in your Mnemo.</p>
+            <p><strong>Example:</strong> If at 100ft actual depth the Mnemo measured 104ft, calculate the offset: <code>100ft - 104ft = -4ft</code></p>
+            <p>Positive offsets make all depths deeper, negative offsets make them shallower.</p>
+          </div>
+          <div class="max-w-[700px] form-row horizontal">
+            <div class="form-group">
+              <label for="depthOffset">Depth Offset <small>(Positive = deeper • Negative = shallower)</small></label>
+              <div class="input-with-suffix">
+                <input type="number"
+                       id="depthOffset"
+                       class="number-input"
+                       value="0"
+                       step="1"
+                       min="-1000"
+                       max="1000"
+                       placeholder="0" />
+                <span class="input-suffix" id="depthUnitSuffix">ft</span>
+              </div>
+            </div>
+            <div class="form-group compact">
+              <label>Depth Unit</label>
+              <div class="unit-toggle">
+                <span class="unit-label" id="metersLabel">Meters</span>
+                <label class="switch">
+                  <input type="checkbox" id="depthUnitSwitch" checked />
+                  <span class="slider"></span>
+                </label>
+                <span class="unit-label active" id="feetLabel">Feet</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="file-upload-container">
+        <div class="file-drop-zone" id="fileDropZone">
+          <div class="file-drop-icon">📁</div>
+          <div class="file-drop-text">Drag and drop your DMP file here</div>
+          <div class="file-drop-hint">or click to browse</div>
+          <div class="initially-hidden file-name-display" id="fileNameDisplay"></div>
+          <div class="initially-hidden file-error-display" id="fileErrorDisplay"></div>
+        </div>
+        <input type="file" id="fileInput" accept=".dmp,.DMP" />
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="controls my-6">
+        <button type="button" class="tool-action" id="resetFormBtn">Reset Form</button>
+        <button type="button" class="tool-action" id="downloadBtn" disabled>Download as DMP</button>
+        <div class="spinner" id="downloadSpinner"></div>
+        <div class="ml-3" id="status"></div>
+      </div>
+      {% csrf_token %}
     </div>
-</div>
-<div id="loading_spinner" class="loading" style="display:none;"></div>
-
-{% include 'snippets/modal_error.html' %}
-
+  </div>
+  <div id="loading_spinner" class="initially-hidden loading"></div>
+  {% include "snippets/modal_error.html" %}
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="dmp-doctor">
-{
-    "endpoint": "{% url 'api:v2:tool-dmp-doctor' %}"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="dmp-doctor">
+    {
+      "endpoint": "{% url 'api:v2:tool-dmp-doctor' %}"
+    }
+  </script>
 {% endblock inline_extra_js %}

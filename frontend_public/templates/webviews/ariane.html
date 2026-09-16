@@ -1,99 +1,81 @@
 {% load static %}
 {% load vite_assets %}
+
 <!DOCTYPE html>
 <html lang="en-us">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="color-scheme" content="dark">
-    <meta name="darkreader-lock">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
     <title>SpeleoDB - Ariane</title>
-
     <meta property="og:locale" content="en_US" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SpeleoDB Collaboration and Survey Data Exchange Server" />
+    <meta name="description"
+          content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
-
     {% vite_styles 'style-app' %}
-
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
-    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
-
-</head>
-
-<body class="font-inter antialiased bg-slate-900 tracking-tight">
-
+    <link rel="apple-touch-icon"
+          sizes="180x180"
+          href="{% static 'favicon/apple-touch-icon.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="{% static 'favicon/favicon-32x32.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="{% static 'favicon/favicon-16x16.png' %}" />
+    <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}" />
+  </head>
+  <body class="font-inter antialiased bg-slate-900 tracking-tight">
     <!-- Page wrapper -->
     <div class="flex flex-col">
-
-        <img class="max-w-none block m-auto mt-4" src="{% static 'media/logo_webview.png' %}" style="height:42px" alt="SpeleoDB">
-
-        <section>
-
-            <!-- Illustration -->
-            <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden h-full" aria-hidden="true">
-                    <img
-                        src="{% static 'media/glow-top.svg' %}"
-                        class="-z-10 pointer-events-none"
-                        style="position: fixed; bottom: 0; left: 0; width: 100%; height: auto; transform: scale(2.5);"
-                    >
+      <img class="max-w-none block m-auto mt-4 h-[42px]"
+           src="{% static 'media/logo_webview.png' %}"
+           alt="SpeleoDB" />
+      <section>
+        <!-- Illustration -->
+        <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden h-full"
+             aria-hidden="true">
+          <img src="{% static 'media/glow-top.svg' %}"
+               alt=""
+               class="-z-10 pointer-events-none fixed bottom-0 left-0 w-full h-auto scale-[2.5]" />
+        </div>
+        <div class="pt-4 ml-4 mr-4">
+          <!-- Section content -->
+          <div class="flex flex-col text-sm">
+            <!-- Content -->
+            <div class="text-center mt-2 mb-2">
+              <span class="bg-clip-text text-base text-slate-200">Survey Collaboration</span>
+              <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
+                <b>SpeleoDB</b> is a 501c3 non-profit project focusing on improving survey
+                collaboration, file versioning, backup and exploration history.
+              </p>
             </div>
-
-            <div class="pt-4 ml-4 mr-4">
-
-                <!-- Section content -->
-                <div class="flex flex-col text-sm">
-
-                    <!-- Content -->
-                    <div class="text-center mt-2 mb-2">
-                        <span class="bg-clip-text text-base text-slate-200">
-                            Survey Collaboration
-                        </span>
-                        <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
-                            <b>SpeleoDB</b> is a 501c3 non-profit project focusing on improving survey
-                            collaboration, file versioning, backup and exploration history.
-                        </p>
-                    </div>
-
-                    <hr class="border-srgb-slate-300-30 border-dashed">
-
-                    <!-- Content -->
-                    <div class="text-center mt-2 mb-2">
-                        <span class="bg-clip-text text-base text-slate-200">
-                            It's Free To Use !
-                        </span>
-                        <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
-                            Being a registered 501c3 US Non Profit allows us to provide this service
-                            <b>entirely for free</b> to the entire community.
-                        </p>
-                    </div>
-
-                    <hr class="border-srgb-slate-300-30 border-dashed">
-
-                    <!-- Content -->
-                    <div class="text-center mt-2 mb-2">
-                        <span class="bg-clip-text text-base text-slate-200">
-                            Data Privacy & Transparency
-                        </span>
-                        <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
-                            We understand the critical importance of data privacy, ownership, and attribution.<br>
-                            Our open-source platform is built on a foundation of transparency, allowing anyone
-                            to review the code. With a technical steering committee guiding its evolution.
-                        </p>
-                    </div>
-
-                </div>
-
+            <hr class="border-srgb-slate-300-30 border-dashed" />
+            <!-- Content -->
+            <div class="text-center mt-2 mb-2">
+              <span class="bg-clip-text text-base text-slate-200">It's Free To Use !</span>
+              <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
+                Being a registered 501c3 US Non Profit allows us to provide this service
+                <b>entirely for free</b> to the entire community.
+              </p>
             </div>
-
-        </section>
-
+            <hr class="border-srgb-slate-300-30 border-dashed" />
+            <!-- Content -->
+            <div class="text-center mt-2 mb-2">
+              <span class="bg-clip-text text-base text-slate-200">Data Privacy & Transparency</span>
+              <p class="text-md text-slate-400 mt-2 mb-2 text-justify">
+                We understand the critical importance of data privacy, ownership, and attribution.
+                <br />
+                Our open-source platform is built on a foundation of transparency, allowing anyone
+                to review the code. With a technical steering committee guiding its evolution.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-
-</body>
-
+  </body>
 </html>

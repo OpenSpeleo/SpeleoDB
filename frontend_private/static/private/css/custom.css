@@ -239,3 +239,8 @@ input.form-input[type='date']::-webkit-calendar-picker-indicator,
 input.form-input[type='datetime-local']::-webkit-calendar-picker-indicator {
     filter: invert(1) !important;
 }
+
+/* Initial visibility remains overridable by jQuery show/hide and inline display. */
+.initially-hidden {
+    display: none;
+}

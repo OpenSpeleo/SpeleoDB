@@ -213,3 +213,7 @@
         .projects-table th:nth-child(6)  { width: 17%; }
         .projects-table th:nth-child(10) { width: 13%; }
     }
+
+.project-card-value.project-card-editor {
+    font-size: 13px;
+}

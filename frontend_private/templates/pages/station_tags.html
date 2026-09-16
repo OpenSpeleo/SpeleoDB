@@ -1,229 +1,237 @@
 {% extends "base_private.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-station-tags' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-station-tags' %}
+  {% vite_preload 'controller-station-tags' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-station-tags' %}
 {% endblock extra_css %}
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        {% csrf_token %}
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Station Tag Editor
-                    <svg class="inline h-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
-                    </svg>
-                </h1>
-                <p class="text-slate-400 mt-2">Manage tags to organize and categorize your stations</p>
-            </div>
-
-            <!-- Right: Actions -->
-            <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
-                <button id="btn-create-tag" class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
-                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
-                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
-                    </svg>
-                    <span class="ml-2">Create New Tag</span>
-                </button>
-            </div>
-
+      {% csrf_token %}
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
+            Station Tag Editor
+            <svg class="inline h-10"
+                 fill="none"
+                 viewBox="0 0 24 24"
+                 stroke-width="1.5"
+                 stroke="currentColor">
+              <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+              <path class="stroke-current text-indigo-400" stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+            </svg>
+          </h1>
+          <p class="text-slate-400 mt-2">Manage tags to organize and categorize your stations</p>
         </div>
-
-        <!-- Mobile Cards View -->
-        <div class="tags-cards">
-            <div id="tags-cards-container" class="p-4">
+        <!-- Right: Actions -->
+        <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+          <button type="button"
+                  id="btn-create-tag"
+                  class="btn bg-indigo-500 hover:bg-indigo-600 text-white">
+            <svg class="w-4 h-4 fill-current opacity-50 shrink-0" viewBox="0 0 16 16">
+              <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+            </svg>
+            <span class="ml-2">Create New Tag</span>
+          </button>
+        </div>
+      </div>
+      <!-- Mobile Cards View -->
+      <div class="tags-cards">
+        <div id="tags-cards-container" class="p-4">
+          <!-- Loading state -->
+          <div class="text-center py-12 text-slate-400">
+            <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <p>Loading tags...</p>
+          </div>
+        </div>
+      </div>
+      <!-- Desktop Table View -->
+      <div class="tags-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
+        <div>
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="table-auto w-full text-slate-300">
+              <!-- Table header -->
+              <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
+                <tr>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
+                    <div class="font-semibold text-center">#</div>
+                  </th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
+                    <div class="font-semibold text-left">Tag Name</div>
+                  </th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
+                    <div class="font-semibold text-center">Color</div>
+                  </th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
+                    <div class="font-semibold text-center">Stations</div>
+                  </th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
+                    <div class="font-semibold text-center">Created</div>
+                  </th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3"></th>
+                </tr>
+              </thead>
+              <!-- Table body -->
+              <tbody id="tags-table-body"
+                     class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
                 <!-- Loading state -->
-                <div class="text-center py-12 text-slate-400">
-                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                <tr>
+                  <td colspan="6" class="px-2 py-8 text-center text-slate-400">
+                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     <p>Loading tags...</p>
-                </div>
-            </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <!-- Desktop Table View -->
-        <div class="tags-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
-            <div>
-                <!-- Table -->
-                <div class="overflow-x-auto">
-                    <table class="table-auto w-full text-slate-300">
-                        <!-- Table header -->
-                        <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
-                            <tr>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">#</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-left">Tag Name</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">Color</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">Stations</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                    <div class="font-semibold text-center">Created</div>
-                                </th>
-                                <th class="px-2 first:pl-5 last:pr-5 py-3">
-                                </th>
-                            </tr>
-                        </thead>
-                        <!-- Table body -->
-                        <tbody id="tags-table-body" class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
-                            <!-- Loading state -->
-                            <tr>
-                                <td colspan="6" class="px-2 py-8 text-center text-slate-400">
-                                    <svg class="w-12 h-12 center-x mb-4 text-slate-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                    </svg>
-                                    <p>Loading tags...</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
+      </div>
     </div>
-</main>
-
-<!-- Edit/Create Tag Modal -->
-<div id="edit-tag-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
+  </main>
+  <!-- Edit/Create Tag Modal -->
+  <div id="edit-tag-modal"
+       class="initially-hidden hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4">
     <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
-        <!-- Modal header -->
-        <div class="px-6 py-4 border-b border-slate-700">
-            <div class="flex items-center justify-between">
-                <h3 id="edit-modal-title" class="text-xl font-semibold text-slate-100">Edit Tag</h3>
-                <button class="btn-close-edit-modal text-slate-400 hover:text-slate-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
+      <!-- Modal header -->
+      <div class="px-6 py-4 border-b border-slate-700">
+        <div class="flex items-center justify-between">
+          <h3 id="edit-modal-title" class="text-xl font-semibold text-slate-100">Edit Tag</h3>
+          <button type="button"
+                  class="btn-close-edit-modal text-slate-400 hover:text-slate-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-
-        <!-- Modal body -->
-        <form id="edit-tag-form">
-            <input type="hidden" id="edit-tag-id" name="tag_id" value="">
-
-            <div class="px-6 py-4 flow-y-4">
-                <!-- Tag Name -->
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2" for="edit-tag-name">
-                        Tag Name <span class="text-rose-500">*</span>
-                    </label>
-                    <input type="text" id="edit-tag-name" name="name" required
-                           class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                           placeholder="e.g., Active, Completed, High Priority">
-                </div>
-
-                    <!-- Color -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">
-                            Color <span class="text-rose-500">*</span>
-                        </label>
-                        <div class="tag-color-picker-grid" id="edit-tag-color-picker">
-                            <!-- Colors will be populated by JavaScript -->
-                        </div>
-                        <input type="hidden" id="edit-tag-color" name="color" required>
-
-                        <!-- Custom Color Picker -->
-                        <div class="mt-4 flex items-center gap-3 flex-wrap">
-                            <label class="text-sm text-slate-400">Or pick a custom color:</label>
-                            <input type="color" id="custom-color-input"
-                                   value="#ef4444"
-                                   class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"
-                                   title="Pick custom color">
-                        </div>
-                    </div>
+      </div>
+      <!-- Modal body -->
+      <form id="edit-tag-form">
+        <input type="hidden" id="edit-tag-id" name="tag_id" value="" />
+        <div class="px-6 py-4 flow-y-4">
+          <!-- Tag Name -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2"
+                   for="edit-tag-name">
+              Tag Name <span class="text-rose-500">*</span>
+            </label>
+            <input type="text"
+                   id="edit-tag-name"
+                   name="name"
+                   required
+                   class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                   placeholder="e.g., Active, Completed, High Priority" />
+          </div>
+          <!-- Color -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+              Color <span class="text-rose-500">*</span>
+            </label>
+            <div class="tag-color-picker-grid" id="edit-tag-color-picker">
+              <!-- Colors will be populated by JavaScript -->
             </div>
-
-            <!-- Modal footer -->
-            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" class="btn-close-edit-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
-                    <span id="edit-submit-text">Save Changes</span>
-                </button>
+            <input type="hidden" id="edit-tag-color" name="color" required />
+            <!-- Custom Color Picker -->
+            <div class="mt-4 flex items-center gap-3 flex-wrap">
+              <label class="text-sm text-slate-400">Or pick a custom color:</label>
+              <input type="color"
+                     id="custom-color-input"
+                     value="#ef4444"
+                     class="h-10 w-20 rounded-sm cursor-pointer border border-slate-600"
+                     title="Pick custom color" />
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- Delete Tag Confirmation Modal -->
-<div id="delete-tag-modal" class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4" style="display: none;">
-    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
-        <!-- Modal header -->
-        <div class="px-6 py-4 border-b border-slate-700">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xl font-semibold text-slate-100">Delete Tag</h3>
-                <button class="btn-close-delete-modal text-slate-400 hover:text-slate-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
+          </div>
         </div>
-
-        <!-- Modal body -->
-        <div class="px-6 py-4">
-            <input type="hidden" id="delete-tag-id" value="">
-
-            <div class="flex items-start flow-x-4">
-                <div class="shrink-0">
-                    <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this tag?</p>
-                    <div id="delete-tag-info" class="mb-3"></div>
-                    <p class="text-slate-400 text-sm">
-                        This will remove the tag from <span id="delete-tag-station-count" class="font-semibold">0</span> station(s). This action cannot be undone.
-                    </p>
-                </div>
-            </div>
-        </div>
-
         <!-- Modal footer -->
         <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-            <button type="button" class="btn-close-delete-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                Cancel
-            </button>
-            <button type="button" id="btn-confirm-delete" class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
-                Delete Tag
-            </button>
+          <button type="button"
+                  class="btn-close-edit-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+            <span id="edit-submit-text">Save Changes</span>
+          </button>
         </div>
+      </form>
     </div>
-</div>
-
-{% include 'snippets/modal_success.html' %}
-{% include 'snippets/modal_error.html' %}
-
+  </div>
+  <!-- Delete Tag Confirmation Modal -->
+  <div id="delete-tag-modal"
+       class="initially-hidden hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4">
+    <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+      <!-- Modal header -->
+      <div class="px-6 py-4 border-b border-slate-700">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-semibold text-slate-100">Delete Tag</h3>
+          <button type="button"
+                  class="btn-close-delete-modal text-slate-400 hover:text-slate-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <!-- Modal body -->
+      <div class="px-6 py-4">
+        <input type="hidden" id="delete-tag-id" value="" />
+        <div class="flex items-start flow-x-4">
+          <div class="shrink-0">
+            <svg class="w-12 h-12 text-rose-500"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this tag?</p>
+            <div id="delete-tag-info" class="mb-3"></div>
+            <p class="text-slate-400 text-sm">
+              This will remove the tag from <span id="delete-tag-station-count"
+       class="font-semibold">0</span> station(s). This action cannot be undone.
+            </p>
+          </div>
+        </div>
+      </div>
+      <!-- Modal footer -->
+      <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+        <button type="button"
+                class="btn-close-delete-modal px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+          Cancel
+        </button>
+        <button type="button"
+                id="btn-confirm-delete"
+                class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+          Delete Tag
+        </button>
+      </div>
+    </div>
+  </div>
+  {% include "snippets/modal_success.html" %}
+  {% include "snippets/modal_error.html" %}
 {% endblock content %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="station-tags">
-{
-    "listEndpoint": "{% url 'api:v2:station-tags' %}"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="station-tags">
+    {
+      "listEndpoint": "{% url 'api:v2:station-tags' %}"
+    }
+  </script>
 {% endblock inline_extra_js %}

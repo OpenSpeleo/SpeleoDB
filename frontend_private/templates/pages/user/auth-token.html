@@ -1,47 +1,46 @@
 {% extends "pages/user/base.html" %}
+
 {% load vite_assets %}
 {% load static %}
 
 {% block extra_css %}
-{{ block.super }}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-user-auth-token' %}
+  {{ block.super }}
+  {% vite_styles 'style-template-frontend-private-templates-pages-user-auth-token' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<!-- Panel -->
-<div class="grow">
-
+  <!-- Panel -->
+  <div class="grow">
     <!-- Panel body -->
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Application Token</h2>
-
-        <!-- Full Name -->
-        <section>
-            <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                <div class="w-full">
-                    <label class="block text-sm font-medium mb-1" for="name">Current Application Token:</label>
-                    <input class="form-input max-w-full w-128" type="text" value="{{ auth_token.key }}" disabled/>
-                </div>
-            </div>
-        </section>
-
-        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-16">
-            <div class="text-right">
-                <h2 class="mb-6">
-                    If you believe your token has been compromised, you can generate a new one.<br>
-                    Treat this value just like you would treat your password.</h2>
-                <form action="{% url 'private:user_authtoken' %}" method="POST">
-                    {% csrf_token %}
-                    <button class="btn bg-rose-500 hover:bg-rose-600 text-white ml-3">Refresh Token</button>
-                </form>
-            </div>
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Application Token</h2>
+      <!-- Full Name -->
+      <section>
+        <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+          <div class="w-full">
+            <label class="block text-sm font-medium mb-1" for="name">Current Application Token:</label>
+            <input class="form-input max-w-full w-128"
+                   type="text"
+                   value="{{ auth_token.key }}"
+                   disabled />
+          </div>
         </div>
-
+      </section>
+      <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700 mt-16">
+        <div class="text-right">
+          <h2 class="mb-6">
+            If you believe your token has been compromised, you can generate a new one.
+            <br />
+            Treat this value just like you would treat your password.
+          </h2>
+          <form action="{% url 'private:user_authtoken' %}" method="post">
+            {% csrf_token %}
+            <button type="submit"
+                    class="btn bg-rose-500 hover:bg-rose-600 text-white ml-3">Refresh Token</button>
+          </form>
+        </div>
+      </div>
     </div>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+  </div>
 {% endblock right_panel %}

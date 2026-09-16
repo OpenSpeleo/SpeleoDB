@@ -1,146 +1,152 @@
 {% extends "pages/project/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{{ block.super }}
-{% vite_preload 'controller-revision-history' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-project-revision-history' %}
+  {{ block.super }}
+  {% vite_preload 'controller-revision-history' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-project-revision-history' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
+  <div class="grow">
     <div class="p-6 flow-y-6">
-
-        <!-- Page header -->
-        <div class="mb-8">
-            <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                Project's Revision History
-            </h1>
-        </div>
-
-        <!-- Mobile List View -->
-        <div class="revision-list">
-            <div id="mobile-revision-container"></div>
-        </div>
-
-        <!-- Desktop Table View -->
-        <div class="revision-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
-            <!-- Table -->
-            <table class="table-auto w-full text-slate-300">
-                <!-- Table header -->
-                <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
-                    <tr>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="font-semibold text-center">ID</div>
-                        </th>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="font-semibold text-center">Author</div>
-                        </th>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="font-semibold text-center">Date</div>
-                        </th>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
-                            <div class="font-semibold text-center">Message</div>
-                        </th>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="font-semibold text-center">Download</div>
-                        </th>
-                        <th class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="font-semibold text-center">Explorer</div>
-                        </th>
-                    </tr>
-                </thead>
-                <!-- Table body -->
-                <tbody id="commit-table-container" class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
-                    <!-- Hidden Template Row -->
-                    <tr id="commit-template" style="display: none;">
-                        <!-- Commit ID -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="text-center">
-                                <div class="font-medium text-slate-100"></div>
-                            </div>
-                        </td>
-                        <!-- Commit Author -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="text-center">
-                                <div class="font-medium text-slate-100"></div>
-                            </div>
-                        </td>
-                        <!-- Commit Date -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3">
-                            <div class="text-center"></div>
-                        </td>
-                        <!-- Commit Message -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
-                            <div class="text-center">
-                                <div class="font-medium text-slate-100"></div>
-                            </div>
-                        </td>
-                        <!-- Commit Download -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-16">
-                            <!-- Menu button -->
-                            <div class="relative inline-flex" x-data="{ open: false }">
-                                <button
-                                    class="rounded-full"
-                                    :class="open ? 'bg-slate-700 text-slate-400': 'text-slate-500 hover:text-slate-400'"
-                                    aria-haspopup="true"
-                                    @click.prevent="open = !open"
-                                    :aria-expanded="open"
-                                >
-                                    <span class="sr-only">Menu</span>
-                                    <svg class="w-8 h-8 fill-current" viewBox="0 0 32 32">
-                                        <circle cx="16" cy="16" r="2" />
-                                        <circle cx="10" cy="16" r="2" />
-                                        <circle cx="22" cy="16" r="2" />
-                                    </svg>
-                                </button>
-                                <div class="origin-top-right z-10 absolute top-full right-0 min-w-36 bg-slate-800 border border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1" @click.outside="open = false" @keydown.escape.window="open = false" x-show="open" x-transition:enter="transition ease-out duration-200 transform" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-out duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak>
-                                    <ul id="format-download-container">
-                                        <li id="format-download-template" style="display: none;">
-                                            <a
-                                                class="dl_link_format font-medium text-sm hover:text-slate-200 flex py-1 px-3 mb-2"
-                                                @click="open = false"
-                                                @focus="open = true"
-                                                @focusout="open = false"
-                                                target="_blank"
-                                                href="#"
-                                            ></a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </td>
-
-                        <!-- Commit File Explorer -->
-                        <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-28">
-                            <div class="relative inline-flex" x-data="{ open: false }">
-                                <a href="#" class="revision_explorer rounded-full">
-                                    <span class="sr-only">Menu</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-folders stroke-current" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round" height="1.5em" viewBox="2.25 3.25 19.5 18.5">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
-                                        <path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2" />
-                                    </svg>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <!-- End of Hidden Template Row -->
-                </tbody>
-            </table>
-        </div>
-
+      <!-- Page header -->
+      <div class="mb-8">
+        <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Project's Revision History</h1>
+      </div>
+      <!-- Mobile List View -->
+      <div class="revision-list">
+        <div id="mobile-revision-container"></div>
+      </div>
+      <!-- Desktop Table View -->
+      <div class="revision-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
+        <!-- Table -->
+        <table class="table-auto w-full text-slate-300">
+          <!-- Table header -->
+          <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
+            <tr>
+              <th class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="font-semibold text-center">ID</div>
+              </th>
+              <th class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="font-semibold text-center">Author</div>
+              </th>
+              <th class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="font-semibold text-center">Date</div>
+              </th>
+              <th class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
+                <div class="font-semibold text-center">Message</div>
+              </th>
+              <th class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="font-semibold text-center">Download</div>
+              </th>
+              <th class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="font-semibold text-center">Explorer</div>
+              </th>
+            </tr>
+          </thead>
+          <!-- Table body -->
+          <tbody id="commit-table-container"
+                 class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
+            <!-- Hidden Template Row -->
+            <tr id="commit-template">
+              <!-- Commit ID -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="text-center">
+                  <div class="font-medium text-slate-100"></div>
+                </div>
+              </td>
+              <!-- Commit Author -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="text-center">
+                  <div class="font-medium text-slate-100"></div>
+                </div>
+              </td>
+              <!-- Commit Date -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3">
+                <div class="text-center"></div>
+              </td>
+              <!-- Commit Message -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3 max-w-lg">
+                <div class="text-center">
+                  <div class="font-medium text-slate-100"></div>
+                </div>
+              </td>
+              <!-- Commit Download -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-16">
+                <!-- Menu button -->
+                <div class="relative inline-flex" x-data="{ open: false }">
+                  <button type="button"
+                          class="rounded-full"
+                          :class="open ? 'bg-slate-700 text-slate-400': 'text-slate-500 hover:text-slate-400'"
+                          aria-haspopup="true"
+                          @click.prevent="open = !open"
+                          :aria-expanded="open">
+                    <span class="sr-only">Menu</span>
+                    <svg class="w-8 h-8 fill-current" viewBox="0 0 32 32">
+                      <circle cx="16" cy="16" r="2" />
+                      <circle cx="10" cy="16" r="2" />
+                      <circle cx="22" cy="16" r="2" />
+                    </svg>
+                  </button>
+                  <div class="origin-top-right z-10 absolute top-full right-0 min-w-36 bg-slate-800 border border-slate-700 py-1.5 rounded-sm shadow-lg overflow-hidden mt-1"
+                       @click.outside="open = false"
+                       @keydown.escape.window="open = false"
+                       x-show="open"
+                       x-transition:enter="transition ease-out duration-200 transform"
+                       x-transition:enter-start="opacity-0 -translate-y-2"
+                       x-transition:enter-end="opacity-100 translate-y-0"
+                       x-transition:leave="transition ease-out duration-200"
+                       x-transition:leave-start="opacity-100"
+                       x-transition:leave-end="opacity-0"
+                       x-cloak>
+                    <ul id="format-download-container">
+                      <li id="format-download-template">
+                        <a class="dl_link_format font-medium text-sm hover:text-slate-200 flex py-1 px-3 mb-2"
+                           @click="open = false"
+                           @focus="open = true"
+                           @focusout="open = false"
+                           target="_blank"
+                           href="#"></a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </td>
+              <!-- Commit File Explorer -->
+              <td class="px-2 first:pl-5 last:pr-5 py-3 text-center w-28">
+                <div class="relative inline-flex" x-data="{ open: false }">
+                  <a href="#" class="revision_explorer rounded-full">
+                    <span class="sr-only">Menu</span>
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon icon-tabler icon-tabler-folders stroke-current"
+                         stroke-width="1.5"
+                         stroke="#2c3e50"
+                         fill="none"
+                         stroke-linecap="round"
+                         stroke-linejoin="round"
+                         height="1.5em"
+                         viewBox="2.25 3.25 19.5 18.5">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                      <path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
+                      <path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2" />
+                    </svg>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            <!-- End of Hidden Template Row -->
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
-
-<div id="loading_spinner" class="loading"></div>
-
+  </div>
+  <div id="loading_spinner" class="loading"></div>
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="revision-history">
-{
-    "endpoint": "{% url 'api:v2:project-revisions' id=project.id %}"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="revision-history">
+    {
+      "endpoint": "{% url 'api:v2:project-revisions' id=project.id %}"
+    }
+  </script>
 {% endblock inline_extra_js %}

@@ -1,107 +1,137 @@
 <!-- GPX Import Modal -->
-<div id="import-gpx-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-lg">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between p-6 border-b border-slate-600">
-            <div class="flex items-center gap-3">
-                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                </svg>
-                <h2 class="text-xl font-semibold text-white">Import GPX File</h2>
-            </div>
-            <button type="button" data-gpx-action="hide" class="text-slate-400 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="p-6">
-            <!-- Drop Zone -->
-            <div id="gpx-drop-zone" class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400">
-                <input type="file" id="gpx-file-input" accept=".gpx" class="hidden">
-                <svg class="w-12 h-12 center-x text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                </svg>
-                <p class="text-slate-300 mb-2">Drag and drop your GPX file here</p>
-                <p class="text-slate-500 text-sm mb-4">or</p>
-                <button type="button" data-gpx-action="browse" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
-                    Browse Files
-                </button>
-                <p class="text-slate-500 text-xs mt-4">Only .gpx files are accepted</p>
-            </div>
-
-            <!-- Selected File Display -->
-            <div id="gpx-selected-file" class="hidden mt-4 p-4 bg-srgb-slate-700-50 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <div>
-                            <p id="gpx-file-name" class="text-white font-medium"></p>
-                            <p id="gpx-file-size" class="text-slate-400 text-sm"></p>
-                        </div>
-                    </div>
-                    <button type="button" data-gpx-action="clear" class="text-slate-400 hover:text-red-400 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Error Message -->
-            <div id="gpx-error-message" class="hidden mt-4 p-4 bg-srgb-red-500-20 border border-srgb-red-500-50 rounded-lg">
-                <p class="text-red-300 text-sm" id="gpx-error-text"></p>
-            </div>
-
-            <!-- Upload Button -->
-            <div class="mt-6 flex justify-end gap-3">
-                <button type="button" data-gpx-action="hide" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-                    Cancel
-                </button>
-                <button type="button" id="gpx-upload-btn" data-gpx-action="upload" disabled class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                    <span id="gpx-upload-spinner" class="hidden">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </span>
-                    <span id="gpx-upload-text">Import GPX</span>
-                </button>
-            </div>
-        </div>
+<div id="import-gpx-modal"
+     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-lg">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6 text-cyan-400"
+             fill="none"
+             stroke="currentColor"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <h2 class="text-xl font-semibold text-white">Import GPX File</h2>
+      </div>
+      <button type="button"
+              data-gpx-action="hide"
+              class="text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
-</div>
-
-<!-- GPX Success Modal -->
-<div id="gpx-success-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-emerald-500-50 w-full max-w-md p-6 text-center">
-        <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-emerald-500-20 flex items-center justify-center">
-            <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-        </div>
-        <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
-        <p id="gpx-success-message" class="text-slate-300 mb-4"></p>
-        <p id="gpx-success-reload-text" class="text-slate-400 text-sm">Refreshing GPS tracks...</p>
-    </div>
-</div>
-
-<!-- GPX Warning Modal -->
-<div id="gpx-warning-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-amber-500-50 w-full max-w-md p-6 text-center">
-        <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-amber-500-20 flex items-center justify-center">
-            <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-        </div>
-        <h3 class="text-xl font-semibold text-white mb-2">Nothing New to Import</h3>
-        <p class="text-slate-300 mb-6">This GPX file does not contain any new landmarks or GPS tracks that aren't already in the system.</p>
-        <button type="button" data-gpx-action="hide-warning" class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">
-            OK
+    <!-- Modal Body -->
+    <div class="p-6">
+      <!-- Drop Zone -->
+      <div id="gpx-drop-zone"
+           class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400">
+        <input type="file" id="gpx-file-input" accept=".gpx" class="hidden" />
+        <svg class="w-12 h-12 center-x text-slate-400 mb-4"
+             fill="none"
+             stroke="currentColor"
+             viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p class="text-slate-300 mb-2">Drag and drop your GPX file here</p>
+        <p class="text-slate-500 text-sm mb-4">or</p>
+        <button type="button"
+                data-gpx-action="browse"
+                class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
+          Browse Files
         </button>
+        <p class="text-slate-500 text-xs mt-4">Only .gpx files are accepted</p>
+      </div>
+      <!-- Selected File Display -->
+      <div id="gpx-selected-file"
+           class="hidden mt-4 p-4 bg-srgb-slate-700-50 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-cyan-400"
+                 fill="none"
+                 stroke="currentColor"
+                 viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div>
+              <p id="gpx-file-name" class="text-white font-medium"></p>
+              <p id="gpx-file-size" class="text-slate-400 text-sm"></p>
+            </div>
+          </div>
+          <button type="button"
+                  data-gpx-action="clear"
+                  class="text-slate-400 hover:text-red-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <!-- Error Message -->
+      <div id="gpx-error-message"
+           class="hidden mt-4 p-4 bg-srgb-red-500-20 border border-srgb-red-500-50 rounded-lg">
+        <p class="text-red-300 text-sm" id="gpx-error-text"></p>
+      </div>
+      <!-- Upload Button -->
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button"
+                data-gpx-action="hide"
+                class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+          Cancel
+        </button>
+        <button type="button"
+                id="gpx-upload-btn"
+                data-gpx-action="upload"
+                disabled
+                class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+          <span id="gpx-upload-spinner" class="hidden">
+            <svg class="animate-spin h-4 w-4 text-white"
+                 xmlns="http://www.w3.org/2000/svg"
+                 fill="none"
+                 viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </span>
+          <span id="gpx-upload-text">Import GPX</span>
+        </button>
+      </div>
     </div>
+  </div>
+</div>
+<!-- GPX Success Modal -->
+<div id="gpx-success-modal"
+     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-emerald-500-50 w-full max-w-md p-6 text-center">
+    <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-emerald-500-20 flex items-center justify-center">
+      <svg class="w-8 h-8 text-emerald-400"
+           fill="none"
+           stroke="currentColor"
+           viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
+    <p id="gpx-success-message" class="text-slate-300 mb-4"></p>
+    <p id="gpx-success-reload-text" class="text-slate-400 text-sm">Refreshing GPS tracks...</p>
+  </div>
+</div>
+<!-- GPX Warning Modal -->
+<div id="gpx-warning-modal"
+     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-amber-500-50 w-full max-w-md p-6 text-center">
+    <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-amber-500-20 flex items-center justify-center">
+      <svg class="w-8 h-8 text-amber-400"
+           fill="none"
+           stroke="currentColor"
+           viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    </div>
+    <h3 class="text-xl font-semibold text-white mb-2">Nothing New to Import</h3>
+    <p class="text-slate-300 mb-6">This GPX file does not contain any new landmarks or GPS tracks that aren't already in the system.</p>
+    <button type="button"
+            data-gpx-action="hide-warning"
+            class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">OK</button>
+  </div>
 </div>

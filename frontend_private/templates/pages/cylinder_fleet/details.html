@@ -1,380 +1,387 @@
 {% extends "pages/cylinder_fleet/base.html" %}
+
 {% load static vite_assets %}
 
-{% block extra_css %}{% vite_preload 'controller-fleet' %}{% endblock extra_css %}
-
+{% block extra_css %}
+  {% vite_preload 'controller-fleet' %}
+{% endblock extra_css %}
 {% block right_panel %}
-<div class="grow">
-
+  <div class="grow">
     <form id="cylinder_fleet_details_form" autocomplete="off">
-
-        <fieldset {% if not has_write_access %}disabled{% endif %}>
-
-            {% csrf_token %}
-
-            <!-- Panel body -->
-            <div class="p-6 flow-y-6">
-                <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
-
-                <!-- Fleet Name & Description -->
-                <section>
-                    <div class="flex flex-wrap mt-5 gap-4">
-                        <div class="w-full lg:flex-1">
-                            <label class="block text-sm font-medium mb-1" for="name">Fleet Name:<span
-                                    class="text-rose-600"> *</span></label>
-                            <input id="name" name="name" class="form-input max-w-full w-full" type="text"
-                                value="{{ cylinder_fleet.name }}" />
-                        </div>
-                    </div>
-
-                    <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                        <div class="w-full">
-                            <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                            <textarea id="description" name="description"
-                                class="form-textarea max-w-full w-full focus:border-slate-300"
-                                rows="4">{% if cylinder_fleet.description %}{{ cylinder_fleet.description }}{% endif %}</textarea>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Cylinders Management -->
-                <section>
-                    <div class="mt-8">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-slate-100">Cylinders in this Fleet</h3>
-                            <div class="flex gap-2">
-                                <a href="{% url 'api:v2:cylinder-fleet-cylinders-export' fleet_id=cylinder_fleet.id %}"
-                                    class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" viewBox="4.5 2.5 15 19">
-                                        <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-                                        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
-                                        <path d="M8 11h8v7h-8z"></path>
-                                        <path d="M8 15h8"></path>
-                                        <path d="M11 11v7"></path>
-                                    </svg>
-                                    Export to Excel
-                                </a>
-                                {% if has_write_access %}
-                                <button type="button" id="add_cylinder_btn"
-                                    class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
-                                    <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
-                                        viewBox="0 0 16 16">
-                                        <path
-                                            d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
-                                    </svg>
-                                    Add Cylinder
-                                </button>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Cylinders List -->
-                        {% if cylinders %}
-                        {% include 'snippets/cylinder_table.html' with cylinders=cylinders table_id='cylinders_table' show_actions=True has_write_access=has_write_access show_count=True %}
-                        {% else %}
-                        <div
-                            class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 center-x text-slate-600 mb-3"
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p class="text-slate-500 mb-4">No cylinders in this fleet yet</p>
-                            {% if has_write_access %}
-                            <button type="button" id="add_first_cylinder_btn"
-                                class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
-                                <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
-                                    viewBox="0 0 16 16">
-                                    <path
-                                        d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
-                                </svg>
-                                Add First Cylinder
-                            </button>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </section>
-
+      <fieldset {% if not has_write_access %}disabled{% endif %}>
+        {% csrf_token %}
+        <!-- Panel body -->
+        <div class="p-6 flow-y-6">
+          <h2 class="text-2xl text-slate-100 font-bold mb-5">Fleet Settings</h2>
+          <!-- Fleet Name & Description -->
+          <section>
+            <div class="flex flex-wrap mt-5 gap-4">
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1"
+                       for="name">Fleet Name:<span class="text-rose-600"> *</span></label>
+                <input id="name"
+                       name="name"
+                       class="form-input max-w-full w-full"
+                       type="text"
+                       value="{{ cylinder_fleet.name }}" />
+              </div>
             </div>
-
-            <!-- Panel footer -->
-            <footer>
-                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                    <div class="flex self-end">
-                        <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
-                            href="{% url 'private:cylinder_fleets' %}">Cancel</a>
-                        <button type="button" id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
-                    </div>
+            <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+              <div class="w-full">
+                <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                <textarea id="description"
+                          name="description"
+                          class="form-textarea max-w-full w-full focus:border-slate-300"
+                          rows="4">{% if cylinder_fleet.description %}{{ cylinder_fleet.description }}{% endif %}</textarea>
+              </div>
+            </div>
+          </section>
+          <!-- Cylinders Management -->
+          <section>
+            <div class="mt-8">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-slate-100">Cylinders in this Fleet</h3>
+                <div class="flex gap-2">
+                  <a href="{% url 'api:v2:cylinder-fleet-cylinders-export' fleet_id=cylinder_fleet.id %}"
+                     class="btn-sm bg-green-500 hover:bg-green-400 text-white border border-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                         fill="none"
+                         stroke="#000000"
+                         stroke-width="1"
+                         stroke-linecap="round"
+                         stroke-linejoin="round"
+                         viewBox="4.5 2.5 15 19">
+                      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                      <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                      <path d="M8 11h8v7h-8z" />
+                      <path d="M8 15h8" />
+                      <path d="M11 11v7" />
+                    </svg>
+                    Export to Excel
+                  </a>
+                  {% if has_write_access %}
+                    <button type="button"
+                            id="add_cylinder_btn"
+                            class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                      <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                           viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                      </svg>
+                      Add Cylinder
+                    </button>
+                  {% endif %}
                 </div>
-            </footer>
-
-        </fieldset>
-
+              </div>
+              <!-- Cylinders List -->
+              {% if cylinders %}
+                {% include "snippets/cylinder_table.html" with cylinders=cylinders table_id="cylinders_table" show_actions=True has_write_access=has_write_access show_count=True %}
+              {% else %}
+                <div class="text-center py-12 bg-srgb-slate-900-20 rounded-lg border-2 border-dashed border-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       class="h-12 w-12 center-x text-slate-600 mb-3"
+                       fill="none"
+                       viewBox="0 0 24 24"
+                       stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p class="text-slate-500 mb-4">No cylinders in this fleet yet</p>
+                  {% if has_write_access %}
+                    <button type="button"
+                            id="add_first_cylinder_btn"
+                            class="btn-sm bg-indigo-500 hover:bg-indigo-600 text-white">
+                      <svg class="w-4 h-4 fill-current opacity-50 shrink-0 inline-block mr-1"
+                           viewBox="0 0 16 16">
+                        <path d="M15 7H9V1c0-.6-.4-1-1-1S7 .4 7 1v6H1c-.6 0-1 .4-1 1s.4 1 1 1h6v6c0 .6.4 1 1 1s1-.4 1-1V9h6c.6 0 1-.4 1-1s-.4-1-1-1z" />
+                      </svg>
+                      Add First Cylinder
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          </section>
+        </div>
+        <!-- Panel footer -->
+        <footer>
+          <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+            <div class="flex self-end">
+              <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                 href="{% url 'private:cylinder_fleets' %}">Cancel</a>
+              <button type="button"
+                      id="btn_submit"
+                      class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Save Changes</button>
+            </div>
+          </div>
+        </footer>
+      </fieldset>
     </form>
-
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
     <!-- Add/Edit Cylinder Modal -->
     <div id="cylinder_modal"
-        class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4"
-        style="display: none;">
-        <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
-            <!-- Modal header -->
-            <div class="px-6 py-4 border-b border-slate-700">
-                <div class="flex items-center justify-between">
-                    <h3 id="cylinder_modal_title" class="text-xl font-semibold text-slate-100">Add Cylinder</h3>
-                    <button id="cylinder_modal_close_x" class="text-slate-400 hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Modal body -->
-            <div class="px-6 py-4 flow-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Cylinder Name -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_name">
-                            Cylinder Name
-                        </label>
-                        <input type="text" id="modal_cylinder_name"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="e.g., Cylinder #023">
-                    </div>
-                    <!-- Serial -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_serial">
-                            Serial
-                        </label>
-                        <input type="text" id="modal_cylinder_serial"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Serial number">
-                    </div>
-                    <!-- Brand -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_brand">
-                            Brand
-                        </label>
-                        <input type="text" id="modal_cylinder_brand"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Luxfer, Catalina...">
-                    </div>
-                    <!-- Owner -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_owner">
-                            Owner
-                        </label>
-                        <input type="text" id="modal_cylinder_owner"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="Owner name">
-                    </div>
-                    <!-- Type -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_type">
-                            Type
-                        </label>
-                        <input type="text" id="modal_cylinder_type"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="AL80, AL40...">
-                    </div>
-                    <!-- Status -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_status">
-                            Status <span class="text-rose-500">*</span>
-                        </label>
-                        <select id="modal_cylinder_status"
-                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                            <option value="functional">✓ Functional</option>
-                            <option value="needs_service">🧰 Needs Service</option>
-                            <option value="broken">✗ Broken</option>
-                            <option value="lost">⚠ Lost</option>
-                            <option value="abandoned">⊘ Abandoned</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- O2 -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_o2">
-                            O2 % <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_o2" min="0" max="100" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="21">
-                    </div>
-                    <!-- He -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_he">
-                            He % <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_he" min="0" max="100" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="0">
-                    </div>
-                    <!-- Pressure -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_pressure">
-                            Pressure <span class="text-rose-500">*</span>
-                        </label>
-                        <input type="number" id="modal_cylinder_pressure" min="0" required
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                            placeholder="3000">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <!-- Unit System -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_unit_system">
-                            Unit System <span class="text-rose-500">*</span>
-                        </label>
-                        <select
-                            id="modal_cylinder_unit_system"
-                            class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                            <option value="imperial">Imperial (PSI)</option>
-                            <option value="metric">Metric (BAR)</option>
-                        </select>
-                    </div>
-                    <!-- Manufactured Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_manufactured_date">
-                            Manufactured
-                        </label>
-                        <input type="month" id="modal_cylinder_manufactured_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <!-- Visual Inspection -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_visual_date">
-                            Last Visual
-                        </label>
-                        <input type="month" id="modal_cylinder_visual_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <!-- Hydro Test -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_hydro_date">
-                            Last Hydro
-                        </label>
-                        <input type="month" id="modal_cylinder_hydro_date"
-                            class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" id="modal_cylinder_use_anode" class="form-checkbox">
-                    <label class="text-sm text-slate-300" for="modal_cylinder_use_anode">Uses anode protection</label>
-                </div>
-
-                <!-- Notes -->
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2" for="modal_cylinder_notes">
-                        Notes
-                    </label>
-                    <textarea id="modal_cylinder_notes" rows="3"
-                        class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                        placeholder="Optional notes about this cylinder"></textarea>
-                </div>
-            </div>
-
-            <!-- Modal footer -->
-            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" id="cylinder_modal_cancel"
-                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                    Cancel
-                </button>
-                <button type="button" id="cylinder_modal_save"
-                    class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
-                    Save Cylinder
-                </button>
-            </div>
+         class="initially-hidden hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4">
+      <div class="relative bg-slate-800 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+          <div class="flex items-center justify-between">
+            <h3 id="cylinder_modal_title"
+                class="text-xl font-semibold text-slate-100">Add Cylinder</h3>
+            <button type="button"
+                    id="cylinder_modal_close_x"
+                    class="text-slate-400 hover:text-slate-200">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+        <!-- Modal body -->
+        <div class="px-6 py-4 flow-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Cylinder Name -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_name">Cylinder Name</label>
+              <input type="text"
+                     id="modal_cylinder_name"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="e.g., Cylinder #023" />
+            </div>
+            <!-- Serial -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_serial">Serial</label>
+              <input type="text"
+                     id="modal_cylinder_serial"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="Serial number" />
+            </div>
+            <!-- Brand -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_brand">Brand</label>
+              <input type="text"
+                     id="modal_cylinder_brand"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="Luxfer, Catalina..." />
+            </div>
+            <!-- Owner -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_owner">Owner</label>
+              <input type="text"
+                     id="modal_cylinder_owner"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="Owner name" />
+            </div>
+            <!-- Type -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_type">Type</label>
+              <input type="text"
+                     id="modal_cylinder_type"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="AL80, AL40..." />
+            </div>
+            <!-- Status -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_status">
+                Status <span class="text-rose-500">*</span>
+              </label>
+              <select id="modal_cylinder_status"
+                      class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                <option value="functional">✓ Functional</option>
+                <option value="needs_service">🧰 Needs Service</option>
+                <option value="broken">✗ Broken</option>
+                <option value="lost">⚠ Lost</option>
+                <option value="abandoned">⊘ Abandoned</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- O2 -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_o2">
+                O2 % <span class="text-rose-500">*</span>
+              </label>
+              <input type="number"
+                     id="modal_cylinder_o2"
+                     min="0"
+                     max="100"
+                     required
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="21" />
+            </div>
+            <!-- He -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_he">
+                He % <span class="text-rose-500">*</span>
+              </label>
+              <input type="number"
+                     id="modal_cylinder_he"
+                     min="0"
+                     max="100"
+                     required
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="0" />
+            </div>
+            <!-- Pressure -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_pressure">
+                Pressure <span class="text-rose-500">*</span>
+              </label>
+              <input type="number"
+                     id="modal_cylinder_pressure"
+                     min="0"
+                     required
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                     placeholder="3000" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Unit System -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_unit_system">
+                Unit System <span class="text-rose-500">*</span>
+              </label>
+              <select id="modal_cylinder_unit_system"
+                      class="form-select w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                <option value="imperial">Imperial (PSI)</option>
+                <option value="metric">Metric (BAR)</option>
+              </select>
+            </div>
+            <!-- Manufactured Date -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_manufactured_date">Manufactured</label>
+              <input type="month"
+                     id="modal_cylinder_manufactured_date"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            </div>
+            <!-- Visual Inspection -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_visual_date">Last Visual</label>
+              <input type="month"
+                     id="modal_cylinder_visual_date"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            </div>
+            <!-- Hydro Test -->
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2"
+                     for="modal_cylinder_hydro_date">Last Hydro</label>
+              <input type="month"
+                     id="modal_cylinder_hydro_date"
+                     class="form-input w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="modal_cylinder_use_anode" class="form-checkbox" />
+            <label class="text-sm text-slate-300" for="modal_cylinder_use_anode">Uses anode protection</label>
+          </div>
+          <!-- Notes -->
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2"
+                   for="modal_cylinder_notes">Notes</label>
+            <textarea id="modal_cylinder_notes"
+                      rows="3"
+                      class="form-textarea w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      placeholder="Optional notes about this cylinder"></textarea>
+          </div>
+        </div>
+        <!-- Modal footer -->
+        <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+          <button type="button"
+                  id="cylinder_modal_cancel"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+            Cancel
+          </button>
+          <button type="button"
+                  id="cylinder_modal_save"
+                  class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors">
+            Save Cylinder
+          </button>
+        </div>
+      </div>
     </div>
-
     <!-- Delete Cylinder Confirmation Modal -->
     <div id="delete_cylinder_modal"
-        class="hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4"
-        style="display: none;">
-        <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
-            <!-- Modal header -->
-            <div class="px-6 py-4 border-b border-slate-700">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-semibold text-slate-100">Delete Cylinder</h3>
-                    <button id="delete_modal_close_x" class="text-slate-400 hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Modal body -->
-            <div class="px-6 py-4">
-                <input type="hidden" id="delete_cylinder_id" value="">
-
-                <div class="flex items-start flow-x-4">
-                    <div class="shrink-0">
-                        <svg class="w-12 h-12 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
-                            </path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this cylinder?
-                        </p>
-                        <p class="text-slate-400 text-sm">
-                            This action cannot be undone.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal footer -->
-            <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-                <button type="button" id="delete_modal_cancel"
-                    class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                    Cancel
-                </button>
-                <button type="button" id="delete_modal_confirm"
-                    class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
-                    Delete Cylinder
-                </button>
-            </div>
+         class="initially-hidden hidden fixed inset-0 bg-srgb-slate-900-90 backdrop-blur-xs transition-opacity z-50 flex items-center justify-center p-4">
+      <div class="relative bg-slate-800 rounded-lg max-w-lg w-full shadow-2xl border border-slate-600">
+        <!-- Modal header -->
+        <div class="px-6 py-4 border-b border-slate-700">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-semibold text-slate-100">Delete Cylinder</h3>
+            <button type="button"
+                    id="delete_modal_close_x"
+                    class="text-slate-400 hover:text-slate-200">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+        <!-- Modal body -->
+        <div class="px-6 py-4">
+          <input type="hidden" id="delete_cylinder_id" value="" />
+          <div class="flex items-start flow-x-4">
+            <div class="shrink-0">
+              <svg class="w-12 h-12 text-rose-500"
+                   fill="none"
+                   stroke="currentColor"
+                   viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-slate-300 text-lg font-medium mb-2">Are you sure you want to delete this cylinder?</p>
+              <p class="text-slate-400 text-sm">This action cannot be undone.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Modal footer -->
+        <div class="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+          <button type="button"
+                  id="delete_modal_cancel"
+                  class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">
+            Cancel
+          </button>
+          <button type="button"
+                  id="delete_modal_confirm"
+                  class="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+            Delete Cylinder
+          </button>
+        </div>
+      </div>
     </div>
-
-</div>
+  </div>
 {% endblock right_panel %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="fleet">
-{
-    "kind": "cylinder",
-    "mode": "details",
-    "tableSelector": "#cylinders_table",
-    "hasRows": {% if cylinders %}true{% else %}false{% endif %},
-    "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
-    "orderAscending": true,
-    "settingsEndpoint": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
-    "settingsMessage": "The cylinder fleet has been updated.",
-    "entityCrud": true,
-    "listEndpoint": "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
-    "detailRoute": "api:v2:cylinder-detail"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="fleet">
+    {
+      "kind": "cylinder",
+      "mode": "details",
+      "tableSelector": "#cylinders_table",
+      "hasRows": {% if cylinders %}true{% else %}false{% endif %},
+      "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
+      "orderAscending": true,
+      "settingsEndpoint": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
+      "settingsMessage": "The cylinder fleet has been updated.",
+      "entityCrud": true,
+      "listEndpoint": "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
+      "detailRoute": "api:v2:cylinder-detail"
+    }
+  </script>
 {% endblock inline_extra_js %}

@@ -1,151 +1,186 @@
 {% extends "pages/project/base.html" %}
-{% load static vite_assets %}
 
+{% load static vite_assets %}
 {% load countries %}
 {% load visibility_scopes %}
 {% load project_types %}
 {% load project_colors %}
 
 {% block extra_css %}
-{{ block.super }}
-{% vite_preload 'controller-entity-crud' %}
-{% vite_styles 'style-template-frontend-private-templates-pages-project-details' %}
+  {{ block.super }}
+  {% vite_preload 'controller-entity-crud' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-project-details' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
-
+  <div class="grow">
     <form id="project_details_form" autocomplete="off">
-
-        <fieldset {% if not has_write_access %}disabled{% endif %}>
-
+      <fieldset {% if not has_write_access %}disabled{% endif %}>
         {% csrf_token %}
-
         <!-- Panel body -->
         <div class="p-6 flow-y-6">
-            <h2 class="text-2xl text-slate-100 font-bold mb-5">Project Settings</h2>
-
-            <!-- Project Name -->
-            <section>
-                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="name">Project Name:<span class="text-rose-600"> *</span></label>
-                        <input id="name" name="name" class="form-input max-w-full w-full" type="text" value="{{ project.name }}" />
-                    </div>
+          <h2 class="text-2xl text-slate-100 font-bold mb-5">Project Settings</h2>
+          <!-- Project Name -->
+          <section>
+            <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+              <div class="w-full">
+                <label class="block text-sm font-medium mb-1"
+                       for="name">Project Name:<span class="text-rose-600"> *</span></label>
+                <input id="name"
+                       name="name"
+                       class="form-input max-w-full w-full"
+                       type="text"
+                       value="{{ project.name }}" />
+              </div>
+            </div>
+          </section>
+          <!-- Description -->
+          <section>
+            <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+              <div class="w-full">
+                <label class="block text-sm font-medium mb-1"
+                       for="description">Description:<span class="text-rose-600"> *</span></label>
+                <textarea id="description"
+                          name="description"
+                          class="form-textarea max-w-full w-full focus:border-slate-300"
+                          rows="4">{{ project.description }}</textarea>
+              </div>
+            </div>
+          </section>
+          <!-- Country / Project Type -->
+          <section>
+            <div class="flex flex-wrap mt-5 gap-4">
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1"
+                       for="country">Country:<span class="text-rose-600"> *</span></label>
+                <select id="country" name="country" class="form-select max-w-full w-full">
+                  {% get_countries as countries %}
+                  {% for country in countries %}
+                    <option value="{{ country.code }}"
+                            {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1"
+                       for="type">Project Type:<span class="text-rose-600"> *</span></label>
+                <select id="type" name="type" class="form-select max-w-full w-full">
+                  {% get_project_types as project_types %}
+                  {% for project_type in project_types %}
+                    <option value="{{ project_type }}"
+                            {% if project_type|lower == project.type %} selected {% endif %}>{{ project_type }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </section>
+          <!-- Project Color -->
+          <section>
+            <div class="mt-5">
+              <label class="block text-sm font-medium mb-1">Project Color:</label>
+              <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
+                <div class="flex items-center gap-3 mb-2">
+                  <!-- Model and palette colors are runtime values, not static presentation. -->
+                  <!-- djlint:off H021 -->
+                  <div id="color-preview"
+                       class="w-8 h-8 rounded-sm border-2 border-slate-500 shrink-0"
+                       style="background-color: {{ project.color }}"></div>
+                  <!-- djlint:on -->
+                  {% if has_write_access %}
+                    <button type="button"
+                            id="color-picker-btn"
+                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            title="Custom color">
+                      <img src="{% static 'private/media/color-picker.svg' %}"
+                           class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity"
+                           alt="Pick color" />
+                    </button>
+                  {% endif %}
+                  <input type="color"
+                         id="color-picker"
+                         value="{{ project.color }}"
+                         class="sr-only" />
+                  <input type="hidden"
+                         name="color"
+                         id="color-value"
+                         value="{{ project.color }}" />
+                  <div class="flex items-stretch">
+                    <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
+                    <input type="text"
+                           id="color-hex-input"
+                           value="{{ project.color|cut:'#' }}"
+                           maxlength="6"
+                           class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-hidden"
+                           spellcheck="false"
+                           {% if not has_write_access %}disabled{% endif %} />
+                  </div>
                 </div>
-            </section>
-
-            <!-- Description -->
-            <section>
-                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                    <div class="w-full">
-                        <label class="block text-sm font-medium mb-1" for="description">Description:<span class="text-rose-600"> *</span></label>
-                        <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4">{{ project.description }}</textarea>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Country / Project Type -->
-            <section>
-                <div class="flex flex-wrap mt-5 gap-4">
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="country">Country:<span class="text-rose-600"> *</span></label>
-                        <select id="country" name="country" class="form-select max-w-full w-full">
-                        {% get_countries as countries %}
-                        {% for country in countries %}
-                            <option value="{{ country.code }}" {% if country.code == project.country %} selected {% endif %}>{{ country.name }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="type">Project Type:<span class="text-rose-600"> *</span></label>
-                        <select id="type" name="type" class="form-select max-w-full w-full">
-                        {% get_project_types as project_types %}
-                        {% for project_type in project_types %}
-                            <option value="{{ project_type }}" {% if project_type|lower == project.type %} selected {% endif %}>{{ project_type }}</option>
-                        {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Project Color -->
-            <section>
-                <div class="mt-5">
-                    <label class="block text-sm font-medium mb-1">Project Color:</label>
-                    <div class="color-picker-group{% if not has_write_access %} color-picker-disabled{% endif %}">
-                        <div class="flex items-center gap-3 mb-2">
-                            <div id="color-preview" class="w-8 h-8 rounded-sm border-2 border-slate-500 shrink-0" style="background-color: {{ project.color }}"></div>
-                            {% if has_write_access %}
-                            <button type="button" id="color-picker-btn" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer" title="Custom color">
-                                <img src="{% static 'private/media/color-picker.svg' %}" class="w-6 h-6 invert opacity-60 hover:opacity-100 transition-opacity" alt="Pick color">
-                            </button>
-                            {% endif %}
-                            <input type="color" id="color-picker" value="{{ project.color }}" class="sr-only">
-                            <input type="hidden" name="color" id="color-value" value="{{ project.color }}">
-                            <div class="flex items-stretch">
-                                <span class="inline-flex items-center px-2 text-sm font-mono text-slate-400 bg-slate-600 border border-r-0 border-slate-600 rounded-l select-none">#</span>
-                                <input type="text" id="color-hex-input" value="{{ project.color|cut:'#' }}" maxlength="6" class="w-[4.5rem] text-sm text-slate-300 font-mono bg-slate-700 border border-slate-600 rounded-r px-2 py-1 focus:border-indigo-500 focus:outline-hidden" spellcheck="false" {% if not has_write_access %}disabled{% endif %}>
-                            </div>
-                        </div>
-                        {% if has_write_access %}
-                        <div class="flex flex-wrap gap-2">
-                            {% get_project_color_palette as palette %}
-                            {% for c in palette %}
-                            <button type="button" class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == project.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}" style="background-color: {{ c }}" data-color="{{ c }}"></button>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </section>
-
-            <!-- Latitude / Longitude -->
-            <section>
-                <div class="flex flex-wrap mt-5 gap-4">
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
-                        <input id="latitude" name="latitude" class="form-input max-w-full w-full" type="text" value="{% if project.latitude %}{{ project.latitude }}{% endif %}" />
-                    </div>
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
-                        <input id="longitude" name="longitude" class="form-input max-w-full w-full" type="text" value="{% if project.longitude %}{{ project.longitude }}{% endif %}" />
-                    </div>
-                </div>
-            </section>
-
+                {% if has_write_access %}
+                  <div class="flex flex-wrap gap-2">
+                    {% get_project_color_palette as palette %}
+                    {% for c in palette %}
+                      <!-- Model and palette colors are runtime values, not static presentation. -->
+                      <!-- djlint:off H021 -->
+                      <button type="button"
+                              class="color-preset w-7 h-7 rounded-full border-2 border-transparent hover:border-white hover:scale-110 transition-all duration-150 cursor-pointer{% if c == project.color %} ring-2 ring-white ring-offset-2 ring-offset-slate-800{% endif %}"
+                              style="background-color: {{ c }}"
+                              data-color="{{ c }}"></button>
+                      <!-- djlint:on -->
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </section>
+          <!-- Latitude / Longitude -->
+          <section>
+            <div class="flex flex-wrap mt-5 gap-4">
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1" for="latitude">Latitude:</label>
+                <input id="latitude"
+                       name="latitude"
+                       class="form-input max-w-full w-full"
+                       type="text"
+                       value="{% if project.latitude %}{{ project.latitude }}{% endif %}" />
+              </div>
+              <div class="w-full lg:flex-1">
+                <label class="block text-sm font-medium mb-1" for="longitude">Longitude:</label>
+                <input id="longitude"
+                       name="longitude"
+                       class="form-input max-w-full w-full"
+                       type="text"
+                       value="{% if project.longitude %}{{ project.longitude }}{% endif %}" />
+              </div>
+            </div>
+          </section>
         </div>
-
         <!-- Panel footer -->
         <footer>
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                <div class="flex self-end">
-                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:projects' %}">Cancel</a>
-                    <button id="btn_submit" class="btn ml-3 {% if has_write_access %}bg-indigo-500 hover:bg-indigo-600 text-white{% else %}bg-slate-600 text-slate-400 cursor-not-allowed{% endif %}" {% if not has_write_access %}disabled{% endif %}>Save Changes</button>
-                </div>
+          <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+            <div class="flex self-end">
+              <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                 href="{% url 'private:projects' %}">Cancel</a>
+              <button type="submit"
+                      id="btn_submit"
+                      class="btn ml-3 {% if has_write_access %}bg-indigo-500 hover:bg-indigo-600 text-white{% else %}bg-slate-600 text-slate-400 cursor-not-allowed{% endif %}"
+                      {% if not has_write_access %}disabled{% endif %}>Save Changes</button>
             </div>
+          </div>
         </footer>
-
-        </fieldset>
-
+      </fieldset>
     </form>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+  </div>
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="entity-crud">
-{
-    "formId": "project_details_form",
-    "endpoint": "{% url 'api:v2:project-detail' id=project.id %}",
-    "method": "PUT",
-    "successMessage": "The project has been updated.",
-    "reloadOnSuccess": true,
-    "colorPicker": true
-}
-</script>
+  <script type="application/json" data-speleodb-controller="entity-crud">
+    {
+      "formId": "project_details_form",
+      "endpoint": "{% url 'api:v2:project-detail' id=project.id %}",
+      "method": "PUT",
+      "successMessage": "The project has been updated.",
+      "reloadOnSuccess": true,
+      "colorPicker": true
+    }
+  </script>
 {% endblock inline_extra_js %}

@@ -1,233 +1,208 @@
 {% extends "pages/tools/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-xls2compass' %}
-{{ block.super }}
-
-{% if debug %}
-<link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
-<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
-{% else %}
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css"
-    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-/>
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
-    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-/>
-{% endif %}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-tools-xls2compass' %}
+  {% vite_preload 'controller-xls2compass' %}
+  {{ block.super }}
+  {% if debug %}
+    <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}"
+          rel="stylesheet" />
+    <link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}"
+          rel="stylesheet" />
+  {% else %}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css"
+          integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
+          integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+  {% endif %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-tools-xls2compass' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
+  <div class="grow">
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Compass Survey</h2>
-        <p class="lead">
-            <b>Instructions:</b>
-            <ul class="instructions">
-                <li>Use the Google Sheet Template below to prepare the data</li>
-                <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
-                <li>You can add or remove rows, however columns are fixed</li>
-                <li>Click "<span class="text-orange-300">Download Compass Survey</span>" when you're done</li>
-                <li>Copy the file content inside the Compass DAT File</li>
-            </ul>
-        </p>
-
-        <div class="my-4">
-            <b>Please use the following:</b>
-                <a href="https://docs.google.com/spreadsheets/d/1a7rhd8YqGyphcx7s16ANNJ5v3JJqEmDSq9e7bfpve3Y/edit?usp=sharing"
-                   class="text-orange-500 underline"
-                   target="_blank"
-                >
-                    Google Spreadsheet Template
-                </a>
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Compass Survey</h2>
+      <div class="lead">
+        <b>Instructions:</b>
+        <ul class="instructions">
+          <li>Use the Google Sheet Template below to prepare the data</li>
+          <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
+          <li>You can add or remove rows, however columns are fixed</li>
+          <li>Click "<span class="text-orange-300">Download Compass Survey</span>" when you're done</li>
+          <li>Copy the file content inside the Compass DAT File</li>
+        </ul>
+      </div>
+      <div class="my-4">
+        <b>Please use the following:</b>
+        <a href="https://docs.google.com/spreadsheets/d/1a7rhd8YqGyphcx7s16ANNJ5v3JJqEmDSq9e7bfpve3Y/edit?usp=sharing"
+           class="text-orange-500 underline"
+           target="_blank">Google Spreadsheet Template</a>
+      </div>
+      <div class="my-4 text-orange-300">
+        <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="form-controls mt-6">
+        <div class="form-group flex-1">
+          <label for="caveName">Cave Name <span class="text-[#ff8900]">*</span></label>
+          <input type="text"
+                 id="caveName"
+                 class="text-input"
+                 placeholder="Enter cave name" />
         </div>
-
-        <div class="my-4 text-orange-300">
-            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+        <div class="form-group flex-1">
+          <label for="surveyName">Survey Name <span class="text-[#ff8900]">*</span></label>
+          <input type="text"
+                 id="surveyName"
+                 class="text-input"
+                 placeholder="Enter survey name" />
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="form-controls mt-6">
-
-            <div class="form-group flex-1">
-                <label for="caveName">Cave Name <span style="color: #ff8900;">*</span></label>
-                <input type="text" id="caveName" class="text-input" placeholder="Enter cave name">
-            </div>
-
-            <div class="form-group flex-1">
-                <label for="surveyName">Survey Name <span style="color: #ff8900;">*</span></label>
-                <input type="text" id="surveyName" class="text-input" placeholder="Enter survey name">
-            </div>
+      </div>
+      <div class="form-controls mt-4">
+        <div class="form-group flex-1">
+          <label for="locationSearch">Location (Town/State) <span class="text-[#ff8900]">*</span></label>
+          <div class="location-search-wrapper">
+            <input type="text"
+                   id="locationSearch"
+                   class="location-search-input text-input flex-1"
+                   placeholder="Search for a location..."
+                   autocomplete="off" />
+            <div class="location-search-spinner" id="locationSpinner"></div>
+            <div class="location-results" id="locationResults"></div>
+          </div>
+          <input type="hidden" id="latitude" value="" />
+          <input type="hidden" id="longitude" value="" />
         </div>
-
-        <div class="form-controls mt-4">
-
-            <div class="form-group flex-1">
-                <label for="locationSearch">Location (Town/State) <span style="color: #ff8900;">*</span></label>
-                <div class="location-search-wrapper">
-                    <input type="text" id="locationSearch" class="text-input flex-1" placeholder="Search for a location..." autocomplete="off" style="width: inherit;">
-                    <div class="location-search-spinner" id="locationSpinner"></div>
-                    <div class="location-results" id="locationResults"></div>
-                </div>
-                <input type="hidden" id="latitude" value="">
-                <input type="hidden" id="longitude" value="">
-            </div>
-
-            <div class="form-group">
-                <label>Longitude</label>
-                <div class="text-input" id="lonDisplay" style="background: #f8fafc; color: #64748b; min-width: 150px;">-</div>
-            </div>
-
-            <div class="form-group">
-                <label>Latitude</label>
-                <div class="text-input" id="latDisplay" style="background: #f8fafc; color: #64748b; min-width: 150px;">-</div>
-            </div>
-
-            <div class="form-group">
-                <label for="surveyDate">Survey Date <span style="color: #ff8900;">*</span></label>
-                <input type="date" id="surveyDate" class="date-input">
-            </div>
-
-            <div class="form-group">
-                <label>Survey Units<span style="color: #ff8900;">*</span></label>
-                <div class="unit-toggle">
-                    <span class="unit-label" id="metersLabel">Meters</span>
-                    <label class="switch">
-                        <input type="checkbox" id="unitSwitch" checked>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="unit-label active" id="feetLabel">Feet</span>
-                </div>
-            </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <div class="coordinate-display text-input" id="lonDisplay">-</div>
         </div>
-
-        <div class="form-controls mt-4">
-            <div class="form-group" style="flex: 1; min-width: 300px;">
-                <label for="surveyTeam">Survey Team</label>
-                <div id="surveyTeamContainer" class="tag-input-container">
-                    <input type="text" id="surveyTeamInput" class="tag-input" placeholder="Add team member and press Enter">
-                </div>
-            </div>
-
-            <div class="form-group" style="flex: 1; min-width: 300px;">
-                <label for="surveyComment">Comment (Optional)</label>
-                <textarea id="surveyComment" class="textarea-input" rows="3" placeholder="Additional notes..."></textarea>
-            </div>
+        <div class="form-group">
+          <label>Latitude</label>
+          <div class="coordinate-display text-input" id="latDisplay">-</div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="controls my-6">
-            <button class="tool-action" id="addRowBtn">Add Row</button>
-            <button class="tool-action" id="clearBtn">Clear All</button>
-            <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
-            <button class="tool-action" id="downloadBtn">Download Compass Survey</button>
-            <div class="spinner" id="downloadSpinner"></div>
-            <div id="status" style="margin-left:12px;"></div>
+        <div class="form-group">
+          <label for="surveyDate">Survey Date <span class="text-[#ff8900]">*</span></label>
+          <input type="date" id="surveyDate" class="date-input" />
         </div>
-
-        {% csrf_token %}
-
-        <div style="overflow:auto;max-height:520px;border:1px solid #eef6ff;border-radius:8px">
-            <table class="text-slate-800 text-center" id="dataTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Station</th>
-                        <th>Depth</th>
-                        <th>Length</th>
-                        <th>Azimuth</th>
-                        <th>Left</th>
-                        <th>Right</th>
-                        <th>Up</th>
-                        <th>Down</th>
-                        <th>Flags</th>
-                        <th>Comment</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <div class="form-group">
+          <label>Survey Units<span class="text-[#ff8900]">*</span></label>
+          <div class="unit-toggle">
+            <span class="unit-label" id="metersLabel">Meters</span>
+            <label class="switch">
+              <input type="checkbox" id="unitSwitch" checked />
+              <span class="slider"></span>
+            </label>
+            <span class="unit-label active" id="feetLabel">Feet</span>
+          </div>
         </div>
+      </div>
+      <div class="form-controls mt-4">
+        <div class="survey-notes-group form-group">
+          <label for="surveyTeam">Survey Team</label>
+          <div id="surveyTeamContainer" class="tag-input-container">
+            <input type="text"
+                   id="surveyTeamInput"
+                   class="tag-input"
+                   placeholder="Add team member and press Enter" />
+          </div>
+        </div>
+        <div class="survey-notes-group form-group">
+          <label for="surveyComment">Comment (Optional)</label>
+          <textarea id="surveyComment"
+                    class="textarea-input"
+                    rows="3"
+                    placeholder="Additional notes..."></textarea>
+        </div>
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="controls my-6">
+        <button type="button" class="tool-action" id="addRowBtn">Add Row</button>
+        <button type="button" class="tool-action" id="clearBtn">Clear All</button>
+        <button type="button" class="tool-action" id="pasteExcelBtn">Paste Excel</button>
+        <button type="button" class="tool-action" id="downloadBtn">Download Compass Survey</button>
+        <div class="spinner" id="downloadSpinner"></div>
+        <div class="ml-3" id="status"></div>
+      </div>
+      {% csrf_token %}
+      <div class="overflow-auto max-h-[520px] border border-[#eef6ff] rounded-[8px]">
+        <table class="text-slate-800 text-center" id="dataTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Station</th>
+              <th>Depth</th>
+              <th>Length</th>
+              <th>Azimuth</th>
+              <th>Left</th>
+              <th>Right</th>
+              <th>Up</th>
+              <th>Down</th>
+              <th>Flags</th>
+              <th>Comment</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
-<div id="loading_spinner" class="loading" style="display:none;"></div>
-
-<!-- Result Modal -->
-<div id="resultModal" class="modal-overlay">
+  </div>
+  <div id="loading_spinner" class="initially-hidden loading"></div>
+  <!-- Result Modal -->
+  <div id="resultModal" class="modal-overlay">
     <div class="modal-container">
-        <div class="modal-header">
-            <h3>Compass Survey Data</h3>
-            <button class="modal-close" id="closeModal">&times;</button>
+      <div class="modal-header">
+        <h3>Compass Survey Data</h3>
+        <button type="button" class="modal-close" id="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-actions">
+          <button type="button" id="copyCodeBtn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+              <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z" />
+            </svg>
+            Copy to Clipboard
+          </button>
+          <button type="button" id="downloadCodeBtn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+            </svg>
+            Download File
+          </button>
         </div>
-        <div class="modal-body">
-            <div class="modal-actions">
-                <button id="copyCodeBtn">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-                    </svg>
-                    Copy to Clipboard
-                </button>
-                <button id="downloadCodeBtn">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                    </svg>
-                    Download File
-                </button>
-            </div>
-            <div class="code-container">
-                <div class="code-display" id="codeDisplay"></div>
-            </div>
+        <div class="code-container">
+          <div class="code-display" id="codeDisplay"></div>
         </div>
+      </div>
     </div>
-</div>
-
-{% include 'snippets/modal_error.html' %}
-
+  </div>
+  {% include "snippets/modal_error.html" %}
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="xls2compass">
-{
-    "endpoint": "{% url 'api:v2:tool-xls2compass' %}"
-}
-</script>
-
-{% if debug %}
-<script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
-<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
-<script src="{% static 'private/js/vendors/prism-makefile.min.js' %}"></script>
-{% else %}
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"
-    integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js"
-    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-makefile.min.js"
-    integrity="sha512-9MXjDxOwWNLJZRSwZRFdc1lvSIxld5c9DeLhySKjTAIEpj8a48Kezdc/hKjUsyD8S+oa3a+5SpuqdcCFodSI3Q=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-{% endif %}
+  <script type="application/json" data-speleodb-controller="xls2compass">
+    {
+      "endpoint": "{% url 'api:v2:tool-xls2compass' %}"
+    }
+  </script>
+  {% if debug %}
+    <script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
+    <script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
+    <script src="{% static 'private/js/vendors/prism-makefile.min.js' %}"></script>
+  {% else %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js" integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-makefile.min.js" integrity="sha512-9MXjDxOwWNLJZRSwZRFdc1lvSIxld5c9DeLhySKjTAIEpj8a48Kezdc/hKjUsyD8S+oa3a+5SpuqdcCFodSI3Q==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+  {% endif %}
 {% endblock inline_extra_js %}

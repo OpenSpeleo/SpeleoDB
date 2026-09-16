@@ -132,3 +132,7 @@
         margin-right: 10px;
         flex-shrink: 0;
     }
+
+.tools-dropdown-section-title.tools-section-spaced {
+    margin-top: 12px;
+}

@@ -666,16 +666,8 @@ export async function initPrivateMapViewer() {
 
     // Setup Landmarks Toggle
     const landmarksToggle = document.getElementById('landmarks-toggle');
-    const landmarksToggleButton = document.getElementById('landmarks-toggle-button');
-    if (landmarksToggle && landmarksToggleButton) {
-        // Prevent button click from toggling
-        landmarksToggleButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            landmarksToggle.checked = !landmarksToggle.checked;
-            Layers.toggleLandmarkVisibility(landmarksToggle.checked);
-        });
-
-        // Handle direct checkbox change
+    if (landmarksToggle) {
+        // The native label handles clicks; checkbox change owns map visibility.
         landmarksToggle.addEventListener('change', (e) => {
             e.stopPropagation();
             Layers.toggleLandmarkVisibility(landmarksToggle.checked);

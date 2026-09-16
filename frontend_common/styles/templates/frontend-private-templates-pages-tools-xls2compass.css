@@ -632,3 +632,18 @@ button.tool-action {
         font-family: sans-serif;
         pointer-events: none;
     }
+
+.text-input.location-search-input {
+    width: inherit;
+}
+
+.text-input.coordinate-display {
+    background: #f8fafc;
+    color: #64748b;
+    min-width: 150px;
+}
+
+.form-group.survey-notes-group {
+    flex: 1;
+    min-width: 300px;
+}

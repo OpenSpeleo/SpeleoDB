@@ -1,142 +1,114 @@
 {% extends "pages/tools/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-dmp2json' %}
-{{ block.super }}
-
-{% if debug %}
-<link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}" rel="stylesheet">
-<link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}" rel="stylesheet">
-{% else %}
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css"
-    integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-/>
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
-    integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-/>
-{% endif %}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-tools-dmp2json' %}
+  {% vite_preload 'controller-dmp2json' %}
+  {{ block.super }}
+  {% if debug %}
+    <link href="{% static 'private/css/vendors/prism-tomorrow.min.css' %}"
+          rel="stylesheet" />
+    <link href="{% static 'private/css/vendors/prism-line-numbers.min.css' %}"
+          rel="stylesheet" />
+  {% else %}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-tomorrow.min.css"
+          integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.css"
+          integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+  {% endif %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-tools-dmp2json' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
+  <div class="grow">
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: DMP to JSON</h2>
-        <p class="lead">
-            <b>Instructions:</b>
-            <ul class="instructions">
-                <li>Upload a DMP file from Ariane survey software</li>
-                <li>The file must have a <span class="text-orange-300">.dmp</span> extension</li>
-                <li>Click "<span class="text-orange-300">Download as JSON</span>" to convert the file</li>
-                <li>The result will be displayed in a modal where you can copy or download it</li>
-            </ul>
-        </p>
-
-        <div class="my-4 text-orange-300">
-            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: DMP to JSON</h2>
+      <div class="lead">
+        <b>Instructions:</b>
+        <ul class="instructions">
+          <li>Upload a DMP file from Ariane survey software</li>
+          <li>The file must have a <span class="text-orange-300">.dmp</span> extension</li>
+          <li>Click "<span class="text-orange-300">Download as JSON</span>" to convert the file</li>
+          <li>The result will be displayed in a modal where you can copy or download it</li>
+        </ul>
+      </div>
+      <div class="my-4 text-orange-300">
+        <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="file-upload-container">
+        <div class="file-drop-zone" id="fileDropZone">
+          <div class="file-drop-icon">📁</div>
+          <div class="file-drop-text">Drag and drop your DMP file here</div>
+          <div class="file-drop-hint">or click to browse</div>
+          <div class="initially-hidden file-name-display" id="fileNameDisplay"></div>
+          <div class="initially-hidden file-error-display" id="fileErrorDisplay"></div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="file-upload-container">
-            <div class="file-drop-zone" id="fileDropZone">
-                <div class="file-drop-icon">📁</div>
-                <div class="file-drop-text">Drag and drop your DMP file here</div>
-                <div class="file-drop-hint">or click to browse</div>
-                <div class="file-name-display" id="fileNameDisplay" style="display: none;"></div>
-                <div class="file-error-display" id="fileErrorDisplay" style="display: none;"></div>
-            </div>
-            <input type="file" id="fileInput" accept=".dmp,.DMP">
-        </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="controls my-6">
-            <button class="tool-action" id="downloadBtn" disabled>Download as JSON</button>
-            <div class="spinner" id="downloadSpinner"></div>
-            <div id="status" style="margin-left:12px;"></div>
-        </div>
-
-        {% csrf_token %}
-
+        <input type="file" id="fileInput" accept=".dmp,.DMP" />
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="controls my-6">
+        <button type="button" class="tool-action" id="downloadBtn" disabled>Download as JSON</button>
+        <div class="spinner" id="downloadSpinner"></div>
+        <div class="ml-3" id="status"></div>
+      </div>
+      {% csrf_token %}
     </div>
-</div>
-<div id="loading_spinner" class="loading" style="display:none;"></div>
-
-<!-- Result Modal -->
-<div id="resultModal" class="modal-overlay">
+  </div>
+  <div id="loading_spinner" class="initially-hidden loading"></div>
+  <!-- Result Modal -->
+  <div id="resultModal" class="modal-overlay">
     <div class="modal-container">
-        <div class="modal-header">
-            <h3>JSON Output</h3>
-            <button class="modal-close" id="closeModal">&times;</button>
+      <div class="modal-header">
+        <h3>JSON Output</h3>
+        <button type="button" class="modal-close" id="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-actions">
+          <button type="button" id="copyCodeBtn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+              <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z" />
+            </svg>
+            Copy to Clipboard
+          </button>
+          <button type="button" id="downloadCodeBtn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+            </svg>
+            Download File
+          </button>
         </div>
-        <div class="modal-body">
-            <div class="modal-actions">
-                <button id="copyCodeBtn">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-                    </svg>
-                    Copy to Clipboard
-                </button>
-                <button id="downloadCodeBtn">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                    </svg>
-                    Download File
-                </button>
-            </div>
-            <div class="code-container">
-                <div class="code-display" id="codeDisplay"></div>
-            </div>
+        <div class="code-container">
+          <div class="code-display" id="codeDisplay"></div>
         </div>
+      </div>
     </div>
-</div>
-
-{% include 'snippets/modal_error.html' %}
-
+  </div>
+  {% include "snippets/modal_error.html" %}
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="dmp2json">
-{
-    "endpoint": "{% url 'api:v2:tool-dmp2json' %}"
-}
-</script>
-
-{% if debug %}
-<script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
-<script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
-<script src="{% static 'private/js/vendors/prism-json.min.js' %}"></script>
-{% else %}
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"
-    integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js"
-    integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-<script
-    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-json.min.js"
-    integrity="sha512-QXFMVAusM85vUYDaNgcYeU3rzSlc+bTV4JvkfJhjxSHlQEo+ig53BtnGkvFTiNJh8D+wv6uWAQ2vJaVmxe8d3w=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
-</script>
-{% endif %}
+  <script type="application/json" data-speleodb-controller="dmp2json">
+    {
+      "endpoint": "{% url 'api:v2:tool-dmp2json' %}"
+    }
+  </script>
+  {% if debug %}
+    <script src="{% static 'private/js/vendors/prism.min.js' %}"></script>
+    <script src="{% static 'private/js/vendors/prism-line-numbers.min.js' %}"></script>
+    <script src="{% static 'private/js/vendors/prism-json.min.js' %}"></script>
+  {% else %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" integrity="sha512-HiD3V4nv8fcjtouznjT9TqDNDm1EXngV331YGbfVGeKUoH+OLkRTCMzA34ecjlgSQZpdHZupdSrqHY+Hz3l6uQ==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/plugins/line-numbers/prism-line-numbers.min.js" integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-json.min.js" integrity="sha512-QXFMVAusM85vUYDaNgcYeU3rzSlc+bTV4JvkfJhjxSHlQEo+ig53BtnGkvFTiNJh8D+wv6uWAQ2vJaVmxe8d3w==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+  {% endif %}
 {% endblock inline_extra_js %}

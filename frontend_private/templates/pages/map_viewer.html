@@ -1,277 +1,305 @@
 {% extends "base_private.html" %}
+
 {% load static %}
 {% load vite_assets %}
 
 {% block extra_css %}
-{# Resource hints: warm cross-origin connections on the map load path so the #}
-{# Mapbox style/tiles, raster glyphs and ESRI tiles fetch faster. #}
-<link rel="preconnect" href="https://api.mapbox.com" crossorigin>
-<link rel="preconnect" href="https://fonts.openmaptiles.org" crossorigin>
-<link rel="preconnect" href="https://services.arcgisonline.com">
-<link rel="preconnect" href="https://server.arcgisonline.com">
-<link rel="dns-prefetch" href="https://api.mapbox.com">
-<link rel="dns-prefetch" href="https://fonts.openmaptiles.org">
-<link rel="dns-prefetch" href="https://services.arcgisonline.com">
-<link rel="dns-prefetch" href="https://server.arcgisonline.com">
-<link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css' rel='stylesheet' />
-{% vite_styles 'style-shared-modal' 'style-map-viewer' %}
-{% vite_preload 'controller-private-map' %}
+  {# Resource hints: warm cross-origin connections on the map load path so the #}
+  {# Mapbox style/tiles, raster glyphs and ESRI tiles fetch faster. #}
+  <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.openmaptiles.org" crossorigin />
+  <link rel="preconnect" href="https://services.arcgisonline.com" />
+  <link rel="preconnect" href="https://server.arcgisonline.com" />
+  <link rel="dns-prefetch" href="https://api.mapbox.com" />
+  <link rel="dns-prefetch" href="https://fonts.openmaptiles.org" />
+  <link rel="dns-prefetch" href="https://services.arcgisonline.com" />
+  <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css'
+        rel='stylesheet' />
+  {% vite_styles 'style-shared-modal' 'style-map-viewer' %}
+  {% vite_preload 'controller-private-map' %}
 {% endblock extra_css %}
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Survey Viewer
-                </h1>
-            </div>
-
-            <!-- Right: Actions -->
-            <div id="page-actions" class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
-
-                <!-- Color Mode Toggle: button-sized, explicit label -->
-                <button id="color-mode-button" class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2" type="button">
-                    <label class="toggle-switch m-0">
-                        <input id="color-mode-toggle" type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
-                </button>
-
-                <!-- Landmarks Toggle: button-sized, explicit label -->
-                <button id="landmarks-toggle-button" class="btn bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2" type="button">
-                    <label class="toggle-switch m-0">
-                        <input id="landmarks-toggle" type="checkbox" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="hidden xs:block ml-1">Landmarks</span>
-                </button>
-
-                <!-- Station Management button -->
-                <button id="station-manager-button" class="btn bg-orange-500 hover:bg-orange-600 text-white">
-                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                    <span class="hidden xs:block ml-2">Survey Stations</span>
-                </button>
-
-                <!-- Surface Station Management button -->
-                <button id="surface-station-manager-button" class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
-                    <svg class="w-4 h-4 stroke-current fill-current shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="112.31 64 799.38 896">
-                        <path d="m574 304 4 38a16 16 0 0 1-16 18h-18v122h12c9 0 16 7 16 16v36h103a120 120 0 1 1 0 56H572v76a16 16 0 0 1-16 16h-12v198h39a32 32 0 0 1 32 29l4 42a8 8 0 0 1-8 9H413a8 8 0 0 1-8-9l4-42a32 32 0 0 1 32-29h39V682h-12a16 16 0 0 1-16-16v-76H349a120 120 0 1 1 0-56h103v-36c0-9 7-16 16-16h12V360h-18a16 16 0 0 1-16-18l13-128a16 16 0 0 1 15-14h76c8 0 15 6 15 14l4 34h127l11-177a8 8 0 0 1 8-7h154c4 0 7 3 8 7l14 224a8 8 0 0 1-8 9H574zM232 518a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm560 0a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm32-398h-64l-8 128h80l-8-128z"></path>
-                    </svg>
-                    <span class="hidden xs:block ml-2">Surface Stations</span>
-                </button>
-
-                <!-- Landmark Management button -->
-                <button id="landmark-manager-button" class="btn bg-blue-500 hover:bg-blue-600 text-white">
-                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="2.5 2.5 19 19.01">
-                        <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
-                        <path d="M12 17l-1 -4l-4 -1l9 -4z"></path>
-                    </svg>
-                    <span class="hidden xs:block ml-2">Landmarks</span>
-                </button>
-
-                <!-- Import Data -->
-                <button id="import-data-button" class="btn bg-red-600 hover:bg-red-700 text-white" title="Import GPX, KML, KMZ files (Google Earth)">
-                    <svg class="w-4 h-4 stroke-current fill-none shrink-0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                    </svg>
-                    <span class="hidden xs:block ml-2">Import GPS</span>
-                </button>
-
-            </div>
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Survey Viewer</h1>
         </div>
-        <!-- Table -->
-        <div class="bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700 relative flex flex-col" style="min-height: 600px;">
-            <!-- Map Container -->
-            <div id='map' class="w-full rounded-xs relative" style="flex-grow: 1; height: 100%; width: 100%;"></div>
-
-
-            <!-- Loading Overlay -->
-            <div id="loading-overlay" class="loading-overlay">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Loading Survey Data</div>
-                <div id="loading-progress" class="loading-progress"></div>
-                <div class="loading-subtext">Downloading and processing GeoJSON data...</div>
-            </div>
-
-            <!-- Station Manager Modal -->
-            <div id="station-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
-                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
-                    <div class="flex flex-col">
-                        <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
-                            <h2 class="text-xl font-semibold text-white">SubSurface Survey Stations</h2>
-                            <button id="station-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="flex-1 min-h-0">
-                            <div id="station-manager-content">
-                                <!-- Station Manager content will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Surface Station Manager Modal -->
-            <div id="surface-station-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
-                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
-                    <div class="flex flex-col">
-                        <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
-                            <div class="flex items-center">
-                                <svg class="w-6 h-6 text-emerald-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-                                </svg>
-                                <h2 class="text-xl font-semibold text-white">Surface Station Manager</h2>
-                            </div>
-                            <button id="surface-station-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="flex-1 min-h-0">
-                            <div id="surface-station-manager-content">
-                                <!-- Surface Station Manager content will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Landmark Manager Modal -->
-            <div id="landmark-manager-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
-                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
-                    <div class="flex flex-col">
-                        <!-- Modal Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
-                            <h2 class="text-xl font-semibold text-white">Landmark Manager</h2>
-                            <button id="landmark-manager-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="flex-1 min-h-0">
-                            <div id="landmark-manager-content">
-                                <!-- Landmark Manager content will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Station Details Modal -->
-
-
-            <div id="station-modal" class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-12 overflow-y-auto">
-                <div id="station-modal-container" class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
-                    <div class="flex flex-col">
-                        <!-- Modal Header -->
-                        <div id="station-modal-header" class="flex items-start justify-between p-6 border-b border-slate-600 shrink-0">
-                            <div class="flex-1">
-                                <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
-                                <div class="mt-3">
-                                    <!-- Mobile: Dropdown -->
-                                    <select id="station-tab-select" class="bg-slate-700 text-white rounded-lg p-2 w-full">
-                                        <option value="details">Station Details</option>
-                                        <option value="logs">Journal Entries</option>
-                                        <option value="resources">Station Resources</option>
-                                        <option value="sensor-management">Sensor Management</option>
-                                        <option value="experiments">Experiment Data</option>
-                                    </select>
-                                    <!-- Desktop: Button Tabs -->
-                                    <div id="station-modal-tabs">
-                                        <button class="tab-btn active" data-tab="details">Station Details</button>
-                                        <button class="tab-btn" data-tab="logs">Journal Entries</button>
-                                        <button class="tab-btn" data-tab="resources">Station Resources</button>
-                                        <button class="tab-btn" data-tab="sensor-management">Sensor Management</button>
-                                        <button class="tab-btn" data-tab="experiments">Experiment Data</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button id="station-modal-close" class="text-slate-400 hover:text-white transition-colors shrink-0">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="flex-1">
-                            <div id="station-modal-content">
-                                <!-- Content will be loaded dynamically -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <!-- Right: Actions -->
+        <div id="page-actions"
+             class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+          <!-- Color Mode Toggle: button-sized, explicit label -->
+          <label id="color-mode-button"
+                 for="color-mode-toggle"
+                 class="btn bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-2">
+            <span class="toggle-switch m-0">
+              <input id="color-mode-toggle" aria-label="Color by depth" type="checkbox" />
+              <span class="toggle-slider"></span>
+            </span>
+            <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
+          </label>
+          <!-- Landmarks Toggle: button-sized, explicit label -->
+          <label id="landmarks-toggle-button"
+                 for="landmarks-toggle"
+                 class="btn bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2">
+            <span class="toggle-switch m-0">
+              <input id="landmarks-toggle"
+                     aria-label="Show landmarks"
+                     type="checkbox"
+                     checked />
+              <span class="toggle-slider"></span>
+            </span>
+            <span class="hidden xs:block ml-1">Landmarks</span>
+          </label>
+          <!-- Station Management button -->
+          <button type="button"
+                  id="station-manager-button"
+                  class="btn bg-orange-500 hover:bg-orange-600 text-white">
+            <svg class="w-4 h-4 stroke-current fill-none shrink-0"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 viewBox="0 0 24 24">
+              <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="hidden xs:block ml-2">Survey Stations</span>
+          </button>
+          <!-- Surface Station Management button -->
+          <button type="button"
+                  id="surface-station-manager-button"
+                  class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
+            <svg class="w-4 h-4 stroke-current fill-current shrink-0"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 viewBox="112.31 64 799.38 896">
+              <path d="m574 304 4 38a16 16 0 0 1-16 18h-18v122h12c9 0 16 7 16 16v36h103a120 120 0 1 1 0 56H572v76a16 16 0 0 1-16 16h-12v198h39a32 32 0 0 1 32 29l4 42a8 8 0 0 1-8 9H413a8 8 0 0 1-8-9l4-42a32 32 0 0 1 32-29h39V682h-12a16 16 0 0 1-16-16v-76H349a120 120 0 1 1 0-56h103v-36c0-9 7-16 16-16h12V360h-18a16 16 0 0 1-16-18l13-128a16 16 0 0 1 15-14h76c8 0 15 6 15 14l4 34h127l11-177a8 8 0 0 1 8-7h154c4 0 7 3 8 7l14 224a8 8 0 0 1-8 9H574zM232 518a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm560 0a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm32-398h-64l-8 128h80l-8-128z" />
+            </svg>
+            <span class="hidden xs:block ml-2">Surface Stations</span>
+          </button>
+          <!-- Landmark Management button -->
+          <button type="button"
+                  id="landmark-manager-button"
+                  class="btn bg-blue-500 hover:bg-blue-600 text-white">
+            <svg class="w-4 h-4 stroke-current fill-none shrink-0"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 viewBox="2.5 2.5 19 19.01">
+              <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+              <path d="M12 17l-1 -4l-4 -1l9 -4z" />
+            </svg>
+            <span class="hidden xs:block ml-2">Landmarks</span>
+          </button>
+          <!-- Import Data -->
+          <button type="button"
+                  id="import-data-button"
+                  class="btn bg-red-600 hover:bg-red-700 text-white"
+                  title="Import GPX, KML, KMZ files (Google Earth)">
+            <svg class="w-4 h-4 stroke-current fill-none shrink-0"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span class="hidden xs:block ml-2">Import GPS</span>
+          </button>
         </div>
+      </div>
+      <!-- Table -->
+      <div class="min-h-[600px] bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700 relative flex flex-col">
+        <!-- Map Container -->
+        <div id="map" class="map-canvas grow w-full rounded-xs relative"></div>
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading Survey Data</div>
+          <div id="loading-progress" class="loading-progress"></div>
+          <div class="loading-subtext">Downloading and processing GeoJSON data...</div>
+        </div>
+        <!-- Station Manager Modal -->
+        <div id="station-manager-modal"
+             class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+          <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+            <div class="flex flex-col">
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
+                <h2 class="text-xl font-semibold text-white">SubSurface Survey Stations</h2>
+                <button type="button"
+                        id="station-manager-close"
+                        class="text-slate-400 hover:text-white transition-colors shrink-0">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Modal Content -->
+              <div class="flex-1 min-h-0">
+                <div id="station-manager-content">
+                  <!-- Station Manager content will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Surface Station Manager Modal -->
+        <div id="surface-station-manager-modal"
+             class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+          <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+            <div class="flex flex-col">
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
+                <div class="flex items-center">
+                  <svg class="w-6 h-6 text-emerald-400 mr-3"
+                       fill="none"
+                       stroke="currentColor"
+                       viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  <h2 class="text-xl font-semibold text-white">Surface Station Manager</h2>
+                </div>
+                <button type="button"
+                        id="surface-station-manager-close"
+                        class="text-slate-400 hover:text-white transition-colors shrink-0">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Modal Content -->
+              <div class="flex-1 min-h-0">
+                <div id="surface-station-manager-content">
+                  <!-- Surface Station Manager content will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Landmark Manager Modal -->
+        <div id="landmark-manager-modal"
+             class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-start justify-center p-4 overflow-y-auto">
+          <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+            <div class="flex flex-col">
+              <!-- Modal Header -->
+              <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
+                <h2 class="text-xl font-semibold text-white">Landmark Manager</h2>
+                <button type="button"
+                        id="landmark-manager-close"
+                        class="text-slate-400 hover:text-white transition-colors shrink-0">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Modal Content -->
+              <div class="flex-1 min-h-0">
+                <div id="landmark-manager-content">
+                  <!-- Landmark Manager content will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Station Details Modal -->
+        <div id="station-modal"
+             class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-12 overflow-y-auto">
+          <div id="station-modal-container"
+               class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-6xl min-h-[600px] max-h-none my-8">
+            <div class="flex flex-col">
+              <!-- Modal Header -->
+              <div id="station-modal-header"
+                   class="flex items-start justify-between p-6 border-b border-slate-600 shrink-0">
+                <div class="flex-1">
+                  <h2 id="station-modal-title" class="text-xl font-semibold text-white">Station Details</h2>
+                  <div class="mt-3">
+                    <!-- Mobile: Dropdown -->
+                    <select id="station-tab-select"
+                            class="bg-slate-700 text-white rounded-lg p-2 w-full">
+                      <option value="details">Station Details</option>
+                      <option value="logs">Journal Entries</option>
+                      <option value="resources">Station Resources</option>
+                      <option value="sensor-management">Sensor Management</option>
+                      <option value="experiments">Experiment Data</option>
+                    </select>
+                    <!-- Desktop: Button Tabs -->
+                    <div id="station-modal-tabs">
+                      <button type="button" class="tab-btn active" data-tab="details">Station Details</button>
+                      <button type="button" class="tab-btn" data-tab="logs">Journal Entries</button>
+                      <button type="button" class="tab-btn" data-tab="resources">Station Resources</button>
+                      <button type="button" class="tab-btn" data-tab="sensor-management">Sensor Management</button>
+                      <button type="button" class="tab-btn" data-tab="experiments">Experiment Data</button>
+                    </div>
+                  </div>
+                </div>
+                <button type="button"
+                        id="station-modal-close"
+                        class="text-slate-400 hover:text-white transition-colors shrink-0">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <!-- Modal Content -->
+              <div class="flex-1">
+                <div id="station-modal-content">
+                  <!-- Content will be loaded dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-</main>
-
-<!-- Cylinder Install/Details Modal -->
-<div id="cylinder-modal" class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  </main>
+  <!-- Cylinder Install/Details Modal -->
+  <div id="cylinder-modal"
+       class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
     <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl max-h-[85vh] flex flex-col">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-slate-600 shrink-0">
-            <h2 id="cylinder-modal-title" class="text-xl font-semibold text-white flex items-center gap-3">
-                <img id="cylinder-modal-icon" class="w-6 h-6" crossorigin="anonymous">
-                Safety Cylinder
-            </h2>
-            <button id="cylinder-modal-close" class="text-slate-400 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-
-        <!-- Modal Content - Scrollable -->
-        <div id="cylinder-modal-content" class="flex-1 overflow-y-auto p-6">
-            <!-- Content will be loaded dynamically -->
-        </div>
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-4 border-b border-slate-600 shrink-0">
+        <h2 id="cylinder-modal-title"
+            class="text-xl font-semibold text-white flex items-center gap-3">
+          <img alt=""
+               id="cylinder-modal-icon"
+               class="w-6 h-6"
+               crossorigin="anonymous" />
+          Safety Cylinder
+        </h2>
+        <button type="button"
+                id="cylinder-modal-close"
+                class="text-slate-400 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <!-- Modal Content - Scrollable -->
+      <div id="cylinder-modal-content" class="flex-1 overflow-y-auto p-6">
+        <!-- Content will be loaded dynamically -->
+      </div>
     </div>
-</div>
-
-<!-- Context Menu (outside main for proper fixed positioning) -->
-<div id="context-menu" class="context-menu">
+  </div>
+  <!-- Context Menu (outside main for proper fixed positioning) -->
+  <div id="context-menu" class="context-menu">
     <!-- Menu items will be populated dynamically -->
-</div>
-
-{% include 'snippets/modal_data_import.html' %}
+  </div>
+  {% include "snippets/modal_data_import.html" %}
 {% endblock content %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
-<script src='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js'></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="private-map">
-{
-    "csrfToken": "{{ csrf_token|escapejs }}",
-    "mapboxToken": "{{ mapbox_api_token|escapejs }}",
-    "icons": {
+  <script type="application/json" data-speleodb-controller="private-map">
+    {
+      "csrfToken": "{{ csrf_token|escapejs }}",
+      "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+      "icons": {
         "cylinderOrange": "{% static 'private/media/cylinder-orange-icon.png' %}",
         "explorationLead": "{% static 'private/media/exploration-lead-icon.png' %}",
         "artifact": "{% static 'private/media/artifact-icon.png' %}",
@@ -279,7 +307,7 @@
         "biology": "{% static 'private/media/fish-icon.png' %}",
         "geology": "{% static 'private/media/rock-icon.png' %}",
         "sensor": "{% static 'private/media/sensor-icon.png' %}"
+      }
     }
-}
-</script>
+  </script>
 {% endblock inline_extra_js %}

@@ -1,118 +1,102 @@
 {% extends "pages/tools/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{% vite_preload 'controller-xls2dmp' %}
-{{ block.super }}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-tools-xls2dmp' %}
+  {% vite_preload 'controller-xls2dmp' %}
+  {{ block.super }}
+  {% vite_styles 'style-template-frontend-private-templates-pages-tools-xls2dmp' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<div class="grow">
+  <div class="grow">
     <div class="p-6">
-        <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Ariane DMP</h2>
-        <p class="lead">
-            <b>Instructions:</b>
-            <ul class="instructions">
-                <li>Use the Google Sheet Template below to prepare the data</li>
-                <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
-                <li>You can add or remove rows, however columns are fixed</li>
-                <li>Click "<span class="text-orange-300">Download as DMP</span>" when you're done</li>
-                <li>Load the DMP into Ariane as if it was coming from the Mnemo</li>
-            </ul>
-        </p>
-
-        <div class="my-4">
-            <b>Please use the following:</b>
-                <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing"
-                   class="text-orange-500 underline"
-                   target="_blank"
-                >
-                    Google Spreadsheet Template
-                </a>
+      <h2 class="text-2xl text-slate-100 font-bold mb-5">Tool: Excel to Ariane DMP</h2>
+      <div class="lead">
+        <b>Instructions:</b>
+        <ul class="instructions">
+          <li>Use the Google Sheet Template below to prepare the data</li>
+          <li>Use the "<span class="text-orange-300">Paste Excel</span>" button to copy the data into the table</li>
+          <li>You can add or remove rows, however columns are fixed</li>
+          <li>Click "<span class="text-orange-300">Download as DMP</span>" when you're done</li>
+          <li>Load the DMP into Ariane as if it was coming from the Mnemo</li>
+        </ul>
+      </div>
+      <div class="my-4">
+        <b>Please use the following:</b>
+        <a href="https://docs.google.com/spreadsheets/d/15DwmV2-78g58LDbnx8cHAONfx2Gj_bqRMJxjDBLkJB0/edit?usp=sharing"
+           class="text-orange-500 underline"
+           target="_blank">Google Spreadsheet Template</a>
+      </div>
+      <div class="my-4 text-orange-300">
+        <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="form-controls mt-6">
+        <div class="form-group text-center">
+          <label for="surveyDate">Survey Date</label>
+          <input type="date" id="surveyDate" class="date-input" />
         </div>
-
-        <div class="my-4 text-orange-300">
-            <b>Note:</b> This tool <b class="underline">does not</b> store any of the data sent. Please back up your data and result.
+        <div class="form-group text-center">
+          <label>Survey Units</label>
+          <div class="unit-toggle">
+            <span class="unit-label" id="metersLabel">Meters</span>
+            <label class="switch">
+              <input type="checkbox" id="unitSwitch" checked />
+              <span class="slider"></span>
+            </label>
+            <span class="unit-label active" id="feetLabel">Feet</span>
+          </div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="form-controls mt-6">
-
-            <div class="form-group text-center">
-                <label for="surveyDate">Survey Date</label>
-                <input type="date" id="surveyDate" class="date-input">
-            </div>
-
-            <div class="form-group text-center">
-                <label>Survey Units</label>
-                <div class="unit-toggle">
-                    <span class="unit-label" id="metersLabel">Meters</span>
-                    <label class="switch">
-                        <input type="checkbox" id="unitSwitch" checked>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="unit-label active" id="feetLabel">Feet</span>
-                </div>
-            </div>
-
-            <div class="form-group text-center">
-                <label>Survey Direction</label>
-                <div class="unit-toggle">
-                    <span class="unit-label active" id="inLabel">In</span>
-                    <label class="switch">
-                        <input type="checkbox" id="directionSwitch">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="unit-label" id="outLabel">Out</span>
-                </div>
-            </div>
+        <div class="form-group text-center">
+          <label>Survey Direction</label>
+          <div class="unit-toggle">
+            <span class="unit-label active" id="inLabel">In</span>
+            <label class="switch">
+              <input type="checkbox" id="directionSwitch" />
+              <span class="slider"></span>
+            </label>
+            <span class="unit-label" id="outLabel">Out</span>
+          </div>
         </div>
-
-        <hr class="border-slate-600 mt-6">
-
-        <div class="controls my-6">
-            <button class="tool-action" id="addRowBtn">Add Row</button>
-            <button class="tool-action" id="clearBtn">Clear All</button>
-            <button class="tool-action" id="pasteExcelBtn">Paste Excel</button>
-            <button class="tool-action" id="downloadBtn">Download as DMP</button>
-            <div class="spinner" id="downloadSpinner"></div>
-            <div id="status" style="margin-left:12px;"></div>
-        </div>
-
-        {% csrf_token %}
-
-        <div style="overflow:auto;max-height:520px;border:1px solid #eef6ff;border-radius:8px">
-            <table class="text-slate-800 text-center" id="dataTable">
-                <thead>
-                    <tr>
-                        <th>Station #</th>
-                        <th>Station Depth</th>
-                        <th>Shot Length</th>
-                        <th>Shot Azimuth</th>
-                        <th>Left</th>
-                        <th>Right</th>
-                        <th>Up</th>
-                        <th>Down</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+      </div>
+      <hr class="border-slate-600 mt-6" />
+      <div class="controls my-6">
+        <button type="button" class="tool-action" id="addRowBtn">Add Row</button>
+        <button type="button" class="tool-action" id="clearBtn">Clear All</button>
+        <button type="button" class="tool-action" id="pasteExcelBtn">Paste Excel</button>
+        <button type="button" class="tool-action" id="downloadBtn">Download as DMP</button>
+        <div class="spinner" id="downloadSpinner"></div>
+        <div class="ml-3" id="status"></div>
+      </div>
+      {% csrf_token %}
+      <div class="overflow-auto max-h-[520px] border border-[#eef6ff] rounded-[8px]">
+        <table class="text-slate-800 text-center" id="dataTable">
+          <thead>
+            <tr>
+              <th>Station #</th>
+              <th>Station Depth</th>
+              <th>Shot Length</th>
+              <th>Shot Azimuth</th>
+              <th>Left</th>
+              <th>Right</th>
+              <th>Up</th>
+              <th>Down</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
-<div id="loading_spinner" class="loading" style="display:none;"></div>
-
-{% include 'snippets/modal_error.html' %}
+  </div>
+  <div id="loading_spinner" class="initially-hidden loading"></div>
+  {% include "snippets/modal_error.html" %}
 {% endblock right_panel %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="xls2dmp">
-{
-    "endpoint": "{% url 'api:v2:tool-xls2dmp' %}"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="xls2dmp">
+    {
+      "endpoint": "{% url 'api:v2:tool-xls2dmp' %}"
+    }
+  </script>
 {% endblock inline_extra_js %}

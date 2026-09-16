@@ -1,95 +1,92 @@
 {% extends "pages/user/base.html" %}
+
 {% load static vite_assets %}
 
 {% block extra_css %}
-{{ block.super }}
-{% vite_preload 'controller-feedback' %}
-
-{% vite_styles 'style-template-frontend-private-templates-pages-user-feedback' %}
+  {{ block.super }}
+  {% vite_preload 'controller-feedback' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-user-feedback' %}
 {% endblock extra_css %}
-
 {% block right_panel %}
-<!-- Panel -->
-<div class="grow">
-
-    <form id="feedback_form" autocomplete="off" method="POST">
-
-        <!-- Panel body -->
-        <div class="p-6 flow-y-6">
-            <div>
-                <h2 class="text-2xl text-slate-100 font-bold mb-4">Give Feedback</h2>
-                <div class="text-sm">Our product depends on customer feedback to improve the overall experience!</div>
-            </div>
-
-            <input type="hidden" name="email" value="{{ user.email }}"/>
-
-            <!-- Score -->
-            <section>
-                <h3 class="text-xl leading-snug text-slate-100 font-bold mb-6">How likely would you recommend us to a friend or colleague?</h3>
-                <div class="w-full max-w-xl">
-                    <div class="relative">
-                        <div class="absolute left-0 top-1/2 -mt-px w-full h-0.5 bg-slate-700" aria-hidden="true"></div>
-
-                        <input type="hidden" name="score" value="3"/>
-
-                        <ul class="relative flex justify-between w-full">
-                            <li class="flex">
-                                <span data-score="1" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
-                            </li>
-                            <li class="flex">
-                                <span data-score="2" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
-                            </li>
-                            <li class="flex">
-                                <span data-score="3" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-indigo-500 border-indigo-500"></span>
-                            </li>
-                            <li class="flex">
-                                <span data-score="4" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
-                            </li>
-                            <li class="flex">
-                                <span data-score="5" class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="w-full flex justify-between text-sm text-slate-400 italic mt-3">
-                        <div>Not at all</div>
-                        <div style="margin-left: 2.65rem;">Not sure</div>
-                        <div>Extremely likely</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Tell us in words -->
-            <section>
-                <h3 class="text-xl leading-snug text-slate-100 font-bold mb-5">What's on your mind ?</h3>
-                <!-- Form -->
-                <label class="sr-only" for="feedback">Leave a feedback</label>
-                <textarea id="feedback" name="feedback" class="form-textarea w-full focus:border-slate-300" rows="4" placeholder="I really enjoy/dislike …"></textarea>
-            </section>
-
+  <!-- Panel -->
+  <div class="grow">
+    <form id="feedback_form" autocomplete="off" method="post">
+      <!-- Panel body -->
+      <div class="p-6 flow-y-6">
+        <div>
+          <h2 class="text-2xl text-slate-100 font-bold mb-4">Give Feedback</h2>
+          <div class="text-sm">Our product depends on customer feedback to improve the overall experience!</div>
         </div>
-
-        <!-- Panel footer -->
-        <footer>
-            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                <div class="flex self-end">
-                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
-                </div>
+        <input type="hidden" name="email" value="{{ user.email }}" />
+        <!-- Score -->
+        <section>
+          <h3 class="text-xl leading-snug text-slate-100 font-bold mb-6">How likely would you recommend us to a friend or colleague?</h3>
+          <div class="w-full max-w-xl">
+            <div class="relative">
+              <div class="absolute left-0 top-1/2 -mt-px w-full h-0.5 bg-slate-700"
+                   aria-hidden="true"></div>
+              <input type="hidden" name="score" value="3" />
+              <ul class="relative flex justify-between w-full">
+                <li class="flex">
+                  <span data-score="1"
+                        class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                </li>
+                <li class="flex">
+                  <span data-score="2"
+                        class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                </li>
+                <li class="flex">
+                  <span data-score="3"
+                        class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-indigo-500 border-indigo-500"></span>
+                </li>
+                <li class="flex">
+                  <span data-score="4"
+                        class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                </li>
+                <li class="flex">
+                  <span data-score="5"
+                        class="feedback_score cursor-pointer w-3 h-3 rounded-full border-2 bg-slate-800 border-slate-500"></span>
+                </li>
+              </ul>
             </div>
-        </footer>
-
+            <div class="w-full flex justify-between text-sm text-slate-400 italic mt-3">
+              <div>Not at all</div>
+              <div class="ml-[2.65rem]">Not sure</div>
+              <div>Extremely likely</div>
+            </div>
+          </div>
+        </section>
+        <!-- Tell us in words -->
+        <section>
+          <h3 class="text-xl leading-snug text-slate-100 font-bold mb-5">What's on your mind ?</h3>
+          <!-- Form -->
+          <label class="sr-only" for="feedback">Leave a feedback</label>
+          <textarea id="feedback"
+                    name="feedback"
+                    class="form-textarea w-full focus:border-slate-300"
+                    rows="4"
+                    placeholder="I really enjoy/dislike …"></textarea>
+        </section>
+      </div>
+      <!-- Panel footer -->
+      <footer>
+        <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+          <div class="flex self-end">
+            <button type="submit"
+                    id="btn_submit"
+                    class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Submit</button>
+          </div>
+        </div>
+      </footer>
     </form>
-
-    {% include 'snippets/modal_success.html' %}
-    {% include 'snippets/modal_error.html' %}
-
-</div>
+    {% include "snippets/modal_success.html" %}
+    {% include "snippets/modal_error.html" %}
+  </div>
 {% endblock right_panel %}
-
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="feedback">
-{
-    "endpoint": "https://formspree.io/f/moveleyo"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="feedback">
+    {
+      "endpoint": "https://formspree.io/f/moveleyo"
+    }
+  </script>
 {% endblock inline_extra_js %}

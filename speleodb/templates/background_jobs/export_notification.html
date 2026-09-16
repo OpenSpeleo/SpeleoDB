@@ -1,25 +1,29 @@
 {% load tz %}
+
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="color-scheme" content="dark" />
-        <meta name="darkreader-lock" />
-        <title>{{ subject }}</title>
-    </head>
-    <!-- Email clients require inline presentation styles. -->
-    {# djlint:off H021 #}
-    <body style="background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; padding: 24px;">
-        <h1>{{ subject }}</h1>
-        <p>{{ message }}</p>
-        {% if has_artifact %}
-            <p><strong>Archive:</strong> {{ filename }}</p>
-            <p><strong>Size:</strong> {{ size_bytes|filesizeformat }} ({{ size_bytes }} bytes)</p>
-            <p><strong>Available until:</strong> {{ expires_at|timezone:"UTC"|date:"Y-m-d H:i" }} UTC.</p>
-        {% endif %}
-        <p><a href="{{ url }}" style="color: #a5b4fc;">Sign in to your account</a></p>
-        <p>Downloads require login and are available for 24 hours after generation completes.</p>
-    </body>
-    {# djlint:on H021 #}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <title>{{ subject }}</title>
+  </head>
+  <!-- Email clients require inline presentation styles. -->
+  {# djlint:off H021 #}
+  <body style="background-color: #0f172a;
+               color: #e2e8f0;
+               font-family: sans-serif;
+               padding: 24px">
+    <h1>{{ subject }}</h1>
+    <p>{{ message }}</p>
+    {% if has_artifact %}
+      <p><strong>Archive:</strong> {{ filename }}</p>
+      <p><strong>Size:</strong> {{ size_bytes|filesizeformat }} ({{ size_bytes }} bytes)</p>
+      <p><strong>Available until:</strong> {{ expires_at|timezone:"UTC"|date:"Y-m-d H:i" }} UTC.</p>
+    {% endif %}
+    <p><a href="{{ url }}" style="color: #a5b4fc;">Sign in to your account</a></p>
+    <p>Downloads require login and are available for 24 hours after generation completes.</p>
+  </body>
+  {# djlint:on H021 #}
 </html>

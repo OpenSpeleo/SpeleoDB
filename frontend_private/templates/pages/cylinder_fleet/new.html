@@ -1,93 +1,88 @@
 {% extends "base_private.html" %}
+
 {% load static vite_assets %}
 
-{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
-
+{% block extra_css %}
+  {% vite_preload 'controller-entity-crud' %}
+{% endblock extra_css %}
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Create a new Cylinder Fleet
-                </h1>
-            </div>
-
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Create a new Cylinder Fleet</h1>
         </div>
-
-        <!-- Cylinder Fleet Details -->
-        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
-            <div class="flex flex-col md:flex-row md:-mr-px">
-                <div class="grow">
-
-                    <form id="new_cylinder_fleet_form" autocomplete="off">
-
-                        {% csrf_token %}
-
-                        <!-- Panel body -->
-                        <div class="p-6 flow-y-6">
-
-                            <!-- Fleet Name & Description -->
-                            <section>
-                                <h2 class="text-xl text-slate-100 font-bold mb-4">Fleet Information</h2>
-
-                                <div class="flex flex-wrap mt-5 gap-4">
-                                    <div class="w-full lg:flex-1">
-                                        <label class="block text-sm font-medium mb-1" for="name">Fleet Name:<span class="text-rose-600"> *</span></label>
-                                        <input id="name" name="name" class="form-input max-w-full w-full" type="text" placeholder="e.g., Safety Cylinders - Wakulla" />
-                                    </div>
-                                </div>
-
-                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                                    <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="description">Description:</label>
-                                        <textarea id="description" name="description" class="form-textarea max-w-full w-full focus:border-slate-300" rows="4" placeholder="Optional description of the cylinder fleet"></textarea>
-                                    </div>
-                                </div>
-                            </section>
-
-                        </div>
-
-                        <!-- Panel footer -->
-                        <footer>
-                            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                                <div class="flex self-end">
-                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300" href="{% url 'private:cylinder_fleets' %}">Cancel</a>
-                                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Create Fleet</button>
-                                </div>
-                            </div>
-                        </footer>
-
-                    </form>
-
-                    {% include 'snippets/modal_success.html' %}
-                    {% include 'snippets/modal_error.html' %}
-
+      </div>
+      <!-- Cylinder Fleet Details -->
+      <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
+        <div class="flex flex-col md:flex-row md:-mr-px">
+          <div class="grow">
+            <form id="new_cylinder_fleet_form" autocomplete="off">
+              {% csrf_token %}
+              <!-- Panel body -->
+              <div class="p-6 flow-y-6">
+                <!-- Fleet Name & Description -->
+                <section>
+                  <h2 class="text-xl text-slate-100 font-bold mb-4">Fleet Information</h2>
+                  <div class="flex flex-wrap mt-5 gap-4">
+                    <div class="w-full lg:flex-1">
+                      <label class="block text-sm font-medium mb-1"
+                             for="name">Fleet Name:<span class="text-rose-600"> *</span></label>
+                      <input id="name"
+                             name="name"
+                             class="form-input max-w-full w-full"
+                             type="text"
+                             placeholder="e.g., Safety Cylinders - Wakulla" />
+                    </div>
+                  </div>
+                  <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+                    <div class="w-full">
+                      <label class="block text-sm font-medium mb-1" for="description">Description:</label>
+                      <textarea id="description"
+                                name="description"
+                                class="form-textarea max-w-full w-full focus:border-slate-300"
+                                rows="4"
+                                placeholder="Optional description of the cylinder fleet"></textarea>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <!-- Panel footer -->
+              <footer>
+                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                  <div class="flex self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+                       href="{% url 'private:cylinder_fleets' %}">Cancel</a>
+                    <button type="submit"
+                            id="btn_submit"
+                            class="btn bg-indigo-500 hover:bg-indigo-600 text-white ml-3">Create Fleet</button>
+                  </div>
                 </div>
-            </div>
+              </footer>
+            </form>
+            {% include "snippets/modal_success.html" %}
+            {% include "snippets/modal_error.html" %}
+          </div>
         </div>
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}
-
 {% block extra_js %}
-<script src="{% url 'url_reverse.js' %}"></script>
+  <script src="{% url 'url_reverse.js' %}"></script>
 {% endblock extra_js %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="entity-crud">
-{
-    "formId": "new_cylinder_fleet_form",
-    "endpoint": "{% url 'api:v2:cylinder-fleets' %}",
-    "method": "POST",
-    "successMessage": "The cylinder fleet has been created successfully.",
-    "requiredField": "name",
-    "requiredMessage": "Fleet name is required.",
-    "redirectRoute": "private:cylinder_fleet_details"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="entity-crud">
+    {
+      "formId": "new_cylinder_fleet_form",
+      "endpoint": "{% url 'api:v2:cylinder-fleets' %}",
+      "method": "POST",
+      "successMessage": "The cylinder fleet has been created successfully.",
+      "requiredField": "name",
+      "requiredMessage": "Fleet name is required.",
+      "redirectRoute": "private:cylinder_fleet_details"
+    }
+  </script>
 {% endblock inline_extra_js %}

@@ -1,4 +1,4 @@
-exclude: "^bin/|/migrations/|.*.html|.*.dist|.workdir/|.uv/|.venv/"
+exclude: "^bin/|/migrations/|.*.dist|.workdir/|.uv/|.venv/"
 
 default_language_version:
   python: python3.14

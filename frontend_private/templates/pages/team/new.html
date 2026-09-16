@@ -1,109 +1,103 @@
 {% extends "base_private.html" %}
+
 {% load static vite_assets %}
 
-{% block extra_css %}{% vite_preload 'controller-entity-crud' %}{% endblock extra_css %}
-
+{% block extra_css %}
+  {% vite_preload 'controller-entity-crud' %}
+{% endblock extra_css %}
 {% load countries %}
 {% load survey_formats %}
 {% load visibility_scopes %}
 
-
 {% block content %}
-<main class="grow">
+  <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
-
-        <!-- Page header -->
-        <div class="sm:flex sm:justify-between sm:items-center mb-8">
-
-            <!-- Left: Title -->
-            <div class="mb-4 sm:mb-0">
-                <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">
-                    Create a new Team
-                </h1>
-            </div>
-
+      <!-- Page header -->
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <!-- Left: Title -->
+        <div class="mb-4 sm:mb-0">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Create a new Team</h1>
         </div>
-
-        <!-- Team Details -->
-        <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
-            <div class="flex flex-col md:flex-row md:-mr-px">
-                <div class="grow">
-
-                    <form id="new_team_form" autocomplete="off">
-
-                        {% csrf_token %}
-
-                        <!-- Panel body -->
-                        <div class="p-6 flow-y-6">
-
-                            <!-- Team Name -->
-                            <section>
-                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                                    <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="name">Team Name:<span class="text-rose-600"> *</span></label>
-                                        <input id="name" name="name" class="form-input w-full" type="text" />
-                                    </div>
-                                </div>
-                            </section>
-
-                            <!-- Description -->
-                            <section>
-                                <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
-                                    <div class="w-full">
-                                        <label class="block text-sm font-medium mb-1" for="description">Description:<span class="text-rose-600"> *</span></label>
-                                        <textarea id="description" name="description" class="form-textarea w-full focus:border-slate-300" rows="4"></textarea>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <!-- Country -->
-                            <section>
-                                <div class="mt-5">
-                                    <div class="w-full max-w-full">
-                                        <label class="block text-sm font-medium mb-1" for="country">Country:<span class="text-rose-600"> *</span></label>
-                                        <select id="country" name="country" class="form-select w-full text-base leading-6" style="max-width: 100%;">
-                                            <option disabled selected value>Select an option...</option>
-                                        {% get_countries as countries %}
-                                        {% for country in countries %}
-                                        <option value="{{ country.code }}">{{ country.name }}</option>
-                                        {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </section>
-
-                        </div>
-
-                        <!-- Panel footer -->
-                        <footer>
-                            <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
-                                <div class="flex flex-col sm:flex-row gap-4 sm:self-end">
-                                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300 w-full sm:w-auto" href="{% url 'private:teams' %}">Cancel</a>
-                                    <button id="btn_submit" class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto shadow-lg">Save Changes</button>
-                                </div>
-                            </div>
-                        </footer>
-
-                    </form>
-
-                    {% include 'snippets/modal_success.html' %}
-                    {% include 'snippets/modal_error.html' %}
-
+      </div>
+      <!-- Team Details -->
+      <div class="bg-slate-800 shadow-lg rounded-xs mb-8">
+        <div class="flex flex-col md:flex-row md:-mr-px">
+          <div class="grow">
+            <form id="new_team_form" autocomplete="off">
+              {% csrf_token %}
+              <!-- Panel body -->
+              <div class="p-6 flow-y-6">
+                <!-- Team Name -->
+                <section>
+                  <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+                    <div class="w-full">
+                      <label class="block text-sm font-medium mb-1"
+                             for="name">Team Name:<span class="text-rose-600"> *</span></label>
+                      <input id="name" name="name" class="form-input w-full" type="text" />
+                    </div>
+                  </div>
+                </section>
+                <!-- Description -->
+                <section>
+                  <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
+                    <div class="w-full">
+                      <label class="block text-sm font-medium mb-1"
+                             for="description">Description:<span class="text-rose-600"> *</span></label>
+                      <textarea id="description"
+                                name="description"
+                                class="form-textarea w-full focus:border-slate-300"
+                                rows="4"></textarea>
+                    </div>
+                  </div>
+                </section>
+                <!-- Country -->
+                <section>
+                  <div class="mt-5">
+                    <div class="w-full max-w-full">
+                      <label class="block text-sm font-medium mb-1"
+                             for="country">Country:<span class="text-rose-600"> *</span></label>
+                      <select id="country"
+                              name="country"
+                              class="form-select w-full max-w-full text-base leading-6">
+                        <option disabled selected value>Select an option...</option>
+                        {% get_countries as countries %}
+                        {% for country in countries %}
+                          <option value="{{ country.code }}">{{ country.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <!-- Panel footer -->
+              <footer>
+                <div class="flex flex-col px-6 py-5 border-t border-slate-200 border-slate-700">
+                  <div class="flex flex-col sm:flex-row gap-4 sm:self-end">
+                    <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300 w-full sm:w-auto"
+                       href="{% url 'private:teams' %}">Cancel</a>
+                    <button type="submit"
+                            id="btn_submit"
+                            class="btn bg-indigo-500 hover:bg-indigo-600 text-white w-full sm:w-auto shadow-lg">Save Changes</button>
+                  </div>
                 </div>
-            </div>
+              </footer>
+            </form>
+            {% include "snippets/modal_success.html" %}
+            {% include "snippets/modal_error.html" %}
+          </div>
         </div>
+      </div>
     </div>
-</main>
+  </main>
 {% endblock content %}
-
 {% block inline_extra_js %}
-<script type="application/json" data-speleodb-controller="entity-crud">
-{
-    "formId": "new_team_form",
-    "endpoint": "{% url 'api:v2:teams' %}",
-    "method": "POST",
-    "successMessage": "The team has been created.",
-    "successRedirect": "{% url 'private:teams' %}"
-}
-</script>
+  <script type="application/json" data-speleodb-controller="entity-crud">
+    {
+      "formId": "new_team_form",
+      "endpoint": "{% url 'api:v2:teams' %}",
+      "method": "POST",
+      "successMessage": "The team has been created.",
+      "successRedirect": "{% url 'private:teams' %}"
+    }
+  </script>
 {% endblock inline_extra_js %}
