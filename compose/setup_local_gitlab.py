@@ -77,6 +77,21 @@ class PythonGitLabClient:
         group = self.admin.groups.create({"name": group_name, "path": group_name})
         return {"id": group.id, "name": group.name}
 
+    def configure_test_group(self, group_id: str) -> None:
+        """Allow disposable test repositories to reset their Git history."""
+        self.admin.groups.update(
+            group_id,
+            {
+                "default_branch_protection_defaults": {
+                    "allowed_to_push": [{"access_level": AccessLevel.DEVELOPER}],
+                    "allowed_to_merge": [{"access_level": AccessLevel.DEVELOPER}],
+                    "allow_force_push": True,
+                    "code_owner_approval_required": False,
+                    "developer_can_initial_push": False,
+                }
+            },
+        )
+
     def token_can_access_group(self, group_id: str, token: str) -> bool:
         try:
             self._connect(token).groups.get(group_id)
@@ -314,12 +329,14 @@ def main() -> None:
         current_token=current_env.get("GITLAB_TOKEN"),
     )
     current_test_env = read_env_file(arguments.test_env_file)
+    test_client: PythonGitLabClient = PythonGitLabClient(base_url, bootstrap_token)
     test_result = provision_gitlab(
-        PythonGitLabClient(base_url, bootstrap_token),
+        test_client,
         group_name=test_group_name,
         token_name=test_token_name,
         current_token=current_test_env.get("GITLAB_TOKEN"),
     )
+    test_client.configure_test_group(test_result.group_id)
     env_changed = update_env_file(
         arguments.env_file,
         {

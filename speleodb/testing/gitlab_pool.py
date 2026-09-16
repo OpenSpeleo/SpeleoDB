@@ -135,41 +135,23 @@ class GitlabPool:
         with creation_allocation(
             ALLOCATION_NAMES[role], credentials.group_id, str(slot.project_id)
         ):
-            remote: RemoteProject = client.projects.create(
-                {
-                    "name": PROJECT_NAMES[role],
-                    "path": str(slot.project_id),
-                    "namespace_id": credentials.group_id,
-                    "visibility": "private",
-                    "builds_access_level": "disabled",
-                    "merge_requests_access_level": "disabled",
-                }
+            repository: GitRepo | None = GitlabManager.create_or_clone_project(
+                self.model(role), base_dir=self._directory.name
             )
+        assert repository is not None, "GitLab pool initialization failed"
+        with repository:
+            slot.baseline_sha = repository.head.commit.hexsha
+            slot.branch = repository.active_branch.name
+        remote: RemoteProject = client.projects.get(
+            f"{credentials.group_name}/{slot.project_id}"
+        )
         slot.remote_id = int(remote.id)
-        slot.branch = str(settings.DJANGO_GIT_BRANCH_NAME)
-        directory: Path = Path(self._directory.name) / str(slot.project_id)
-        repository: GitRepo = GitRepo.init(directory)
-        try:
-            repository.git.symbolic_ref("HEAD", f"refs/heads/{slot.branch}")
-            repository.create_remote("origin", credentials.project_url(slot.project_id))
-            sha: str | None = repository.commit_and_push_project(
-                message=settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE,
-                author_name="SpeleoDB CI",
-                author_email=f"{slot.project_id}@ci.example.test",
-                force_empty_commit=True,
-            )
-            assert sha is not None
-            slot.baseline_sha = sha
-        finally:
-            repository.close()
         for branch in remote.protectedbranches.list(get_all=True):
             branch.delete()
+        remote.builds_access_level = "disabled"
+        remote.merge_requests_access_level = "disabled"
         remote.default_branch = slot.branch
         remote.save()
-        baselines: list[str] = [
-            item.baseline_sha for item in self.slots.values() if item.baseline_sha
-        ]
-        assert len(baselines) == len(set(baselines))
 
     def release(self) -> None:
         """Restore only borrowed slots, including after a failing test."""

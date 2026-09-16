@@ -324,6 +324,16 @@ def test_real_setup_cli_provisions_isolated_dev_and_test_resources(
     assert development["GITLAB_GROUP_NAME"] == dev_name
     assert testing["GITLAB_GROUP_NAME"] == test_name
     assert development["GITLAB_GROUP_ID"] != testing["GITLAB_GROUP_ID"]
+    test_group_defaults: dict[str, Any] = client.admin.groups.get(
+        testing["GITLAB_GROUP_ID"]
+    ).default_branch_protection_defaults
+    assert test_group_defaults == {
+        "allowed_to_push": [{"access_level": 30}],
+        "allowed_to_merge": [{"access_level": 30}],
+        "allow_force_push": True,
+        "code_owner_approval_required": False,
+        "developer_can_initial_push": False,
+    }
     separate_credentials: bool = development["GITLAB_TOKEN"] != testing["GITLAB_TOKEN"]
     assert separate_credentials
     for values in (development, testing):

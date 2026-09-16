@@ -1,5 +1,34 @@
 # Task reviews
 
+## Local GitLab stale branch-protection cache
+
+Diagnosed an empty protection-rule list with a stale `protected=true` result in
+local GitLab 18.7. Invalidating only the affected project's cache restored
+branch push authorization. Local bootstrap now configures unprotected default
+branches on the dedicated test group, avoiding the initial protection/deletion
+transition for disposable repositories. Normal UUID-based manager provisioning
+is retained.
+
+The focused container run passed 52 tests with four skips, including all
+reported uploads, lease restoration, and real repeated bootstrap. Audit: four
+creations and POSTs, zero violations or unresolved outcomes, and verified
+cleanup for all four repositories. Ruff, formatting, combined mypy, and diff
+checks pass. See [the review](todos/gitlab-protected-push.md).
+
+## Reuse production GitLab repository provisioning
+
+Removed the pool's custom remote naming, Git initialization, and commit
+authorship. It now delegates to `GitlabManager.create_or_clone_project()`, using
+ordinary UUID names and initial commits. This fixes the supplied CI job's
+duplicate-name HTTP 400 failures without adding another fixture-specific
+provisioning path.
+
+The full Python suite passed 4,568 tests with 178 skips inside the existing
+container. Audit: nine creations, ten POSTs, zero violations or unresolved
+outcomes, and verified deletion marks for all nine repositories. Focused tests,
+Ruff, formatting, mypy, and diff checks pass. See
+[the review](todos/ci-gitlab-project-names.md).
+
 ## CI dashboard and dark document assertions
 
 Updated stale inline-style assertions to check dashboard utility classes and

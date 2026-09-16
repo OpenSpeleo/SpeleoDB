@@ -265,9 +265,8 @@ def test_canonical_factory_rejects_identity_overrides(
 
 
 @pytest.mark.skip_if_lighttest
-def test_live_roles_have_distinct_empty_initial_commits() -> None:
+def test_live_roles_use_uuid_repositories_with_standard_initial_commits() -> None:
     pool: GitlabPool = get_pool()
-    hashes: set[str] = set()
     remote_ids: set[int] = set()
     for role in PROJECT_NAMES:
         project: Project = canonical_project(role)
@@ -278,15 +277,20 @@ def test_live_roles_have_distinct_empty_initial_commits() -> None:
             )
             assert list(repository.head.commit.tree) == []
             assert len(list(repository.iter_commits())) == 1
-            hashes.add(repository.head.commit.hexsha)
-            ProjectCommitFactory.create(
-                id=repository.head.commit.hexsha, project=project
+            assert repository.head.commit.author.name == (
+                settings.DJANGO_GIT_COMMITTER_NAME
             )
+            assert repository.head.commit.author.email == (
+                settings.DJANGO_GIT_COMMITTER_EMAIL
+            )
+            assert repository.head.commit.hexsha == pool.slots[role].baseline_sha
         remote_id: int | None = pool.slots[role].remote_id
         assert remote_id is not None
         remote_ids.add(remote_id)
+        remote: RemoteProject = pool.client.projects.get(remote_id)
+        assert remote.name == remote.path == str(project.id)
+        assert project.name == PROJECT_NAMES[role]
 
-    assert len(hashes) == len(PROJECT_NAMES)
     assert len(remote_ids) == len(PROJECT_NAMES)
 
 

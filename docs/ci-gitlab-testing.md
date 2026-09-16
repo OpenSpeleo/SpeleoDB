@@ -32,11 +32,15 @@ tests reuse four repositories with fresh UUIDs for each invocation:
 
 `speleodb/testing/gitlab_pool.py` owns the identifiers, remote client, initial
 commit SHAs, leases, and final cleanup. It retains no session-scoped Django
-model instances. `canonical_user()` and `canonical_project()` materialize
-database rows inside the requesting test's transaction, including after
-`TransactionTestCase` flushes. Database-only tests do not contact GitLab.
-`project_matrix()` explicitly creates the complete A/B ownership and permission
-matrix.
+model instances. Provisioning delegates to
+`GitlabManager.create_or_clone_project()`, including UUID remote names and
+paths, bounded creation retries, and the application's normal initial commit.
+Canonical role names are Django fixture labels only; using those labels as
+remote names collides across concurrent runs or with repositories awaiting
+deletion. `canonical_user()` and `canonical_project()` materialize database rows
+inside the requesting test's transaction, including after `TransactionTestCase`
+flushes. Database-only tests do not contact GitLab. `project_matrix()`
+explicitly creates the complete A/B ownership and permission matrix.
 
 The base API cases select the canonical project for their tested permission
 level. Grants remain explicit: `canonical_project()` does not silently grant A
@@ -143,17 +147,19 @@ current branch SHA and extra-ref inventory come from `git ls-remote`, because
 GitLab's REST branch metadata can lag a push. The lease then verifies the entire
 REST history with `all=True`, not just the default branch.
 
-Pool repositories disable GitLab builds and merge requests before initial
-publication, and tests do not create GitLab notes. Those GitLab features can
-retain hidden references after a public branch is reset. The initial empty
-commits use project-specific author identities so their SHAs remain distinct:
-`ProjectCommit.id` is globally unique across survey projects. A dirty lease
-fails instead of silently replacing the repository. Restoration attempts every
-borrowed role even when another reset fails, and failed roles remain pending
-until their reset succeeds. Preparing such a role must complete restoration
-before granting the next lease; preparing an already healthy active lease does
-not reset the current test's changes. Local Git-only behavior can use real bare
-repositories without a GitLab lease.
+After normal provisioning, pool repositories disable GitLab builds and merge
+requests before granting a lease, and tests do not create GitLab notes. Those
+GitLab features can retain hidden references after a public branch is reset.
+Each slot records its actual initial commit as the restoration baseline; fixture
+code does not customize commit authors or require distinct empty-commit SHAs.
+The live pool regression checks UUID names and paths plus standard commit
+authorship using the existing four allocations, without additional provisioning.
+A dirty lease fails instead of silently replacing the repository. Restoration
+attempts every borrowed role even when another reset fails, and failed roles
+remain pending until their reset succeeds. Preparing such a role must complete
+restoration before granting the next lease; preparing an already healthy active
+lease does not reset the current test's changes. Local Git-only behavior can use
+real bare repositories without a GitLab lease.
 
 Individual tests must never delete pooled repositories. Session cleanup owns
 them. Destructive command checks use isolated subgroups or an explicitly
@@ -268,6 +274,29 @@ Local bootstrap provisioning tests additionally require the local administrator
 bootstrap token. They run only against the local infrastructure addresses and
 create their own groups. Those local setup tests are inapplicable to a remote
 test service; ordinary authenticated integration checks still run there.
+
+### Local default branch protection
+
+Local bootstrap configures only the dedicated test group's default branch
+protection as unprotected, using GitLab's
+[`default_branch_protection_defaults` API](https://docs.gitlab.com/api/groups/#options-for-default_branch_protection_defaults).
+Disposable repositories need normal pushes and force resets for isolated leases.
+The development group's protection policy is left to GitLab's defaults.
+Provisioning still uses the application manager and UUID names.
+
+This also avoids a demonstrated local GitLab 18.7 cache inconsistency: after a
+successful protection-rule deletion, the rule list was empty while
+`ProtectedBranch.protected?` remained true and branch authorization denied an
+otherwise permitted owner. Repeated pushes did not repair it. For an affected
+existing repository, verify the missing rules and refresh only that project's
+`ProtectedBranches::CacheService`; do not flush the whole GitLab cache or add
+application retry logic. Group defaults prevent creating and deleting the
+automatic protection rule for future test repositories. This is infrastructure
+configuration, not a second repository creation path.
+
+The existing real bootstrap test checks the configured policy, and real upload
+and lease restoration tests verify normal pushes and history resets. No extra
+repositories are allocated for this coverage.
 
 ## Browser upload transport
 
