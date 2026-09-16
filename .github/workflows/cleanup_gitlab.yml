@@ -1,12 +1,12 @@
-name: Nightly Gitlab Cleaning Job
+name: Manual GitLab Cleanup
 
 on:
-  schedule:
-    - cron: "0 10 * * *" # 10 AM UTC corresponds to 5 AM ET during Standard Time
+  # schedule:
+  #   - cron: "0 10 * * *" # 10 AM UTC corresponds to 5 AM ET during Standard Time
   workflow_dispatch: # Allows manual triggering
 
 jobs:
-  nightly-job:
+  cleanup:
     runs-on: ubuntu-latest
     concurrency:
       group: speleodb-gitlab-integration-namespace
@@ -60,7 +60,10 @@ jobs:
         run: uv sync --extra local --frozen
 
       - name: Clean Gitlab Test Database
-        run: make wipe_gitlab_test
+        # Preserve repositories owned by active CI jobs (bounded to 60 minutes).
+        run: >-
+          python manage.py wipe_test_gitlab --settings=config.settings.test
+          --accept_danger --skip_user_confirmation --older-than-hours 24
         env:
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}

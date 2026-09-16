@@ -11,9 +11,10 @@ service quotas without adding GitLab startup to every CI job.
 The test service must have its own namespace and credentials. Configure
 `GITLAB_HTTP_PROTOCOL`, `GITLAB_HOST_URL`, `GITLAB_GROUP_ID`,
 `GITLAB_GROUP_NAME`, and `GITLAB_TOKEN` as a consistent set. Test-group cleanup
-is destructive and must never target production or overlap another run using
-that group. A `test` environment isolates the service; it does not by itself
-configure GitHub Actions or prove that its secrets point at that service.
+is destructive and must never target production. Unrestricted cleanup must not
+overlap another run using that group. A `test` environment isolates the service;
+it does not by itself configure GitHub Actions or prove that its secrets point
+at that service.
 
 ## Repository budget and ownership
 
@@ -106,8 +107,30 @@ Reports live under `.artifacts/gitlab/<run-id>/`:
 The audit omits credentials, request/response bodies, and credential-bearing
 URLs. GitHub Actions uploads these artifacts even when tests fail. The CI
 preflight uses `check_gitlab --read-only`; repository writes belong to pytest's
-`write-check` allocation. CI and scheduled group cleanup share a concurrency key
-so cleanup cannot delete active test repositories.
+`write-check` allocation.
+
+### Branch concurrency and manual cleanup
+
+CI's pytest concurrency group includes `github.head_ref || github.ref`, allowing
+different branches to run concurrently while retaining
+`cancel-in-progress: false`. Each invocation owns fresh repository UUIDs;
+workers within an invocation remain serial. Parallel jobs increase aggregate
+GitLab load but do not change the nine-project budget per invocation.
+
+Pytest jobs have a 60-minute timeout. The manual cleanup workflow passes
+`--older-than-hours 24` to `wipe_test_gitlab`, so active jobs' repositories
+remain untouched. The filter compares timezone-aware `created_at` values against
+a cutoff captured once at command start; missing or invalid dates are preserved.
+Normal session cleanup still deletes only the invocation's own repositories. The
+cleanup workflow has only a `workflow_dispatch` trigger; there is no cron. Run
+it manually to remove stale leftovers from interrupted or failed cleanup. The
+unrestricted `make wipe_gitlab_test` command remains available for manual
+maintenance only when no tests are active.
+
+Deploy the safe cleanup workflow to the default branch before enabling parallel
+CI on other branches: an older scheduled workflow still performs a full wipe.
+Verification covers age boundaries and malformed dates plus preservation of a
+real, fresh lifecycle repository before its normal deletion.
 
 ## Isolation when reusing a remote
 

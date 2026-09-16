@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -12,6 +14,8 @@ import gitlab.exceptions
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from dotenv import load_dotenv
 
 from speleodb.git_engine.client import GitlabClient
@@ -23,10 +27,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def is_older_than(created_at: object, cutoff: datetime) -> bool:
+    """Only a valid, timezone-aware creation date permits stale cleanup."""
+    if not isinstance(created_at, str):
+        return False
+    try:
+        created: datetime | None = parse_datetime(created_at)
+    except ValueError:
+        return False
+    return created is not None and timezone.is_aware(created) and created < cutoff
+
+
 class Command(BaseCommand):
     help = "Wipe all repositories from a specified GitLab group."
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--older-than-hours",
+            type=int,
+            help="Only delete repositories created more than this many hours ago.",
+        )
         parser.add_argument(
             "--accept_danger",
             action="store_true",
@@ -50,8 +70,16 @@ class Command(BaseCommand):
         *,
         skip_user_confirmation: bool = False,
         accept_danger: bool = False,
+        older_than_hours: int | None = None,
         **kwargs: Any,
     ) -> None:
+        if older_than_hours is not None and older_than_hours <= 0:
+            raise CommandError("--older-than-hours must be positive.")
+        cutoff: datetime | None = (
+            timezone.now() - timedelta(hours=older_than_hours)
+            if older_than_hours is not None
+            else None
+        )
         project_base_dir = Path(__file__).parents[4].resolve()
         if (env_file := project_base_dir / ".envs/test.env").exists():
             assert load_dotenv(env_file)
@@ -100,6 +128,11 @@ class Command(BaseCommand):
                 return
 
             for project_id, project in enumerate(projects):
+                if cutoff is not None and not is_older_than(
+                    project.attributes.get("created_at"), cutoff
+                ):
+                    logger.info("Preserving recent project or unknown creation date.")
+                    continue
                 logger.info(
                     f"[{project_id + 1}/{len(projects)}] Processing project: "
                     f"`{project.name}` - {project.web_url}"

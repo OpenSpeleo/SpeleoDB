@@ -1,5 +1,20 @@
 # Task reviews
 
+## Pytest concurrency across branches
+
+Pytest uses a branch-specific job concurrency group with cancellation disabled.
+Manual cleanup preserves repositories younger than 24 hours, and pytest jobs
+have a 60-minute limit. This replaces the global test/cleanup lock while
+retaining serial workers and each invocation's nine-repository budget. At the
+user's request, the cron trigger was removed; cleanup is available only through
+`workflow_dispatch`. Container YAML checks verified the manual-only trigger.
+
+All 11 focused container tests passed, including real GitLab preservation and
+deletion. Ruff, formatting, mypy, YAML/policy checks and diff checks passed. The
+audit recorded one creation/POST, zero violations or unresolved outcomes, and
+verified cleanup. Update cleanup on the default branch before enabling parallel
+runs on other branches. See [the review](todos/pytest-branch-concurrency.md).
+
 ## Django tests reuse four GitLab repositories
 
 Ordinary Git integration tests now reuse four canonical project identities with

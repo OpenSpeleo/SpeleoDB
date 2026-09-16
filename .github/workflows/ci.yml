@@ -94,8 +94,9 @@ jobs:
   pytest:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     concurrency:
-      group: speleodb-gitlab-integration-namespace
+      group: speleodb-pytest-${{ github.head_ref || github.ref }}
       cancel-in-progress: false
 
     services:

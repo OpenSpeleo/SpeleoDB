@@ -116,7 +116,12 @@ def cleanup_remote_on_exit(client: Gitlab, project_path: str) -> Iterator[None]:
 
 
 def run_group_cleanup(
-    group: Group, *, answer: str = "", delete: bool = True, token: str | None = None
+    group: Group,
+    *,
+    answer: str = "",
+    delete: bool = True,
+    token: str | None = None,
+    older_than_hours: int | None = None,
 ) -> subprocess.CompletedProcess[str]:
     environment: dict[str, str] = os.environ.copy()
     environment.update(
@@ -127,6 +132,9 @@ def run_group_cleanup(
             "CLEANUP_HOST": settings.GITLAB_HOST_URL,
             "CLEANUP_TOKEN": settings.GITLAB_TOKEN if token is None else token,
             "CLEANUP_DELETE": "1" if delete else "0",
+            "CLEANUP_OLDER_THAN_HOURS": (
+                str(older_than_hours) if older_than_hours is not None else ""
+            ),
         }
     )
     script: str = """
@@ -141,7 +149,12 @@ for key, source in {
     "GITLAB_TOKEN": "CLEANUP_TOKEN",
 }.items():
     os.environ[key] = os.environ[source]
-call_command("wipe_test_gitlab", accept_danger=os.environ["CLEANUP_DELETE"] == "1")
+age = os.environ["CLEANUP_OLDER_THAN_HOURS"]
+call_command(
+    "wipe_test_gitlab",
+    accept_danger=os.environ["CLEANUP_DELETE"] == "1",
+    older_than_hours=int(age) if age else None,
+)
 """
     return subprocess.run(  # noqa: S603
         [sys.executable, "-c", script],
@@ -170,6 +183,11 @@ def assert_group_cleanup_lifecycle(
     result = run_group_cleanup(group, answer="Y\n", delete=False)
     assert result.returncode == 0, result.stderr
     assert client.projects.get(remote.id).id == remote.id
+
+    result = run_group_cleanup(group, answer="Y\n", older_than_hours=24)
+    assert result.returncode == 0, result.stderr
+    assert client.projects.get(remote.id).id == remote.id
+    assert not client.projects.get(remote.id).attributes.get("marked_for_deletion_at")
 
     result = run_group_cleanup(group, answer="Y\n", token=f"invalid-{uuid4()}")
     assert result.returncode != 0
