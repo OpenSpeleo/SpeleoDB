@@ -58,6 +58,13 @@ describe('LandmarkManager', () => {
     });
 
     describe('loadCollections', () => {
+        it.each(['failure', 'invalid'])('keeps current collections when a strict import refresh returns %s', async kind => {
+            State.landmarkCollections.set('old', { id: 'old' });
+            if (kind === 'failure') API.getLandmarkCollections.mockRejectedValue(new Error('Unavailable'));
+            else API.getLandmarkCollections.mockResolvedValue(null);
+            await expect(LandmarkManager.loadCollections({ throwOnError: true })).rejects.toThrow();
+            expect(State.landmarkCollections.has('old')).toBe(true);
+        });
         it('populates writable and admin flags from permission levels', async () => {
             API.getLandmarkCollections.mockResolvedValue([
                 { id: 'coll-1', name: 'Read', color: '#111111', user_permission_level: 1 },
@@ -91,6 +98,13 @@ describe('LandmarkManager', () => {
     // ------------------------------------------------------------------ //
 
     describe('loadAllLandmarks', () => {
+        it.each(['failure', 'invalid'])('keeps current landmarks when a strict import refresh returns %s', async kind => {
+            State.allLandmarks.set('old', { id: 'old' });
+            if (kind === 'failure') API.getAllLandmarksGeoJSON.mockRejectedValue(new Error('Unavailable'));
+            else API.getAllLandmarksGeoJSON.mockResolvedValue({ type: 'FeatureCollection' });
+            await expect(LandmarkManager.loadAllLandmarks({ throwOnError: true })).rejects.toThrow();
+            expect(State.allLandmarks.has('old')).toBe(true);
+        });
         it('populates State.allLandmarks from GeoJSON', async () => {
             const fc = makeLandmarkFC([
                 makeLandmarkFeature('lm1', [6.5, 46.5]),

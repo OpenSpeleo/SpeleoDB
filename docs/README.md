@@ -26,6 +26,9 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- [Map file import](map-viewer/import.md)
+  - Explicit editable-place versus single-overlay intent, shared KML/KMZ
+    inspection, compatibility reporting, publication, and verification.
 - `gis-geometries.md`
   - private line/polygon authoring, shared access, map/GPS editing, 100-vertex
     and 30 km² bounding-box limits, atomic saves, and verification

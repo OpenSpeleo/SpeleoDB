@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,6 +12,7 @@ from speleodb.gis.gis_layer_processing.errors import GISLayerProcessingError
 from speleodb.gis.gis_layer_processing.errors import ProcessingErrorCode
 from speleodb.gis.gis_layer_processing.kml import KMLProcessor
 from speleodb.gis.gis_layer_processing.kmz import KMZProcessor
+from speleodb.gis.gis_layer_processing.limits import read_bounded_source
 from speleodb.gis.gis_layer_processing.shapefile import ShapefileProcessor
 from speleodb.gis.gis_layer_processing.topojson import TopoJSONProcessor
 from speleodb.gis.models.gis_layer import GISLayerSourceFormat
@@ -40,6 +42,15 @@ def compile_gis_layer(
                 ProcessingErrorCode.FORMAT_MISMATCH,
                 "The selected file extension does not match its declared format.",
             )
+    if isinstance(processor, KMLProcessor | KMZProcessor):
+        with contextlib.suppress(OSError, ValueError):
+            file_obj.seek(0)
+        try:
+            source = read_bounded_source(file_obj)
+        finally:
+            with contextlib.suppress(OSError, ValueError):
+                file_obj.seek(0)
+        return processor.process(source)
     return processor.process(read_source(file_obj))
 
 

@@ -665,12 +665,12 @@ export const Layers = {
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const geojsonData = await response.json();
 
-                    // Cache the data
-                    State.gpsTrackCache.set(tid, geojsonData);
-                    console.log(`✅ Cached GPS track GeoJSON: ${trackId}`);
-
                     // Add the layer to the map
                     await this.addGPSTrackLayer(tid, geojsonData);
+
+                    // Cache only after installation so a failed display can be retried.
+                    State.gpsTrackCache.set(tid, geojsonData);
+                    console.log(`✅ Cached GPS track GeoJSON: ${trackId}`);
                 } catch (e) {
                     console.error(`❌ Failed to download GPS track ${trackId}:`, e);
                     // Revert visibility state on error

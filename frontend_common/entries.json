@@ -8,6 +8,7 @@
     "style-shared-modal": "frontend_private/static/private/css/shared-modal.css",
     "style-gis-geometry-management": "frontend_common/styles/gis-geometry-management.css",
     "style-map-viewer": "frontend_private/static/private/css/map_viewer.css",
+    "style-map-import": "frontend_private/static/private/css/data_import.css",
     "style-template-frontend-public-templates-snippets-welcome-modal": "frontend_common/styles/templates/frontend-public-templates-snippets-welcome-modal.css",
     "style-template-frontend-private-templates-base-private": "frontend_common/styles/templates/frontend-private-templates-base-private.css",
     "style-template-frontend-private-templates-pages-cylinder-fleet-base": "frontend_common/styles/templates/frontend-private-templates-pages-cylinder-fleet-base.css",

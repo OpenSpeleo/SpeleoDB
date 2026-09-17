@@ -35,6 +35,11 @@ export function geometryCameraPadding(map, viewport, obstacles = []) {
 
 export function fitGISGeometry(map, bounds) {
     if (!bounds) return;
+    // RFC 7946 crossing bounds use west > east. Mapbox fits projected corners
+    // directly, so unwrap east to keep the camera on the short longitude span.
+    const cameraBounds = Array.isArray(bounds) && bounds.length === 4 && bounds[0] > bounds[2]
+        ? [bounds[0], bounds[1], bounds[2] + DEFAULTS.MAP.ANTIMERIDIAN_WRAP_DEGREES, bounds[3]]
+        : bounds;
     const container = map.getContainer?.() || document.getElementById('map');
     const rectangle = container?.getBoundingClientRect();
     const viewport = window.visualViewport;
@@ -49,7 +54,7 @@ export function fitGISGeometry(map, bounds) {
     const obstacles = selectors.flatMap(selector => [...document.querySelectorAll(selector)])
         .filter(element => !element.hidden && getComputedStyle(element).display !== 'none')
         .map(element => element.getBoundingClientRect());
-    map.fitBounds(bounds, {
+    map.fitBounds(cameraBounds, {
         padding: rectangle?.width && rectangle?.height
             ? geometryCameraPadding(rectangle, visible, obstacles) : DEFAULTS.MAP.FIT_BOUNDS_PADDING,
         maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM,

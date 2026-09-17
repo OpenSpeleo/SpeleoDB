@@ -15,19 +15,4 @@ export async function init(context) {
     await initPrivateMapViewer();
 
     DataImport.init(context.csrfToken);
-    $('#import-data-button').on('click', () => DataImport.showModal());
-    $(document).on('click', '[data-import-action]', function () {
-        const actions = {
-            'browse-gpx': () => document.getElementById('gpx-file-input').click(),
-            'browse-kml': () => document.getElementById('kml-file-input').click(),
-            'clear-gpx': () => DataImport.clearGPXFile(),
-            'clear-kml': () => DataImport.clearKMLFile(),
-            hide: () => DataImport.hideModal(),
-            'hide-warning': () => DataImport.hideWarningModal(),
-            tab: () => DataImport.switchTab($(this).data('import-tab')),
-            'upload-gpx': () => DataImport.uploadGPX(),
-            'upload-kml': () => DataImport.uploadKML(),
-        };
-        actions[$(this).data('import-action')]?.();
-    });
 }

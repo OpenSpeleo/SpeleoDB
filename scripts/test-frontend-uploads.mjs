@@ -80,16 +80,18 @@ function form(name, contents = source, filename = `${name}.geojson`) {
 
 function request(url, data, options = {}) {
     const progress = [];
+    const phases = [];
     let xhr;
     const done = new Promise(resolve => {
         xhr = uploadWithProgress(url, data, {
             ...options,
             onProgress: (...values) => progress.push(values),
+            onUploaded: () => phases.push('uploaded'),
             onSuccess: response => resolve({ response }),
             onError: error => resolve({ error }),
         });
     });
-    return { xhr, done, progress };
+    return { xhr, done, progress, phases };
 }
 
 try {
@@ -167,6 +169,7 @@ try {
         assert.equal(percent, Math.round(100 * loaded / total));
     }
     assert.equal(successful.progress.at(-1)[0], 100);
+    assert.deepEqual(successful.phases, ['uploaded']);
     stored.push({ id: response.id, name: 'browser-helper-renamed', contents: source });
     checks.push('upload-helper-success-and-progress');
 
@@ -199,17 +202,31 @@ try {
     checks.push('upload-helper-empty-response');
 
     const html = request(configuration.url, new window.FormData(), { method: 'GET' });
-    assert.match((await html.done).error.message, /unreadable response/);
+    const htmlError = (await html.done).error;
+    assert.match(htmlError.message, /unreadable response/);
+    assert.equal(htmlError.ambiguous, true);
+    assert.equal(htmlError.status, 200);
     assert.equal(html.xhr.status, 200);
     checks.push('upload-helper-html-response');
 
     const invalid = request(context.listEndpoint, form('broken', '{}', 'broken.topojson'));
-    assert.equal((await invalid.done).error.message, 'The uploaded file is not a TopoJSON topology.');
+    const invalidError = (await invalid.done).error;
+    assert.equal(invalidError.message, 'The uploaded file is not a TopoJSON topology.');
+    assert.equal(invalidError.status, 422);
+    assert.equal(invalidError.ambiguous, false);
     assert.equal(invalid.xhr.status, 422);
+    const invalidName = request(context.listEndpoint, form('x'.repeat(256)));
+    const nameError = (await invalidName.done).error;
+    assert.equal(invalidName.xhr.status, 400);
+    assert.match(nameError.message, /name:.*255/);
+    assert.ok(Array.isArray(nameError.payload.errors.name));
     checks.push('upload-helper-server-error');
 
     const unavailable = request(configuration.unavailableUrl, new window.FormData());
-    assert.equal((await unavailable.done).error.message, 'Network error during upload');
+    const networkError = (await unavailable.done).error;
+    assert.equal(networkError.message, 'Network error during upload');
+    assert.equal(networkError.status, 0);
+    assert.equal(networkError.ambiguous, true);
     assert.equal(unavailable.xhr.status, 0);
     checks.push('upload-helper-network-error');
 

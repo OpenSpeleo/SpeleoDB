@@ -675,8 +675,8 @@ export const Config = {
     NETWORK_VISIBILITY_PREFS_STORAGE_KEY: DEFAULTS.STORAGE_KEYS.NETWORK_VISIBILITY,
 
     // Load GPS tracks from API (call this early in initialization)
-    async loadGPSTracks() {
-        if (this._gpsTracks) {
+    async loadGPSTracks({ force = false, throwOnError = false } = {}) {
+        if (this._gpsTracks && !force) {
             return this._gpsTracks;
         }
 
@@ -695,29 +695,33 @@ export const Config = {
                 }));
                 console.log(`✅ Loaded ${this._gpsTracks.length} GPS tracks from API`);
             } else {
+                if (throwOnError) throw new Error('Invalid GPS tracks response');
                 console.error('❌ Invalid GPS tracks response:', response);
                 this._gpsTracks = [];
             }
         } catch (error) {
             console.error('❌ Failed to load GPS tracks from API:', error);
+            if (throwOnError) throw error;
             this._gpsTracks = [];
         }
 
         return this._gpsTracks;
     },
 
-    async loadGISLayers() {
-        if (this._gisLayers) {
+    async loadGISLayers({ force = false, throwOnError = false } = {}) {
+        if (this._gisLayers && !force) {
             return this._gisLayers;
         }
 
         try {
             const response = await API.getGISLayers();
+            if (throwOnError && !Array.isArray(response)) throw new Error('Invalid GIS Layers response');
             this._gisLayers = Array.isArray(response)
                 ? response.map(layer => ({ ...layer, id: String(layer.id) }))
                 : [];
         } catch (error) {
             console.error('Failed to load GIS Layers:', error);
+            if (throwOnError) throw error;
             this._gisLayers = [];
         }
 

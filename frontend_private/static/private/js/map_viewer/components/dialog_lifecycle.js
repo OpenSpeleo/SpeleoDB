@@ -21,8 +21,9 @@ function isolateDialog(element) {
 }
 
 /** Open an existing map dialog; callers retain ownership of its content. */
-export function openMapDialog(element, { closeButton = null, returnFocus = null, onClose = null, dismissOnBackdrop = true } = {}) {
+export function openMapDialog(element, { closeButton = null, returnFocus = null, onClose = null, dismissOnBackdrop = true, canDismiss = () => true } = {}) {
     if (!element) return;
+    if (dialogs.has(element) && !dialogs.get(element).canDismiss()) return;
     closeMapDialog(element, { restoreFocus: false });
     const trigger = returnFocus || document.activeElement;
     getMapOverlayHost().append(element);
@@ -55,7 +56,7 @@ export function openMapDialog(element, { closeButton = null, returnFocus = null,
             containDialogTab(event, element);
         }
     };
-    dialogs.set(element, { trigger, onClose, keydown });
+    dialogs.set(element, { trigger, onClose, keydown, canDismiss });
     document.addEventListener('keydown', keydown, true);
     isolateDialog(element);
     (close || getDialogFocusableElements(element)[0] || element).focus({ preventScroll: true });
@@ -64,7 +65,7 @@ export function openMapDialog(element, { closeButton = null, returnFocus = null,
 export function closeMapDialog(element, { restoreFocus = true } = {}) {
     if (!element) return;
     const record = dialogs.get(element);
-    if (!record) return;
+    if (!record || !record.canDismiss()) return;
     dialogs.delete(element);
     document.removeEventListener('keydown', record.keydown, true);
     element.classList.add('hidden');

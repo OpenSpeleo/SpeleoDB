@@ -52,6 +52,34 @@ describe('GPS Track lazy loading', () => {
         expect(State.gpsTrackCache.has('track-1')).toBe(true);
     });
 
+    it('downloads and installs again when the first map layer installation fails', async () => {
+        const geojson = { type: 'FeatureCollection', features: [] };
+        mocks.getGPSTrackDetails.mockResolvedValue({ file: '/fresh-signed-url' });
+        globalThis.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue(geojson),
+        });
+        const install = vi.spyOn(Layers, 'addGPSTrackLayer')
+            .mockRejectedValueOnce(new Error('Map style is not ready'))
+            .mockResolvedValue();
+
+        await Layers.toggleGPSTrackVisibility('track-1', true);
+
+        expect(Layers.isGPSTrackVisible('track-1')).toBe(false);
+        expect(Layers.isGPSTrackLoading('track-1')).toBe(false);
+        expect(State.gpsTrackCache.has('track-1')).toBe(false);
+
+        await Layers.toggleGPSTrackVisibility('track-1', true);
+
+        expect(mocks.getGPSTrackDetails).toHaveBeenCalledTimes(2);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(install).toHaveBeenCalledTimes(2);
+        expect(install).toHaveBeenLastCalledWith('track-1', geojson);
+        expect(Layers.isGPSTrackVisible('track-1')).toBe(true);
+        expect(Layers.isGPSTrackLoading('track-1')).toBe(false);
+        expect(State.gpsTrackCache.get('track-1')).toEqual(geojson);
+    });
+
     it('never fetches an undefined URL when detail metadata has no file', async () => {
         mocks.getGPSTrackDetails.mockResolvedValue({ id: 'track-1' });
         globalThis.fetch = vi.fn();

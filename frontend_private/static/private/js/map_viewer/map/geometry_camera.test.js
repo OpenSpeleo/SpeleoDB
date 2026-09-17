@@ -42,3 +42,28 @@ it('uses transient fit padding and clears tilt so no bounding-box corner is clip
     }));
     vi.restoreAllMocks();
 });
+
+it('fits the short antimeridian span without changing the imported RFC 7946 bounds', () => {
+    const map = { fitBounds: vi.fn() };
+    const bounds = Object.freeze([179.5, 10, -179.5, 11]);
+
+    fitGISGeometry(map, bounds);
+
+    const [cameraBounds] = map.fitBounds.mock.calls[0];
+    expect(cameraBounds).toEqual([179.5, 10, 180.5, 11]);
+    expect(cameraBounds[2] - cameraBounds[0]).toBe(1);
+    expect(bounds).toEqual([179.5, 10, -179.5, 11]);
+});
+
+it.each([
+    [-87.5, 20.5, -87.49, 20.51],
+    [-180, -85, 180, 85],
+    [179.5, 10, 180.5, 11],
+])('preserves ordinary and already-unwrapped bounds %#', (...coordinates) => {
+    const map = { fitBounds: vi.fn() };
+    const bounds = Object.freeze(coordinates);
+
+    fitGISGeometry(map, bounds);
+
+    expect(map.fitBounds.mock.calls[0][0]).toBe(bounds);
+});

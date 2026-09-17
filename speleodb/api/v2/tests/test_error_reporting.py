@@ -28,7 +28,6 @@ from django.db.models.signals import post_save
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.urls import reverse
-from fastkml import config as kml_config
 from git.exc import GitCommandError
 from gpxpy.gpx import GPXXMLSyntaxException
 from rest_framework import status
@@ -42,6 +41,7 @@ from speleodb.api.v2.tests.test_file_upload_error_handling import BASE_DIR
 from speleodb.api.v2.tests.test_file_upload_error_handling import SentryEventTestCase
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.gis.gis_layer_processing import GISLayerProcessingError
 from speleodb.gis.models import GISView
 from speleodb.gis.models import Landmark
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
@@ -343,12 +343,12 @@ class KMLImportSentryTests(LandmarkImportSentryTestCase):
             headers={"authorization": self.auth},
         )
 
-    def test_kml_import_failure_returns_500_with_sentry(self) -> None:
+    def test_kml_import_failure_returns_422_with_sentry(self) -> None:
         with self.assertLogs("speleodb.api.v2.views.kml_kmz_import", level="ERROR"):
             response: Response = self._import(b"not valid kml")
 
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert isinstance(self._reported_exception(), kml_config.etree.ParseError)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert isinstance(self._reported_exception(), GISLayerProcessingError)
         assert self.written_landmarks == []
 
     def test_kml_import_failure_does_not_commit_partial_landmarks(self) -> None:

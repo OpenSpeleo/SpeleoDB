@@ -40,6 +40,28 @@ describe('Config loading and data methods', () => {
     // Getters
     // ------------------------------------------------------------------ //
 
+    describe.each([
+        ['loadGISLayers', 'getGISLayers', '_gisLayers'],
+        ['loadGPSTracks', 'getGPSTracks', '_gpsTracks'],
+    ])('%s import refresh', (method, endpoint, cache) => {
+        it('forces a fresh list without requiring callers to clear the cache', async () => {
+            Config[cache] = [{ id: 'old' }];
+            API[endpoint].mockResolvedValue([{ id: 'new' }]);
+            const result = await Config[method]({ force: true, throwOnError: true });
+            expect(result).toEqual([expect.objectContaining({ id: 'new' })]);
+            expect(API[endpoint]).toHaveBeenCalledOnce();
+        });
+
+        it.each(['failure', 'invalid'])('preserves the prior list on %s and exposes retryable refresh failure', async kind => {
+            const previous = [{ id: 'old' }];
+            Config[cache] = previous;
+            if (kind === 'failure') API[endpoint].mockRejectedValue(new Error('Unavailable'));
+            else API[endpoint].mockResolvedValue({ error: 'Bad response' });
+            await expect(Config[method]({ force: true, throwOnError: true })).rejects.toThrow();
+            expect(Config[cache]).toBe(previous);
+        });
+    });
+
     describe('projects getter', () => {
         it('returns empty array when _projects is null', () => {
             expect(Config.projects).toEqual([]);

@@ -1,522 +1,536 @@
-// Data Import Module - Unified interface for GPX and KML/KMZ imports
-export const DataImport = (function() {
-    let selectedGPXFile = null;
-    let selectedKMLFile = null;
-    let csrfToken = '';
-    let currentTab = 'gpx';
-    let landmarkCollectionsLoaded = false;
+import { openMapDialog, closeMapDialog } from './map_viewer/components/dialog_lifecycle.js';
+import { uploadWithProgress } from './map_viewer/components/upload.js';
+import { refreshImportedMapData, showImportedMapData } from './map_viewer/components/map_import_navigation.js';
+import { LandmarkManager } from './map_viewer/landmarks/manager.js';
+import { State } from './map_viewer/state.js';
 
-    // Initialize with CSRF token
-    function init(token) {
-        csrfToken = token;
-        setupEventListeners();
+const count = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+const plural = (value, singular, multiple = `${singular}s`) => `${count(value)} ${count(value) === 1 ? singular : multiple}`;
+
+/** Stable review IDs and intent values are shared by the template and controller. */
+export function renderImportReview(report, mode, root = document) {
+    const review = root.querySelector('#kml-review');
+    review.hidden = !report;
+    if (!report) return;
+    const places = report.places;
+    const overlay = report.overlay;
+    const summary = root.querySelector('#kml-review-summary');
+    const detail = root.querySelector('#kml-review-detail');
+    if (mode === 'places') {
+        summary.textContent = count(places.unique_coordinate_count)
+            ? `${plural(places.unique_coordinate_count, 'place')} available to import as landmarks.` : 'No editable places found.';
+        detail.textContent = !count(places.unique_coordinate_count) && count(overlay.feature_count)
+            ? 'Choose Map Overlay to import the supported lines and areas in this file.'
+            : `${plural(places.duplicate_coordinate_count, 'repeated coordinate')} in this file. Places already in the selected collection will be skipped when importing.`;
+    } else if (mode === 'overlay') {
+        summary.textContent = count(overlay.feature_count)
+            ? `One GIS layer with ${plural(overlay.point_parts, 'point')}, ${plural(overlay.line_parts, 'line')}, and ${plural(overlay.polygon_parts, 'area')}.`
+            : 'No supported map geometry found.';
+        detail.textContent = !count(overlay.feature_count) && count(places.unique_coordinate_count)
+            ? 'Choose Placemarks to import the points in this file.'
+            : 'All folders stay together. The original KML or KMZ file is preserved for download.';
+    } else {
+        summary.textContent = `${plural(places.unique_coordinate_count, 'editable place')} · ${plural(overlay.feature_count, 'map feature')}`;
+        detail.textContent = 'Choose how you want to import this file above.';
+    }
+    const warnings = root.querySelector('#kml-review-warnings');
+    warnings.replaceChildren();
+    if (mode === 'places' && count(places.skipped_placemarks)) {
+        const item = document.createElement('li');
+        item.textContent = `${plural(places.skipped_placemarks, 'item')} containing paths, areas, or other content will not become editable places.`;
+        warnings.append(item);
+    }
+    for (const warning of report.warnings || []) {
+        if (mode && !warning.modes?.includes(mode)) continue;
+        if (mode === 'places' && count(places.skipped_placemarks) && warning.code === 'PLACEMARKS_NOT_IMPORTED') continue;
+        const item = document.createElement('li');
+        item.textContent = String(warning.message || 'Some content cannot be displayed.');
+        warnings.append(item);
+    }
+    warnings.hidden = !warnings.children.length;
+}
+
+export function canImportKML({ file, report, mode, collectionId, layerName, busy = false, uncertain = false }) {
+    if (!file || !report || busy || uncertain) return false;
+    if (mode === 'places') return count(report.places?.unique_coordinate_count) > 0 && Boolean(collectionId);
+    if (mode === 'overlay') return count(report.overlay?.feature_count) > 0 && Boolean(layerName?.trim());
+    return false;
+}
+
+export function renderImportCollections(collections, root = document) {
+    const writable = [...collections].filter(collection => collection.can_write)
+        .sort((a, b) => Number(b.is_personal) - Number(a.is_personal) || a.name.localeCompare(b.name));
+    for (const type of ['gpx', 'kml']) {
+        const select = root.querySelector(`#${type}-landmark-collection`);
+        const selected = select.value;
+        select.replaceChildren();
+        for (const collection of writable) {
+            const option = document.createElement('option');
+            option.value = collection.id;
+            option.textContent = collection.is_personal ? `${collection.name} (Private)` : collection.name;
+            select.append(option);
+        }
+        if (writable.some(collection => String(collection.id) === selected)) select.value = selected;
+    }
+    return writable.length > 0;
+}
+
+export function renderImportError(errors, tab, root = document) {
+    const error = root.querySelector('#import-error');
+    error.textContent = errors[tab] || '';
+    error.hidden = !errors[tab];
+}
+
+export function applySuggestedLayerName(input, name, edited) {
+    if (edited || typeof name !== 'string') return;
+    input.value = input.maxLength > 0 ? name.slice(0, input.maxLength) : name;
+}
+
+function validReport(report) {
+    return report?.places && report?.overlay && Array.isArray(report.warnings)
+        && Number.isFinite(report.places.unique_coordinate_count)
+        && Number.isFinite(report.overlay.feature_count);
+}
+
+/** One transient dialog session; inspection never creates an import or background job. */
+export const DataImport = (() => {
+    let token = '';
+    let modal = null;
+    let listeners = [];
+    let session = null;
+    let inspection = null;
+    let generation = 0;
+    const element = id => document.getElementById(id);
+    const query = selector => modal.querySelector(selector);
+    const listen = (target, name, handler) => {
+        target?.addEventListener(name, handler);
+        listeners.push(() => target?.removeEventListener(name, handler));
+    };
+    const beforeUnload = event => { event.preventDefault(); event.returnValue = ''; };
+    const interactionLocked = () => Boolean(session?.busy || session?.showing);
+
+    function resetSession() {
+        generation += 1;
+        inspection?.abort();
+        inspection = null;
+        window.removeEventListener('beforeunload', beforeUnload);
+        session = {
+            tab: 'gpx', gpxFile: null, kmlFile: null, mode: null, report: null,
+            inspecting: false, busy: false, uncertain: false, errors: { gpx: '', kml: '' }, layerNameEdited: false,
+            result: null, refreshing: false, refreshed: false, refreshError: '', showing: false,
+            collectionsReady: false, collectionsLoading: false, collectionsError: '', progress: null, progressText: '',
+        };
     }
 
-    function setupEventListeners() {
-        // GPX file input
-        const gpxFileInput = document.getElementById('gpx-file-input');
-        const gpxDropZone = document.getElementById('gpx-drop-zone');
-
-        if (gpxFileInput) {
-            gpxFileInput.addEventListener('change', function(e) {
-                if (e.target.files && e.target.files[0]) {
-                    handleGPXFile(e.target.files[0]);
-                }
-            });
-        }
-
-        if (gpxDropZone) {
-            gpxDropZone.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('border-cyan-400', 'bg-srgb-slate-700-50');
-            });
-
-            gpxDropZone.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('border-cyan-400', 'bg-srgb-slate-700-50');
-            });
-
-            gpxDropZone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('border-cyan-400', 'bg-srgb-slate-700-50');
-
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleGPXFile(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        // KML file input
-        const kmlFileInput = document.getElementById('kml-file-input');
-        const kmlDropZone = document.getElementById('kml-drop-zone');
-
-        if (kmlFileInput) {
-            kmlFileInput.addEventListener('change', function(e) {
-                if (e.target.files && e.target.files[0]) {
-                    handleKMLFile(e.target.files[0]);
-                }
-            });
-        }
-
-        if (kmlDropZone) {
-            kmlDropZone.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('border-amber-400', 'bg-srgb-slate-700-50');
-            });
-
-            kmlDropZone.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('border-amber-400', 'bg-srgb-slate-700-50');
-            });
-
-            kmlDropZone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('border-amber-400', 'bg-srgb-slate-700-50');
-
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleKMLFile(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        // Close on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const importModal = document.getElementById('import-data-modal');
-                if (importModal && !importModal.classList.contains('hidden')) {
-                    hideModal();
-                }
-                hideWarningModal();
+    function init(csrfToken) {
+        if (interactionLocked()) return;
+        destroy();
+        token = csrfToken;
+        modal = element('import-data-modal');
+        if (!modal) return;
+        resetSession();
+        listen(element('import-data-button'), 'click', showModal);
+        listen(modal, 'click', event => {
+            const button = event.target.closest('[data-import-action]');
+            if (!button || button.disabled) return;
+            const action = button.dataset.importAction;
+            if (action === 'hide') hideModal();
+            else if (action === 'tab') switchTab(button.dataset.importTab);
+            else if (action === 'browse-gpx' || action === 'browse-kml') {
+                if (!session.busy && (action === 'browse-gpx' || session.mode)) element(`${action.slice(7)}-file-input`).click();
+            } else if (action === 'clear-gpx') clearFile('gpx');
+            else if (action === 'clear-kml') clearFile('kml');
+            else if (action === 'inspect-kml') inspectKML();
+            else if (action === 'submit') submit();
+            else if (action === 'refresh') refreshResult();
+            else if (action === 'collections') loadCollections();
+            else if (action === 'show') showResult();
+            else if (action === 'choose-mode' && !session.busy) {
+                session.mode = button.dataset.importMode;
+                render();
+                query('[data-import-action="change-mode"]').focus();
+            } else if (action === 'change-mode' && !session.busy) {
+                const previousMode = session.mode;
+                session.mode = null;
+                render();
+                query(`[data-import-mode="${previousMode}"]`).focus();
             }
         });
-
-        // Close when clicking outside modal content
-        const importModal = document.getElementById('import-data-modal');
-        if (importModal) {
-            importModal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    hideModal();
-                }
-            });
+        listen(modal, 'change', event => {
+            if (session.busy) return;
+            if (event.target.id.endsWith('-landmark-collection')) render();
+        });
+        listen(element('kml-layer-name'), 'input', () => {
+            session.layerNameEdited = true;
+            render();
+        });
+        listen(query('[role="tablist"]'), 'keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || session.busy) return;
+            event.preventDefault();
+            const tab = event.key === 'Home' ? 'gpx' : event.key === 'End' ? 'kml' : session.tab === 'gpx' ? 'kml' : 'gpx';
+            switchTab(tab);
+            element(`import-tab-${tab}`).focus();
+        });
+        for (const type of ['gpx', 'kml']) {
+            listen(element(`${type}-file-input`), 'change', event => selectFile(type, event.target.files?.[0]));
+            const zone = element(`${type}-drop-zone`);
+            for (const name of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+                listen(zone, name, event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    zone.classList.toggle('is-dragging', name === 'dragenter' || name === 'dragover');
+                    if (name === 'drop' && !session.busy) {
+                        if (event.dataTransfer.files.length !== 1) {
+                            session.errors[type] = 'Choose one file at a time.';
+                            render();
+                        } else selectFile(type, event.dataTransfer.files[0]);
+                    }
+                });
+            }
         }
+    }
 
-        // Setup collapsible instructions toggle
-        const instructionsToggle = document.getElementById('kml-instructions-toggle');
-        if (instructionsToggle) {
-            instructionsToggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleInstructions();
-            });
+    function showModal() {
+        if (!modal || interactionLocked() || !modal.classList.contains('hidden')) return;
+        resetSession();
+        for (const type of ['gpx', 'kml']) element(`${type}-file-input`).value = '';
+        element('kml-layer-name').value = '';
+        render();
+        openMapDialog(modal, {
+            returnFocus: element('import-data-button'), dismissOnBackdrop: false,
+            canDismiss: () => !interactionLocked(),
+            onClose: resetSession,
+        });
+        element('import-data-title').focus({ preventScroll: true });
+        loadCollections();
+    }
+
+    function hideModal() { closeMapDialog(modal); }
+
+    async function loadCollections() {
+        if (session.collectionsLoading) return;
+        const current = session;
+        current.collectionsLoading = true;
+        current.collectionsReady = false;
+        current.collectionsError = '';
+        render();
+        try {
+            await LandmarkManager.loadCollections({ throwOnError: true });
+            if (current !== session) return;
+            current.collectionsReady = renderImportCollections(State.landmarkCollections.values());
+            if (!current.collectionsReady) current.collectionsError = 'No writable landmark collections are available.';
+        } catch {
+            if (current !== session) return;
+            current.collectionsError = 'Unable to load landmark collections. Please try again.';
+        } finally {
+            if (current === session) {
+                current.collectionsLoading = false;
+                render();
+            }
         }
     }
 
     function switchTab(tab) {
-        currentTab = tab;
-
-        const gpxTab = document.getElementById('import-tab-gpx');
-        const kmlTab = document.getElementById('import-tab-kml');
-        const gpxContent = document.getElementById('import-content-gpx');
-        const kmlContent = document.getElementById('import-content-kml');
-
-        if (tab === 'gpx') {
-            gpxTab.classList.add('text-white', 'border-cyan-400', 'bg-srgb-slate-700-50');
-            gpxTab.classList.remove('text-slate-400', 'border-transparent');
-            kmlTab.classList.remove('text-white', 'border-amber-400', 'bg-srgb-slate-700-50');
-            kmlTab.classList.add('text-slate-400', 'border-transparent');
-            gpxContent.classList.remove('hidden');
-            kmlContent.classList.add('hidden');
-        } else {
-            kmlTab.classList.add('text-white', 'border-amber-400', 'bg-srgb-slate-700-50');
-            kmlTab.classList.remove('text-slate-400', 'border-transparent');
-            gpxTab.classList.remove('text-white', 'border-cyan-400', 'bg-srgb-slate-700-50');
-            gpxTab.classList.add('text-slate-400', 'border-transparent');
-            kmlContent.classList.remove('hidden');
-            gpxContent.classList.add('hidden');
-        }
+        if (session.busy || session.result || !['gpx', 'kml'].includes(tab)) return;
+        session.tab = tab;
+        render();
     }
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    function handleGPXFile(file) {
-        document.getElementById('gpx-error-message').classList.add('hidden');
-
-        // Validate extension
-        if (!file.name.toLowerCase().endsWith('.gpx')) {
-            showGPXError('Invalid file type. Please select a .gpx file.');
-            return;
-        }
-
-        selectedGPXFile = file;
-
-        // Show file info
-        document.getElementById('gpx-file-name').textContent = file.name;
-        document.getElementById('gpx-file-size').textContent = formatFileSize(file.size);
-        document.getElementById('gpx-drop-zone').classList.add('hidden');
-        document.getElementById('gpx-selected-file').classList.remove('hidden');
-        document.getElementById('gpx-upload-btn').disabled = false;
-    }
-
-    function handleKMLFile(file) {
-        document.getElementById('kml-error-message').classList.add('hidden');
-
-        const fileName = file.name.toLowerCase();
-        // Validate extension
-        if (!fileName.endsWith('.kml') && !fileName.endsWith('.kmz')) {
-            showKMLError('Invalid file type. Please select a .kml or .kmz file.');
-            return;
-        }
-
-        selectedKMLFile = file;
-
-        // Show file info
-        document.getElementById('kml-file-name').textContent = file.name;
-        document.getElementById('kml-file-size').textContent = formatFileSize(file.size);
-        document.getElementById('kml-drop-zone').classList.add('hidden');
-        document.getElementById('kml-selected-file').classList.remove('hidden');
-        document.getElementById('kml-upload-btn').disabled = false;
-    }
-
-    function showGPXError(message) {
-        const errorDiv = document.getElementById('gpx-error-message');
-        const errorText = document.getElementById('gpx-error-text');
-        errorText.textContent = message;
-        errorDiv.classList.remove('hidden');
-    }
-
-    function showKMLError(message) {
-        const errorDiv = document.getElementById('kml-error-message');
-        const errorText = document.getElementById('kml-error-text');
-        errorText.textContent = message;
-        errorDiv.classList.remove('hidden');
-    }
-
-    function showModal() {
-        const modal = document.getElementById('import-data-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            clearGPXFile();
-            clearKMLFile();
-            loadLandmarkCollectionSelectors();
-            switchTab('gpx');
-        }
-    }
-
-    async function loadLandmarkCollectionSelectors() {
-        if (landmarkCollectionsLoaded) return;
-
-        try {
-            const response = await fetch(Urls['api:v2:landmark-collections'](), {
-                method: 'GET',
-                headers: { 'X-CSRFToken': csrfToken },
-                credentials: 'same-origin'
-            });
-            const collections = await response.json();
-
-            if (!response.ok || !Array.isArray(collections)) {
-                return;
-            }
-
-            ['gpx-landmark-collection', 'kml-landmark-collection'].forEach(function(selectId) {
-                const select = document.getElementById(selectId);
-                if (!select) return;
-
-                select.innerHTML = '';
-                const writableCollections = collections
-                    .filter(function(collection) { return Number(collection.user_permission_level) >= 2; })
-                    .sort(function(a, b) {
-                        const aPersonal = a.is_personal === true || a.collection_type === 'PERSONAL';
-                        const bPersonal = b.is_personal === true || b.collection_type === 'PERSONAL';
-                        if (aPersonal !== bPersonal) return aPersonal ? -1 : 1;
-                        return String(a.name || '').localeCompare(String(b.name || ''));
-                    });
-
-                const hasPersonalCollection = writableCollections.some(function(collection) {
-                    return collection.is_personal === true || collection.collection_type === 'PERSONAL';
-                });
-
-                if (!hasPersonalCollection) {
-                    const personalOption = document.createElement('option');
-                    personalOption.value = '';
-                    personalOption.textContent = 'Personal Landmarks';
-                    select.appendChild(personalOption);
-                }
-
-                writableCollections
-                    .forEach(function(collection) {
-                        const isPersonal = collection.is_personal === true || collection.collection_type === 'PERSONAL';
-                        const option = document.createElement('option');
-                        option.value = collection.id;
-                        option.textContent = isPersonal ? `${collection.name} (Private)` : collection.name;
-                        select.appendChild(option);
-                    });
-            });
-
-            landmarkCollectionsLoaded = true;
-        } catch (error) {
-            console.error('Failed to load Landmark Collections:', error);
-        }
-    }
-
-    function hideModal() {
-        const modal = document.getElementById('import-data-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            clearGPXFile();
-            clearKMLFile();
-        }
-    }
-
-    function hideWarningModal() {
-        const modal = document.getElementById('import-warning-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    function clearGPXFile() {
-        selectedGPXFile = null;
-        const fileInput = document.getElementById('gpx-file-input');
-        if (fileInput) fileInput.value = '';
-
-        const dropZone = document.getElementById('gpx-drop-zone');
-        const selectedFile = document.getElementById('gpx-selected-file');
-        const errorMessage = document.getElementById('gpx-error-message');
-        const uploadBtn = document.getElementById('gpx-upload-btn');
-
-        if (dropZone) dropZone.classList.remove('hidden');
-        if (selectedFile) selectedFile.classList.add('hidden');
-        if (errorMessage) errorMessage.classList.add('hidden');
-        if (uploadBtn) uploadBtn.disabled = true;
-
-        // Reset upload button state
-        const uploadText = document.getElementById('gpx-upload-text');
-        const uploadSpinner = document.getElementById('gpx-upload-spinner');
-        if (uploadText) uploadText.textContent = 'Import GPX';
-        if (uploadSpinner) uploadSpinner.classList.add('hidden');
-    }
-
-    function clearKMLFile() {
-        selectedKMLFile = null;
-        const fileInput = document.getElementById('kml-file-input');
-        if (fileInput) fileInput.value = '';
-
-        const dropZone = document.getElementById('kml-drop-zone');
-        const selectedFile = document.getElementById('kml-selected-file');
-        const errorMessage = document.getElementById('kml-error-message');
-        const uploadBtn = document.getElementById('kml-upload-btn');
-
-        if (dropZone) dropZone.classList.remove('hidden');
-        if (selectedFile) selectedFile.classList.add('hidden');
-        if (errorMessage) errorMessage.classList.add('hidden');
-        if (uploadBtn) uploadBtn.disabled = true;
-
-        // Reset upload button state
-        const uploadText = document.getElementById('kml-upload-text');
-        const uploadSpinner = document.getElementById('kml-upload-spinner');
-        if (uploadText) uploadText.textContent = 'Import KML/KMZ';
-        if (uploadSpinner) uploadSpinner.classList.add('hidden');
-    }
-
-    async function uploadGPX() {
-        if (!selectedGPXFile) return;
-
-        const uploadBtn = document.getElementById('gpx-upload-btn');
-        const uploadText = document.getElementById('gpx-upload-text');
-        const uploadSpinner = document.getElementById('gpx-upload-spinner');
-
-        // Show loading state
-        uploadBtn.disabled = true;
-        uploadText.textContent = 'Importing...';
-        uploadSpinner.classList.remove('hidden');
-        document.getElementById('gpx-error-message').classList.add('hidden');
-
-        try {
-            const headers = new Headers();
-            headers.append('X-CSRFToken', csrfToken);
-
-            const formData = new FormData();
-            formData.append('file', selectedGPXFile, selectedGPXFile.name);
-            const collectionId = document.getElementById('gpx-landmark-collection')?.value;
-            if (collectionId) {
-                formData.append('collection', collectionId);
-            }
-
-            const requestOptions = {
-                method: 'PUT',
-                headers: headers,
-                body: formData,
-                credentials: 'same-origin',
-                redirect: 'follow'
-            };
-
-            const response = await fetch(Urls['api:v2:gpx-import'](), requestOptions);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Import failed');
-            }
-
-            const landmarksCreated = data?.landmarks_created || 0;
-            const tracksCreated = data?.gps_tracks_created || 0;
-
-            if (landmarksCreated > 0 || tracksCreated > 0) {
-                // Success - show message and reload
-                hideModal();
-                showSuccessModal(landmarksCreated, tracksCreated, 'gpx');
-            } else {
-                // Nothing imported - show warning
-                hideModal();
-                showWarningModal('gpx');
-            }
-
-        } catch (error) {
-            console.error('GPX import error:', error);
-            showGPXError(error.message || 'Failed to import GPX file');
-
-            // Reset button
-            uploadBtn.disabled = false;
-            uploadText.textContent = 'Import GPX';
-            uploadSpinner.classList.add('hidden');
-        }
-    }
-
-    async function uploadKML() {
-        if (!selectedKMLFile) return;
-
-        const uploadBtn = document.getElementById('kml-upload-btn');
-        const uploadText = document.getElementById('kml-upload-text');
-        const uploadSpinner = document.getElementById('kml-upload-spinner');
-
-        // Show loading state
-        uploadBtn.disabled = true;
-        uploadText.textContent = 'Importing...';
-        uploadSpinner.classList.remove('hidden');
-        document.getElementById('kml-error-message').classList.add('hidden');
-
-        try {
-            const headers = new Headers();
-            headers.append('X-CSRFToken', csrfToken);
-
-            const formData = new FormData();
-            formData.append('file', selectedKMLFile, selectedKMLFile.name);
-            const collectionId = document.getElementById('kml-landmark-collection')?.value;
-            if (collectionId) {
-                formData.append('collection', collectionId);
-            }
-
-            const requestOptions = {
-                method: 'PUT',
-                headers: headers,
-                body: formData,
-                credentials: 'same-origin',
-                redirect: 'follow'
-            };
-
-            const response = await fetch(Urls['api:v2:kml-kmz-import'](), requestOptions);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Import failed');
-            }
-
-            const landmarksCreated = data?.landmarks_created || 0;
-
-            if (landmarksCreated > 0) {
-                // Success - show message and reload landmarks
-                hideModal();
-                showSuccessModal(landmarksCreated, 0, 'kml');
-            } else {
-                // Nothing imported - show warning
-                hideModal();
-                showWarningModal('kml');
-            }
-
-        } catch (error) {
-            console.error('KML/KMZ import error:', error);
-            showKMLError(error.message || 'Failed to import KML/KMZ file');
-
-            // Reset button
-            uploadBtn.disabled = false;
-            uploadText.textContent = 'Import KML/KMZ';
-            uploadSpinner.classList.add('hidden');
-        }
-    }
-
-    function showSuccessModal(landmarks, tracks, type) {
-        const parts = [];
-        if (tracks > 0) parts.push(`${tracks} GPS track${tracks > 1 ? 's' : ''}`);
-        if (landmarks > 0) parts.push(`${landmarks} landmark${landmarks > 1 ? 's' : ''}`);
-
-        const message = `Successfully imported ${parts.join(' and ')}!`;
-
-        const messageEl = document.getElementById('import-success-message');
-        const modal = document.getElementById('import-success-modal');
-        const reloadText = document.getElementById('import-success-reload-text');
-
-        if (messageEl) messageEl.textContent = message;
-        if (reloadText) reloadText.textContent = 'Refreshing map data...';
-        if (modal) modal.classList.remove('hidden');
-
-        // Dispatch events to refresh data without full page reload
-        // Refresh landmarks if any were imported
-        if (landmarks > 0) {
-            window.dispatchEvent(new CustomEvent('speleo:refresh-landmarks'));
-        }
-
-        // Refresh GPS tracks if any were imported (only for GPX)
-        if (tracks > 0) {
-            window.dispatchEvent(new CustomEvent('speleo:refresh-gps-tracks', {
-                detail: { deactivateAll: true }
-            }));
-        }
-
-        // Close success modal after a short delay
-        setTimeout(() => {
-            if (modal) modal.classList.add('hidden');
-        }, 2500);
-    }
-
-    function showWarningModal(type) {
-        const modal = document.getElementById('import-warning-modal');
-        const messageEl = document.getElementById('import-warning-message');
-
+    function clearFile(type) {
+        if (session.busy) return;
+        session[`${type}File`] = null;
+        element(`${type}-file-input`).value = '';
+        session.errors[type] = '';
+        session.uncertain = false;
         if (type === 'kml') {
-            if (messageEl) messageEl.textContent = "This KML/KMZ file does not contain any new landmarks that aren't already in the system.";
-        } else {
-            if (messageEl) messageEl.textContent = "This GPX file does not contain any new landmarks or GPS tracks that aren't already in the system.";
+            generation += 1;
+            inspection?.abort();
+            inspection = null;
+            session.report = null;
+            session.inspecting = false;
         }
-
-        if (modal) modal.classList.remove('hidden');
+        render();
     }
 
-    function toggleInstructions() {
-        const panel = document.getElementById('kml-instructions-panel');
-        if (panel) {
-            panel.classList.toggle('is-open');
+    function selectFile(type, file) {
+        if (!file || session.busy) return;
+        if (type === 'kml' && !session.mode) {
+            session.errors.kml = 'Choose Placemarks or Map Overlay before selecting a file.';
+            render();
+            return;
+        }
+        clearFile(type);
+        if (!(type === 'gpx' ? /\.gpx$/i : /\.(kml|kmz)$/i).test(file.name)) {
+            session.errors[type] = type === 'gpx' ? 'Choose a .gpx file.' : 'Choose a .kml or .kmz file.';
+            render();
+            return;
+        }
+        session[`${type}File`] = file;
+        if (type === 'kml') {
+            session.layerNameEdited = false;
+            applySuggestedLayerName(element('kml-layer-name'), file.name.replace(/\.(kml|kmz)$/i, ''), false);
+        }
+        render();
+        if (type === 'kml') inspectKML();
+    }
+
+    async function inspectKML() {
+        if (!session.kmlFile || session.busy) return;
+        generation += 1;
+        const requestGeneration = generation;
+        inspection?.abort();
+        session.inspecting = true;
+        session.report = null;
+        session.errors.kml = '';
+        session.progress = null;
+        session.progressText = 'Uploading for review…';
+        render();
+        const data = new FormData();
+        data.append('file', session.kmlFile, session.kmlFile.name);
+        const isCurrent = () => generation === requestGeneration;
+        try {
+            const report = await new Promise((resolve, reject) => {
+                inspection = uploadWithProgress(Urls['api:v2:kml-kmz-inspect'](), data, {
+                    csrfToken: token, onSuccess: resolve, onError: reject,
+                    onProgress: percent => {
+                        if (!isCurrent()) return;
+                        session.progress = percent;
+                        session.progressText = `Uploading for review… ${percent}%`;
+                        renderProgress();
+                    },
+                    onUploaded: () => {
+                        if (!isCurrent()) return;
+                        session.progress = null;
+                        session.progressText = 'Reviewing file…';
+                        renderProgress();
+                    },
+                });
+            });
+            if (!isCurrent()) return;
+            if (!validReport(report)) throw new Error('The file review could not be read. Please try again.');
+            session.report = report;
+            applySuggestedLayerName(element('kml-layer-name'), report.suggested_name, session.layerNameEdited);
+        } catch (error) {
+            if (!isCurrent()) return;
+            session.errors.kml = error.message || 'Unable to review this file.';
+        } finally {
+            if (isCurrent()) {
+                inspection = null;
+                session.inspecting = false;
+                render();
+            }
         }
     }
 
-    // Public API
+    function eligible() {
+        if (session.result || session.busy || session.uncertain) return false;
+        if (session.tab === 'gpx') return Boolean(session.gpxFile && session.collectionsReady);
+        return canImportKML({
+            file: session.kmlFile, report: session.report, mode: session.mode,
+            collectionId: session.collectionsReady ? element('kml-landmark-collection').value : '',
+            layerName: element('kml-layer-name').value,
+        });
+    }
+
+    async function submit() {
+        if (!eligible()) return;
+        generation += 1;
+        inspection?.abort();
+        inspection = null;
+        session.inspecting = false;
+        const kind = session.tab === 'gpx' ? 'gpx' : session.mode;
+        const file = kind === 'gpx' ? session.gpxFile : session.kmlFile;
+        const data = new FormData();
+        const overlay = kind === 'overlay';
+        data.append(overlay ? 'source_file' : 'file', file, file.name);
+        if (overlay) data.append('name', element('kml-layer-name').value.trim());
+        else data.append('collection', element(`${kind === 'gpx' ? 'gpx' : 'kml'}-landmark-collection`).value);
+        const endpoint = overlay ? 'api:v2:gis-layers' : kind === 'gpx' ? 'api:v2:gpx-import' : 'api:v2:kml-kmz-import';
+        session.busy = true;
+        session.errors[session.tab] = '';
+        session.progress = null;
+        session.progressText = 'Uploading file…';
+        window.addEventListener('beforeunload', beforeUnload);
+        render();
+        try {
+            const response = await new Promise((resolve, reject) => {
+                uploadWithProgress(Urls[endpoint](), data, {
+                    method: overlay ? 'POST' : 'PUT', csrfToken: token,
+                    onSuccess: resolve, onError: reject,
+                    onProgress: percent => {
+                        session.progress = percent;
+                        session.progressText = `Uploading file… ${percent}%`;
+                        renderProgress();
+                    },
+                    onUploaded: () => {
+                        session.progress = null;
+                        session.progressText = overlay ? 'Preparing your map overlay… Keep this window open.'
+                            : kind === 'gpx' ? 'Importing landmarks and tracks… Keep this window open.' : 'Importing places… Keep this window open.';
+                        renderProgress();
+                    },
+                });
+            });
+            if (!response || (overlay ? !response.id : !Number.isFinite(response.landmarks_created))) {
+                throw Object.assign(new Error('The server returned an unreadable import result.'), { ambiguous: true });
+            }
+            session.result = {
+                kind, layerId: response.id, collectionId: response.collection_id,
+                bounds: response.bounds, landmarksCreated: count(response.landmarks_created),
+                gpsTracksCreated: count(response.gps_tracks_created),
+                gpsTrackIds: Array.isArray(response.gps_track_ids) ? response.gps_track_ids.map(String) : [],
+                landmarksSkipped: count(response.landmarks_skipped), duplicatesInFile: count(response.duplicates_in_file),
+                name: overlay ? String(response.name || element('kml-layer-name').value) : '',
+            };
+        } catch (error) {
+            session.uncertain = Boolean(error.ambiguous);
+            session.errors[session.tab] = session.uncertain
+                ? 'The connection ended before the import result could be confirmed. Check your GIS layers, landmarks, or GPS tracks before importing this file again.'
+                : error.message || 'Import failed. Please try again.';
+        } finally {
+            session.busy = false;
+            window.removeEventListener('beforeunload', beforeUnload);
+            render();
+        }
+        if (session.result) {
+            element('import-result').focus({ preventScroll: true });
+            await refreshResult();
+        }
+    }
+
+    async function refreshResult() {
+        if (!session.result || session.refreshing) return;
+        const current = session;
+        current.refreshing = true;
+        current.refreshError = '';
+        render();
+        try {
+            await refreshImportedMapData(current.result);
+            if (current === session) current.refreshed = true;
+        } catch {
+            if (current === session) current.refreshError = 'Your import is saved, but the map could not refresh.';
+        } finally {
+            if (current === session) {
+                current.refreshing = false;
+                render();
+            }
+        }
+    }
+
+    async function showResult() {
+        if (!session.result || session.refreshing || !session.refreshed) return;
+        const current = session;
+        current.refreshing = true;
+        current.showing = true;
+        render();
+        try {
+            await showImportedMapData(current.result);
+            if (current === session) {
+                current.showing = false;
+                hideModal();
+            }
+        } catch {
+            if (current === session) current.refreshError = 'Your import is saved, but it could not be shown on the map. Please try again.';
+        } finally {
+            if (current === session) {
+                current.showing = false;
+                current.refreshing = false;
+                render();
+            }
+        }
+    }
+
+    function renderProgress() {
+        const visible = session.busy || (session.tab === 'kml' && session.mode && session.inspecting);
+        element('import-progress').hidden = !visible;
+        element('import-progress-text').textContent = session.progressText;
+        const progress = element('import-progress-bar');
+        if (session.progress === null) progress.removeAttribute('value');
+        else progress.value = session.progress;
+    }
+
+    function render() {
+        if (!modal || !session) return;
+        const completed = Boolean(session.result);
+        for (const type of ['gpx', 'kml']) {
+            const selected = session.tab === type;
+            const tab = element(`import-tab-${type}`);
+            tab.setAttribute('aria-selected', String(selected));
+            tab.tabIndex = selected ? 0 : -1;
+            tab.disabled = session.busy || completed;
+            element(`import-content-${type}`).hidden = !selected || completed;
+            element(`${type}-import-fields`).disabled = session.busy;
+            element(`${type}-landmark-collection`).disabled = session.collectionsLoading || !session.collectionsReady;
+            const file = session[`${type}File`];
+            element(`${type}-drop-zone`).hidden = Boolean(file);
+            element(`${type}-selected-file`).hidden = !file;
+            if (file) {
+                element(`${type}-file-name`).textContent = file.name;
+                element(`${type}-file-size`).textContent = `${file.size.toLocaleString()} bytes`;
+            }
+        }
+        query('[role="tablist"]').hidden = completed;
+        element('kml-collection-field').hidden = session.mode !== 'places';
+        element('kml-name-field').hidden = session.mode !== 'overlay';
+        element('kml-mode-help').hidden = Boolean(session.mode);
+        element('kml-selected-mode').hidden = !session.mode;
+        element('kml-selected-mode-label').textContent = session.mode === 'places' ? 'Placemarks' : 'Map Overlay';
+        element('kml-import-form').hidden = !session.mode;
+        element('kml-export-instructions').hidden = !session.mode;
+        element('kml-export-selection').textContent = session.mode === 'places'
+            ? 'In the Places panel, select a point placemark or a folder of point placemarks.'
+            : 'In the Places panel, select the folder containing the points, lines, and areas for your layer.';
+        query('[data-import-action="browse-kml"]').disabled = !session.mode || session.busy;
+        renderImportReview(session.report, session.mode);
+        element('kml-review').hidden = !session.mode || !session.report;
+        element('kml-inspect-retry').hidden = !session.mode || !session.kmlFile || session.inspecting || Boolean(session.report) || session.busy;
+        renderImportError(session.errors, session.tab);
+        if (session.tab === 'kml' && !session.mode) element('import-error').hidden = true;
+        element('import-collections-error').textContent = session.collectionsError;
+        element('import-collections-error').hidden = !session.collectionsError || completed || (session.tab === 'kml' && session.mode !== 'places');
+        element('import-collections-retry').hidden = element('import-collections-error').hidden;
+        element('import-collections-retry').disabled = session.collectionsLoading || session.busy;
+        modal.querySelectorAll('[data-import-action="hide"]').forEach(button => { button.disabled = interactionLocked(); });
+        element('import-dismiss-button').textContent = completed ? 'Close' : 'Cancel';
+        const submitButton = element('import-submit-button');
+        submitButton.hidden = completed || (session.tab === 'kml' && !session.mode);
+        submitButton.disabled = !eligible();
+        submitButton.textContent = session.busy ? 'Importing…' : session.tab === 'gpx' ? 'Import GPX'
+            : session.mode === 'overlay' ? 'Import map overlay'
+                : session.mode === 'places' && session.report ? `Import ${plural(session.report.places.unique_coordinate_count, 'place')}` : 'Import';
+        element('import-result').hidden = !completed;
+        const show = element('import-show-button');
+        show.hidden = !completed || (session.result.kind !== 'overlay'
+            && !session.result.landmarksCreated && !session.result.gpsTracksCreated);
+        show.disabled = session.refreshing || !session.refreshed;
+        show.textContent = session.showing ? 'Showing on map…' : 'Show on map';
+        if (completed) {
+            const result = session.result;
+            const created = result.kind === 'overlay' || result.landmarksCreated || result.gpsTracksCreated;
+            element('import-result-title').textContent = created ? 'Import complete' : 'Nothing new to import';
+            element('import-result-message').textContent = result.kind === 'overlay' ? `“${result.name}” is ready as one GIS layer.`
+                : result.kind === 'gpx' ? `Imported ${plural(result.landmarksCreated, 'landmark')} and ${plural(result.gpsTracksCreated, 'GPS track')}.`
+                    : `Imported ${plural(result.landmarksCreated, 'landmark')}.`;
+            element('import-result-detail').textContent = result.kind === 'overlay' ? 'Your original file is preserved. Show the overlay when you are ready.'
+                : result.kind === 'places' ? `${plural(result.landmarksSkipped, 'place')} already in this collection. ${plural(result.duplicatesInFile, 'repeated coordinate')} in the file.`
+                    : 'Show your imported tracks and landmarks when you are ready.';
+            element('import-refresh-status').textContent = session.refreshing ? 'Updating map…' : session.refreshError || (session.refreshed ? 'Map data updated.' : '');
+            element('import-refresh-retry').hidden = !session.refreshError || session.refreshing;
+        }
+        renderProgress();
+    }
+
+    function destroy() {
+        if (interactionLocked()) return;
+        if (modal) closeMapDialog(modal);
+        listeners.forEach(remove => remove());
+        listeners = [];
+        if (session) resetSession();
+        modal = null;
+    }
+
     return {
-        init: init,
-        showModal: showModal,
-        hideModal: hideModal,
-        hideWarningModal: hideWarningModal,
-        clearGPXFile: clearGPXFile,
-        clearKMLFile: clearKMLFile,
-        uploadGPX: uploadGPX,
-        uploadKML: uploadKML,
-        switchTab: switchTab,
-        toggleInstructions: toggleInstructions
+        init, destroy, showModal, hideModal, switchTab, inspectKML,
+        clearGPXFile: () => clearFile('gpx'), clearKMLFile: () => clearFile('kml'),
+        uploadGPX: submit, uploadKML: submit,
     };
 })();
