@@ -795,8 +795,8 @@ export const Layers = {
             this.showGISGeometryLayers(key, false);
             return true;
         }
+        let record = State.gisGeometryCache.get(key);
         try {
-            let record = State.gisGeometryCache.get(key);
             if (!record) {
                 // Reuse the in-flight detail request if visibility changes rapidly.
                 let pending = State.gisGeometryLoading.get(key);
@@ -817,7 +817,12 @@ export const Layers = {
             this.showGISGeometryLayers(key, true);
             return true;
         } catch (error) {
+            // An independent editor fetch/save may have supplied a newer record
+            // while this request was pending. Its visibility remains authoritative.
+            const current = State.gisGeometryCache.get(key);
+            if (current && current !== record) return this.isGISGeometryVisible(key);
             State.gisGeometryStates.set(key, false);
+            this.showGISGeometryLayers(key, false);
             console.error('Failed to show GIS Geometry:', error);
             return false;
         } finally {

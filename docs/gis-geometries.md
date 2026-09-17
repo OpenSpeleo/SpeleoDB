@@ -40,7 +40,9 @@ Metadata retries preserve successful local saves made while a request is in
 flight, without retaining unchanged records omitted by the server. A failed
 retry keeps locally saved rows available alongside its Retry action. Panel
 expansion, collapse, and visibility changes preserve keyboard focus on a visible
-control; asynchronous responses never take focus away from the editor.
+control; asynchronous responses never take focus away from the editor. An older
+failed detail request cannot undo a newer saved shape's visibility or the user's
+subsequent hide action.
 
 Folded Projects, GPS Tracks, GIS Layers, and GIS Geometry cards share one 160 ×
 48 px size in the shared map stylesheet, keeping their labels and chevrons
@@ -94,6 +96,8 @@ scans.
 
 Errors remain next to the Save action. A revision conflict offers copying the
 draft and reloading the saved version; it never retries an overwrite silently.
+Editor switching waits until an active save or reload finishes. Clipboard
+completion belongs to its initiating draft and cannot modify a later editor.
 Area warnings use both words and color, and the Save button cannot bypass an
 invalid pending coordinate or an oversized bounding box.
 

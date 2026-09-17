@@ -545,3 +545,18 @@ keyboard/GPS/save flow, visibility focus, direct-link close behavior, editing at
 the vertex cap, and mobile controls using the clean production build. Final
 full-suite and pre-commit evidence is recorded in
 [the review task](todos/gis-geometry-adversarial-review.md).
+
+# GIS Geometry second adversarial review
+
+The requested independent second pass found and fixed three asynchronous
+failures: conflict reload could discard a replacement editor, clipboard
+completion could access a closed/replaced draft, and an older failed detail
+request could overwrite a newer save's visibility. Existing session/cache
+boundaries now guard those completions, with eleven additional regressions.
+
+All 1,185 JavaScript tests and 4,870 Python tests (181 skips) passed. Chromium
+reproduced the conflict-reload and delayed-clipboard flows against the running
+app and confirmed the fixes without runtime errors. Backend, permissions,
+validation, migrations, and exports were re-reviewed with no additional
+actionable findings. Full final verification is recorded in
+[the second review](todos/gis-geometry-second-review.md).

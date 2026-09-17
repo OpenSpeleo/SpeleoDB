@@ -348,6 +348,91 @@ describe('native GIS geometry editor', () => {
         expect(GeometryEditor.isActive()).toBe(true);
     });
 
+    it.each(['create', 'edit'])('does not %s another draft while an unchanged conflict is reloading', async method => {
+        await GeometryEditor.edit(existing);
+        inputName('Conflicting change');
+        API.updateGISGeometry.mockRejectedValue(Object.assign(new Error('Conflict'), { status: 409 }));
+        await GeometryEditor.save();
+        inputName(existing.name);
+        expect(GeometryEditor.hasUnsavedChanges()).toBe(false);
+        expect(GeometryEditor.nodes.conflict.hidden).toBe(false);
+        let resolve;
+        API.getGISGeometryDetails.mockReturnValue(new Promise(done => { resolve = done; }));
+        GeometryEditor.performAction('reload');
+        const session = GeometryEditor.session;
+        GeometryEditor.performAction('discard');
+        expect(session.saving).toBe(true);
+        // Start the actual entry point without awaiting an accidentally opened
+        // fetch: before the fix, edit() waits on the same pending detail response.
+        const opening = method === 'create' ? GeometryEditor.create() : GeometryEditor.edit(existing);
+        const unchanged = GeometryEditor.session === session;
+        const requestCount = API.getGISGeometryDetails.mock.calls.length;
+        resolve({ ...existing, revision: existing.revision + 1 });
+        const result = await opening;
+        await vi.waitFor(() => expect(GeometryEditor.session.record?.revision).toBe(existing.revision + 1));
+        expect(unchanged).toBe(true);
+        expect(requestCount).toBe(2);
+        expect(result).toBe(false);
+        expect(document.querySelectorAll('[data-geometry-editor]')).toHaveLength(1);
+    });
+
+    it.each(['resolve', 'reject'])('ignores clipboard %s after the editor closes', async outcome => {
+        await GeometryEditor.edit(existing);
+        let settle;
+        const writeText = vi.fn(() => new Promise((resolve, reject) => {
+            settle = outcome === 'resolve' ? resolve : reject;
+        }));
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+        try {
+            const copying = GeometryEditor.copyDraft();
+            GeometryEditor.close(true);
+            settle();
+            await expect(copying).resolves.toBe(false);
+            expect(GeometryEditor.isActive()).toBe(false);
+        } finally {
+            delete navigator.clipboard;
+        }
+    });
+
+    it.each(['resolve', 'reject'])('does not leak clipboard %s into a replacement draft', async outcome => {
+        await GeometryEditor.edit(existing);
+        let settle;
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+            writeText: () => new Promise((resolve, reject) => { settle = outcome === 'resolve' ? resolve : reject; }),
+        } });
+        try {
+            const copying = GeometryEditor.copyDraft();
+            GeometryEditor.close(true);
+            await GeometryEditor.create();
+            const status = GeometryEditor.nodes.status.textContent;
+            settle();
+            await expect(copying).resolves.toBe(false);
+            expect(GeometryEditor.nodes.status.textContent).toBe(status);
+            expect(GeometryEditor.nodes.copyFallback.hidden).toBe(true);
+            expect(GeometryEditor.nodes.copyFallback.value).toBe('');
+        } finally {
+            delete navigator.clipboard;
+        }
+    });
+
+    it('shows the retained draft when asynchronous clipboard access is denied', async () => {
+        await GeometryEditor.edit(existing);
+        let reject;
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+            writeText: () => new Promise((_, rejectPromise) => { reject = rejectPromise; }),
+        } });
+        try {
+            const copying = GeometryEditor.copyDraft();
+            reject(new Error('Clipboard denied'));
+            await expect(copying).resolves.toBe(true);
+            expect(GeometryEditor.nodes.copyFallback.hidden).toBe(false);
+            expect(JSON.parse(GeometryEditor.nodes.copyFallback.value)).toEqual(existing.geojson);
+            expect(document.activeElement).toBe(GeometryEditor.nodes.copyFallback);
+        } finally {
+            delete navigator.clipboard;
+        }
+    });
+
     it('continues a requested session switch after discard and blocks accidental control map clicks', async () => {
         await GeometryEditor.edit(existing);
         inputName('Dirty edit');

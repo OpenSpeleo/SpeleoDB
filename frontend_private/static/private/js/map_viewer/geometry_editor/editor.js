@@ -101,7 +101,7 @@ export const GeometryEditor = {
     },
 
     async create() {
-        if (this._opening) return false;
+        if (this._opening || this.session?.saving) return false;
         if (this.session && this.hasUnsavedChanges()) { this.requestClose(() => this.create()); return false; }
         if (this.session) this.close();
         this.begin(null);
@@ -109,7 +109,7 @@ export const GeometryEditor = {
     },
 
     async edit(record) {
-        if (this._opening) return false;
+        if (this._opening || this.session?.saving) return false;
         if (this.session && this.hasUnsavedChanges()) { this.requestClose(() => this.edit(record)); return false; }
         if (this.session) this.close();
         if (!record?.id || !Config.hasGISGeometryAccess(record.id, 'write')) return false;
@@ -501,17 +501,20 @@ export const GeometryEditor = {
 
     async copyDraft() {
         if (!this.session || !this.flushGPS()) return false;
-        const text = JSON.stringify(geometryFromVertices(this.session.draft.type, this.session.draft.vertices), null, 2);
+        const { session, nodes } = this;
+        const text = JSON.stringify(geometryFromVertices(session.draft.type, session.draft.vertices), null, 2);
         try {
             if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
             await navigator.clipboard.writeText(text);
-            this.nodes.status.textContent = 'Draft GeoJSON copied. Keep it before reloading the saved geometry.';
+            if (this.session !== session || this.nodes !== nodes) return false;
+            nodes.status.textContent = 'Draft GeoJSON copied. Keep it before reloading the saved geometry.';
         } catch {
-            this.nodes.copyFallback.value = text;
-            this.nodes.copyFallback.hidden = false;
-            this.nodes.copyFallback.focus();
-            this.nodes.copyFallback.select();
-            this.nodes.status.textContent = 'Select and copy the draft below before reloading.';
+            if (this.session !== session || this.nodes !== nodes) return false;
+            nodes.copyFallback.value = text;
+            nodes.copyFallback.hidden = false;
+            nodes.copyFallback.focus();
+            nodes.copyFallback.select();
+            nodes.status.textContent = 'Select and copy the draft below before reloading.';
         }
         return true;
     },

@@ -153,6 +153,41 @@ it('refreshes a collaborator change as the revert baseline without revealing hid
     expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
 });
 
+it.each(['acceptGISGeometry', 'refreshGISGeometry'])('ignores a stale request failure after %s supplies the record', async replaceRecord => {
+    let reject;
+    API.getGISGeometryDetails.mockReturnValueOnce(new Promise((resolve, fail) => { reject = fail; }));
+    const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    Layers[replaceRecord](record({ name: 'Newer saved baseline', revision: 2 }));
+    reject(new Error('The older request failed'));
+    expect(await showing).toBe(true);
+    expect(Layers.isGISGeometryVisible('g1')).toBe(true);
+    expect(State.gisGeometryCache.get('g1').revision).toBe(2);
+    expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'visible');
+    expect(State.gisGeometryLoading.size).toBe(0);
+});
+
+it('preserves an explicit hide after saving when an older request fails', async () => {
+    let reject;
+    API.getGISGeometryDetails.mockReturnValueOnce(new Promise((resolve, fail) => { reject = fail; }));
+    const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    Layers.acceptGISGeometry(record({ revision: 2 }));
+    await Layers.toggleGISGeometryVisibility('g1', false);
+    reject(new Error('The older request failed'));
+    expect(await showing).toBe(false);
+    expect(Layers.isGISGeometryVisible('g1')).toBe(false);
+    expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
+});
+
+it('hides existing rendered layers when an ordinary show attempt fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await Layers.toggleGISGeometryVisibility('g1', true);
+    State.gisGeometryCache.delete('g1');
+    API.getGISGeometryDetails.mockRejectedValueOnce(new Error('offline'));
+    expect(await Layers.toggleGISGeometryVisibility('g1', true)).toBe(false);
+    expect(Layers.isGISGeometryVisible('g1')).toBe(false);
+    expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
+});
+
 it('fails closed on missing access and permits retry', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     API.getGISGeometryDetails.mockRejectedValueOnce(new Error('revoked'));
