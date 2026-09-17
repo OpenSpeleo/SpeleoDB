@@ -1,5 +1,8 @@
 # Backend GIS menu order
 
+Historical order, superseded by
+[GIS navigation section](gis-navigation-section.md).
+
 - [x] Order the backend links My GIS Geometries, My GIS Layers, My GPS Tracks.
 - [x] Check template lint, frontend regressions, and the running server's menu
       order.

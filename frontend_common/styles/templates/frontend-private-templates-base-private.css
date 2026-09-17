@@ -21,12 +21,12 @@
             }
 
             /* Sidebar header spacing and logo sizing */
-            #sidebar .flex.justify-between.mb-10 {
+            #sidebar .flex.justify-between.my-3 {
                 gap: 16px;
                 align-items: center;
             }
 
-            #sidebar .flex.justify-between.mb-10 a img {
+            #sidebar .flex.justify-between.my-3 a img {
                 max-width: 120px;
                 height: auto;
             }
@@ -130,3 +130,15 @@
                 font-size: 0.875rem !important;
             }
         }
+/* One native disclosure serves the desktop sidebar and mobile drawer. */
+.gis-tooling-summary {
+    list-style: none;
+}
+
+.gis-tooling-summary::-webkit-details-marker {
+    display: none;
+}
+
+.gis-tooling[open] > .gis-tooling-summary .gis-tooling-chevron {
+    transform: rotate(90deg);
+}

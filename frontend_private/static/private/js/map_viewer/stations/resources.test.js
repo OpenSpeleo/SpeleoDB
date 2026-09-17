@@ -1,5 +1,28 @@
 import { StationResources } from './resources.js';
 
+it('keeps note copy info styling throughout clipboard feedback', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    try {
+        StationResources.openNoteViewer({ title: 'Note', content: 'Survey note', author: 'Surveyor', date: '2026-09-17' });
+        const button = document.querySelector('[data-copy-note]');
+        const originalMarkup = button.innerHTML;
+        button.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(writeText).toHaveBeenCalledWith('Survey note');
+        expect(button.textContent.trim()).toBe('Copied!');
+        expect(button.className).toBe('copy-button');
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(button.innerHTML).toBe(originalMarkup);
+        expect(button.className).toBe('copy-button');
+    } finally {
+        StationResources.closeNoteViewer();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    }
+});
+
 vi.mock('../api.js', () => ({
     API: {
         getStationResources: vi.fn(),

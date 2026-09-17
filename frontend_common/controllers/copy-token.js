@@ -1,7 +1,6 @@
 import { afterWindowLoad } from '../readiness.js';
 
 const CHECK_ICON = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
-const COPY_ICON = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>';
 
 function copyFallback(value) {
     const $textArea = $('<textarea>').val(value).css({
@@ -26,23 +25,16 @@ function attachCopyButton(options) {
     const $button = $(options.button);
     const $text = $(options.text);
     const $icon = options.icon ? $(options.icon) : $();
+    const originalIcon = $icon.html();
 
     function reset() {
         $text.text('Copy');
-        if ($icon.length) $icon.html(COPY_ICON);
-        if (options.toggleClasses) {
-            $button.removeClass('bg-green-600 hover:bg-green-700')
-                .addClass('bg-slate-700 hover:bg-slate-600');
-        }
+        if ($icon.length) $icon.html(originalIcon);
     }
 
     function success() {
         $text.text('Copied!');
         if ($icon.length) $icon.html(CHECK_ICON);
-        if (options.toggleClasses) {
-            $button.removeClass('bg-slate-700 hover:bg-slate-600')
-                .addClass('bg-green-600 hover:bg-green-700');
-        }
         window.setTimeout(reset, 2000);
     }
 
@@ -50,7 +42,8 @@ function attachCopyButton(options) {
         event.preventDefault();
         event.stopPropagation();
         if (options.disabledGuard && $button.prop('disabled')) return;
-        const value = $(options.value).text().trim();
+        const $value = $(options.value);
+        const value = ($value.is('input, textarea') ? $value.val() : $value.text()).trim();
         if (!value) return;
         const operation = navigator.clipboard?.writeText
             ? navigator.clipboard.writeText(value).then(() => true).catch(() => copyFallback(value))

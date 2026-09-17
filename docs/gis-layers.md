@@ -41,6 +41,12 @@ files remain available for retention and administrative recovery.
 
 ## Web interface
 
+The shared desktop sidebar and mobile drawer label the entry **GIS Layers** and
+place it in the second **GIS Tooling** disclosure, alphabetically between GIS
+Landmark Collections and GIS Sensor Fleets. The listing heading remains **My GIS
+Layers**. The group starts collapsed and automatically expands for its listing
+and all layer settings tabs, using the existing current-route marker.
+
 `/private/gis-layers/` remains the listing and upload entry point. Each desktop
 row and mobile card provides the source download plus the same circular
 right-arrow Open control used by Project and Surface Network listings. Open

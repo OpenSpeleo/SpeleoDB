@@ -365,7 +365,7 @@ export const GeometryEditor = {
     },
 
     button(action, label, text) {
-        const button = element('button', 'gis-geometry-editor__button', text);
+        const button = element('button', action === 'copy' ? 'copy-button' : 'gis-geometry-editor__button', text);
         button.type = 'button';
         button.dataset.editorAction = action;
         button.setAttribute('aria-label', label);

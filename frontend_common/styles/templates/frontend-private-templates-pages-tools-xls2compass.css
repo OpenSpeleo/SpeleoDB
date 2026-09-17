@@ -520,7 +520,7 @@ button.tool-action {
         gap: 12px;
     }
 
-    .modal-actions button {
+    .modal-actions button:not(.copy-button) {
         padding: 8px 16px;
         border-radius: 6px;
         border: 1px solid #475569;
@@ -534,7 +534,7 @@ button.tool-action {
         transition: all 0.2s;
     }
 
-    .modal-actions button:hover {
+    .modal-actions button:not(.copy-button):hover {
         background: #334155;
         border-color: #64748b;
     }

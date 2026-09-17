@@ -5,6 +5,7 @@
 
 {% block extra_css %}
   {{ block.super }}
+  {% vite_preload 'controller-copy-token' %}
   {% vite_styles 'style-template-frontend-private-templates-pages-user-auth-token' %}
 {% endblock extra_css %}
 {% block right_panel %}
@@ -17,11 +18,20 @@
       <section>
         <div class="sm:flex sm:items-center flow-y-4 sm:flow-y-0 sm:flow-x-4 mt-5">
           <div class="w-full">
-            <label class="block text-sm font-medium mb-1" for="name">Current Application Token:</label>
-            <input class="form-input max-w-full w-128"
-                   type="text"
-                   value="{{ auth_token.key }}"
-                   disabled />
+            <label class="block text-sm font-medium mb-1" for="auth-token">Current Application Token:</label>
+            <div class="relative max-w-full w-128">
+              <input id="auth-token"
+                     class="form-input w-full h-11 pr-24"
+                     type="text"
+                     value="{{ auth_token.key }}"
+                     disabled />
+              <button id="copy-token-btn"
+                      type="button"
+                      aria-label="Copy application token"
+                      class="copy-button absolute right-1 top-1/2 -translate-y-1/2">
+                <span id="copy-token-text" role="status" aria-live="polite">Copy</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -44,3 +54,14 @@
     {% include "snippets/modal_error.html" %}
   </div>
 {% endblock right_panel %}
+{% block inline_extra_js %}
+  <script type="application/json" data-speleodb-controller="copy-token">
+    {
+      "copyButtons": [{
+        "button": "#copy-token-btn",
+        "value": "#auth-token",
+        "text": "#copy-token-text"
+      }]
+    }
+  </script>
+{% endblock inline_extra_js %}

@@ -192,9 +192,96 @@ def test_inherited_permission_team_links_are_balanced(*, has_team_access: bool) 
 
 
 @pytest.mark.parametrize(
-    "url_name", ["user_dashboard", "projects", "map_viewer", "teams"]
+    ("url_name", "active_route"),
+    [
+        ("user_dashboard", "user_dashboard"),
+        ("projects", "projects"),
+        ("map_viewer", "map_viewer"),
+        ("teams", "teams"),
+        ("gis_geometries", "gis_geometries"),
+        ("gis_geometry_details", "gis_geometries"),
+        ("gis_geometry_user_permissions", "gis_geometries"),
+        ("gis_geometry_danger_zone", "gis_geometries"),
+        ("gis_layers", "gis_layers"),
+        ("gis_layer_details", "gis_layers"),
+        ("gis_layer_user_permissions", "gis_layers"),
+        ("gis_layer_danger_zone", "gis_layers"),
+        *[
+            (route, "cylinder_fleets")
+            for route in (
+                "cylinder_fleets",
+                "cylinder_fleet_new",
+                "cylinder_fleet_details",
+                "cylinder_fleet_danger_zone",
+                "cylinder_fleet_user_permissions",
+                "cylinder_fleet_history",
+                "cylinder_fleet_watchlist",
+                "cylinder_fleet_needs_hydro",
+                "cylinder_fleet_needs_visual",
+            )
+        ],
+        *[
+            (route, "experiments")
+            for route in (
+                "experiments",
+                "experiment_new",
+                "experiment_details",
+                "experiment_danger_zone",
+                "experiment_gis_integration",
+                "experiment_user_permissions",
+                "experiment_data_viewer",
+            )
+        ],
+        *[
+            (route, "landmark_collections")
+            for route in (
+                "landmark_collections",
+                "landmark_collection_new",
+                "landmark_collection_details",
+                "landmark_collection_user_permissions",
+                "landmark_collection_gis_integration",
+                "landmark_collection_danger_zone",
+            )
+        ],
+        *[
+            (route, "sensor_fleets")
+            for route in (
+                "sensor_fleets",
+                "sensor_fleet_new",
+                "sensor_fleet_details",
+                "sensor_fleet_danger_zone",
+                "sensor_fleet_user_permissions",
+                "sensor_fleet_history",
+                "sensor_fleet_watchlist",
+            )
+        ],
+        ("station_tags", "station_tags"),
+        *[
+            (route, "surface_networks")
+            for route in (
+                "surface_networks",
+                "surface_network_new",
+                "surface_network_details",
+                "surface_network_user_permissions",
+                "surface_network_gis_integration",
+                "surface_network_danger_zone",
+            )
+        ],
+        *[
+            (route, "gis_views")
+            for route in (
+                "gis_views",
+                "gis_view_new",
+                "gis_view_details",
+                "gis_view_gis_integration",
+                "gis_view_danger_zone",
+            )
+        ],
+    ],
 )
-def test_private_navigation_has_no_nested_interactive_elements(url_name: str) -> None:
+def test_private_navigation_has_no_nested_interactive_elements(
+    url_name: str, active_route: str
+) -> None:
     page: Element = render_page(
         "base_private.html", request=SimpleNamespace(url_name=url_name)
     )
@@ -205,6 +292,85 @@ def test_private_navigation_has_no_nested_interactive_elements(url_name: str) ->
     )
     active_items: list[Element] = with_class(sidebar, "bg-slate-900")
     assert len(active_items) == 1
+    active_link: Element = next(
+        element for element in descendants(active_items[0]) if element.name == "a"
+    )
+    assert dict(active_link.attributes)["href"] == reverse(f"private:{active_route}")
+    navigation: Element = next(
+        element for element in descendants(sidebar) if element.name == "ul"
+    )
+    sections: list[list[Element]] = [[]]
+    for child in navigation.children:
+        if not isinstance(child, Element):
+            continue
+        if child.name == "hr":
+            sections.append([])
+        elif child.name == "li":
+            sections[-1].append(child)
+    gis_links: list[Element] = [
+        element
+        for item in sections[1]
+        for element in descendants(item)
+        if element.name == "a"
+    ]
+    gis_labels: list[str] = [
+        "".join(element.children).strip()
+        for link in gis_links
+        for element in descendants(link)
+        if element.name == "span"
+    ]
+    assert gis_labels == sorted(gis_labels)
+    group: Element = next(
+        element
+        for element in descendants(sidebar)
+        if dict(element.attributes).get("id") == "gis-tooling"
+    )
+    assert group.name == "details"
+    assert "open" not in dict(group.attributes)
+    summary: Element = next(
+        element for element in descendants(group) if element.name == "summary"
+    )
+    assert "GIS Tooling" in str(summary)
+    current_links: list[Element] = [
+        link
+        for link in gis_links
+        if dict(link.attributes).get("aria-current") == "page"
+    ]
+    assert current_links == ([active_link] if active_link in gis_links else [])
+    first_section_links: list[Element] = [
+        element
+        for item in sections[0]
+        for element in descendants(item)
+        if element.name == "a"
+    ]
+    first_section_urls: list[str | None] = [
+        dict(link.attributes).get("href") for link in first_section_links
+    ]
+    tools_index: int = first_section_urls.index(reverse("private:tool-xls2dmp"))
+    assert first_section_urls[tools_index + 1] == reverse("private:map_viewer")
+    assert all(
+        dict(link.attributes).get("href") != reverse("private:map_viewer")
+        for link in gis_links
+    )
+    for route, label in (
+        ("gis_geometries", "GIS Geometries"),
+        ("gis_layers", "GIS Layers"),
+    ):
+        matching_links: list[Element] = [
+            link
+            for link in descendants(sidebar)
+            if link.name == "a"
+            and dict(link.attributes).get("href") == reverse(f"private:{route}")
+        ]
+        assert len(matching_links) == 1
+        assert matching_links[0] in gis_links
+        assert gis_labels[gis_links.index(matching_links[0])] == label
+    # One shared sidebar serves both the mobile drawer and desktop layout.
+    assert "lg:static" in (dict(sidebar.attributes).get("class") or "").split()
+    for item in sections[1]:
+        for element in [item, *descendants(item)]:
+            classes: list[str] = (dict(element.attributes).get("class") or "").split()
+            assert not {"hidden", "lg:hidden"}.intersection(classes)
     for element in descendants(page):
         if element.name in {"a", "button"}:
             assert not any(

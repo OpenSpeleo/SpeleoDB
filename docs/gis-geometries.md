@@ -15,14 +15,17 @@ export contract.
 
 ## User workflow
 
-The backend navigation orders My GIS Geometries, My GIS Layers, then My GPS
-Tracks. The GIS Geometries navigation entry opens the same responsive listing
-and settings workflow as GIS Layers. Each record has a name, creator, color,
-Details, User Access, and an administrator-only Danger Zone. Create geometry
-opens the Survey Viewer without creating an empty database record. Details also
-offers View/Edit on map and an Advanced: GeoJSON field. Readers can inspect and
-copy JSON; writers can edit it. Name, color, and changed geometry save in one
-atomic request.
+The shared desktop sidebar and mobile drawer place GIS Geometries and GIS Layers
+in the second, alphabetically ordered **GIS Tooling** disclosure. It starts
+collapsed and opens automatically on any contained page. GIS Geometries follows
+GIS Experiments; GIS Layers follows GIS Landmark Collections. My GPS Tracks
+remains in the first section. The GIS Geometries navigation entry opens the same
+responsive listing and settings workflow as GIS Layers. Each record has a name,
+creator, color, Details, User Access, and an administrator-only Danger Zone.
+Create geometry opens the Survey Viewer without creating an empty database
+record. Details also offers View/Edit on map and an Advanced: GeoJSON field.
+Readers can inspect and copy JSON; writers can edit it. Name, color, and changed
+geometry save in one atomic request.
 
 The Survey Viewer loads geometry metadata alongside its other lists. All stored
 geometries start hidden on each fresh viewer load. Visibility uses the same

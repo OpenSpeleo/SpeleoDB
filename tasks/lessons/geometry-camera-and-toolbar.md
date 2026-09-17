@@ -22,9 +22,20 @@ beside Import GPS, and expected the same chevron as other overlay sections.
 - Reuse the existing visibility toggle markup and styles for every map overlay
   panel. A native checkbox without the shared slider is a visible inconsistency;
   verify the rendered control as well as its on/off behavior.
-- Keep the backend GIS navigation in the requested order: My GIS Geometries, My
-  GIS Layers, then My GPS Tracks. Move complete navigation blocks so each link
-  keeps its own icon and active-page highlighting.
+- Keep GIS Geometries and GIS Layers in the second navigation section, without
+  My prefixes, in alphabetical order with the other GIS entries. This replaces
+  the earlier request to put them before My GPS Tracks. Update the shared
+  desktop/mobile sidebar and move complete blocks so icons and active-page
+  highlighting stay with their links.
+- The second section is now a collapsed-by-default GIS Tooling disclosure that
+  opens on its contained pages. Keep GIS Survey Map outside it, directly below
+  Survey Tools. Use current-page markers to expand the group instead of
+  duplicating the route registry, and include special fleet watchlist pages.
+- Keep the label GIS Tooling (without Advanced) and visually indent its
+  children. Allow long nested link names to wrap rather than clipping them at
+  narrow widths. Use the requested 290px sidebar width to keep ordinary GIS
+  labels on one line; increase drawer width together with its full-width hidden
+  translation.
 - Treat folded overlay cards as one visual component: share their width, height,
   and chevron alignment so a longer label does not change the stack's
   dimensions.

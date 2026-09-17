@@ -36,9 +36,7 @@
                     class="text-slate-100 font-mono text-sm break-all flex-1 min-w-0">
                 {{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:landmark-collection-landing' gis_token=collection.gis_token %}
               </code>
-              <button id="copy-api-btn"
-                      type="button"
-                      class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+              <button id="copy-api-btn" type="button" class="copy-button">
                 <svg id="copy-api-icon"
                      class="w-4 h-4"
                      fill="none"

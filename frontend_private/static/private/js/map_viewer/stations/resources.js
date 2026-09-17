@@ -1009,8 +1009,8 @@ export const StationResources = {
                 </div>
                 <div class="p-4 border-t border-slate-700 flex justify-between items-center">
                     <span class="text-xs text-slate-400">${noteData.content.length} characters</span>
-                    <button data-copy-note class="btn-secondary text-sm">
-                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button data-copy-note class="copy-button">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                         </svg>
                         Copy to Clipboard
@@ -1090,18 +1090,14 @@ export const StationResources = {
 
             const originalHTML = btn.innerHTML;
             btn.innerHTML = `
-                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
                 Copied!
             `;
-            btn.classList.add('bg-green-600');
-            btn.classList.remove('bg-slate-600');
 
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
-                btn.classList.remove('bg-green-600');
-                btn.classList.add('bg-slate-600');
             }, 2000);
         }).catch(err => {
             console.error('Failed to copy:', err);

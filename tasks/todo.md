@@ -508,6 +508,9 @@ at desktop and mobile widths: Create Geometry is left of Import GPS. See
 
 # Backend GIS menu order review
 
+Historical placement below is superseded by
+[GIS navigation section](todos/gis-navigation-section.md).
+
 Reordered the existing sidebar blocks to My GIS Geometries, My GIS Layers, then
 My GPS Tracks. Verified the actual authenticated HTTP response from the running
 server. Template lint and all 1,158 JavaScript tests pass. See
@@ -579,3 +582,80 @@ existing 160 × 48 px card still fits the longer text at desktop/mobile widths.
 All 1,185 JavaScript tests, ten page tests, lint, and the production build
 passed in the running container. See
 [the task](todos/gis-geometries-plural-labels.md).
+
+# Profile application token copy review
+
+Follow-up: applied the requested sky-blue info button style. All 1,191
+JavaScript tests, template checks, and the production build passed again.
+
+Added a right-side Copy button to the account token field using the shared
+clipboard controller, now supporting input values. Includes accessible
+success/failure feedback and preserves existing integration text copying. All
+1,191 JavaScript tests, JavaScript lint, template formatting/lint, and the clean
+production build passed in the running application container. See
+[the task](todos/profile-token-copy.md).
+
+# Feedback navigation icon review
+
+Removed the default black fill from the main sidebar's Give us Feedback
+paper-plane icon and aligned SVG-level stroke/color styling with its neighbors.
+Container JavaScript tests, template formatting/lint, and clean production build
+passed. See [the task](todos/feedback-icon-fill.md).
+
+# GIS navigation section review
+
+Moved GIS Geometries and GIS Layers into the alphabetized second sidebar
+section, removed their navigation My prefixes, and preserved shared desktop/
+mobile markup, icons, links, and route-family highlighting. Reviewed and updated
+current docs and stale ordering guidance; independent review found no issues.
+All 125 focused Python tests and 1,191 JavaScript tests passed, as did final
+template regression checks, lint, typing, and the production build. GitLab
+audit: zero creations/POSTs/violations, no unresolved outcomes or cleanup
+needed. See [the task](todos/gis-navigation-section.md).
+
+# Shared info copy buttons review
+
+Placed the profile token Copy control inside its field and unified all 12 site
+copy buttons under one shared info-style component. Removed feature color resets
+and conflicting modal styles; clipboard behavior and disabled controls remain
+intact. Updated docs and the styling lesson. Browser verification confirmed
+matching styles and desktop/mobile field fit at 1440, 390, and 320px. Python
+checks (64), JavaScript coverage (1,194, with load-related timeout retries),
+lint, template checks, and production build completed successfully. See
+[the verification details](todos/shared-copy-buttons.md).
+
+# GIS Tooling disclosure review
+
+Follow-up: added the supplied map-pin/layers SVG to **GIS Tooling** and indented
+the submenu with a subtle guide, keeping desktop/mobile disclosure behavior.
+Final icon/indent checks: 1,197 JavaScript tests, 68 template tests, template
+checks, and build passed; browser verified 1440/390/320px layouts without
+overflow. Sidebar follow-ups set its width to 290px (all nested labels remain
+one line) and replace header `mb-10 mt-3` with `my-3`, preserving mobile logo
+styles and full-width drawer dismissal. Final JavaScript tests, template checks,
+and build passed.
+
+Moved GIS Survey Map below Survey Tools and gave it a subtle blue accent. The
+shared desktop/mobile sidebar now groups the remaining GIS entries under native
+GIS Tooling disclosure, closed by default and automatically opened for a current
+child page. Included missing cylinder inspection watchlist route highlighting.
+Fixed the live new-entry error by building assets and reloading Django's cached
+registry; the reported landmark page returns HTTP 200. All 178 focused Python
+tests, 1,197 JavaScript tests, lint, typing, and build passed. Chromium verified
+desktop/mobile expansion, keyboard toggling, and final styling. See
+[the task](todos/gis-tooling-collapse.md).
+
+# Profile and navigation adversarial review
+
+Reviewed the complete copy-button and responsive sidebar change set with the
+independent review agent; no actionable findings or corrective code edits were
+needed. Full container JavaScript tests passed: 1,197 tests across 74 files.
+Full Python tests reported 4,918 passed, 181 skipped, and one fixture setup
+timeout from local GitLab. All 32 archive tests passed on rerun without changes.
+
+The full run used 9 GitLab repositories and 10 creation POSTs; the archive retry
+used 2 repositories and 2 POSTs. Both audits had zero violations, no unresolved
+creations, and verified deletion marking for every created repository. The first
+full `prek` run passed all code, security, type, lint, URL, and build checks;
+Markdown formatting was applied and reviewed before the final rerun. See
+[the verification record](todos/profile-navigation-adversarial-review.md).

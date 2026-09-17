@@ -18,7 +18,7 @@
           content="SpeleoDB Collaboration and Survey Data Exchange Server" />
     <meta name="author" content="Jonathan Dekhtiar" />
     {% vite_styles 'style-app' 'style-private-shell' %}
-    {% vite_preload 'app' %}
+    {% vite_preload 'app' 'controller-private-navigation' %}
     {% vite_styles 'style-template-frontend-private-templates-base-private' %}
     {% block extra_css %}
     {% endblock extra_css %}
@@ -48,13 +48,13 @@
              x-cloak></div>
         <!-- Sidebar -->
         <div id="sidebar"
-             class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-68 lg:w-64! shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
-             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64'"
+             class="flex flex-col absolute z-40 left-0 top-0 lg:static lg:left-auto lg:top-auto lg:translate-x-0 h-[100dvh] overflow-y-scroll lg:overflow-y-auto no-scrollbar w-[290px] max-w-full shrink-0 bg-slate-800 p-4 transition-all duration-200 ease-in-out"
+             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
              @click.outside="sidebarOpen = false"
              @keydown.escape.window="sidebarOpen = false"
              x-cloak="lg">
           <!-- Sidebar header -->
-          <div class="flex justify-between mb-10 mt-3">
+          <div class="flex justify-between my-3">
             <!-- Close button -->
             <button type="button"
                     class="lg:hidden text-slate-100 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg p-2 transition-all"
@@ -144,53 +144,6 @@
                     </div>
                   </a>
                 </li>
-                <!-- My GIS Geometries -->
-                {% if request.url_name|is_in_list:"gis_geometries,gis_geometry_details,gis_geometry_user_permissions,gis_geometry_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:gis_geometries' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
-                             viewBox="0 0 24 24"
-                             stroke-width="1.8">
-                          <path d="M5 6l14 3-4 11L5 6z" />
-                          <circle cx="5" cy="6" r="2" />
-                          <circle cx="19" cy="9" r="2" />
-                          <circle cx="15" cy="20" r="2" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">My GIS Geometries</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- My GIS Layers -->
-                {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:gis_layers' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
-                             viewBox="0 0 24 24"
-                             stroke-width="1.8">
-                          <path d="M12 3l8 4-8 4-8-4 8-4z" />
-                          <path d="M4 12l8 4 8-4" />
-                          <path d="M4 17l8 4 8-4" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
                 <!-- My GPS Tracks -->
                 {% if request.url_name|is_in_list:"gps_tracks,gps_track_details,gps_track_user_permissions,gps_track_danger_zone" %}
                   {% set stroke_color = "indigo" %}
@@ -261,194 +214,19 @@
                     </div>
                   </a>
                 </li>
-                <hr class="mt-5 mb-5 border-white/30 border-dotted" />
-                <!-- GIS Cylinders -->
-                {% if request.url_name|is_in_list:"cylinder_fleets,cylinder_fleet_new,cylinder_fleet_details,cylinder_fleet_danger_zone,cylinder_fleet_user_permissions,cylinder_fleet_history,cylinder_fleet_watchlist" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:cylinder_fleets' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 fill-current stroke-current text-{{ stroke_color }}-400"
-                             viewBox="2.44 17 506.56 479">
-                          <path d="M382 17h3c12 1 22 15 30 23l6 7c4 0 6-3 9-5 4-2 8-3 13-2 7 2 11 6 14 12 2 5 2 9 0 14l-4 5-1 4c0 5 3 7 6
-                                                         10 4 3 7 2 11 1l5 1 6 7 4 4 13 13 11 10 1 4c0 7-4 10-9 14l-8 9-3 2-4 5c-6 6-6 6-11
-                                                         7l-8-4-2-1-5-5v-2l-2-1-7-5-2-3-3-3-3-3-8-9v-2c1-6 1-9-2-13l-8-7c-3 1-4 2-6 5l2 3c15 27 20 56 12 87-6
-                                                         22-19 39-36 56l-2 2-12 12-10 10a629 629 0 0 1-32 31l-17 16-5 6-16 17-7 7-4 4-79 79-2 2a7968 7968 0 0
-                                                         1-39 40l-3 2c-6 6-12 11-21 13-14 0-21-6-31-15l-5-7-2-1-8-7-2-2a2628 2628 0 0
-                                                         1-23-22l-11-12-19-19-14-14-4-4-2-2-2-2-2-1-1-4-2-1c-8-4-13-12-16-21-1-7-1-15 3-21l10-12h2l1-2 5-6 2-2
-                                                         6-5 14-14 3-3a248 248 0 0 0 21-22l1-1 3-3 14-14a48875 48875 0 0 1 55-55l2-2 10-9 3-3 19-20a29966 29966
-                                                         0 0 0 37-37l19-19 7-6c10-10 19-19 31-27l3-2c4-3 9-5 15-7l2-1a94 94 0 0 1 40-5c19 0 38 3 53 15l5 1
-                                                         5-5-2-2-3-3-2-2-5-6-5-5c-5-4-9-9-12-14V32c0-6 3-9 7-12 3-3 6-3 10-3Zm33 51-1 16 4-1h13V68h-16Zm-179
-                                                         71a248 248 0 0 1-22 21l-2 2-6 7-11 11-2 2a5592 5592 0 0 1-23 23l-12 12a45769 45769 0 0 1-30 30l-40 40-2
-                                                         2a9117 9117 0 0 1-56 56l-1 1c-3 3-5 5-5 9 1 8 11 16 17 21a12075 12075 0 0 1 86 87c7 7 7 7 16 12 5-1 8-5
-                                                         12-8l1-1 20-20c5-7 11-12 17-18a2961 2961 0 0 0 10-10l2-2 9-8 11-11 2-2a3324 3324 0 0 0 25-25l17-19a16481
-                                                         16481 0 0 0 115-113c9-9 16-18 22-30l1-2a89 89 0 0 0-7-86c-3-5-3-8-3-13v-7h-3c-16 1-16 1-22-4-53-35-100
-                                                         7-136 43Zm219-31c0 5 0 9 3 14l7 6 2 2 6 6c6-4 6-4 10-10l-2-2-11-12c-4-4-7-4-13-4h-2Z" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Cylinder Fleets</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- GIS Experiments -->
-                {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:experiments' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
-                             fill="none"
-                             viewBox="4.5 2.5 16 19">
-                          <path d="M5 21h14" />
-                          <path d="M6 18h2" />
-                          <path d="M7 18v3" />
-                          <path d="M9 11l3 3l6 -6l-3 -3z" />
-                          <path d="M10.5 12.5l-1.5 1.5" />
-                          <path d="M17 3l3 3" />
-                          <path d="M12 21a6 6 0 0 0 3.715 -10.712" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Experiments</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- GIS Landmark Collections -->
-                {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:landmark_collections' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                             class="shrink-0 h-6 w-6 text-{{ stroke_color }}-400 fill-current"
-                             viewBox="531 240 1138 1720">
-                          <path d="M1669 809c0 424-404 661-544 949a28 28 0 0 1-50 0c-140-288-544-525-544-949a569 569 0 0 1 1138 0m-955 0a387 387 0 1 0 773 0 387 387 0 1 0-773 0m108 0a279 279 0 1 0 557 0 279 279 0 1 0-557 0m511 877q-56-14-114-20l-22 32q83 15 156 57c12 7 38 25 36 40q-3 7-11 15l-13 9c-77 44-260 49-351 42q-63-4-125-21-28-8-54-22c-8-5-25-16-24-26 2-15 23-30 36-38q72-39 156-55l-23-34q-57 6-113 21c-52 16-120 46-123 109-2 46 36 80 72 100 84 48 189 63 284 65 98 1 198-16 284-65 36-21 73-55 72-100-2-63-71-94-123-109" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Landmark Collections</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- GIS Sensors -->
-                {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:sensor_fleets' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
-                             fill="none"
-                             viewBox="2.5 2.5 19 19">
-                          <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" />
-                          <path d="M9 9h6v6h-6z" />
-                          <path d="M3 10h2" />
-                          <path d="M3 14h2" />
-                          <path d="M10 3v2" />
-                          <path d="M14 3v2" />
-                          <path d="M21 10h-2" />
-                          <path d="M21 14h-2" />
-                          <path d="M14 21v-2" />
-                          <path d="M10 21v-2" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Sensor Fleets</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- Station Tag Editor -->
-                {% if request.url_name == "station_tags" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:station_tags' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
-                             fill="none"
-                             viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Station Tags</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- GIS Surface Monitoring -->
-                {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions,surface_network_gis_integration,surface_network_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:surface_networks' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-none fill-current text-{{ stroke_color }}-400"
-                             viewBox="1 2.1 14 12.9">
-                          <path d="M8.5 14V8.5H9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.5V14H1v1h14v-1ZM7 5.5h2v2H7Z" />
-                          <path d="M4.7 9.1a3.5 3.5 0 0 1 0-5.2l.6.7a2.5 2.5 0 0 0 0 3.8Zm6.6 0-.6-.7a2.5 2.5 0 0 0 0-3.8l.6-.7a3.5 3.5 0 0 1 0 5.2Z" />
-                          <path d="M3.2 10.9a5.5 5.5 0 0 1 0-8.8l.6.8a4.5 4.5 0 0 0 0 7.2Zm9.6 0-.6-.8a4.5 4.5 0 0 0 0-7.2l.6-.8a5.5 5.5 0 0 1 0 8.8Z" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Surface Monitoring</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- GIS Views -->
-                {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:gis_views' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
-                             fill="none"
-                             viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">GIS Views</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
                 <!-- Survey Map -->
                 {% if request.url_name == "map_viewer" %}
                   {% set stroke_color = "indigo" %}
                 {% else %}
                   {% set stroke_color = "slate" %}
                 {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                <li class="rounded-md mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block rounded-md border px-3 py-2 text-slate-100 truncate transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 {% if stroke_color == 'indigo' %}border-srgb-indigo-400-30 bg-srgb-indigo-500-20{% else %}border-srgb-sky-400-30 bg-srgb-sky-500-10 hover:bg-srgb-sky-500-20{% endif %}"
+                     {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
                      href="{% url 'private:map_viewer' %}">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                        <svg class="shrink-0 h-6 w-6 stroke-current {% if stroke_color == 'indigo' %}text-indigo-400{% else %}text-sky-400{% endif %}"
                              fill="none"
                              viewBox="2.5 2.5 19 19.01">
                           <path d="M8 16l2 -6l6 -2l-2 6l-6 2" />
@@ -464,6 +242,262 @@
                   </a>
                 </li>
                 <hr class="mt-5 mb-5 border-white/30 border-dotted" />
+                <li>
+                  <details id="gis-tooling" class="gis-tooling">
+                    <summary class="gis-tooling-summary flex items-center justify-between gap-2 px-3 py-2 rounded-xs text-sm font-medium text-slate-200 hover:text-white cursor-pointer focus-visible:outline-2 focus-visible:outline-sky-400">
+                      <span class="flex items-center min-w-0">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="shrink-0 h-6 w-6 text-slate-400"
+                             viewBox="0 0 32 32"
+                             aria-hidden="true">
+                          <path fill="currentColor" d="m29.014 23.89l2.296 1.145L16 32.101L.53 24.961l2.49-1.056l2.453 1.132l-.003.002L16 29.899l10.69-4.934l-.003-.001zm-4.972-7.482l7.268 3.627L16 27.101L.53 19.961l7.668-3.252q.587.729 1.34 1.604L5.47 20.039L16 24.899l10.69-4.934l-3.954-1.973q.74-.87 1.306-1.584" />
+                          <path fill="currentColor" d="M18 9a2 2 0 1 0-4 0a2 2 0 0 0 4 0m2 0a4 4 0 1 1-8 0a4 4 0 0 1 8 0m-3.268 12.681l-.732.787l-.732-.787c-3.557-3.824-5.817-6.462-6.81-7.96A8.75 8.75 0 0 1 7 8.875C7 3.97 11.033 0 16 0s9 3.97 9 8.875a8.75 8.75 0 0 1-1.459 4.846c-.992 1.498-3.252 4.136-6.809 7.96m5.142-9.064A6.75 6.75 0 0 0 23 8.875C23 5.081 19.87 2 16 2S9 5.081 9 8.875c0 1.349.394 2.636 1.126 3.742c.846 1.277 2.812 3.593 5.874 6.912c3.062-3.32 5.028-5.635 5.874-6.912" />
+                        </svg>
+                        <span class="ml-3">GIS Tooling</span>
+                      </span>
+                      <svg class="gis-tooling-chevron w-4 h-4 shrink-0 fill-none stroke-current"
+                           viewBox="0 0 24 24"
+                           stroke-width="2"
+                           aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </summary>
+                    <ul class="mt-1 ml-4 border-l border-slate-700 pl-1">
+                      <!-- GIS Cylinders -->
+                      {% if request.url_name|is_in_list:"cylinder_fleets,cylinder_fleet_new,cylinder_fleet_details,cylinder_fleet_danger_zone,cylinder_fleet_user_permissions,cylinder_fleet_history,cylinder_fleet_watchlist,cylinder_fleet_needs_hydro,cylinder_fleet_needs_visual" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:cylinder_fleets' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 fill-current stroke-current text-{{ stroke_color }}-400"
+                                   viewBox="2.44 17 506.56 479">
+                                <path d="M382 17h3c12 1 22 15 30 23l6 7c4 0 6-3 9-5 4-2 8-3 13-2 7 2 11 6 14 12 2 5 2 9 0 14l-4 5-1 4c0 5 3 7 6
+                                                               10 4 3 7 2 11 1l5 1 6 7 4 4 13 13 11 10 1 4c0 7-4 10-9 14l-8 9-3 2-4 5c-6 6-6 6-11
+                                                               7l-8-4-2-1-5-5v-2l-2-1-7-5-2-3-3-3-3-3-8-9v-2c1-6 1-9-2-13l-8-7c-3 1-4 2-6 5l2 3c15 27 20 56 12 87-6
+                                                               22-19 39-36 56l-2 2-12 12-10 10a629 629 0 0 1-32 31l-17 16-5 6-16 17-7 7-4 4-79 79-2 2a7968 7968 0 0
+                                                               1-39 40l-3 2c-6 6-12 11-21 13-14 0-21-6-31-15l-5-7-2-1-8-7-2-2a2628 2628 0 0
+                                                               1-23-22l-11-12-19-19-14-14-4-4-2-2-2-2-2-1-1-4-2-1c-8-4-13-12-16-21-1-7-1-15 3-21l10-12h2l1-2 5-6 2-2
+                                                               6-5 14-14 3-3a248 248 0 0 0 21-22l1-1 3-3 14-14a48875 48875 0 0 1 55-55l2-2 10-9 3-3 19-20a29966 29966
+                                                               0 0 0 37-37l19-19 7-6c10-10 19-19 31-27l3-2c4-3 9-5 15-7l2-1a94 94 0 0 1 40-5c19 0 38 3 53 15l5 1
+                                                               5-5-2-2-3-3-2-2-5-6-5-5c-5-4-9-9-12-14V32c0-6 3-9 7-12 3-3 6-3 10-3Zm33 51-1 16 4-1h13V68h-16Zm-179
+                                                               71a248 248 0 0 1-22 21l-2 2-6 7-11 11-2 2a5592 5592 0 0 1-23 23l-12 12a45769 45769 0 0 1-30 30l-40 40-2
+                                                               2a9117 9117 0 0 1-56 56l-1 1c-3 3-5 5-5 9 1 8 11 16 17 21a12075 12075 0 0 1 86 87c7 7 7 7 16 12 5-1 8-5
+                                                               12-8l1-1 20-20c5-7 11-12 17-18a2961 2961 0 0 0 10-10l2-2 9-8 11-11 2-2a3324 3324 0 0 0 25-25l17-19a16481
+                                                               16481 0 0 0 115-113c9-9 16-18 22-30l1-2a89 89 0 0 0-7-86c-3-5-3-8-3-13v-7h-3c-16 1-16 1-22-4-53-35-100
+                                                               7-136 43Zm219-31c0 5 0 9 3 14l7 6 2 2 6 6c6-4 6-4 10-10l-2-2-11-12c-4-4-7-4-13-4h-2Z" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Cylinder Fleets</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Experiments -->
+                      {% if request.url_name|is_in_list:"experiments,experiment_new,experiment_details,experiment_danger_zone,experiment_gis_integration,experiment_user_permissions,experiment_data_viewer" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:experiments' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                                   fill="none"
+                                   viewBox="4.5 2.5 16 19">
+                                <path d="M5 21h14" />
+                                <path d="M6 18h2" />
+                                <path d="M7 18v3" />
+                                <path d="M9 11l3 3l6 -6l-3 -3z" />
+                                <path d="M10.5 12.5l-1.5 1.5" />
+                                <path d="M17 3l3 3" />
+                                <path d="M12 21a6 6 0 0 0 3.715 -10.712" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Experiments</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Geometries -->
+                      {% if request.url_name|is_in_list:"gis_geometries,gis_geometry_details,gis_geometry_user_permissions,gis_geometry_danger_zone" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:gis_geometries' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
+                                   viewBox="0 0 24 24"
+                                   stroke-width="1.8">
+                                <path d="M5 6l14 3-4 11L5 6z" />
+                                <circle cx="5" cy="6" r="2" />
+                                <circle cx="19" cy="9" r="2" />
+                                <circle cx="15" cy="20" r="2" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Geometries</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Landmark Collections -->
+                      {% if request.url_name|is_in_list:"landmark_collections,landmark_collection_new,landmark_collection_details,landmark_collection_user_permissions,landmark_collection_gis_integration,landmark_collection_danger_zone" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:landmark_collections' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg"
+                                   class="shrink-0 h-6 w-6 text-{{ stroke_color }}-400 fill-current"
+                                   viewBox="531 240 1138 1720">
+                                <path d="M1669 809c0 424-404 661-544 949a28 28 0 0 1-50 0c-140-288-544-525-544-949a569 569 0 0 1 1138 0m-955 0a387 387 0 1 0 773 0 387 387 0 1 0-773 0m108 0a279 279 0 1 0 557 0 279 279 0 1 0-557 0m511 877q-56-14-114-20l-22 32q83 15 156 57c12 7 38 25 36 40q-3 7-11 15l-13 9c-77 44-260 49-351 42q-63-4-125-21-28-8-54-22c-8-5-25-16-24-26 2-15 23-30 36-38q72-39 156-55l-23-34q-57 6-113 21c-52 16-120 46-123 109-2 46 36 80 72 100 84 48 189 63 284 65 98 1 198-16 284-65 36-21 73-55 72-100-2-63-71-94-123-109" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Landmark Collections</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Layers -->
+                      {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:gis_layers' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
+                                   viewBox="0 0 24 24"
+                                   stroke-width="1.8">
+                                <path d="M12 3l8 4-8 4-8-4 8-4z" />
+                                <path d="M4 12l8 4 8-4" />
+                                <path d="M4 17l8 4 8-4" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Layers</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Sensors -->
+                      {% if request.url_name|is_in_list:"sensor_fleets,sensor_fleet_new,sensor_fleet_details,sensor_fleet_danger_zone,sensor_fleet_user_permissions,sensor_fleet_history,sensor_fleet_watchlist" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:sensor_fleets' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                                   fill="none"
+                                   viewBox="2.5 2.5 19 19">
+                                <path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" />
+                                <path d="M9 9h6v6h-6z" />
+                                <path d="M3 10h2" />
+                                <path d="M3 14h2" />
+                                <path d="M10 3v2" />
+                                <path d="M14 3v2" />
+                                <path d="M21 10h-2" />
+                                <path d="M21 14h-2" />
+                                <path d="M14 21v-2" />
+                                <path d="M10 21v-2" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Sensor Fleets</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- Station Tag Editor -->
+                      {% if request.url_name == "station_tags" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:station_tags' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                                   fill="none"
+                                   viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Station Tags</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Surface Monitoring -->
+                      {% if request.url_name|is_in_list:"surface_networks,surface_network_new,surface_network_details,surface_network_user_permissions,surface_network_gis_integration,surface_network_danger_zone" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:surface_networks' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 stroke-none fill-current text-{{ stroke_color }}-400"
+                                   viewBox="1 2.1 14 12.9">
+                                <path d="M8.5 14V8.5H9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.5V14H1v1h14v-1ZM7 5.5h2v2H7Z" />
+                                <path d="M4.7 9.1a3.5 3.5 0 0 1 0-5.2l.6.7a2.5 2.5 0 0 0 0 3.8Zm6.6 0-.6-.7a2.5 2.5 0 0 0 0-3.8l.6-.7a3.5 3.5 0 0 1 0 5.2Z" />
+                                <path d="M3.2 10.9a5.5 5.5 0 0 1 0-8.8l.6.8a4.5 4.5 0 0 0 0 7.2Zm9.6 0-.6-.8a4.5 4.5 0 0 0 0-7.2l.6-.8a5.5 5.5 0 0 1 0 8.8Z" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Surface Monitoring</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                      <!-- GIS Views -->
+                      {% if request.url_name|is_in_list:"gis_views,gis_view_new,gis_view_details,gis_view_gis_integration,gis_view_danger_zone" %}
+                        {% set stroke_color = "indigo" %}
+                      {% else %}
+                        {% set stroke_color = "slate" %}
+                      {% endif %}
+                      <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                        <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} transition duration-150"
+                           {% if stroke_color == "indigo" %}aria-current="page"{% endif %}
+                           href="{% url 'private:gis_views' %}">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                              <svg class="shrink-0 h-6 w-6 stroke-current text-{{ stroke_color }}-400"
+                                   fill="none"
+                                   viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                              </svg>
+                              <span class="text-sm font-medium ml-3 duration-200">GIS Views</span>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </details>
+                </li>
+                <hr class="mt-5 mb-5 border-white/30 border-dotted" />
                 <!-- Feedback -->
                 {% if request.url_name == "user_feedback" %}
                   {% set stroke_color = "indigo" %}
@@ -475,8 +509,10 @@
                      href="{% url 'private:user_feedback' %}">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6" viewBox="0 0 24 24">
-                          <path class="stroke-current stroke-width-2 text-{{ stroke_color }}-400" d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
+                        <svg class="shrink-0 h-6 w-6 stroke-current stroke-width-2 text-{{ stroke_color }}-400"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                          <path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
                         </svg>
                         <span class="text-sm font-medium ml-3 duration-200">Give us Feedback</span>
                       </div>
@@ -725,6 +761,9 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.11.1/cdn.min.js" integrity="sha512-p5D8PQLs985Yn0ag6o2zDx/YTzcZKq7YsO+rM79PnqJ0ahDrdR9jg8iCZXdIjdA8vBh4vgsdp4wcO1S+ShE43Q==" crossorigin="anonymous" referrerpolicy="no-referrer">
       </script>
     {% endif %}
+    <script type="application/json" data-speleodb-controller="private-navigation">
+      {}
+    </script>
     {% block extra_js %}
     {% endblock extra_js %}
     {% block inline_extra_js %}

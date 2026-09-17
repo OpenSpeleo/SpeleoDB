@@ -59,6 +59,7 @@
     "controller-danger-zone": "frontend_common/controllers/danger-zone.js",
     "controller-entity-crud": "frontend_common/controllers/entity-crud.js",
     "controller-public-shell": "frontend_common/controllers/public-shell.js",
+    "controller-private-navigation": "frontend_common/controllers/private-navigation.js",
     "controller-error-page": "frontend_common/controllers/error-page.js",
     "controller-private-map": "frontend_common/controllers/private-map.js",
     "controller-public-gis": "frontend_common/controllers/public-gis.js",
