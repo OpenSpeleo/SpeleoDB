@@ -624,6 +624,15 @@ checks (64), JavaScript coverage (1,194, with load-related timeout retries),
 lint, template checks, and production build completed successfully. See
 [the verification details](todos/shared-copy-buttons.md).
 
+# Celery worker container name review
+
+Configured `${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker` in
+`local.yml` and documented the resulting single-container scaling constraint.
+Validated resolved worker and Beat names with assertions inside the running
+Django container. Renamed the live worker to `speleodb_local_celery_worker`;
+its ID, running state, and start time remained unchanged. Diff whitespace checks
+passed. See [the task](todos/celery-worker-container-name.md).
+
 # GIS Tooling disclosure review
 
 Follow-up: added the supplied map-pin/layers SVG to **GIS Tooling** and indented

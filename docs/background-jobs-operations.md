@@ -123,16 +123,18 @@ not terminate an archive mid-generation. Restart it explicitly after code
 changes. Compose gives it 120 seconds to stop gracefully; application attempt
 recovery handles longer interrupted work.
 
-The `celery-worker` service has no fixed `container_name`. Each startup adds a
-UUID to its Celery node name because host-networked replicas share a hostname.
-Scale the existing worker service locally with:
+The `celery-worker` service uses the explicit container name
+`${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker`, matching the other
+local services and keeping its Docker Desktop display consistent. This limits
+the local Compose service to one worker container; `--scale celery-worker=N`
+cannot be used with multiple replicas while the fixed name is configured.
+Each startup still adds a UUID to its Celery node name to avoid collisions when
+workers share a hostname. The worker consumes both queues. Keep Beat at one
+replica; its database lock also protects against scheduler overlap during
+restarts. Naming does not change worker concurrency or task processing overhead.
 
-```bash
-docker compose -f local.yml up -d --scale celery-worker=2 celery-worker
-```
-
-Every replica consumes both queues. Keep Beat at one replica; its database lock
-also protects against scheduler overlap during restarts.
+Verify the resolved name with `docker compose -f local.yml config` and the live
+container name with `docker ps` after applying the configuration.
 
 Exports are available to every authenticated active account using the normal
 account and resource permissions in both local Compose and production. Exports

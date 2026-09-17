@@ -94,7 +94,7 @@ services:
 
   celery-worker: &celery-worker
     <<: *django
-    # No fixed container name: --scale celery-worker=N creates unique replicas.
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker"
     depends_on:
       setup:
         condition: service_completed_successfully
