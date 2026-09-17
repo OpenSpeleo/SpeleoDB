@@ -1,6 +1,7 @@
 import { State } from '../state.js';
 import { Layers } from './layers.js';
 import { DEFAULTS } from '../config.js';
+import { calculateDistanceInMeters } from './geodesy.js';
 
 let MAGNETIC_SNAP_RADIUS = DEFAULTS.SNAP.RADIUS_METERS;
 
@@ -9,20 +10,7 @@ const snapPointsCache = new Map();
 
 export const Geometry = {
     // Calculate distance in meters between two lat/lng points using Haversine formula
-    calculateDistanceInMeters: function(point1, point2) {
-        const [lng1, lat1] = point1;
-        const [lng2, lat2] = point2;
-
-        const EARTH_RADIUS_METERS = 6_371_000; // WGS84 mean Earth radius
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return EARTH_RADIUS_METERS * c;
-    },
+    calculateDistanceInMeters,
 
     // Cache line features and extract start/end snap points from a project's GeoJSON source
     cacheLineFeatures: function(projectId, geojsonData) {

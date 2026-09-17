@@ -12,27 +12,35 @@ export const Interactions = {
         this.setupClickHandlers(map);
         this.setupDragHandlers(map);
         this.setupContextMenu(map);
-        // Touch geometry editing uses the same commands as mouse editing.
+        // Active tools own touch and mouse input through the same dispatcher.
         for (const [event, method] of [
             ['touchstart', 'handleMouseDown'], ['touchmove', 'handleMouseMove'],
             ['touchend', 'handleMouseUp'], ['touchcancel', 'handleCancel'],
         ]) {
             map.on(event, e => {
-                const editor = this.handlers.geometryEditor;
-                if (editor?.isActive()) editor[method](e);
+                this.dispatchToActiveTool(method, e);
             });
         }
+    },
+
+    // One ownership boundary prevents tool input from also opening or moving data.
+    getActiveTool() {
+        return [this.handlers.geometryEditor, this.handlers.measurementTool]
+            .find(tool => tool?.isActive()) || null;
+    },
+
+    dispatchToActiveTool(method, event) {
+        const tool = this.getActiveTool();
+        if (!tool) return false;
+        tool[method]?.(event);
+        return true;
     },
 
     QUERY_PADDING: DEFAULTS.DRAG.QUERY_PADDING_PX,
 
     setupHoverEffects: function (map) {
         map.on('mousemove', (e) => {
-            const editor = this.handlers.geometryEditor;
-            if (editor?.isActive()) {
-                editor.handleMouseMove(e);
-                return;
-            }
+            if (this.dispatchToActiveTool('handleMouseMove', e)) return;
             // Use padded query box for better hit detection on icons
             const padding = this.QUERY_PADDING;
             const queryBox = [
@@ -67,11 +75,7 @@ export const Interactions = {
 
     setupClickHandlers: function (map) {
         map.on('click', (e) => {
-            const editor = this.handlers.geometryEditor;
-            if (editor?.isActive()) {
-                editor.handleClick(e);
-                return;
-            }
+            if (this.dispatchToActiveTool('handleClick', e)) return;
             if (e.defaultPrevented) return;
 
             // Use padded query box for better hit detection on icons
@@ -192,11 +196,7 @@ export const Interactions = {
         const SNAPPABLE_TYPES = ['station', 'cylinder-install', 'exploration-lead'];
 
         map.on('mousedown', (e) => {
-            const editor = this.handlers.geometryEditor;
-            if (editor?.isActive()) {
-                editor.handleMouseDown(e);
-                return;
-            }
+            if (this.dispatchToActiveTool('handleMouseDown', e)) return;
             if (e.originalEvent.button !== 0) return; // Only left click
 
             // Use padded query box for better hit detection on icons (same as click/hover)
@@ -308,7 +308,7 @@ export const Interactions = {
         });
 
         map.on('mousemove', (e) => {
-            if (this.handlers.geometryEditor?.isActive()) return;
+            if (this.getActiveTool()) return;
             if (!isPotentialDrag) return;
 
             // Check if we've moved past the threshold
@@ -369,11 +369,7 @@ export const Interactions = {
         });
 
         const onUp = (e) => {
-            const editor = this.handlers.geometryEditor;
-            if (editor?.isActive()) {
-                editor.handleMouseUp(e);
-                return;
-            }
+            if (this.dispatchToActiveTool('handleMouseUp', e)) return;
             if (!isPotentialDrag) return;
 
             const wasDragging = isDragging && hasMoved;
@@ -444,11 +440,7 @@ export const Interactions = {
 
     setupContextMenu: function (map) {
         map.on('contextmenu', (e) => {
-            const editor = this.handlers.geometryEditor;
-            if (editor?.isActive()) {
-                editor.handleContextMenu(e);
-                return;
-            }
+            if (this.dispatchToActiveTool('handleContextMenu', e)) return;
             // Use padded query box for better hit detection on icons (same as hover/click)
             const padding = this.QUERY_PADDING;
             const queryBox = [

@@ -39,6 +39,7 @@ const stateMock = {
 
 const mapMock = {
     on: vi.fn(),
+    addControl: vi.fn(),
     flyTo: vi.fn(),
     resize: vi.fn(),
 };
@@ -125,7 +126,7 @@ vi.mock('./components/gis_geometries_panel.js', () => ({
     GISGeometriesPanel: { init: vi.fn(), refreshList: vi.fn(), setupStackListener: vi.fn(), setExpanded: vi.fn() },
 }));
 vi.mock('./geometry_editor/editor.js', () => ({
-    GeometryEditor: { init: vi.fn(), restoreLayers: vi.fn(), isActive: vi.fn(() => false), create: vi.fn(async () => true) },
+    GeometryEditor: { init: vi.fn(), restoreLayers: vi.fn(), isActive: vi.fn(() => false), isOpening: vi.fn(() => false), create: vi.fn(async () => true) },
 }));
 vi.mock('./components/depth_legend.js', () => ({ DepthLegend: { init: vi.fn() } }));
 vi.mock('./api.js', () => ({ API: apiMock }));
@@ -250,6 +251,12 @@ describe('private map viewer entrypoint', () => {
 
         expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map', { fullscreenContainer: null });
         expect(mapCoreMock.setupMapSourceControl).toHaveBeenCalledWith(mapMock, 'mapbox-token');
+        expect(mapMock.addControl).toHaveBeenCalledWith(expect.objectContaining({
+            onAdd: expect.any(Function), onRemove: expect.any(Function),
+            activate: expect.any(Function), deactivate: expect.any(Function),
+        }), 'top-right');
+        expect(mapMock.addControl.mock.invocationCallOrder[0])
+            .toBeGreaterThan(mapCoreMock.setupMapSourceControl.mock.invocationCallOrder[0]);
     });
 
     it('kicks off project, network, GPS track, and private GIS Layer loads in parallel', async () => {

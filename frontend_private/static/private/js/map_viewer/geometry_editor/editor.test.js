@@ -64,6 +64,53 @@ describe('native GIS geometry editor', () => {
     });
     afterEach(() => { GeometryEditor.destroy(); vi.restoreAllMocks(); });
 
+    it('announces tool ownership before capturing camera settings and releases it on close', () => {
+        let doubleClickEnabled = false;
+        let previousToolActive = true;
+        const activity = [];
+        map.doubleClickZoom = {
+            isEnabled: () => doubleClickEnabled,
+            enable: () => { doubleClickEnabled = true; },
+            disable: () => { doubleClickEnabled = false; },
+        };
+        GeometryEditor.onActivityChange = state => {
+            activity.push(state);
+            if ((state.opening || state.active) && previousToolActive) {
+                previousToolActive = false;
+                map.doubleClickZoom.enable();
+            }
+        };
+        GeometryEditor.begin(null);
+        expect(activity[0]).toEqual({ opening: true, active: false });
+        expect(GeometryEditor.session.doubleClickEnabled).toBe(true);
+        expect(doubleClickEnabled).toBe(false);
+        expect(activity.at(-1)).toEqual({ opening: false, active: true });
+        GeometryEditor.close();
+        expect(activity.at(-1)).toEqual({ opening: false, active: false });
+        expect(doubleClickEnabled).toBe(true);
+    });
+
+    it('reports asynchronous opening before loading and releases availability after failure', async () => {
+        const activity = [];
+        GeometryEditor.onActivityChange = state => activity.push(state);
+        let rejectLoad;
+        API.getGISGeometryDetails.mockImplementationOnce(() => new Promise((_, reject) => { rejectLoad = reject; }));
+        const opening = GeometryEditor.edit(existing);
+        expect(GeometryEditor.isOpening()).toBe(true);
+        expect(activity).toEqual([{ opening: true, active: false }]);
+        rejectLoad(new Error('Unavailable'));
+        expect(await opening).toBe(false);
+        expect(GeometryEditor.isOpening()).toBe(false);
+        expect(activity.at(-1)).toEqual({ opening: false, active: false });
+    });
+
+    it('does not announce ownership for an unavailable geometry', async () => {
+        const activity = [];
+        GeometryEditor.onActivityChange = state => activity.push(state);
+        expect(await GeometryEditor.edit({ id: 'unavailable' })).toBe(false);
+        expect(activity).toEqual([]);
+    });
+
     it('preserves an unsaved draft while Settings or a manager handles keyboard input', async () => {
         await GeometryEditor.create();
         inputName('Unsaved draft');

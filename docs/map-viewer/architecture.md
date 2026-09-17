@@ -34,6 +34,14 @@ initializes the editor nor requests its data. See
 
 ---
 
+## Temporary map tools
+
+The private distance ruler and geometry editor share the central interaction
+dispatcher. Only one tool owns pointer input; the editor activity lifecycle
+releases measurement before acquiring camera handlers. Measurement state and
+native overlays remain separate from entity data and saved geometry. See
+[Distance ruler](measurement.md) for the module interfaces and lifecycle.
+
 ## Module Dependency Graph
 
 ```mermaid

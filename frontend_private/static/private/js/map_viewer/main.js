@@ -24,6 +24,7 @@ import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { GISLayersPanel } from './components/gis_layers_panel.js';
 import { GISGeometriesPanel } from './components/gis_geometries_panel.js';
 import { GeometryEditor } from './geometry_editor/editor.js';
+import { MeasurementTool } from './measurement/tool.js';
 import { DepthLegend } from './components/depth_legend.js';
 import { MapSettings } from './components/settings.js';
 import { DisplayPreferences } from './display_preferences.js';
@@ -86,6 +87,13 @@ export async function initPrivateMapViewer() {
     const map = MapCore.init(token, 'map', {
         fullscreenContainer: document.getElementById('map-viewer-shell'),
     });
+    const measurementTool = new MeasurementTool({
+        canActivate: () => !GeometryEditor.isActive() && !GeometryEditor.isOpening(),
+        onActivate: () => {
+            ContextMenu.hide();
+            Layers.closeGISFeaturePopups();
+        },
+    });
     configureMapNavigation(map);
     configureStationManagerNavigation({
         subsurface: () => StationUI.openManagerModal(),
@@ -134,6 +142,7 @@ export async function initPrivateMapViewer() {
     // 4. Setup Interactions
     Interactions.init(map, {
         geometryEditor: GeometryEditor,
+        measurementTool,
         onStationClick: (stationId, stationType) => {
             if (stationType === 'surface') {
                 const station = State.allSurfaceStations.get(stationId);
@@ -631,6 +640,11 @@ export async function initPrivateMapViewer() {
             GISLayersPanel.init();
             GeometryEditor.init({
                 map,
+                onActivityChange({ opening, active }) {
+                    const available = !opening && !active;
+                    if (!available) measurementTool.deactivate();
+                    measurementTool.setAvailable(available);
+                },
                 palette: getRuntimeContext().geometryColors || [],
                 onLoaded(record) {
                     Layers.refreshGISGeometry(record);
@@ -724,6 +738,7 @@ export async function initPrivateMapViewer() {
     });
 
     MapCore.setupMapSourceControl(map, token);
+    map.addControl(measurementTool, 'top-right');
     MapSettings.init({
         managers: {
             surveyStations: () => StationUI.openManagerModal(),

@@ -17,6 +17,16 @@ considering a change complete.
 Do not start another stack or run tests on the host. Run GitLab-backed tests
 serially under the repository audit contract.
 
+## Distance ruler verification
+
+[Measurement](measurement.md) requires pure geometry/formatting tests, real
+controller and DOM integration, native renderer lifecycle tests, and actual
+browser evidence. Explicitly check touch tap deduplication, entity drag
+suppression, editor opening races, source-menu Escape focus, style changes,
+globe sky picking, label collision, and cleanup. Public initialization must
+remain unchanged. Use the existing container Playwright setup; confirm the clean
+build's manifest hash served by Django before screenshots.
+
 ## Frontend Test Scope
 
 Representative map viewer coverage (use the runner's report for current totals):

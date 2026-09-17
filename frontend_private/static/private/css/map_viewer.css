@@ -2358,3 +2358,113 @@ select.form-input:focus {
     }
 
 }
+
+/* Temporary measurement belongs to the private map, including fullscreen. */
+.mapboxgl-ctrl-group button.measurement-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111827;
+    background-image: none;
+}
+.measurement-button svg { width: 18px; height: 18px; }
+.mapboxgl-ctrl-group button.measurement-button[aria-pressed="true"] {
+    color: #0369a1;
+    background: #e0f2fe;
+    box-shadow: inset 0 0 0 1px #7dd3fc;
+}
+.mapboxgl-ctrl-group button.measurement-button:focus-visible {
+    outline: 3px solid #0284c7;
+    outline-offset: 2px;
+}
+.mapboxgl-ctrl-group button.measurement-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.measurement-instructions {
+    position: absolute;
+    z-index: 3;
+    top: 12px;
+    right: 58px;
+    width: fit-content;
+    max-width: 360px;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border: 1px solid #64748b;
+    border-radius: 12px;
+    background: rgb(15 23 42 / 98%);
+    color: #f8fafc;
+    font: 13px/1.4 system-ui, sans-serif;
+    box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+    pointer-events: none;
+}
+.measurement-instructions[hidden], .measurement-instructions p[hidden], .measurement-crosshair[hidden] { display: none; }
+.measurement-instructions strong { color: #7dd3fc; font-size: 14px; font-weight: 700; }
+.measurement-instructions p { margin: 4px 0 0; }
+.measurement-instructions .measurement-prompt { font-weight: 600; }
+.measurement-instructions .measurement-hint { color: #e2e8f0; }
+.measurement-instructions .measurement-clear-hint { padding-top: 6px; margin-top: 6px; border-top: 1px solid #475569; }
+.measurement-crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    width: 20px;
+    height: 20px;
+    transform: translate(-50%, -50%);
+    border: 1px solid #f8fafc;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #0f172a;
+    pointer-events: none;
+}
+.measurement-crosshair::before, .measurement-crosshair::after {
+    content: '';
+    position: absolute;
+    background: #f8fafc;
+    box-shadow: 0 0 0 1px #0f172a;
+}
+.measurement-crosshair::before { top: 9px; left: -4px; width: 26px; height: 1px; }
+.measurement-crosshair::after { left: 9px; top: -4px; height: 26px; width: 1px; }
+.measurement-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+@media (pointer: coarse) {
+    .map-viewer-shell .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group > button { width: 44px; height: 44px; }
+    .map-viewer-shell .map-source-menu { top: 48px; }
+    .measurement-instructions { right: 66px; }
+}
+/* Two narrow control columns leave room for the ruler on short maps. */
+.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: start;
+}
+.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right > .mapboxgl-ctrl { grid-column: 2; }
+.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right > .mapboxgl-ctrl:has(.mapboxgl-ctrl-zoom-in) {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    margin-right: 0;
+}
+.measurement-compact-map .measurement-instructions { right: 100px; padding: 8px 10px; }
+@media (pointer: coarse) {
+    .measurement-compact-map .measurement-instructions { right: 120px; }
+}
+
+/* The single live capsule follows the pointer without native symbol fades. */
+.measurement-live-label {
+    padding: var(--measurement-label-padding);
+    border: var(--measurement-label-border-width) solid var(--measurement-label-border-color);
+    border-radius: var(--measurement-label-radius);
+    background: var(--measurement-label-background);
+    color: var(--measurement-label-color);
+    font: var(--measurement-label-font-size)/1.4 system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}

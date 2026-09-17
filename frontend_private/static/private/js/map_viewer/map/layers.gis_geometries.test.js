@@ -1,4 +1,4 @@
-import { Config } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { API } from '../api.js';
 import { Layers } from './layers.js';
@@ -204,4 +204,16 @@ it('centralizes read/write/delete capabilities and forgets session visibility on
     State.gisGeometryStates.set('g1', true);
     State.resetLayerState();
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
+});
+
+it('restores measurement order above saved overlays and below editor handles', () => {
+    const measurementIds = DEFAULTS.MEASUREMENT.LAYER_ROLES.map(role => `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${role}`);
+    for (const id of [...measurementIds].reverse()) State.map.addLayer({ id });
+    State.map.addLayer({ id: 'landmarks-layer' });
+    State.map.addLayer({ id: 'gis-geometry-draft-vertices' });
+    Layers.reorderLayers();
+    const moved = State.map.moveLayer.mock.calls.map(([id]) => id);
+    expect(moved.slice(-(measurementIds.length + 1))).toEqual([
+        ...measurementIds, 'gis-geometry-draft-vertices',
+    ]);
 });

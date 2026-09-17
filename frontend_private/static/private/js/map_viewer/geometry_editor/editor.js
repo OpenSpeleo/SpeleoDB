@@ -52,12 +52,13 @@ function errorText(error) {
 
 /** One private, transactional editor. The map dispatcher delegates while isActive() is true. */
 export const GeometryEditor = {
-    init({ map, onSaved = () => {}, onPreview = () => {}, onLoaded = () => {}, palette = [] }) {
+    init({ map, onSaved = () => {}, onPreview = () => {}, onLoaded = () => {}, onActivityChange = () => {}, palette = [] }) {
         this.destroy();
         this.map = map;
         this.onSaved = onSaved;
         this.onPreview = onPreview;
         this.onLoaded = onLoaded;
+        this.onActivityChange = onActivityChange;
         this.palette = palette;
         this.session = null;
         this._opening = false;
@@ -91,6 +92,11 @@ export const GeometryEditor = {
     },
 
     isActive() { return Boolean(this.session); },
+    isOpening() { return this._opening; },
+
+    notifyActivityChange() {
+        this.onActivityChange?.({ opening: this.isOpening(), active: this.isActive() });
+    },
 
     hasUnsavedChanges() {
         return Boolean(this.session && (this.session.gpsDirty || this.signature() !== this.session.originalSignature));
@@ -115,6 +121,7 @@ export const GeometryEditor = {
         if (this.session) this.close();
         if (!record?.id || !Config.hasGISGeometryAccess(record.id, 'write')) return false;
         this._opening = true;
+        this.notifyActivityChange();
         try {
             const fresh = await API.getGISGeometryDetails(record.id);
             Config.upsertGISGeometry(fresh);
@@ -130,36 +137,46 @@ export const GeometryEditor = {
             return false;
         } finally {
             this._opening = false;
+            this.notifyActivityChange();
         }
     },
 
     begin(record) {
-        this.session = {
-            record: record ? structuredClone(record) : null,
-            name: record?.name || '',
-            color: Utils.safeCssColor(record?.color || this.palette[Math.floor(Math.random() * this.palette.length)] || DEFAULTS.COLORS.FALLBACK),
-            draft: createGeometryDraft(record?.geojson),
-            selected: null,
-            drawing: !record,
-            preview: null,
-            drag: null,
-            saving: false,
-            error: '',
-            gpsDirty: false,
-            discardRequested: false,
-            conflict: false,
-            doubleClickEnabled: this.map.doubleClickZoom?.isEnabled?.() ?? false,
-        };
-        this.session.originalSignature = this.signature();
-        this.session.returnFocus = document.activeElement;
-        this.map.doubleClickZoom?.disable();
-        this.buildUI();
-        this.render();
-        this.observeViewport();
-        this.onPreview(record?.id || null, true);
-        const firstControl = record ? this.nodes.root.querySelector('[data-editor-action="close"]')
-            : this.nodes.types.querySelector('[aria-pressed="true"]');
-        firstControl?.focus({ preventScroll: true });
+        const wasOpening = this._opening;
+        this._opening = true;
+        // Release the previous tool before taking the camera-handler snapshot.
+        this.notifyActivityChange();
+        try {
+            this.session = {
+                record: record ? structuredClone(record) : null,
+                name: record?.name || '',
+                color: Utils.safeCssColor(record?.color || this.palette[Math.floor(Math.random() * this.palette.length)] || DEFAULTS.COLORS.FALLBACK),
+                draft: createGeometryDraft(record?.geojson),
+                selected: null,
+                drawing: !record,
+                preview: null,
+                drag: null,
+                saving: false,
+                error: '',
+                gpsDirty: false,
+                discardRequested: false,
+                conflict: false,
+                doubleClickEnabled: this.map.doubleClickZoom?.isEnabled?.() ?? false,
+            };
+            this.session.originalSignature = this.signature();
+            this.session.returnFocus = document.activeElement;
+            this.map.doubleClickZoom?.disable();
+            this.buildUI();
+            this.render();
+            this.observeViewport();
+            this.onPreview(record?.id || null, true);
+            const firstControl = record ? this.nodes.root.querySelector('[data-editor-action="close"]')
+                : this.nodes.types.querySelector('[aria-pressed="true"]');
+            firstControl?.focus({ preventScroll: true });
+        } finally {
+            this._opening = wasOpening;
+            this.notifyActivityChange();
+        }
     },
 
     observeViewport() {
@@ -771,6 +788,7 @@ export const GeometryEditor = {
         this.map.getCanvas().style.cursor = '';
         if (doubleClickEnabled) this.map.doubleClickZoom?.enable();
         this.onPreview(record?.id || null, false);
+        this.notifyActivityChange();
         if (!focusControl(returnFocus)) {
             const controls = document.querySelectorAll('#gis-geometries-panel-minimized, #gis-geometries-panel .gis-geometries-icon-button, #create-geometry-btn');
             [...controls].some(control => focusControl(control));

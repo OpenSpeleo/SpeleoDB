@@ -9,33 +9,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../api.js', () => ({
     API: { getGISLayerDetails: mocks.getGISLayerDetails },
 }));
-vi.mock('../config.js', () => ({
-    Config: {
-        getGISLayerById: vi.fn(() => ({ color: '#6366f1' })),
-    },
-    DEFAULTS: {
-        COLORS: { FALLBACK: '#94a3b8' },
-        GIS_LAYER_RENDER: {
-            FILL_OPACITY: 0.35,
-            OUTLINE_WIDTH: 1.5,
-            LINE_WIDTH: 2.5,
-            LINE_OPACITY: 0.95,
-            POINT_RADIUS_ZOOM_MIN: 5,
-            POINT_RADIUS_MIN: 3,
-            POINT_RADIUS_ZOOM_MAX: 14,
-            POINT_RADIUS_MAX: 6,
-            POINT_STROKE_COLOR: '#ffffff',
-            POINT_STROKE_WIDTH: 1,
-            POPUP_MAX_WIDTH_PX: 360,
-            POPUP_DESCRIPTION_MAX_CHARS: 1200,
-            POPUP_METADATA_MAX_ROWS: 4,
-            POPUP_METADATA_VALUE_MAX_CHARS: 180,
-            POPUP_OVERFLOW_TOLERANCE_PX: 1,
-            POPUP_SCROLL_THUMB_MIN_PX: 28,
-        },
-        ZOOM_LEVELS: {},
-    },
-}));
+vi.mock('../config.js', async () => {
+    const actual = await vi.importActual('../config.js');
+    return {
+        ...actual,
+        Config: { getGISLayerById: vi.fn(() => ({ color: '#6366f1' })) },
+    };
+});
 vi.mock('../state.js', () => ({
     State: {
         gisLayerStates: new Map(),
@@ -179,6 +159,24 @@ describe('GIS Layer display', () => {
         const viewport = card.querySelector('.gis-layer-feature-card__scroll');
         expect(viewport.parentElement).toBe(body);
         expect(body.querySelector('.gis-layer-feature-card__scroll-rail').getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('closes map-owned GIS popups through their native lifecycle', () => {
+        const closed = [];
+        class Popup {
+            once(name, handler) { if (name === 'close') this.onClose = handler; return this; }
+            setLngLat() { return this; }
+            setDOMContent() { return this; }
+            addTo() { return this; }
+            remove() { closed.push(this); this.onClose(); }
+        }
+        globalThis.mapboxgl.Popup = Popup;
+        Layers.openGISFeaturePopup({ properties: { name: 'First' } }, { lng: 0, lat: 0 });
+        Layers.openGISFeaturePopup({ properties: { name: 'Second' } }, { lng: 1, lat: 1 });
+        Layers.closeGISFeaturePopups();
+        expect(closed).toHaveLength(2);
+        Layers.closeGISFeaturePopups();
+        expect(closed).toHaveLength(2);
     });
 
     it('renders missing properties safely with the prior fallback card', async () => {

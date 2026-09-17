@@ -1,5 +1,39 @@
 # Task reviews
 
+## Private map distance ruler
+
+Implemented the approved temporary measurement tool below Map Source: bowed
+connectors, simultaneous metric/imperial readouts, multiple independent pairs,
+draft cancellation, and clear-all on deactivation. Mouse, touch, and keyboard
+share exclusive interaction ownership. Geometry editing safely ends measurement;
+ordinary dialogs and style changes preserve it. One live Mapbox marker keeps the
+changing readout visible, while native completed labels declutter.
+
+The helper now explicitly explains each input method with stronger contrast and
+larger text, and has no Cancel button. Adversarial review corrected keyboard
+placement on partially visible maps and added viewport/observer regressions.
+
+Final container frontend verification passed **1,315 JavaScript tests across 85
+files**, lint, and a clean build with all 88 registered asset entries and both
+map entrypoints. Authenticated browser checks passed desktop/mobile input,
+camera-changing touch gestures, fullscreen, narrow/landscape and zoom-equivalent
+layouts, style reloads, globe edges, and 100 overlapping pairs. The independent
+review found no remaining actionable issues. See the
+[task and evidence](todos/map-viewer-measurement.md) and
+[feature design](../docs/map-viewer/measurement.md).
+
+Two full Python runs each reported **4,919 passed, 181 skipped, one failure**.
+The first encountered a partial Git clone during resource pressure; that test
+passed in the second run, which instead encountered GitLab HTTP 502 during
+cleanup. All **48 Git proxy tests** passed on focused rerun. Both full audits
+recorded nine creations and ten POSTs; the focused audit recorded two of each.
+All had zero violations/unresolved outcomes and verified cleanup for every
+created repository. Neither full Python run is claimed as green.
+
+Final `prek run -a`: every hook passed. All review findings and the helper
+revision are resolved; the complete feature and verification record are
+committed.
+
 ## Folded map cards and lighter GIS Geometry
 
 Projects, GPS Tracks, GIS Layers, and GIS Geometry now share a 160 × 48 px

@@ -18,6 +18,7 @@ const OVERLAY_LAYER_PREFIXES = Object.freeze([
     'cylinder-installs',
     'exploration-leads',
     'marker-drag-highlight',
+    DEFAULTS.MEASUREMENT.LAYER_PREFIX,
 ]);
 
 const MAP_SOURCE_ICON_SVG = `
@@ -494,7 +495,8 @@ export const MapSources = {
                 document.addEventListener('click', this._onDocumentClick);
 
                 this._onDocumentKeyDown = (event) => {
-                    if (event.key === 'Escape') {
+                    if (event.key === 'Escape' && !menu.classList.contains('hidden')) {
+                        event.preventDefault();
                         closeMenu();
                         button.focus();
                     }

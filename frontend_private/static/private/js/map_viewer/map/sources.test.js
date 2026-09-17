@@ -23,6 +23,8 @@ function createMapMock() {
         { id: 'cylinder-installs-layer' },
         { id: 'exploration-leads-layer' },
         { id: 'marker-drag-highlight' },
+        { id: 'speleo-measurement-completed-line' },
+        { id: 'speleo-measurement-draft-endpoints' },
     ];
     const sources = new Set();
     return {
@@ -317,6 +319,8 @@ describe('MapSources', () => {
         expect(map.setLayoutProperty).not.toHaveBeenCalledWith('cylinder-installs-layer', 'visibility', 'none');
         expect(map.setLayoutProperty).not.toHaveBeenCalledWith('exploration-leads-layer', 'visibility', 'none');
         expect(map.setLayoutProperty).not.toHaveBeenCalledWith('marker-drag-highlight', 'visibility', 'none');
+        expect(map.setLayoutProperty).not.toHaveBeenCalledWith('speleo-measurement-completed-line', 'visibility', 'none');
+        expect(map.setLayoutProperty).not.toHaveBeenCalledWith('speleo-measurement-draft-endpoints', 'visibility', 'none');
         expect(layers.map(layer => layer.id).indexOf('speleo-base-raster-layer'))
             .toBeLessThan(layers.map(layer => layer.id).indexOf('project-layer-p1'));
         expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
@@ -391,6 +395,29 @@ describe('MapSources', () => {
             }),
             'top-right'
         );
+    });
+
+    it('only takes Escape focus when its own menu is open', () => {
+        const { map } = createMapMock();
+        const control = MapSources.createControl('token');
+        const element = control.onAdd(map);
+        const canvas = document.createElement('canvas');
+        canvas.tabIndex = 0;
+        document.body.append(element, canvas);
+        const button = element.querySelector('#map-source-button');
+        canvas.focus();
+        const closedEscape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+        canvas.dispatchEvent(closedEscape);
+        expect(document.activeElement).toBe(canvas);
+        expect(closedEscape.defaultPrevented).toBe(false);
+        button.click();
+        const openEscape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+        canvas.dispatchEvent(openEscape);
+        expect(document.activeElement).toBe(button);
+        expect(openEscape.defaultPrevented).toBe(true);
+        expect(button.getAttribute('aria-expanded')).toBe('false');
+        control.onRemove();
+        canvas.remove();
     });
 
     it('renders a Mapbox icon button under controls with a menu that switches sources', () => {

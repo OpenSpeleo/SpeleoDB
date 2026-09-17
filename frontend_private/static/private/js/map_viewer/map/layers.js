@@ -15,6 +15,7 @@ import { getRuntimeContext } from '../runtime_context.js';
 
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
+const gisFeaturePopups = new WeakMap();
 
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
@@ -217,7 +218,13 @@ function openGISFeaturePopup(map, feature, lngLat) {
         focusAfterOpen: true,
         maxWidth: `${DEFAULTS.GIS_LAYER_RENDER.POPUP_MAX_WIDTH_PX}px`,
     });
-    popup.once?.('close', cleanup);
+    if (!gisFeaturePopups.has(map)) gisFeaturePopups.set(map, new Set());
+    const popups = gisFeaturePopups.get(map);
+    popups.add(popup);
+    popup.once?.('close', () => {
+        popups.delete(popup);
+        cleanup();
+    });
     popup
         .setLngLat(lngLat)
         .setDOMContent(content)
@@ -824,6 +831,13 @@ export const Layers = {
                 map.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
             }
         });
+    },
+
+    closeGISFeaturePopups: function () {
+        const popups = gisFeaturePopups.get(State.map);
+        if (!popups) return;
+        for (const popup of popups) popup.remove();
+        popups.clear();
     },
 
     openGISFeaturePopup: function (feature, lngLat) {
@@ -1821,6 +1835,12 @@ export const Layers = {
                 // Layer might not exist
             }
         });
+
+        // Temporary measurements stay legible after asynchronous overlay refreshes.
+        for (const role of DEFAULTS.MEASUREMENT.LAYER_ROLES) {
+            const id = `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${role}`;
+            if (map.getLayer(id)) map.moveLayer(id);
+        }
 
         // Draft handles must stay above every selectable survey overlay.
         allLayerIds.filter(id => id.startsWith('gis-geometry-draft-')).forEach(id => map.moveLayer(id));

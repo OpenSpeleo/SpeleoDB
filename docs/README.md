@@ -39,6 +39,9 @@ Unlike product docs, these files prioritize:
 - `api-docs-access.md`
   - user-level API Docs/API Schema menu visibility flag, admin ownership, and
     permission boundaries
+- [Private map distance ruler](map-viewer/measurement.md)
+  - Temporary A–B measurement UX, native rendering, interaction ownership, and
+    verification.
 - `map-viewer/features.md`
   - station/landmark/exploration lead/GPS track/cylinder management,
     drag-and-drop, context menu, component library

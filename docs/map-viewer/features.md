@@ -11,6 +11,16 @@ subset.
 
 ---
 
+## Distance Measurement (Private)
+
+The ruler below Map Source measures independent temporary A–B pairs, showing
+metric and imperial distance together. Mouse, touch, and keyboard placement
+share one tool state. Cancel affects only the draft; turning the tool off or
+starting geometry editing clears all pairs. Native map overlays retain correct
+camera and globe behavior. See
+[distance ruler architecture and UX](measurement.md) for distance semantics,
+input ownership, lifecycle, and verification.
+
 ## Map Source Selection
 
 The public and private viewers share a single base-map source system. Users
