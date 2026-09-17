@@ -22,7 +22,7 @@ beside Import GPS, and expected the same chevron as other overlay sections.
 - Reuse the existing visibility toggle markup and styles for every map overlay
   panel. A native checkbox without the shared slider is a visible inconsistency;
   verify the rendered control as well as its on/off behavior.
-- Keep the backend GIS navigation in the requested order: My GIS Geometry, My
+- Keep the backend GIS navigation in the requested order: My GIS Geometries, My
   GIS Layers, then My GPS Tracks. Move complete navigation blocks so each link
   keeps its own icon and active-page highlighting.
 - Treat folded overlay cards as one visual component: share their width, height,

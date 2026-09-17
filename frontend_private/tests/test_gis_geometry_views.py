@@ -65,7 +65,7 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
 
         content = response.content.decode()
         assert response.status_code == status.HTTP_200_OK
-        assert "My GIS Geometry" in content
+        assert "My GIS Geometries" in content
         assert 'data-speleodb-controller="gis-geometries"' in content
         assert reverse("api:v2:gis-geometry-list") in content
         assert 'id="gis-geometries-cards-container"' in content

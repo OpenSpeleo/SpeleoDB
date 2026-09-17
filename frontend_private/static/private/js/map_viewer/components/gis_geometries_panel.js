@@ -29,25 +29,25 @@ export const GISGeometriesPanel = {
         this.panel = document.createElement('section');
         this.panel.id = 'gis-geometries-panel';
         this.panel.className = 'gis-geometries-panel';
-        this.panel.setAttribute('aria-label', 'GIS Geometry');
+        this.panel.setAttribute('aria-label', 'GIS Geometries');
         this.panel.hidden = true;
         const header = document.createElement('header');
         const title = document.createElement('h3');
-        title.textContent = 'GIS Geometry';
+        title.textContent = 'GIS Geometries';
         const collapse = button('', 'gis-geometries-icon-button', () => this.setExpanded(false));
         collapse.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
-        collapse.setAttribute('aria-label', 'Minimize GIS Geometry');
-        collapse.title = 'Minimize GIS Geometry';
+        collapse.setAttribute('aria-label', 'Minimize GIS Geometries');
+        collapse.title = 'Minimize GIS Geometries';
         header.append(title, collapse);
         const list = document.createElement('div');
         list.id = 'gis-geometries-map-list';
         list.className = 'gis-geometries-list';
         this.panel.append(header, list);
         this.minimized = button('', 'gis-geometries-minimized', () => this.setExpanded(true));
-        this.minimized.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg><span>GIS Geometry</span>';
+        this.minimized.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg><span>GIS Geometries</span>';
         this.minimized.id = 'gis-geometries-panel-minimized';
-        this.minimized.setAttribute('aria-label', 'Expand GIS Geometry');
-        this.minimized.title = 'Expand GIS Geometry';
+        this.minimized.setAttribute('aria-label', 'Expand GIS Geometries');
+        this.minimized.title = 'Expand GIS Geometries';
         this.minimized.setAttribute('aria-expanded', 'false');
         this.minimized.setAttribute('aria-controls', this.panel.id);
         for (const element of [this.panel, this.minimized]) {
@@ -128,7 +128,7 @@ export const GISGeometriesPanel = {
             const notice = document.createElement('div');
             notice.className = 'gis-geometries-load-error';
             const message = document.createElement('p');
-            message.textContent = 'Unable to load your geometry.';
+            message.textContent = 'Unable to load your geometries.';
             message.setAttribute('role', 'alert');
             const retry = button('Retry', 'gis-geometries-retry', async () => {
                 retry.disabled = true;
@@ -138,7 +138,7 @@ export const GISGeometriesPanel = {
                 list.removeAttribute('aria-busy');
                 this.refreshList();
             });
-            retry.setAttribute('aria-label', 'Retry loading GIS Geometry');
+            retry.setAttribute('aria-label', 'Retry loading GIS Geometries');
             notice.append(message, retry);
             notices.push(notice);
         }
@@ -150,7 +150,7 @@ export const GISGeometriesPanel = {
             }
             const empty = document.createElement('p');
             empty.className = 'gis-geometries-empty';
-            empty.textContent = 'No geometry yet. Choose Create Geometry above the map to draw a line or polygon.';
+            empty.textContent = 'No geometries yet. Choose Create Geometry above the map to draw a line or polygon.';
             list.replaceChildren(empty);
             return;
         }

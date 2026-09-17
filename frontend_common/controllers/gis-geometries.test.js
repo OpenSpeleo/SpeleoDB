@@ -5,7 +5,7 @@ beforeEach(() => {
 });
 afterEach(() => { delete globalThis.Urls; });
 
-describe('GIS Geometry management listing', () => {
+describe('GIS Geometries management listing', () => {
     it('reuses table/card Open controls and access pills without source fields or uploads', () => {
         const markup = buildGISGeometryListMarkup([{
             id: 'geometry-id', name: 'Survey boundary', color: '#123456',
@@ -36,7 +36,7 @@ describe('GIS Geometry management listing', () => {
     it('offers a geometry-specific empty state', () => {
         const markup = buildGISGeometryListMarkup([]);
         expect(markup.tableHtml).toContain('colspan="6"');
-        expect(markup.cardsHtml).toContain('No GIS Geometry yet');
+        expect(markup.cardsHtml).toContain('No GIS Geometries yet');
         expect(markup.cardsHtml).toContain('Create a line or polygon');
         expect(markup.cardsHtml).not.toContain('Upload');
     });

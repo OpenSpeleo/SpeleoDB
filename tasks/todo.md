@@ -508,8 +508,8 @@ at desktop and mobile widths: Create Geometry is left of Import GPS. See
 
 # Backend GIS menu order review
 
-Reordered the existing sidebar blocks to My GIS Geometry, My GIS Layers, then My
-GPS Tracks. Verified the actual authenticated HTTP response from the running
+Reordered the existing sidebar blocks to My GIS Geometries, My GIS Layers, then
+My GPS Tracks. Verified the actual authenticated HTTP response from the running
 server. Template lint and all 1,158 JavaScript tests pass. See
 [the task](todos/geometry-menu-order.md).
 
@@ -560,3 +560,22 @@ app and confirmed the fixes without runtime errors. Backend, permissions,
 validation, migrations, and exports were re-reviewed with no additional
 actionable findings. Full final verification is recorded in
 [the second review](todos/gis-geometry-second-review.md).
+
+# GIS Geometry read-only specification review
+
+Added an agent-facing specification for the resource and its three GET
+endpoints, including exact response schemas, examples, permissions, error
+handling, caching, and centralized opacity/transparency constants. Corrected the
+documentation index's stale Point/10 km² summary. Container checks validated all
+six JSON examples against serializers and geometry validation; an independent
+backend review confirmed the HTTP contracts. No runtime changes. See
+[the specification](../docs/gis-geometry-read-api.md).
+
+# GIS Geometries collection labels review
+
+Pluralized the map card/header, accessible controls, and management collection
+loading/empty/error messages. Individual record labels remain singular. The
+existing 160 × 48 px card still fits the longer text at desktop/mobile widths.
+All 1,185 JavaScript tests, ten page tests, lint, and the production build
+passed in the running container. See
+[the task](todos/gis-geometries-plural-labels.md).

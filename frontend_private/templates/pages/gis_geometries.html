@@ -12,7 +12,7 @@
       {% csrf_token %}
       <div class="sm:flex sm:justify-between sm:items-center mb-8">
         <div class="mb-4 sm:mb-0 sm:mr-8">
-          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">My GIS Geometry</h1>
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">My GIS Geometries</h1>
           <p class="text-slate-400 mt-2">Draw a line or polygon on the survey map and share it with your collaborators.</p>
         </div>
         <a href="{% url 'private:map_viewer' %}?geometry=new"
@@ -28,7 +28,7 @@
       </div>
       <div class="tracks-cards md:hidden">
         <div id="gis-geometries-cards-container" class="p-4">
-          <p class="text-center py-12 text-slate-400">Loading GIS Geometry…</p>
+          <p class="text-center py-12 text-slate-400">Loading GIS Geometries…</p>
         </div>
       </div>
       <div class="tracks-table hidden md:block bg-slate-800 shadow-lg rounded-xs border border-slate-700">
@@ -59,7 +59,7 @@
             <tbody id="gis-geometries-table-body"
                    class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
               <tr>
-                <td colspan="6" class="px-2 py-8 text-center text-slate-400">Loading GIS Geometry…</td>
+                <td colspan="6" class="px-2 py-8 text-center text-slate-400">Loading GIS Geometries…</td>
               </tr>
             </tbody>
           </table>

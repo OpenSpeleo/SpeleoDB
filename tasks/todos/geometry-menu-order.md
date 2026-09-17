@@ -1,6 +1,6 @@
 # Backend GIS menu order
 
-- [x] Order the backend links My GIS Geometry, My GIS Layers, My GPS Tracks.
+- [x] Order the backend links My GIS Geometries, My GIS Layers, My GPS Tracks.
 - [x] Check template lint, frontend regressions, and the running server's menu
       order.
 

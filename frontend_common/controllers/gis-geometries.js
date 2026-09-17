@@ -4,7 +4,7 @@ import { buildGISOverlayListMarkup } from './gis-layers.js';
 export function buildGISGeometryListMarkup(geometries, openIconUrl = '') {
     return buildGISOverlayListMarkup(geometries, openIconUrl, {
         entityLabel: 'GIS Geometry',
-        pluralLabel: 'GIS Geometry',
+        pluralLabel: 'GIS Geometries',
         detailsRoute: 'private:gis_geometry_details',
         showSource: false,
         emptyHint: 'Create a line or polygon on the survey map to get started.',
@@ -15,7 +15,7 @@ export function init(context) {
     return attachTaggedEntityList({
         listEndpoint: context.listEndpoint,
         entityLabel: 'GIS Geometry',
-        loadFailedMessage: 'Unable to load GIS Geometry. Refresh the page to try again.',
+        loadFailedMessage: 'Unable to load GIS Geometries. Refresh the page to try again.',
         renderList(geometries) {
             const { tableHtml, cardsHtml } = buildGISGeometryListMarkup(geometries, context.openIconUrl);
             document.getElementById('gis-geometries-table-body').innerHTML = tableHtml;

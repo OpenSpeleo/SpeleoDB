@@ -15,9 +15,9 @@ export contract.
 
 ## User workflow
 
-The backend navigation orders My GIS Geometry, My GIS Layers, then My GPS
-Tracks. The GIS Geometry navigation entry opens the same responsive listing and
-settings workflow as GIS Layers. Each record has a name, creator, color,
+The backend navigation orders My GIS Geometries, My GIS Layers, then My GPS
+Tracks. The GIS Geometries navigation entry opens the same responsive listing
+and settings workflow as GIS Layers. Each record has a name, creator, color,
 Details, User Access, and an administrator-only Danger Zone. Create geometry
 opens the Survey Viewer without creating an empty database record. Details also
 offers View/Edit on map and an Advanced: GeoJSON field. Readers can inspect and
@@ -44,8 +44,8 @@ control; asynchronous responses never take focus away from the editor. An older
 failed detail request cannot undo a newer saved shape's visibility or the user's
 subsequent hide action.
 
-Folded Projects, GPS Tracks, GIS Layers, and GIS Geometry cards share one 160 ×
-48 px size in the shared map stylesheet, keeping their labels and chevrons
+Folded Projects, GPS Tracks, GIS Layers, and GIS Geometries cards share one 160
+× 48 px size in the shared map stylesheet, keeping their labels and chevrons
 aligned without per-component sizing overrides.
 
 Polygon fills use 17.5% opacity when saved and 9% while editing, keeping the

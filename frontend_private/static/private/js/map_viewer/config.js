@@ -279,7 +279,7 @@ export const Config = {
             records.forEach(record => this.upsertGISGeometry(record));
             this.gisGeometriesError = false;
         } catch (error) {
-            console.error('Failed to load GIS Geometry:', error);
+            console.error('Failed to load GIS Geometries:', error);
             this.gisGeometriesError = true;
         }
         return this.gisGeometries;
