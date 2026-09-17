@@ -1330,7 +1330,9 @@ class TestProjectViewOGCCompliance(BaseAPITestCase):
 
 @pytest.fixture
 def landmark_owner() -> User:
-    return User.objects.create_user(email="landmark-owner@example.com")
+    return User.objects.create_user(
+        name="Landmark Owner", email="landmark-owner@example.com"
+    )
 
 
 @pytest.fixture
@@ -1491,8 +1493,8 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner_a = User.objects.create_user(email="owner-a@example.com")
-        owner_b = User.objects.create_user(email="owner-b@example.com")
+        owner_a = User.objects.create_user(name="Owner A", email="owner-a@example.com")
+        owner_b = User.objects.create_user(name="Owner B", email="owner-b@example.com")
         coll_a = LandmarkCollection.objects.create(name="A", created_by=owner_a.email)
         LandmarkCollectionUserPermission.objects.create(
             collection=coll_a,
@@ -1525,7 +1527,9 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner = User.objects.create_user(email="latest-owner@example.com")
+        owner = User.objects.create_user(
+            name="Latest Owner", email="latest-owner@example.com"
+        )
         project = ProjectFactory.create(created_by=owner.email)
         old_sha = "1" * 40
         latest_sha = "2" * 40
@@ -1596,8 +1600,12 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner_a = User.objects.create_user(email="project-owner-a@example.com")
-        owner_b = User.objects.create_user(email="project-owner-b@example.com")
+        owner_a = User.objects.create_user(
+            name="Project Owner A", email="project-owner-a@example.com"
+        )
+        owner_b = User.objects.create_user(
+            name="Project Owner B", email="project-owner-b@example.com"
+        )
         project_b = ProjectFactory.create(created_by=owner_b.email)
         other_sha = "3" * 40
         _create_project_geojson_for(str(project_b.id), other_sha)

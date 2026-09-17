@@ -15,11 +15,26 @@ if TYPE_CHECKING:
     from _pytest.config.argparsing import Parser
     from _pytest.nodes import Item
 
+    from speleodb.users.models import User
+
 
 pytest_plugins: tuple[str, ...] = (
     "speleodb.testing.pytest_gitlab",
     "speleodb.testing.gitlab_fixtures",
 )
+
+
+@pytest.fixture
+def admin_user(db: None, django_user_model: type[User]) -> User:
+    """Preserve pytest-django's admin defaults with a required display name."""
+    try:
+        return django_user_model.objects.get_by_natural_key("admin@example.com")
+    except django_user_model.DoesNotExist:
+        return django_user_model.objects.create_superuser(
+            email="admin@example.com",
+            password="password",  # noqa: S106
+            name="Test Administrator",
+        )
 
 
 @pytest.hookimpl(trylast=True)

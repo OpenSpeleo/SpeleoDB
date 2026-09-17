@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import BooleanField
 from django.db.models import CharField
@@ -18,9 +19,14 @@ from speleodb.common.caching import UserProjectPermissionCache
 from speleodb.common.caching import UserProjectPermissionInfo
 from speleodb.users.managers import UserManager
 from speleodb.utils.exceptions import NotAuthorizedError
+from speleodb.utils.user_identity import USER_NAME_NONBLANK_PATTERN
+from speleodb.utils.user_identity import validate_user_name
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from django.db.models import QuerySet
+    from django.db.models.base import ModelBase
     from django_stubs_ext import StrOrPromise
 
     from speleodb.gis.models import ExperimentUserPermission
@@ -75,7 +81,13 @@ class User(AbstractUser):
     id = models.AutoField(primary_key=True)  # Explicitly declared for typing
 
     # First and last name do not cover name patterns around the globe
-    name = CharField("Name of User", blank=False, null=False, max_length=255)
+    name = CharField(
+        "Name of User",
+        blank=False,
+        null=False,
+        max_length=255,
+        validators=[validate_user_name],
+    )
     email = EmailField("email address", unique=True)
     country = CountryField()
 
@@ -118,6 +130,39 @@ class User(AbstractUser):
             # models.Index(fields=["email"]),  # Present via unique constraint
             models.Index(fields=["country"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(name__regex=USER_NAME_NONBLANK_PATTERN),
+                name="users_user_name_nonblank",
+            ),
+        ]
+
+    def save(
+        self,
+        *,
+        force_insert: bool | tuple[ModelBase, ...] = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        if update_fields is not None:
+            update_fields = frozenset(update_fields)
+        writes_name: bool = (
+            "name" in update_fields
+            if update_fields is not None
+            else self._state.adding or "name" not in self.get_deferred_fields()
+        )
+        if writes_name:
+            try:
+                validate_user_name(self.name)
+            except ValidationError as exc:
+                raise ValidationError({"name": exc.messages}) from exc
+        super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using,
+            update_fields=update_fields,
+        )
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.name} [{self.email}]>"

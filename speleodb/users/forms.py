@@ -12,6 +12,7 @@ from django.forms import Form
 from django.forms import TextInput
 
 from speleodb.users.models import User
+from speleodb.utils.user_identity import validate_user_name
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -32,7 +33,7 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):  # type:ignore[type-a
 
     class Meta:
         model = User
-        fields = ("email",)
+        fields = ("email", "name")
         field_classes = {"email": EmailField}
         error_messages = {
             "email": {"unique": "This email has already been taken."},
@@ -50,6 +51,7 @@ class SignupForm(Form):
         max_length=255,
         min_length=5,
         required=True,
+        validators=[validate_user_name],
         widget=TextInput(attrs={"placeholder": "Full Name"}),
     )
 
@@ -65,6 +67,4 @@ class SignupForm(Form):
         super().__init__(*args, **kwargs)
 
     def signup(self, request: HttpRequest, user: User) -> None:
-        user.name = self.cleaned_data["name"]
-        user.country = self.cleaned_data["country"]
-        user.save()
+        """Required allauth hook; AccountAdapter populates fields before saving."""

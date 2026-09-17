@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import StringIO
+from unittest.mock import patch
 
 import pytest
 from allauth.account.models import EmailAddress
@@ -69,6 +70,25 @@ def test_ensure_local_superuser_repairs_existing_account() -> None:
     assert user.check_password(LOCAL_SUPERUSER_PASSWORD)
     assert email_address.verified is True
     assert email_address.primary is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("name", ["", " \t\n ", "\u00a0\u2003"])
+@override_settings(DEBUG=True)
+def test_ensure_local_superuser_repairs_legacy_blank_name(name: str) -> None:
+    user: User = User.objects.create_user(
+        email=LOCAL_SUPERUSER_EMAIL,
+        name="Existing Administrator",
+        country=LOCAL_SUPERUSER_COUNTRY_CODE,
+    )
+    # Model a legacy instance without inserting invalid data past the current
+    # database constraint. The command must persist its repaired identity.
+    user.name = name
+    with patch.object(User.objects, "get_or_create", return_value=(user, False)):
+        call_command("ensure_local_superuser")
+
+    user.refresh_from_db()
+    assert user.name == "SpeleoDB Administrator"
 
 
 @pytest.mark.django_db

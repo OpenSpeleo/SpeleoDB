@@ -68,6 +68,16 @@ creating another commit. Author, committer, and exact message bytes are
 retained. Cached `cat-file` readers keep their normal lifetime;
 filesystem/object database reads are not subject to a whole-operation deadline.
 
+The CLI validates identities more strictly than GitPython's former direct
+serialization. At the commit boundary, missing/whitespace-only author names and
+names made entirely of Git-disallowed characters use `NO NAME`; author email,
+configured committer, and usable names are preserved. This includes period-only
+names rejected by the deployed Git 2.39.5. Account validation, database repair,
+and a nonblank-name constraint prevent new unnamed rows; the fallback also
+protects stale in-memory users. See [user identity](user-identity.md) for the
+signup lifecycle, migration, and regression coverage. Historical commits are not
+rewritten, and the fallback adds no SQL or network calls.
+
 Initial publication explicitly selects the configured unborn branch and never
 pulls from an empty remote. Existing commits or remote refs prohibit initial
 publication: an unset remote HEAD does not establish that a repository is empty.

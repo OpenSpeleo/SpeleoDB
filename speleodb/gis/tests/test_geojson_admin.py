@@ -18,7 +18,11 @@ from speleodb.users.models import User
 
 @pytest.fixture
 def user(db: None) -> User:
-    return User.objects.create_user(email="admin@test.org", password="x")  # noqa: S106
+    return User.objects.create_user(
+        name="Test Admin",
+        email="admin@test.org",
+        password="x",  # noqa: S106
+    )
 
 
 @pytest.fixture

@@ -37,6 +37,8 @@ from speleodb.git_engine.exceptions import GitPathNotFoundError
 from speleodb.git_engine.operations import BoundedGit
 from speleodb.git_engine.operations import retry_git_operation
 from speleodb.utils.helpers import retry_with_backoff
+from speleodb.utils.user_identity import DEFAULT_USER_NAME
+from speleodb.utils.user_identity import has_user_name
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -47,10 +49,26 @@ GIT_COMMITTER = git.Actor(
     settings.DJANGO_GIT_COMMITTER_NAME,
     settings.DJANGO_GIT_COMMITTER_EMAIL,
 )
+GIT_NAME_DISALLOWED_PUNCTUATION: str = ".,:;<>\"\\'"
 
 logger = logging.getLogger(__name__)
 
 type PathLike = str | os.PathLike[str]
+
+
+def _git_author_name(name: str | None) -> str:
+    """Keep display names intact unless Git would receive an empty identity."""
+    if name is None or not has_user_name(name):
+        return DEFAULT_USER_NAME
+    # Git 2.39's ident.c also rejects period-only names; retain compatibility
+    # with that supported runtime. Leave usable-name formatting to Git itself.
+    if not any(
+        character > " " and character not in GIT_NAME_DISALLOWED_PUNCTUATION
+        for character in name
+    ):
+        return DEFAULT_USER_NAME
+    return name
+
 
 # class GitBlob(Blob):
 #     def __init__(
@@ -758,7 +776,7 @@ class GitRepo(Repo):
             with (
                 tempfile.TemporaryFile() as message_file,
                 self.git.custom_environment(
-                    GIT_AUTHOR_NAME=author.name,
+                    GIT_AUTHOR_NAME=_git_author_name(author.name),
                     GIT_AUTHOR_EMAIL=author.email,
                     GIT_COMMITTER_NAME=GIT_COMMITTER.name,
                     GIT_COMMITTER_EMAIL=GIT_COMMITTER.email,

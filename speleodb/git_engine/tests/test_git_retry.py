@@ -26,6 +26,7 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.operations import BoundedGit
 from speleodb.git_engine.operations import DeadlineGitProcess
+from speleodb.utils.user_identity import DEFAULT_USER_NAME
 
 ENCODED_CREDENTIAL: str = "test%40credential"
 DECODED_CREDENTIAL: str = "test@credential"
@@ -234,6 +235,68 @@ class CommitAndPushRetryTests(LocalGitTests):
         assert commit.author.name == "Original Author"
         assert commit.author.email == "author@example.org"
         assert commit.committer == GIT_COMMITTER
+
+    def test_commit_and_push_uses_fallback_for_unusable_author_names(self) -> None:
+        names: tuple[str, ...] = (
+            "",
+            " \t\r\n ",
+            "\u00a0\u2003",
+            "<>",
+            ".",
+            "...",
+            ".,:;<>\"\\'",
+            "\x00\x01\x1f",
+        )
+        attempts: pathlib.Path = self._hook(self.repo, "pre-commit", failures=0)
+        for index, author_name in enumerate(names, start=1):
+            with self.subTest(author_name=author_name):
+                original: str = self.repo.head.commit.hexsha
+                message: str = f"Fallback author {index}"
+                result: str | None = self.repo.commit_and_push_project(
+                    message=message,
+                    author_name=author_name,
+                    author_email="original-author@example.org",
+                    force_empty_commit=True,
+                )
+                committed: git.Commit = self.remote.commit(self.repo.active_branch.name)
+                assert result == committed.hexsha
+                assert committed.message == message
+                assert committed.author.name == DEFAULT_USER_NAME
+                assert committed.author.email == "original-author@example.org"
+                assert committed.committer == GIT_COMMITTER
+                assert [parent.hexsha for parent in committed.parents] == [original]
+                assert attempts.read_text() == str(index)
+
+    def test_supervised_commit_uses_fallback_for_missing_actor_name(self) -> None:
+        commit: GitCommit = self.repo._commit_project(  # noqa: SLF001
+            "missing actor name", author=git.Actor(None, "author@example.org")
+        )
+        assert commit.author.name == DEFAULT_USER_NAME
+        assert commit.author.email == "author@example.org"
+        assert commit.committer == GIT_COMMITTER
+
+    def test_commit_and_push_preserves_usable_author_names(self) -> None:
+        names: tuple[tuple[str, str], ...] = (
+            ("Ada Lovelace", "Ada Lovelace"),
+            ("Élodie 李", "Élodie 李"),
+            ("O'Connor", "O'Connor"),
+            ("Dr. Alice", "Dr. Alice"),
+            ("  Alice  ", "Alice"),
+            ("<Alice>", "Alice"),
+        )
+        for author_name, expected_name in names:
+            with self.subTest(author_name=author_name):
+                result: str | None = self.repo.commit_and_push_project(
+                    message="preserve usable author",
+                    author_name=author_name,
+                    author_email="author@example.org",
+                    force_empty_commit=True,
+                )
+                committed: git.Commit = self.remote.commit(self.repo.active_branch.name)
+                assert result == committed.hexsha
+                assert committed.author.name == expected_name
+                assert committed.author.email == "author@example.org"
+                assert committed.committer == GIT_COMMITTER
 
     @override_settings(DJANGO_GIT_COMMAND_TIMEOUT_SECONDS=0.5)
     def test_post_commit_timeout_does_not_retry_completed_commit(self) -> None:

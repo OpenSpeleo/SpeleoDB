@@ -424,3 +424,26 @@ creations/POSTs/violations/unresolved allocations; no remote cleanup needed.
 JSDOM covers submit/reload calls rather than actual browser Enter/navigation.
 See [the completed plan](todos/project-edition-upload-controls.md) and
 [feature design](../docs/project-edition-and-upload.md).
+
+## Required user names and Git authorship review
+
+Require nonblank names in account writes and enforce the invariant in SQL. The
+migration repairs legacy names to `NO NAME`; supervised Git commits also fall
+back for stale/invalid author names while retaining email and committer. Admin,
+CLI, headless signup, and post-sanitization profile updates are covered.
+Existing nameless test fixtures now provide names explicitly.
+
+Container full suite: **4,796 passed, 178 skipped**. An additional 348
+PostgreSQL user/profile tests passed, as did the real Ariane upload regression,
+application Ruff, full mypy, Django system checks, and migration drift checks.
+GitLab audit: **9 creations / 10 POSTs**, zero violations or unresolved
+outcomes; all nine repositories have verified deletion marks. Broad root Ruff
+also reports 44 pre-existing issues in untouched `bin/squash_dependencies.py`.
+Final evidence is in [the task review](todos/required-user-names.md). See
+[the design and rollout notes](../docs/user-identity.md).
+
+The requested adversarial review found no actionable application issues. Its
+final full container run passed 4,796 Python tests (178 skipped) and all 1,040
+JavaScript tests. The repeat GitLab audit stayed at nine repositories and ten
+POSTs with no violations or unresolved outcomes; deletion marks were verified.
+Final `prek run -a` passed every hook after test-lint and formatting fixes.

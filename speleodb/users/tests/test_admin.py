@@ -68,17 +68,62 @@ class TestUserAdmin:
         url = reverse("admin:users_user_add")
         response = admin_client.get(url)
         assert response.status_code == status.HTTP_200_OK, response.data  # type: ignore[attr-defined]
+        assert response.context["adminform"].form.fields["name"].required
 
         response = admin_client.post(
             url,
             data={
                 "email": "new-admin@example.com",
+                "name": "New Administrator",
                 "password1": "My_R@ndom-P@ssw0rd",
                 "password2": "My_R@ndom-P@ssw0rd",
             },
         )
         assert response.status_code == status.HTTP_302_FOUND, response.data  # type: ignore[attr-defined]
-        assert User.objects.filter(email="new-admin@example.com").exists()
+        assert (
+            User.objects.get(email="new-admin@example.com").name == "New Administrator"
+        )
+
+    @pytest.mark.parametrize("name", [None, "", " \t\n ", "\u00a0\u2003"])
+    def test_add_requires_name(self, admin_client: Client, name: str | None) -> None:
+        data: dict[str, str] = {
+            "email": "unnamed-admin@example.com",
+            "password1": "My_R@ndom-P@ssw0rd",
+            "password2": "My_R@ndom-P@ssw0rd",
+        }
+        if name is not None:
+            data["name"] = name
+
+        response = admin_client.post(reverse("admin:users_user_add"), data=data)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "name" in response.context["adminform"].form.errors
+        assert not User.objects.filter(email=data["email"]).exists()
+
+    @pytest.mark.parametrize("name", ["Updated User", "", " \t\n "])
+    def test_change_validates_name(self, admin_client: Client, name: str) -> None:
+        user: User = UserFactory.create(name="Original User", country="US")
+        response = admin_client.post(
+            reverse("admin:users_user_change", kwargs={"object_id": user.pk}),
+            data={
+                "email": user.email,
+                "name": name,
+                "country": "US",
+                "password": user.password,
+                "date_joined_0": "2026-09-16",
+                "date_joined_1": "12:00:00",
+                "is_active": "on",
+            },
+        )
+
+        user.refresh_from_db()
+        if name.strip():
+            assert response.status_code == status.HTTP_302_FOUND
+            assert user.name == name
+        else:
+            assert response.status_code == status.HTTP_200_OK
+            assert "name" in response.context["adminform"].form.errors
+            assert user.name == "Original User"
 
     def test_view_user(self, admin_client: Client) -> None:
         user = User.objects.get(email="admin@example.com")

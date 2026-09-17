@@ -45,7 +45,9 @@ class TestLandmarkCollectionOGC:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(email="owner@example.com")
+        return User.objects.create_user(
+            name="Collection Owner", email="owner@example.com"
+        )
 
     @pytest.fixture
     def collection(self, owner: User) -> LandmarkCollection:
@@ -533,7 +535,9 @@ class TestLandmarkCollectionOGC:
         owner: User,
         user_token: Token,
     ) -> None:
-        other_user = User.objects.create_user(email="other@example.com")
+        other_user = User.objects.create_user(
+            name="Other User", email="other@example.com"
+        )
         unknown_collection_id = "00000000-0000-0000-0000-000000000001"
         inaccessible_collection = LandmarkCollection.objects.create(
             name="Private",

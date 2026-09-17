@@ -146,7 +146,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_grant_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(email="other@example.com")
+        other_user = User.objects.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )
@@ -170,7 +170,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_update_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(email="other@example.com")
+        other_user = User.objects.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )
@@ -198,7 +198,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_delete_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(email="other@example.com")
+        other_user = User.objects.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )

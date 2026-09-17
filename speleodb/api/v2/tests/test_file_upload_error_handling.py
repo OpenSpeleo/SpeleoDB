@@ -49,6 +49,8 @@ from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.git_engine.core import GIT_COMMITTER
+from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabError
@@ -63,6 +65,7 @@ from speleodb.testing.gitlab_pool import canonical_user
 from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.exceptions import FileRejectedError
 from speleodb.utils.exceptions import GeoJSONGenerationError
+from speleodb.utils.user_identity import DEFAULT_USER_NAME
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -233,6 +236,37 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             == self.original_commit_ids
         )
         assert self._remote_head() == self.original_head
+
+    def test_repaired_account_upload_with_stale_empty_name_succeeds(self) -> None:
+        self.user.name = DEFAULT_USER_NAME
+        self.user.save(update_fields=["name"])
+        # A request can retain an older user instance while a migration repairs
+        # its row. Keep the database invariant and exercise that stale instance.
+        self.user.name = ""
+        self.client.force_authenticate(user=self.user)
+
+        response: Response = self._do_upload(message="Legacy unnamed author upload")
+
+        assert response.status_code == status.HTTP_200_OK
+        commit: ProjectCommit = ProjectCommit.objects.get(
+            project=self.project,
+            message="Legacy unnamed author upload",
+        )
+        assert commit.author_name == DEFAULT_USER_NAME
+        assert commit.author_email == self.user.email
+        assert commit.parent_ids == [self.original_head]
+        assert self._remote_head() == commit.id
+        committed: GitCommit = self.repo.commit(commit.id)
+        assert committed.author.name == DEFAULT_USER_NAME
+        assert committed.author.email == self.user.email
+        assert committed.committer == GIT_COMMITTER
+        assert (
+            committed.tree.get_file(pathlib.Path("ariane.tml")).content.getvalue()
+            == (BASE_DIR / "test_simple.tml").read_bytes()
+        )
+        self.user.refresh_from_db(fields=["name"])
+        assert self.user.name == DEFAULT_USER_NAME
+        assert self.sentry_events == []
 
     def test_git_checkout_failure_logs_and_captures_sentry(self) -> None:
         index_lock: pathlib.Path = pathlib.Path(self.repo.git_dir) / "index.lock"

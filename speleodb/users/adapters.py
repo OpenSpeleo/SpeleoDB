@@ -12,12 +12,30 @@ from django.contrib.sites.shortcuts import get_current_site
 if typing.TYPE_CHECKING:
     from typing import Any
 
+    from django.contrib.auth.base_user import AbstractBaseUser
+    from django.forms import BaseForm
     from django.http import HttpRequest
+
+    from speleodb.users.models import User
 
 
 class AccountAdapter(DefaultAccountAdapter):
     def is_open_for_signup(self, request: HttpRequest) -> bool:
         return getattr(settings, "ACCOUNT_ALLOW_REGISTRATION", True)
+
+    def save_user(
+        self,
+        request: HttpRequest,
+        user: AbstractBaseUser,
+        form: BaseForm,
+        commit: bool = True,
+    ) -> AbstractBaseUser:
+        # allauth saves before calling SignupForm.signup(), so required profile
+        # fields must be populated before its first INSERT.
+        speleodb_user: User = typing.cast("User", user)
+        speleodb_user.name = form.cleaned_data["name"]
+        speleodb_user.country = form.cleaned_data["country"]
+        return super().save_user(request, user, form, commit=commit)
 
     def send_mail(
         self, template_prefix: str, email: str, context: dict[str, Any]

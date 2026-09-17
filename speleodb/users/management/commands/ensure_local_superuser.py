@@ -9,6 +9,7 @@ from django.core.management.base import CommandError
 from django.db import transaction
 
 from speleodb.users.models import User
+from speleodb.utils.user_identity import has_user_name
 
 LOCAL_SUPERUSER_EMAIL = "contact@speleodb.org"
 LOCAL_SUPERUSER_NAME = "SpeleoDB Administrator"
@@ -45,7 +46,7 @@ class Command(BaseCommand):
                 setattr(user, field, value)
                 changed_fields.append(field)
 
-        if not user.name:
+        if not has_user_name(user.name):
             user.name = LOCAL_SUPERUSER_NAME
             changed_fields.append("name")
 

@@ -31,6 +31,7 @@ class TestLandmarkEndpoints:
     def user(self) -> User:
         """Create a test user."""
         return User.objects.create_user(
+            name="Test User",
             email="testuser@example.com",
             password="testpass123",  # noqa: S106
         )
@@ -39,6 +40,7 @@ class TestLandmarkEndpoints:
     def other_user(self) -> User:
         """Create another test user."""
         return User.objects.create_user(
+            name="Other User",
             email="otheruser@example.com",
             password="otherpass123",  # noqa: S106
         )
@@ -547,6 +549,7 @@ class TestBulkTransfer:
     @pytest.fixture
     def owner(self) -> User:
         return User.objects.create_user(
+            name="Collection Owner",
             email="owner@example.com",
             password="pass",  # noqa: S106
         )
@@ -554,6 +557,7 @@ class TestBulkTransfer:
     @pytest.fixture
     def other_user(self) -> User:
         return User.objects.create_user(
+            name="Other User",
             email="other@example.com",
             password="pass",  # noqa: S106
         )
@@ -848,6 +852,7 @@ class TestBulkDelete:
     @pytest.fixture
     def owner(self) -> User:
         return User.objects.create_user(
+            name="Collection Owner",
             email="delowner@example.com",
             password="pass",  # noqa: S106
         )
@@ -855,6 +860,7 @@ class TestBulkDelete:
     @pytest.fixture
     def reader_user(self) -> User:
         return User.objects.create_user(
+            name="Collection Reader",
             email="delreader@example.com",
             password="pass",  # noqa: S106
         )

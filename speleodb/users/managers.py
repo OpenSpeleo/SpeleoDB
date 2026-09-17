@@ -7,6 +7,8 @@ from typing import Any
 
 from django.contrib.auth.models import UserManager as DjangoUserManager
 
+from speleodb.utils.user_identity import validate_user_name
+
 if TYPE_CHECKING:
     from speleodb.users.models import User
 
@@ -23,6 +25,7 @@ class UserManager(DjangoUserManager["User"]):
         if not email:
             msg = "The given email must be set"
             raise ValueError(msg)
+        validate_user_name(extra_fields.get("name"))
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)

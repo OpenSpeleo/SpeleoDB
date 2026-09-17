@@ -82,9 +82,46 @@ class TestUserAPI(BaseAPITestCase):
         email = "tom@domain"
         self._patch_user_info(expect_success=False, email=email)
 
-    def test_invalid_name(self) -> None:
-        name = ""
-        self._patch_user_info(expect_success=False, name=name)
+    @parameterized.expand(
+        [
+            ("empty", ""),
+            ("null", None),
+            ("whitespace", " \t\n "),
+            ("unicode_whitespace", "\u00a0\u2003"),
+            ("empty_markup", "<b></b>"),
+            ("script_only", "<script>alert('name')</script>"),
+            ("combining_marks", "\u0301\u0302"),
+            ("format_characters", "\u200b\u200d"),
+        ]
+    )
+    def test_invalid_name(self, case: str, name: str | None) -> None:
+        original_name: str = self.user.name
+        auth: str = self.header_prefix + self.token.key
+        response = self.client.patch(
+            reverse("api:v2:user-detail"),
+            headers={"authorization": auth},
+            data=json.dumps({"name": name}),
+            content_type="application/json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert "name" in response.data["errors"]
+        self.user.refresh_from_db()
+        assert self.user.name == original_name
+
+    def test_patch_user_name_sanitizes_valid_markup(self) -> None:
+        auth: str = self.header_prefix + self.token.key
+        response = self.client.patch(
+            reverse("api:v2:user-detail"),
+            headers={"authorization": auth},
+            data=json.dumps({"name": "<b>Ada Lovelace</b>"}),
+            content_type="application/json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data["name"] == "Ada Lovelace"
+        self.user.refresh_from_db()
+        assert self.user.name == "Ada Lovelace"
 
     @parameterized.expand(["email_on_projects_updates", "email_on_speleodb_updates"])
     def test_invalid_preference(self, name: str) -> None:

@@ -21,6 +21,7 @@ class TestLandmarkModel:
     def user(self) -> User:
         """Create a test user."""
         return User.objects.create_user(
+            name="Test User",
             email="testuser@example.com",
             password="testpass123",  # noqa: S106
         )

@@ -50,15 +50,27 @@ class TestLandmarkCollectionAPI:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(email="owner@example.com", password="pass")  # noqa: S106
+        return User.objects.create_user(
+            name="Collection Owner",
+            email="owner@example.com",
+            password="pass",  # noqa: S106
+        )
 
     @pytest.fixture
     def reader(self) -> User:
-        return User.objects.create_user(email="reader@example.com", password="pass")  # noqa: S106
+        return User.objects.create_user(
+            name="Collection Reader",
+            email="reader@example.com",
+            password="pass",  # noqa: S106
+        )
 
     @pytest.fixture
     def writer(self) -> User:
-        return User.objects.create_user(email="writer@example.com", password="pass")  # noqa: S106
+        return User.objects.create_user(
+            name="Collection Writer",
+            email="writer@example.com",
+            password="pass",  # noqa: S106
+        )
 
     @pytest.fixture
     def collection(self, owner: User) -> LandmarkCollection:
@@ -423,9 +435,15 @@ class TestLandmarkCollectionAPI:
         owner: User,
         collection: LandmarkCollection,
     ) -> None:
-        admin_user = User.objects.create_user(email="z-admin@example.com")
-        writer_user = User.objects.create_user(email="a-writer@example.com")
-        reader_user = User.objects.create_user(email="m-reader@example.com")
+        admin_user = User.objects.create_user(
+            name="Z Admin", email="z-admin@example.com"
+        )
+        writer_user = User.objects.create_user(
+            name="A Writer", email="a-writer@example.com"
+        )
+        reader_user = User.objects.create_user(
+            name="M Reader", email="m-reader@example.com"
+        )
         LandmarkCollectionUserPermission.objects.create(
             collection=collection,
             user=reader_user,
@@ -914,7 +932,11 @@ class TestLandmarkCollectionLandmarkExports:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(email="owner@example.com", password="pass")  # noqa: S106
+        return User.objects.create_user(
+            name="Collection Owner",
+            email="owner@example.com",
+            password="pass",  # noqa: S106
+        )
 
     @pytest.fixture
     def collection(self, owner: User) -> LandmarkCollection:
@@ -978,7 +1000,9 @@ class TestLandmarkCollectionLandmarkExports:
         expected_content_type: str,
         extension: str,
     ) -> None:
-        user = User.objects.create_user(email=f"user-{level}@example.com")
+        user = User.objects.create_user(
+            name="Collection Member", email=f"user-{level}@example.com"
+        )
         LandmarkCollectionUserPermission.objects.create(
             collection=collection,
             user=user,
@@ -1010,7 +1034,9 @@ class TestLandmarkCollectionLandmarkExports:
         collection: LandmarkCollection,
         url_name: str,
     ) -> None:
-        user = User.objects.create_user(email="stranger@example.com")
+        user = User.objects.create_user(
+            name="Unrelated User", email="stranger@example.com"
+        )
         api_client.force_authenticate(user=user)
 
         response = api_client.get(
