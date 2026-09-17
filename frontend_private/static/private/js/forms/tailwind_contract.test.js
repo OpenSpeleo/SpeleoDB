@@ -575,7 +575,7 @@ describe('Tailwind v4 single-bundle contract', () => {
         expect(ariane).toContain("{% vite_styles 'style-app' %}");
         expectInOrder(privateMap, [
             'https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css',
-            "{% vite_styles 'style-shared-modal' 'style-map-viewer' 'style-gis-geometry-map' %}",
+            "{% vite_styles 'style-shared-modal' 'style-map-viewer' 'style-gis-geometry-map' 'style-map-import' %}",
         ]);
         expect(allTemplates).not.toContain("{% static 'css/style.css' %}");
         expect(allTemplates).not.toContain("{% static 'private/css/style.css' %}");

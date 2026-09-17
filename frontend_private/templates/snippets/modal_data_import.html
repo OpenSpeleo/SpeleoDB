@@ -1,313 +1,349 @@
-<!-- Data Import Modal -->
 <div id="import-data-modal"
-     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-  <div class="import-modal-container bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl">
-    <!-- Modal Header -->
-    <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
-      <div class="flex items-center gap-3">
-        <svg class="w-6 h-6 text-cyan-400"
+     class="map-import-modal fixed inset-0 hidden"
+     aria-labelledby="import-data-title">
+  <div class="map-import-frame">
+    <header class="map-import-header">
+      <div class="map-import-heading">
+        <span class="map-import-heading-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"
+               fill="none"
+               stroke="currentColor"
+               stroke-width="1.8"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+            <path d="M12 3v12m-4-4 4 4 4-4M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" />
+          </svg>
+        </span>
+        <div>
+          <h2 id="import-data-title" tabindex="-1">Import GPX / KML-KMZ</h2>
+          <p>Your places, routes, and layers. On your map.</p>
+        </div>
+      </div>
+      <button type="button"
+              class="map-import-icon-button"
+              data-import-action="hide"
+              aria-label="Close import">
+        <svg viewBox="0 0 24 24"
              fill="none"
              stroke="currentColor"
-             viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-        </svg>
-        <h2 class="text-xl font-semibold text-white">Import Data</h2>
-      </div>
-      <button type="button"
-              data-import-action="hide"
-              class="text-slate-400 hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+             aria-hidden="true">
+          <path stroke-width="2" stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
         </svg>
       </button>
-    </div>
-    <!-- Tab Navigation -->
-    <div class="flex border-b border-slate-600 shrink-0">
+    </header>
+    <div class="map-import-tabs" role="tablist" aria-label="File format">
       <button type="button"
               id="import-tab-gpx"
+              role="tab"
+              aria-controls="import-content-gpx"
+              aria-selected="true"
               data-import-action="tab"
-              data-import-tab="gpx"
-              class="flex-1 px-6 py-4 text-white font-medium border-b-2 border-cyan-400 bg-srgb-slate-700-50 transition-all flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-        </svg>
-        GPX File
-      </button>
+              data-import-tab="gpx">GPX</button>
       <button type="button"
               id="import-tab-kml"
+              role="tab"
+              aria-controls="import-content-kml"
+              aria-selected="false"
+              tabindex="-1"
               data-import-action="tab"
-              data-import-tab="kml"
-              class="flex-1 px-6 py-4 text-slate-400 font-medium border-b-2 border-transparent hover:text-white hover:bg-srgb-slate-700-30 transition-all flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        KML/KMZ (Google Earth)
-      </button>
+              data-import-tab="kml">KML / KMZ</button>
     </div>
-    <!-- Tab Content - Scrollable -->
-    <div class="modal-scroll-content">
-      <!-- GPX Tab Content -->
-      <div id="import-content-gpx" class="p-6">
-        <div class="mb-4">
-          <p class="text-slate-300 text-sm">
-            Import waypoints and tracks from a GPX file. Waypoints will be imported as <strong class="text-blue-400">Landmarks</strong>,
-            and tracks will be imported as <strong class="text-cyan-400">GPS Tracks</strong>.
-          </p>
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-slate-300 mb-2"
-                 for="gpx-landmark-collection">Landmark Collection</label>
-          <select id="gpx-landmark-collection" class="form-input w-full">
-            <option value="">Personal Landmarks</option>
-          </select>
-        </div>
-        <!-- Drop Zone -->
-        <div id="gpx-drop-zone"
-             class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-cyan-400">
-          <input type="file" id="gpx-file-input" accept=".gpx" class="hidden" />
-          <svg class="w-12 h-12 center-x text-slate-400 mb-4"
-               fill="none"
-               stroke="currentColor"
-               viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <p class="text-slate-300 mb-2">Drag and drop your GPX file here</p>
-          <p class="text-slate-500 text-sm mb-4">or</p>
-          <button type="button"
-                  data-import-action="browse-gpx"
-                  class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
-            Browse Files
-          </button>
-          <p class="text-slate-500 text-xs mt-4">Only .gpx files are accepted</p>
-        </div>
-        <!-- Selected File Display -->
-        <div id="gpx-selected-file"
-             class="hidden mt-4 p-4 bg-srgb-slate-700-50 rounded-lg">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <svg class="w-8 h-8 text-cyan-400"
+    <div class="map-import-body">
+      <div id="import-content-gpx"
+           role="tabpanel"
+           aria-labelledby="import-tab-gpx">
+        <fieldset class="map-import-fields" id="gpx-import-fields">
+          <legend class="sr-only">GPX import</legend>
+          <div class="map-import-gpx-intro">
+            <h3>Bring your tracks and landmarks onto the map</h3>
+            <p>Your GPX file can contain either or both. We’ll import them together.</p>
+          </div>
+          <div class="map-import-gpx-outcomes">
+            <div class="map-import-gpx-outcome">
+              <svg viewBox="0 0 24 24"
                    fill="none"
                    stroke="currentColor"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                   stroke-width="1.8"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   aria-hidden="true">
+                <circle cx="6" cy="5" r="2" /><circle cx="18" cy="19" r="2" />
+                <path d="M6 7v6a3 3 0 0 0 6 0V9a3 3 0 0 1 6 0v8" />
               </svg>
               <div>
-                <p id="gpx-file-name" class="text-white font-medium"></p>
-                <p id="gpx-file-size" class="text-slate-400 text-sm"></p>
+                <h4>GPS tracks</h4>
+                <p>Your recorded paths.</p>
               </div>
             </div>
+            <div class="map-import-gpx-outcome map-import-gpx-landmarks">
+              <svg viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="1.8"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+              <div>
+                <h4>Landmarks</h4>
+                <p>Your saved locations.</p>
+              </div>
+            </div>
+          </div>
+          <div id="gpx-drop-zone" class="map-import-drop-zone">
+            <input type="file" id="gpx-file-input" accept=".gpx" hidden />
+            <svg class="map-import-upload-icon"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.6"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M12 16V4m-4 4 4-4 4 4M4 15v5h16v-5" />
+            </svg>
+            <p>Drop a GPX file here</p>
             <button type="button"
+                    class="map-import-browse"
+                    data-import-action="browse-gpx">Choose file</button>
+          </div>
+          <div id="gpx-selected-file" class="map-import-file" hidden>
+            <div>
+              <p id="gpx-file-name"></p>
+              <span id="gpx-file-size"></span>
+            </div>
+            <button type="button"
+                    class="map-import-icon-button"
                     data-import-action="clear-gpx"
-                    class="text-slate-400 hover:text-red-400 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+                    aria-label="Remove GPX file">×</button>
           </div>
-        </div>
-        <!-- Error Message -->
-        <div id="gpx-error-message"
-             class="hidden mt-4 p-4 bg-srgb-red-500-20 border border-srgb-red-500-50 rounded-lg">
-          <p class="text-red-300 text-sm" id="gpx-error-text"></p>
-        </div>
-        <!-- Upload Button -->
-        <div class="mt-6 flex justify-end gap-3">
-          <button type="button"
-                  data-import-action="hide"
-                  class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-            Cancel
-          </button>
-          <button type="button"
-                  id="gpx-upload-btn"
-                  data-import-action="upload-gpx"
-                  disabled
-                  class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-            <span id="gpx-upload-spinner" class="hidden">
-              <svg class="animate-spin h-4 w-4 text-white"
-                   xmlns="http://www.w3.org/2000/svg"
-                   fill="none"
-                   viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            </span>
-            <span id="gpx-upload-text">Import GPX</span>
-          </button>
-        </div>
-      </div>
-      <!-- KML/KMZ Tab Content -->
-      <div id="import-content-kml" class="p-6 hidden">
-        <div class="mb-6">
-          <div class="bg-srgb-blue-500-10 border border-srgb-blue-500-30 rounded-lg p-4 mb-4">
-            <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-blue-400 mt-0.5 shrink-0"
+          <div class="map-import-gpx-destination">
+            <label class="map-import-label"
+                   for="gpx-landmark-collection">Landmark collection <span class="map-import-label-note">- Landmarks only</span></label>
+            <p id="gpx-collection-help">
+              Used only if your file contains landmarks.
+              <br />
+              GPS tracks are saved separately and do not belong to this collection.
+            </p>
+            <div class="map-import-select">
+              <select id="gpx-landmark-collection"
+                      class="form-input"
+                      aria-describedby="gpx-collection-help">
+                <option value="">Loading collections…</option>
+              </select>
+              <svg viewBox="0 0 24 24"
                    fill="none"
                    stroke="currentColor"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   stroke-width="2"
+                   aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
               </svg>
-              <div>
-                <p class="text-blue-300 font-medium mb-1">Landmarks Only</p>
-                <p class="text-slate-300 text-sm">
-                  KML/KMZ import only supports <strong class="text-blue-400">Placemarks (Landmarks)</strong>.
-                  <br />
-                  Tracks and routes from KML/KMZ files are not imported.
-                </p>
-              </div>
             </div>
           </div>
-          <div id="kml-instructions-panel"
-               class="rounded-lg collapsible-panel border border-slate-600 hover:border-srgb-amber-500-50 transition-colors">
+        </fieldset>
+      </div>
+      <div id="import-content-kml"
+           role="tabpanel"
+           aria-labelledby="import-tab-kml"
+           hidden>
+        <fieldset class="map-import-fields" id="kml-import-fields">
+          <legend class="sr-only">KML or KMZ import</legend>
+          <fieldset id="kml-mode-help" class="map-import-intent">
+            <legend>What kind of data are you importing ?</legend>
+            <div class="map-import-mode-guide">
+              <button type="button"
+                      class="map-import-guide-card map-import-guide-places"
+                      data-import-action="choose-mode"
+                      data-import-mode="places"
+                      aria-label="Import Placemarks"
+                      aria-describedby="kml-places-description">
+                <span class="map-import-guide-label">Individual locations</span>
+                <span class="map-import-guide-title">Placemarks</span>
+                <span id="kml-places-description"
+                      class="map-import-guide-description">Turn point locations into landmarks you can edit and organize in a collection.</span>
+                <span class="map-import-guide-example">Cave entrances · Landmarks</span>
+                <span class="map-import-guide-action" aria-hidden="true">Choose Placemarks <span>→</span></span>
+              </button>
+              <button type="button"
+                      class="map-import-guide-card map-import-guide-overlay"
+                      data-import-action="choose-mode"
+                      data-import-mode="overlay"
+                      aria-label="Import Map Overlay"
+                      aria-describedby="kml-overlay-description">
+                <span class="map-import-guide-label">A complete map layer</span>
+                <span class="map-import-guide-title">Map Overlay</span>
+                <span id="kml-overlay-description"
+                      class="map-import-guide-description">Keep points, lines, and areas together in one GIS layer. Your original file is preserved.</span>
+                <span class="map-import-guide-example">Trails · Boundaries · Reference maps</span>
+                <span class="map-import-guide-action" aria-hidden="true">Choose Map Overlay <span>→</span></span>
+              </button>
+            </div>
+          </fieldset>
+          <div id="kml-selected-mode" class="map-import-selected-mode" hidden>
+            <span id="kml-selected-mode-label"></span>
             <button type="button"
-                    id="kml-instructions-toggle"
-                    class="w-full p-4 cursor-pointer flex items-center justify-between text-white font-medium bg-srgb-slate-700-70 hover:bg-srgb-slate-600-70 rounded-lg transition-all">
-              <span class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-amber-400"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                <span>How to Export from Google Earth Pro</span>
-                <span class="text-xs text-slate-400 font-normal ml-1">(click to expand)</span>
-              </span>
-              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-600 text-amber-400">
-                <svg class="w-4 h-4 collapsible-chevron"
-                     fill="none"
-                     stroke="currentColor"
-                     viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </span>
-            </button>
-            <ol class="collapsible-content text-slate-300 text-sm flow-y-2 list-decimal list-inside px-4 py-4 bg-srgb-slate-800-50 border-t border-slate-600">
-              <li>Open <strong>Google Earth Pro</strong> on your computer</li>
-              <li>In the left sidebar, expand <strong>"My Places"</strong></li>
-              <li>Right-click on the folder or placemarks you want to export</li>
-              <li>Select <strong>"Save Place As..."</strong></li>
-              <li>Choose <strong>KML (.kml)</strong> or <strong>KMZ (.kmz)</strong> format</li>
-              <li>Save the file and upload it below</li>
-            </ol>
+                    data-import-action="change-mode"
+                    aria-label="Change import type">Change</button>
           </div>
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-slate-300 mb-2"
-                 for="kml-landmark-collection">Landmark Collection</label>
-          <select id="kml-landmark-collection" class="form-input w-full">
-            <option value="">Personal Landmarks</option>
-          </select>
-        </div>
-        <!-- Drop Zone -->
-        <div id="kml-drop-zone"
-             class="file-upload-area border-2 border-dashed border-slate-500 rounded-lg p-8 text-center transition-all duration-200 hover:border-amber-400">
-          <input type="file" id="kml-file-input" accept=".kml,.kmz" class="hidden" />
-          <svg class="w-12 h-12 center-x text-slate-400 mb-4"
-               fill="none"
-               stroke="currentColor"
-               viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <p class="text-slate-300 mb-2">Drag and drop your KML or KMZ file here</p>
-          <p class="text-slate-500 text-sm mb-4">or</p>
-          <button type="button"
-                  data-import-action="browse-kml"
-                  class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">
-            Browse Files
-          </button>
-          <p class="text-slate-500 text-xs mt-4">Only .kml and .kmz files are accepted</p>
-        </div>
-        <!-- Selected File Display -->
-        <div id="kml-selected-file"
-             class="hidden mt-4 p-4 bg-srgb-slate-700-50 rounded-lg">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <svg class="w-8 h-8 text-amber-400"
+          <div id="kml-import-form" hidden>
+            <details id="kml-export-instructions" class="map-import-instructions" hidden>
+              <summary>
+                <svg class="map-import-instructions-icon"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path stroke-linecap="round" d="M12 11v6m0-10v.1" />
+                </svg>
+                Export from Google Earth Pro
+                <svg class="map-import-instructions-chevron"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
+                </svg>
+              </summary>
+              <ol class="map-import-export-steps">
+                <li>
+                  <div>
+                    <strong>Select your content</strong>
+                    <p id="kml-export-selection"></p>
+                  </div>
+                </li>
+                <li>
+                  <div>
+                    <strong>Right-click your selection</strong>
+                    <p>Choose <span class="map-import-menu-item">Save Place As…</span></p>
+                  </div>
+                </li>
+                <li>
+                  <div>
+                    <strong>Save your file</strong>
+                    <p>Choose <span class="map-import-format-tag">KML</span> or <span class="map-import-format-tag">KMZ</span>, then upload it below.</p>
+                  </div>
+                </li>
+              </ol>
+            </details>
+            <div id="kml-collection-field" hidden>
+              <label class="map-import-label" for="kml-landmark-collection">Landmark collection</label>
+              <div class="map-import-select">
+                <select id="kml-landmark-collection" class="form-input">
+                  <option value="">Loading collections…</option>
+                </select>
+                <svg viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
+                </svg>
+              </div>
+            </div>
+            <div id="kml-name-field" hidden>
+              <label class="map-import-label" for="kml-layer-name">Layer name</label>
+              <input type="text"
+                     id="kml-layer-name"
+                     class="form-input"
+                     autocomplete="off"
+                     maxlength="255" />
+            </div>
+            <div id="kml-drop-zone" class="map-import-drop-zone">
+              <input type="file" id="kml-file-input" accept=".kml,.kmz" hidden />
+              <svg class="map-import-upload-icon"
+                   viewBox="0 0 24 24"
                    fill="none"
                    stroke="currentColor"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   stroke-width="1.6"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M12 16V4m-4 4 4-4 4 4M4 15v5h16v-5" />
               </svg>
-              <div>
-                <p id="kml-file-name" class="text-white font-medium"></p>
-                <p id="kml-file-size" class="text-slate-400 text-sm"></p>
-              </div>
+              <p>Drop a KML or KMZ file here</p>
+              <button type="button"
+                      class="map-import-browse"
+                      data-import-action="browse-kml">Choose file</button>
             </div>
-            <button type="button"
-                    data-import-action="clear-kml"
-                    class="text-slate-400 hover:text-red-400 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div id="kml-selected-file" class="map-import-file" hidden>
+              <div>
+                <p id="kml-file-name"></p>
+                <span id="kml-file-size"></span>
+              </div>
+              <button type="button"
+                      class="map-import-icon-button"
+                      data-import-action="clear-kml"
+                      aria-label="Remove KML or KMZ file">×</button>
+            </div>
           </div>
-        </div>
-        <!-- Error Message -->
-        <div id="kml-error-message"
-             class="hidden mt-4 p-4 bg-srgb-red-500-20 border border-srgb-red-500-50 rounded-lg">
-          <p class="text-red-300 text-sm" id="kml-error-text"></p>
-        </div>
-        <!-- Upload Button -->
-        <div class="mt-6 flex justify-end gap-3">
-          <button type="button"
-                  data-import-action="hide"
-                  class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-            Cancel
-          </button>
-          <button type="button"
-                  id="kml-upload-btn"
-                  data-import-action="upload-kml"
-                  disabled
-                  class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-            <span id="kml-upload-spinner" class="hidden">
-              <svg class="animate-spin h-4 w-4 text-white"
-                   xmlns="http://www.w3.org/2000/svg"
-                   fill="none"
-                   viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            </span>
-            <span id="kml-upload-text">Import KML/KMZ</span>
-          </button>
-        </div>
+        </fieldset>
+        <section id="kml-review"
+                 class="map-import-review"
+                 aria-label="File review"
+                 aria-live="polite"
+                 hidden>
+          <h3>File review</h3>
+          <p id="kml-review-summary"></p>
+          <p id="kml-review-detail" class="map-import-help"></p>
+          <ul id="kml-review-warnings" class="map-import-warnings">
+          </ul>
+        </section>
+        <button type="button"
+                id="kml-inspect-retry"
+                class="map-import-text-button"
+                data-import-action="inspect-kml"
+                hidden>Try reviewing again</button>
       </div>
+      <p id="import-collections-error"
+         class="map-import-error"
+         role="alert"
+         hidden></p>
+      <button type="button"
+              id="import-collections-retry"
+              class="map-import-text-button"
+              data-import-action="collections"
+              hidden>Retry collections</button>
+      <div id="import-progress" class="map-import-progress" role="status" hidden>
+        <p id="import-progress-text"></p>
+        <progress id="import-progress-bar" max="100" aria-label="File upload progress"></progress>
+      </div>
+      <p id="import-error" class="map-import-error" role="alert" hidden></p>
+      <section id="import-result"
+               class="map-import-result"
+               tabindex="-1"
+               aria-labelledby="import-result-title"
+               hidden>
+        <h3 id="import-result-title"></h3>
+        <p id="import-result-message"></p>
+        <p id="import-result-detail" class="map-import-help"></p>
+        <p id="import-refresh-status" role="status"></p>
+        <button type="button"
+                id="import-refresh-retry"
+                class="map-import-text-button"
+                data-import-action="refresh"
+                hidden>Retry map refresh</button>
+      </section>
     </div>
-  </div>
-</div>
-<!-- Import Success Modal -->
-<div id="import-success-modal"
-     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-  <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-emerald-500-50 w-full max-w-md p-6 text-center">
-    <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-emerald-500-20 flex items-center justify-center">
-      <svg class="w-8 h-8 text-emerald-400"
-           fill="none"
-           stroke="currentColor"
-           viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
-    <h3 class="text-xl font-semibold text-white mb-2">Import Successful!</h3>
-    <p id="import-success-message" class="text-slate-300 mb-4"></p>
-    <p id="import-success-reload-text" class="text-slate-400 text-sm">Refreshing map data...</p>
-  </div>
-</div>
-<!-- Import Warning Modal -->
-<div id="import-warning-modal"
-     class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-  <div class="bg-slate-800 rounded-xl shadow-2xl border border-srgb-amber-500-50 w-full max-w-md p-6 text-center">
-    <div class="w-16 h-16 center-x mb-4 rounded-full bg-srgb-amber-500-20 flex items-center justify-center">
-      <svg class="w-8 h-8 text-amber-400"
-           fill="none"
-           stroke="currentColor"
-           viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    </div>
-    <h3 class="text-xl font-semibold text-white mb-2">Nothing New to Import</h3>
-    <p id="import-warning-message"
-       class="text-slate-300 mb-6">This file does not contain any new landmarks or GPS tracks that aren't already in the system.</p>
-    <button type="button"
-            data-import-action="hide-warning"
-            class="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors">OK</button>
+    <footer class="map-import-footer">
+      <button type="button"
+              id="import-dismiss-button"
+              class="map-import-secondary"
+              data-import-action="hide">Cancel</button>
+      <button type="button"
+              id="import-submit-button"
+              class="map-import-primary"
+              data-import-action="submit"
+              disabled>Import GPX</button>
+      <button type="button"
+              id="import-show-button"
+              class="map-import-primary"
+              data-import-action="show"
+              hidden>Show on map</button>
+    </footer>
   </div>
 </div>

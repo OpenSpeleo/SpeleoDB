@@ -3,10 +3,11 @@ import { State } from '../state.js';
 import { Layers } from '../map/layers.js';
 
 export const LandmarkManager = {
-    async loadCollections() {
+    async loadCollections({ throwOnError = false } = {}) {
         try {
             console.log('📍 Loading Landmark Collections...');
             const response = await API.getLandmarkCollections();
+            if (throwOnError && !Array.isArray(response)) throw new Error('Invalid Landmark Collections response');
             const collections = Array.isArray(response) ? response : [];
 
             State.landmarkCollections.clear();
@@ -30,17 +31,18 @@ export const LandmarkManager = {
             return collections;
         } catch (error) {
             console.error('Error loading Landmark Collections:', error);
+            if (throwOnError) throw error;
             State.landmarkCollections.clear();
             return [];
         }
     },
 
-    async loadAllLandmarks() {
+    async loadAllLandmarks({ throwOnError = false } = {}) {
         try {
             console.log('📍 Loading all Landmarks...');
             const landmarkData = await API.getAllLandmarksGeoJSON();
 
-            if (!landmarkData) {
+            if (!landmarkData || (throwOnError && !Array.isArray(landmarkData.features))) {
                 throw new Error('Invalid Landmark GeoJSON response');
             }
 
@@ -80,6 +82,7 @@ export const LandmarkManager = {
             return landmarkData;
         } catch (error) {
             console.error('Error loading Landmarks:', error);
+            if (throwOnError) throw error;
             return { type: 'FeatureCollection', features: [] };
         }
     },

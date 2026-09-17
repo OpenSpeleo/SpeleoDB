@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import html
 import io
 import math
 import re
@@ -11,19 +10,25 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
-import nh3
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from lxml import etree  # type: ignore[attr-defined]
 
+from speleodb.gis.gis_layer_processing import limits
 from speleodb.gis.gis_layer_processing.base import BaseGISLayerProcessor
 from speleodb.gis.gis_layer_processing.common import calculate_bbox
+from speleodb.gis.gis_layer_processing.common import deterministic_json
 from speleodb.gis.gis_layer_processing.common import explode_geometry_collections
 from speleodb.gis.gis_layer_processing.common import iter_coordinate_positions
 from speleodb.gis.gis_layer_processing.common import validate_position
 from speleodb.gis.gis_layer_processing.errors import GISLayerProcessingError
 from speleodb.gis.gis_layer_processing.errors import ProcessingErrorCode
+from speleodb.gis.gis_layer_processing.types import CompilationResult
+from speleodb.gis.gis_layer_processing.types import KMLAnalysis
+from speleodb.gis.gis_layer_processing.types import KMLWarning
+from speleodb.gis.gis_layer_processing.types import LandmarkCandidate
 from speleodb.gis.models.gis_layer import GISLayerSourceFormat
+from speleodb.utils.sanitize import sanitize_field_name
 
 _CANONICAL_XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 _KML_NAMESPACES = {
@@ -34,6 +39,43 @@ _KML_NAMESPACES = {
 }
 _ROOT_KML_PATTERN = re.compile(rb"<(?:[A-Za-z_][\w.-]*:)?kml(?:\s|>)")
 _GEOMETRY_NAMES = {"Point", "LineString", "Polygon", "MultiGeometry"}
+_GX_NAMESPACE = "http://www.google.com/kml/ext/2.2"
+_METADATA_NAMESPACES = {
+    "http://www.w3.org/2005/Atom",
+    "urn:oasis:names:tc:ciq:xsdschema:xAL:2.0",
+}
+_GX_FEATURE_PROPERTIES = {"balloonVisibility", "TimeStamp", "TimeSpan"}
+_FEATURE_PROPERTIES = {
+    "name",
+    "visibility",
+    "open",
+    "address",
+    "phoneNumber",
+    "Snippet",
+    "snippet",
+    "description",
+    "LookAt",
+    "Camera",
+    "TimeStamp",
+    "TimeSpan",
+    "styleUrl",
+    "Style",
+    "StyleMap",
+    "Region",
+    "Metadata",
+    "ExtendedData",
+}
+_UNSUPPORTED_CONSTRUCTS = {
+    "NetworkLink": "Linked map content is not fetched or imported.",
+    "GroundOverlay": "Ground images are not imported.",
+    "ScreenOverlay": "Screen images are not imported.",
+    "PhotoOverlay": "Photo overlays are not imported.",
+    "Model": "3D models are not imported.",
+    "Track": "KML animated tracks are not imported.",
+    "MultiTrack": "KML animated tracks are not imported.",
+    "Tour": "Google Earth tours are not imported.",
+    "Update": "Linked-document updates are not applied during import.",
+}
 
 
 @dataclass(slots=True)
@@ -41,6 +83,19 @@ class _ScanResult:
     styles: dict[str, dict[str, Any]] = field(default_factory=dict)
     style_maps: dict[str, str] = field(default_factory=dict)
     hierarchy_ids: Counter[str] = field(default_factory=Counter)
+    source_placemarks: int = 0
+    coordinate_count: int = 0
+    warnings: Counter[str] = field(default_factory=Counter)
+
+
+@dataclass(slots=True)
+class _FeatureAnalysis:
+    features: list[dict[str, Any]] = field(default_factory=list)
+    candidates: list[LandmarkCandidate] = field(default_factory=list)
+    eligible_placemarks: int = 0
+    shortened_names: int = 0
+    three_dimensional: int = 0
+    parts: Counter[str] = field(default_factory=Counter)
 
 
 @dataclass(slots=True)
@@ -52,6 +107,11 @@ class _FolderContext:
 
 
 def compile_kml(source: bytes) -> dict[str, Any]:
+    return _require_overlay(analyze_kml(source)).feature_collection
+
+
+def analyze_kml(source: bytes, *, warnings: tuple[KMLWarning, ...] = ()) -> KMLAnalysis:
+    limits.check_source_size(len(source))
     _reject_unsafe_xml(source)
 
     parse_source = source
@@ -72,9 +132,10 @@ def compile_kml(source: bytes) -> dict[str, Any]:
                 "The KML document is not well-formed XML.",
             ) from repaired_error
         parse_source = repaired
+        scan.warnings["NAMESPACE_REPAIRED"] += 1
 
-    features = _compile_features(parse_source, scan)
-    features = explode_geometry_collections(features)
+    result = _compile_features(parse_source, scan)
+    features = explode_geometry_collections(result.features)
     feature_ids = [feature["id"] for feature in features]
     if len(feature_ids) != len(set(feature_ids)):
         raise GISLayerProcessingError(
@@ -93,11 +154,129 @@ def compile_kml(source: bytes) -> dict[str, Any]:
     }
     if bbox is not None:
         feature_collection["bbox"] = bbox
-    return feature_collection
+    display_geojson = _encode_geojson(feature_collection)
+    return KMLAnalysis(
+        feature_collection=feature_collection,
+        display_geojson=display_geojson,
+        landmark_candidates=tuple(result.candidates),
+        source_placemarks=scan.source_placemarks,
+        eligible_placemarks=result.eligible_placemarks,
+        overlay_placemarks=len(result.features),
+        point_parts=result.parts["Point"],
+        line_parts=result.parts["LineString"],
+        polygon_parts=result.parts["Polygon"],
+        warnings=(*warnings, *_analysis_warnings(scan, result)),
+    )
+
+
+def _require_overlay(analysis: KMLAnalysis) -> KMLAnalysis:
+    if not analysis.feature_collection["features"]:
+        raise GISLayerProcessingError(
+            ProcessingErrorCode.KML_NO_RENDERABLE_GEOMETRY,
+            "This file does not contain supported map geometry.",
+            details=analysis.inspection(),
+        )
+    return analysis
+
+
+def _encode_geojson(feature_collection: dict[str, Any]) -> bytes:
+    """Serialize per feature so the output cap applies before accumulation."""
+    output = io.BytesIO()
+
+    def write(chunk: bytes) -> None:
+        if output.tell() + len(chunk) > limits.source_bytes_limit():
+            raise GISLayerProcessingError(
+                ProcessingErrorCode.GEOJSON_TOO_LARGE,
+                "The converted map exceeds the import size limit.",
+                details={"limit_bytes": limits.source_bytes_limit()},
+            )
+        output.write(chunk)
+
+    write(b"{")
+    if "bbox" in feature_collection:
+        write(b'"bbox":' + deterministic_json(feature_collection["bbox"]) + b",")
+    write(b'"features":[')
+    for index, feature in enumerate(feature_collection["features"]):
+        if index:
+            write(b",")
+        write(deterministic_json(feature))
+    write(b'],"type":"FeatureCollection"}')
+    return output.getvalue()
+
+
+def _analysis_warnings(scan: _ScanResult, result: _FeatureAnalysis) -> list[KMLWarning]:
+    warnings: list[KMLWarning] = []
+    for name, message in _UNSUPPORTED_CONSTRUCTS.items():
+        if count := scan.warnings[name]:
+            warnings.append(KMLWarning(f"UNSUPPORTED_{name.upper()}", message, count))
+    for key, message, modes in (
+        (
+            "NAMESPACE_REPAIRED",
+            "A missing XML namespace was repaired.",
+            ("places", "overlay"),
+        ),
+        (
+            "Time",
+            "Time-based visibility and animation are not retained.",
+            ("places", "overlay"),
+        ),
+        ("Icon", "Custom icon images are not retained.", ("places", "overlay")),
+        ("ExternalStyle", "External styles are not fetched or imported.", ("overlay",)),
+        (
+            "LAYER_APPEARANCE",
+            "Colors and line styles use the layer appearance in SpeleoDB.",
+            ("overlay",),
+        ),
+        (
+            "HIDDEN_ITEMS_INCLUDED",
+            "Items hidden in the file are included in the import.",
+            ("places", "overlay"),
+        ),
+        (
+            "UnsupportedExtension",
+            "Unrecognized geometry or feature extensions are not imported.",
+            ("places", "overlay"),
+        ),
+        (
+            "LinearRing",
+            "Standalone linear rings are not imported.",
+            ("places", "overlay"),
+        ),
+    ):
+        if count := scan.warnings[key]:
+            warnings.append(KMLWarning(key.upper(), message, count, modes))
+    if skipped := scan.source_placemarks - result.eligible_placemarks:
+        warnings.append(
+            KMLWarning(
+                "PLACEMARKS_NOT_IMPORTED",
+                "Only placemarks made entirely of points become editable places.",
+                skipped,
+                ("places",),
+            )
+        )
+    if result.shortened_names:
+        warnings.append(
+            KMLWarning(
+                "LANDMARK_NAMES_SHORTENED",
+                "Place names longer than 100 characters are shortened.",
+                result.shortened_names,
+                ("places",),
+            )
+        )
+    if result.three_dimensional:
+        warnings.append(
+            KMLWarning(
+                "GEOMETRY_DISPLAYED_IN_2D",
+                "Altitude and extrusion are displayed in 2D.",
+                result.three_dimensional,
+            )
+        )
+    return warnings
 
 
 def _reject_unsafe_xml(source: bytes) -> None:
-    upper_source = source.upper()
+    # Removing NUL bytes also detects declarations in UTF-16/UTF-32 XML.
+    upper_source = source.replace(b"\x00", b"").upper()
     if b"<!DOCTYPE" in upper_source or b"<!ENTITY" in upper_source:
         raise GISLayerProcessingError(
             ProcessingErrorCode.XML_UNSAFE,
@@ -146,6 +325,7 @@ def _scan_document(source: bytes) -> _ScanResult:
     protected_depth: int | None = None
     root_name: str | None = None
     root_namespace: str | None = None
+    unsupported_depth: int | None = None
     context = etree.iterparse(
         io.BytesIO(source),
         events=("start", "end"),
@@ -157,6 +337,40 @@ def _scan_document(source: bytes) -> _ScanResult:
         local_name = _local_name(element)
         if event == "start":
             depth += 1
+            if depth > limits.MAX_XML_DEPTH:
+                raise GISLayerProcessingError(
+                    ProcessingErrorCode.XML_DEPTH_LIMIT,
+                    "The KML document is nested too deeply.",
+                    details={"limit": limits.MAX_XML_DEPTH},
+                )
+            if _is_kml(element, "Placemark") and _is_document_feature(element):
+                scan.source_placemarks += 1
+                if scan.source_placemarks > limits.MAX_KML_PLACEMARKS:
+                    raise GISLayerProcessingError(
+                        ProcessingErrorCode.KML_FEATURE_LIMIT,
+                        "The KML document contains too many placemarks.",
+                        details={"limit": limits.MAX_KML_PLACEMARKS},
+                    )
+            if unsupported_depth is None:
+                if local_name in _UNSUPPORTED_CONSTRUCTS and (
+                    _is_kml(element) or _namespace(element) == _GX_NAMESPACE
+                ):
+                    scan.warnings[local_name] += 1
+                    unsupported_depth = depth
+                elif _is_kml(element) and local_name in {"TimeStamp", "TimeSpan"}:
+                    scan.warnings["Time"] += 1
+                elif _is_kml(element, "Icon"):
+                    scan.warnings["Icon"] += 1
+                elif (
+                    _is_kml(element, "LinearRing")
+                    and element.getparent() is not None
+                    and _local_name(element.getparent())
+                    in {"Placemark", "MultiGeometry"}
+                ):
+                    scan.warnings["LinearRing"] += 1
+                elif _is_unrecognized_feature_child(element):
+                    scan.warnings["UnsupportedExtension"] += 1
+                    unsupported_depth = depth
             if root_name is None:
                 root_name = local_name
                 root_namespace = _namespace(element)
@@ -164,6 +378,7 @@ def _scan_document(source: bytes) -> _ScanResult:
             if (
                 source_id
                 and _is_kml(element)
+                and _is_document_feature(element)
                 and local_name
                 in {
                     "Document",
@@ -179,7 +394,36 @@ def _scan_document(source: bytes) -> _ScanResult:
                 protected_depth = depth
             continue
 
+        if _is_kml(element, "coordinates"):
+            for _ in re.finditer(r"\S+", element.text or ""):
+                scan.coordinate_count += 1
+                if scan.coordinate_count > limits.MAX_KML_COORDINATES:
+                    raise GISLayerProcessingError(
+                        ProcessingErrorCode.KML_COORDINATE_LIMIT,
+                        "The KML document contains too many coordinate positions.",
+                        details={"limit": limits.MAX_KML_COORDINATES},
+                    )
+        elif _is_kml(element, "styleUrl"):
+            style_url = (element.text or "").strip()
+            if style_url and not style_url.startswith("#"):
+                scan.warnings["ExternalStyle"] += 1
+        elif (
+            unsupported_depth is None
+            and _is_kml(element, "visibility")
+            and (element.text or "").strip() == "0"
+            and element.getparent() is not None
+            and _is_document_feature(element.getparent())
+        ):
+            scan.warnings["HIDDEN_ITEMS_INCLUDED"] += 1
+        if unsupported_depth == depth:
+            unsupported_depth = None
         if protected_depth == depth:
+            if unsupported_depth is None:
+                scan.warnings["LAYER_APPEARANCE"] += sum(
+                    1
+                    for child in element.iter()
+                    if _is_kml(child, "Style") and _parse_style(child)
+                )
             source_id = element.get("id")
             if source_id and _is_kml(element, "Style"):
                 scan.styles[source_id] = _parse_style(element)
@@ -203,8 +447,8 @@ def _scan_document(source: bytes) -> _ScanResult:
 def _compile_features(
     source: bytes,
     scan: _ScanResult,
-) -> list[dict[str, Any]]:
-    features: list[dict[str, Any]] = []
+) -> _FeatureAnalysis:
+    result = _FeatureAnalysis()
     contexts: list[_FolderContext] = []
     depth = 0
     placemark_depth: int | None = None
@@ -226,6 +470,7 @@ def _compile_features(
                 placemark_depth is None
                 and is_kml_element
                 and local_name in {"Document", "Folder"}
+                and _is_document_feature(element)
             ):
                 hierarchy_index += 1
                 source_id = element.get("id")
@@ -244,7 +489,16 @@ def _compile_features(
                         ),
                     )
                 )
-            if is_kml_element and local_name == "Placemark":
+            if (
+                is_kml_element
+                and local_name == "Placemark"
+                and _is_document_feature(element)
+            ):
+                if placemark_depth is not None:
+                    raise GISLayerProcessingError(
+                        ProcessingErrorCode.XML_INVALID,
+                        "Placemarks cannot contain other placemarks.",
+                    )
                 placemark_depth = depth
             continue
 
@@ -255,6 +509,7 @@ def _compile_features(
             and contexts
             and element.getparent() is not None
             and _local_name(element.getparent()) == contexts[-1].kind
+            and _is_document_feature(element.getparent())
         ):
             contexts[-1].name = _plain_text(element.text or "")
         if (
@@ -264,6 +519,7 @@ def _compile_features(
             and contexts
             and element.getparent() is not None
             and _local_name(element.getparent()) == contexts[-1].kind
+            and _is_document_feature(element.getparent())
         ):
             contexts[-1].visibility = (element.text or "").strip() != "0"
 
@@ -276,20 +532,123 @@ def _compile_features(
                 scan,
             )
             if feature is not None:
-                features.append(feature)
+                result.features.append(feature)
+                _analyze_placemark(element, feature, result)
             placemark_depth = None
             _clear_element(element)
         elif (
             is_kml_element
             and local_name in {"Document", "Folder"}
             and placemark_depth is None
+            and _is_document_feature(element)
         ):
             contexts.pop()
             _clear_element(element)
         elif placemark_depth is None:
             _clear_element(element)
         depth -= 1
-    return features
+    return result
+
+
+def _is_document_feature(element: etree._Element) -> bool:
+    """Only container children are features; metadata and updates are payloads."""
+    for parent in element.iterancestors():
+        if not _is_kml(parent):
+            return False
+        name = _local_name(parent)
+        if name == "kml":
+            return parent.getparent() is None
+        if name not in {"Document", "Folder"}:
+            return False
+    return False
+
+
+def _analyze_placemark(
+    element: etree._Element, feature: dict[str, Any], result: _FeatureAnalysis
+) -> None:
+    geometry = feature["geometry"]
+    geometries = geometry.get("geometries", [geometry])
+    for part in geometries:
+        kind = part["type"]
+        if kind.startswith("Multi"):
+            result.parts[kind.removeprefix("Multi")] += len(part["coordinates"])
+        else:
+            result.parts[kind] += 1
+    metadata = feature["properties"].get("kml_geometry_metadata", {})
+    if (
+        any(
+            position[2:] and position[2] != 0
+            for position in iter_coordinate_positions(geometry)
+        )
+        or "1" in metadata.get("extrude", [])
+        or any(mode != "clampToGround" for mode in metadata.get("altitude_mode", []))
+    ):
+        result.three_dimensional += 1
+    if not _point_only_placemark(element):
+        return
+    result.eligible_placemarks += 1
+    properties = feature["properties"]
+    name = properties["name"]
+    if len(name) > limits.LANDMARK_NAME_MAX_LENGTH:
+        result.shortened_names += 1
+    for position in iter_coordinate_positions(geometry):
+        result.candidates.append(
+            LandmarkCandidate(
+                name=name[: limits.LANDMARK_NAME_MAX_LENGTH],
+                description=properties.get("description", ""),
+                longitude=position[0],
+                latitude=position[1],
+            )
+        )
+
+
+def _point_only_placemark(element: etree._Element) -> bool:
+    geometry_roots: list[etree._Element] = []
+    for child in element:
+        if not isinstance(child.tag, str):
+            continue
+        local_name = _local_name(child)
+        if _is_kml(child) and local_name in _FEATURE_PROPERTIES:
+            continue
+        if _namespace(child) in _METADATA_NAMESPACES:
+            continue
+        if _namespace(child) == _GX_NAMESPACE and local_name in _GX_FEATURE_PROPERTIES:
+            continue
+        geometry_roots.append(child)
+    return bool(geometry_roots) and all(
+        _point_only_geometry(child) for child in geometry_roots
+    )
+
+
+def _is_unrecognized_feature_child(element: etree._Element) -> bool:
+    parent = element.getparent()
+    if parent is None or not _is_kml(parent):
+        return False
+    parent_name = _local_name(parent)
+    if parent_name not in {"Placemark", "MultiGeometry"}:
+        return False
+    name = _local_name(element)
+    if _is_kml(element) and name in _GEOMETRY_NAMES | {"LinearRing", "Model"}:
+        return False
+    if _namespace(element) == _GX_NAMESPACE and name in {"Track", "MultiTrack"}:
+        return False
+    if parent_name == "Placemark":
+        if _is_kml(element) and name in _FEATURE_PROPERTIES:
+            return False
+        if _namespace(element) in _METADATA_NAMESPACES:
+            return False
+        if _namespace(element) == _GX_NAMESPACE and name in _GX_FEATURE_PROPERTIES:
+            return False
+    return True
+
+
+def _point_only_geometry(element: etree._Element) -> bool:
+    if _is_kml(element, "Point"):
+        return True
+    if not _is_kml(element, "MultiGeometry"):
+        return False
+    children = [child for child in element if isinstance(child.tag, str)]
+    return bool(children) and all(_point_only_geometry(child) for child in children)
 
 
 def _compile_placemark(
@@ -441,7 +800,8 @@ def _parse_kml_coordinates(
     feature_id: str,
 ) -> list[list[float]]:
     positions: list[list[float]] = []
-    for token in value.split():
+    for match in re.finditer(r"\S+", value):
+        token = match.group()
         components = token.split(",")
         try:
             position = [float(component) for component in components]
@@ -614,7 +974,7 @@ def _geometry_metadata(placemark: etree._Element) -> dict[str, list[str]]:
 
 
 def _plain_text(value: str) -> str:
-    return html.unescape(nh3.clean(value, tags=set(), attributes={})).strip()
+    return sanitize_field_name(value)
 
 
 def _direct_text(element: etree._Element, child_name: str) -> str:
@@ -632,14 +992,20 @@ def _descendant_text(element: etree._Element, child_name: str) -> str:
 
 
 def _local_name(element: etree._Element) -> str:
+    if not isinstance(element.tag, str):
+        return ""
     return str(etree.QName(element.tag).localname)
 
 
 def _namespace(element: etree._Element) -> str:
+    if not isinstance(element.tag, str):
+        return ""
     return etree.QName(element.tag).namespace or ""
 
 
 def _is_kml(element: etree._Element, local_name: str | None = None) -> bool:
+    if not isinstance(element.tag, str):
+        return False
     if _namespace(element) not in _KML_NAMESPACES:
         return False
     return local_name is None or _local_name(element) == local_name
@@ -675,6 +1041,10 @@ def _stable_kml_id(
 
 class KMLProcessor(BaseGISLayerProcessor):
     source_format = GISLayerSourceFormat.KML
+
+    def process(self, source: bytes) -> CompilationResult:
+        analysis = _require_overlay(analyze_kml(source))
+        return CompilationResult(display_geojson=analysis.display_geojson)
 
     def build_feature_collection(
         self,

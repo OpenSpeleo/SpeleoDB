@@ -888,6 +888,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/import/kml_kmz/inspect/",
+        "module": "speleodb.api.v2.views.kml_kmz_import.KMLKMZInspectView",
+        "name": "api:v1:kml-kmz-inspect",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/landmark-collections/",
         "module": "speleodb.api.v2.views.landmark_collection.LandmarkCollectionApiView",
         "name": "api:v1:landmark-collections",
@@ -1791,6 +1797,12 @@
         "url": "/api/v2/import/kml_kmz/",
         "module": "speleodb.api.v2.views.kml_kmz_import.KML_KMZ_ImportView",
         "name": "api:v2:kml-kmz-import",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/import/kml_kmz/inspect/",
+        "module": "speleodb.api.v2.views.kml_kmz_import.KMLKMZInspectView",
+        "name": "api:v2:kml-kmz-inspect",
         "decorators": ""
     },
     {

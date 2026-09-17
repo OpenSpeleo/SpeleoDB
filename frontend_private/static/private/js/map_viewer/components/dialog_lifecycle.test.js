@@ -63,6 +63,39 @@ it('hosts dialogs inside fullscreen, isolates the background, traps focus, and r
     expect(isMapDialogOpen()).toBe(false);
 });
 
+it('honors a live dismissal guard for buttons, Escape, backdrop, direct close, and reopening', () => {
+    const dialog = document.createElement('div');
+    dialog.id = 'guarded-modal';
+    dialog.innerHTML = '<h2>Import</h2><button id="guarded-close">Close</button>';
+    document.body.append(dialog);
+    let busy = true;
+    openMapDialog(dialog, { closeButton: '#guarded-close', canDismiss: () => !busy });
+    document.getElementById('guarded-close').click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    dialog.click();
+    closeMapDialog(dialog);
+    openMapDialog(dialog);
+    expect(dialog.classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('other-content').inert).toBe(true);
+    busy = false;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(dialog.classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('other-content').inert).not.toBe(true);
+});
+
+it('preserves an upload form on backdrop clicks while allowing explicit dismissal', () => {
+    const dialog = document.createElement('div');
+    dialog.id = 'upload-modal';
+    dialog.innerHTML = '<h2>Import</h2><input value="Selected file">';
+    document.body.append(dialog);
+    openMapDialog(dialog, { dismissOnBackdrop: false });
+    dialog.click();
+    expect(dialog.classList.contains('hidden')).toBe(false);
+    expect(dialog.querySelector('input').value).toBe('Selected file');
+    closeMapDialog(dialog);
+    expect(dialog.classList.contains('hidden')).toBe(true);
+});
+
 it('suspends a parent dialog for its child and Escape closes only the child', () => {
     Modal.open('parent-modal', Modal.base('parent-modal', 'Parent', '<button id="child-trigger">Open child</button>'));
     document.getElementById('child-trigger').focus();

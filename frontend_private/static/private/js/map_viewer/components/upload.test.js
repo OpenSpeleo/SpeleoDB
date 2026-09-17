@@ -1,7 +1,20 @@
-import { createProgressBarHTML, UploadProgressController } from './upload.js';
+import { createProgressBarHTML, getUploadErrorMessage, UploadProgressController } from './upload.js';
 
 // Real transport, cancellation and promise results run against Django in
 // speleodb/api/v2/tests/test_frontend_upload_integration.py.
+
+describe('getUploadErrorMessage', () => {
+    it('preserves existing messages and exposes serializer field errors', () => {
+        expect(getUploadErrorMessage({ error: 'Invalid file' })).toBe('Invalid file');
+        expect(getUploadErrorMessage({ errors: { name: ['Keep the name shorter.'], source_file: ['Choose a KML file.'] } }))
+            .toBe('name: Keep the name shorter. source file: Choose a KML file.');
+    });
+
+    it('uses a safe fallback for malformed payloads', () => {
+        expect(getUploadErrorMessage(null)).toBe('Upload failed');
+        expect(getUploadErrorMessage({ detail: {}, errors: { field: { nested: true } } })).toBe('Upload failed');
+    });
+});
 
 describe('createProgressBarHTML', () => {
     it('returns HTML with default ID prefix', () => {

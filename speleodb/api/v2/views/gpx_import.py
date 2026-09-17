@@ -28,6 +28,8 @@ from rest_framework.generics import GenericAPIView
 
 from speleodb.api.v2.landmark_access import user_has_collection_access
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.gis_layer_processing.common import calculate_bbox
+from speleodb.gis.gis_layer_processing.common import validate_position
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import GPSTrackUserPermission
@@ -63,6 +65,18 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                 "properties": {
                     "landmarks_created": {"type": "integer"},
                     "gps_tracks_created": {"type": "integer"},
+                    "gps_track_ids": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "uuid"},
+                    },
+                    "collection_id": {"type": "string", "format": "uuid"},
+                    "bounds": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "nullable": True,
+                    },
                 },
             }
         },
@@ -150,6 +164,9 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
 
         landmarks_created = 0
         gps_tracks_created = 0
+        gps_track_ids: list[str] = []
+        created_positions: list[list[float]] = []
+        bounds: list[float] | None = None
         stored_gps_track_files: list[tuple[Any, str]] = []
 
         try:
@@ -175,6 +192,12 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                     )
                     if created:
                         landmarks_created += 1
+                        created_positions.append(
+                            [
+                                round(waypoint.longitude, OSPL_GEOJSON_DIGIT_PRECISION),
+                                round(waypoint.latitude, OSPL_GEOJSON_DIGIT_PRECISION),
+                            ]
+                        )
 
                 # 2. Let's extract the track and convert them to individual GPSTrack
                 for track in gpx.tracks:
@@ -193,12 +216,17 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                             for point in segment.points
                         ]
 
+                        geometry = LineString(
+                            track_list,
+                            precision=OSPL_GEOJSON_DIGIT_PRECISION,
+                        )  # type: ignore[no-untyped-call]
+                        created_positions.extend(
+                            validate_position(position, context="GPX track")
+                            for position in geometry.coordinates
+                        )
                         features.append(
                             Feature(  # type: ignore[no-untyped-call]
-                                geometry=LineString(
-                                    track_list,
-                                    precision=OSPL_GEOJSON_DIGIT_PRECISION,
-                                ),  # type: ignore[no-untyped-call]
+                                geometry=geometry,
                                 properties=dict(
                                     segment_id=seg_id + 1,
                                     **{
@@ -236,6 +264,9 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                             level=PermissionLevel.ADMIN,
                         )
                         gps_tracks_created += 1
+                        gps_track_ids.append(str(gps_track.id))
+
+                bounds = calculate_bbox(created_positions)
 
         except Exception as e:
             for storage, name in reversed(stored_gps_track_files):
@@ -257,5 +288,8 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
             data={
                 "landmarks_created": landmarks_created,
                 "gps_tracks_created": gps_tracks_created,
+                "gps_track_ids": gps_track_ids,
+                "collection_id": str(collection.id),
+                "bounds": bounds,
             }
         )

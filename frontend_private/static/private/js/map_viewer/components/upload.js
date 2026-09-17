@@ -7,6 +7,21 @@
 
 import { Utils } from '../utils.js';
 
+/** Preserve simple API messages and make serializer field errors actionable. */
+export function getUploadErrorMessage(data) {
+    for (const key of ['message', 'error', 'detail']) {
+        if (typeof data?.[key] === 'string') return data[key];
+    }
+    if (data?.errors && typeof data.errors === 'object') {
+        const messages = Object.entries(data.errors).flatMap(([field, values]) => {
+            const text = (Array.isArray(values) ? values : [values]).filter(value => typeof value === 'string').join(' ');
+            return text ? [`${field.replaceAll('_', ' ')}: ${text}`] : [];
+        });
+        if (messages.length) return messages.join(' ');
+    }
+    return 'Upload failed';
+}
+
 /**
  * Upload a FormData object with progress tracking
  * @param {string} url - The API endpoint URL
@@ -23,6 +38,8 @@ export function uploadWithProgress(url, formData, options = {}) {
         onProgress = () => {},
         onSuccess = () => {},
         onError = () => {},
+        onUploaded = () => {},
+        csrfToken = Utils.getCSRFToken(),
         method = 'POST'
     } = options;
 
@@ -34,6 +51,7 @@ export function uploadWithProgress(url, formData, options = {}) {
             onProgress(percent, e.loaded, e.total);
         }
     });
+    xhr.upload.addEventListener('load', onUploaded);
 
     xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
@@ -53,30 +71,31 @@ export function uploadWithProgress(url, formData, options = {}) {
                 // -- treat this as an error rather than silently pretend
                 // the upload succeeded. The caller can decide whether to
                 // retry or surface it to the user.
-                onError(new Error('Upload succeeded but server returned an unreadable response. The upload state is unknown -- please refresh to verify.'));
+                onError(Object.assign(new Error('Upload succeeded but server returned an unreadable response. The upload state is unknown -- please refresh to verify.'), { status: xhr.status, ambiguous: true }));
             }
         } else {
             let errorMessage = 'Upload failed';
+            let errorData = null;
             try {
-                const errorData = JSON.parse(xhr.responseText);
-                errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
+                errorData = JSON.parse(xhr.responseText);
+                errorMessage = getUploadErrorMessage(errorData);
             } catch {
                 // Use default error message
             }
-            onError(new Error(errorMessage));
+            onError(Object.assign(new Error(errorMessage), { status: xhr.status, ambiguous: xhr.status === 0 || xhr.status >= 500, payload: errorData }));
         }
     });
 
     xhr.addEventListener('error', () => {
-        onError(new Error('Network error during upload'));
+        onError(Object.assign(new Error('Network error during upload'), { status: 0, ambiguous: true }));
     });
 
     xhr.addEventListener('abort', () => {
-        onError(new Error('Upload cancelled'));
+        onError(Object.assign(new Error('Upload cancelled'), { status: 0, name: 'AbortError' }));
     });
 
     xhr.open(method, url);
-    xhr.setRequestHeader('X-CSRFToken', Utils.getCSRFToken());
+    xhr.setRequestHeader('X-CSRFToken', csrfToken);
     xhr.send(formData);
 
     return xhr;
