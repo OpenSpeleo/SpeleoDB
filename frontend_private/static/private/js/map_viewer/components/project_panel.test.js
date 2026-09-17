@@ -29,6 +29,7 @@ vi.mock('../config.js', () => ({
 
 vi.mock('../map/layers.js', () => ({
     Layers: {
+        saveProjectVisibilityPref: vi.fn(),
         isProjectVisible: vi.fn(() => true),
         toggleProjectVisibility: vi.fn(),
         applyProjectVisibility: vi.fn(),

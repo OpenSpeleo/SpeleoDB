@@ -1,3 +1,4 @@
+import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.js';
 import { LandmarkManager } from './manager.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
@@ -110,33 +111,11 @@ export const LandmarkUI = {
         return select.value;
     },
 
-    openManagerModal() {
+    openManagerModal({ returnFocus = document.getElementById('map-managers-button') } = {}) {
         const modal = document.getElementById('landmark-manager-modal');
-        if (!modal) {
-            console.error('❌ Landmark Manager modal element not found!');
-            return;
-        }
-
-        // Show modal
-        modal.classList.remove('hidden');
-
-        // Load content
+        if (!modal) return;
         this.loadLandmarkManagerContent();
-
-        // Setup close handlers
-        const closeBtn = document.getElementById('landmark-manager-close');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.classList.add('hidden');
-            };
-        }
-
-        // Close on backdrop click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        };
+        openMapDialog(modal, { closeButton: '#landmark-manager-close', returnFocus });
     },
 
     loadLandmarkManagerContent() {
@@ -283,6 +262,7 @@ export const LandmarkUI = {
                 const landmarkId = btn.dataset.landmarkId;
                 const lat = parseFloat(btn.dataset.lat);
                 const lon = parseFloat(btn.dataset.lon);
+                closeMapDialog(document.getElementById('landmark-manager-modal'));
                 goToLandmark(landmarkId, lat, lon);
             });
         });
@@ -290,9 +270,10 @@ export const LandmarkUI = {
         content.querySelectorAll('.landmark-item, .open-landmark-btn').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (e.target.closest('.go-to-landmark-btn')) return; // Skip if clicking go-to button
+                e.stopPropagation();
                 const landmarkId = el.dataset.landmarkId;
                 if (landmarkId) {
-                    document.getElementById('landmark-manager-modal').classList.add('hidden');
+                    closeMapDialog(document.getElementById('landmark-manager-modal'), { restoreFocus: false });
                     this.openDetailsModal(landmarkId);
                 }
             });
@@ -302,7 +283,7 @@ export const LandmarkUI = {
         const createBtn = document.getElementById('create-landmark-manual-btn');
         if (createBtn) {
             createBtn.addEventListener('click', () => {
-                document.getElementById('landmark-manager-modal').classList.add('hidden');
+                closeMapDialog(document.getElementById('landmark-manager-modal'), { restoreFocus: false });
                 this.openCreateModalManual();
             });
         }

@@ -1,3 +1,4 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
 import { isCurrentStationNew } from './session.js';
@@ -737,7 +738,7 @@ export const StationResources = {
             </div>
         `;
 
-        document.body.appendChild(modal);
+        getMapOverlayHost().appendChild(modal);
         document.body.style.overflow = 'hidden';
 
         // Handle all clicks via event delegation on the modal
@@ -836,7 +837,7 @@ export const StationResources = {
             </div>
         `;
 
-        document.body.appendChild(lightbox);
+        getMapOverlayHost().appendChild(lightbox);
         document.body.style.overflow = 'hidden';
 
         // Close on backdrop click
@@ -933,7 +934,7 @@ export const StationResources = {
             </div>
         `;
 
-        document.body.appendChild(modal);
+        getMapOverlayHost().appendChild(modal);
         document.body.style.overflow = 'hidden';
 
         // Close on backdrop click
@@ -1019,7 +1020,7 @@ export const StationResources = {
             </div>
         `;
 
-        document.body.appendChild(modal);
+        getMapOverlayHost().appendChild(modal);
         document.body.style.overflow = 'hidden';
 
         // Close on backdrop click

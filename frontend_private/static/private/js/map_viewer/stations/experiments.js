@@ -1,3 +1,4 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
 
@@ -879,7 +880,7 @@ function openModal(modalId, html, closeHandler) {
     closeModal(RECORD_MODAL_ID);
     closeModal(DELETE_MODAL_ID);
 
-    document.body.insertAdjacentHTML('beforeend', html);
+    getMapOverlayHost().insertAdjacentHTML('beforeend', html);
     lockBodyScroll();
     setModalKeydownHandler(closeHandler);
 }

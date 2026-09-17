@@ -1,4 +1,5 @@
 import { DEFAULTS } from '../config.js';
+import { getMapOverlayHost } from './overlay_host.js';
 
 export const Notification = {
     show(type, message, duration = DEFAULTS.UI.NOTIFICATION_DURATION_MS) {
@@ -11,7 +12,7 @@ export const Notification = {
             container = document.createElement('div');
             container.id = 'notification-container';
             container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2';
-            document.body.appendChild(container);
+            getMapOverlayHost().appendChild(container);
         }
 
         const el = document.createElement('div');

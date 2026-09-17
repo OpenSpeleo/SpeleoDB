@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-
 const configMock = {
     loadProjects: vi.fn(),
     loadNetworks: vi.fn(),
@@ -56,6 +54,7 @@ const mapSourcesMock = {
 };
 
 const layersMock = {
+    applyDisplayPreferences: vi.fn(),
     loadMarkerImages: vi.fn(),
     loadProjectVisibilityPrefs: vi.fn(),
     loadNetworkVisibilityPrefs: vi.fn(),
@@ -84,7 +83,10 @@ vi.mock('./config.js', async () => {
     return { Config: configMock, DEFAULTS: actual.DEFAULTS };
 });
 
-vi.mock('./state.js', () => ({ State: stateMock }));
+vi.mock('./state.js', async () => ({
+    ...await vi.importActual('./state.js'),
+    State: stateMock,
+}));
 vi.mock('./map/core.js', () => ({ MapCore: mapCoreMock }));
 vi.mock('./map/sources.js', () => ({ MapSources: mapSourcesMock }));
 vi.mock('./map/layers.js', () => ({ Layers: layersMock }));
@@ -94,6 +96,7 @@ vi.mock('./stations/manager.js', () => ({ StationManager: {} }));
 vi.mock('./stations/ui.js', () => ({ StationUI: { openManagerModal: vi.fn() } }));
 vi.mock('./stations/details.js', () => ({
     StationDetails: { openModal: vi.fn() },
+    configureStationManagerNavigation: vi.fn(),
     returnToStationManager: vi.fn(),
 }));
 vi.mock('./stations/tags.js', () => ({ StationTags: { init: vi.fn() } }));
@@ -205,27 +208,6 @@ describe('private map viewer entrypoint', () => {
         delete window.MAPVIEWER_CONTEXT;
     });
 
-    it('toggles landmarks once from the native label or checkbox', async () => {
-        const template = document.createElement('template');
-        template.innerHTML = readFileSync(
-            'frontend_private/templates/pages/map_viewer.html', 'utf8',
-        );
-        const control = template.content.querySelector('#landmarks-toggle-button');
-        document.body.append(control);
-        const toggle = control.querySelector('#landmarks-toggle');
-        const onDomReady = await importModuleAndGetDomReadyHandler();
-        await onDomReady();
-
-        control.click();
-        expect(toggle.checked).toBe(false);
-        expect(layersMock.toggleLandmarkVisibility).toHaveBeenCalledExactlyOnceWith(false);
-
-        layersMock.toggleLandmarkVisibility.mockClear();
-        toggle.click();
-        expect(toggle.checked).toBe(true);
-        expect(layersMock.toggleLandmarkVisibility).toHaveBeenCalledExactlyOnceWith(true);
-    });
-
     it('does not reload private map data for non-destructive map source changes', async () => {
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
@@ -266,7 +248,8 @@ describe('private map viewer entrypoint', () => {
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
 
-        expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
+        expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map', { fullscreenContainer: null });
+        expect(mapCoreMock.setupMapSourceControl).toHaveBeenCalledWith(mapMock, 'mapbox-token');
     });
 
     it('kicks off project, network, GPS track, and private GIS Layer loads in parallel', async () => {

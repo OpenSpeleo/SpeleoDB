@@ -64,6 +64,25 @@ describe('native GIS geometry editor', () => {
     });
     afterEach(() => { GeometryEditor.destroy(); vi.restoreAllMocks(); });
 
+    it('preserves an unsaved draft while Settings or a manager handles keyboard input', async () => {
+        await GeometryEditor.create();
+        inputName('Unsaved draft');
+        const session = GeometryEditor.session;
+        const dialog = document.createElement('dialog');
+        dialog.open = true;
+        document.body.append(dialog);
+        for (const key of ['Escape', 'Delete', 'Backspace', 'Enter', 'z']) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: key === 'z', bubbles: true }));
+            expect(GeometryEditor.session).toBe(session);
+            expect(GeometryEditor.session.name).toBe('Unsaved draft');
+        }
+        dialog.remove();
+        document.body.insertAdjacentHTML('beforeend', '<div role="dialog" aria-modal="true"><button>Close</button></div>');
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        expect(GeometryEditor.session).toBe(session);
+        expect(GeometryEditor.hasUnsavedChanges()).toBe(true);
+    });
+
     it('selects a fresh palette color for each new draft and preserves stored colors on edit', async () => {
         const random = vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.99);
         await GeometryEditor.create();

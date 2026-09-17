@@ -63,6 +63,72 @@ def render_page(template: str, **context: object) -> Element:
     return cast("Element", parser.root)
 
 
+def test_map_settings_toolbar_and_fullscreen_dialog_structure() -> None:
+    """Render the real page so hidden/nested toolbar regressions cannot pass."""
+    page: Element = render_page("pages/map_viewer.html")
+    elements_by_id: dict[str, Element] = {
+        element_id: element
+        for element in descendants(page)
+        if (element_id := dict(element.attributes).get("id"))
+    }
+    actions: Element = elements_by_id["page-actions"]
+    buttons: list[Element] = [
+        element
+        for element in descendants(actions)
+        if element.name == "button"
+        and "map-viewer-action" in (dict(element.attributes).get("class") or "").split()
+    ]
+    assert [dict(button.attributes).get("id") for button in buttons] == [
+        "create-geometry-btn",
+        "import-data-button",
+        "map-managers-button",
+        "map-settings-button",
+    ]
+    assert not any(element.name == "input" for element in descendants(actions))
+
+    settings: Element = elements_by_id["map-settings-dialog"]
+    assert settings.name == "dialog"
+    assert dict(settings.attributes)["aria-labelledby"] == "map-settings-title"
+    settings_ids: set[str | None] = {
+        dict(element.attributes).get("id") for element in descendants(settings)
+    }
+    assert "map-settings-reset" in settings_ids
+    assert not {
+        "station-manager-button",
+        "surface-station-manager-button",
+        "landmark-manager-button",
+        "map-settings-source",
+        "map-settings-storage",
+    }.intersection(settings_ids)
+    managers: Element = elements_by_id["map-managers-menu"]
+    manager_ids: set[str | None] = {
+        dict(element.attributes).get("id") for element in descendants(managers)
+    }
+    assert {
+        "station-manager-button",
+        "surface-station-manager-button",
+        "landmark-manager-button",
+    }.issubset(manager_ids)
+
+    shell: Element = elements_by_id["map-viewer-shell"]
+    shell_ids: set[str | None] = {
+        dict(element.attributes).get("id") for element in descendants(shell)
+    }
+    assert {
+        "page-actions",
+        "map",
+        "map-settings-dialog",
+        "map-managers-menu",
+        "station-manager-modal",
+        "surface-station-manager-modal",
+        "landmark-manager-modal",
+        "station-modal",
+        "import-data-modal",
+        "cylinder-modal",
+        "context-menu",
+    }.issubset(shell_ids)
+
+
 @pytest.mark.parametrize(
     ("role", "label", "color"),
     [

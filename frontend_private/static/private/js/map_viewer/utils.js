@@ -1,3 +1,4 @@
+import { getMapOverlayHost } from './components/overlay_host.js';
 import { Notification } from './components/notification.js';
 import { DEFAULTS } from './config.js';
 import { getRuntimeContext } from './runtime_context.js';
@@ -234,7 +235,7 @@ export const Utils = {
         inner.appendChild(spinner);
         inner.appendChild(msgEl);
         overlay.appendChild(inner);
-        document.body.appendChild(overlay);
+        getMapOverlayHost().appendChild(overlay);
         return overlay;
     },
 

@@ -13,6 +13,7 @@
  */
 
 import { State } from '../../../frontend_private/static/private/js/map_viewer/state.js';
+import { DisplayPreferences } from '../../../frontend_private/static/private/js/map_viewer/display_preferences.js';
 import { MapCore } from '../../../frontend_private/static/private/js/map_viewer/map/core.js';
 import { MapSources } from '../../../frontend_private/static/private/js/map_viewer/map/sources.js';
 import { Layers } from '../../../frontend_private/static/private/js/map_viewer/map/layers.js';
@@ -37,6 +38,7 @@ export async function initPublicGISViewer() {
 
     // 1. Initialize State
     State.resetLayerState();
+    DisplayPreferences.init({ persist: false });
 
     // 2. Initialize Map
     const token = context.mapboxToken || '';

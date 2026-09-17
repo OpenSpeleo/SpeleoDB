@@ -1,4 +1,6 @@
 import { DepthLegend } from './depth_legend.js';
+import { State, createDefaultDisplayPreferences } from '../state.js';
+import { Layers } from '../map/layers.js';
 
 function createMapMock() {
     const handlers = {};
@@ -16,6 +18,9 @@ function createMapMock() {
 
 describe('DepthLegend', () => {
     beforeEach(() => {
+        State.displayPreferences = createDefaultDisplayPreferences();
+        State.activeDepthDomain = null;
+        State.map = null;
         document.body.innerHTML = '<div id="map"></div>';
     });
 
@@ -37,6 +42,19 @@ describe('DepthLegend', () => {
         expect(legend).not.toBeNull();
         expect(legend.style.display).toBe('block');
         expect(legend.textContent).toContain('N/A');
+    });
+
+    it('starts with restored depth preferences and keeps the scale when station markers are hidden', () => {
+        State.displayPreferences.colorMode = 'depth';
+        State.activeDepthDomain = { min: 0, max: 80 };
+        const { map } = createMapMock();
+        DepthLegend.init(map);
+        const legend = document.getElementById('depth-scale-fixed');
+        expect(legend.style.display).toBe('block');
+        expect(legend.textContent).toContain('80 ft');
+        Layers.setCategoryVisibility('surveyStations', false);
+        expect(legend.style.display).toBe('block');
+        expect(State.activeDepthDomain).toEqual({ min: 0, max: 80 });
     });
 
     it('updates gauge labels when depth domain max changes', () => {

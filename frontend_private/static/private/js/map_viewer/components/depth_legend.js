@@ -1,3 +1,5 @@
+import { State } from '../state.js';
+
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
@@ -21,8 +23,8 @@ export const DepthLegend = {
         if (!map || this.initialized) return;
 
         this.map = map;
-        this.colorMode = 'project';
-        this.depthDomain = null;
+        this.colorMode = State.displayPreferences.colorMode;
+        this.depthDomain = State.activeDepthDomain;
         this.initialized = true;
 
         this.onColorModeChangedHandler = (event) => {

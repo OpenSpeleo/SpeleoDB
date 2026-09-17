@@ -108,17 +108,14 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
     def test_map_toolbar_places_geometry_creation_beside_gps_import(self) -> None:
         self.client.force_login(self.user)
 
-        content = self.client.get(reverse("private:map_viewer")).content.decode()
+        content: str = self.client.get(reverse("private:map_viewer")).content.decode()
 
-        actions = content.split('class="map-viewer-authoring-actions"', 1)[1].split(
-            "</div>", 1
-        )[0]
+        actions: str = content.split('id="page-actions"', 1)[1].split("</div>", 1)[0]
         assert actions.index('id="create-geometry-btn"') < actions.index(
             'id="import-data-button"'
         )
-        assert 'aria-label="Create Geometry"' in actions
-        assert 'aria-label="Import GPS"' in actions
         assert "Create Geometry</span>" in actions
+        assert "Import GPS</span>" in actions
         assert 'id="station-manager-button"' in content
         assert 'id="surface-station-manager-button"' in content
         assert 'id="landmark-manager-button"' in content

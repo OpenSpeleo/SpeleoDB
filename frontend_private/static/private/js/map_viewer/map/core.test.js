@@ -77,4 +77,13 @@ describe('MapCore', () => {
         expect(mapSourcesMock.renderControl).toHaveBeenCalledWith(mapMock, 'token');
     });
 
+    it('includes the private toolbar and overlays in the fullscreen container', async () => {
+        const { MapCore } = await import('./core.js');
+        const fullscreenContainer = document.createElement('section');
+
+        MapCore.init('token', 'map', { fullscreenContainer });
+
+        expect(mapboxgl.FullscreenControl).toHaveBeenCalledWith({ container: fullscreenContainer });
+    });
+
 });

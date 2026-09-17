@@ -1,5 +1,6 @@
 import { API } from '../api.js';
 import { Config, DEFAULTS } from '../config.js';
+import { isMapDialogOpen } from '../components/overlay_host.js';
 import { Utils } from '../utils.js';
 import {
     changeDraft, createGeometryDraft, geometryFromVertices, restoreDraft, validateGeometry,
@@ -678,7 +679,7 @@ export const GeometryEditor = {
     },
 
     handleKeyDown(event) {
-        if (!this.session || this.session.saving) return;
+        if (!this.session || this.session.saving || isMapDialogOpen()) return;
         const typing = event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"]');
         if (event.key === 'Escape') {
             event.preventDefault();

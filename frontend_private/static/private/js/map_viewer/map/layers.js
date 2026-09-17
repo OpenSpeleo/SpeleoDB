@@ -25,6 +25,14 @@ const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
     'exploration-leads-layer'
 ]);
 
+function applyLayerVisibility(layerIds, visible) {
+    const map = State.map;
+    if (!map || !map.getStyle()) return;
+    for (const id of layerIds) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
+    }
+}
+
 function boundedGISPopupText(value, maxLength) {
     const text = String(value ?? '').trim();
     if (text.length <= maxLength) return text;
@@ -323,8 +331,82 @@ function processGeoJSON(projectId, geojsonData) {
 }
 
 export const Layers = {
-    // Current mode
-    colorMode: 'project', // 'project' or 'depth'
+    get colorMode() { return State.displayPreferences.colorMode; },
+    set colorMode(mode) { State.displayPreferences.colorMode = mode; },
+
+    emitDisplayPreferencesChanged() {
+        window.dispatchEvent(new CustomEvent('speleo:display-preferences-changed', {
+            detail: { preferences: State.displayPreferences },
+        }));
+    },
+
+    setCategoryVisibility(id, visible) {
+        if (!Object.hasOwn(State.displayPreferences.categories, id) || typeof visible !== 'boolean') return;
+        if (State.displayPreferences.categories[id] === visible) return;
+        State.displayPreferences.categories[id] = visible;
+        this.applyCategoryVisibility(id);
+        this.emitDisplayPreferencesChanged();
+    },
+
+    setStationTypeVisibility(type, visible) {
+        if (!Object.hasOwn(State.displayPreferences.stationTypes, type) || typeof visible !== 'boolean') return;
+        if (State.displayPreferences.stationTypes[type] === visible) return;
+        State.displayPreferences.stationTypes[type] = visible;
+        this.applyCategoryVisibility('surveyStations');
+        this.emitDisplayPreferencesChanged();
+    },
+
+    revealCategory(id, options = {}) {
+        this.setCategoryVisibility(id, true);
+        if (Object.hasOwn(options, 'stationType')) this.setStationTypeVisibility(options.stationType ?? 'sensor', true);
+    },
+
+    applyCategoryVisibility(id) {
+        const visible = State.displayPreferences.categories[id];
+        switch (id) {
+            case 'surveyStations':
+                State.allProjectLayers.forEach((_, projectId) => this.applyProjectLayerVisibility(projectId));
+                break;
+            case 'surfaceStations':
+                State.allNetworkLayers.forEach((_, networkId) => this.applyNetworkLayerVisibility(networkId));
+                break;
+            case 'landmarks':
+                applyLayerVisibility(['landmarks-layer', 'landmarks-labels'], visible);
+                break;
+            case 'explorationLeads':
+                applyLayerVisibility(['exploration-leads-layer'], visible);
+                break;
+            case 'cylinders':
+                applyLayerVisibility(['cylinder-installs-layer', 'cylinder-installs-labels'], visible);
+                break;
+        }
+    },
+
+    applyDisplayPreferences() {
+        for (const { id } of DEFAULTS.DISPLAY.CATEGORIES) this.applyCategoryVisibility(id);
+        this.setColorMode(State.displayPreferences.colorMode);
+    },
+
+    applySurveyStationVisibility(projectId, projectVisible) {
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+        const visible = projectVisible && State.displayPreferences.categories.surveyStations;
+        for (const { id, layerSuffix } of DEFAULTS.DISPLAY.STATION_TYPES) {
+            applyLayerVisibility([`stations-${projectId}-${layerSuffix}`], visible && State.displayPreferences.stationTypes[id]);
+        }
+        const labelId = `stations-${projectId}-labels`;
+        if (map.getLayer(labelId)) {
+            const enabledTypes = DEFAULTS.DISPLAY.STATION_TYPES
+                .filter(({ id }) => State.displayPreferences.stationTypes[id]).map(({ id }) => id);
+            map.setFilter(labelId, ['in', ['coalesce', ['get', 'type'], 'sensor'], ['literal', enabledTypes]]);
+            applyLayerVisibility([labelId], visible);
+        }
+    },
+
+    applyNetworkLayerVisibility(networkId) {
+        applyLayerVisibility(State.allNetworkLayers.get(String(networkId)) || [],
+            this.isNetworkVisible(networkId) && State.displayPreferences.categories.surfaceStations);
+    },
 
     // Persist project visibility preferences
     loadProjectVisibilityPrefs: function () {
@@ -446,6 +528,8 @@ export const Layers = {
                 map.setFilter(layerId, filter);
             }
         });
+        this.applyCategoryVisibility('explorationLeads');
+        this.applyCategoryVisibility('cylinders');
     },
 
     /**
@@ -477,10 +561,10 @@ export const Layers = {
 
         const projectLayerIds = State.allProjectLayers.get(pid) || [];
         projectLayerIds.forEach((layerId) => {
-            if (map.getLayer(layerId)) {
-                map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
-            }
+            if (layerId.startsWith(`stations-${pid}-`)) return;
+            applyLayerVisibility([layerId], isVisible);
         });
+        this.applySurveyStationVisibility(pid, isVisible);
     },
 
     /**
@@ -871,20 +955,7 @@ export const Layers = {
         const nid = String(networkId);
         this.saveNetworkVisibilityPref(nid, isVisible);
 
-        if (State.map && State.map.getStyle()) {
-            const surfaceStationLayerId = `surface-stations-${nid}`;
-            const surfaceStationLabelsId = `surface-stations-${nid}-labels`;
-
-            [surfaceStationLayerId, surfaceStationLabelsId].forEach(layerId => {
-                if (State.map.getLayer(layerId)) {
-                    State.map.setLayoutProperty(
-                        layerId,
-                        'visibility',
-                        isVisible ? 'visible' : 'none'
-                    );
-                }
-            });
-        }
+        this.applyNetworkLayerVisibility(nid);
     },
 
     toggleProjectVisibility: function (projectId, isVisible) {
@@ -947,10 +1018,11 @@ export const Layers = {
         if (mode === 'depth') {
             this.recomputeActiveDepthDomain();
             this.applyDepthLineColors();
-            return;
+        } else {
+            this.applyProjectLineColors();
         }
-
-        this.applyProjectLineColors();
+        window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode } }));
+        this.emitDisplayPreferencesChanged();
     },
 
     addProjectGeoJSON: async function (projectId, url) {
@@ -1345,23 +1417,7 @@ export const Layers = {
     },
 
     toggleLandmarkVisibility: function (isVisible) {
-        State.landmarksVisible = isVisible;
-
-        if (State.map && State.map.getStyle()) {
-            const layerIds = ['landmarks-layer', 'landmarks-labels'];
-
-            layerIds.forEach(layerId => {
-                if (State.map.getLayer(layerId)) {
-                    State.map.setLayoutProperty(
-                        layerId,
-                        'visibility',
-                        isVisible ? 'visible' : 'none'
-                    );
-                }
-            });
-
-            console.log(`📍 Landmarks visibility: ${isVisible ? 'visible' : 'hidden'}`);
-        }
+        this.setCategoryVisibility('landmarks', isVisible);
     },
 
     // Surface Station Layer - uses diamond (◆) symbol instead of circle
@@ -1455,10 +1511,7 @@ export const Layers = {
         if (!networkLayers.includes(labelLayerId)) networkLayers.push(labelLayerId);
 
         // Respect initial visibility
-        if (!this.isNetworkVisible(networkId)) {
-            map.setLayoutProperty(symbolLayerId, 'visibility', 'none');
-            map.setLayoutProperty(labelLayerId, 'visibility', 'none');
-        }
+        this.applyNetworkLayerVisibility(networkId);
     },
 
     updateSurfaceStationPosition: function (networkId, stationId, newCoords) {

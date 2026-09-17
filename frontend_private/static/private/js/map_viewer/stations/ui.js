@@ -1,3 +1,4 @@
+import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.js';
 import { StationManager } from './manager.js';
 import { State } from '../state.js';
 import { Config } from '../config.js';
@@ -9,35 +10,11 @@ import { getRuntimeContext } from '../runtime_context.js';
 import { goToStation } from '../map/navigation.js';
 
 export const StationUI = {
-    openManagerModal() {
-        console.log('📋 Opening Station Manager');
-
+    openManagerModal({ returnFocus = document.getElementById('map-managers-button') } = {}) {
         const modal = document.getElementById('station-manager-modal');
-        if (!modal) {
-            console.error('❌ Station Manager modal element not found!');
-            return;
-        }
-
-        // Show modal
-        modal.classList.remove('hidden');
-
-        // Load content
+        if (!modal) return;
         this.loadStationManagerContent();
-
-        // Setup close handlers
-        const closeBtn = document.getElementById('station-manager-close');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.classList.add('hidden');
-            };
-        }
-
-        // Close on backdrop click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        };
+        openMapDialog(modal, { closeButton: '#station-manager-close', returnFocus });
     },
 
     loadStationManagerContent() {
@@ -193,6 +170,7 @@ export const StationUI = {
                     const lat = parseFloat(btn.dataset.lat);
                     const lon = parseFloat(btn.dataset.lon);
                     e.stopPropagation();
+                    closeMapDialog(document.getElementById('station-manager-modal'));
                     goToStation(stationId, lat, lon);
                     return;
                 }
@@ -201,8 +179,8 @@ export const StationUI = {
                 const stationId = el.dataset.stationId;
                 const projectId = el.dataset.projectId;
                 if (stationId) {
-                    document.getElementById('station-manager-modal').classList.add('hidden');
-                    StationDetails.openModal(stationId, projectId);
+                    closeMapDialog(document.getElementById('station-manager-modal'), { restoreFocus: false });
+                    StationDetails.openModal(stationId, projectId, false, 'subsurface', { fromManager: true });
                 }
             });
         });

@@ -1,3 +1,5 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
+import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.js';
 import { API } from '../api.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
@@ -101,13 +103,21 @@ export const StationTags = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+        const overlay = document.getElementById('tag-selector-overlay');
+        openMapDialog(overlay, {
+            closeButton: '[data-map-action="tags.closeTagSelector"]',
+            onClose: () => overlay.remove(),
+        });
     },
 
     // Close tag selector
     closeTagSelector() {
         const overlay = document.getElementById('tag-selector-overlay');
-        if (overlay) overlay.remove();
+        if (overlay) {
+            closeMapDialog(overlay);
+            overlay.remove();
+        }
     },
 
     // Open tag creation modal
@@ -176,7 +186,12 @@ export const StationTags = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+        const overlay = document.getElementById('tag-creation-overlay');
+        openMapDialog(overlay, {
+            closeButton: '[data-map-action="tags.closeTagCreationModal"]',
+            onClose: () => overlay.remove(),
+        });
 
         // Auto-select first color
         setTimeout(() => this.selectTagColor(State.tagColors[0] || '#ef4444'), 0);
@@ -185,7 +200,10 @@ export const StationTags = {
     // Close tag creation modal
     closeTagCreationModal() {
         const overlay = document.getElementById('tag-creation-overlay');
-        if (overlay) overlay.remove();
+        if (overlay) {
+            closeMapDialog(overlay);
+            overlay.remove();
+        }
     },
 
     // Select a color for new tag

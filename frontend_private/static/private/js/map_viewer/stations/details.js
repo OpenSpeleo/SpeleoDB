@@ -1,3 +1,5 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
+import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.js';
 import { API } from '../api.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
@@ -20,6 +22,11 @@ let currentNetworkId = null;
 let currentStationType = 'subsurface';  // 'subsurface' or 'surface'
 let currentSubsurfaceType = null;  // 'sensor', 'biology', 'bone', 'geology' or 'artifact' (only for subsurface)
 let activeTab = 'details';
+let stationManagerNavigation = {};
+
+export function configureStationManagerNavigation(handlers) {
+    stationManagerNavigation = handlers;
+}
 
 // Helper to get station type label and icon
 function getStationTypeInfo(subsurfaceType) {
@@ -44,7 +51,7 @@ export const StationDetails = {
      * @param {boolean} isNewlyCreated - Whether this is a newly created station
      * @param {string} stationType - 'subsurface' or 'surface'
      */
-    async openModal(stationId, parentId = null, isNewlyCreated = false, stationType = 'subsurface') {
+    async openModal(stationId, parentId = null, isNewlyCreated = false, stationType = 'subsurface', { fromManager = false } = {}) {
         console.log(`📋 Opening ${stationType} station modal for: ${stationId || 'NEW STATION'}`);
 
         currentStationId = stationId;
@@ -86,8 +93,7 @@ export const StationDetails = {
 
         // Update title
         const titleElement = document.getElementById('station-modal-title');
-        const stationManagerModal = document.getElementById('station-manager-modal');
-        if (titleElement && stationManagerModal && !stationManagerModal.classList.contains('hidden')) {
+        if (titleElement && fromManager) {
             titleElement.innerHTML = `
                 <button ${Utils.mapActionAttributes('navigation.returnToStationManager')} class="text-sky-400 hover:text-sky-300 mr-2" title="Back to Station Manager">
                     <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,20 +200,7 @@ export const StationDetails = {
 
     setupModalHandlers() {
         const modal = document.getElementById('station-modal');
-        const closeBtn = document.getElementById('station-modal-close');
-
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.classList.add('hidden');
-            };
-        }
-
-        // Close on backdrop click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        };
+        openMapDialog(modal, { closeButton: '#station-modal-close' });
     },
 
     switchTab(tabName) {
@@ -426,7 +419,14 @@ export const StationDetails = {
             typeBadge = `<span class="ml-2 px-2 py-0.5 rounded-sm text-xs font-medium border ${typeInfo.color}">${typeInfo.icon} ${typeInfo.label}</span>`;
         }
 
+        // Keep manager navigation when loading or refreshing the station title.
+        const backButton = modalTitle.querySelector('[data-map-action="navigation.returnToStationManager"]');
+        const restoreBackFocus = backButton && document.activeElement === backButton;
         modalTitle.innerHTML = Utils.safeHtml`${Utils.raw(stationTypeLabel)}: ${station.name}${Utils.raw(typeBadge)}${Utils.raw(isDemoStation ? ' <span class="demo-badge">DEMO</span>' : '')}`;
+        if (backButton) {
+            modalTitle.prepend(backButton);
+            if (restoreBackFocus) backButton.focus({ preventScroll: true });
+        }
 
         // Determine access based on station type
         let hasWriteAccess, hasAdminAccess, parentName, parentType;
@@ -681,7 +681,7 @@ export const StationDetails = {
                     Utils.showNotification('success', `${stationTypeLabel} deleted successfully`);
 
                     // Close modal
-                    document.getElementById('station-modal').classList.add('hidden');
+                    closeMapDialog(document.getElementById('station-modal'));
                 } catch (error) {
                     Utils.showNotification('error', `Failed to delete ${stationTypeLabel.toLowerCase()}`);
                 }
@@ -723,7 +723,7 @@ export const StationDetails = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
 
         const modal = document.getElementById('station-delete-confirm-modal');
 
@@ -766,11 +766,7 @@ export const StationDetails = {
 };
 
 export function returnToStationManager() {
-    console.log('↩️ Returning to Station Manager');
     const stationModal = document.getElementById('station-modal');
-    if (stationModal) {
-        stationModal.classList.add('hidden');
-        stationModal.style.display = 'none';
-    }
-    document.getElementById('station-manager-button')?.click();
+    closeMapDialog(stationModal, { restoreFocus: false });
+    stationManagerNavigation[currentStationType]?.();
 }

@@ -144,6 +144,24 @@ describe('StationDetails XSS', () => {
         expect(content).toContain('&lt;script&gt;evil()&lt;/script&gt;');
     });
 
+    it.each(['subsurface', 'surface'])('preserves focused manager navigation when %s details finish loading or refresh', stationType => {
+        const title = document.getElementById('station-modal-title');
+        const back = document.createElement('button');
+        back.dataset.mapAction = 'navigation.returnToStationManager';
+        back.textContent = 'Back';
+        title.append(back);
+        back.focus();
+        const station = { id: 'st-1', name: 'Loaded station', latitude: 1, longitude: 2 };
+        const parentId = stationType === 'surface' ? 'net-1' : 'project-1';
+
+        for (let refresh = 0; refresh < 2; refresh += 1) {
+            StationDetails.displayStationDetails(station, parentId, stationType);
+            expect(title.querySelector('[data-map-action="navigation.returnToStationManager"]')).toBe(back);
+            expect(title.textContent).toContain('Loaded station');
+            expect(document.activeElement).toBe(back);
+        }
+    });
+
     it('escapes station.tag.name and runs tag color through safeCssColor', () => {
         const tagNamePayload = '<img src=x onerror=alert(1)>';
         const maliciousColor = 'red; background:url(javascript:void(0))';

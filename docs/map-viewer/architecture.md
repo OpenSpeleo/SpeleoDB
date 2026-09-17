@@ -15,6 +15,15 @@ Both entry points share core modules located in
 `frontend_private/static/private/js/map_viewer/`. The public viewer imports them
 via relative paths (e.g. `../../../frontend_private/...`).
 
+The private toolbar delegates display controls to `MapSettings`, with one
+`State.displayPreferences` model and private `DisplayPreferences` persistence.
+`Layers` composes marker category/type gates with country/project/network
+selections. Managers are launched separately from display settings. The
+fullscreen viewer host owns visual overlays and the same toolbar instance.
+Public initialization uses default display preferences and its existing
+controls. See [Settings architecture and UX](settings.md) for lifecycle,
+navigation, accessibility, extension, and performance contracts.
+
 GIS Geometry adds private-only small-shape authoring through
 `GISGeometriesPanel` and `GeometryEditor`. It uses the established
 API/Config/State/Layers lifecycle and a shared vector renderer. `Interactions`

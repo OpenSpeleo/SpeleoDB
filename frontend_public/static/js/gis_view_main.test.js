@@ -14,6 +14,7 @@ const mapCoreMock = {
 };
 
 const layersMock = {
+    applyDisplayPreferences: vi.fn(),
     addProjectGeoJSON: vi.fn(),
     reorderLayers: vi.fn()
 };
@@ -51,7 +52,8 @@ const configMock = {
     }
 };
 
-vi.mock('../../../frontend_private/static/private/js/map_viewer/state.js', () => ({
+vi.mock('../../../frontend_private/static/private/js/map_viewer/state.js', async () => ({
+    ...await vi.importActual('../../../frontend_private/static/private/js/map_viewer/state.js'),
     State: stateMock
 }));
 

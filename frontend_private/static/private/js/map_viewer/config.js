@@ -140,7 +140,29 @@ export const DEFAULTS = Object.freeze({
         DEPTH_DEEP: '#d73027',
     },
 
+    DISPLAY: {
+        COLOR_MODE: 'project',
+        STORAGE_VERSION: 1,
+        CATEGORIES: Object.freeze([
+            { id: 'surveyStations', label: 'Survey stations' },
+            { id: 'surfaceStations', label: 'Surface stations' },
+            { id: 'landmarks', label: 'Landmarks' },
+            { id: 'explorationLeads', label: 'Exploration leads' },
+            { id: 'cylinders', label: 'Safety cylinders' },
+        ].map(Object.freeze)),
+        // Presentation and rendering metadata for SubSurfaceStationType.
+        // Missing/null legacy feature types use the Sensor entry.
+        STATION_TYPES: Object.freeze([
+            { id: 'sensor', label: 'Sensor', layerSuffix: 'circles' },
+            { id: 'biology', label: 'Biology', layerSuffix: 'biology-icons' },
+            { id: 'bone', label: 'Bones', layerSuffix: 'bone-icons' },
+            { id: 'artifact', label: 'Artifact', layerSuffix: 'artifact-icons' },
+            { id: 'geology', label: 'Geology', layerSuffix: 'geology-icons' },
+        ].map(Object.freeze)),
+    },
+
     STORAGE_KEYS: {
+        DISPLAY_PREFERENCES: 'speleo_private_map_display',
         PROJECT_VISIBILITY: 'speleo_project_visibility',
         NETWORK_VISIBILITY: 'speleo_network_visibility',
         COUNTRY_COLLAPSED: 'speleo_country_collapsed',

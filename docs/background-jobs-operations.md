@@ -127,8 +127,8 @@ The `celery-worker` service uses the explicit container name
 `${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker`, matching the other
 local services and keeping its Docker Desktop display consistent. This limits
 the local Compose service to one worker container; `--scale celery-worker=N`
-cannot be used with multiple replicas while the fixed name is configured.
-Each startup still adds a UUID to its Celery node name to avoid collisions when
+cannot be used with multiple replicas while the fixed name is configured. Each
+startup still adds a UUID to its Celery node name to avoid collisions when
 workers share a hostname. The worker consumes both queues. Keep Beat at one
 replica; its database lock also protects against scheduler overlap during
 restarts. Naming does not change worker concurrency or task processing overhead.

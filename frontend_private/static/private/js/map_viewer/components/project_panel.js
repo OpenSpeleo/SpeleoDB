@@ -127,6 +127,19 @@ export const ProjectPanel = {
         }
     },
 
+    /** Explicit navigation opens the country gate without replacing other choices. */
+    revealProject: function(projectId) {
+        const project = Config.getProjectById(projectId);
+        if (!project) return;
+        const country = project.country || 'Unknown';
+        const visibility = this._loadCountryVisibility();
+        delete visibility[country];
+        this._saveCountryVisibility(visibility);
+        Layers.saveProjectVisibilityPref(project.id, true);
+        this._syncCountryToMap(country, Config.projects.filter(candidate => (candidate.country || 'Unknown') === country));
+        this.refreshList();
+    },
+
     _applyInitialCountryVisibility: function() {
         if (!this._hasCountryData(Config.projects)) return;
 
@@ -292,6 +305,9 @@ export const ProjectPanel = {
 
         item.addEventListener('click', (e) => {
             if (e.target !== checkbox && e.target !== checkbox.nextElementSibling && e.target.closest('.toggle-switch') === null) {
+                if (document.getElementById('map-viewer-shell')) {
+                    this.revealProject(project.id);
+                }
                 const bounds = State.projectBounds.get(String(project.id));
                 if (bounds) {
                     State.map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });

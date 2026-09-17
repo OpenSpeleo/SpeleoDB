@@ -1,5 +1,16 @@
+import { DEFAULTS } from './config.js';
+
+export function createDefaultDisplayPreferences() {
+    return {
+        colorMode: DEFAULTS.DISPLAY.COLOR_MODE,
+        categories: Object.fromEntries(DEFAULTS.DISPLAY.CATEGORIES.map(({ id }) => [id, true])),
+        stationTypes: Object.fromEntries(DEFAULTS.DISPLAY.STATION_TYPES.map(({ id }) => [id, true])),
+    };
+}
+
 export const State = {
     map: null,
+    displayPreferences: createDefaultDisplayPreferences(),
     projectLayerStates: new Map(), // Individual user preference per project
     effectiveProjectVisibility: new Map(), // Actual map visibility (preference AND country gate)
     networkLayerStates: new Map(), // Track visibility state for each network
@@ -24,8 +35,9 @@ export const State = {
     // Cylinder installs (persistent from database)
     cylinderInstalls: new Map(), // Track cylinder installs by ID for easy access
 
-    // Landmark visibility state (default: true = visible)
-    landmarksVisible: true,
+    // Existing consumers share the canonical preference rather than a second flag.
+    get landmarksVisible() { return this.displayPreferences.categories.landmarks; },
+    set landmarksVisible(visible) { this.displayPreferences.categories.landmarks = visible; },
 
     // GPS Tracks state
     gpsTrackLayerStates: new Map(), // Track visibility state for each GPS track (default: all OFF)
@@ -51,7 +63,8 @@ export const State = {
     gisGeometryEditingId: null,
 
     // Resets layer and map data state. Does NOT reset map instance,
-    // userTags, tagColors, currentStationForTagging, or currentProjectId.
+    // userTags, tagColors, currentStationForTagging, currentProjectId, or display
+    // preferences. Route initialization, not a map-data reload, resets preferences.
     resetLayerState: function () {
         this.projectLayerStates = new Map();
         this.effectiveProjectVisibility = new Map();
@@ -66,7 +79,6 @@ export const State = {
         this.activeDepthDomain = null;
         this.projectBounds = new Map();
         this.networkBounds = new Map();
-        this.landmarksVisible = true;
         this.explorationLeads = new Map();
         this.cylinderInstalls = new Map();
         // GPS Tracks

@@ -1,3 +1,4 @@
+import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.js';
 import { SurfaceStationManager } from './manager.js';
 import { State } from '../state.js';
 import { Config } from '../config.js';
@@ -7,35 +8,11 @@ import { StationDetails } from '../stations/details.js';
 import { Modal } from '../components/modal.js';
 
 export const SurfaceStationUI = {
-    openManagerModal() {
-        console.log('📋 Opening Surface Station Manager');
-
+    openManagerModal({ returnFocus = document.getElementById('map-managers-button') } = {}) {
         const modal = document.getElementById('surface-station-manager-modal');
-        if (!modal) {
-            console.error('❌ Surface Station Manager modal element not found!');
-            return;
-        }
-
-        // Show modal
-        modal.classList.remove('hidden');
-
-        // Load content
+        if (!modal) return;
         this.loadSurfaceStationManagerContent();
-
-        // Setup close handlers
-        const closeBtn = document.getElementById('surface-station-manager-close');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.classList.add('hidden');
-            };
-        }
-
-        // Close on backdrop click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        };
+        openMapDialog(modal, { closeButton: '#surface-station-manager-close', returnFocus });
     },
 
     loadSurfaceStationManagerContent() {
@@ -182,6 +159,7 @@ export const SurfaceStationUI = {
                     const lat = parseFloat(btn.dataset.lat);
                     const lon = parseFloat(btn.dataset.lon);
                     e.stopPropagation();
+                    closeMapDialog(document.getElementById('surface-station-manager-modal'));
                     goToStation(stationId, lat, lon);
                     return;
                 }
@@ -190,8 +168,8 @@ export const SurfaceStationUI = {
                 const stationId = el.dataset.stationId;
                 const networkId = el.dataset.networkId;
                 if (stationId) {
-                    document.getElementById('surface-station-manager-modal').classList.add('hidden');
-                    StationDetails.openModal(stationId, networkId, false, 'surface');
+                    closeMapDialog(document.getElementById('surface-station-manager-modal'), { restoreFocus: false });
+                    StationDetails.openModal(stationId, networkId, false, 'surface', { fromManager: true });
                 }
             });
         });
@@ -318,7 +296,7 @@ export const SurfaceStationUI = {
                     Modal.close('create-surface-station-modal');
                     const managerModal = document.getElementById('surface-station-manager-modal');
                     if (managerModal) {
-                        managerModal.classList.add('hidden');
+                        closeMapDialog(managerModal, { restoreFocus: false });
                     }
 
                     // Open station details

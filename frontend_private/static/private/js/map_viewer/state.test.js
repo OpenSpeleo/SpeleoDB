@@ -1,8 +1,9 @@
-import { State } from './state.js';
+import { State, createDefaultDisplayPreferences } from './state.js';
 
 describe('State', () => {
     afterEach(() => {
         State.resetLayerState();
+        State.displayPreferences = createDefaultDisplayPreferences();
         State.map = null;
         State.userTags = [];
         State.tagColors = [];
@@ -96,10 +97,14 @@ describe('State', () => {
             expect(State.activeDepthDomain).toBeNull();
         });
 
-        it('resets landmarksVisible to true', () => {
+        it('preserves display preferences across a map-data reset', () => {
             State.landmarksVisible = false;
+            State.displayPreferences.colorMode = 'depth';
+            State.displayPreferences.stationTypes.biology = false;
             State.resetLayerState();
-            expect(State.landmarksVisible).toBe(true);
+            expect(State.landmarksVisible).toBe(false);
+            expect(State.displayPreferences.colorMode).toBe('depth');
+            expect(State.displayPreferences.stationTypes.biology).toBe(false);
         });
 
         it('creates new Map instances rather than clearing existing ones', () => {

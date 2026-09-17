@@ -25,12 +25,15 @@ import { GISLayersPanel } from './components/gis_layers_panel.js';
 import { GISGeometriesPanel } from './components/gis_geometries_panel.js';
 import { GeometryEditor } from './geometry_editor/editor.js';
 import { DepthLegend } from './components/depth_legend.js';
+import { MapSettings } from './components/settings.js';
+import { DisplayPreferences } from './display_preferences.js';
+import { getMapOverlayHost } from './components/overlay_host.js';
 import { API } from './api.js';
 import { getRuntimeContext } from './runtime_context.js';
 import { initMapActionDispatcher } from './action_dispatcher.js';
 import { configureMapNavigation } from './map/navigation.js';
 import { StationSensors } from './stations/sensors.js';
-import { returnToStationManager } from './stations/details.js';
+import { configureStationManagerNavigation, returnToStationManager } from './stations/details.js';
 
 // Parse URL parameters for initial map position
 // Usage: ?goto=LAT,LONG (e.g., ?goto=38.1234,-85.5678)
@@ -73,14 +76,21 @@ export async function initPrivateMapViewer() {
 
     // 1. Initialize State
     State.resetLayerState();
+    DisplayPreferences.init({ persist: true });
 
     // 2. Initialize Map immediately so the Mapbox style and tiles download
     //    concurrently with the startup API calls below (the map does not need
     //    project/network/GPS data to begin loading its style).
     const token = getRuntimeContext().mapboxToken || '';
 
-    const map = MapCore.init(token, 'map');
+    const map = MapCore.init(token, 'map', {
+        fullscreenContainer: document.getElementById('map-viewer-shell'),
+    });
     configureMapNavigation(map);
+    configureStationManagerNavigation({
+        subsurface: () => StationUI.openManagerModal(),
+        surface: () => SurfaceStationUI.openManagerModal(),
+    });
 
     // 3. Kick off the independent startup API loads in parallel instead of
     //    awaiting them one after another. They are consumed later (in
@@ -106,7 +116,8 @@ export async function initPrivateMapViewer() {
         const viewportHeight = window.innerHeight;
         const mapTop = rect.top;
         const isMobile = window.innerWidth <= DEFAULTS.UI.MOBILE_BREAKPOINT;
-        const newHeight = isMobile ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
+        const isFullscreen = document.fullscreenElement === document.getElementById('map-viewer-shell');
+        const newHeight = isMobile || isFullscreen ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
         mapElement.style.height = newHeight + 'px';
     }
 
@@ -115,6 +126,10 @@ export async function initPrivateMapViewer() {
 
     // Update map height on window resize
     window.addEventListener('resize', setMapHeight);
+    document.addEventListener('fullscreenchange', () => {
+        setMapHeight();
+        map.resize();
+    });
 
     // 4. Setup Interactions
     Interactions.init(map, {
@@ -386,7 +401,6 @@ export async function initPrivateMapViewer() {
         }
     });
 
-    const legend = document.getElementById('map-legend');
     DepthLegend.init(map);
 
     async function loadGeoJSONMetadata() {
@@ -709,32 +723,14 @@ export async function initPrivateMapViewer() {
         }
     });
 
-    // Setup UI listeners
-    MapCore.setupColorModeToggle(map);
     MapCore.setupMapSourceControl(map, token);
-
-    // Setup Landmarks Toggle
-    const landmarksToggle = document.getElementById('landmarks-toggle');
-    if (landmarksToggle) {
-        // The native label handles clicks; checkbox change owns map visibility.
-        landmarksToggle.addEventListener('change', (e) => {
-            e.stopPropagation();
-            Layers.toggleLandmarkVisibility(landmarksToggle.checked);
-        });
-    }
-
-    // Setup Landmark Manager Button (backup to onclick in HTML)
-    const landmarkManagerButton = document.getElementById('landmark-manager-button');
-    if (landmarkManagerButton && !landmarkManagerButton.onclick) {
-        landmarkManagerButton.addEventListener('click', () => LandmarkUI.openManagerModal());
-    }
-
-    const legendToggleBtn = document.getElementById('legend-toggle-button');
-    if (legendToggleBtn && legend) {
-        legendToggleBtn.addEventListener('click', () => {
-            legend.classList.toggle('hidden');
-        });
-    }
+    MapSettings.init({
+        managers: {
+            surveyStations: () => StationUI.openManagerModal(),
+            surfaceStations: () => SurfaceStationUI.openManagerModal(),
+            landmarks: () => LandmarkUI.openManagerModal(),
+        },
+    });
 
     // Listen for Refresh Events
     window.addEventListener('speleo:refresh-stations', async (e) => {
@@ -813,12 +809,6 @@ export async function initPrivateMapViewer() {
         }
     });
 
-    document.getElementById('station-manager-button')
-        ?.addEventListener('click', () => StationUI.openManagerModal());
-    document.getElementById('surface-station-manager-button')
-        ?.addEventListener('click', () => SurfaceStationUI.openManagerModal());
-    document.getElementById('landmark-manager-button')
-        ?.addEventListener('click', () => LandmarkUI.openManagerModal());
     initMapActionDispatcher({
         cylinder: CylinderInstalls,
         sensors: StationSensors,
@@ -884,7 +874,7 @@ export async function initPrivateMapViewer() {
         if (existingModal) existingModal.remove();
 
         // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
         const removeLandmarkModal = () => {
@@ -992,7 +982,7 @@ export async function initPrivateMapViewer() {
         if (existingModal) existingModal.remove();
 
         // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
         const removeDragModal = () => {
@@ -1100,7 +1090,7 @@ export async function initPrivateMapViewer() {
         if (existingModal) existingModal.remove();
 
         // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
 
         // Setup handlers
         const revertPosition = () => {

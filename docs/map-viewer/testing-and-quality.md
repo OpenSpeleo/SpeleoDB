@@ -3,20 +3,23 @@
 This document explains how agents should validate map viewer work before
 considering a change complete.
 
-## Core Commands (Run From Repo Root)
+## Core Commands (Existing Application Container Only)
 
 - Lint JavaScript:
-  - `npm run lint:js`
+  - `docker exec -w /app speleodb_local_django npm run lint:js`
 - Run frontend unit tests:
-  - `npm run test:js`
+  - `docker exec -w /app speleodb_local_django npm run test:js`
 - Run backend tests:
-  - `pytest`
-- Combined local smoke:
-  - `make test`
+  - `docker exec -w /app speleodb_local_django pytest <targets>`
+- Clean production build:
+  - `docker exec -w /app speleodb_local_django npm run build`
+
+Do not start another stack or run tests on the host. Run GitLab-backed tests
+serially under the repository audit contract.
 
 ## Frontend Test Scope
 
-Current map viewer tests (20 files, 484+ tests):
+Representative map viewer coverage (use the runner's report for current totals):
 
 ### Core modules
 
@@ -91,14 +94,35 @@ Current map viewer tests (20 files, 484+ tests):
 
 - project toggle hides related project-scoped layers
 - any domain or color-mode side effects remain synchronized
+- global categories compose with country/project/network/item selections
+- station subtype filters affect symbols and labels, including Sensor fallback
+- delayed loads and refreshes preserve current display settings
+- persistence/reset remains private; public controls keep their existing
+  behavior
+
+### Settings and modal flows
+
+- four equal-width toolbar actions with readable mobile labels and green Import
+  GPS
+- native dialog focus, keyboard containment, dismissal, and browser persistence
+- separate Managers menu, manager/details/Back handoff, and single manager
+  launch
+- Settings keyboard input never changes an active geometry draft
+- fullscreen contains toolbar, import, managers, child dialogs, and
+  notifications
+- actual authenticated browser evidence at 320/390px, tablet, desktop,
+  landscape, 200% zoom, and reduced motion; inspect bounds and focus as well as
+  screenshots
+
+See [Settings design](settings.md) for the complete behavioral contract.
 
 ## Vite/Tailwind Pipeline Checks
 
 When frontend build scripts, registry entries, or Tailwind sources change:
 
 1. run
-   - `npm run build`
-   - `npm run test:assets-watch`
+   - `docker exec -w /app speleodb_local_django npm run build`
+   - `docker exec -w /app speleodb_local_django npm run test:assets-watch`
 2. ensure no "No utility classes were detected" warnings
 3. validate `.vite/manifest.json`, `style-app`, the bootstrap, and all map
    controller entries are generated under

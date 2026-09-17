@@ -4,7 +4,7 @@ import { Layers } from './layers.js';
 import { MapSources } from './sources.js';
 
 export const MapCore = {
-    init: function (accessToken, containerId = 'map') {
+    init: function (accessToken, containerId = 'map', { fullscreenContainer } = {}) {
         mapboxgl.accessToken = accessToken;
         MapSources.installCheckedTileProtocol();
         MapSources.installCheckedTileFetch();
@@ -22,7 +22,9 @@ export const MapCore = {
         });
 
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-        map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+        map.addControl(new mapboxgl.FullscreenControl(
+            fullscreenContainer ? { container: fullscreenContainer } : undefined
+        ), 'top-right');
         map.addControl(new mapboxgl.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'metric' }), 'bottom-right');
         map.addControl(new mapboxgl.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'imperial' }), 'bottom-right');
 
@@ -95,8 +97,6 @@ export const MapCore = {
                 Layers.setColorMode('project');
             }
 
-            // Dispatch event for other listeners
-            window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode: isDepthMode ? 'depth' : 'project' } }));
         });
     },
 

@@ -1,3 +1,4 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
 import { Config } from '../config.js';
 import { Utils } from '../utils.js';
 import { API } from '../api.js';
@@ -1235,7 +1236,7 @@ export const StationSensors = {
         const existingModal = document.getElementById('sensor-status-change-modal');
         if (existingModal) existingModal.remove();
 
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
     },
 
     cancelStatusChange() {

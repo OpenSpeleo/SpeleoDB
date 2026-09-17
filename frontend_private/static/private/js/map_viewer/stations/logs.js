@@ -1,3 +1,4 @@
+import { getMapOverlayHost } from '../components/overlay_host.js';
 import { API } from '../api.js';
 import { Utils } from '../utils.js';
 import { Config } from '../config.js';
@@ -257,7 +258,7 @@ export const StationLogs = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
 
         const modal = document.getElementById('log-entry-modal');
         const form = document.getElementById('log-entry-form');
@@ -377,7 +378,7 @@ export const StationLogs = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
 
         const modal = document.getElementById('log-edit-modal');
         const form = document.getElementById('log-edit-form');
@@ -440,7 +441,7 @@ export const StationLogs = {
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
 
         const modal = document.getElementById('log-delete-modal');
 

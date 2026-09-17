@@ -629,8 +629,8 @@ lint, template checks, and production build completed successfully. See
 Configured `${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker` in
 `local.yml` and documented the resulting single-container scaling constraint.
 Validated resolved worker and Beat names with assertions inside the running
-Django container. Renamed the live worker to `speleodb_local_celery_worker`;
-its ID, running state, and start time remained unchanged. Diff whitespace checks
+Django container. Renamed the live worker to `speleodb_local_celery_worker`; its
+ID, running state, and start time remained unchanged. Diff whitespace checks
 passed. See [the task](todos/celery-worker-container-name.md).
 
 # GIS Tooling disclosure review
@@ -668,3 +668,37 @@ creations, and verified deletion marking for every created repository. The first
 full `prek` run passed all code, security, type, lint, URL, and build checks;
 Markdown formatting was applied and reviewed before the final rerun. See
 [the verification record](todos/profile-navigation-adversarial-review.md).
+
+# Private map toolbar and Settings review
+
+Implemented four equal-width actions: Create Geometry, green Import GPS,
+Managers, and Settings. Settings now contains compact color controls and marker
+visibility; Managers directly opens the three entity managers. Removed retired
+preference gates, preserved item selections, and corrected focus/fullscreen and
+station Back navigation behavior. Documented the architecture and both user
+feedback lessons.
+
+Verified in the existing application container: **1,258 JavaScript tests**, **80
+Python tests**, lint, typing, template checks, Django check, and clean Vite
+build. Authenticated browser checks covered desktop/mobile, narrow breakpoints,
+fullscreen, persistence, keyboard behavior, and actual existing map records.
+Independent architecture and interface reviews found no remaining blockers. See
+[the task](todos/map-viewer-settings.md) for exact scope and evidence.
+
+Hover/color follow-up: removed the old fixed width from Survey Stations so all
+three menu rows highlight fully. Managers is blue and Settings purple, including
+hover/open states. Real desktop/mobile browser checks confirm identical 210px
+menu rows and equal toolbar widths. Clean build, template formatting, and all
+1,258 JavaScript tests pass.
+
+Final review: the selected color mode now has an indigo highlight. The
+adversarial reviewer accepted corrections to two stale test expectations
+(toolbar markup and the documented worker container name). A fresh full run
+passed **4,920 Python tests, 181 skipped**, and **1,258 JavaScript tests**. Both
+full GitLab audits stayed within nine repositories and ten creation requests,
+with zero violations/unresolved creations and confirmed cleanup of every created
+repository. The first `prek run -a` passed code, security, type, URL, lint, and
+build checks; its Markdown formatting changes were reviewed before the final
+rerun.
+
+Final `prek run -a`: all checks passed. Final browser checks passed again.

@@ -14,7 +14,8 @@ subset.
 ## Map Source Selection
 
 The public and private viewers share a single base-map source system. Users
-select the base map from the in-map **Map Source** control; the choice is
+select the base map from the existing map-canvas source control in the private
+viewer and the in-map **Map Source** control in the public viewer; the choice is
 persisted in browser `localStorage` under `DEFAULTS.STORAGE_KEYS.MAP_SOURCE`.
 
 Supported sources are defined in one registry, `MAP_SOURCES` in
@@ -69,6 +70,12 @@ control icon is the trusted static `MAP_SOURCE_ICON_SVG` constant in
 ---
 
 ## 1. Station Management
+
+The private toolbar provides Create Geometry, Import GPS, Managers, and
+Settings. Settings owns color and marker visibility preferences. Managers
+separately opens Survey Stations, Surface Stations, and Landmarks. See
+[Settings design](settings.md) for visibility composition, persistence,
+accessibility, and extension contracts.
 
 ### 1.1 Subsurface Stations
 

@@ -1,3 +1,6 @@
+import { getMapOverlayHost } from './overlay_host.js';
+import { openMapDialog, closeMapDialog } from './dialog_lifecycle.js';
+
 export const Modal = {
     base(id, title, content, footer = null, maxWidth = 'max-w-2xl') {
         return `
@@ -5,7 +8,7 @@ export const Modal = {
                 <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full ${maxWidth} flex flex-col max-h-[90vh]">
                     <div class="flex items-center justify-between p-6 border-b border-slate-600 shrink-0">
                         <h2 class="text-xl font-semibold text-white">${title}</h2>
-                        <button data-close-modal="${id}" class="text-slate-400 hover:text-white transition-colors">
+                        <button data-close-modal="${id}" aria-label="Close dialog" class="text-slate-400 hover:text-white transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
@@ -25,7 +28,9 @@ export const Modal = {
 
     open(id, html, onOpen = null) {
         this.close(id);
-        document.body.insertAdjacentHTML('beforeend', html);
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+        const element = document.getElementById(id);
+        openMapDialog(element, { onClose: () => element.remove(), dismissOnBackdrop: false });
 
         // Attach standard close handlers to ALL elements with data-close-modal
         const closeBtns = document.querySelectorAll(`[data-close-modal="${id}"]`);
@@ -33,19 +38,14 @@ export const Modal = {
             btn.onclick = () => this.close(id);
         });
 
-        const escHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.close(id);
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
-
         if (onOpen) setTimeout(onOpen, 50);
     },
 
     close(id) {
         const el = document.getElementById(id);
-        if (el) el.remove();
+        if (el) {
+            closeMapDialog(el);
+            el.remove();
+        }
     }
 };

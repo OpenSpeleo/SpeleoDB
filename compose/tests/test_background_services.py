@@ -82,7 +82,9 @@ def test_background_services_start_after_migrations_without_kanchi(
         assert service["environment"]["CELERY_BROKER_URL"] == (
             "${CELERY_BROKER_URL:-redis://localhost:6379/1}"
         )
-    assert services["celery-worker"].get("container_name") is None
+    assert services["celery-worker"]["container_name"] == (
+        "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker"
+    )
     assert "celery-exports" not in services
     assert "celery-maintenance" not in services
 
