@@ -740,3 +740,29 @@ Final `prek run -a`: all checks passed. Final browser checks passed again.
 Import label follow-up: renamed the green toolbar action to Import GPX/KML.
 Build, 1,258 JavaScript tests, and 79 focused Python tests passed. Chromium
 verified the label, sizing, and import dialog at desktop and phone widths.
+
+# Private map ruler second adversarial review
+
+The independent review identified and corrected stale measurement previews
+during camera navigation and pending entity drags surviving tool handoffs.
+Temporary entity previews now roll back without persistence, with original
+camera handlers restored. Normal drag completion remains covered.
+
+Replaced the helper prose with concise action/meaning rows and the exact title
+“Distance measurement instructions”. The compact header collapses with a
+right-hand chevron and expands on every activation. The exit row is separated by
+a horizontal divider and labeled “Ruler icon”; “Cancel measurement” remains
+explicit. Pointer-preview and scroll-zoom rows are removed, preserving behavior.
+Narrow layouts stack the reference without horizontal overflow.
+
+Final authenticated browser verification passed, including collapse, input
+ownership, camera preview, desktop/mobile layouts, fullscreen, and 100 pairs.
+Full Python passed **4,920 tests, 181 skipped**; full JavaScript passed **1,328
+tests across 85 files**. The successful GitLab audit recorded nine repositories,
+ten creation requests, zero violations/unresolved outcomes, and independently
+verified deletion marks for all nine repositories. Full evidence, including
+recovery of the earlier interrupted run, is recorded in
+[the second review](todos/map-measurement-second-review.md).
+
+All code, security, type, template, URL, lint, and production-build hooks
+passed. Markdown formatting was reviewed before the final `prek run -a` rerun.

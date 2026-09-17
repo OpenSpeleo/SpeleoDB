@@ -8,10 +8,11 @@ viewer user independently of entity write permissions. It does not create GIS
 geometry, call an API, or save browser preferences. The public viewer does not
 initialize it.
 
-Activate the ruler directly below Map Source. Click A, move the pointer to
-preview, and click B to retain the result. Each subsequent pair is independent.
-The connector has a gentle bow to distinguish measurement annotations from
-survey lines; its shape is **not** the path used to calculate distance.
+Activate the ruler directly below Map Source. Left-click to start measuring,
+move the pointer to preview, and left-click again to stop and retain the result.
+Each subsequent measurement is independent. The connector has a gentle bow to
+distinguish measurement annotations from survey lines; its shape is **not** the
+path used to calculate distance.
 
 Both metric and imperial values remain available together. The tool measures
 shortest spherical surface distance using the viewer's existing mean-radius
@@ -21,25 +22,26 @@ Displayed precision does not imply survey accuracy.
 
 ## Interaction contract
 
-| Action                                    | Result                                         |
-| ----------------------------------------- | ---------------------------------------------- |
-| Ruler on                                  | Ready to place A; map uses a crosshair         |
-| Click/tap A                               | Start one unfinished pair                      |
-| Pointer movement                          | Preview B and update both units                |
-| Click/tap B                               | Keep the pair, then await the next A           |
-| Right-click or Escape                     | Cancel only the unfinished pair                |
-| Ruler off                                 | Clear all pairs and restore normal interaction |
-| Start geometry creation/editing           | End measurement and clear its pairs            |
-| Basemap/display change or ordinary dialog | Preserve the measurement session               |
-| Page reload                               | Start with measurement off and no pairs        |
+| Action                                     | Result                                         |
+| ------------------------------------------ | ---------------------------------------------- |
+| Ruler on                                   | Ready to start; map uses a crosshair           |
+| First left-click/tap                       | Start measuring                                |
+| Pointer preview, including camera movement | Update the distance under the pointer          |
+| Next left-click/tap                        | Stop and keep the measurement; ready to repeat |
+| Right-click or Escape                      | Cancel only the unfinished pair                |
+| Ruler off                                  | Clear all pairs and restore normal interaction |
+| Start geometry creation/editing            | End measurement and clear its pairs            |
+| Basemap/display change or ordinary dialog  | Preserve the measurement session               |
+| Page reload                                | Start with measurement off and no pairs        |
 
-Dragging with the left mouse button pans rather than placing B. Scroll/pinch
-zoom remains available. Touch uses tap-to-start and tap-to-finish, with the
-ruler button providing exit and clear-all; long-press is not a required gesture.
-There is no separate Cancel button. One click path commits endpoints for mouse
-and browser-generated tap clicks, avoiding an additional commit on touchend.
-Native touch cancellation invalidates a tap. Coincident endpoints and repeated
-double-click/keyboard events cannot produce accidental extra measurements.
+Dragging with the left mouse button pans rather than stopping a measurement.
+Scroll/pinch zoom remains available. Touch uses tap-to-start and tap-to-stop,
+with the ruler button providing exit and clear-all; long-press is not a required
+gesture. There is no separate Cancel button. One click path commits endpoints
+for mouse and browser-generated tap clicks, avoiding an additional commit on
+touchend. Native touch cancellation invalidates a tap. Coincident endpoints and
+repeated double-click/keyboard events cannot produce accidental extra
+measurements.
 
 Keyboard activation focuses the map canvas and shows a reticle within its
 intersection with the visible viewport, clear of the instructions. Existing map
@@ -47,10 +49,22 @@ arrow and zoom keys move the target; Enter places it. Endpoint key handling
 belongs to the focused canvas. Menus, dialogs, and form fields retain their own
 keys. The source picker only handles Escape while its menu is open.
 
-Instructions explicitly name each gesture instead of assuming familiarity with
-map tools. They distinguish endpoint placement, pointer preview, map navigation,
-draft cancellation, repeated pairs, and exiting/clearing. Mouse, touch, and
-keyboard users receive wording appropriate to their input method.
+Instructions use concise, aligned action/meaning rows instead of tutorial
+paragraphs or point A/B terminology. The card fits the concise rows instead of
+reserving space for tutorial prose; responsive sizing preserves readability.
+Mouse, touch, and keyboard users receive the applicable start/stop, navigation,
+cancellation, and exit/clear gestures. Pointer movement previews the distance
+and scrolling zooms without separate mouse instruction rows. The mouse reference
+contains only left-click, left-drag, right-click/Escape, and “Ruler icon” for
+exit. A horizontal divider separates the clear-all/exit row from the measurement
+gestures.
+
+The “Distance measurement instructions” header is a native button with a
+right-hand chevron, `aria-expanded`, and `aria-controls`. It collapses only the
+gesture reference, retaining the header and the active measurement session.
+Every ruler activation expands it again. Toggling updates the existing layout so
+the keyboard reticle can use the freed map area; no collapse preference is
+persisted.
 
 A polite live region announces state changes and completed results, not every
 pointer movement. A visually hidden ordered list exposes completed distances to
@@ -71,7 +85,10 @@ lifecycle includes `activate`, `deactivate`, `cancelDraft`, `isActive`,
 editing and measurement. While a tool is active, the normal entity hover, popup,
 drag, and context-menu paths are not entered. This avoids a competing set of map
 listeners and prevents permission-sensitive entity mutations from being
-accidentally triggered by ruler gestures.
+accidentally triggered by ruler gestures. `cancelPendingDrag()` releases a
+pending entity drag before a new tool takes ownership: it restores any transient
+position and feedback, restores the original camera handlers, and discards the
+gesture without calling a persistence callback.
 
 The editor exposes `isOpening()` and optional
 `onActivityChange({ opening, active })`. It notifies before asynchronous loading
@@ -121,7 +138,7 @@ flattened along the boundary. Distances retain their geographic meaning.
 Picking uses the public surface API and a projection/unprojection round trip.
 This extra check is necessary because the pinned Mapbox version can clamp sky
 coordinates to the globe horizon. Invalid preview positions hide the preview and
-preserve A.
+preserve the start location.
 
 Meters/kilometers and feet/miles derive from the same raw value. Formatting uses
 at most one decimal for meters, whole feet, and two decimals for large units,
@@ -135,12 +152,15 @@ preferences, and backend models. Genuine style reloads restore the owned
 sources/layers/image idempotently. Ordinary basemap changes preserve overlays
 without reloading survey data.
 
-Pointer movement updates only the draft, coalesced to an animation frame.
-Completed curves and distances are cached; camera movement does not regenerate
-them, and measuring does not query or rescan survey features. Updating the
-completed source occurs when a pair completes. Native label decluttering avoids
-a custom collision solver or a DOM marker for every completed result; only the
-current preview has a DOM label.
+Pointer movement updates only the draft, coalesced to an animation frame. The
+latest mouse screen point is re-picked when the camera moves, keeping the
+preview consistent with the next click. Leaving the canvas, suspending for a
+dialog, canceling, or changing input mode invalidates that point. Completed
+curves and distances are cached; camera movement does not regenerate them, and
+measuring does not query or rescan survey features. Updating the completed
+source occurs when a pair completes. Native label decluttering avoids a custom
+collision solver or a DOM marker for every completed result; only the current
+preview has a DOM label.
 
 Turning the tool off removes owned overlays and pending animation work.
 Destruction removes listeners and restores previous camera-handler state.

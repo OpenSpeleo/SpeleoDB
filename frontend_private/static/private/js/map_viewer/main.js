@@ -90,6 +90,7 @@ export async function initPrivateMapViewer() {
     const measurementTool = new MeasurementTool({
         canActivate: () => !GeometryEditor.isActive() && !GeometryEditor.isOpening(),
         onActivate: () => {
+            Interactions.cancelPendingDrag();
             ContextMenu.hide();
             Layers.closeGISFeaturePopups();
         },
@@ -642,7 +643,10 @@ export async function initPrivateMapViewer() {
                 map,
                 onActivityChange({ opening, active }) {
                     const available = !opening && !active;
-                    if (!available) measurementTool.deactivate();
+                    if (!available) {
+                        Interactions.cancelPendingDrag();
+                        measurementTool.deactivate();
+                    }
                     measurementTool.setAvailable(available);
                 },
                 palette: getRuntimeContext().geometryColors || [],

@@ -1,6 +1,9 @@
 import { MeasurementTool } from './tool.js';
-import { DEFAULTS } from '../config.js';
+import { Config, DEFAULTS } from '../config.js';
 import { Interactions } from '../map/interactions.js';
+import { State } from '../state.js';
+import { Layers } from '../map/layers.js';
+import { Geometry } from '../map/geometry.js';
 
 // Only the browser/map boundary is simulated. Tool, dispatcher, geometry and
 // renderer are the actual modules, including their DOM and GeoJSON output.
@@ -16,6 +19,7 @@ function createMap() {
     const layers = new Map();
     const images = new Map();
     let doubleClick = true;
+    let pan = true;
     const map = {
         on(name, handler) { if (!events.has(name)) events.set(name, new Set()); events.get(name).add(handler); },
         off(name, handler) { events.get(name)?.delete(handler); },
@@ -25,19 +29,21 @@ function createMap() {
         getContainer: () => host,
         getStyle: () => ({ layers: [...layers.values()] }),
         unproject: point => ({ lng: point.x / 10, lat: point.y / 10 }),
-        project: coordinate => ({ x: coordinate.lng * 10, y: coordinate.lat * 10 }),
+        project: coordinate => ({ x: (coordinate.lng ?? coordinate[0]) * 10, y: (coordinate.lat ?? coordinate[1]) * 10 }),
         isPointOnSurface: point => point.y >= 0,
         getSource: id => sources.get(id),
-        addSource(id, source) { sources.set(id, { ...source, setData: vi.fn(function (data) { this.data = data; }) }); },
+        addSource(id, source) { sources.set(id, { ...source, _data: source.data, setData: vi.fn(function (data) { this.data = data; this._data = data; }) }); },
         removeSource: id => sources.delete(id),
         getLayer: id => layers.get(id),
         addLayer: layer => layers.set(layer.id, layer),
+        setLayoutProperty: vi.fn(),
+        setFilter: vi.fn(),
         removeLayer: id => layers.delete(id),
         hasImage: id => images.has(id),
         addImage: (id, image) => images.set(id, image),
         removeImage: id => images.delete(id),
         queryRenderedFeatures: vi.fn(() => []),
-        dragPan: { disable: vi.fn(), enable: vi.fn(), isEnabled: () => true },
+        dragPan: { disable: vi.fn(() => { pan = false; }), enable: vi.fn(() => { pan = true; }), isEnabled: () => pan },
         doubleClickZoom: { isEnabled: () => doubleClick, disable: () => { doubleClick = false; }, enable: () => { doubleClick = true; } },
     };
     return map;
@@ -50,6 +56,7 @@ const event = (x, y, extra = {}) => ({
 let map;
 let tool;
 let frames;
+let originalProjects;
 const flushFrames = () => {
     const callbacks = [...frames.values()];
     frames.clear();
@@ -63,6 +70,7 @@ const click = (x, y) => {
 const source = kind => map.getSource(`${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${kind}`);
 
 beforeEach(() => {
+    originalProjects = Config._projects;
     frames = new Map();
     let frame = 0;
     vi.stubGlobal('requestAnimationFrame', callback => { frames.set(++frame, callback); return frame; });
@@ -82,6 +90,12 @@ beforeEach(() => {
 
 afterEach(() => {
     tool.destroy();
+    State.map = null;
+    State.allLandmarks.clear();
+    State.explorationLeads.clear();
+    Config._projects = originalProjects;
+    Geometry.snapIndicatorEl?.remove();
+    Geometry.snapIndicatorEl = null;
     document.body.replaceChildren();
     vi.unstubAllGlobals();
 });
@@ -89,11 +103,11 @@ afterEach(() => {
 it('measures independent pairs, cancels only the draft, and clears all on toggling off', () => {
     tool.button.dispatchEvent(new MouseEvent('click', { detail: 1 }));
     expect(tool.button.getAttribute('aria-pressed')).toBe('true');
-    expect(tool.prompt.textContent).toBe('Left-click point A, move the pointer, then left-click point B.');
+    expect(tool.gestures.textContent).toContain('Left-clickStart / stop');
     click(0, 0);
     flushFrames();
     expect(source('draft').data.features).toHaveLength(1);
-    expect(tool.cancelHint.textContent).toContain('unfinished line');
+    expect(tool.gestures.textContent).toContain('Right-click / EscCancel measurement');
     map.fire('mousemove', event(1, 1));
     flushFrames();
     expect(document.querySelector('.measurement-live-label').textContent).toMatch(/km.*mi/);
@@ -135,6 +149,105 @@ it('owns the real dispatcher without querying or dragging entities, then restore
     tool.deactivate();
     map.fire('click', event(10, 10));
     expect(onStationClick).toHaveBeenCalledWith('station', 'subsurface');
+});
+
+it.each([[false, true], [true, true], [false, false], [true, false]])(
+    'cancels an entity drag before ruler ownership (moved=%s, handlers enabled=%s)', (moved, enabled) => {
+        State.map = map;
+        State.allLandmarks.set('landmark', { can_write: true, longitude: 1, latitude: 1 });
+        const feature = { id: 'landmark', layer: { id: 'landmarks-layer' }, geometry: { type: 'Point', coordinates: [1, 1] }, properties: {} };
+        map.addSource('landmarks-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [feature] } });
+        map.queryRenderedFeatures.mockReturnValue([feature]);
+        const preview = vi.fn((id, coordinate) => Layers.revertLandmarkPosition(id, coordinate));
+        const complete = vi.fn();
+        Interactions.handlers.onLandmarkDrag = preview;
+        Interactions.handlers.onLandmarkDragEnd = complete;
+        tool.onActivate = () => Interactions.cancelPendingDrag();
+        if (!enabled) { map.dragPan.disable(); map.doubleClickZoom.disable(); }
+        map.fire('mousedown', event(10, 10));
+        expect(map.dragPan.isEnabled()).toBe(false);
+        if (moved) {
+            map.fire('mousemove', event(50, 50));
+            expect(feature.geometry.coordinates).toEqual([5, 5]);
+        }
+        tool.activate({ keyboard: true });
+        expect(feature.geometry.coordinates).toEqual([1, 1]);
+        expect(State.allLandmarks.get('landmark')).toMatchObject({ longitude: 1, latitude: 1 });
+        expect(map.dragPan.isEnabled()).toBe(enabled);
+        expect(map.doubleClickZoom.isEnabled()).toBe(false);
+        map.fire('mouseup', event(50, 50));
+        tool.deactivate();
+        expect(map.doubleClickZoom.isEnabled()).toBe(enabled);
+        preview.mockClear();
+        map.fire('mousemove', event(70, 70));
+        map.fire('mouseup', event(70, 70));
+        expect(preview).not.toHaveBeenCalled();
+        expect(complete).not.toHaveBeenCalled();
+        expect(feature.geometry.coordinates).toEqual([1, 1]);
+    },
+);
+
+it.each([true, false])('completes a normal landmark drag and restores camera handlers (enabled=%s)', enabled => {
+    State.map = map;
+    State.allLandmarks.set('landmark', { can_write: true, longitude: 1, latitude: 1 });
+    const feature = { id: 'landmark', layer: { id: 'landmarks-layer' }, geometry: { type: 'Point', coordinates: [1, 1] }, properties: {} };
+    map.addSource('landmarks-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [feature] } });
+    map.queryRenderedFeatures.mockReturnValue([feature]);
+    const preview = vi.fn((id, coordinate) => Layers.revertLandmarkPosition(id, coordinate));
+    const complete = vi.fn();
+    Interactions.handlers.onLandmarkDrag = preview;
+    Interactions.handlers.onLandmarkDragEnd = complete;
+    map.getCanvas().style.cursor = 'grab';
+    if (!enabled) { map.dragPan.disable(); map.doubleClickZoom.disable(); }
+    map.fire('mousedown', event(10, 10));
+    map.fire('mousemove', event(50, 50));
+    expect(feature.geometry.coordinates).toEqual([5, 5]);
+    map.fire('mouseup', event(50, 50));
+    expect(complete).toHaveBeenCalledExactlyOnceWith('landmark', [5, 5], [1, 1]);
+    expect(map.dragPan.isEnabled()).toBe(enabled);
+    expect(map.doubleClickZoom.isEnabled()).toBe(enabled);
+    expect(map.getCanvas().style.cursor).toBe('grab');
+    preview.mockClear();
+    map.fire('mousemove', event(70, 70));
+    map.fire('mouseup', event(70, 70));
+    expect(preview).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(feature.geometry.coordinates).toEqual([5, 5]);
+});
+
+it.each(['station', 'cylinder-install', 'exploration-lead'])('rolls back %s coordinates and feedback without completing its drag', kind => {
+    State.map = map;
+    const projectId = '00000000-0000-0000-0000-000000000001';
+    Config._projects = [{ id: projectId, permissions: 'READ_AND_WRITE' }];
+    const sourceId = kind === 'station' ? `stations-source-${projectId}`
+        : kind === 'cylinder-install' ? 'cylinder-installs-source' : 'exploration-leads-source';
+    const layerId = kind === 'station' ? `stations-${projectId}-circles`
+        : kind === 'cylinder-install' ? 'cylinder-installs-layer' : 'exploration-leads-layer';
+    const originalColor = '#123456';
+    const feature = { id: 'entity', layer: { id: layerId }, geometry: { type: 'Point', coordinates: [1, 1] }, properties: { project_id: projectId, color: originalColor } };
+    map.addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [feature] } });
+    map.addLayer({ id: layerId });
+    if (kind === 'exploration-lead') State.explorationLeads.set('entity', { id: 'entity', coordinates: [1, 1], projectId });
+    map.queryRenderedFeatures.mockReturnValue([feature]);
+    const complete = vi.fn();
+    Interactions.handlers.onStationDragEnd = complete;
+    Interactions.handlers.onMarkerDragEnd = complete;
+    map.fire('mousedown', event(10, 10));
+    map.fire('mousemove', event(50, 50));
+    expect(map.getSource(sourceId)._data.features[0].geometry.coordinates).toEqual([5, 5]);
+    if (kind === 'station') expect(feature.properties.color).not.toBe(originalColor);
+    else expect(map.getLayer('marker-drag-highlight')).toBeDefined();
+    expect(Geometry.snapIndicatorEl.style.display).toBe('block');
+    Interactions.cancelPendingDrag();
+    expect(map.getSource(sourceId)._data.features[0].geometry.coordinates).toEqual([1, 1]);
+    if (kind === 'station') expect(feature.properties.color).toBe(originalColor);
+    expect(map.getLayer('marker-drag-highlight')).toBeUndefined();
+    expect(map.getSource('marker-drag-highlight-source')).toBeUndefined();
+    expect(Geometry.snapIndicatorEl.style.display).toBe('none');
+    map.fire('mouseup', event(50, 50));
+    expect(complete).not.toHaveBeenCalled();
+    expect(map.dragPan.isEnabled()).toBe(true);
+    expect(map.doubleClickZoom.isEnabled()).toBe(true);
 });
 
 it('keeps endpoint placement out of pan, pinch, touchend and cancelled gestures', () => {
@@ -258,6 +371,51 @@ it('keeps completed data stable through pointer updates and restores after a sty
     expect(tool.measurements).toHaveLength(1);
 });
 
+it('keeps a mouse preview under the pointer through camera changes and commits the displayed endpoint', () => {
+    tool.activate();
+    click(1, 1);
+    map.fire('mousemove', event(20, 20));
+    flushFrames();
+    expect(source('draft').data.features.filter(feature => feature.properties.role === 'endpoint').at(-1).geometry.coordinates)
+        .toEqual([2, 2]);
+    // Camera navigation changes the coordinate under a stationary pointer.
+    map.unproject = point => ({ lng: point.x / 20, lat: point.y / 20 });
+    map.project = coordinate => ({ x: coordinate.lng * 20, y: coordinate.lat * 20 });
+    map.fire('move');
+    flushFrames();
+    const previewEndpoint = source('draft').data.features.filter(feature => feature.properties.role === 'endpoint').at(-1).geometry.coordinates;
+    const previewLabel = document.querySelector('.measurement-live-label').textContent;
+    expect(previewEndpoint).toEqual([1, 1]);
+    click(20, 20);
+    expect(tool.measurements[0].end).toEqual(previewEndpoint);
+    expect(tool.results.textContent).toContain(previewLabel);
+});
+
+it('does not revive a mouse preview during a pan or after the pointer leaves the canvas', () => {
+    tool.activate();
+    click(1, 1);
+    map.fire('mousemove', event(20, 20));
+    flushFrames();
+    map.getCanvas().dispatchEvent(new Event('mouseleave'));
+    map.fire('move');
+    flushFrames();
+    expect(source('draft').data.features).toHaveLength(1);
+    expect(document.querySelector('.measurement-live-label')).toBeNull();
+    map.fire('mousemove', event(20, 20));
+    flushFrames();
+    map.fire('mousedown', event(20, 20));
+    map.fire('mousemove', event(50, 50));
+    map.fire('move');
+    map.fire('mouseup', event(50, 50));
+    // Inertia may continue moving the map after the pan gesture ends.
+    map.fire('move');
+    flushFrames();
+    expect(source('draft').data.features).toHaveLength(1);
+    expect(document.querySelector('.measurement-live-label')).toBeNull();
+    expect(tool.start).not.toBeNull();
+    expect(tool.measurements).toHaveLength(0);
+});
+
 it('restores cursor and original double-click state across activation, busy editing and removal', () => {
     map.getCanvas().style.cursor = 'grab';
     map.doubleClickZoom.disable();
@@ -285,21 +443,70 @@ it('restores cursor and original double-click state across activation, busy edit
 
 it('explains each input mode explicitly without a cancel button', () => {
     tool.activate();
-    expect(tool.instructions.querySelector('button')).toBeNull();
-    expect(tool.hint.textContent).toMatch(/Hold left button.*drag.*Scroll/);
-    expect(tool.cancelHint.textContent).toMatch(/Right-click or Esc.*unfinished/);
-    expect(tool.clearHint.textContent).toBe('Click the ruler again to clear all and exit.');
+    expect(tool.instructions.querySelectorAll('button')).toHaveLength(1);
+    expect(tool.heading.textContent).toBe('Distance measurement instructions');
+    const rows = () => [...tool.gestures.children].map(row => [...row.children].map(cell => cell.textContent));
+    expect(rows()).toEqual([
+        ['Left-click', 'Start / stop'],
+        ['Left-drag', 'Pan map'],
+        ['Right-click / Esc', 'Cancel measurement'], ['Ruler icon', 'Clear all & exit'],
+    ]);
     tool.setInputMode(false, true);
-    expect(tool.prompt.textContent).toBe('Tap point A, then tap point B.');
-    expect(tool.hint.textContent).toMatch(/one finger.*Pinch/);
-    expect(tool.cancelHint.hidden).toBe(true);
-    expect(tool.clearHint.textContent).toBe('Tap the ruler again to clear all and exit.');
+    expect(rows()).toEqual([
+        ['Tap', 'Start / stop'], ['Drag', 'Pan map'],
+        ['Pinch', 'Zoom'], ['Ruler icon', 'Clear all & exit'],
+    ]);
     tool.setInputMode(true, false);
-    expect(tool.prompt.textContent).toMatch(/Enter.*point A.*crosshair/);
-    expect(tool.hint.textContent).toMatch(/Arrow keys.*zoom/);
-    expect(tool.cancelHint.textContent).toBe('Esc cancels the unfinished line.');
-    expect(tool.cancelHint.hidden).toBe(false);
-    expect(tool.clearHint.textContent).toBe('Tab to the ruler, then Enter to clear all and exit.');
+    expect(rows()).toEqual([
+        ['Enter', 'Start / stop at crosshair'], ['Arrow keys', 'Pan map'],
+        ['+ / −', 'Zoom'], ['Esc', 'Cancel measurement'],
+        ['Tab → ruler, Enter', 'Clear all & exit'],
+    ]);
+    expect(tool.instructions.textContent).not.toMatch(/point [AB]/i);
+});
+
+it('collapses instructions without measuring or clearing the draft and expands on each activation', () => {
+    tool.activate();
+    click(1, 1);
+    click(2, 2);
+    click(3, 3);
+    const draftStart = [...tool.start];
+    tool.heading.focus();
+    const mapGesture = vi.fn();
+    for (const name of ['mousedown', 'mouseup', 'click', 'touchstart', 'touchend']) map.getContainer().addEventListener(name, mapGesture);
+    tool.heading.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    tool.heading.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    tool.heading.click();
+    tool.heading.dispatchEvent(new Event('touchstart', { bubbles: true }));
+    tool.heading.dispatchEvent(new Event('touchend', { bubbles: true }));
+    expect(mapGesture).not.toHaveBeenCalled();
+    expect(tool.heading.getAttribute('aria-controls')).toBe(tool.gestures.id);
+    expect(tool.heading.getAttribute('aria-expanded')).toBe('false');
+    expect(tool.gestures.hidden).toBe(true);
+    expect(tool.instructions.hidden).toBe(false);
+    expect(document.activeElement).toBe(tool.heading);
+    expect(tool.measurements).toHaveLength(1);
+    expect(tool.start).toEqual(draftStart);
+    tool.heading.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(tool.measurements).toHaveLength(1);
+    tool.deactivate();
+    tool.activate();
+    expect(tool.heading.getAttribute('aria-expanded')).toBe('true');
+    expect(tool.gestures.hidden).toBe(false);
+});
+
+it('repositions the keyboard target when the instructions collapse or expand', () => {
+    vi.stubGlobal('innerHeight', 390);
+    map.getContainer().getBoundingClientRect = () => ({ top: 180, left: 0, right: 800, bottom: 780, width: 800, height: 600 });
+    tool.instructions.getBoundingClientRect = () => ({ top: 192, left: 300, right: 600, bottom: tool.gestures.hidden ? 216 : 310 });
+    tool.activate({ keyboard: true });
+    expect(tool.crosshair.style.top).toBe('170px');
+    tool.heading.focus();
+    tool.heading.click();
+    expect(tool.crosshair.style.top).toBe('105px');
+    expect(document.activeElement).toBe(tool.heading);
+    tool.heading.click();
+    expect(tool.crosshair.style.top).toBe('170px');
 });
 
 it('does not activate when a dialog or editor owns the interaction', () => {

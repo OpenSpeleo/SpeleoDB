@@ -32,6 +32,7 @@ export const Interactions = {
     dispatchToActiveTool(method, event) {
         const tool = this.getActiveTool();
         if (!tool) return false;
+        this.cancelPendingDrag?.();
         tool[method]?.(event);
         return true;
     },
@@ -189,11 +190,61 @@ export const Interactions = {
         let currentSnapResult = null;
         let draggedProjectId = null;
         let originalColor = null;
+        let savedHandlers = null;
 
         const self = this;
 
         // Types that snap to survey line endpoints (like stations)
         const SNAPPABLE_TYPES = ['station', 'cylinder-install', 'exploration-lead'];
+
+        const lockPan = () => {
+            savedHandlers = {
+                pan: map.dragPan.isEnabled?.() ?? true,
+                doubleClick: map.doubleClickZoom.isEnabled?.() ?? true,
+                cursor: map.getCanvas().style.cursor,
+            };
+            map.dragPan.disable();
+        };
+        const restoreHandlers = () => {
+            if (!savedHandlers) return;
+            map.getCanvas().style.cursor = savedHandlers.cursor;
+            map.dragPan[savedHandlers.pan ? 'enable' : 'disable']();
+            map.doubleClickZoom[savedHandlers.doubleClick ? 'enable' : 'disable']();
+        };
+        const resetDrag = () => {
+            isPotentialDrag = false;
+            isDragging = false;
+            hasMoved = false;
+            draggedFeatureId = null;
+            draggedType = null;
+            originalCoords = null;
+            mouseDownPoint = null;
+            currentSnapResult = null;
+            draggedProjectId = null;
+            originalColor = null;
+            savedHandlers = null;
+        };
+        // Tool handoffs must roll back transient previews without committing a
+        // drag or leaving a pressed-button gesture alive after its mouseup.
+        this.cancelPendingDrag = () => {
+            if (!isPotentialDrag) return;
+            if (hasMoved) {
+                if (draggedType === 'station') {
+                    Layers.updateStationPosition(draggedProjectId, draggedFeatureId, originalCoords);
+                    Layers.updateStationColor(draggedProjectId, draggedFeatureId, originalColor || DEFAULTS.COLORS.DEFAULT_STATION);
+                } else if (draggedType === 'cylinder-install') {
+                    Layers.updateCylinderInstallPosition(draggedFeatureId, originalCoords);
+                } else if (draggedType === 'exploration-lead') {
+                    Layers.updateExplorationLeadPosition(draggedFeatureId, originalCoords);
+                } else if (draggedType === 'landmark') {
+                    Layers.revertLandmarkPosition(draggedFeatureId, originalCoords);
+                }
+                if (draggedType === 'cylinder-install' || draggedType === 'exploration-lead') Layers.resetMarkerDragFeedback(draggedType);
+                Geometry.hideSnapIndicator();
+            }
+            restoreHandlers();
+            resetDrag();
+        };
 
         map.on('mousedown', (e) => {
             if (this.dispatchToActiveTool('handleMouseDown', e)) return;
@@ -231,7 +282,7 @@ export const Interactions = {
                     currentSnapResult = null;
 
                     // Disable pan immediately to avoid interference
-                    map.dragPan.disable();
+                    lockPan();
                     return;
                 }
             }
@@ -254,7 +305,7 @@ export const Interactions = {
                     draggedProjectId = null;
                     currentSnapResult = null;
 
-                    map.dragPan.disable();
+                    lockPan();
                     return;
                 }
             }
@@ -277,7 +328,7 @@ export const Interactions = {
                     draggedProjectId = null;
                     currentSnapResult = null;
 
-                    map.dragPan.disable();
+                    lockPan();
                     return;
                 }
             }
@@ -303,7 +354,7 @@ export const Interactions = {
                 draggedProjectId = null;
                 currentSnapResult = null;
 
-                map.dragPan.disable();
+                lockPan();
             }
         });
 
@@ -378,9 +429,7 @@ export const Interactions = {
             Geometry.hideSnapIndicator();
 
             // Restore cursor and map interactions
-            map.getCanvas().style.cursor = '';
-            map.dragPan.enable();
-            map.doubleClickZoom.enable();
+            restoreHandlers();
 
             if (wasDragging) {
                 const finalCoords = [e.lngLat.lng, e.lngLat.lat];
@@ -423,16 +472,7 @@ export const Interactions = {
             }
 
             // Reset state
-            isPotentialDrag = false;
-            isDragging = false;
-            hasMoved = false;
-            draggedFeatureId = null;
-            draggedType = null;
-            originalCoords = null;
-            mouseDownPoint = null;
-            currentSnapResult = null;
-            draggedProjectId = null;
-            originalColor = null;
+            resetDrag();
         };
 
         map.on('mouseup', onUp);

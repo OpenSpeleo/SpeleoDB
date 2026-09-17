@@ -2384,23 +2384,31 @@ select.form-input:focus {
     top: 12px;
     right: 58px;
     width: fit-content;
-    max-width: 360px;
+    max-width: 340px;
     box-sizing: border-box;
     padding: 12px 14px;
     border: 1px solid #64748b;
     border-radius: 12px;
     background: rgb(15 23 42 / 98%);
     color: #f8fafc;
-    font: 13px/1.4 system-ui, sans-serif;
+    font: 14px/1.4 system-ui, sans-serif;
     box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
     pointer-events: none;
 }
-.measurement-instructions[hidden], .measurement-instructions p[hidden], .measurement-crosshair[hidden] { display: none; }
-.measurement-instructions strong { color: #7dd3fc; font-size: 14px; font-weight: 700; }
-.measurement-instructions p { margin: 4px 0 0; }
-.measurement-instructions .measurement-prompt { font-weight: 600; }
-.measurement-instructions .measurement-hint { color: #e2e8f0; }
-.measurement-instructions .measurement-clear-hint { padding-top: 6px; margin-top: 6px; border-top: 1px solid #475569; }
+.measurement-instructions[hidden], .measurement-gestures[hidden], .measurement-crosshair[hidden] { display: none; }
+.measurement-heading { display: flex; min-height: 24px; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: #7dd3fc; font: inherit; font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; pointer-events: auto; }
+.measurement-heading:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 4px; border-radius: 2px; }
+.measurement-heading svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.measurement-heading[aria-expanded="true"] svg { transform: rotate(180deg); }
+.measurement-gestures { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 8px 0 0; }
+.measurement-gestures > div { display: contents; }
+.measurement-gestures dt { font-weight: 600; color: #e2e8f0; }
+.measurement-gestures dd { margin: 0; }
+.measurement-gestures > div:last-child::before { content: ''; display: block; grid-column: 1 / -1; border-top: 1px solid #475569; margin-top: 2px; padding-top: 2px; }
+@media (max-width: 480px) {
+    .measurement-gestures { display: block; }
+    .measurement-gestures > div { display: block; margin-top: 6px; }
+}
 .measurement-crosshair {
     position: absolute;
     top: 50%;
@@ -2437,6 +2445,7 @@ select.form-input:focus {
     .map-viewer-shell .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group > button { width: 44px; height: 44px; }
     .map-viewer-shell .map-source-menu { top: 48px; }
     .measurement-instructions { right: 66px; }
+    .measurement-heading { min-height: 44px; }
 }
 /* Two narrow control columns leave room for the ruler on short maps. */
 .map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right {
@@ -2450,7 +2459,8 @@ select.form-input:focus {
     grid-row: 1 / span 3;
     margin-right: 0;
 }
-.measurement-compact-map .measurement-instructions { right: 100px; padding: 8px 10px; }
+.measurement-compact-map .measurement-instructions { right: 100px; padding: 6px 10px; font-size: 13px; line-height: 1.3; }
+.measurement-compact-map .measurement-gestures { margin-top: 4px; row-gap: 2px; }
 @media (pointer: coarse) {
     .measurement-compact-map .measurement-instructions { right: 120px; }
 }

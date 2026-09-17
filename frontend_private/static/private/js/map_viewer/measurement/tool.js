@@ -46,17 +46,24 @@ export class MeasurementTool {
         this.instructions.className = 'measurement-instructions';
         this.instructions.setAttribute('aria-label', 'Distance measurement instructions');
         this.instructions.hidden = true;
-        const heading = document.createElement('strong');
-        heading.textContent = 'Measure distance';
-        this.prompt = document.createElement('p');
-        this.prompt.className = 'measurement-prompt';
-        this.hint = document.createElement('p');
-        this.hint.className = 'measurement-hint';
-        this.cancelHint = document.createElement('p');
-        this.cancelHint.className = 'measurement-hint';
-        this.clearHint = document.createElement('p');
-        this.clearHint.className = 'measurement-clear-hint';
-        this.instructions.append(heading, this.prompt, this.hint, this.cancelHint, this.clearHint);
+        this.heading = document.createElement('button');
+        this.heading.type = 'button';
+        this.heading.className = 'measurement-heading';
+        const title = document.createElement('span');
+        title.textContent = 'Distance measurement instructions';
+        const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        chevron.setAttribute('viewBox', '0 0 16 16');
+        chevron.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'm4 6 4 4 4-4');
+        chevron.append(path);
+        this.heading.append(title, chevron);
+        this.gestures = document.createElement('dl');
+        this.gestures.id = `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}instructions`;
+        this.gestures.className = 'measurement-gestures';
+        this.heading.setAttribute('aria-controls', this.gestures.id);
+        this.heading.setAttribute('aria-expanded', 'true');
+        this.instructions.append(this.heading, this.gestures);
         this.crosshair = document.createElement('div');
         this.crosshair.className = 'measurement-crosshair';
         this.crosshair.setAttribute('aria-hidden', 'true');
@@ -75,6 +82,13 @@ export class MeasurementTool {
             if (this.active) this.deactivate();
             else this.activate({ keyboard: event.detail === 0 });
         });
+        this.listen(this.heading, 'click', event => {
+            event.stopPropagation();
+            this.setInstructionsExpanded(this.gestures.hidden);
+        });
+        for (const name of ['mousedown', 'mouseup', 'touchstart', 'touchend', 'dblclick']) {
+            this.listen(this.heading, name, event => event.stopPropagation());
+        }
         this.listen(this.canvas, 'keydown', event => this.handleKeyDown(event));
         this.listen(this.canvas, 'mouseleave', () => this.hidePreview());
         this.listen(this.canvas, 'touchcancel', () => this.handleCancel());
@@ -87,7 +101,9 @@ export class MeasurementTool {
             this.listen(window.visualViewport, 'scroll', () => this.queueLayout());
         }
         this.onMapMove = () => {
-            if (this.active && this.keyboard && !isMapDialogOpen()) this.preview(this.centerPoint());
+            if (!this.active || isMapDialogOpen()) return;
+            if (this.keyboard) this.preview(this.centerPoint());
+            else if (!this.touch && !this.gesture?.invalid) this.preview(this.pointerPoint);
         };
         map.on('move', this.onMapMove);
         this.onMapRemove = () => this.destroy();
@@ -134,10 +150,12 @@ export class MeasurementTool {
         this.button.setAttribute('aria-pressed', 'true');
         this.button.title = 'Turn off measurement and clear all';
         this.instructions.hidden = false;
+        this.setInstructionsExpanded(true);
         this.crosshair.hidden = !keyboard;
         if (keyboard) this.canvas.focus({ preventScroll: true });
         this.updateInstructions();
-        this.announce(keyboard ? 'Measurement on. Arrow keys to pan, plus or minus to zoom, and Enter to set the first point.' : 'Measurement on. Set the first point.');
+        this.announce(keyboard ? 'Measurement on. Arrow keys to pan, plus or minus to zoom, and Enter to start measuring.'
+            : this.touch ? 'Measurement on. Tap to start measuring.' : 'Measurement on. Left-click to start measuring.');
         this.observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'style'] });
         return true;
     }
@@ -150,6 +168,7 @@ export class MeasurementTool {
         this.layoutFrame = null;
         this.start = null;
         this.gesture = null;
+        this.pointerPoint = null;
         this.suppressClick = false;
         this.measurements = [];
         this.renderer.clear();
@@ -175,9 +194,10 @@ export class MeasurementTool {
     cancelDraft() {
         if (!this.active || !this.start) return false;
         this.start = null;
+        this.pointerPoint = null;
         this.renderer.setDraft(null);
         this.updateInstructions();
-        this.announce('Unfinished measurement cancelled. Set the first point.');
+        this.announce('Unfinished measurement cancelled. Start measuring again.');
         return true;
     }
 
@@ -187,6 +207,7 @@ export class MeasurementTool {
         if (this.suppressClick) { this.suppressClick = false; return true; }
         if (event.originalEvent?.button > 0 || event.originalEvent?.detail > 1) return true;
         this.setInputMode(false, Boolean(event.originalEvent?.sourceCapabilities?.firesTouchEvents) || this.touch);
+        if (!this.touch) this.pointerPoint = event.point;
         this.commit(event.point);
         return true;
     }
@@ -221,8 +242,9 @@ export class MeasurementTool {
             this.gesture.invalid = true;
             this.suppressClick = true;
         }
-        if (this.gesture?.invalid) return true;
+        if (this.gesture?.invalid) { this.hidePreview(); return true; }
         if (!this.touch) this.setInputMode(false, false);
+        if (!this.touch) this.pointerPoint = point;
         this.preview(point);
         return true;
     }
@@ -242,7 +264,7 @@ export class MeasurementTool {
         return true;
     }
 
-    // Gesture cancellation preserves the first endpoint; explicit Cancel/Esc
+    // Gesture cancellation preserves the first endpoint; right-click/Esc
     // removes it. A browser touchcancel must never complete a measurement.
     handleCancel() {
         if (!this.active) return false;
@@ -270,6 +292,7 @@ export class MeasurementTool {
         if (this.keyboard === keyboard && this.touch === touch) return;
         this.keyboard = keyboard;
         this.touch = touch;
+        this.pointerPoint = null;
         this.crosshair.hidden = !keyboard;
         this.updateInstructions();
     }
@@ -311,11 +334,11 @@ export class MeasurementTool {
         if (!this.start) {
             this.start = coordinate;
             this.renderer.setDraft({ start: this.start, end: null });
-            this.announce('First point set. Set the second point.');
+            this.announce('Measurement started. Choose where to stop measuring.');
         } else {
             const measurement = createMeasurement(this.start, coordinate, ++this.nextId);
             if (!measurement || measurement.distanceMeters === 0) {
-                this.announce('Choose a different point to complete the distance.');
+                this.announce('Choose a different location to stop measuring.');
                 return;
             }
             this.measurements.push(measurement);
@@ -326,7 +349,7 @@ export class MeasurementTool {
             const item = document.createElement('li');
             item.textContent = `Measurement ${this.measurements.length}: ${label}`;
             this.results.append(item);
-            this.announce(`Measurement ${this.measurements.length}: ${label}. Set the first point to measure again.`);
+            this.announce(`Measurement ${this.measurements.length}: ${label}. Start measuring again.`);
         }
         this.updateInstructions();
     }
@@ -338,6 +361,7 @@ export class MeasurementTool {
     }
 
     hidePreview() {
+        this.pointerPoint = null;
         if (this.active && this.start) this.renderer.setDraft({ start: this.start, end: null });
     }
 
@@ -351,22 +375,38 @@ export class MeasurementTool {
     }
 
     updateInstructions() {
-        if (this.keyboard) {
-            this.prompt.textContent = `Press Enter to set point ${this.start ? 'B' : 'A'} at the crosshair.${this.start ? '' : this.measurements.length ? ' Start another measurement.' : ''}`;
-            this.hint.textContent = 'Arrow keys move the map. + / − zoom.';
-            this.cancelHint.textContent = 'Esc cancels the unfinished line.';
-            this.clearHint.textContent = 'Tab to the ruler, then Enter to clear all and exit.';
-        } else if (this.touch) {
-            this.prompt.textContent = this.start ? 'Tap point B to finish.' : this.measurements.length ? 'Tap point A to measure again.' : 'Tap point A, then tap point B.';
-            this.hint.textContent = 'Drag with one finger to move the map. Pinch to zoom.';
-            this.clearHint.textContent = 'Tap the ruler again to clear all and exit.';
-        } else {
-            this.prompt.textContent = this.start ? 'Move the pointer to preview. Left-click point B to finish.' : this.measurements.length ? 'Left-click point A to measure again.' : 'Left-click point A, move the pointer, then left-click point B.';
-            this.hint.textContent = 'Hold left button + drag to move the map. Scroll to zoom.';
-            this.cancelHint.textContent = 'Right-click or Esc cancels the unfinished line.';
-            this.clearHint.textContent = 'Click the ruler again to clear all and exit.';
-        }
-        this.cancelHint.hidden = this.touch;
+        const rows = this.keyboard ? [
+            ['Enter', 'Start / stop at crosshair'],
+            ['Arrow keys', 'Pan map'],
+            ['+ / −', 'Zoom'],
+            ['Esc', 'Cancel measurement'],
+            ['Tab → ruler, Enter', 'Clear all & exit'],
+        ] : this.touch ? [
+            ['Tap', 'Start / stop'],
+            ['Drag', 'Pan map'],
+            ['Pinch', 'Zoom'],
+            ['Ruler icon', 'Clear all & exit'],
+        ] : [
+            ['Left-click', 'Start / stop'],
+            ['Left-drag', 'Pan map'],
+            ['Right-click / Esc', 'Cancel measurement'],
+            ['Ruler icon', 'Clear all & exit'],
+        ];
+        this.gestures.replaceChildren(...rows.map(([action, meaning]) => {
+            const row = document.createElement('div');
+            const term = document.createElement('dt');
+            const description = document.createElement('dd');
+            term.textContent = action;
+            description.textContent = meaning;
+            row.append(term, description);
+            return row;
+        }));
+        this.layout();
+    }
+
+    setInstructionsExpanded(expanded) {
+        this.gestures.hidden = !expanded;
+        this.heading.setAttribute('aria-expanded', String(expanded));
         this.layout();
     }
 
