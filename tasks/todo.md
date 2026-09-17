@@ -702,3 +702,7 @@ build checks; its Markdown formatting changes were reviewed before the final
 rerun.
 
 Final `prek run -a`: all checks passed. Final browser checks passed again.
+
+Import label follow-up: renamed the green toolbar action to Import GPX/KML.
+Build, 1,258 JavaScript tests, and 79 focused Python tests passed. Chromium
+verified the label, sizing, and import dialog at desktop and phone widths.

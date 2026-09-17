@@ -115,7 +115,7 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
             'id="import-data-button"'
         )
         assert "Create Geometry</span>" in actions
-        assert "Import GPS</span>" in actions
+        assert "Import GPX/KML</span>" in actions
         assert 'id="station-manager-button"' in content
         assert 'id="surface-station-manager-button"' in content
         assert 'id="landmark-manager-button"' in content

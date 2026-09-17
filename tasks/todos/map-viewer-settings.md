@@ -2,8 +2,8 @@
 
 ## Agreed design
 
-Four equal-width actions: **Create Geometry → Import GPS → Managers →
-Settings**. Import GPS is green. Managers provides direct access to Survey
+Four equal-width actions: **Create Geometry → Import GPX/KML → Managers →
+Settings**. Import GPX/KML is green. Managers provides direct access to Survey
 Stations, Surface Stations, and Landmarks. Settings contains compact color
 controls and five marker visibility categories, with five survey-station types.
 Its footer has danger **Reset** and **Close** buttons. It does not contain
@@ -51,6 +51,15 @@ gaps, and fullscreen excluding toolbar/managers. No product mutations were made
 during planning.
 
 ## Review
+
+### Import label follow-up
+
+- [x] Rename the toolbar action to Import GPX/KML and update its existing test.
+- [x] Rebuild assets and verify tests, the import action, and narrow layouts.
+
+Verified 1,258 JavaScript tests, 79 focused Python tests, and a clean build.
+Chromium confirms the label, equal widths, no overflow, and import dialog
+open/close at 1440px, 390px, and 320px. No GitLab repositories were created.
 
 ### Final adversarial review and commit
 

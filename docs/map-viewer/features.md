@@ -71,7 +71,7 @@ control icon is the trusted static `MAP_SOURCE_ICON_SVG` constant in
 
 ## 1. Station Management
 
-The private toolbar provides Create Geometry, Import GPS, Managers, and
+The private toolbar provides Create Geometry, Import GPX/KML, Managers, and
 Settings. Settings owns color and marker visibility preferences. Managers
 separately opens Survey Stations, Surface Stations, and Landmarks. See
 [Settings design](settings.md) for visibility composition, persistence,

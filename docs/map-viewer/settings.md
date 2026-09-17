@@ -3,16 +3,16 @@
 ## Intent and ownership
 
 The private Survey Viewer separates authoring from display preferences. Its
-toolbar contains four equal-width buttons: **Create Geometry**, **Import GPS**,
-**Managers**, and **Settings**. Import GPS uses green, Managers blue, and
-Settings purple, with matching hover/open states. The selected color mode uses
-an indigo fill and white text so its state is immediately visible. All manager
-rows share full-width hit areas and highlights; obsolete ID-specific toolbar
-widths must not override their menu styling. Managers gives direct access to
-Survey Stations, Surface Stations, and Landmarks; entity management is separate
-from display preferences. Settings contains compact color controls and marker
-visibility. Per-project and per-record panels remain on the map and own record
-selection. Hiding a marker category never rewrites those selections.
+toolbar contains four equal-width buttons: **Create Geometry**, **Import
+GPX/KML**, **Managers**, and **Settings**. Import GPX/KML uses green, Managers
+blue, and Settings purple, with matching hover/open states. The selected color
+mode uses an indigo fill and white text so its state is immediately visible. All
+manager rows share full-width hit areas and highlights; obsolete ID-specific
+toolbar widths must not override their menu styling. Managers gives direct
+access to Survey Stations, Surface Stations, and Landmarks; entity management is
+separate from display preferences. Settings contains compact color controls and
+marker visibility. Per-project and per-record panels remain on the map and own
+record selection. Hiding a marker category never rewrites those selections.
 
 Changes apply immediately. Close, Escape, and backdrop dismissal keep changes.
 Desktop uses a centered, constrained dialog; phones use the viewport with a
