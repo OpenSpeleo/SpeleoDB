@@ -42,6 +42,14 @@ export const State = {
     gisLayerBounds: new Map(),
     gisLayerClickableLayerIds: new Set(),
 
+    // GIS Geometry is private, lazy-loaded, and hidden on every fresh session.
+    gisGeometryStates: new Map(),
+    gisGeometryCache: new Map(),
+    gisGeometryLoading: new Map(),
+    allGISGeometryLayers: new Map(),
+    gisGeometryBounds: new Map(),
+    gisGeometryEditingId: null,
+
     // Resets layer and map data state. Does NOT reset map instance,
     // userTags, tagColors, currentStationForTagging, or currentProjectId.
     resetLayerState: function () {
@@ -74,5 +82,11 @@ export const State = {
         this.allGISLayerLayers = new Map();
         this.gisLayerBounds = new Map();
         this.gisLayerClickableLayerIds = new Set();
+        this.gisGeometryStates = new Map();
+        this.gisGeometryCache = new Map();
+        this.gisGeometryLoading = new Map();
+        this.allGISGeometryLayers = new Map();
+        this.gisGeometryBounds = new Map();
+        this.gisGeometryEditingId = null;
     }
 };

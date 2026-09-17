@@ -606,6 +606,24 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/gis-geometries/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometryCollectionAPIView",
+        "name": "api:v1:gis-geometry-list",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-geometries/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometrySpecificAPIView",
+        "name": "api:v1:gis-geometry-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v1/gis-geometries/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometryPermissionAPIView",
+        "name": "api:v1:gis-geometry-permissions",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/gis-layers/",
         "module": "speleodb.api.v2.views.gis_layer.GISLayerCollectionAPIView",
         "name": "api:v1:gis-layers",
@@ -1491,6 +1509,24 @@
         "url": "/api/v2/exploration-leads/geojson/",
         "module": "speleodb.api.v2.views.exploration_lead.AllExploLeadsGeoJSONApiView",
         "name": "api:v2:exploration-lead-all-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-geometries/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometryCollectionAPIView",
+        "name": "api:v2:gis-geometry-list",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-geometries/<uuid:id>/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometrySpecificAPIView",
+        "name": "api:v2:gis-geometry-detail",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/gis-geometries/<uuid:id>/permissions/",
+        "module": "speleodb.api.v2.views.gis_geometry.GISGeometryPermissionAPIView",
+        "name": "api:v2:gis-geometry-permissions",
         "decorators": ""
     },
     {
@@ -2457,6 +2493,30 @@
         "url": "/private/feedback/",
         "module": "frontend_private.views.user.FeedbackView",
         "name": "private:user_feedback",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-geometries/",
+        "module": "frontend_private.views.gis_geometries.GISGeometryListView",
+        "name": "private:gis_geometries",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-geometry/<uuid:geometry_id>/",
+        "module": "frontend_private.views.gis_geometries.GISGeometryDetailsView",
+        "name": "private:gis_geometry_details",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-geometry/<uuid:geometry_id>/danger_zone/",
+        "module": "frontend_private.views.gis_geometries.GISGeometryDangerZoneView",
+        "name": "private:gis_geometry_danger_zone",
+        "decorators": ""
+    },
+    {
+        "url": "/private/gis-geometry/<uuid:geometry_id>/permissions/",
+        "module": "frontend_private.views.gis_geometries.GISGeometryUserPermissionsView",
+        "name": "private:gis_geometry_user_permissions",
         "decorators": ""
     },
     {

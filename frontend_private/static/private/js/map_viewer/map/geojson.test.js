@@ -61,3 +61,12 @@ it('uses the smallest bbox for geometry crossing the antimeridian', () => {
 
     expect(bounds.coordinates).toEqual([[179, 20], [293, 22]]);
 });
+
+it('preserves the full extent of non-wrapping authoring geometry', () => {
+    const bounds = computeGeoJSONBounds({
+        type: 'LineString',
+        coordinates: [[-170, 0], [0, 0], [170, 0]],
+    }, { wrapLongitude: false });
+
+    expect(bounds.coordinates).toEqual([[-170, 0], [170, 0]]);
+});

@@ -1,0 +1,83 @@
+{% extends "base_private.html" %}
+
+{% load static vite_assets %}
+
+{% block extra_css %}
+  {% vite_preload 'controller-gis-geometries' %}
+  {% vite_styles 'style-template-frontend-private-templates-pages-gis-layers' %}
+{% endblock extra_css %}
+{% block content %}
+  <main class="grow">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
+      {% csrf_token %}
+      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <div class="mb-4 sm:mb-0 sm:mr-8">
+          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">My GIS Geometry</h1>
+          <p class="text-slate-400 mt-2">Draw a line or polygon on the survey map and share it with your collaborators.</p>
+        </div>
+        <a href="{% url 'private:map_viewer' %}?geometry=new"
+           class="btn bg-indigo-500 hover:bg-indigo-600 text-white shrink-0">
+          <svg class="w-4 h-4 mr-2 stroke-current fill-none"
+               viewBox="0 0 24 24"
+               stroke-width="2"
+               aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Create geometry
+        </a>
+      </div>
+      <div class="tracks-cards md:hidden">
+        <div id="gis-geometries-cards-container" class="p-4">
+          <p class="text-center py-12 text-slate-400">Loading GIS Geometry…</p>
+        </div>
+      </div>
+      <div class="tracks-table hidden md:block bg-slate-800 shadow-lg rounded-xs border border-slate-700">
+        <div class="overflow-x-auto">
+          <table class="table-auto w-full text-slate-300">
+            <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
+              <tr>
+                <th class="px-2 first:pl-5 last:pr-5 py-3 w-12">
+                  <div class="font-semibold text-center">#</div>
+                </th>
+                <th class="px-2 first:pl-5 last:pr-5 py-3">
+                  <div class="font-semibold text-left">Geometry Name</div>
+                </th>
+                <th class="px-2 first:pl-5 last:pr-5 py-3 w-52">
+                  <div class="font-semibold text-center">Creator</div>
+                </th>
+                <th class="px-2 first:pl-5 last:pr-5 py-3 w-40">
+                  <div class="font-semibold text-center">Access Level</div>
+                </th>
+                <th class="px-2 first:pl-5 last:pr-5 py-3 w-48">
+                  <div class="font-semibold text-center">Creation Date</div>
+                </th>
+                <th class="px-2 first:pl-5 last:pr-5 py-3 w-44">
+                  <div class="font-semibold text-center">Actions</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="gis-geometries-table-body"
+                   class="text-sm row-divide-y row-divide-slate-200 row-divide-slate-700">
+              <tr>
+                <td colspan="6" class="px-2 py-8 text-center text-slate-400">Loading GIS Geometry…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  {% include "snippets/modal_success.html" %}
+  {% include "snippets/modal_error.html" %}
+{% endblock content %}
+{% block extra_js %}
+  <script src="{% url 'url_reverse.js' %}"></script>
+{% endblock extra_js %}
+{% block inline_extra_js %}
+  <script type="application/json" data-speleodb-controller="gis-geometries">
+    {
+      "listEndpoint": "{% url 'api:v2:gis-geometry-list' %}",
+      "openIconUrl": "{% static 'private/media/right_arrow.svg' %}"
+    }
+  </script>
+{% endblock inline_extra_js %}

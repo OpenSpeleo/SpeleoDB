@@ -1,5 +1,40 @@
 # Task reviews
 
+## Folded map cards and lighter GIS Geometry
+
+Projects, GPS Tracks, GIS Layers, and GIS Geometry now share a 160 × 48 px
+folded card size. Chromium verified identical chevron/label offsets and no
+overflow using production CSS. GIS Geometry polygon opacity is halved to 17.5%
+when saved and 9% in the editor, with constants centralized and no new UI
+control.
+
+See [the follow-up checklist](todos/folded-map-panels.md).
+
+## GIS Geometry
+
+Implemented private line/polygon authoring, shared GIS Layer management
+patterns, direct-user access, editable GeoJSON, revision-safe persistence, and a
+native Mapbox draft editor. One JSON contract supplies both Python and
+JavaScript with the 30 km² bounding-box maximum, 8 km² warning, supported types,
+and vertex/coordinate limits; paired runtime tests verify those values against
+the same source.
+
+The viewer starts geometry hidden, fetches coordinates on demand, preserves
+drafts after failed saves, and restores saved visibility on Revert. Creation
+lives beside Import GPS, overlay sections use consistent chevrons, and camera
+framing accounts for the inspector, panels, and visible viewport. The mobile
+sheet keeps its actions reachable during scrolling, keyboard use, and
+fullscreen.
+
+Verification: 1,155 JavaScript tests pass. The full Python run passed 4,863
+tests with 178 skips and found one native Node JSON import failure, fixed and
+verified in a final PostgreSQL run of 67 tests plus three subtests. Ten final
+private-page tests pass. GitLab audit stayed at nine creations and ten POSTs,
+with zero violations/unresolved outcomes and verified deletion marks for all
+nine. Repository hooks, types, migrations, clean builds, and real browser
+workflows pass. See [the feature review](todos/gis-geometry.md) and
+[design documentation](../docs/gis-geometries.md).
+
 ## Local GitLab stale branch-protection cache
 
 Diagnosed an empty protection-rule list with a stale `protected=true` result in
@@ -447,3 +482,66 @@ final full container run passed 4,796 Python tests (178 skipped) and all 1,040
 JavaScript tests. The repeat GitLab audit stayed at nine repositories and ten
 POSTs with no violations or unresolved outcomes; deletion marks were verified.
 Final `prek run -a` passed every hook after test-lint and formatting fixes.
+
+# GIS Geometry visibility controls review
+
+Replaced the bare geometry checkboxes with the existing map panel toggle markup
+and shared styling. Label activation, visibility state, loading locks, and edit
+locks are covered. All 1,156 JavaScript tests, lint, and the clean production
+build pass in the application container; Chromium confirmed the rendered
+switches in both states. See [the task](todos/geometry-visibility-toggles.md).
+
+# Geometry creation defaults review
+
+Swapped the toolbar actions to Create Geometry, Import GPS. New drafts randomly
+select from the existing server-provided palette once when opened; editing keeps
+the stored color. All 1,158 JavaScript tests, lint, and the clean production
+build pass in the application container. See
+[the task](todos/geometry-creation-defaults.md).
+
+# Live toolbar refresh review
+
+Confirmed the running development server was serving cached pre-swap markup.
+Restarted it with automatic reload enabled and verified actual browser positions
+at desktop and mobile widths: Create Geometry is left of Import GPS. See
+[the reproduction and verification](todos/geometry-toolbar-live-refresh.md).
+
+# Backend GIS menu order review
+
+Reordered the existing sidebar blocks to My GIS Geometry, My GIS Layers, then My
+GPS Tracks. Verified the actual authenticated HTTP response from the running
+server. Template lint and all 1,158 JavaScript tests pass. See
+[the task](todos/geometry-menu-order.md).
+
+# GIS Geometry export review
+
+Account exports now include each readable active GIS Geometry as stored GeoJSON
+in `geometries/`, with revision and metadata in the manifest. Imported layer
+files use `layers/`; new archives identify the layout as format version 2. The
+existing permission snapshot, staging, checksums, progress, and archive upload
+are reused.
+
+Passed 69 focused Python tests, 1,158 JavaScript tests, all applicable
+pre-commit checks, and the clean Vite build inside the running container.
+Confirmed the live export page lists six datasets. See
+[the task](todos/gis-geometry-export.md).
+
+# GIS Geometry adversarial review
+
+Three reviewers covered backend authorization/validation, editor interactions,
+and frontend integration; the main review covered exports and final integration.
+Corrected gesture boundaries, keyboard focus/activation, GPS updates at the
+vertex cap, and metadata retry races. Added real PostgreSQL concurrent-writer
+tests. The user's architecture correction removes the GIS-only generic
+permission view and serializer base: Geometry uses explicit typed endpoints and
+the existing shared validators, while GIS Layer's original implementation is
+restored.
+
+All 4,870 Python tests (181 skips), 1,174 JavaScript tests, and 79 PostgreSQL
+tests (plus three subtests) passed. The full GitLab audit stayed within nine
+creations and ten POSTs, with zero violations/unresolved outcomes and confirmed
+deletion marks for all nine repositories. Real Chromium verified the
+keyboard/GPS/save flow, visibility focus, direct-link close behavior, editing at
+the vertex cap, and mobile controls using the clean production build. Final
+full-suite and pre-commit evidence is recorded in
+[the review task](todos/gis-geometry-adversarial-review.md).

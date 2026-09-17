@@ -11,6 +11,7 @@ const OVERLAY_LAYER_PREFIXES = Object.freeze([
     'gps-track-line-',
     'gps-track-points-',
     'gis-layer-',
+    'gis-geometry-',
     'stations-',
     'surface-stations-',
     'landmarks-',

@@ -343,7 +343,8 @@ def test_live_export_download_notification_and_expiration(
             "manifest.json",
             "projects/",
             "geojsons/",
-            "gis_layers/",
+            "geometries/",
+            "layers/",
             "gps tracks/",
             "landmarks/",
         }

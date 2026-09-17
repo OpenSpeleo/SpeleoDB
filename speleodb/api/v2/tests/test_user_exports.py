@@ -279,6 +279,9 @@ class TestUserExports(BaseAPITestCase):
         assert html.count('id="export-history"') == 1
         assert "Recent exports" not in html
         assert "24 hours" in html
+        assert "6 datasets" in html
+        assert "GIS geometries" in html
+        assert "Your accessible lines and polygons as GeoJSON" in html
         assert 'name="csrfmiddlewaretoken"' in html
 
     def test_admin_staff_can_inspect_and_retry_but_cannot_download_others_exports(

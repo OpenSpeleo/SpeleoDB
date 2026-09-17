@@ -27,6 +27,10 @@
  *       onSuccess: function(response) {},
  *       redirectDelayMs: 2000,
  *       redirectFromResponse: function(response) { return url; }, // dynamic
+ *       submitOnForm: true, // handle form submission, including the Enter key
+ *       onPendingChange: function(pending) {}, // optional busy state + duplicate guard
+ *       onError: function(xhr) {}, // optional inline error presentation
+ *       showSuccessModal: false, // caller presents success through onSuccess
  *   });
  *
  * Requires: jQuery, FormModals, showAjaxErrorModal.
@@ -58,8 +62,11 @@ export function attachEntityCrudForm(options) {
 
     FormModals.bindAutoDismiss();
 
-    $('#' + submitBtnId).click(function (e) {
+    var pending = false;
+    var submitTarget = options.submitOnForm ? $('#' + formId) : $('#' + submitBtnId);
+    submitTarget.on(options.submitOnForm ? 'submit' : 'click', function (e) {
         e.preventDefault();
+        if (options.onPendingChange && pending) { return false; }
 
         $('#error_div').hide();
         $('#success_div').hide();
@@ -83,6 +90,8 @@ export function attachEntityCrudForm(options) {
             ? serialize(payload)
             : JSON.stringify(payload);
 
+        pending = true;
+        options.onPendingChange?.(true);
         $.ajax({
             url: endpoint,
             method: method,
@@ -94,7 +103,9 @@ export function attachEntityCrudForm(options) {
                 return true;
             },
             success: function (response) {
-                FormModals.showSuccess(successMessage);
+                if (options.showSuccessModal !== false) {
+                    FormModals.showSuccess(successMessage);
+                }
                 if (typeof onSuccess === 'function') { onSuccess(response); }
                 var target = typeof redirectFromResponse === 'function'
                     ? redirectFromResponse(response)
@@ -110,7 +121,15 @@ export function attachEntityCrudForm(options) {
                 }
             },
             error: function (xhr) {
-                showAjaxErrorModal(xhr);
+                if (typeof options.onError === 'function') {
+                    options.onError(xhr);
+                } else {
+                    showAjaxErrorModal(xhr);
+                }
+            },
+            complete: function () {
+                pending = false;
+                options.onPendingChange?.(false);
             },
         });
         return false;

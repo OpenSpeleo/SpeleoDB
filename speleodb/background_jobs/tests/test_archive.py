@@ -504,8 +504,12 @@ def test_gis_missing_file_keeps_other_file(
     )
     assert result.partial
     assert result.manifest["resources"][0]["outcome"] == "PARTIAL"
+    assert result.manifest["resources"][0]["category"] == "layers"
+    assert result.manifest["omissions"][0]["category"] == "layers"
+    assert result.manifest["omissions"][0]["path"].startswith("layers/")
     with ZipFile(tmp_path / "export.zip") as archive:
         path: str = result.manifest["resources"][0]["files"][0]["path"]
+        assert path.startswith("layers/")
         assert archive.read(path) == b"data"
 
 
@@ -528,6 +532,11 @@ def test_gis_identical_source_is_not_duplicated(
         "source.geojson"
     )
     assert len(result.manifest["resources"][0]["files"]) == 1
+    assert result.manifest["resources"][0]["category"] == "layers"
+    with ZipFile(tmp_path / "export.zip") as archive:
+        assert "layers/" in archive.namelist()
+        assert not any(name.startswith("gis_layers/") for name in archive.namelist())
+        assert archive.read(f"layers/layer--{layer.id}/source.geojson") == EMPTY_GEOJSON
 
 
 @pytest.mark.django_db

@@ -2,6 +2,7 @@
 
 {% load static %}
 {% load vite_assets %}
+{% load project_colors %}
 
 {% block extra_css %}
   {# Resource hints: warm cross-origin connections on the map load path so the #}
@@ -16,21 +17,20 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
   <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css'
         rel='stylesheet' />
-  {% vite_styles 'style-shared-modal' 'style-map-viewer' %}
+  {% vite_styles 'style-shared-modal' 'style-map-viewer' 'style-gis-geometry-map' %}
   {% vite_preload 'controller-private-map' %}
 {% endblock extra_css %}
 {% block content %}
   <main class="grow">
     <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
       <!-- Page header -->
-      <div class="sm:flex sm:justify-between sm:items-center mb-8">
+      <div class="map-viewer-header">
         <!-- Left: Title -->
-        <div class="mb-4 sm:mb-0">
-          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Survey Viewer</h1>
+        <div class="map-viewer-heading">
+          <h1 class="text-xl md:text-2xl text-slate-100 font-bold">Survey Viewer</h1>
         </div>
         <!-- Right: Actions -->
-        <div id="page-actions"
-             class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+        <div id="page-actions" class="map-viewer-actions">
           <!-- Color Mode Toggle: button-sized, explicit label -->
           <label id="color-mode-button"
                  for="color-mode-toggle"
@@ -39,7 +39,7 @@
               <input id="color-mode-toggle" aria-label="Color by depth" type="checkbox" />
               <span class="toggle-slider"></span>
             </span>
-            <span id="color-mode-label" class="hidden xs:block ml-1">Color: By Survey</span>
+            <span id="color-mode-label" class="map-viewer-action-label">Color: By Survey</span>
           </label>
           <!-- Landmarks Toggle: button-sized, explicit label -->
           <label id="landmarks-toggle-button"
@@ -52,11 +52,13 @@
                      checked />
               <span class="toggle-slider"></span>
             </span>
-            <span class="hidden xs:block ml-1">Landmarks</span>
+            <span class="map-viewer-action-label">Landmarks</span>
           </label>
           <!-- Station Management button -->
           <button type="button"
                   id="station-manager-button"
+                  aria-label="Survey Stations"
+                  title="Survey Stations"
                   class="btn bg-orange-500 hover:bg-orange-600 text-white">
             <svg class="w-4 h-4 stroke-current fill-none shrink-0"
                  stroke-width="2"
@@ -66,11 +68,13 @@
               <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span class="hidden xs:block ml-2">Survey Stations</span>
+            <span class="map-viewer-action-label map-viewer-action-label--optional">Survey Stations</span>
           </button>
           <!-- Surface Station Management button -->
           <button type="button"
                   id="surface-station-manager-button"
+                  aria-label="Surface Stations"
+                  title="Surface Stations"
                   class="btn bg-emerald-500 hover:bg-emerald-600 text-white">
             <svg class="w-4 h-4 stroke-current fill-current shrink-0"
                  stroke-width="2"
@@ -79,11 +83,13 @@
                  viewBox="112.31 64 799.38 896">
               <path d="m574 304 4 38a16 16 0 0 1-16 18h-18v122h12c9 0 16 7 16 16v36h103a120 120 0 1 1 0 56H572v76a16 16 0 0 1-16 16h-12v198h39a32 32 0 0 1 32 29l4 42a8 8 0 0 1-8 9H413a8 8 0 0 1-8-9l4-42a32 32 0 0 1 32-29h39V682h-12a16 16 0 0 1-16-16v-76H349a120 120 0 1 1 0-56h103v-36c0-9 7-16 16-16h12V360h-18a16 16 0 0 1-16-18l13-128a16 16 0 0 1 15-14h76c8 0 15 6 15 14l4 34h127l11-177a8 8 0 0 1 8-7h154c4 0 7 3 8 7l14 224a8 8 0 0 1-8 9H574zM232 518a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm560 0a44 44 0 1 0 0 88 44 44 0 0 0 0-88zm32-398h-64l-8 128h80l-8-128z" />
             </svg>
-            <span class="hidden xs:block ml-2">Surface Stations</span>
+            <span class="map-viewer-action-label map-viewer-action-label--optional">Surface Stations</span>
           </button>
           <!-- Landmark Management button -->
           <button type="button"
                   id="landmark-manager-button"
+                  aria-label="Manage Landmarks"
+                  title="Manage Landmarks"
                   class="btn bg-blue-500 hover:bg-blue-600 text-white">
             <svg class="w-4 h-4 stroke-current fill-none shrink-0"
                  stroke-width="2"
@@ -93,22 +99,43 @@
               <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
               <path d="M12 17l-1 -4l-4 -1l9 -4z" />
             </svg>
-            <span class="hidden xs:block ml-2">Landmarks</span>
+            <span class="map-viewer-action-label map-viewer-action-label--optional">Landmarks</span>
           </button>
-          <!-- Import Data -->
-          <button type="button"
-                  id="import-data-button"
-                  class="btn bg-red-600 hover:bg-red-700 text-white"
-                  title="Import GPX, KML, KMZ files (Google Earth)">
-            <svg class="w-4 h-4 stroke-current fill-none shrink-0"
-                 stroke-width="2"
-                 stroke-linecap="round"
-                 stroke-linejoin="round"
-                 viewBox="0 0 24 24">
-              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            <span class="hidden xs:block ml-2">Import GPS</span>
-          </button>
+          <div class="map-viewer-authoring-actions">
+            <button type="button"
+                    id="create-geometry-btn"
+                    class="btn bg-indigo-600 hover:bg-indigo-500 text-white"
+                    title="Draw a line or polygon"
+                    aria-label="Create Geometry">
+              <svg class="w-4 h-4 stroke-current fill-none shrink-0"
+                   stroke-width="1.8"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   viewBox="0 0 24 24"
+                   aria-hidden="true">
+                <path d="m5 17 4-11 10 10-14 1Z" />
+                <circle cx="9" cy="6" r="2" />
+                <circle cx="5" cy="17" r="2" />
+                <circle cx="19" cy="16" r="2" />
+              </svg>
+              <span class="map-viewer-action-label">Create Geometry</span>
+            </button>
+            <!-- Import Data -->
+            <button type="button"
+                    id="import-data-button"
+                    class="btn bg-red-600 hover:bg-red-700 text-white"
+                    aria-label="Import GPS"
+                    title="Import GPX, KML, KMZ files (Google Earth)">
+              <svg class="w-4 h-4 stroke-current fill-none shrink-0"
+                   stroke-width="2"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   viewBox="0 0 24 24">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span class="map-viewer-action-label map-viewer-action-label--optional">Import GPS</span>
+            </button>
+          </div>
         </div>
       </div>
       <!-- Table -->
@@ -295,10 +322,14 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
 {% endblock extra_js %}
 {% block inline_extra_js %}
+  {% get_project_color_palette as geometry_colors %}
   <script type="application/json" data-speleodb-controller="private-map">
     {
       "csrfToken": "{{ csrf_token|escapejs }}",
       "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+      "geometryColors": [{% for color in geometry_colors %} "{{ color|escapejs }}"
+        {% if not forloop.last %}, {% endif %}{% endfor %}
+      ],
       "icons": {
         "cylinderOrange": "{% static 'private/media/cylinder-orange-icon.png' %}",
         "explorationLead": "{% static 'private/media/exploration-lead-icon.png' %}",

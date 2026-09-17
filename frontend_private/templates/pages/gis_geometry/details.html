@@ -1,0 +1,64 @@
+{% extends "pages/shared/entity_settings/details.html" %}
+
+{% load vite_assets %}
+
+{% block extra_css %}
+  {{ block.super }}
+  {% vite_preload 'controller-gis-geometry-details' %}
+  {% vite_styles 'style-gis-geometry-management' %}
+{% endblock extra_css %}
+{% block entity_details_extra %}
+  <section class="geometry-details p-6 border-t border-slate-700"
+           aria-labelledby="geometry-details-heading">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h3 id="geometry-details-heading"
+            class="text-lg font-semibold text-slate-100">Geometry</h3>
+        <p class="text-sm text-slate-400 mt-1">Created by {{ entity.created_by }}</p>
+      </div>
+      <a class="btn bg-slate-700 hover:bg-slate-600 text-white"
+         href="{{ map_url }}{% if has_write_access %}&amp;edit=1{% endif %}">
+        {% if has_write_access %}Edit on map{% else %}View on map{% endif %}
+      </a>
+    </div>
+    <p id="geometry-summary"
+       class="geometry-details__summary text-sm text-slate-300"></p>
+    <p id="geometry-limit-help" class="text-sm text-slate-400 mt-2">
+      The bounding box is the smallest rectangle around your geometry. It cannot exceed {{ geometry_max_area_km2|floatformat:"-2" }} km² to keep the map responsive.
+    </p>
+    <details id="geometry-json-disclosure" class="geometry-details__advanced mt-5">
+      <summary class="cursor-pointer text-sm font-medium text-slate-200">
+        Advanced: GeoJSON <span id="geometry-json-status" class="text-slate-400"></span>
+      </summary>
+      <p id="geometry-json-help" class="text-sm text-slate-400 mt-3 mb-3">
+        One {{ geometry_supported_types }}, with up to {{ geometry_max_vertices }} vertices and no holes. Polygon closure does not count as a vertex.
+        {% if has_write_access %}Changes are saved together with the name and color.{% endif %}
+      </p>
+      <label for="geometry-geojson" class="sr-only">GeoJSON geometry</label>
+      <textarea id="geometry-geojson"
+                class="geometry-details__json form-textarea w-full"
+                rows="12"
+                spellcheck="false"
+                aria-describedby="geometry-json-help geometry-limit-help geometry-error"
+                {% if not has_write_access %}readonly{% endif %}>{{ geojson_text }}</textarea>
+    </details>
+    <p id="geometry-error"
+       class="geometry-details__error mt-3"
+       role="alert"
+       hidden></p>
+    <p id="geometry-saved"
+       class="text-sm text-emerald-400 mt-3"
+       role="status"
+       hidden>Changes saved.</p>
+  </section>
+{% endblock entity_details_extra %}
+{% block inline_extra_js %}
+  <script type="application/json" data-speleodb-controller="gis-geometry-details">
+    {
+      "formId": "{{ details_form_id }}",
+      "endpoint": "{{ api_detail_url }}",
+      "revision": {{ entity.revision }},
+      "canWrite": {% if has_write_access %}true{% else %}false{% endif %}
+    }
+  </script>
+{% endblock inline_extra_js %}

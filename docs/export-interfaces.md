@@ -9,12 +9,14 @@ hide a valid archive. The application job service owns permission decisions,
 request deduplication, retries, and signing. Views do not enqueue arbitrary
 tasks.
 
-The feature exports the five documented dataset categories. It is not an account
-restoration format. Project access must be Read Only or higher; Web Viewer
-access does not qualify. Generation failures affecting individual sources appear
-as explicit omissions in the page and archive manifest. Project folders contain
-readable current files and `.git/` history; zero-commit projects contain only
-the empty `PROJECT IS EMPTY` marker. Downloads are named
+The feature exports six documented dataset categories, including GIS Geometries
+as GeoJSON in `geometries/` and imported GIS Layers in `layers/`. New archives
+use manifest format version 2. It is not an account restoration format. Project
+access must be Read Only or higher; Web Viewer access does not qualify.
+Generation failures affecting individual sources appear as explicit omissions in
+the page and archive manifest. Project folders contain readable current files
+and `.git/` history; zero-commit projects contain only the empty
+`PROJECT IS EMPTY` marker. Downloads are named
 `speleodb-export-YYYY-MM-DDTHH-MM-SSZ-<attempt-uuid>.zip`, with a UTC timestamp.
 New objects use the flat key `exports/{filename}.zip` with that same basename.
 

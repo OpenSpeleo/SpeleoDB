@@ -86,6 +86,11 @@ const apiRequest = async (url, method = 'GET', body = null, isFormData = false) 
 };
 
 export const API = {
+    getGISGeometries: () => apiRequest(Urls['api:v2:gis-geometry-list']()),
+    getGISGeometryDetails: id => apiRequest(Urls['api:v2:gis-geometry-detail'](id)),
+    createGISGeometry: data => apiRequest(Urls['api:v2:gis-geometry-list'](), 'POST', data),
+    updateGISGeometry: (id, data) => apiRequest(Urls['api:v2:gis-geometry-detail'](id), 'PATCH', data),
+
     // Stations
     createStation: (projectId, stationData) =>
         apiRequest(Urls['api:v2:project-stations'](projectId), 'POST', stationData),

@@ -15,6 +15,14 @@ Both entry points share core modules located in
 `frontend_private/static/private/js/map_viewer/`. The public viewer imports them
 via relative paths (e.g. `../../../frontend_private/...`).
 
+GIS Geometry adds private-only small-shape authoring through
+`GISGeometriesPanel` and `GeometryEditor`. It uses the established
+API/Config/State/Layers lifecycle and a shared vector renderer. `Interactions`
+delegates exclusively to the active editor; draft geometry remains isolated
+until an atomic, revision-checked save. The public entrypoint neither
+initializes the editor nor requests its data. See
+[GIS Geometry](../gis-geometries.md) for the complete contract and limits.
+
 ---
 
 ## Module Dependency Graph

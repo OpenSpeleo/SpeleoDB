@@ -1,0 +1,32 @@
+.geometry-details__json {
+    min-height: 15rem;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    tab-size: 2;
+}
+
+.geometry-details__advanced {
+    padding: 1rem;
+    border: 1px solid #475569;
+    border-radius: 0.5rem;
+    background: rgb(15 23 42 / 25%);
+}
+
+.geometry-details__error,
+.geometry-details__summary--invalid {
+    color: #fca5a5;
+}
+
+.geometry-details__summary--warning {
+    color: #fdba74;
+}
+
+.geometry-details__json[aria-invalid='true'] {
+    border-color: #f87171;
+}
+
+.geometry-details__json:read-only {
+    cursor: text;
+}

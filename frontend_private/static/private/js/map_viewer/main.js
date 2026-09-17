@@ -5,6 +5,7 @@ import { MapSources } from './map/sources.js';
 import { Layers } from './map/layers.js';
 import { Interactions } from './map/interactions.js';
 import { Geometry } from './map/geometry.js';
+import { fitGISGeometry } from './map/geometry_camera.js';
 import { StationManager } from './stations/manager.js';
 import { StationUI } from './stations/ui.js';
 import { StationDetails } from './stations/details.js';
@@ -21,6 +22,8 @@ import { ContextMenu } from './components/context_menu.js';
 import { ProjectPanel } from './components/project_panel.js';
 import { GPSTracksPanel } from './components/gps_tracks_panel.js';
 import { GISLayersPanel } from './components/gis_layers_panel.js';
+import { GISGeometriesPanel } from './components/gis_geometries_panel.js';
+import { GeometryEditor } from './geometry_editor/editor.js';
 import { DepthLegend } from './components/depth_legend.js';
 import { API } from './api.js';
 import { getRuntimeContext } from './runtime_context.js';
@@ -87,6 +90,7 @@ export async function initPrivateMapViewer() {
         Config.loadNetworks(),
         Config.loadGPSTracks(),
         Config.loadGISLayers(),
+        Config.loadGISGeometries(),
     ]);
 
     // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
@@ -114,6 +118,7 @@ export async function initPrivateMapViewer() {
 
     // 4. Setup Interactions
     Interactions.init(map, {
+        geometryEditor: GeometryEditor,
         onStationClick: (stationId, stationType) => {
             if (stationType === 'surface') {
                 const station = State.allSurfaceStations.get(stationId);
@@ -424,6 +429,8 @@ export async function initPrivateMapViewer() {
         State.allGISLayerLayers = new Map();
         State.gisLayerBounds = new Map();
         State.gisLayerClickableLayerIds = new Set();
+        State.allGISGeometryLayers = new Map();
+        State.gisGeometryBounds = new Map();
     }
 
     async function loadProjectAndStationLayers(geojsonMetadata, showProgress) {
@@ -608,6 +615,31 @@ export async function initPrivateMapViewer() {
             ProjectPanel.init();
             GPSTracksPanel.init();
             GISLayersPanel.init();
+            GeometryEditor.init({
+                map,
+                palette: getRuntimeContext().geometryColors || [],
+                onLoaded(record) {
+                    Layers.refreshGISGeometry(record);
+                    GISGeometriesPanel.refreshList();
+                },
+                onPreview(id, active) {
+                    State.gisGeometryEditingId = active && id ? String(id) : null;
+                    if (id) Layers.showGISGeometryLayers(id, Layers.isGISGeometryVisible(id));
+                    GISGeometriesPanel.refreshList();
+                    if (active && id) {
+                        GISGeometriesPanel.setExpanded(false);
+                        fitGISGeometry(map, State.gisGeometryBounds.get(String(id)));
+                    }
+                },
+                onSaved(record) {
+                    Layers.acceptGISGeometry(record);
+                    GISGeometriesPanel.refreshList();
+                },
+            });
+            GISGeometriesPanel.init(GeometryEditor);
+            document.getElementById('create-geometry-btn')?.addEventListener('click', async () => {
+                if (await GeometryEditor.create()) GISGeometriesPanel.setExpanded(false);
+            });
         } else {
             ProjectPanel.refreshVisibilityState();
         }
@@ -628,7 +660,10 @@ export async function initPrivateMapViewer() {
             loadCylinderInstallLayers(),
             loadVisibleGPSTrackLayers(),
             loadVisibleGISLayers(),
+            ...Config.gisGeometries.filter(record => Layers.isGISGeometryVisible(record.id))
+                .map(record => Layers.toggleGISGeometryVisibility(record.id, true)),
         ]);
+        GeometryEditor.restoreLayers();
         Layers.reorderLayers();
 
         if (fitCamera) fitInitialCamera();
@@ -646,6 +681,20 @@ export async function initPrivateMapViewer() {
             fitCamera: true,
             hideOverlay: true,
         });
+        const params = new URLSearchParams(window.location.search);
+        const geometryId = params.get('geometry');
+        if (geometryId === 'new') {
+            GeometryEditor.create();
+        } else if (geometryId) {
+            const record = Config.getGISGeometryById(geometryId);
+            if (!record) {
+                Utils.showNotification('error', 'This geometry is unavailable or you no longer have access.');
+            } else if (params.get('edit') === '1') {
+                await GeometryEditor.edit(record);
+            } else {
+                await GISGeometriesPanel.activateAndZoom(geometryId);
+            }
+        }
     });
 
     window.addEventListener('speleo:map-source-changed', async (event) => {
@@ -756,6 +805,7 @@ export async function initPrivateMapViewer() {
                 GPSTracksPanel.init();
             }
             GISLayersPanel.setupStackListener();
+            GISGeometriesPanel.setupStackListener();
 
             Utils.showNotification('success', 'GPS tracks refreshed');
         } catch (e) {

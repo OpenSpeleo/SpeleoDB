@@ -115,18 +115,20 @@
             </section>
           {% endif %}
         </div>
-        <footer>
-          <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-700">
-            <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
-               href="{{ listing_url }}">Cancel</a>
-            {% if has_write_access %}
-              <button type="submit"
-                      id="btn_submit"
-                      class="btn bg-indigo-500 hover:bg-indigo-600 text-white">Save Changes</button>
-            {% endif %}
-          </div>
-        </footer>
       </fieldset>
+      {% block entity_details_extra %}
+      {% endblock entity_details_extra %}
+      <footer>
+        <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-700">
+          <a class="btn bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300"
+             href="{{ listing_url }}">Cancel</a>
+          {% if has_write_access %}
+            <button type="submit"
+                    id="btn_submit"
+                    class="btn bg-indigo-500 hover:bg-indigo-600 text-white">Save Changes</button>
+          {% endif %}
+        </div>
+      </footer>
     </form>
     {% include "snippets/modal_success.html" %}
     {% include "snippets/modal_error.html" %}

@@ -21,6 +21,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.text import slugify
 
+from speleodb.api.v2.gis_geometry_access import accessible_gis_geometries_queryset
 from speleodb.api.v2.gis_layer_access import accessible_gis_layers_queryset
 from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
 from speleodb.api.v2.landmark_access import accessible_landmark_collections_queryset
@@ -34,6 +35,7 @@ from speleodb.background_jobs.archive_sources import mirror_project
 from speleodb.background_jobs.archive_sources import project_git_source
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.landmark_geojson import landmark_geojson_feature
+from speleodb.gis.models import GISGeometry
 from speleodb.gis.models import GISLayer
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import Landmark
@@ -54,7 +56,8 @@ if TYPE_CHECKING:
 ARCHIVE_DIRECTORIES: tuple[str, ...] = (
     "projects/",
     "geojsons/",
-    "gis_layers/",
+    "geometries/",
+    "layers/",
     "gps tracks/",
     "landmarks/",
 )
@@ -65,7 +68,7 @@ COMPRESSED_SUFFIXES: frozenset[str] = frozenset(
 )
 README: str = """# SpeleoDB export
 
-This archive contains the five supported categories accessible with READ_ONLY
+This archive contains the six supported categories accessible with READ_ONLY
 permission or higher when generation began. Project WEB_VIEWER access is excluded.
 Each resource is captured separately; this is not an atomic database/Git snapshot.
 See manifest.json for exact source revisions, checksums, timestamps, and omissions.
@@ -82,7 +85,9 @@ See manifest.json for exact source revisions, checksums, timestamps, and omissio
   Zero-commit projects contain only the zero-byte file PROJECT IS EMPTY. Empty
   and uninitialized states are informational notes in manifest.json.
 - geojsons/: each project's latest stored GeoJSON. It may predate the Git HEAD.
-- gis_layers/: original stored uploads plus distinct processed GeoJSON files.
+- geometries/: each geometry's stored LineString or Polygon GeoJSON.
+  Coordinates are preserved; revision, name, color, and creator are in manifest.json.
+- layers/: original stored uploads plus distinct processed GeoJSON files.
 - gps tracks/: exact stored GeoJSON plus derived GPX 1.1 when conversion succeeds.
   Imported GPX timestamps and original GPX files are not retained by SpeleoDB.
 - landmarks/: one GeoJSON per accessible collection, including empty collections.
@@ -110,7 +115,14 @@ class ArchiveResult:
 @dataclass(frozen=True)
 class ArchiveSource:
     category: str
-    resource: Project | ProjectGeoJSON | GISLayer | GPSTrack | LandmarkCollection
+    resource: (
+        Project
+        | ProjectGeoJSON
+        | GISGeometry
+        | GISLayer
+        | GPSTrack
+        | LandmarkCollection
+    )
     name: str
     resource_id: str
     has_recorded_history: bool = True
@@ -197,7 +209,11 @@ def _snapshot_sources(user: User) -> tuple[list[ArchiveSource], list[dict[str, s
         if str(project.id) not in available_geojson_ids
     ]
     sources.extend(
-        ArchiveSource("gis_layers", layer, layer.name, str(layer.id))
+        ArchiveSource("geometries", geometry, geometry.name, str(geometry.id))
+        for geometry in accessible_gis_geometries_queryset(user).order_by("id")
+    )
+    sources.extend(
+        ArchiveSource("layers", layer, layer.name, str(layer.id))
         for layer in accessible_gis_layers_queryset(user).order_by("id")
     )
     sources.extend(
@@ -338,6 +354,11 @@ def _stage_resource(
             archive_path=f"{prefix}.geojson",
             staged=staged,
         )
+    elif isinstance(resource, GISGeometry):
+        geometry_path: Path = directory / "geometry.geojson"
+        geometry_path.write_bytes(orjson.dumps(resource.geojson))
+        staged.files.append((geometry_path, f"{prefix}.geojson"))
+        staged.metadata["revision"] = resource.revision
     elif isinstance(resource, GISLayer):
         suffix: str = Path(resource.source_f.name or "").suffix.lower()
         safe_suffix: str = (
@@ -410,7 +431,7 @@ def build_archive(
     sources, notes = _snapshot_sources(user)
     total: int = len(sources)
     manifest: dict[str, Any] = {
-        "format_version": 1,
+        "format_version": 2,
         "permission_snapshot_at": captured_at,
         "capture_policy": (
             "Permissions at generation start; sources captured separately."

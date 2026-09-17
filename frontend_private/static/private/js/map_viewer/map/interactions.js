@@ -12,12 +12,27 @@ export const Interactions = {
         this.setupClickHandlers(map);
         this.setupDragHandlers(map);
         this.setupContextMenu(map);
+        // Touch geometry editing uses the same commands as mouse editing.
+        for (const [event, method] of [
+            ['touchstart', 'handleMouseDown'], ['touchmove', 'handleMouseMove'],
+            ['touchend', 'handleMouseUp'], ['touchcancel', 'handleCancel'],
+        ]) {
+            map.on(event, e => {
+                const editor = this.handlers.geometryEditor;
+                if (editor?.isActive()) editor[method](e);
+            });
+        }
     },
 
     QUERY_PADDING: DEFAULTS.DRAG.QUERY_PADDING_PX,
 
     setupHoverEffects: function (map) {
         map.on('mousemove', (e) => {
+            const editor = this.handlers.geometryEditor;
+            if (editor?.isActive()) {
+                editor.handleMouseMove(e);
+                return;
+            }
             // Use padded query box for better hit detection on icons
             const padding = this.QUERY_PADDING;
             const queryBox = [
@@ -52,6 +67,11 @@ export const Interactions = {
 
     setupClickHandlers: function (map) {
         map.on('click', (e) => {
+            const editor = this.handlers.geometryEditor;
+            if (editor?.isActive()) {
+                editor.handleClick(e);
+                return;
+            }
             if (e.defaultPrevented) return;
 
             // Use padded query box for better hit detection on icons
@@ -172,6 +192,11 @@ export const Interactions = {
         const SNAPPABLE_TYPES = ['station', 'cylinder-install', 'exploration-lead'];
 
         map.on('mousedown', (e) => {
+            const editor = this.handlers.geometryEditor;
+            if (editor?.isActive()) {
+                editor.handleMouseDown(e);
+                return;
+            }
             if (e.originalEvent.button !== 0) return; // Only left click
 
             // Use padded query box for better hit detection on icons (same as click/hover)
@@ -283,6 +308,7 @@ export const Interactions = {
         });
 
         map.on('mousemove', (e) => {
+            if (this.handlers.geometryEditor?.isActive()) return;
             if (!isPotentialDrag) return;
 
             // Check if we've moved past the threshold
@@ -343,6 +369,11 @@ export const Interactions = {
         });
 
         const onUp = (e) => {
+            const editor = this.handlers.geometryEditor;
+            if (editor?.isActive()) {
+                editor.handleMouseUp(e);
+                return;
+            }
             if (!isPotentialDrag) return;
 
             const wasDragging = isDragging && hasMoved;
@@ -413,6 +444,11 @@ export const Interactions = {
 
     setupContextMenu: function (map) {
         map.on('contextmenu', (e) => {
+            const editor = this.handlers.geometryEditor;
+            if (editor?.isActive()) {
+                editor.handleContextMenu(e);
+                return;
+            }
             // Use padded query box for better hit detection on icons (same as hover/click)
             const padding = this.QUERY_PADDING;
             const queryBox = [

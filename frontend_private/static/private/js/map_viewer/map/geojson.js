@@ -1,4 +1,4 @@
-export function computeGeoJSONBounds(geojsonData) {
+export function computeGeoJSONBounds(geojsonData, { wrapLongitude = true } = {}) {
     const bounds = new mapboxgl.LngLatBounds();
     if (
         Array.isArray(geojsonData?.bbox)
@@ -25,7 +25,7 @@ export function computeGeoJSONBounds(geojsonData) {
         if (typeof coordinates[0] === 'number') {
             const [longitude, latitude] = coordinates;
             if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return;
-            longitudes.push(((longitude % 360) + 360) % 360);
+            longitudes.push(wrapLongitude ? ((longitude % 360) + 360) % 360 : longitude);
             minimumLatitude = Math.min(minimumLatitude, latitude);
             maximumLatitude = Math.max(maximumLatitude, latitude);
             return;
@@ -52,6 +52,11 @@ export function computeGeoJSONBounds(geojsonData) {
 
     if (longitudes.length === 0) return bounds;
     longitudes.sort((left, right) => left - right);
+    if (!wrapLongitude) {
+        bounds.extend([longitudes[0], minimumLatitude]);
+        bounds.extend([longitudes.at(-1), maximumLatitude]);
+        return bounds;
+    }
 
     let largestGap = Number.NEGATIVE_INFINITY;
     let gapIndex = 0;

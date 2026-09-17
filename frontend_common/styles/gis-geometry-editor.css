@@ -1,0 +1,103 @@
+/* The map stays available throughout editing; only the inspector scrolls. */
+.gis-geometry-editor {
+    --geometry-accent: #38bdf8;
+    position: absolute;
+    z-index: 20;
+    top: 16px;
+    right: 56px;
+    width: min(360px, calc(100% - 32px));
+    max-height: calc(100% - 32px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #e2e8f0;
+    background: rgb(15 23 42 / 97%);
+    border: 1px solid rgb(148 163 184 / 28%);
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgb(0 0 0 / 35%);
+    backdrop-filter: blur(16px);
+    font-size: 13px;
+    line-height: 1.45;
+}
+.gis-geometry-editor *, .gis-geometry-editor *::before, .gis-geometry-editor *::after { box-sizing: border-box; }
+.gis-geometry-editor [hidden] { display: none !important; }
+.gis-geometry-editor__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgb(148 163 184 / 15%);
+    flex-shrink: 0;
+}
+.gis-geometry-editor__eyebrow { margin: 0 0 4px; font-size: 10px; font-weight: 700; letter-spacing: .12em; color: #94a3b8; }
+.gis-geometry-editor__header h2 { margin: 0; color: #f8fafc; font-size: 19px; font-weight: 650; letter-spacing: -.025em; }
+.gis-geometry-editor__body { padding: 16px 20px; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.gis-geometry-editor__field { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 12px; color: #cbd5e1; }
+.gis-geometry-editor__field input {
+    width: 100%; min-width: 0; border: 1px solid #475569; border-radius: 8px;
+    padding: 9px 10px; background: #1e293b; color: #f8fafc; font: inherit; font-size: 13px;
+}
+.gis-geometry-editor__field input::placeholder { color: #94a3b8; }
+.gis-geometry-editor__types { display: flex; gap: 4px; padding: 4px; margin-top: 14px; background: #1e293b; border-radius: 10px; }
+.gis-geometry-editor__types .gis-geometry-editor__button { flex: 1; border-color: transparent; background: transparent; }
+.gis-geometry-editor__types .gis-geometry-editor__button[aria-pressed="true"] { background: #334155; color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 20%); }
+.gis-geometry-editor__types .gis-geometry-editor__button:disabled { opacity: .55; }
+.gis-geometry-editor__types .gis-geometry-editor__button[aria-pressed="true"]:disabled { opacity: 1; }
+.gis-geometry-editor__button {
+    min-height: 36px; border: 1px solid #475569; border-radius: 8px; padding: 7px 10px;
+    color: #cbd5e1; background: transparent; font: inherit; font-weight: 500; cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+}
+.gis-geometry-editor__button:hover:not(:disabled) { background: #334155; border-color: #64748b; color: #fff; }
+.gis-geometry-editor__button:disabled { opacity: .4; cursor: not-allowed; }
+.gis-geometry-editor__button:focus-visible, .gis-geometry-editor__field input:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+.gis-geometry-editor__close { border: none; padding: 0; min-width: 36px; font-size: 24px; line-height: 1; }
+.gis-geometry-editor__colors { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 0 2px; }
+.gis-geometry-editor__swatch { padding: 0; min-height: 22px; width: 22px; border: 2px solid transparent; border-radius: 50%; background: var(--geometry-swatch); }
+.gis-geometry-editor__swatch:hover:not(:disabled) { background: var(--geometry-swatch); border-color: #cbd5e1; }
+.gis-geometry-editor__swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px #e2e8f0; }
+.gis-geometry-editor__hint { margin: 14px 0 10px; color: #94a3b8; font-size: 12px; }
+.gis-geometry-editor__tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.gis-geometry-editor__tools .gis-geometry-editor__button { font-size: 11px; }
+.gis-geometry-editor__subheading { margin: 16px 0 8px; color: #cbd5e1; font-size: 12px; font-weight: 600; }
+.gis-geometry-editor__gps-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.gis-geometry-editor__footer { padding: 14px 20px 18px; border-top: 1px solid rgb(148 163 184 / 15%); background: #0f172a; flex-shrink: 0; }
+.gis-geometry-editor__area { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 12px; }
+.gis-geometry-editor__area strong { color: var(--geometry-accent); font-variant-numeric: tabular-nums; font-weight: 600; }
+.gis-geometry-editor__meter { height: 4px; margin: 8px 0; overflow: hidden; border-radius: 4px; background: #334155; }
+.gis-geometry-editor__meter span { display: block; height: 100%; background: var(--geometry-accent); border-radius: inherit; }
+.gis-geometry-editor__limit { margin: 0; color: #94a3b8; font-size: 11px; }
+.gis-geometry-editor__status { margin: 8px 0 12px; color: #94a3b8; font-size: 11px; min-height: 16px; }
+.gis-geometry-editor__status.has-error { color: #fca5a5; }
+.gis-geometry-editor.is-near-limit { --geometry-accent: #f59e0b; }
+.gis-geometry-editor.is-over-limit { --geometry-accent: #ef4444; }
+.gis-geometry-editor__actions { display: flex; gap: 8px; }
+.gis-geometry-editor__actions > button { flex: 1; }
+.gis-geometry-editor__save { color: #082f49; background: #38bdf8; border-color: #38bdf8; font-weight: 700; }
+.gis-geometry-editor__save:hover:not(:disabled) { background: #7dd3fc; color: #082f49; border-color: #7dd3fc; }
+.gis-geometry-editor__discard { margin: 10px 0; padding: 12px; border: 1px solid #64748b; border-radius: 10px; background: #1e293b; }
+.gis-geometry-editor__discard p { margin: 0 0 10px; font-size: 12px; }
+.gis-geometry-editor__discard button + button { margin-left: 6px; }
+@media (max-width: 640px) {
+    .gis-geometry-editor { top: auto; bottom: var(--geometry-mobile-bottom, 10px); left: 10px; right: 10px; width: auto; max-height: var(--geometry-mobile-max-height, 58%); border-radius: 16px; }
+    .gis-geometry-editor__header { padding: 10px 14px; }
+    .gis-geometry-editor__header h2 { font-size: 17px; }
+    .gis-geometry-editor__body { padding: 12px 14px; }
+    .gis-geometry-editor__footer { padding: 10px 14px 12px; }
+    .gis-geometry-editor__button { min-height: 40px; }
+    .gis-geometry-editor__swatch { min-height: 26px; width: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gis-geometry-editor__button { transition: none; }
+}
+.gis-geometry-editor__disclosure { margin-top: 12px; }
+.gis-geometry-editor__disclosure > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; color: #cbd5e1; padding: 6px 0; font-size: 12px; list-style: none; }
+.gis-geometry-editor__disclosure > summary::after { content: '+'; margin-left: auto; color: #94a3b8; font-size: 16px; }
+.gis-geometry-editor__disclosure[open] > summary::after { content: '−'; }
+.gis-geometry-editor__disclosure > summary::-webkit-details-marker { display: none; }
+.gis-geometry-editor__disclosure > summary:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 4px; }
+.gis-geometry-editor__current-color { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 1px rgb(255 255 255 / 20%); }
+.gis-geometry-editor__vertex-nav { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.gis-geometry-editor__vertex-nav > button:nth-child(2) { flex: 1; font-size: 12px; }
+.gis-geometry-editor__conflict { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.gis-geometry-editor__copy-fallback { width: 100%; min-height: 100px; padding: 8px; border: 1px solid #64748b; border-radius: 8px; color: #e2e8f0; background: #1e293b; font: 11px monospace; }

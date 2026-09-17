@@ -1,0 +1,282 @@
+[
+  {
+    "id": "small_horizontal_line",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          -87.5,
+          20.1
+        ],
+        [
+          -87.499,
+          20.1
+        ]
+      ]
+    },
+    "area_m2": 0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "horizontal_line",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          -70,
+          20
+        ],
+        [
+          70,
+          20
+        ]
+      ]
+    },
+    "area_m2": 0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "equator_square",
+    "geojson": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            0.01,
+            0
+          ],
+          [
+            0.01,
+            0.01
+          ],
+          [
+            0,
+            0.01
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    "area_m2": 1236434.580536857,
+    "vertex_count": 4,
+    "valid": true
+  },
+  {
+    "id": "high_latitude",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          80
+        ],
+        [
+          0.01,
+          80.01
+        ]
+      ]
+    },
+    "area_m2": 214598.35167475257,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "north_pole_line",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          179,
+          90
+        ],
+        [
+          180,
+          90
+        ]
+      ]
+    },
+    "area_m2": 0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_7999999",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.06470216156948976,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 7999998.999999999,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_8000000",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.06470216965726094,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 8000000.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_8000001",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.06470217774503216,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 8000001.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_9999999",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.08087770398380499,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 9999999.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_10000000",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.0808777120715762,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 10000000.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_10000001",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.0808777201593474,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 10000001.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_29999999",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.2426331281269574,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 29999999.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_30000000",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.2426331362147286,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 30000000.0,
+    "vertex_count": 2,
+    "valid": true
+  },
+  {
+    "id": "area_30000001",
+    "geojson": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          0.2426331443024998,
+          0.01
+        ]
+      ]
+    },
+    "area_m2": 30000001.0,
+    "vertex_count": 2,
+    "valid": false
+  }
+]

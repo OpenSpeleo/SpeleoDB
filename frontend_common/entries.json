@@ -1,10 +1,12 @@
 {
   "styles": {
+    "style-gis-geometry-map": "frontend_common/styles/gis-geometry-map.css",
     "style-app": "tailwind_css/style.css",
     "style-public-shell": "frontend_public/static/css/custom.css",
     "style-private-shell": "frontend_private/static/private/css/custom.css",
     "style-error-page": "frontend_errors/static/css/error.css",
     "style-shared-modal": "frontend_private/static/private/css/shared-modal.css",
+    "style-gis-geometry-management": "frontend_common/styles/gis-geometry-management.css",
     "style-map-viewer": "frontend_private/static/private/css/map_viewer.css",
     "style-template-frontend-public-templates-snippets-welcome-modal": "frontend_common/styles/templates/frontend-public-templates-snippets-welcome-modal.css",
     "style-template-frontend-private-templates-base-private": "frontend_common/styles/templates/frontend-private-templates-base-private.css",
@@ -79,6 +81,8 @@
     "controller-experiment-data": "frontend_common/controllers/experiment-data.js",
     "controller-station-tags": "frontend_common/controllers/station-tags.js",
     "controller-gps-tracks": "frontend_common/controllers/gps-tracks.js",
+    "controller-gis-geometries": "frontend_common/controllers/gis-geometries.js",
+    "controller-gis-geometry-details": "frontend_common/controllers/gis-geometry-details.js",
     "controller-gis-layers": "frontend_common/controllers/gis-layers.js",
     "controller-dmp-doctor": "frontend_common/controllers/dmp-doctor.js",
     "controller-dmp2json": "frontend_common/controllers/dmp2json.js",

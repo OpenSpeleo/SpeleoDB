@@ -1,0 +1,42 @@
+.gis-geometries-panel,
+.gis-geometries-minimized {
+    position: absolute;
+    z-index: 6;
+    color: #e2e8f0;
+    background: rgb(30 41 59 / 95%);
+    border: 2px solid #475569;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 20px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(4px);
+    font-family: inherit;
+}
+.gis-geometries-minimized {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: auto;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+.gis-geometries-panel { display: flex; flex-direction: column; box-sizing: border-box; width: min(300px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 1rem; overflow: hidden; }
+.gis-geometries-panel[hidden], .gis-geometries-minimized[hidden] { display: none; }
+.gis-geometries-panel header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.gis-geometries-panel h3 { font-size: 0.875rem; font-weight: 600; margin: 0; }
+.gis-geometries-panel button { cursor: pointer; }
+.gis-geometries-panel button:disabled, .gis-geometries-visibility:disabled { cursor: default; }
+.gis-geometries-icon-button { border: 0; background: transparent; color: #94a3b8; padding: 0.25rem; }
+.gis-geometries-icon-button svg, .gis-geometries-minimized svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.gis-geometries-list { display: grid; gap: 0.375rem; min-height: 0; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+.gis-geometries-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 0.25rem; background: rgb(51 65 85 / 50%); }
+.gis-geometries-color { width: 0.65rem; height: 0.65rem; border-radius: 50%; flex-shrink: 0; }
+.gis-geometries-name { min-width: 0; flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; color: #e2e8f0; border: 0; background: transparent; padding: 0.25rem 0; }
+.gis-geometries-edit { color: #a5b4fc; background: transparent; border: 0; font-size: 0.75rem; padding: 0.25rem; }
+.gis-geometries-empty { color: #94a3b8; font-size: 0.8125rem; line-height: 1.5; margin: 0; }
+.gis-geometries-load-error { color: #cbd5e1; font-size: 0.8125rem; line-height: 1.5; padding: 0.5rem; }
+.gis-geometries-load-error p { margin: 0 0 0.5rem; }
+.gis-geometries-retry { color: #c7d2fe; border: 1px solid #64748b; border-radius: 0.375rem; background: #334155; padding: 0.375rem 0.75rem; }
+.gis-geometries-retry:disabled { opacity: 0.6; cursor: wait; }
+.gis-geometries-panel button:focus-visible, .gis-geometries-minimized:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 3px; }

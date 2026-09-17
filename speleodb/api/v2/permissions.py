@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotAuthenticated
 
+from speleodb.api.v2.gis_geometry_access import user_has_gis_geometry_access
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.gis.models import Cylinder
@@ -19,6 +20,8 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models import GISGeometry
+from speleodb.gis.models import GISGeometryUserPermission
 from speleodb.gis.models import GISLayer
 from speleodb.gis.models import GISLayerUserPermission
 from speleodb.gis.models import GISView
@@ -186,6 +189,11 @@ class BaseAccessLevel(permissions.BasePermission):
                 except ObjectDoesNotExist:
                     return False
 
+            case GISGeometry():
+                return user_has_gis_geometry_access(
+                    request.user, obj, self.MIN_ACCESS_LEVEL
+                )
+
             # =============================================================== #
             #                        TRANSITIVE MODELS                        #
             # =============================================================== #
@@ -289,6 +297,9 @@ class BaseAccessLevel(permissions.BasePermission):
 
             case GISLayerUserPermission():
                 return self.has_object_permission(request, view, obj.gis_layer)
+
+            case GISGeometryUserPermission():
+                return self.has_object_permission(request, view, obj.gis_geometry)
 
             # SensorFleet & Station Models
             # -----------------------------------------------------------------

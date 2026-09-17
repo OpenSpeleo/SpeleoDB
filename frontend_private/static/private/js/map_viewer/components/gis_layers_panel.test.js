@@ -59,7 +59,7 @@ describe('GIS Layers panel', () => {
         vi.clearAllMocks();
     });
 
-    it('uses one private left-stack panel with the 130px collapsed contract', () => {
+    it('uses the shared folded-card dimensions in the private left stack', () => {
         mocks.layers = [{ id: 'layer-1', name: 'Protected areas', color: '#6366f1' }];
         GISLayersPanel.init();
 
@@ -67,7 +67,7 @@ describe('GIS Layers panel', () => {
         expect(document.getElementById('gis-layers-panel').style.left).toBe('16px');
         expect(minimized.style.display).toBe('block');
         const css = readFileSync(resolve('frontend_private/static/private/css/map_viewer.css'), 'utf8');
-        expect(css).toMatch(/#gis-layers-panel-minimized\s*\{[^}]*width:\s*130px/s);
+        expect(css).toMatch(/#gis-layers-panel-minimized,\s*#gis-geometries-panel-minimized\s*\{[^}]*width:\s*160px;[^}]*height:\s*48px/s);
         expect(document.getElementById('map-layers-mobile-drawer')).toBeNull();
     });
 

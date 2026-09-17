@@ -26,6 +26,9 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- `gis-geometries.md`
+  - private point/line/polygon authoring, shared access, map/GPS editing,
+    100-vertex and 10 km² bounding-box limits, atomic saves, and verification
 - `gps-tracks.md`
   - GPS Track sharing permissions, soft-delete lifecycle, GPX export mapping,
     API/UI contracts, performance boundaries, and verification strategy

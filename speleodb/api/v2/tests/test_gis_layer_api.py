@@ -13,6 +13,7 @@ from rest_framework import status
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISLayer
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from rest_framework.response import Response
@@ -151,3 +152,32 @@ class TestGISLayerAPI(BaseAPITestCase):
         assert "source_layer.geojson" in response["Location"]
         with layer.source_f.open("rb") as source_file:
             assert source_file.read() == GEOJSON_CONTENT
+
+    def test_permission_view_preserves_layer_lifecycle(self) -> None:
+        assert self._create(_geojson()).status_code == status.HTTP_201_CREATED
+        layer = GISLayer.objects.get()
+        collaborator = UserFactory.create(email="layer-sharing-regression@example.com")
+        endpoint: str = reverse("api:v2:gis-layer-permissions", kwargs={"id": layer.id})
+        headers: dict[str, str] = {"authorization": self.auth}
+        payload: dict[str, str] = {"user": collaborator.email, "level": "READ_ONLY"}
+        granted = self.client.post(endpoint, payload, format="json", headers=headers)
+        assert granted.status_code == status.HTTP_201_CREATED
+        assert granted.data["gis_layer"]["file"]
+        assert (
+            layer.permissions.get(user=collaborator).level == PermissionLevel.READ_ONLY
+        )
+        payload["level"] = "READ_AND_WRITE"
+        updated = self.client.put(endpoint, payload, format="json", headers=headers)
+        assert updated.status_code == status.HTTP_200_OK
+        permission = layer.permissions.get(user=collaborator)
+        assert permission.level == PermissionLevel.READ_AND_WRITE
+        revoked = self.client.delete(endpoint, payload, format="json", headers=headers)
+        assert revoked.status_code == status.HTTP_200_OK
+        permission.refresh_from_db()
+        assert not permission.is_active
+        assert permission.deactivated_by == self.user
+        restored = self.client.post(endpoint, payload, format="json", headers=headers)
+        assert restored.status_code == status.HTTP_201_CREATED
+        permission.refresh_from_db()
+        assert permission.is_active
+        assert permission.deactivated_by is None

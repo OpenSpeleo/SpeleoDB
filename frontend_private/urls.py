@@ -25,6 +25,10 @@ from frontend_private.views import ExperimentGISView
 from frontend_private.views import ExperimentListingView
 from frontend_private.views import ExperimentUserPermissionsView
 from frontend_private.views import FeedbackView
+from frontend_private.views import GISGeometryDangerZoneView
+from frontend_private.views import GISGeometryDetailsView
+from frontend_private.views import GISGeometryListView
+from frontend_private.views import GISGeometryUserPermissionsView
 from frontend_private.views import GISLayerDangerZoneView
 from frontend_private.views import GISLayerDetailsView
 from frontend_private.views import GISLayerListView
@@ -308,6 +312,20 @@ gis_layer_patterns: list[URLPattern] = [
     ),
 ]
 
+gis_geometry_patterns: list[URLPattern] = [
+    path("", GISGeometryDetailsView.as_view(), name="gis_geometry_details"),
+    path(
+        "permissions/",
+        GISGeometryUserPermissionsView.as_view(),
+        name="gis_geometry_user_permissions",
+    ),
+    path(
+        "danger_zone/",
+        GISGeometryDangerZoneView.as_view(),
+        name="gis_geometry_danger_zone",
+    ),
+]
+
 urlpatterns: list[URLPattern | URLResolver] = [
     # User URLs
     path("", DashboardView.as_view(), name="user_dashboard"),
@@ -379,6 +397,9 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # Private GIS Layers
     path("gis-layers/", GISLayerListView.as_view(), name="gis_layers"),
     path("gis-layer/<uuid:layer_id>/", include(gis_layer_patterns)),
+    # Private GIS Geometry
+    path("gis-geometries/", GISGeometryListView.as_view(), name="gis_geometries"),
+    path("gis-geometry/<uuid:geometry_id>/", include(gis_geometry_patterns)),
     # Map Viewer URLs
     path("map_viewer/", MapViewerView.as_view(), name="map_viewer"),
     # Tool URLs

@@ -9,6 +9,7 @@ import {
 } from './depth.js';
 import { Geometry } from './geometry.js';
 import { computeGeoJSONBounds } from './geojson.js';
+import { addVectorOverlay } from './vector_overlay.js';
 import { API } from '../api.js';
 import { getRuntimeContext } from '../runtime_context.js';
 
@@ -763,61 +764,7 @@ export const Layers = {
         removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
 
         const color = Config.getGISLayerById(id)?.color || DEFAULTS.COLORS.FALLBACK;
-        const render = DEFAULTS.GIS_LAYER_RENDER;
-        map.addSource(sourceId, {
-            type: 'geojson',
-            data: geojsonData,
-            generateId: true
-        });
-        map.addLayer({
-            id: fillLayerId,
-            type: 'fill',
-            source: sourceId,
-            filter: ['==', '$type', 'Polygon'],
-            layout: { visibility: 'visible' },
-            paint: { 'fill-color': color, 'fill-opacity': render.FILL_OPACITY }
-        });
-        map.addLayer({
-            id: outlineLayerId,
-            type: 'line',
-            source: sourceId,
-            filter: ['==', '$type', 'Polygon'],
-            layout: { visibility: 'visible' },
-            paint: {
-                'line-color': color,
-                'line-width': render.OUTLINE_WIDTH,
-                'line-opacity': render.LINE_OPACITY
-            }
-        });
-        map.addLayer({
-            id: lineLayerId,
-            type: 'line',
-            source: sourceId,
-            filter: ['==', '$type', 'LineString'],
-            layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-                'line-color': color,
-                'line-width': render.LINE_WIDTH,
-                'line-opacity': render.LINE_OPACITY
-            }
-        });
-        map.addLayer({
-            id: pointLayerId,
-            type: 'circle',
-            source: sourceId,
-            filter: ['==', '$type', 'Point'],
-            layout: { visibility: 'visible' },
-            paint: {
-                'circle-color': color,
-                'circle-radius': [
-                    'interpolate', ['linear'], ['zoom'],
-                    render.POINT_RADIUS_ZOOM_MIN, render.POINT_RADIUS_MIN,
-                    render.POINT_RADIUS_ZOOM_MAX, render.POINT_RADIUS_MAX
-                ],
-                'circle-stroke-color': render.POINT_STROKE_COLOR,
-                'circle-stroke-width': render.POINT_STROKE_WIDTH
-            }
-        });
+        addVectorOverlay(map, { sourceId, layerIds, data: geojsonData, color });
 
         State.allGISLayerLayers.set(id, layerIds);
         State.gisLayerClickableLayerIds.add(fillLayerId);
@@ -825,6 +772,94 @@ export const Layers = {
         const bounds = computeGeoJSONBounds(geojsonData);
         if (!bounds.isEmpty()) State.gisLayerBounds.set(id, bounds);
         this.reorderLayers();
+    },
+
+    isGISGeometryVisible(id) {
+        return State.gisGeometryStates.get(String(id)) === true;
+    },
+
+    showGISGeometryLayers(id, visible) {
+        const key = String(id);
+        const show = visible && State.gisGeometryEditingId !== key;
+        for (const layerId of State.allGISGeometryLayers.get(key) || []) {
+            if (State.map?.getLayer(layerId)) {
+                State.map.setLayoutProperty(layerId, 'visibility', show ? 'visible' : 'none');
+            }
+        }
+    },
+
+    async toggleGISGeometryVisibility(id, visible) {
+        const key = String(id);
+        State.gisGeometryStates.set(key, visible);
+        if (!visible) {
+            this.showGISGeometryLayers(key, false);
+            return true;
+        }
+        try {
+            let record = State.gisGeometryCache.get(key);
+            if (!record) {
+                // Reuse the in-flight detail request if visibility changes rapidly.
+                let pending = State.gisGeometryLoading.get(key);
+                if (!pending) {
+                    pending = API.getGISGeometryDetails(key);
+                    State.gisGeometryLoading.set(key, pending);
+                }
+                record = await pending;
+                if (!record?.geojson) throw new Error('The geometry is unavailable.');
+                const current = State.gisGeometryCache.get(key);
+                if (current && current.revision > record.revision) record = current;
+                State.gisGeometryCache.set(key, record);
+                Config.upsertGISGeometry(record);
+            }
+            if (!this.isGISGeometryVisible(key)) return false;
+            const ids = State.allGISGeometryLayers.get(key);
+            if (!ids?.length || !State.map?.getLayer(ids[0])) this.addGISGeometry(record);
+            this.showGISGeometryLayers(key, true);
+            return true;
+        } catch (error) {
+            State.gisGeometryStates.set(key, false);
+            console.error('Failed to show GIS Geometry:', error);
+            return false;
+        } finally {
+            State.gisGeometryLoading.delete(key);
+        }
+    },
+
+    addGISGeometry(record) {
+        const map = State.map;
+        if (!map) return;
+        const id = String(record.id);
+        const sourceId = `gis-geometry-source-${id}`;
+        const layerIds = ['fill', 'outline', 'line', 'point'].map(role => `gis-geometry-${id}-${role}`);
+        removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
+        addVectorOverlay(map, {
+            sourceId, layerIds,
+            data: { type: 'Feature', properties: { name: record.name }, geometry: record.geojson },
+            color: record.color || DEFAULTS.COLORS.FALLBACK,
+            fillOpacity: DEFAULTS.GIS_GEOMETRY.FILL_OPACITY,
+        });
+        State.allGISGeometryLayers.set(id, layerIds);
+        // Stored Geometry never has a trusted caller-supplied bbox.
+        const bounds = computeGeoJSONBounds(record.geojson, { wrapLongitude: false });
+        if (!bounds.isEmpty()) State.gisGeometryBounds.set(id, bounds);
+        this.showGISGeometryLayers(id, this.isGISGeometryVisible(id));
+        this.reorderLayers();
+    },
+
+    acceptGISGeometry(record) {
+        const id = String(record.id);
+        Config.upsertGISGeometry(record);
+        State.gisGeometryCache.set(id, record);
+        State.gisGeometryStates.set(id, true);
+        this.addGISGeometry(record);
+    },
+
+    refreshGISGeometry(record) {
+        const id = String(record.id);
+        Config.upsertGISGeometry(record);
+        State.gisGeometryCache.set(id, record);
+        // Refresh the saved baseline without changing the pre-edit visibility.
+        this.addGISGeometry(record);
     },
 
     toggleNetworkVisibility: function (networkId, isVisible) {
@@ -1587,6 +1622,7 @@ export const Layers = {
         const gpsTrackLineLayers = allLayerIds.filter(id => id.startsWith('gps-track-line-'));
         const gpsTrackPointLayers = allLayerIds.filter(id => id.startsWith('gps-track-points-'));
         const gisLayerLayers = allLayerIds.filter(id => id.startsWith('gis-layer-'));
+        const gisGeometryLayers = allLayerIds.filter(id => id.startsWith('gis-geometry-') && !id.startsWith('gis-geometry-draft-'));
         const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
         const stationBiologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-biology-icons'));
         const stationBoneIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-bone-icons'));
@@ -1622,7 +1658,7 @@ export const Layers = {
 
         // GIS display products render above GPS tracks but below stations and
         // editable survey features. One logical GIS Layer can own many roles.
-        gisLayerLayers.forEach(layerId => {
+        [...gisLayerLayers, ...gisGeometryLayers].forEach(layerId => {
             try {
                 map.moveLayer(layerId);
             } catch (e) {
@@ -1728,6 +1764,8 @@ export const Layers = {
             }
         });
 
+        // Draft handles must stay above every selectable survey overlay.
+        allLayerIds.filter(id => id.startsWith('gis-geometry-draft-')).forEach(id => map.moveLayer(id));
         console.log('✅ Layer reordering complete');
     },
 

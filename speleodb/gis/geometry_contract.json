@@ -1,0 +1,14 @@
+{
+  "types": ["LineString", "Polygon"],
+  "max_vertices": 100,
+  "max_area_m2": 30000000,
+  "warning_area_m2": 8000000,
+  "earth_radius_m": 6371008.8,
+  "name_max_length": 255,
+  "position_dimensions": 2,
+  "min_line_vertices": 2,
+  "min_polygon_vertices": 3,
+  "longitude_limit": 180,
+  "latitude_limit": 90,
+  "square_metres_per_square_kilometre": 1000000
+}

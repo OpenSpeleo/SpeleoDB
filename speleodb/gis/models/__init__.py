@@ -16,6 +16,10 @@ from speleodb.gis.models.gis_layer import GISLayer
 from speleodb.gis.models.gis_layer import GISLayerSourceFormat
 from speleodb.gis.models.gis_layer import GISLayerUserPermission
 
+# Manually authored GIS geometries
+from speleodb.gis.models.gis_geometry import GISGeometry
+from speleodb.gis.models.gis_geometry import GISGeometryUserPermission
+
 # Landmark Related Models
 from speleodb.gis.models.landmark import Landmark
 from speleodb.gis.models.landmark import LandmarkCollection
@@ -68,6 +72,8 @@ __all__ = [
     "ExperimentRecord",
     "ExperimentUserPermission",
     "ExplorationLead",
+    "GISGeometry",
+    "GISGeometryUserPermission",
     "GISLayer",
     "GISLayerSourceFormat",
     "GISLayerUserPermission",

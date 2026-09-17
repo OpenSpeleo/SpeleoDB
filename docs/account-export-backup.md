@@ -3,11 +3,12 @@
 ## Intent and ownership
 
 Account exports produce a ZIP containing full reachable Git history, the latest
-stored project GeoJSON, GIS source/processed files, GPS GeoJSON/derived GPX, and
-landmark collections. This is a portable data export, not a complete database
-restore. Each populated project extracts into directly readable working files
-and a `.git/` directory containing its full reachable history. Zero-commit
-projects contain only a zero-byte file named `PROJECT IS EMPTY`.
+stored project GeoJSON, GIS Geometry GeoJSON, GIS source/processed files, GPS
+GeoJSON/derived GPX, and landmark collections. This is a portable data export,
+not a complete database restore. Each populated project extracts into directly
+readable working files and a `.git/` directory containing its full reachable
+history. Zero-commit projects contain only a zero-byte file named
+`PROJECT IS EMPTY`.
 
 Django owns user authorization, accepted requests, retries, and artifact expiry.
 `django-celery-results` stores technical execution results in the application
@@ -56,6 +57,19 @@ querysets with minimum READ_ONLY, active resources, and project deduplication.
 WEB_VIEWER project access is excluded. It honors that attempt's selected
 resources even if permissions are subsequently revoked. Retries take a fresh
 snapshot. Landmark enumeration does not create a personal collection.
+
+Archive format version 2 adds `geometries/` and renames `gis_layers/` to
+`layers/`. The manifest category names follow those directories. Existing
+generated archives retain their original layout. Each geometry is written
+directly from its database JSON snapshot to `geometries/<name>--<uuid>.geojson`,
+preserving the stored bare LineString/Polygon and coordinate precision. The
+manifest records its revision, name, creator, color, timestamps, size, and
+checksum. Geometry selection reuses the same centralized active
+READ_ONLY-or-higher permission queryset as the API; creator provenance alone
+does not grant access. Small, vertex-bounded geometry documents are loaded with
+the selected rows in one query, so subsequent edits cannot mix a newer shape
+with an older revision. No source S3 read or per-geometry database query is
+needed; the completed ZIP still uses existing export storage.
 
 Sources are captured individually; GitLab, database rows, and uploaded objects
 are not an atomic cross-system snapshot. The manifest records captured

@@ -3,11 +3,7 @@ import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
 
-function visibleAnchor(...elementIds) {
-    return elementIds
-        .map(elementId => document.getElementById(elementId))
-        .find(element => element && element.style.display !== 'none');
-}
+import { positionOverlayPanel } from './panel_position.js';
 
 export const GISLayersPanel = {
     _resizeObserver: null,
@@ -67,23 +63,10 @@ export const GISLayersPanel = {
         const mapContainer = document.querySelector('#map')?.parentElement;
         if (!panel || !minimized || !mapContainer) return;
 
-        const anchor = visibleAnchor(
-            'gps-tracks-panel',
-            'gps-tracks-panel-minimized',
-            'project-panel',
-            'project-panel-minimized',
-        );
-        let top = DEFAULTS.UI.MAP_PANEL_EDGE_PX;
-        if (anchor) {
-            const anchorRect = anchor.getBoundingClientRect();
-            const mapRect = mapContainer.getBoundingClientRect();
-            top = anchorRect.bottom - mapRect.top + DEFAULTS.UI.MAP_PANEL_GAP_PX;
-        }
-        for (const element of [panel, minimized]) {
-            element.style.left = `${DEFAULTS.UI.MAP_PANEL_EDGE_PX}px`;
-            element.style.right = 'auto';
-            element.style.top = `${top}px`;
-        }
+        positionOverlayPanel([panel, minimized], [
+            'gps-tracks-panel', 'gps-tracks-panel-minimized',
+            'project-panel', 'project-panel-minimized',
+        ], mapContainer);
     },
 
     refreshList() {

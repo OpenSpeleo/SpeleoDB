@@ -1,6 +1,39 @@
 import { Interactions } from './interactions.js';
 import { State } from '../state.js';
 
+describe('GIS Geometry interaction ownership', () => {
+    it('routes pointer and touch events exclusively to an active editor', () => {
+        const handlers = new Map();
+        const map = {
+            on: (event, fn) => handlers.set(event, [...(handlers.get(event) || []), fn]),
+            queryRenderedFeatures: vi.fn(() => []),
+            getCanvas: () => ({ style: {} }),
+        };
+        const editor = {
+            isActive: vi.fn(() => true), handleClick: vi.fn(), handleMouseDown: vi.fn(),
+            handleMouseMove: vi.fn(), handleMouseUp: vi.fn(), handleContextMenu: vi.fn(), handleCancel: vi.fn(),
+        };
+        const onMapClick = vi.fn();
+        Interactions.init(map, { geometryEditor: editor, onMapClick });
+        const event = { point: { x: 1, y: 1 }, lngLat: { lng: 0, lat: 0, toArray: () => [0, 0] }, originalEvent: { button: 0 } };
+        for (const name of ['mousedown', 'mousemove', 'mouseup', 'click', 'contextmenu', 'touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+            handlers.get(name).forEach(fn => fn(event));
+        }
+        expect(editor.handleMouseMove).toHaveBeenCalledTimes(2);
+        expect(editor.handleMouseDown).toHaveBeenCalledTimes(2);
+        expect(editor.handleMouseUp).toHaveBeenCalledTimes(2);
+        expect(editor.handleCancel).toHaveBeenCalledOnce();
+        expect(editor.handleClick).toHaveBeenCalledOnce();
+        expect(editor.handleContextMenu).toHaveBeenCalledOnce();
+        expect(map.queryRenderedFeatures).not.toHaveBeenCalled();
+        expect(onMapClick).not.toHaveBeenCalled();
+        editor.isActive.mockReturnValue(false);
+        handlers.get('click').forEach(fn => fn(event));
+        expect(onMapClick).toHaveBeenCalledWith([0, 0]);
+        Interactions.handlers = {};
+    });
+});
+
 describe('Interactions landmark dragging', () => {
     function createMap(features) {
         const handlers = {};

@@ -1,4 +1,5 @@
 import { API } from './api.js';
+import geometryContract from '../../../../../speleodb/gis/geometry_contract.json' with { type: 'json' };
 
 // ============================================================
 // DEFAULTS — single source of truth for every tuneable constant
@@ -83,6 +84,42 @@ export const DEFAULTS = Object.freeze({
         POPUP_METADATA_VALUE_MAX_CHARS: 180,
         POPUP_OVERFLOW_TOLERANCE_PX: 1,
         POPUP_SCROLL_THUMB_MIN_PX: 28,
+    },
+
+    GIS_GEOMETRY: {
+        TYPES: Object.freeze(geometryContract.types),
+        NAME_MAX_LENGTH: geometryContract.name_max_length,
+        POSITION_DIMENSIONS: geometryContract.position_dimensions,
+        MIN_LINE_VERTICES: geometryContract.min_line_vertices,
+        MIN_POLYGON_VERTICES: geometryContract.min_polygon_vertices,
+        LONGITUDE_LIMIT: geometryContract.longitude_limit,
+        LATITUDE_LIMIT: geometryContract.latitude_limit,
+        SQUARE_METRES_PER_SQUARE_KILOMETRE: geometryContract.square_metres_per_square_kilometre,
+        BBOX_DASH_ARRAY: [3, 3],
+        MAX_VERTICES: geometryContract.max_vertices,
+        MAX_AREA_M2: geometryContract.max_area_m2,
+        WARNING_AREA_M2: geometryContract.warning_area_m2,
+        EARTH_RADIUS_M: geometryContract.earth_radius_m,
+        COORDINATE_PRECISION: 6,
+        AREA_DISPLAY_PRECISION: 4,
+        FIT_MARGIN_RATIO: 0.1,
+        MOBILE_EDGE_PX: 10,
+        MOBILE_VISIBLE_HEIGHT_RATIO: 0.75,
+        MAX_HISTORY: 100,
+        VERTEX_RADIUS: 6,
+        SELECTED_VERTEX_RADIUS: 8,
+        VERTEX_STROKE_WIDTH: 2,
+        MIDPOINT_RADIUS: 4,
+        LINE_WIDTH: 3,
+        FILL_OPACITY: 0.175,
+        DRAFT_FILL_OPACITY: 0.09,
+        BBOX_LINE_WIDTH: 1,
+        HANDLE_QUERY_PADDING: 10,
+        DRAG_THRESHOLD: 4,
+        COLORS: {
+            HANDLE: '#ffffff', SELECTED: '#38bdf8', WARNING: '#f59e0b',
+            INVALID: '#ef4444', BBOX: '#94a3b8',
+        },
     },
 
     UPLOAD: {
@@ -197,6 +234,56 @@ export const Config = {
 
     // Private storage for GIS Layers loaded from API
     _gisLayers: null,
+    _gisGeometries: null,
+    gisGeometriesError: false,
+
+    get gisGeometries() {
+        return this._gisGeometries || [];
+    },
+
+    getGISGeometryById(id) {
+        return this.gisGeometries.find(geometry => geometry.id === String(id)) || null;
+    },
+
+    upsertGISGeometry(record) {
+        // Metadata stays in Config; coordinate payloads belong to State's cache.
+        const { geojson: _geojson, ...metadata } = record;
+        const existing = this.getGISGeometryById(record.id);
+        if (existing && existing.revision > record.revision) return;
+        this._gisGeometries ??= [];
+        if (existing) Object.assign(existing, metadata, { id: String(record.id) });
+        else this._gisGeometries.push({ ...metadata, id: String(record.id) });
+    },
+
+    hasGISGeometryAccess(id, action = PermissionAction.READ) {
+        const geometry = this.getGISGeometryById(id);
+        if (!geometry) return false;
+        if (action === PermissionAction.READ) return true;
+        if (action === PermissionAction.WRITE) return geometry.can_write === true;
+        if (action === PermissionAction.DELETE) return geometry.can_delete === true;
+        return false;
+    },
+
+    async loadGISGeometries() {
+        if (this._gisGeometries && !this.gisGeometriesError) return this._gisGeometries;
+        const revisions = new Map(this.gisGeometries.map(record => [record.id, record.revision]));
+        try {
+            const response = await API.getGISGeometries();
+            const records = Array.isArray(response) ? response : [];
+            const returnedIds = new Set(records.map(record => String(record.id)));
+            // A retry can overlap a successful local save. Retain returned rows
+            // for revision-aware merging and records changed during this request.
+            this._gisGeometries = this.gisGeometries.filter(record =>
+                returnedIds.has(record.id) || !revisions.has(record.id)
+                || revisions.get(record.id) !== record.revision);
+            records.forEach(record => this.upsertGISGeometry(record));
+            this.gisGeometriesError = false;
+        } catch (error) {
+            console.error('Failed to load GIS Geometry:', error);
+            this.gisGeometriesError = true;
+        }
+        return this.gisGeometries;
+    },
 
     get projects() {
         return this._projects || [];
@@ -412,6 +499,7 @@ export const Config = {
     },
 
     hasScopedAccess: function (scopeType, scopeId, action = PermissionAction.READ) {
+        if (scopeType === 'gis_geometry') return this.hasGISGeometryAccess(scopeId, action);
         if (scopeType === 'network') {
             return this.hasNetworkAccess(scopeId, action);
         }
@@ -419,6 +507,13 @@ export const Config = {
     },
 
     getScopedAccess: function (scopeType, scopeId) {
+        if (scopeType === 'gis_geometry') {
+            return {
+                read: this.hasGISGeometryAccess(scopeId, PermissionAction.READ),
+                write: this.hasGISGeometryAccess(scopeId, PermissionAction.WRITE),
+                delete: this.hasGISGeometryAccess(scopeId, PermissionAction.DELETE),
+            };
+        }
         if (scopeType === 'network') {
             return this.getNetworkAccess(scopeId);
         }

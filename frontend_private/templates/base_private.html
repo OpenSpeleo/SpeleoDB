@@ -144,6 +144,53 @@
                     </div>
                   </a>
                 </li>
+                <!-- My GIS Geometry -->
+                {% if request.url_name|is_in_list:"gis_geometries,gis_geometry_details,gis_geometry_user_permissions,gis_geometry_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:gis_geometries' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
+                             viewBox="0 0 24 24"
+                             stroke-width="1.8">
+                          <path d="M5 6l14 3-4 11L5 6z" />
+                          <circle cx="5" cy="6" r="2" />
+                          <circle cx="19" cy="9" r="2" />
+                          <circle cx="15" cy="20" r="2" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My GIS Geometry</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
+                <!-- My GIS Layers -->
+                {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
+                  {% set stroke_color = "indigo" %}
+                {% else %}
+                  {% set stroke_color = "slate" %}
+                {% endif %}
+                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
+                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
+                     href="{% url 'private:gis_layers' %}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
+                             viewBox="0 0 24 24"
+                             stroke-width="1.8">
+                          <path d="M12 3l8 4-8 4-8-4 8-4z" />
+                          <path d="M4 12l8 4 8-4" />
+                          <path d="M4 17l8 4 8-4" />
+                        </svg>
+                        <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
+                      </div>
+                    </div>
+                  </a>
+                </li>
                 <!-- My GPS Tracks -->
                 {% if request.url_name|is_in_list:"gps_tracks,gps_track_details,gps_track_user_permissions,gps_track_danger_zone" %}
                   {% set stroke_color = "indigo" %}
@@ -168,29 +215,6 @@
                                                          24 0 0 1 23.9-24 24 24 0 0 1 0 48 24 24 0 0 1-23.8-24z" />
                         </svg>
                         <span class="text-sm font-medium ml-3 duration-200">My GPS Tracks</span>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-                <!-- My GIS Layers -->
-                {% if request.url_name|is_in_list:"gis_layers,gis_layer_details,gis_layer_user_permissions,gis_layer_danger_zone" %}
-                  {% set stroke_color = "indigo" %}
-                {% else %}
-                  {% set stroke_color = "slate" %}
-                {% endif %}
-                <li class="px-3 py-2 rounded-xs mb-0.5 last:mb-0{% if stroke_color == 'indigo' %} bg-slate-900{% endif %}">
-                  <a class="block text-slate-200{% if stroke_color == 'slate' %} hover:text-white{% endif %} truncate transition duration-150"
-                     href="{% url 'private:gis_layers' %}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <svg class="shrink-0 h-6 w-6 fill-none stroke-current text-{{ stroke_color }}-400"
-                             viewBox="0 0 24 24"
-                             stroke-width="1.8">
-                          <path d="M12 3l8 4-8 4-8-4 8-4z" />
-                          <path d="M4 12l8 4 8-4" />
-                          <path d="M4 17l8 4 8-4" />
-                        </svg>
-                        <span class="text-sm font-medium ml-3 duration-200">My GIS Layers</span>
                       </div>
                     </div>
                   </a>

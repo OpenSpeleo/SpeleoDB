@@ -5,11 +5,13 @@ const configMock = {
     loadNetworks: vi.fn(),
     loadGPSTracks: vi.fn(),
     loadGISLayers: vi.fn(),
+    loadGISGeometries: vi.fn(),
     filterProjectsByGeoJSON: vi.fn(),
     projects: [],
     networks: [],
     gpsTracks: [],
     gisLayers: [],
+    gisGeometries: [],
 };
 
 const stateMock = {
@@ -116,6 +118,12 @@ vi.mock('./components/gps_tracks_panel.js', () => ({
 vi.mock('./components/gis_layers_panel.js', () => ({
     GISLayersPanel: { init: vi.fn(), refreshList: vi.fn() }
 }));
+vi.mock('./components/gis_geometries_panel.js', () => ({
+    GISGeometriesPanel: { init: vi.fn(), refreshList: vi.fn(), setupStackListener: vi.fn(), setExpanded: vi.fn() },
+}));
+vi.mock('./geometry_editor/editor.js', () => ({
+    GeometryEditor: { init: vi.fn(), restoreLayers: vi.fn(), isActive: vi.fn(() => false), create: vi.fn(async () => true) },
+}));
 vi.mock('./components/depth_legend.js', () => ({ DepthLegend: { init: vi.fn() } }));
 vi.mock('./api.js', () => ({ API: apiMock }));
 
@@ -146,6 +154,7 @@ describe('private map viewer entrypoint', () => {
         configMock.loadNetworks.mockResolvedValue(undefined);
         configMock.loadGPSTracks.mockResolvedValue(undefined);
         configMock.loadGISLayers.mockResolvedValue(undefined);
+        configMock.loadGISGeometries.mockResolvedValue(undefined);
         mapCoreMock.init.mockReturnValue(mapMock);
         mapSourcesMock.requiresDataReload.mockReturnValue(false);
         apiMock.getAllProjectsGeoJSON.mockResolvedValue([]);
@@ -286,5 +295,18 @@ describe('private map viewer entrypoint', () => {
         await loadHandler();
 
         expect(apiMock.getAllProjectsGeoJSON).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens geometry creation from the top bar after the map is ready', async () => {
+        document.body.insertAdjacentHTML('beforeend', '<button id="create-geometry-btn">Create Geometry</button>');
+        const onDomReady = await importModuleAndGetDomReadyHandler();
+        await onDomReady();
+        await mapMock.on.mock.calls.find(([name]) => name === 'load')[1]();
+        const { GeometryEditor } = await import('./geometry_editor/editor.js');
+        const { GISGeometriesPanel } = await import('./components/gis_geometries_panel.js');
+        document.getElementById('create-geometry-btn').click();
+        await Promise.resolve();
+        expect(GeometryEditor.create).toHaveBeenCalledOnce();
+        expect(GISGeometriesPanel.setExpanded).toHaveBeenCalledWith(false);
     });
 });
