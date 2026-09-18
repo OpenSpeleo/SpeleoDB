@@ -1,4 +1,7 @@
 import { State } from '../state.js';
+import { DEFAULTS } from '../config.js';
+import { depthFromFeet, isValidDepthLimit } from '../map/depth.js';
+import { Layers } from '../map/layers.js';
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -10,6 +13,19 @@ function getNumeric(value) {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getDepthUnit() {
+    return State.displayPreferences.depthUnit === 'm' ? 'm' : 'ft';
+}
+
+function getDepthLimit() {
+    const limit = State.displayPreferences.depthLimitFeet;
+    return isValidDepthLimit(limit) ? limit : null;
+}
+
+function formatExactDepth(feet, unit) {
+    return String(Number(depthFromFeet(feet, unit).toPrecision(DEFAULTS.DEPTH.INPUT_SIGNIFICANT_DIGITS)));
+}
+
 export const DepthLegend = {
     map: null,
     colorMode: 'project',
@@ -18,6 +34,8 @@ export const DepthLegend = {
     onColorModeChangedHandler: null,
     onDepthDomainUpdatedHandler: null,
     onMapMouseMoveHandler: null,
+    onMapMouseOutHandler: null,
+    hoveredLineFeature: null,
 
     init: function (map) {
         if (!map || this.initialized) return;
@@ -46,19 +64,19 @@ export const DepthLegend = {
 
             this.createOrUpdateDepthScale();
             this.updateDepthLegendVisibility();
-            if (!this.depthDomain) {
-                this.hideDepthCursor();
-            }
+            this.renderDepthCursor();
         };
 
         this.onMapMouseMoveHandler = (event) => {
             this.updateDepthCursor(event);
         };
+        this.onMapMouseOutHandler = () => this.hideDepthCursor();
 
         window.addEventListener('speleo:color-mode-changed', this.onColorModeChangedHandler);
         window.addEventListener('speleo:depth-domain-updated', this.onDepthDomainUpdatedHandler);
 
         this.map.on('mousemove', this.onMapMouseMoveHandler);
+        this.map.on('mouseout', this.onMapMouseOutHandler);
         this.createOrUpdateDepthScale();
         this.updateDepthLegendVisibility();
     },
@@ -71,6 +89,7 @@ export const DepthLegend = {
 
         if (this.map && typeof this.map.off === 'function') {
             this.map.off('mousemove', this.onMapMouseMoveHandler);
+            this.map.off('mouseout', this.onMapMouseOutHandler);
         }
 
         this.map = null;
@@ -80,6 +99,8 @@ export const DepthLegend = {
         this.onColorModeChangedHandler = null;
         this.onDepthDomainUpdatedHandler = null;
         this.onMapMouseMoveHandler = null;
+        this.onMapMouseOutHandler = null;
+        this.hoveredLineFeature = null;
     },
 
     createOrUpdateDepthScale: function () {
@@ -103,8 +124,14 @@ export const DepthLegend = {
             }
 
             const hasDomain = this.depthDomain && Number.isFinite(this.depthDomain.max);
-            const minLabel = hasDomain ? '0 ft' : 'N/A';
-            const maxLabel = hasDomain ? `${Math.ceil(this.depthDomain.max)} ft` : 'N/A';
+            const unit = getDepthUnit();
+            const maximum = hasDomain
+                ? (unit === 'ft' && getDepthLimit() === null
+                    ? Math.ceil(this.depthDomain.max)
+                    : formatExactDepth(this.depthDomain.max, unit))
+                : null;
+            const minLabel = hasDomain ? `0 ${unit}` : 'N/A';
+            const maxLabel = hasDomain ? `${maximum} ${unit}` : 'N/A';
 
             container.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -139,6 +166,7 @@ export const DepthLegend = {
     },
 
     hideDepthCursor: function () {
+        this.hoveredLineFeature = null;
         const indicator = document.getElementById('depth-cursor-indicator');
         const label = document.getElementById('depth-cursor-label');
         if (indicator) indicator.style.display = 'none';
@@ -151,12 +179,7 @@ export const DepthLegend = {
             return;
         }
 
-        const indicator = document.getElementById('depth-cursor-indicator');
-        const labelEl = document.getElementById('depth-cursor-label');
-        const gradientEl = document.getElementById('depth-scale-gradient');
-        if (!gradientEl || !indicator || !labelEl) return;
-
-        const queryPaddingPx = 12;
+        const queryPaddingPx = DEFAULTS.DEPTH.HOVER_QUERY_PADDING_PX;
         const queryBox = [
             [event.point.x - queryPaddingPx, event.point.y - queryPaddingPx],
             [event.point.x + queryPaddingPx, event.point.y + queryPaddingPx]
@@ -175,38 +198,66 @@ export const DepthLegend = {
             (feature.properties.depth_val !== undefined || feature.properties.depth_norm !== undefined)
         );
 
-        if (!lineFeature) {
+        this.hoveredLineFeature = lineFeature || null;
+        this.renderDepthCursor();
+    },
+
+    renderDepthCursor() {
+        const lineFeature = this.hoveredLineFeature;
+        if (this.colorMode !== 'depth' || !this.depthDomain || !lineFeature) {
+            this.hideDepthCursor();
+            return;
+        }
+
+        const indicator = document.getElementById('depth-cursor-indicator');
+        const labelEl = document.getElementById('depth-cursor-label');
+        if (!indicator || !labelEl) return;
+
+        const sourceId = lineFeature.source || lineFeature.layer?.source;
+        const projectId = typeof sourceId === 'string' && sourceId.startsWith('project-geojson-')
+            ? sourceId.slice('project-geojson-'.length) : null;
+        if (projectId && (!State.projectDepthDomains.has(projectId) || !Layers.isProjectEffectivelyVisible(projectId))) {
             this.hideDepthCursor();
             return;
         }
 
         const props = lineFeature.properties || {};
-        const maxDepth = Math.max(1e-9, this.depthDomain.max);
+        const maxDepth = this.depthDomain.max > 0
+            ? this.depthDomain.max : DEFAULTS.DEPTH.ZERO_DOMAIN_MAX_FEET;
         const rawDepth = getNumeric(props.depth_val);
         const rawNorm = getNumeric(props.depth_norm);
 
         if (Number.isFinite(rawDepth)) {
-            const pct = clamp(rawDepth / maxDepth, 0, 1) * 100;
-            indicator.style.left = `calc(${pct}% - 1px)`;
-            indicator.style.display = 'block';
-            labelEl.textContent = `${rawDepth.toFixed(1)} ft`;
-            labelEl.style.left = `calc(${pct}% - 0px)`;
-            labelEl.style.display = 'block';
+            this.showDepthCursor(rawDepth, maxDepth, indicator, labelEl);
             return;
         }
 
         if (Number.isFinite(rawNorm)) {
             const clampedNorm = clamp(rawNorm, 0, 1);
-            const depth = clampedNorm * maxDepth;
-            const pct = clampedNorm * 100;
-            indicator.style.left = `calc(${pct}% - 1px)`;
-            indicator.style.display = 'block';
-            labelEl.textContent = `${depth.toFixed(1)} ft`;
-            labelEl.style.left = `calc(${pct}% - 0px)`;
-            labelEl.style.display = 'block';
+            // Legacy normalized values refer to the source project's uncapped scale.
+            const projectDomain = projectId ? State.projectDepthDomains.get(projectId) : null;
+            const sourceMax = getDepthLimit() !== null && Number.isFinite(projectDomain?.max)
+                ? projectDomain.max : maxDepth;
+            this.showDepthCursor(clampedNorm * sourceMax, maxDepth, indicator, labelEl);
             return;
         }
 
         this.hideDepthCursor();
+    },
+
+    showDepthCursor(rawDepth, maxDepth, indicator, labelEl) {
+        const limit = getDepthLimit();
+        const unit = getDepthUnit();
+        const depth = limit === null ? rawDepth : Math.min(rawDepth, limit);
+        const pct = clamp(depth / maxDepth, 0, 1) * 100;
+        const rounded = depthFromFeet(depth, unit).toFixed(DEFAULTS.DEPTH.DISPLAY_DECIMALS);
+        const roundedPastLimit = limit !== null && Number(rounded) > depthFromFeet(limit, unit);
+        const label = limit !== null && (rawDepth >= limit || roundedPastLimit)
+            ? formatExactDepth(limit, unit) : rounded;
+        indicator.style.left = `calc(${pct}% - 1px)`;
+        indicator.style.display = 'block';
+        labelEl.textContent = `${label} ${unit}`;
+        labelEl.style.left = `calc(${pct}% - 0px)`;
+        labelEl.style.display = 'block';
     }
 };

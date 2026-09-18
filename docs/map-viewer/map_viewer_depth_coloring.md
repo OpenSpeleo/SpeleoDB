@@ -53,6 +53,15 @@ In depth mode:
 - hide/show immediately recomputes active merged domain
 - all projects hidden shows `N/A` in gauge labels
 
+The private viewer additionally offers a collapsed **Depth limit** under
+Settings → Appearance → By Depth. A positive maximum fixes colors and displayed
+depths to 0–X in meters or feet; blank restores the full visible-project range.
+The limit survives project/country toggles and late loads, while no visible
+depth data still shows N/A. Raw source depths are never modified. Public maps
+retain automatic scaling and do not read private depth preferences. See the
+expanded architecture document above for validation, persistence, conversion,
+and performance contracts.
+
 Depth legend and cursor behavior is centralized in:
 
 - `frontend_private/static/private/js/map_viewer/components/depth_legend.js`

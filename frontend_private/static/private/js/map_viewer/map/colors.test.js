@@ -7,6 +7,7 @@ vi.mock('../config.js', () => ({
         getGPSTrackById: vi.fn(),
     },
     DEFAULTS: Object.freeze({
+        DEPTH: { ZERO_DOMAIN_MAX_FEET: 1e-9 },
         COLORS: {
             FALLBACK: '#94a3b8',
             DEPTH_NONE: '#999999',
@@ -171,6 +172,23 @@ describe('Colors', () => {
             // so this actually returns a valid expression (documenting current behavior)
             const result = Colors.getDepthPaint({ max: -5 });
             expect(Array.isArray(result)).toBe(true);
+        });
+
+        it.each([10.06, 1e-12])('preserves a positive fixed maximum of %s in the gradient', maximum => {
+            const interpolation = Colors.getDepthPaint({ min: 0, max: maximum })[2];
+            expect(interpolation.slice(3)).toEqual([
+                0, DEFAULTS.COLORS.DEPTH_SHALLOW,
+                maximum / 2, DEFAULTS.COLORS.DEPTH_MID,
+                maximum, DEFAULTS.COLORS.DEPTH_DEEP,
+            ]);
+        });
+
+        it('keeps interpolation stops distinct when a positive maximum has no representable midpoint', () => {
+            const interpolation = Colors.getDepthPaint({ min: 0, max: Number.MIN_VALUE })[2];
+            expect(interpolation.slice(3)).toEqual([
+                0, DEFAULTS.COLORS.DEPTH_SHALLOW,
+                Number.MIN_VALUE, DEFAULTS.COLORS.DEPTH_DEEP,
+            ]);
         });
     });
 });

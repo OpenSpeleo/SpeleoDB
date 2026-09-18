@@ -269,6 +269,47 @@ describe('frontend_public gis_view_main', () => {
         expect(document.getElementById('loading-overlay')).toBeNull();
     });
 
+    it('initializes public depth defaults without reading or changing saved private preferences', async () => {
+        window.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'public-token', mapboxToken: '' };
+        globalThis.fetch.mockResolvedValue({ ok: true, json: async () => ({ projects: [] }) });
+        const initialize = await importModuleAndGetDomReadyHandler();
+        const { DEFAULTS } = await import('../../../frontend_private/static/private/js/map_viewer/config.js');
+        const { DisplayPreferences } = await import('../../../frontend_private/static/private/js/map_viewer/display_preferences.js');
+        const storageKey = DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES;
+        const previous = localStorage.getItem(storageKey);
+        const saved = JSON.stringify({
+            version: DEFAULTS.DISPLAY.STORAGE_VERSION,
+            colorMode: 'depth', depthLimitFeet: 125.75, depthUnit: 'm',
+            categories: { landmarks: false },
+        });
+        localStorage.setItem(storageKey, saved);
+        stateMock.displayPreferences = { colorMode: 'depth', depthLimitFeet: 125.75, depthUnit: 'm' };
+        const read = vi.spyOn(localStorage, 'getItem');
+        const write = vi.spyOn(localStorage, 'setItem');
+
+        try {
+            await initialize();
+
+            expect(stateMock.displayPreferences).toMatchObject({
+                colorMode: 'project', depthLimitFeet: null, depthUnit: 'ft',
+                categories: { landmarks: true },
+            });
+            expect(depthLegendMock.init).toHaveBeenCalledWith(mapMock);
+            window.dispatchEvent(new CustomEvent('speleo:display-preferences-changed', {
+                detail: { preferences: stateMock.displayPreferences },
+            }));
+            expect(read).not.toHaveBeenCalledWith(storageKey);
+            expect(write).not.toHaveBeenCalled();
+            expect(localStorage.getItem(storageKey)).toBe(saved);
+        } finally {
+            DisplayPreferences.destroy();
+            read.mockRestore();
+            write.mockRestore();
+            if (previous === null) localStorage.removeItem(storageKey);
+            else localStorage.setItem(storageKey, previous);
+        }
+    });
+
     it('prefetches the GIS View GeoJSON during init, before the map load event', async () => {
         window.MAPVIEWER_CONTEXT = {
             viewMode: 'public',

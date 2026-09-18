@@ -25,6 +25,15 @@ export const DEFAULTS = Object.freeze({
         ]),
     },
 
+    DEPTH: {
+        LIMIT_FEET: null,
+        UNIT: 'ft',
+        INPUT_SIGNIFICANT_DIGITS: 12,
+        DISPLAY_DECIMALS: 1,
+        ZERO_DOMAIN_MAX_FEET: 1e-9,
+        HOVER_QUERY_PADDING_PX: 12,
+    },
+
     GEODESY: {
         EARTH_RADIUS_METERS: 6_371_000,
         DEGREES_PER_HALF_TURN: 180,

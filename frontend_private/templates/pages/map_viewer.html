@@ -310,6 +310,53 @@
                 </label>
               </div>
             </fieldset>
+            <details id="map-settings-depth-limit" class="map-settings-depth-limit" hidden>
+              <summary>
+                <span>Depth limit</span>
+                <span id="map-settings-depth-summary" class="map-settings-depth-summary">Full range</span>
+                <svg viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
+                </svg>
+              </summary>
+              <div class="map-settings-depth-body">
+                <div class="map-settings-depth-intro">
+                  <strong>Bring back color detail</strong>
+                  <p>One very deep cave can compress the color scale, making shallower passages look alike. Set a limit to spread the colors across the depths you want to compare.</p>
+                </div>
+                <label for="map-settings-depth-value">Maximum depth</label>
+                <div class="map-settings-depth-controls">
+                  <input id="map-settings-depth-value"
+                         type="number"
+                         step="any"
+                         inputmode="decimal"
+                         placeholder="Full range"
+                         autocomplete="off"
+                         aria-describedby="map-settings-depth-help map-settings-depth-error" />
+                  <fieldset class="map-settings-segments map-settings-depth-units">
+                    <legend class="sr-only">Depth units</legend>
+                    <label>
+                      <input type="radio" name="map-settings-depth-unit" value="m" /><span>Meters</span>
+                    </label>
+                    <label>
+                      <input type="radio" name="map-settings-depth-unit" value="ft" /><span>Feet</span>
+                    </label>
+                  </fieldset>
+                </div>
+                <p id="map-settings-depth-help">Colors and depth readings stop at this limit.</p>
+                <p id="map-settings-depth-error"
+                   class="map-settings-depth-error"
+                   role="alert"
+                   hidden></p>
+                <button id="map-settings-depth-clear"
+                        type="button"
+                        class="map-settings-depth-clear"
+                        hidden>Reset to Full Depth Range</button>
+              </div>
+            </details>
           </section>
           <section class="map-settings-section"
                    aria-labelledby="map-settings-visibility-title">

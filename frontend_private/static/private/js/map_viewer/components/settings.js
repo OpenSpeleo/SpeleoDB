@@ -2,6 +2,7 @@ import { DEFAULTS } from '../config.js';
 import { DisplayPreferences } from '../display_preferences.js';
 import { State } from '../state.js';
 import { Layers } from '../map/layers.js';
+import { depthFromFeet, depthToFeet, isValidDepthLimit } from '../map/depth.js';
 import { containDialogTab } from './dialog_focus.js';
 import { MapManagersMenu } from './managers_menu.js';
 
@@ -31,6 +32,7 @@ export const MapSettings = {
     trigger: null,
     listeners: [],
     restoreFocus: true,
+    depthDraftDirty: false,
 
     init({ managers = {} } = {}) {
         this.destroy();
@@ -53,7 +55,10 @@ export const MapSettings = {
         this.listen(this.dialog, 'keydown', event => {
             // Settings form keys must never reach map or geometry shortcuts.
             event.stopPropagation();
-            if (event.key === 'Escape') {
+            if (event.key === 'Enter' && event.target.id === 'map-settings-depth-value') {
+                event.preventDefault();
+                this.commitDepthLimit();
+            } else if (event.key === 'Escape') {
                 event.preventDefault();
                 this.close();
             } else if (event.key === 'Tab') {
@@ -73,6 +78,15 @@ export const MapSettings = {
             if (this.restoreFocus) this.trigger.focus();
         });
         this.listen(this.dialog, 'change', event => this.handleChange(event));
+        this.listen(this.dialog.querySelector('#map-settings-depth-value'), 'input', () => {
+            this.depthDraftDirty = true;
+            this.validateDepthLimit();
+        });
+        this.listen(this.dialog.querySelector('#map-settings-depth-clear'), 'click', () => {
+            this.dialog.querySelector('#map-settings-depth-value').value = '';
+            this.depthDraftDirty = true;
+            this.commitDepthLimit();
+        });
         this.listen(document.getElementById('map-settings-reset'), 'click', () => this.reset());
         this.listen(window, 'speleo:display-preferences-changed', () => this.sync());
 
@@ -116,7 +130,15 @@ export const MapSettings = {
 
     handleChange(event) {
         const input = event.target;
-        if (input.name === 'map-settings-color-mode' && input.checked) {
+        if (input.id === 'map-settings-depth-value') {
+            this.commitDepthLimit();
+            return;
+        } else if (input.name === 'map-settings-depth-unit' && input.checked) {
+            const unit = input.value;
+            if (this.commitDepthLimit()) {
+                Layers.setDepthLimit(State.displayPreferences.depthLimitFeet, unit);
+            }
+        } else if (input.name === 'map-settings-color-mode' && input.checked) {
             Layers.setColorMode(input.value);
         } else if (input.dataset.category) {
             Layers.setCategoryVisibility(input.dataset.category, input.checked);
@@ -126,9 +148,55 @@ export const MapSettings = {
         this.sync();
     },
 
+    validateDepthLimit() {
+        const input = this.dialog.querySelector('#map-settings-depth-value');
+        const value = input.value.trim() === '' ? null
+            : depthToFeet(input.valueAsNumber, State.displayPreferences.depthUnit);
+        const valid = !input.validity.badInput && isValidDepthLimit(value);
+        const message = valid ? '' : 'Enter a number greater than zero, or leave blank for the full range.';
+        input.setCustomValidity(message);
+        input.setAttribute('aria-invalid', String(!valid));
+        const error = this.dialog.querySelector('#map-settings-depth-error');
+        error.textContent = message;
+        error.hidden = valid;
+        this.dialog.querySelector('#map-settings-depth-clear').hidden = valid && value === null;
+        return { valid, value };
+    },
+
+    commitDepthLimit() {
+        // Unit changes must preserve canonical feet, not reconvert a rounded label.
+        if (!this.depthDraftDirty) return true;
+        const { valid, value } = this.validateDepthLimit();
+        if (!valid) return false;
+        this.depthDraftDirty = false;
+        Layers.setDepthLimit(value, State.displayPreferences.depthUnit);
+        this.syncDepthLimit();
+        return true;
+    },
+
+    syncDepthLimit() {
+        const { colorMode, depthLimitFeet, depthUnit } = State.displayPreferences;
+        const details = this.dialog.querySelector('#map-settings-depth-limit');
+        details.hidden = colorMode !== 'depth';
+        const limited = depthLimitFeet !== null;
+        details.classList.toggle('has-limit', limited);
+        const value = limited ? String(Number(depthFromFeet(depthLimitFeet, depthUnit)
+            .toPrecision(DEFAULTS.DEPTH.INPUT_SIGNIFICANT_DIGITS))) : '';
+        this.dialog.querySelector('#map-settings-depth-summary').textContent = limited
+            ? `${value} ${depthUnit}` : 'Full range';
+        this.dialog.querySelectorAll('[name="map-settings-depth-unit"]').forEach(input => {
+            input.checked = input.value === depthUnit;
+        });
+        if (!this.depthDraftDirty) {
+            this.dialog.querySelector('#map-settings-depth-value').value = value;
+            this.validateDepthLimit();
+        }
+    },
+
     sync() {
         if (!this.dialog || !State.displayPreferences) return;
         const preferences = State.displayPreferences;
+        this.syncDepthLimit();
         this.dialog.querySelectorAll('[name="map-settings-color-mode"]').forEach(input => {
             input.checked = input.value === preferences.colorMode;
         });
@@ -147,6 +215,8 @@ export const MapSettings = {
 
     reset() {
         try {
+            this.depthDraftDirty = false;
+            this.dialog.querySelector('#map-settings-depth-limit').open = false;
             DisplayPreferences.reset();
             this.setError('');
         } catch {
@@ -184,6 +254,7 @@ export const MapSettings = {
         if (this.trigger) this.trigger.setAttribute('aria-expanded', 'false');
         this.dialog = null;
         this.trigger = null;
+        this.depthDraftDirty = false;
         MapManagersMenu.destroy();
     },
 };

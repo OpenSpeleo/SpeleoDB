@@ -1,3 +1,31 @@
+import { DEFAULTS } from '../config.js';
+
+export function isValidDepthLimit(value) {
+    return value === null || (typeof value === 'number' && Number.isFinite(value) && value > 0);
+}
+
+export function depthToFeet(value, unit) {
+    if (unit !== 'ft' && unit !== 'm') return NaN;
+    if (value === null) return null;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return NaN;
+    return unit === 'm' ? value / DEFAULTS.MEASUREMENT.METERS_PER_FOOT : value;
+}
+
+export function depthFromFeet(value, unit) {
+    if (unit !== 'ft' && unit !== 'm') return NaN;
+    if (value === null) return null;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return NaN;
+    return unit === 'm' ? value * DEFAULTS.MEASUREMENT.METERS_PER_FOOT : value;
+}
+
+/** Apply a fixed scale without changing the measured project domain. */
+export function applyDepthLimit(domain, limitFeet) {
+    if (!domain) return null;
+    return limitFeet !== null && isValidDepthLimit(limitFeet)
+        ? { min: 0, max: limitFeet }
+        : domain;
+}
+
 export const DepthUtils = {
     // Robust depth parser: supports numbers and numeric prefixes like "123 ft"
     parseDepthValue(raw) {

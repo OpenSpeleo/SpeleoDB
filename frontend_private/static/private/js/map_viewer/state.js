@@ -3,6 +3,8 @@ import { DEFAULTS } from './config.js';
 export function createDefaultDisplayPreferences() {
     return {
         colorMode: DEFAULTS.DISPLAY.COLOR_MODE,
+        depthLimitFeet: DEFAULTS.DEPTH.LIMIT_FEET,
+        depthUnit: DEFAULTS.DEPTH.UNIT,
         categories: Object.fromEntries(DEFAULTS.DISPLAY.CATEGORIES.map(({ id }) => [id, true])),
         stationTypes: Object.fromEntries(DEFAULTS.DISPLAY.STATION_TYPES.map(({ id }) => [id, true])),
     };

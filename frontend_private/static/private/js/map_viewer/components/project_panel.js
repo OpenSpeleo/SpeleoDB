@@ -106,15 +106,6 @@ export const ProjectPanel = {
     // A project is visible on the map only when BOTH its individual
     // toggle AND its country gate are ON.
 
-    _syncProjectToMap: function(project) {
-        const country = project.country || 'Unknown';
-        const individualOn = Layers.isProjectVisible(project.id);
-        const countryOn = this.isCountryVisible(country);
-        const effective = individualOn && countryOn;
-
-        Layers.applyProjectVisibility(project.id, effective);
-    },
-
     _syncCountryToMap: function(country, projects) {
         const countryOn = this.isCountryVisible(country);
         projects.forEach(p => {
@@ -329,14 +320,10 @@ export const ProjectPanel = {
     },
 
     toggleProject: function(projectId, isVisible) {
-        // Save individual preference (always persisted regardless of country gate)
-        Layers.toggleProjectVisibility(projectId, isVisible);
-
-        // If country is OFF, override map back to hidden
         const project = Config.getProjectById(projectId);
-        if (project) {
-            this._syncProjectToMap(project);
-        }
+        const countryOn = !project || this.isCountryVisible(project.country || 'Unknown');
+        // Publish only the final visibility so depth domains never include a gated project.
+        Layers.toggleProjectVisibility(projectId, isVisible, isVisible && countryOn);
 
         this.refreshList();
     },

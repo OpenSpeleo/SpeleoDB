@@ -202,7 +202,7 @@ describe('ProjectPanel', () => {
 
             ProjectPanel.toggleProject('p-1', false);
 
-            expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', false);
+            expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', false, false);
         });
 
         it('refreshes the list after toggling', () => {
@@ -466,8 +466,8 @@ describe('ProjectPanel', () => {
             ProjectPanel.refreshList();
             ProjectPanel.toggleProject('p-1', true);
 
-            expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', true);
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-1', false);
+            expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', true, false);
+            expect(Layers.applyProjectVisibility).not.toHaveBeenCalled();
         });
     });
 

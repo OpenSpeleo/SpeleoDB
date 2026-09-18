@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe('private map Settings', () => {
-    it('contains only color mode, marker categories, and station types', () => {
+    it('contains appearance, marker categories, and station types', () => {
         expect([...dialog.querySelectorAll('[data-category]')].map(input => input.dataset.category))
             .toEqual(['surveyStations', 'surfaceStations', 'landmarks', 'explorationLeads', 'cylinders']);
         expect(dialog.querySelectorAll('[data-station-type]')).toHaveLength(DEFAULTS.DISPLAY.STATION_TYPES.length);
@@ -183,5 +183,161 @@ describe('private map Settings', () => {
         expect(dialog.showModal).not.toHaveBeenCalled();
         document.getElementById('station-manager-button').click();
         expect(managers.surveyStations).toHaveBeenCalledOnce();
+    });
+});
+
+describe('private depth limit controls', () => {
+    const control = id => dialog.querySelector(`#map-settings-depth-${id}`);
+    const chooseUnit = unit => dialog.querySelector(`[name="map-settings-depth-unit"][value="${unit}"]`).click();
+    const draft = value => {
+        control('value').value = value;
+        control('value').dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const commit = value => {
+        draft(value);
+        control('value').dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    beforeEach(() => {
+        MapSettings.open();
+    });
+
+    it('is initially hidden, reveals a collapsed disclosure only in depth mode, and preserves the cap across modes', () => {
+        expect(control('limit').hidden).toBe(true);
+        dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();
+        expect(control('limit').hidden).toBe(false);
+        expect(control('limit').open).toBe(false);
+        expect(control('summary').textContent).toBe('Full range');
+        control('limit').open = true;
+        commit('100');
+        expect(control('summary').textContent).toBe('100 ft');
+        expect(control('limit').classList.contains('has-limit')).toBe(true);
+        dialog.querySelector('[name="map-settings-color-mode"][value="project"]').click();
+        expect(control('limit').hidden).toBe(true);
+        dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();
+        expect(control('value').value).toBe('100');
+        expect(State.displayPreferences.depthLimitFeet).toBe(100);
+    });
+
+    it('validates while typing and applies once on Enter without forwarding map shortcuts', () => {
+        Layers.setColorMode('depth');
+        const setter = vi.spyOn(Layers, 'setDepthLimit');
+        const mapShortcut = vi.fn();
+        document.addEventListener('keydown', mapShortcut);
+        draft('1');
+        draft('12');
+        draft('125.5');
+        expect(setter).not.toHaveBeenCalled();
+        expect(State.displayPreferences.depthLimitFeet).toBeNull();
+        const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        control('value').dispatchEvent(enter);
+        control('value').dispatchEvent(new Event('change', { bubbles: true }));
+        expect(enter.defaultPrevented).toBe(true);
+        expect(mapShortcut).not.toHaveBeenCalled();
+        expect(setter).toHaveBeenCalledExactlyOnceWith(125.5, 'ft');
+        expect(State.displayPreferences.depthLimitFeet).toBe(125.5);
+        expect(dialog.open).toBe(true);
+        document.removeEventListener('keydown', mapShortcut);
+    });
+
+    it('converts the field on unit changes without cumulative rounding drift', () => {
+        const feet = 123.456789012345;
+        Layers.setDepthLimit(feet, 'ft');
+        for (let i = 0; i < 20; i++) {
+            chooseUnit('m');
+            expect(Number(control('value').value)).toBeCloseTo(feet * 0.3048, 9);
+            chooseUnit('ft');
+            expect(State.displayPreferences.depthLimitFeet).toBe(feet);
+        }
+        expect(control('summary').textContent).toBe('123.456789012 ft');
+    });
+
+    it('commits a pending draft in its original unit before switching units', () => {
+        draft('100');
+        chooseUnit('m');
+        expect(State.displayPreferences.depthLimitFeet).toBe(100);
+        expect(control('value').value).toBe('30.48');
+        commit('12.5');
+        expect(State.displayPreferences.depthLimitFeet).toBeCloseTo(12.5 / 0.3048, 10);
+        expect(control('summary').textContent).toBe('12.5 m');
+    });
+
+    it.each(['0', '-1', '-0.01'])('rejects %s without changing the cap and preserves the draft during unrelated changes', value => {
+        Layers.setDepthLimit(100, 'ft');
+        commit(value);
+        expect(State.displayPreferences.depthLimitFeet).toBe(100);
+        expect(control('error').hidden).toBe(false);
+        expect(control('value').getAttribute('aria-invalid')).toBe('true');
+        control('value').focus();
+        Layers.setCategoryVisibility('landmarks', false);
+        expect(control('value').value).toBe(value);
+        expect(document.activeElement).toBe(control('value'));
+        chooseUnit('m');
+        expect(State.displayPreferences.depthUnit).toBe('ft');
+        expect(dialog.querySelector('[name="map-settings-depth-unit"][value="ft"]').checked).toBe(true);
+        expect(control('value').value).toBe(value);
+    });
+
+    it('rejects overflowing meter conversion and accepts a corrected fractional limit', () => {
+        chooseUnit('m');
+        commit('1e308');
+        expect(State.displayPreferences.depthLimitFeet).toBeNull();
+        expect(control('error').hidden).toBe(false);
+        commit('0.125');
+        expect(State.displayPreferences.depthLimitFeet).toBeCloseTo(0.125 / 0.3048, 10);
+        expect(control('error').hidden).toBe(true);
+        expect(control('value').validity.valid).toBe(true);
+    });
+
+    it('does not treat an incomplete browser number as an empty limit', () => {
+        Layers.setDepthLimit(100, 'ft');
+        // Browsers expose value="" with badInput=true while typing "-" or "e".
+        draft('');
+        const validity = vi.spyOn(control('value'), 'validity', 'get')
+            .mockReturnValue({ badInput: true });
+        control('value').dispatchEvent(new Event('change', { bubbles: true }));
+        expect(State.displayPreferences.depthLimitFeet).toBe(100);
+        expect(control('error').hidden).toBe(false);
+        validity.mockRestore();
+        commit('');
+        expect(State.displayPreferences.depthLimitFeet).toBeNull();
+    });
+
+    it('clears a limit or invalid draft and retains selected units for automatic depth labels', () => {
+        chooseUnit('m');
+        commit('20');
+        expect(control('clear').hidden).toBe(false);
+        control('clear').click();
+        expect(State.displayPreferences.depthLimitFeet).toBeNull();
+        expect(State.displayPreferences.depthUnit).toBe('m');
+        expect(control('value').value).toBe('');
+        expect(control('summary').textContent).toBe('Full range');
+        expect(control('clear').hidden).toBe(true);
+        draft('-20');
+        control('clear').click();
+        expect(control('error').hidden).toBe(true);
+        expect(control('value').getAttribute('aria-invalid')).toBe('false');
+    });
+
+    it('persists valid changes, restores on reload, and resets limit, units and disclosure', () => {
+        Layers.setColorMode('depth');
+        chooseUnit('m');
+        commit('30');
+        const stored = JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES));
+        expect(stored.depthLimitFeet).toBeCloseTo(30 / 0.3048, 10);
+        expect(stored.depthUnit).toBe('m');
+        DisplayPreferences.init({ persist: true });
+        MapSettings.sync();
+        expect(control('value').value).toBe('30');
+        expect(control('summary').textContent).toBe('30 m');
+        control('limit').open = true;
+        draft('-1');
+        document.getElementById('map-settings-reset').click();
+        expect(State.displayPreferences.depthLimitFeet).toBeNull();
+        expect(State.displayPreferences.depthUnit).toBe('ft');
+        expect(control('limit').hidden).toBe(true);
+        expect(control('limit').open).toBe(false);
+        expect(control('error').hidden).toBe(true);
+        expect(control('value').value).toBe('');
     });
 });

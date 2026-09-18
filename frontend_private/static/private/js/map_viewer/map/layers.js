@@ -2,9 +2,11 @@ import { Config, DEFAULTS } from '../config.js';
 import { State } from '../state.js';
 import { Colors } from './colors.js';
 import {
+    applyDepthLimit,
     buildSectionDepthAverageMap,
     computeProjectDepthDomain,
     mergeDepthDomains,
+    isValidDepthLimit,
     resolveLineDepthValue
 } from './depth.js';
 import { Geometry } from './geometry.js';
@@ -391,6 +393,7 @@ export const Layers = {
 
     applyDisplayPreferences() {
         for (const { id } of DEFAULTS.DISPLAY.CATEGORIES) this.applyCategoryVisibility(id);
+        if (State.displayPreferences.colorMode !== 'depth') this.recomputeActiveDepthDomain();
         this.setColorMode(State.displayPreferences.colorMode);
     },
 
@@ -503,7 +506,9 @@ export const Layers = {
         const activeDomains = this.getVisibleProjectIds().map((projectId) => {
             return State.projectDepthDomains.get(String(projectId)) || null;
         });
-        State.activeDepthDomain = mergeDepthDomains(activeDomains);
+        State.activeDepthDomain = applyDepthLimit(
+            mergeDepthDomains(activeDomains), State.displayPreferences.depthLimitFeet
+        );
         this.emitDepthDomainUpdated();
         return State.activeDepthDomain;
     },
@@ -972,7 +977,8 @@ export const Layers = {
         this.applyNetworkLayerVisibility(nid);
     },
 
-    toggleProjectVisibility: function (projectId, isVisible) {
+    // A country gate may override on-map visibility without changing the saved preference.
+    toggleProjectVisibility: function (projectId, isVisible, visibilityOverride) {
         const pid = String(projectId);
 
         // Update state and storage
@@ -984,7 +990,7 @@ export const Layers = {
 
         // Update map visibility in one place for project layers and scoped markers.
         // Panel UI is updated by ProjectPanel.refreshList() which callers invoke.
-        this.applyProjectVisibility(pid);
+        this.applyProjectVisibility(pid, visibilityOverride);
 
         this.recomputeActiveDepthDomain();
         if (this.colorMode === 'depth') {
@@ -1037,6 +1043,20 @@ export const Layers = {
         }
         window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode } }));
         this.emitDisplayPreferencesChanged();
+    },
+
+    setDepthLimit(limitFeet, unit) {
+        if (!isValidDepthLimit(limitFeet) || (unit !== 'ft' && unit !== 'm')) return false;
+        const preferences = State.displayPreferences;
+        const limitChanged = preferences.depthLimitFeet !== limitFeet;
+        if (!limitChanged && preferences.depthUnit === unit) return true;
+
+        preferences.depthLimitFeet = limitFeet;
+        preferences.depthUnit = unit;
+        this.recomputeActiveDepthDomain();
+        if (limitChanged && this.colorMode === 'depth') this.applyDepthLineColors();
+        this.emitDisplayPreferencesChanged();
+        return true;
     },
 
     addProjectGeoJSON: async function (projectId, url) {

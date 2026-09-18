@@ -52,20 +52,21 @@ export const Colors = {
 
     getDepthPaint: function(depthDomain = null) {
         const maxDepth = depthDomain && Number.isFinite(depthDomain.max)
-            ? Math.max(1e-9, depthDomain.max)
+            ? (depthDomain.max > 0 ? depthDomain.max : DEFAULTS.DEPTH.ZERO_DOMAIN_MAX_FEET)
             : null;
         if (!maxDepth) {
             return DEFAULTS.COLORS.DEPTH_NONE;
         }
 
         const midDepth = maxDepth / 2;
+        const stops = midDepth > 0
+            ? [0, DEFAULTS.COLORS.DEPTH_SHALLOW, midDepth, DEFAULTS.COLORS.DEPTH_MID, maxDepth, DEFAULTS.COLORS.DEPTH_DEEP]
+            : [0, DEFAULTS.COLORS.DEPTH_SHALLOW, maxDepth, DEFAULTS.COLORS.DEPTH_DEEP];
         return [
             'case',
             ['has', 'depth_val'],
             ['interpolate', ['linear'], ['max', 0, ['coalesce', ['to-number', ['get', 'depth_val']], 0]],
-                0, DEFAULTS.COLORS.DEPTH_SHALLOW,
-                midDepth, DEFAULTS.COLORS.DEPTH_MID,
-                maxDepth, DEFAULTS.COLORS.DEPTH_DEEP
+                ...stops
             ],
             DEFAULTS.COLORS.DEPTH_NONE
         ];
