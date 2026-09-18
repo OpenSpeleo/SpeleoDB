@@ -177,8 +177,8 @@ jobs:
           pytest -o faulthandler_timeout=60 --durations=20
         env:
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
-          GITLAB_GROUP_NAME: ${{ secrets.GITLAB_GROUP_NAME }}
-          GITLAB_HOST_URL: ${{ secrets.GITLAB_HOST_URL }}
+          GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
+          GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           MAPBOX_API_TOKEN: ${{ secrets.MAPBOX_API_TOKEN }}
           AWS_ACCESS_KEY_ID: access_key
