@@ -132,7 +132,7 @@ local = [
     # ------------------------------------------------------------------------------
     "ruff==0.16.6",     # https://github.com/astral-sh/ruff
     "coverage==7.16.0", # https://github.com/nedbat/coveragepy
-    "djlint==1.45.2",   # https://github.com/Riverside-Healthcare/djLint
+    "djlint==1.46.1",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.5.2",      # https://github.com/j178/prek
 
     # Django
