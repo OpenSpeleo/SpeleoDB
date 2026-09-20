@@ -1,0 +1,4 @@
+interface:
+  display_name: "Merge Dependabot"
+  short_description: "Merge, verify, and squash Dependabot updates"
+  default_prompt: "Use $merge-dependabot to merge every dependabot/* branch into the current branch, upgrade and regenerate all locks once, then rebuild, test, and create one verified dependency commit."
