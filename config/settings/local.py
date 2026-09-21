@@ -13,6 +13,7 @@ from .base import *  # noqa: F403
 from .base import AWS_STORAGE_BUCKET_NAME
 from .base import INSTALLED_APPS
 from .base import LOGGING
+from .base import MAILERS
 from .base import MIDDLEWARE
 from .base import env
 
@@ -104,12 +105,21 @@ class EmailEMLBackend(EmailBackend):
         self._fname = os.path.join(self.file_path, fname)  # noqa: PTH118
 
 
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND",
-    default="config.settings.local.EmailEMLBackend",
-)
-EMAIL_FILE_PATH = "./.workdir/emails"
+# https://docs.djangoproject.com/en/dev/ref/settings/#mailers
+MAILERS = {
+    "default": {
+        **MAILERS["default"],
+        "BACKEND": env(
+            "DJANGO_EMAIL_BACKEND",
+            default="config.settings.local.EmailEMLBackend",
+        ),
+    },
+}
+if MAILERS["default"]["BACKEND"] in {
+    "config.settings.local.EmailEMLBackend",
+    "django.core.mail.backends.filebased.EmailBackend",
+}:
+    MAILERS["default"]["OPTIONS"] = {"file_path": "./.workdir/emails"}
 
 # django-debug-toolbar
 # ------------------------------------------------------------------------------

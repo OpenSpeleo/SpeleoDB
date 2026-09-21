@@ -17,6 +17,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.management import call_command
 from django.db import IntegrityError
 from django.db import transaction
+from django.test import override_settings
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask
 from django_celery_results.models import TaskResult
@@ -319,9 +320,9 @@ def test_notification_attempts_are_bounded_and_manual_resend_is_independent(
     assert job.attempts.count() == 1
 
 
+@pytest.mark.filterwarnings("error::django.utils.deprecation.RemovedInDjango70Warning")
 def test_smtp_failure_retries_email_without_rebuilding(
     user: User,
-    settings: Settings,
 ) -> None:
     EmailAddress.objects.create(
         user=user, email=user.email, verified=True, primary=True
@@ -330,23 +331,27 @@ def test_smtp_failure_retries_email_without_rebuilding(
     assert _publish(attempt)
     artifact: JobArtifact = JobArtifact.objects.get(job=job)
     expiry = artifact.expires_at
-    original_backend: str = settings.EMAIL_BACKEND
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unavailable:
         unavailable.bind(("127.0.0.1", 0))
-        settings.EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-        settings.EMAIL_HOST = "127.0.0.1"
-        settings.EMAIL_PORT = unavailable.getsockname()[1]
-        settings.EMAIL_TIMEOUT = 1
-        settings.EMAIL_USE_TLS = False
-        settings.EMAIL_USE_SSL = False
-        settings.EMAIL_HOST_USER = ""
-        settings.EMAIL_HOST_PASSWORD = ""
-        assert send_export_notification.run(str(job.pk))["notification"] == "pending"
+        with override_settings(
+            MAILERS={
+                "default": {
+                    "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+                    "OPTIONS": {
+                        "host": "127.0.0.1",
+                        "port": unavailable.getsockname()[1],
+                        "timeout": 1,
+                    },
+                },
+            },
+        ):
+            assert (
+                send_export_notification.run(str(job.pk))["notification"] == "pending"
+            )
     job.refresh_from_db()
     assert job.state == JobState.READY
     assert "Email delivery failed" in job.notification_error
     assert len(mail.outbox) == 0
-    settings.EMAIL_BACKEND = original_backend
     BackgroundJob.objects.filter(pk=job.pk).update(
         notification_due_at=timezone.now() - timedelta(seconds=1)
     )

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import socket
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from allauth.account.models import EmailAddress
@@ -10,6 +12,7 @@ from allauth.core.context import request_context
 from allauth.headless.account.inputs import SignupInput
 from django.core import mail
 from django.test import RequestFactory
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -22,6 +25,11 @@ from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from django.test.client import Client
+
+
+pytestmark = pytest.mark.filterwarnings(
+    "error::django.utils.deprecation.RemovedInDjango70Warning"
+)
 
 
 @pytest.mark.django_db
@@ -109,11 +117,56 @@ class TestAccountAdapterSendMail:
     """
     Regression tests for the custom AccountAdapter.send_mail method.
 
-    The custom adapter overrides send_mail to pass ``fail_silently=True``.
+    The custom adapter keeps backend delivery failures non-fatal for account mail.
     A previous bug caused ``KeyError: 'context'`` because
     ``globals()["context"]`` resolved against the adapter module's namespace,
     which did not import ``allauth.core.context``.
     """
+
+    def test_smtp_failure_is_silent_only_for_account_mail(self) -> None:
+        user: User = UserFactory.create()
+        email_address: EmailAddress = EmailAddress.objects.create(
+            user=user, email=user.email, verified=False, primary=True
+        )
+        request = RequestFactory().get("/")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unavailable:
+            unavailable.bind(("127.0.0.1", 0))
+            with (
+                override_settings(
+                    MAILERS={
+                        "default": {
+                            "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+                            "OPTIONS": {
+                                "host": "127.0.0.1",
+                                "port": unavailable.getsockname()[1],
+                                "timeout": 1,
+                            },
+                        },
+                    },
+                ),
+                request_context(request),
+            ):
+                email_address.send_confirmation(request, signup=True)
+                with pytest.raises(ConnectionRefusedError):
+                    mail.send_mail("Delivery probe", "Body", None, [user.email])
+
+        assert not mail.outbox
+
+    def test_unexpected_delivery_error_is_not_silenced(self) -> None:
+        request = RequestFactory().get("/")
+        with (
+            request_context(request),
+            patch(
+                "django.core.mail.backends.locmem.EmailBackend.send_messages",
+                side_effect=RuntimeError("Unexpected delivery error"),
+            ),
+            pytest.raises(RuntimeError, match="Unexpected delivery error"),
+        ):
+            AccountAdapter().send_mail(
+                "account/email/email_confirmation",
+                "recipient@example.com",
+                {"activate_url": "https://example.com/confirm/"},
+            )
 
     def test_send_confirmation_email_does_not_raise_key_error(self) -> None:
         """

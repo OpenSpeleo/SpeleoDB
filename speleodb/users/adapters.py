@@ -8,11 +8,13 @@ from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as _allauth_context
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
+from django.core.mail import mailers
 
 if typing.TYPE_CHECKING:
     from typing import Any
 
     from django.contrib.auth.base_user import AbstractBaseUser
+    from django.core.mail.backends.base import BaseEmailBackend
     from django.forms import BaseForm
     from django.http import HttpRequest
 
@@ -48,4 +50,7 @@ class AccountAdapter(DefaultAccountAdapter):
         }
         ctx.update(context)
         msg = self.render_mail(template_prefix, email, ctx)
-        msg.send(fail_silently=True)
+        # Mailers return a fresh backend, so this policy only affects account mail.
+        mailer: BaseEmailBackend = mailers.default
+        mailer.fail_silently = True
+        mailer.send_messages([msg])

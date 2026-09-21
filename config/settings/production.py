@@ -118,10 +118,10 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
 INSTALLED_APPS += ["anymail"]
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+# https://docs.djangoproject.com/en/dev/ref/settings/#mailers
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps/mailgun/
-EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
+MAILERS = {"default": {"BACKEND": "anymail.backends.mailersend.EmailBackend"}}
 ANYMAIL = {
     "MAILERSEND_API_TOKEN": env("MAILERSEND_API_TOKEN"),
 }
