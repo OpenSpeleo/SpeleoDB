@@ -36,3 +36,7 @@ signup/email changes, real SMTP failure isolation, and unexpected-error
 propagation. Settings tests construct the supported local backends and verify
 file delivery, including `.eml` naming. Django 7.0 deprecations are treated as
 errors in the affected regression tests and during the focused verification run.
+The settings subprocess supplies an explicit test-only `DJANGO_SECRET_KEY` with
+base/local dotenv loading disabled. This keeps the probe independent of
+developer secrets and the test-settings fallback, which does not populate the
+environment required by local settings.

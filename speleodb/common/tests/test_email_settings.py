@@ -29,6 +29,9 @@ def test_mailer_settings_construct_working_backends(
     child_environment.update(
         DJANGO_SETTINGS_MODULE=settings_module,
         DJANGO_READ_DOT_ENV_FILE="False",
+        # Local settings require an environment key; test settings' default
+        # does not populate os.environ for this subprocess.
+        DJANGO_SECRET_KEY="mailer-settings-probe-only",  # noqa: S106 - test-only key
     )
     child_environment.pop("DJANGO_EMAIL_BACKEND", None)
     if backend is not None:
