@@ -27,7 +27,8 @@ provides User Access Control and an administrator-only Danger Zone.
 - [x] Run JavaScript lint, targeted Ruff/mypy, Django checks, and Vite build.
 - [x] Verify desktop and mobile workflows in the authenticated local
       application.
-- [x] Review the final diff, whitespace, staged state, and subtree boundaries.
+- [x] Review the final diff, whitespace, staged state, and repository
+      boundaries.
 
 ## Review / Results
 

@@ -39,10 +39,10 @@
 - [x] Remove the experimental Rust/native dependency layer so both standalone
       and monorepo devcontainers use the same web-only image.
 - [x] Exclude Compass and Ariane from root prek discovery while keeping their
-      standalone configurations runnable from inside each subtree.
+      standalone configurations runnable from inside each repository.
 - [x] Remove obsolete toolchain references from scripts and documentation.
 - [x] Verify the web image, merged Compose configuration, root hooks, and both
-      subtree-local hook entry points.
+      repository-local hook entry points.
 - [x] Mount the web Linux `node_modules` volume at both `/app/node_modules` and
       `/workspace/apps/web/node_modules` in the monorepo workspace container.
 - [x] Verify the native Rolldown binding and Vite pre-commit build from the
@@ -74,7 +74,7 @@
 
 ## Review
 
-The root devcontainer composes on top of this subtree rather than duplicating
+The root devcontainer composes on top of this repository rather than duplicating
 its services. The initial smoke test reached `/start`, but merely adding
 hard-coded GitLab values to `.envs/.django` did not provision the corresponding
 GitLab group/token or RustFS buckets and incorrectly assumed a stable group ID.

@@ -36,7 +36,7 @@ preserving each model's routes, permissions, fields, shell, and responsive UI.
       build.
 - [x] Adversarial principal-engineer review and corrective pass.
 - [x] Full standalone web `prek run -a` validation.
-- [x] Whitespace, staged-state, and subtree-boundary review.
+- [x] Whitespace, staged-state, and repository-boundary review.
 
 ## Review / Results
 
