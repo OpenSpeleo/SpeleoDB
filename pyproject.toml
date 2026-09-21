@@ -3,6 +3,16 @@
 # compass-lib = { git = "https://github.com/OpenSpeleo/pytool_compass_lib.git", rev = "5cdfbb5ca9e850a99f35ca5df584674c9764b8e0" }
 # openspeleo-lib = { path = ".workdir/test_wheels/openspeleo_lib-0.0.12-py3-none-any.whl" }
 
+[tool.uv]
+override-dependencies = [
+    { package = { name = "django-celery-beat" }, dependencies = [
+        "django>=5.2,<6.2",
+    ] },
+    { package = { name = "django-js-reverse" }, dependencies = [
+        "django>=5.2,<6.2",
+    ] },
+]
+
 # ==== UV Settings ==== #
 [project]
 name = "speleodb_website"
@@ -20,7 +30,7 @@ dependencies = [
     "pytz==2026.3.post1",   # https://github.com/stub42/pytz
     "timeago==1.0.16",      # https://github.com/hustcc/timeago
     "tomlkit==0.15.1",      # https://github.com/python-poetry/tomlkit
-    "wrapt==2.4.0",         # https://github.com/GrahamDumpleton/wrapt
+    "wrapt==2.4.1",         # https://github.com/GrahamDumpleton/wrapt
 
     # Redis
     # ------------------------------------------------------------------------------
@@ -45,9 +55,9 @@ dependencies = [
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
     "geojson==3.3.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
-    "jsonschema-rs==0.55.0", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.56.0", # https://github.com/Stranger6667/jsonschema
     "orjson==3.12.0",        # https://github.com/ijl/orjson
-    "pyproj==3.7.2",         # https://github.com/pyproj4/pyproj
+    "pyproj==3.8.0",         # https://github.com/pyproj4/pyproj
     "pyshp==3.1.6",          # https://github.com/GeospatialPython/pyshp
     "shapely==2.1.2",        # https://github.com/shapely/shapely
 
@@ -64,9 +74,9 @@ dependencies = [
 
     # Django
     # ------------------------------------------------------------------------------
-    "django==6.0.8",                   # https://www.djangoproject.com/
-    "django-allauth==65.19.2",         # https://github.com/pennersr/django-allauth
-    "django-countries==9.0.0",         # https://github.com/SmileyChris/django-countries/
+    "django==6.1.1",                   # https://www.djangoproject.com/
+    "django-allauth==65.19.4",         # https://github.com/pennersr/django-allauth
+    "django-countries==9.1.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.14.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.7.8",            # https://github.com/django-hijack/django-hijack/
@@ -79,32 +89,32 @@ dependencies = [
 
     # Django REST Framework
     # ------------------------------------------------------------------------------
-    "djangorestframework==3.18.0", # https://github.com/encode/django-rest-framework
+    "djangorestframework==3.18.1", # https://github.com/encode/django-rest-framework
     "django-cors-headers==4.9.0",  # https://github.com/adamchainz/django-cors-headers
     "drf-spectacular==0.30.0",     # https://github.com/tfranzel/drf-spectacular
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.43.89", # https://github.com/boto/botocore
-    "boto3==1.43.89",    # https://github.com/boto/boto3
+    "botocore==1.43.98", # https://github.com/boto/botocore
+    "boto3==1.43.98",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
-    "celery==5.6.3",               # https://github.com/celery/celery
+    "celery==5.6.3",                # https://github.com/celery/celery
     "django-celery-beat==2.9.0",    # https://github.com/celery/django-celery-beat
     "django-celery-results==2.6.0", # https://github.com/celery/django-celery-results
-    "watchfiles==1.2.0",           # https://github.com/samuelcolvin/watchfiles
+    "watchfiles==1.2.0",            # https://github.com/samuelcolvin/watchfiles
 
     # Sentry-SDK
     # ------------------------------------------------------------------------------
-    "sentry-sdk[django]==2.68.1", # https://github.com/getsentry/sentry-python
+    "sentry-sdk[django]==2.69.2", # https://github.com/getsentry/sentry-python
 ]
 
 [project.optional-dependencies]
 local = [
     "werkzeug[watchdog]==3.1.8", # https://github.com/pallets/werkzeug
     "ipdb==0.13.13",             # https://github.com/gotcha/ipdb
-    "psycopg[binary]==3.3.5",    # https://github.com/psycopg/psycopg
+    "psycopg[binary]==3.3.6",    # https://github.com/psycopg/psycopg
 
     # Testing
     # ------------------------------------------------------------------------------
@@ -130,23 +140,23 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.16.6",     # https://github.com/astral-sh/ruff
-    "coverage==7.16.0", # https://github.com/nedbat/coveragepy
-    "djlint==1.45.2",   # https://github.com/Riverside-Healthcare/djLint
-    "prek==0.5.2",      # https://github.com/j178/prek
+    "ruff==0.16.8",     # https://github.com/astral-sh/ruff
+    "coverage==7.16.1", # https://github.com/nedbat/coveragepy
+    "djlint==1.46.2",   # https://github.com/Riverside-Healthcare/djLint
+    "prek==0.5.3",      # https://github.com/j178/prek
 
     # Django
     # ------------------------------------------------------------------------------
     "django-debug-toolbar==8.0.0",    # https://github.com/jazzband/django-debug-toolbar
     "django-extensions==4.1",         # https://github.com/django-extensions/django-extensions
     "django-schema-viewer==0.5.3",    # https://github.com/pikhovkin/django-schema-viewer
-    "django-silk[formatting]==5.5.2", # https://github.com/jazzband/django-silk
+    "django-silk[formatting]==5.6.0", # https://github.com/jazzband/django-silk
 ]
 
 production = [
     "gunicorn==26.2.0", # https://github.com/benoitc/gunicorn
     # "granian==2.5.2",  # https://github.com/emmett-framework/granian
-    "psycopg[c]==3.3.5", # https://github.com/psycopg/psycopg
+    "psycopg[c]==3.3.6", # https://github.com/psycopg/psycopg
 
     # AWS
     # ------------------------------------------------------------------------------

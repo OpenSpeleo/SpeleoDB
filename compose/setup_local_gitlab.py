@@ -166,7 +166,6 @@ def provision_gitlab(
     if (
         current_token
         and len(named_tokens) == 1
-        and named_tokens[0].get("expires_at") is None
         and client.token_can_access_group(group_id, current_token)
     ):
         return GitLabProvisioningResult(
