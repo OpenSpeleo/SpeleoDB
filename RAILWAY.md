@@ -7,8 +7,10 @@ add a `railway.json`. Preserve the existing named partial so applying this file
 does not take ownership of unrelated services or databases.
 
 `railpack.json` is the image-build recipe, including Python dependencies and
-frontend assets. Service start commands, predeployment commands, resources, and
-environment references belong in `.railway/railway.ts`.
+frontend assets. It keeps the Python provider and runs frontend commands through
+Mise with the Node major read from `.node-version`; do not duplicate that major
+in the Railpack package map. Service start commands, predeployment commands,
+resources, and environment references belong in `.railway/railway.ts`.
 
 Validate edits in the running application container:
 
@@ -90,21 +92,23 @@ Verify
   ↳ Using provider Python from config
   ↳ Using uv
 
-  Packages
-  ──────────
-  pipx    │  1.7.1   │  railpack default (latest)
-  python  │  3.13.3  │  custom config (3.13)
-
   Steps
   ──────────
   ▸ install
-    $ pipx install uv
+    $ uv sync --locked --no-dev --no-install-project
+
+  ▸ build
     $ uv sync --extra production --frozen
+    $ mise exec -- node --version
+    $ mise exec -- npm ci
+    $ mise exec -- npm run build
+    $ rm -rf node_modules
 
   Deploy
   ──────────
     $ python manage.py migrate && gunicorn backend.wsgi:application
 ```
 
-The file `railpack.json` is generated using
-`railpack prepare --plan-out out.json .` to "inspect the default configuration".
+Mise discovers Node from `.node-version`; `mise exec --` activates that
+repository-owned version without duplicating the major in `railpack.json`. Use
+`railpack prepare --plan-out out.json .` to inspect the effective plan.

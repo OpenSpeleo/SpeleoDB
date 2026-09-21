@@ -102,6 +102,9 @@ The repository now uses a single Node workspace at the repo root.
 - Canonical Node manifests are:
   - `package.json`
   - `package-lock.json`
+- `.node-version` is the canonical Node major for local containers, CI, and
+  Railpack. The root `engines.node` value mirrors it as `<major>.*`; do not
+  hard-code a separate Node version in those integrations.
 - Do not re-introduce nested `package.json` files for frontend tooling.
 - Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
   is the logical-entry registry consumed by `vite.config.mjs` and the Django
@@ -152,7 +155,8 @@ The repository now uses a single Node workspace at the repo root.
 ### Related system hooks
 
 - Dev container/webserver bootstrap: `compose/start` (root npm commands).
-- Railpack image build: `railpack.json` (Node 24, `npm ci && npm run build`).
+- Railpack image build: `railpack.json` (Node from `.node-version` via Mise,
+  `npm ci && npm run build`).
 - Railway service configuration: `.railway/railway.ts` is the sole authority;
   predeploy runs migrations, `install_background_schedules`, and
   `collectstatic`. Do not reintroduce legacy `railway.toml` or `railway.json`

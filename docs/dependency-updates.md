@@ -12,9 +12,11 @@ resolvers decide which combined graph is actually valid.
 
 Python direct requirements and extras are owned by `pyproject.toml`, with the
 complete cross-extra graph in `uv.lock`. JavaScript tooling is one root
-workspace owned by `package.json` and `package-lock.json`. GitHub Actions own CI
-tool bootstrap versions, and `compose/Dockerfile` owns the local Python image.
-Cargo and Bun workflows do not apply unless their manifests exist in the tree.
+workspace owned by `package.json` and `package-lock.json`. `.node-version` owns
+the Node major used by local containers, GitHub Actions, and Railpack; the root
+package engine mirrors it as `<major>.*`. GitHub Actions own other CI tool
+bootstrap versions, and `compose/Dockerfile` owns the local Python image. Cargo
+and Bun workflows do not apply unless their manifests exist in the tree.
 
 Fetch the authoritative list of open Dependabot PRs targeting `dev`, merge all
 of their heads locally, and then consolidate overlaps in the manifests. Run
@@ -53,13 +55,13 @@ to make a candidate version resolve.
 
 ## Compatibility and performance
 
-The Node engine range follows the intersection required by the installed tooling
-graph and the Node releases exercised by CI/deployment. Major updates to test
-environments, compilers, framework packages, serializers, database clients, or
-geospatial/media bindings require the same full-suite evidence as a source
-change. Dependency updates must not add runtime queries, frontend work, or new
-services; any performance change should come only from the selected upstream
-implementations.
+The Node engine must match the major selected by `.node-version`, and every
+Node-consuming build environment must read that file rather than carry a second
+version. Major updates to test environments, compilers, framework packages,
+serializers, database clients, or geospatial/media bindings require the same
+relevant-suite evidence as a source change. Dependency updates must not add
+runtime queries, frontend work, or new services; any performance change should
+come only from the selected upstream implementations.
 
 The DRF 3.18 typing contract accurately models parsed request data as either a
 JSON object or array. Object-only handlers narrow that shape through

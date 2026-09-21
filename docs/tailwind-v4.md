@@ -182,8 +182,8 @@ manifest must fail rather than skip a route, role, state, viewport, or engine
 that it claims to cover.
 
 Required repository gates remain the root builds, JavaScript lint/tests, Django
-template validation, pytest, pre-commit, clean installs on Node 22 and Node 24,
-watcher isolation, and deployment build contracts.
+template validation, pytest, pre-commit, a clean install on the `.node-version`
+runtime, watcher isolation, and deployment build contracts.
 
 The focused Git route is not a substitute for the release matrix. The active
 adversarial review deliberately remains incomplete until every required

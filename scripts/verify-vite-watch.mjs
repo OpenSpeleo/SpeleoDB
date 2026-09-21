@@ -111,6 +111,7 @@ try {
             'frontend_private',
             'frontend_public',
             'tailwind_css',
+            'speleodb/gis/geometry_contract.json',
             'speleodb/surveys/templatetags/project_types.py',
         ].map(copy),
     );

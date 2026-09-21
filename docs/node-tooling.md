@@ -7,15 +7,19 @@ compiles Tailwind, route CSS, application ES modules, and shared chunks; Django
 remains the only HTML and static-file server. The repository does not run Vite's
 development server, proxy, HMR client, or HTML transformer.
 
-The supported Node lines and their exact minimum releases are declared by the
-root `package.json` engine range. Production images use Node 24. This declared
-range tracks the runtime floor of the frontend test/tooling graph. CI and
-Railpack exercise Node 24, the Compose/devcontainer image exercises Node 22, and
-the local clean install covers the newer `>=26` range. Exact direct dependency
-versions live only in `package.json` and `package-lock.json` so documentation
-cannot drift from the install graph. Registry-backed lockfile nodes retain
-`resolved` and `integrity` metadata, and `allowScripts` must exactly match
-packages with install scripts. Audit both invariants whenever the graph changes.
+The supported Node major is declared once in `.node-version`. The root
+`package.json` engine mirrors that value as `26.*`, making the compatibility
+contract explicit without creating another independently selected runtime.
+GitHub Actions reads the version file directly, the Compose/devcontainer image
+derives its NodeSource channel from it, and Railpack passes it to Mise for the
+frontend build. The major-only value intentionally follows compatible 26.x patch
+releases across all environments.
+
+Exact direct dependency versions live only in `package.json` and
+`package-lock.json` so documentation cannot drift from the install graph.
+Registry-backed lockfile nodes retain `resolved` and `integrity` metadata, and
+`allowScripts` must exactly match packages with install scripts. Audit both
+invariants whenever the graph changes.
 
 ## Asset graph
 
@@ -65,8 +69,10 @@ loudly. DEBUG/test may fall back to registry-derived stable names before the
 first watcher build. URLs pass through Django static storage, preserving local
 serving and S3/CloudFront behavior.
 
-Railpack installs Node 24 and runs `npm ci && npm run build` while constructing
-the image. The runtime retains generated assets and manifest but not
+Railpack retains the Python provider and uses `mise exec` to run `node`,
+`npm ci`, and `npm run build` with the major read from `.node-version`. Node is
+therefore versioned by the repository rather than duplicated in Railpack's
+package map. The runtime retains generated assets and manifest but not
 `node_modules`. Railway pre-deploy runs only migrations and `collectstatic`,
 because pre-deploy filesystem changes are not persisted. SPA serving is disabled
 and Gunicorn/Django remains the start command.
@@ -77,8 +83,7 @@ acceptable source because it can omit registry resolution metadata. Run npm with
 the temporary directory as its real working directory: using `--prefix` and then
 moving that lockfile can encode temporary paths into package keys. Confirm
 package keys are empty or `node_modules/...`, the root manifest matches, and
-every registry-backed package retains its checksum. Then run clean installs on
-the maintained Node 22 and 24 lines plus the active local `>=26` runtime, audit
-pending scripts, run the complete build/lint/test suite, exercise watcher
-invalidation, and verify `collectstatic` plus production module MIME/CORS
-behavior.
+every registry-backed package retains its checksum. Then run a clean install on
+the `.node-version` runtime, audit pending scripts, run the complete
+build/lint/test suite, exercise watcher invalidation, and verify `collectstatic`
+plus production module MIME/CORS behavior.

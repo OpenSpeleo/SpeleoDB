@@ -2,7 +2,6 @@
   "$schema": "https://schema.railpack.com",
   "provider": "python",
   "packages": {
-    "node": "24",
     "python": "3.14"
   },
   "steps": {
@@ -12,10 +11,13 @@
           "cmd": "uv sync --extra production --frozen"
         },
         {
-          "cmd": "npm ci"
+          "cmd": "mise exec -- node --version"
         },
         {
-          "cmd": "npm run build"
+          "cmd": "mise exec -- npm ci"
+        },
+        {
+          "cmd": "mise exec -- npm run build"
         },
         {
           "cmd": "rm -rf node_modules"

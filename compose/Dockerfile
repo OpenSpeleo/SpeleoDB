@@ -39,15 +39,23 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
-# Install NodeJS
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+# Install the NodeJS major declared by the repository.
+COPY .node-version /tmp/.node-version
+RUN NODE_MAJOR="$(tr -d '[:space:]' < /tmp/.node-version)" \
+    && case "${NODE_MAJOR}" in \
+        ""|*[!0-9]*) echo "Invalid Node major in .node-version: ${NODE_MAJOR}" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
     && apt-get update && apt-get install --no-install-recommends -y \
     nodejs \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/* && \
     # update npm to latest
-    npm install -g npm && npm cache clean --force
+    npm install -g npm \
+    && node --version | grep -Eq "^v${NODE_MAJOR}\\." \
+    && npm cache clean --force \
+    && rm /tmp/.node-version
 
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
