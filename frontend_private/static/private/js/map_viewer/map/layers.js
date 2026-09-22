@@ -1012,35 +1012,25 @@ export const Layers = {
         });
     },
 
-    applyProjectLineColors: function () {
+    applyLineColors: function (mode = this.colorMode) {
         const map = State.map;
         if (!map) return;
 
         this.forEachProjectLineLayer((layerId, projectId) => {
-            map.setPaintProperty(layerId, 'line-color', Colors.getProjectColor(projectId));
+            map.setPaintProperty(layerId, 'line-color', Colors.getSurveyPaint(projectId, mode, State.activeDepthDomain));
         });
     },
 
     applyDepthLineColors: function () {
-        const map = State.map;
-        if (!map) return;
-
-        const depthPaint = Colors.getDepthPaint(State.activeDepthDomain);
-        this.forEachProjectLineLayer((layerId) => {
-            map.setPaintProperty(layerId, 'line-color', depthPaint);
-        });
+        this.applyLineColors('depth');
     },
 
     setColorMode: function (mode) {
-        if (mode !== 'project' && mode !== 'depth') return;
+        if (!Colors.isValidColorMode(mode)) return;
         this.colorMode = mode;
 
-        if (mode === 'depth') {
-            this.recomputeActiveDepthDomain();
-            this.applyDepthLineColors();
-        } else {
-            this.applyProjectLineColors();
-        }
+        if (mode === 'depth') this.recomputeActiveDepthDomain();
+        this.applyLineColors();
         window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode } }));
         this.emitDisplayPreferencesChanged();
     },
@@ -1083,9 +1073,6 @@ export const Layers = {
                     tolerance: 0  // Prevent line simplification at low zoom levels
                 });
 
-                // Use Color Helper
-                const color = Colors.getProjectColor(projectId);
-
                 // Track layers
                 if (!State.allProjectLayers.has(String(projectId))) {
                     State.allProjectLayers.set(String(projectId), []);
@@ -1105,9 +1092,7 @@ export const Layers = {
                         'line-cap': 'round'
                     },
                     paint: {
-                        'line-color': this.colorMode === 'project'
-                            ? color
-                            : Colors.getDepthPaint(State.activeDepthDomain),
+                        'line-color': Colors.getSurveyPaint(projectId, this.colorMode, State.activeDepthDomain),
                         // Thicker lines at low zoom for visibility from high altitude
                         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 2.5, 10, 3, 14, 4, 18, 6],
                         'line-opacity': 1

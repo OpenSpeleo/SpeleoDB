@@ -42,6 +42,13 @@ storage leaves controls usable for the visit. Retired preference fields from the
 earlier linework/overlay controls are ignored, so removed controls cannot leave
 content hidden.
 
+The private color selector offers **By Survey**, **By Depth**, and **By Shot**.
+By Shot uses exported Ariane shot colors and generated Compass section colors,
+with each feature falling back to its survey color when its color is absent or
+invalid. This mode stays available for legacy or mixed data and persists like
+the other modes. See [shot coloring](shot-coloring.md) for the rendering
+contract. Depth controls and the depth legend appear only in By Depth.
+
 All five marker categories/types default on; color defaults to By Survey.
 Individual GPS, GIS layer, and GIS geometry selections keep their existing
 session-off defaults. Reset restores marker/type visibility and color defaults,

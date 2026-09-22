@@ -130,9 +130,9 @@ it.each(['not JSON', 'null', '[]', '{"version":999,"colorMode":"depth"}'])('uses
     expect(DisplayPreferences.storageAvailable).toBe(true);
 });
 
-it('resets public routes without reading, replacing, or persisting private browser preferences', () => {
+it.each(['depth', 'shot'])('resets public routes without reading or changing private %s preferences', mode => {
     DisplayPreferences.init({ persist: true });
-    Layers.setColorMode('depth');
+    Layers.setColorMode(mode);
     Layers.setCategoryVisibility('surveyStations', false);
     Layers.setDepthLimit(125.75, 'm');
     const saved = localStorage.getItem(storageKey);
@@ -199,4 +199,17 @@ it('keeps one persistence listener after repeated initialization and removes it 
     DisplayPreferences.destroy();
     Layers.setCategoryVisibility('landmarks', true);
     expect(write).toHaveBeenCalledTimes(1);
+});
+
+
+it('persists shot mode, restores it after layer-state resets, and resets to survey', () => {
+    DisplayPreferences.init({ persist: true });
+    Layers.setColorMode('shot');
+    expect(JSON.parse(localStorage.getItem(storageKey)).colorMode).toBe('shot');
+    State.resetLayerState();
+    DisplayPreferences.init({ persist: true });
+    expect(State.displayPreferences.colorMode).toBe('shot');
+    DisplayPreferences.reset();
+    expect(State.displayPreferences.colorMode).toBe('project');
+    expect(JSON.parse(localStorage.getItem(storageKey)).colorMode).toBe('project');
 });

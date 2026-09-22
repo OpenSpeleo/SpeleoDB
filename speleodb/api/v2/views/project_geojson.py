@@ -28,11 +28,10 @@ from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WebViewerAccess
 from speleodb.api.v2.serializers import ProjectGeoJSONCommitSerializer
 from speleodb.api.v2.serializers import ProjectWithGeoJsonSerializer
+from speleodb.api.v2.views.gis_view import ProjectArtifactOGCService
 from speleodb.api.v2.views.gis_view import _build_typed_collection_meta
 from speleodb.api.v2.views.gis_view import _load_collection_bbox
-from speleodb.api.v2.views.gis_view import _load_feature_by_id
 from speleodb.api.v2.views.gis_view import _load_geometry_groups_present
-from speleodb.api.v2.views.gis_view import _load_normalized_features
 from speleodb.api.v2.views.ogc_base import BaseOGCCollectionApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCCollectionItemsApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCCollectionsApiView
@@ -40,10 +39,8 @@ from speleodb.api.v2.views.ogc_base import BaseOGCConformanceApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCLandingPageApiView
 from speleodb.api.v2.views.ogc_base import BaseOGCSingleFeatureApiView
 from speleodb.api.v2.views.ogc_base import OGCCollectionMeta
-from speleodb.api.v2.views.ogc_base import OGCFeatureService
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.ogc_helpers import GEOMETRY_GROUPS_ORDERED
-from speleodb.gis.ogc_helpers import filter_features_by_geometry_group
 from speleodb.gis.ogc_helpers import parse_typed_collection_id
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -110,7 +107,7 @@ class ProjectAllProjectGeoJsonApiView(
 # ---------------------------------------------------------------------------
 
 
-class ProjectUserOGCService(OGCFeatureService[Token]):
+class ProjectUserOGCService(ProjectArtifactOGCService[Token]):
     """OGC feature service for projects the token's user can read.
 
     Same geometry-typed split as :class:`ProjectViewOGCService`: each
@@ -140,11 +137,10 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
         projects = helper.get_user_projects(user)
         out: list[OGCCollectionMeta] = []
         for project in projects:
-            geojsons = list(project.geojsons.all())
-            if not geojsons:
+            latest = project.geojsons.all().first()
+            if latest is None:
                 continue
-            latest = geojsons[0]
-            present = _load_geometry_groups_present(latest.commit_sha)
+            present = _load_geometry_groups_present(latest)
             for group in GEOMETRY_GROUPS_ORDERED:
                 if group not in present:
                     continue
@@ -172,12 +168,8 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
             return None
         sha, group = parsed
         user: User = scope.user
-        try:
-            project_geojson = ProjectGeoJSON.objects.select_related(
-                "project",
-                "commit",
-            ).get(commit__id=sha)
-        except ProjectGeoJSON.DoesNotExist:
+        project_geojson = self._artifact_for_commit(sha)
+        if project_geojson is None:
             return None
         try:
             user.get_best_permission(project_geojson.project)
@@ -185,7 +177,7 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
             # Treat permission denial as "not found" — never leak the
             # existence of resources outside the user's read scope.
             return None
-        if group not in _load_geometry_groups_present(sha):
+        if group not in _load_geometry_groups_present(project_geojson):
             # SHA exists and the user is permitted, but this geometry
             # group has no features at this commit — surface as 404
             # so QGIS / ArcGIS Pro do not add an empty layer.
@@ -194,47 +186,8 @@ class ProjectUserOGCService(OGCFeatureService[Token]):
             project_name=project_geojson.project.name,
             commit_sha=sha,
             group=group,
-            bbox=_load_collection_bbox(sha, group),
+            bbox=_load_collection_bbox(project_geojson, group),
         )
-
-    def get_features(
-        self,
-        scope: Token,
-        collection_id: str,
-    ) -> list[dict[str, Any]]:
-        # Authorization performed in get_collection() — the generic
-        # view always calls it first. The cached features list is
-        # keyed by commit SHA only; the geometry filter is applied
-        # at request time.
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return []
-        sha, group = parsed
-        return filter_features_by_geometry_group(
-            _load_normalized_features(sha),
-            group,
-        )
-
-    def get_feature(
-        self,
-        scope: Token,
-        collection_id: str,
-        feature_id: str,
-    ) -> dict[str, Any] | None:
-        # O(1) lookup via the cached index then a constant-time group
-        # filter — see ProjectViewOGCService.get_feature.
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return None
-        sha, group = parsed
-        return _load_feature_by_id(sha, feature_id, group)
-
-    def get_etag(self, scope: Token, collection_id: str) -> str | None:
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return None
-        sha, group = parsed
-        return f"{sha}_{group}"
 
 
 # ---------------------------------------------------------------------------

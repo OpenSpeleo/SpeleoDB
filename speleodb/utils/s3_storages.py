@@ -253,7 +253,8 @@ class BaseGeoJSONStorage(PrivateS3Storage):
 class GeoJSONStorage(PrivateS3Storage):
     """
     Files are stored under the "geojson/" prefix; the model's upload_to
-    callable should place them into "project.id/commit.sha/" subfolder.
+    callable places them under "project.id/artifact.uuid.json". Source commit
+    identity remains in the database, independently of regenerated artifacts.
     """
 
     file_overwrite = BaseS3Storage.file_overwrite

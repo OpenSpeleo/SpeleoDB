@@ -1,6 +1,8 @@
 import { Config, DEFAULTS } from '../config.js';
 import { State, createDefaultDisplayPreferences } from '../state.js';
 import { Layers } from './layers.js';
+import { Colors } from './colors.js';
+import { Geometry } from './geometry.js';
 
 vi.mock('./geojson.js', () => ({ computeGeoJSONBounds: () => ({ isEmpty: () => false }) }));
 
@@ -39,6 +41,7 @@ beforeEach(() => {
     State.displayPreferences = createDefaultDisplayPreferences();
     State.map = createMap();
     Config._projects = [{ id: 'p1', name: 'Survey', color: '#123456' }];
+    Colors.resetColorMap();
     localStorage.clear();
 });
 
@@ -161,4 +164,89 @@ it('emits color and preference changes once, sharing legacy accessors without re
     expect(State.displayPreferences.categories.landmarks).toBe(false);
     window.removeEventListener('speleo:color-mode-changed', colorChanged);
     window.removeEventListener('speleo:display-preferences-changed', preferencesChanged);
+});
+
+
+it('changes all survey modes using paint only, with each project fallback and no unrelated layer changes', () => {
+    const map = State.map;
+    Config._projects.push({ id: 'p2', color: '#abcdef' });
+    for (const id of ['p1', 'p2']) {
+        map.addLayer({ id: `project-layer-${id}`, type: 'line' });
+        map.addLayer({ id: `project-points-${id}`, type: 'symbol' });
+        State.allProjectLayers.set(id, [`project-layer-${id}`, `project-points-${id}`]);
+        State.projectDepthDomains.set(id, { min: 0, max: 100 });
+    }
+    map.addLayer({ id: 'gps-track', type: 'line' });
+    map.addLayer({ id: 'gis-outline', type: 'line' });
+    vi.stubGlobal('fetch', vi.fn());
+    const cache = vi.spyOn(Geometry, 'cacheLineFeatures');
+    for (const mode of ['depth', 'shot', 'project', 'shot']) {
+        map.setPaintProperty.mockClear();
+        Layers.setColorMode(mode);
+        expect(map.setPaintProperty).toHaveBeenCalledTimes(2);
+        for (const id of ['p1', 'p2']) {
+            expect(map.setPaintProperty).toHaveBeenCalledWith(
+                `project-layer-${id}`, 'line-color', Colors.getSurveyPaint(id, mode, { min: 0, max: 100 }),
+            );
+        }
+    }
+    expect(map.setPaintProperty).toHaveBeenCalledWith('project-layer-p1', 'line-color', ['to-color', ['get', 'color'], '#123456']);
+    expect(map.setPaintProperty).toHaveBeenCalledWith('project-layer-p2', 'line-color', ['to-color', ['get', 'color'], '#abcdef']);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(cache).not.toHaveBeenCalled();
+    expect(map.addSource).not.toHaveBeenCalled();
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.flyTo).not.toHaveBeenCalled();
+    expect(map.setStyle).not.toHaveBeenCalled();
+});
+
+it('preserves shot properties through late loading, data refresh, and layer reconstruction', async () => {
+    const properties = [
+        { color: '#12ab34', depth: 20 },
+        { color: 'rgba(50,100,150,0.5)', depth: 40 },
+        {},
+        { color: 'not-a-color' },
+    ];
+    const data = collection(properties.map((props, index) => ({
+        type: 'Feature', id: index, properties: props,
+        geometry: { type: 'LineString', coordinates: [[-87, 20, -20], [-87.1, 20.1, -40]] },
+    })));
+    let resolveResponse;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { resolveResponse = resolve; })));
+    const pending = Layers.addProjectGeoJSON('p1', '/survey.geojson');
+    Layers.setColorMode('shot');
+    resolveResponse({ ok: true, json: async () => data });
+    await pending;
+    const expression = ['to-color', ['get', 'color'], '#123456'];
+    expect(State.map.getLayer('project-layer-p1').paint['line-color']).toEqual(expression);
+    const source = State.map.getSource('project-geojson-p1');
+    expect(source.data.features.map(feature => feature.properties.color)).toEqual(properties.map(props => props.color));
+    const entrancePaint = State.map.getLayer('project-points-p1').paint;
+    expect(entrancePaint['text-color']).toBe('#F5E027');
+    fetch.mockResolvedValue({ ok: true, json: async () => data });
+    await Layers.addProjectGeoJSON('p1', '/refreshed.geojson');
+    expect(source.setData).toHaveBeenCalledOnce();
+    expect(source.setData.mock.calls[0][0].features[1].properties.color).toBe('rgba(50,100,150,0.5)');
+    State.resetLayerState();
+    State.map = createMap();
+    await Layers.addProjectGeoJSON('p1', '/rebuilt.geojson');
+    Layers.applyDisplayPreferences();
+    expect(State.map.getLayer('project-layer-p1').paint['line-color']).toEqual(expression);
+    expect(State.map.setPaintProperty).toHaveBeenCalledWith('project-layer-p1', 'line-color', expression);
+    expect(State.map.getLayer('project-points-p1').paint).toEqual(entrancePaint);
+});
+
+it('ignores invalid color modes without changing preferences, paint, or events', () => {
+    Layers.setColorMode('shot');
+    const changed = vi.fn();
+    window.addEventListener('speleo:color-mode-changed', changed);
+    State.map.setPaintProperty.mockClear();
+    try {
+        for (const mode of [null, undefined, 'invalid', {}, 1]) Layers.setColorMode(mode);
+        expect(State.displayPreferences.colorMode).toBe('shot');
+        expect(State.map.setPaintProperty).not.toHaveBeenCalled();
+        expect(changed).not.toHaveBeenCalled();
+    } finally {
+        window.removeEventListener('speleo:color-mode-changed', changed);
+    }
 });

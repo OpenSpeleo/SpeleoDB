@@ -1917,9 +1917,8 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
         assert "ETag" in resp
-        # ETag includes the geometry group so a content classifier
-        # change would invalidate cached responses.
-        assert resp["ETag"] == f'"{self._lines_id}"'
+        artifact = ProjectGeoJSON.objects.get(commit_id=self.commit_sha)
+        assert resp["ETag"] == f'"{self._lines_id}_{artifact.geojson_revision}"'
 
     def test_items_has_cache_control_header(self) -> None:
         resp = self._get_items_response()
@@ -1933,7 +1932,8 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_conditional_request_returns_304(self) -> None:
         """If-None-Match with matching ETag should return 304."""
-        etag = f'"{self._lines_id}"'
+        artifact = ProjectGeoJSON.objects.get(commit_id=self.commit_sha)
+        etag = f'"{self._lines_id}_{artifact.geojson_revision}"'
         resp = self._get_items_response(
             headers={"if-none-match": etag},
         )
@@ -1942,7 +1942,8 @@ class TestOGCCollectionItems(BaseOGCViewTestCase):
 
     def test_items_conditional_request_with_query_returns_200(self) -> None:
         """Collection ETags cannot 304 a different paged representation."""
-        etag = f'"{self._lines_id}"'
+        artifact = ProjectGeoJSON.objects.get(commit_id=self.commit_sha)
+        etag = f'"{self._lines_id}_{artifact.geojson_revision}"'
         resp = self.public_client.get(
             reverse(
                 "api:v2:gis-ogc:view-collection-items",
@@ -2357,7 +2358,8 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
     def test_items_has_etag_header(self) -> None:
         resp = self._get_items_response()
         assert "ETag" in resp
-        assert resp["ETag"] == f'"{self._lines_id}"'
+        artifact = ProjectGeoJSON.objects.get(commit_id=self.commit_sha)
+        assert resp["ETag"] == f'"{self._lines_id}_{artifact.geojson_revision}"'
 
     def test_items_has_cache_control_header(self) -> None:
         resp = self._get_items_response()
@@ -2370,7 +2372,8 @@ class TestOGCUserCollectionItems(BaseOGCUserTestCase):
         assert resp.get("Content-Disposition") == "inline"
 
     def test_items_conditional_request_returns_304(self) -> None:
-        etag = f'"{self._lines_id}"'
+        artifact = ProjectGeoJSON.objects.get(commit_id=self.commit_sha)
+        etag = f'"{self._lines_id}_{artifact.geojson_revision}"'
         resp = self._get_items_response(
             headers={"if-none-match": etag},
         )

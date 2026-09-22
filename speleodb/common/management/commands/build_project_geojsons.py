@@ -11,13 +11,12 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from typing import Any
 
-import orjson
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
 
 from speleodb.common.enums import ProjectType
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.project_geojson_services import replace_project_geojson
 from speleodb.git_engine.core import GitFile
 from speleodb.processors import ArianeTMLFileProcessor
 from speleodb.processors._impl.compass_toml import CompassTOML
@@ -150,7 +149,7 @@ class Command(BaseCommand):
 
             for commit in git_repo.commits:
                 with contextlib.suppress(ProjectGeoJSON.DoesNotExist):
-                    obj = ProjectGeoJSON.objects.get(
+                    ProjectGeoJSON.objects.get(
                         # Globally unique. Does not need to specify the project.
                         commit__id=commit.hexsha,
                     )
@@ -161,8 +160,6 @@ class Command(BaseCommand):
                             commit.hexsha,
                         )
                         continue
-
-                    obj.delete()
 
                 logger.info("Processing commit: %s - %s", commit.hexsha, commit.date_dt)
 
@@ -187,21 +184,16 @@ class Command(BaseCommand):
                         except GeoJSONGenerationError:
                             continue
 
-                        geojson_f = SimpleUploadedFile(
-                            "test.geojson",
-                            orjson.dumps(geojson_data),
-                            content_type="application/geo+json",
-                        )
-
                         commit_obj = ProjectCommit.get_or_create_from_commit(
                             project=project,
                             commit=commit,
                         )
 
-                        ProjectGeoJSON.objects.create(
-                            project=project,
-                            commit=commit_obj,
-                            file=geojson_f,
+                        replace_project_geojson(
+                            project,
+                            commit_obj,
+                            geojson_data,
+                            replace_existing=force_recompute,
                         )
 
                 except Exception:

@@ -297,7 +297,8 @@
           <section class="map-settings-section"
                    aria-labelledby="map-settings-appearance-title">
             <h3 id="map-settings-appearance-title">Appearance</h3>
-            <fieldset class="map-settings-color-mode">
+            <fieldset class="map-settings-color-mode"
+                      aria-describedby="map-settings-color-help">
               <legend>Color mode</legend>
               <div class="map-settings-segments">
                 <label>
@@ -307,6 +308,10 @@
                 <label>
                   <input type="radio" name="map-settings-color-mode" value="depth" />
                   <span>By Depth</span>
+                </label>
+                <label>
+                  <input type="radio" name="map-settings-color-mode" value="shot" />
+                  <span>By Shot</span>
                 </label>
               </div>
             </fieldset>

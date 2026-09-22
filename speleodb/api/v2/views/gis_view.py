@@ -62,9 +62,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# Cache timeout for the per-commit normalized features list. Content is
-# tied to a git commit SHA and therefore immutable, so 24 h is
-# conservative — the data can never change for a given key.
+# Cached artifacts are immutable. Regeneration at the same Git SHA receives a
+# new revision and therefore a separate features/index/bounds/lock namespace.
 _GEOJSON_CACHE_TIMEOUT: int = 60 * 60 * 24
 _GEOJSON_CACHE_LOCK_TIMEOUT: int = 60
 _GEOJSON_CACHE_LOCK_RETRIES: int = 7
@@ -89,27 +88,41 @@ _EXPIRES_IN_MAX: int = 86_400
 # ``max-age`` the CDN would pin the now-stale 404 (or worse, a still-
 # live 200 for an old commit) for the full window. 5 minutes plus a
 # strong ETag keeps revalidation cheap while bounding the staleness
-# horizon. Explicit-SHA collections are immutable so they keep the
-# 24 h TTL (see ``cache_control`` on :class:`ProjectViewOGCService`).
+# horizon. Explicit-SHA collections keep the 24 h TTL; artifact revisions
+# revalidate same-SHA rebuilds after that lifetime (see ``cache_control``).
 _USE_LATEST_CACHE_CONTROL: str = "public, max-age=300, must-revalidate"
 
 
 # ---------------------------------------------------------------------------
-# Shared feature loader (cached by commit SHA — content is immutable)
+# Shared feature loader (cached by commit SHA and stored artifact revision)
 # ---------------------------------------------------------------------------
 
 
-def _read_normalized_features_from_storage(commit_sha: str) -> list[dict[str, Any]]:
-    """Read, parse, and normalize the immutable GeoJSON for *commit_sha*."""
+def _geojson_artifact(
+    artifact: str | ProjectGeoJSON,
+) -> ProjectGeoJSON | None:
+    """Resolve once, then carry the same file/revision through nested loaders."""
+    if isinstance(artifact, ProjectGeoJSON):
+        return artifact
     try:
-        project_geojson = ProjectGeoJSON.objects.select_related("commit").get(
-            commit__id=commit_sha,
+        return ProjectGeoJSON.objects.get(
+            commit_id=artifact,
         )
     except ProjectGeoJSON.DoesNotExist:
-        return []
-    with project_geojson.file.open("rb") as f:
+        return None
+
+
+def _geojson_cache_key(artifact: ProjectGeoJSON, kind: str) -> str:
+    return f"ogc_geojson_{kind}_{artifact.commit_id}_{artifact.geojson_revision}"
+
+
+def _read_normalized_features_from_storage(
+    artifact: ProjectGeoJSON,
+) -> list[dict[str, Any]]:
+    """Read the exact artifact whose revision owns the caller's cache key."""
+    with artifact.file.open("rb") as f:
         raw_features = orjson.loads(f.read()).get("features", [])
-    return normalize_features(raw_features, commit_sha=commit_sha)
+    return normalize_features(raw_features, commit_sha=artifact.commit_id)
 
 
 def _build_feature_index(
@@ -185,8 +198,10 @@ def _cache_index_if_features_cached(
     )
 
 
-def _load_normalized_features(commit_sha: str) -> list[dict[str, Any]]:
-    """Load + normalize + cache the feature list for *commit_sha*.
+def _load_normalized_features(
+    commit_sha: str | ProjectGeoJSON,
+) -> list[dict[str, Any]]:
+    """Load + normalize + cache the feature list for one stored artifact.
 
     Cache key uses the ``ogc_geojson_features_`` prefix to retire the
     previous unfiltered/uncoded ``ogc_geojson_`` key (the old key
@@ -202,7 +217,10 @@ def _load_normalized_features(commit_sha: str) -> list[dict[str, Any]]:
     The companion ``{id: feature}`` index is filled in the same
     critical section (see :func:`_load_feature_by_id`).
     """
-    cache_key = f"ogc_geojson_features_{commit_sha}"
+    artifact = _geojson_artifact(commit_sha)
+    if artifact is None:
+        return []
+    cache_key = _geojson_cache_key(artifact, "features")
     cached = cache.get(cache_key)
     if cached is not None:
         return cached  # type: ignore[no-any-return]
@@ -213,7 +231,7 @@ def _load_normalized_features(commit_sha: str) -> list[dict[str, Any]]:
             cached = cache.get(cache_key)
             if cached is not None:
                 return cached  # type: ignore[no-any-return]
-            features = _read_normalized_features_from_storage(commit_sha)
+            features = _read_normalized_features_from_storage(artifact)
             _cache_features_if_under_limit(cache_key, features)
             _cache_index_if_features_cached(cache_key, features)
             return features
@@ -229,14 +247,14 @@ def _load_normalized_features(commit_sha: str) -> list[dict[str, Any]]:
         delay = min(delay * 2, _GEOJSON_CACHE_LOCK_MAX_WAIT_SECONDS)
 
     # If the filling worker died, serve the request rather than hanging.
-    features = _read_normalized_features_from_storage(commit_sha)
+    features = _read_normalized_features_from_storage(artifact)
     _cache_features_if_under_limit(cache_key, features)
     _cache_index_if_features_cached(cache_key, features)
     return features
 
 
 def _load_collection_bbox(
-    commit_sha: str,
+    commit_sha: str | ProjectGeoJSON,
     group: str,
 ) -> tuple[float, float, float, float] | None:
     """Return the cached 2-D bbox for *commit_sha* features in *group*.
@@ -249,12 +267,14 @@ def _load_collection_bbox(
     which case the collection metadata falls back to the world bbox —
     acceptable, never wrong).
 
-    Cache key shape: ``ogc_geojson_bbox_{sha}_{group}``. The previous
-    un-grouped key (``ogc_geojson_bbox_{sha}``) is no longer queried
-    after the geometry split and will expire naturally on its own
-    24 h TTL.
+    Keys include both the stored revision and group. Superseded artifact
+    keys expire naturally without allowing an old in-flight read to populate
+    the replacement artifact's cache.
     """
-    bbox_key = f"ogc_geojson_bbox_{commit_sha}_{group}"
+    artifact = _geojson_artifact(commit_sha)
+    if artifact is None:
+        return None
+    bbox_key = f"{_geojson_cache_key(artifact, 'bbox')}_{group}"
     cached = cache.get(bbox_key)
     if cached is not None:
         # Cache stores ``("none",)`` for "we tried, no bbox" so we don't
@@ -263,7 +283,7 @@ def _load_collection_bbox(
             return None
         return cached  # type: ignore[no-any-return]
 
-    features = _load_normalized_features(commit_sha)
+    features = _load_normalized_features(artifact)
     bbox = collection_bbox_2d_for_group(features, group)
     if bbox is None:
         cache.set(bbox_key, ("none",), timeout=_GEOJSON_CACHE_TIMEOUT)
@@ -272,7 +292,9 @@ def _load_collection_bbox(
     return bbox
 
 
-def _load_geometry_groups_present(commit_sha: str) -> frozenset[str]:
+def _load_geometry_groups_present(
+    commit_sha: str | ProjectGeoJSON,
+) -> frozenset[str]:
     """Return the cached set of geometry groups present at *commit_sha*.
 
     Drives ``ProjectViewOGCService.list_collections`` so the
@@ -286,12 +308,15 @@ def _load_geometry_groups_present(commit_sha: str) -> frozenset[str]:
     collections for this SHA", which surfaces as a 404 from the
     routing layer — never as a phantom layer in the client UI.
     """
-    groups_key = f"ogc_geojson_groups_present_{commit_sha}"
+    artifact = _geojson_artifact(commit_sha)
+    if artifact is None:
+        return frozenset()
+    groups_key = _geojson_cache_key(artifact, "groups_present")
     cached = cache.get(groups_key)
     if cached is not None:
         return frozenset(cached)
 
-    features = _load_normalized_features(commit_sha)
+    features = _load_normalized_features(artifact)
     groups = frozenset(geometry_groups_present(features))
     # Persist as a tuple for cache-backend compatibility (memcached
     # rejects sets); the readback above re-wraps in a frozenset so
@@ -301,7 +326,7 @@ def _load_geometry_groups_present(commit_sha: str) -> frozenset[str]:
 
 
 def _load_feature_by_id(
-    commit_sha: str,
+    commit_sha: str | ProjectGeoJSON,
     feature_id: str,
     group: str,
 ) -> dict[str, Any] | None:
@@ -315,14 +340,17 @@ def _load_feature_by_id(
     disagree — typically a stale client URL after the geometry-typed
     split).
 
-    The features index is shared across all groups at the same SHA
+    The features index is shared across all groups of the same artifact
     (one feature has one id, and that id is unique across the entire
     project); ``group`` is used to filter the lookup result, not the
     cached object. This keeps the ArcGIS Pro 3.6 edit-tracking hot
     path (one ``/items/{featureId}`` per modified row) at a single
     cache GET plus a dict access regardless of how many groups exist.
     """
-    index_key = f"ogc_geojson_features_index_{commit_sha}"
+    artifact = _geojson_artifact(commit_sha)
+    if artifact is None:
+        return None
+    index_key = _geojson_cache_key(artifact, "features_index")
     target = str(feature_id)
 
     def _filter_to_group(feat: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -335,7 +363,7 @@ def _load_feature_by_id(
         return _filter_to_group(cached_index.get(target))
 
     # Index missing — touch the features path which (re)builds it.
-    features = _load_normalized_features(commit_sha)
+    features = _load_normalized_features(artifact)
     cached_index = cache.get(index_key)
     if cached_index is not None:
         return _filter_to_group(cached_index.get(target))
@@ -410,7 +438,63 @@ def _build_typed_collection_meta(
     )
 
 
-class ProjectViewOGCService(OGCFeatureService[GISView]):
+class ProjectArtifactOGCService[ScopeT](OGCFeatureService[ScopeT]):
+    """Pair metadata, validators and payloads with one artifact per request.
+
+    Generic OGC views instantiate a fresh service for each request. A rebuild
+    between metadata lookup and serialization must not mix the old ETag with
+    replacement bytes, or put replacement bytes in an old cache namespace.
+    """
+
+    def __init__(self) -> None:
+        self._artifacts: dict[str, ProjectGeoJSON | None] = {}
+
+    def _artifact_for_commit(self, sha: str) -> ProjectGeoJSON | None:
+        if sha not in self._artifacts:
+            self._artifacts[sha] = (
+                ProjectGeoJSON.objects.select_related("project", "commit")
+                .filter(commit_id=sha)
+                .first()
+            )
+        return self._artifacts[sha]
+
+    def get_features(self, scope: ScopeT, collection_id: str) -> list[dict[str, Any]]:
+        # The generic view always authorizes through get_collection() first.
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return []
+        sha, group = parsed
+        artifact = self._artifact_for_commit(sha)
+        if artifact is None:
+            return []
+        return filter_features_by_geometry_group(
+            _load_normalized_features(artifact), group
+        )
+
+    def get_feature(
+        self, scope: ScopeT, collection_id: str, feature_id: str
+    ) -> dict[str, Any] | None:
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return None
+        sha, group = parsed
+        artifact = self._artifact_for_commit(sha)
+        if artifact is None:
+            return None
+        return _load_feature_by_id(artifact, feature_id, group)
+
+    def get_etag(self, scope: ScopeT, collection_id: str) -> str | None:
+        parsed = parse_typed_collection_id(collection_id)
+        if parsed is None:
+            return None
+        sha, group = parsed
+        artifact = self._artifact_for_commit(sha)
+        if artifact is None:
+            return None
+        return f"{sha}_{group}_{artifact.geojson_revision}"
+
+
+class ProjectViewOGCService(ProjectArtifactOGCService[GISView]):
     """OGC feature service for projects in a single ``GISView``.
 
     Each project commit becomes **up to two** OGC collections, one per
@@ -448,7 +532,7 @@ class ProjectViewOGCService(OGCFeatureService[GISView]):
         for d in scope.get_view_geojson_data():
             commit_sha: str = d["project_geojson"].commit_sha
             project_name: str = d["project_name"]
-            present = _load_geometry_groups_present(commit_sha)
+            present = _load_geometry_groups_present(d["project_geojson"])
             for group in GEOMETRY_GROUPS_ORDERED:
                 if group not in present:
                     continue
@@ -477,16 +561,12 @@ class ProjectViewOGCService(OGCFeatureService[GISView]):
             return None
         sha, group = parsed
 
-        try:
-            project_geojson = ProjectGeoJSON.objects.select_related(
-                "project",
-                "commit",
-            ).get(commit__id=sha)
-        except ProjectGeoJSON.DoesNotExist:
+        project_geojson = self._artifact_for_commit(sha)
+        if project_geojson is None:
             return None
         if not _project_authorized_for_view(scope, project_geojson, sha):
             return None
-        if group not in _load_geometry_groups_present(sha):
+        if group not in _load_geometry_groups_present(project_geojson):
             # SHA exists and is reachable through the view, but this
             # geometry group has no features at this commit — surface
             # as 404 so QGIS / ArcGIS Pro do not add an empty layer.
@@ -495,54 +575,8 @@ class ProjectViewOGCService(OGCFeatureService[GISView]):
             project_name=project_geojson.project.name,
             commit_sha=sha,
             group=group,
-            bbox=_load_collection_bbox(sha, group),
+            bbox=_load_collection_bbox(project_geojson, group),
         )
-
-    def get_features(
-        self,
-        scope: GISView,
-        collection_id: str,
-    ) -> list[dict[str, Any]]:
-        # Authorization is the responsibility of get_collection() (the
-        # generic view always calls it first). Here we just fetch the
-        # commit-keyed cache and filter by geometry group — content
-        # is invariant by commit SHA so the cache key is not scope-
-        # sensitive.
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return []
-        sha, group = parsed
-        return filter_features_by_geometry_group(
-            _load_normalized_features(sha),
-            group,
-        )
-
-    def get_feature(
-        self,
-        scope: GISView,
-        collection_id: str,
-        feature_id: str,
-    ) -> dict[str, Any] | None:
-        # O(1) lookup via the cached index, then a constant-time
-        # geometry-group filter so a cross-group ``/items/{featureId}``
-        # URL (typically a stale client) returns 404 instead of an
-        # incoherent feature.
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return None
-        sha, group = parsed
-        return _load_feature_by_id(sha, feature_id, group)
-
-    def get_etag(self, scope: GISView, collection_id: str) -> str | None:
-        # Project commits are immutable, so the SHA + group itself is
-        # a perfect ETag (a deploy that changes the geometry-classifier
-        # would change the group → ETag → revalidate). Returning
-        # anything else would be wasteful.
-        parsed = parse_typed_collection_id(collection_id)
-        if parsed is None:
-            return None
-        sha, group = parsed
-        return f"{sha}_{group}"
 
     def get_cache_control(self, scope: GISView, collection_id: str) -> str:
         """Use a 5-minute TTL when the SHA was resolved via ``use_latest``.

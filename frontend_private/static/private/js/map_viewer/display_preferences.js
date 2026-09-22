@@ -1,12 +1,13 @@
 import { DEFAULTS } from './config.js';
 import { Layers } from './map/layers.js';
+import { Colors } from './map/colors.js';
 import { isValidDepthLimit } from './map/depth.js';
 import { State, createDefaultDisplayPreferences } from './state.js';
 
 function restorePreferences(stored) {
     if (!stored || Array.isArray(stored) || stored.version !== DEFAULTS.DISPLAY.STORAGE_VERSION) return;
     const preferences = State.displayPreferences;
-    if (stored.colorMode === 'project' || stored.colorMode === 'depth') preferences.colorMode = stored.colorMode;
+    if (Colors.isValidColorMode(stored.colorMode)) preferences.colorMode = stored.colorMode;
     if (isValidDepthLimit(stored.depthLimitFeet)) preferences.depthLimitFeet = stored.depthLimitFeet;
     if (stored.depthUnit === 'ft' || stored.depthUnit === 'm') preferences.depthUnit = stored.depthUnit;
     for (const section of ['categories', 'stationTypes']) {

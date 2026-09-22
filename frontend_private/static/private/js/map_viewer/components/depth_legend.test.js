@@ -205,11 +205,12 @@ describe('DepthLegend', () => {
         expect(document.getElementById('depth-cursor-label').textContent).toBe('0.0 m');
     });
 
-    it.each(['mouseout', 'colorMode', 'visibility'])('clears cached hover on %s', trigger => {
+    it.each(['mouseout', 'colorMode', 'shotMode', 'visibility'])('clears cached hover on %s', trigger => {
         const { hover, handlers } = initializeDepthLegend(100);
         hover({ depth_val: 80 });
         if (trigger === 'mouseout') handlers.mouseout();
         if (trigger === 'colorMode') Layers.setColorMode('project');
+        if (trigger === 'shotMode') Layers.setColorMode('shot');
         if (trigger === 'visibility') Layers.toggleProjectVisibility('1', false);
         expect(document.getElementById('depth-cursor-label').style.display).toBe('none');
         expect(DepthLegend.hoveredLineFeature).toBeNull();

@@ -257,21 +257,21 @@ class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):
 
 
 class ProjectWithGeoJsonSerializer(ProjectSerializer):
-    geojson_file = serializers.SerializerMethodField()
+    geojson_file = serializers.CharField(read_only=True, allow_null=True)
+    geojson_revision = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta(ProjectSerializer.Meta):
         read_only_fields = ["__all__"]
 
-    def get_geojson_file(self, obj: Project) -> str | None:
-        """
-        Retrieve geojson files from serializer context.
-        Expect the context to have a 'geojson_files' key containing
-        a queryset or list of GeoJson instances.
-        """
-
-        try:
-            geojson_obj = obj.geojsons.order_by("-commit__authored_date")[0]
-            return geojson_obj.get_signed_download_url()
-
-        except IndexError:
-            return None
+    def to_representation(self, instance: Project) -> dict[str, Any]:
+        data = super().to_representation(instance)
+        # The endpoint prefetches geojsons in commit order. Calling order_by()
+        # again would discard that cache and add one query per project.
+        artifact = instance.geojsons.all().first()
+        data["geojson_file"] = (
+            artifact.get_signed_download_url() if artifact is not None else None
+        )
+        data["geojson_revision"] = (
+            artifact.geojson_revision if artifact is not None else None
+        )
+        return data

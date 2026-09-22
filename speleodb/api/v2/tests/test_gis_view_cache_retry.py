@@ -8,10 +8,12 @@ from unittest.mock import patch
 import pytest
 
 from speleodb.api.v2.views.gis_view import _load_normalized_features
+from speleodb.gis.models import ProjectGeoJSON
 
 
 @pytest.mark.parametrize("cache_recovers", [False, True])
 def test_cache_lock_wait_is_bounded_and_exponential(cache_recovers: bool) -> None:
+    artifact = ProjectGeoJSON(commit_id="commit-sha", file="artifact.json")
     with (
         patch("speleodb.api.v2.views.gis_view.cache") as cache,
         patch("speleodb.api.v2.views.gis_view.time.sleep") as sleep,
@@ -26,7 +28,7 @@ def test_cache_lock_wait_is_bounded_and_exponential(cache_recovers: bool) -> Non
         cache.get.return_value = None
         if cache_recovers:
             cache.get.side_effect = [None, None, []]
-        assert _load_normalized_features("commit-sha") == []
+        assert _load_normalized_features(artifact) == []
     expected: list[float] = (
         [0.1, 0.2] if cache_recovers else [0.1, 0.2, 0.4, 0.8, 1, 1, 1]
     )
@@ -35,4 +37,4 @@ def test_cache_lock_wait_is_bounded_and_exponential(cache_recovers: bool) -> Non
     if cache_recovers:
         read.assert_not_called()
     else:
-        read.assert_called_once_with("commit-sha")
+        read.assert_called_once_with(artifact)

@@ -8,6 +8,18 @@ const gpsTrackColorMap = new Map();
 export const Colors = {
     FALLBACK_COLOR,
 
+    isValidColorMode(mode) {
+        return DEFAULTS.DISPLAY.COLOR_MODES.includes(mode);
+    },
+
+    // Resolve paint in one place for mode changes and newly loaded/rebuilt layers.
+    getSurveyPaint(projectId, mode, depthDomain = null) {
+        if (mode === 'depth') return this.getDepthPaint(depthDomain);
+        const projectColor = this.getProjectColor(projectId);
+        if (mode === 'shot') return ['to-color', ['get', 'color'], projectColor];
+        return projectColor;
+    },
+
     getProjectColor: function(projectId) {
         if (projectColorMap.has(projectId)) {
             return projectColorMap.get(projectId);

@@ -505,7 +505,7 @@ wheels = [
 
 [[package]]
 name = "compass-lib"
-version = "0.0.8"
+version = "0.0.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "geojson" },
@@ -519,9 +519,9 @@ dependencies = [
     { name = "shapely" },
     { name = "utm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/eb/44c70d2b66fe5cae728eca836476073861adb4801a8b233ac811efc5cbd2/compass_lib-0.0.8.tar.gz", hash = "sha256:bf3cd7f5e0a4a53ae69ed2be37f551831fd8cc5579cf4b7a8a7090df8d3838fe", size = 84215, upload-time = "2026-09-07T19:54:56.198Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/ca/f03bedfb7825702e0a7e80ff076a3c2b56c39e3c57a8d2cfb9f78507dafb/compass_lib-0.0.9.tar.gz", hash = "sha256:bf98732614836da9c184e2304f42ceb70934b51a6d477161333788cc87a53b26", size = 88312, upload-time = "2026-09-22T05:07:45.927Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/2e/c32bfe66490b0b3a3f0f409b2408bd4061dc1cc3f1a9854d80eed600343f/compass_lib-0.0.8-py3-none-any.whl", hash = "sha256:8bc8e13633c7edc54a9e0692e66e2a58c4997516e13ab2e9ee0a9264330cfafd", size = 101888, upload-time = "2026-09-07T19:54:54.666Z" },
+    { url = "https://files.pythonhosted.org/packages/42/00/4b06f1b705a3ce43a1168f43d1ebfc4f50a2a60fe0408a768410a232c85c/compass_lib-0.0.9-py3-none-any.whl", hash = "sha256:ea54fc82b2f7b8fbc89f7ebbf04cdf0f56724a51be3c6c70874668ad914fde29", size = 105319, upload-time = "2026-09-22T05:07:44.108Z" },
 ]
 
 [[package]]
@@ -1749,7 +1749,7 @@ wheels = [
 
 [[package]]
 name = "openspeleo-lib"
-version = "0.0.19"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
@@ -1764,9 +1764,9 @@ dependencies = [
     { name = "pyproj" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/cf/a8429bf98df938ba8a56ecc74c7bbb15edae9c084cb22b6402e404db0f0d/openspeleo_lib-0.0.19.tar.gz", hash = "sha256:0afa1bdda86ce5d66dfe518066e906565cc33d5b32540cf52ec638d50b8d579f", size = 34903, upload-time = "2026-09-07T19:34:01.993Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/ca/07ac0e01f550dab61c452204df84586d1658700dcc8cf6554a648d65738f/openspeleo_lib-0.0.20.tar.gz", hash = "sha256:462d1858f11c3e8297c9b4859482ae4613d91cc212f8d784cc5a7965663ee8e0", size = 35558, upload-time = "2026-09-22T05:10:51.383Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/4c/30c154bdd8cd707e3f324c567c9cdb443a0598bc9b87ce5771928cf97758/openspeleo_lib-0.0.19-py3-none-any.whl", hash = "sha256:5e4dd9015033f83957799eb9cb7772ec1b9206a7c3b4a82c910b8d1d514c0809", size = 40646, upload-time = "2026-09-07T19:34:00.519Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/cd/2324e43fa556070de3b7e760e74f2df9f4e790a045eb9c426fe0f09555a0/openspeleo_lib-0.0.20-py3-none-any.whl", hash = "sha256:ce66e29767f70bba6d80ec82606a3c01584a899f0d6254e6c4df00729041c68b", size = 41498, upload-time = "2026-09-22T05:10:50.065Z" },
 ]
 
 [[package]]
@@ -2674,7 +2674,7 @@ requires-dist = [
     { name = "botocore", specifier = "==1.43.98" },
     { name = "celery", specifier = "==5.6.3" },
     { name = "celery-types", marker = "extra == 'local'", specifier = "==0.26.0" },
-    { name = "compass-lib", specifier = "==0.0.8" },
+    { name = "compass-lib", specifier = "==0.0.9" },
     { name = "coverage", marker = "extra == 'local'", specifier = "==7.16.1" },
     { name = "cryptography", marker = "extra == 'production'", specifier = "==50.0.1" },
     { name = "deepdiff", marker = "extra == 'local'", specifier = ">=9.1.0,<10.0" },
@@ -2719,7 +2719,7 @@ requires-dist = [
     { name = "mnemo-lib", specifier = "==0.0.9" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==2.3.1" },
     { name = "nh3", specifier = "==0.3.7" },
-    { name = "openspeleo-lib", specifier = "==0.0.19" },
+    { name = "openspeleo-lib", specifier = "==0.0.20" },
     { name = "orjson", specifier = "==3.12.0" },
     { name = "parameterized", marker = "extra == 'local'", specifier = "==0.9.0" },
     { name = "pillow", specifier = "==12.3.0" },

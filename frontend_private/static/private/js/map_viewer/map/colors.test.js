@@ -8,6 +8,7 @@ vi.mock('../config.js', () => ({
     },
     DEFAULTS: Object.freeze({
         DEPTH: { ZERO_DOMAIN_MAX_FEET: 1e-9 },
+        DISPLAY: { COLOR_MODES: ['project', 'depth', 'shot'] },
         COLORS: {
             FALLBACK: '#94a3b8',
             DEPTH_NONE: '#999999',
@@ -92,6 +93,30 @@ describe('Colors', () => {
             expect(Colors.getProjectColor('pub-1')).toBe('#4daf4a');
 
             expect(Config.getProjectById).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('getSurveyPaint', () => {
+        it('uses the model color as shot conversion fallback and preserves depth paint', () => {
+            Config.getProjectById.mockReturnValue({ color: '#ff5500' });
+            expect(Colors.getSurveyPaint('p-1', 'shot')).toEqual(['to-color', ['get', 'color'], '#ff5500']);
+            expect(Colors.getSurveyPaint('p-1', 'project')).toBe('#ff5500');
+            expect(Colors.getSurveyPaint('p-1', 'depth', { max: 200 })).toEqual(Colors.getDepthPaint({ max: 200 }));
+        });
+
+        it('retries the shot fallback when project metadata arrives later', () => {
+            Config.getProjectById.mockReturnValue(null);
+            expect(Colors.getSurveyPaint('p-1', 'shot')[2]).toBe(Colors.FALLBACK_COLOR);
+            Config.getProjectById.mockReturnValue({ color: '#123456' });
+            expect(Colors.getSurveyPaint('p-1', 'shot')[2]).toBe('#123456');
+        });
+
+        it.each(['project', 'depth', 'shot'])('accepts the supported %s mode', mode => {
+            expect(Colors.isValidColorMode(mode)).toBe(true);
+        });
+
+        it.each([null, undefined, 'unknown', {}, 1])('rejects unsupported mode %j', mode => {
+            expect(Colors.isValidColorMode(mode)).toBe(false);
         });
     });
 

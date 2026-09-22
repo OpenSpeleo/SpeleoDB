@@ -269,7 +269,7 @@ describe('frontend_public gis_view_main', () => {
         expect(document.getElementById('loading-overlay')).toBeNull();
     });
 
-    it('initializes public depth defaults without reading or changing saved private preferences', async () => {
+    it.each(['depth', 'shot'])('initializes public defaults without reading or changing saved private %s preferences', async mode => {
         window.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'public-token', mapboxToken: '' };
         globalThis.fetch.mockResolvedValue({ ok: true, json: async () => ({ projects: [] }) });
         const initialize = await importModuleAndGetDomReadyHandler();
@@ -279,11 +279,11 @@ describe('frontend_public gis_view_main', () => {
         const previous = localStorage.getItem(storageKey);
         const saved = JSON.stringify({
             version: DEFAULTS.DISPLAY.STORAGE_VERSION,
-            colorMode: 'depth', depthLimitFeet: 125.75, depthUnit: 'm',
+            colorMode: mode, depthLimitFeet: 125.75, depthUnit: 'm',
             categories: { landmarks: false },
         });
         localStorage.setItem(storageKey, saved);
-        stateMock.displayPreferences = { colorMode: 'depth', depthLimitFeet: 125.75, depthUnit: 'm' };
+        stateMock.displayPreferences = { colorMode: mode, depthLimitFeet: 125.75, depthUnit: 'm' };
         const read = vi.spyOn(localStorage, 'getItem');
         const write = vi.spyOn(localStorage, 'setItem');
 

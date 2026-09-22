@@ -186,7 +186,7 @@ class OGCFeatureService[ScopeT](abc.ABC):
     )
 
     #: ``Cache-Control`` header to send on items responses. Project file
-    #: data is immutable (keyed by commit SHA) so 24 h is safe; landmark
+    #: artifacts are immutable; replacements revalidate by revision. Landmark
     #: data is mutable so subclasses override to a short revalidating
     #: value.
     cache_control: ClassVar[str] = "public, max-age=86400"
@@ -213,7 +213,7 @@ class OGCFeatureService[ScopeT](abc.ABC):
 
         Implementations are responsible for any caching they want; the
         generic view never caches the result, so the service can apply
-        commit-SHA-keyed cache for immutable data and live queries for
+        artifact-revision-keyed cache for immutable data and live queries for
         mutable data.
         """
 

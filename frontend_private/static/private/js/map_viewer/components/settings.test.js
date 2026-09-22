@@ -45,12 +45,32 @@ describe('private map Settings', () => {
             expect(input.checked).toBe(true);
             expect(input.closest('label').textContent).toContain(label);
         }
+        expect([...dialog.querySelectorAll('[name="map-settings-color-mode"]')].map(input => input.value))
+            .toEqual(['project', 'depth', 'shot']);
+        expect(dialog.querySelector('#map-settings-color-help').textContent).toContain('Missing colors use the survey color');
         expect(dialog.querySelector('.map-settings-station-types').open).toBe(false);
         expect(dialog.querySelector('#map-settings-source')).toBeNull();
         expect(dialog.querySelector('#station-manager-button')).toBeNull();
         expect(dialog.querySelector('#map-settings-storage')).toBeNull();
         expect(dialog.querySelector('.map-settings-dismiss').textContent).toBe('Close');
         expect(dialog.querySelector('#map-settings-reset').textContent).toBe('Reset');
+    });
+
+    it('selects and restores By Shot through the actual radio group and hides depth controls', () => {
+        dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();
+        const shot = dialog.querySelector('[name="map-settings-color-mode"][value="shot"]');
+        shot.click();
+        expect(State.displayPreferences.colorMode).toBe('shot');
+        expect(shot.checked).toBe(true);
+        expect(dialog.querySelector('#map-settings-depth-limit').hidden).toBe(true);
+        expect(JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES)).colorMode).toBe('shot');
+        MapSettings.destroy();
+        DisplayPreferences.init({ persist: true });
+        MapSettings.init({ managers });
+        expect(shot.checked).toBe(true);
+        MapSettings.reset();
+        expect(shot.checked).toBe(false);
+        expect(dialog.querySelector('[name="map-settings-color-mode"][value="project"]').checked).toBe(true);
     });
 
     it('opens with heading focus, preserves disclosure and scrolling, and returns focus on Close', () => {

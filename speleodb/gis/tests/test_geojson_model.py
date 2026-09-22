@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 from typing import Any
+from uuid import UUID
 
 import boto3
 import pytest
@@ -49,7 +50,11 @@ class TestGeoJSONModel:
         )
         obj.save()
 
-        assert obj.file.name == f"{project.id}/{commit_sha1}.json"
+        assert obj.file.name is not None
+        directory, filename = obj.file.name.split("/")
+        assert directory == str(project.id)
+        assert filename.endswith(".json")
+        assert UUID(filename.removesuffix(".json")).version == 4  # noqa: PLR2004
 
     def test_invalid_geojson_rejected(self, project: Project) -> None:
         payload = {"type": "NotFeatureCollection"}

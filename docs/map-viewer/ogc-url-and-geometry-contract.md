@@ -223,15 +223,23 @@ without tripping the regression-killer tests above.
 
 ## 4. Performance implications
 
-The geometry split adds one cache key per (commit_sha, group) tuple for the
-per-group bbox (`ogc_geojson_bbox_<sha>_<group>`) and one cache key per
-commit_sha for the present-group set (`ogc_geojson_groups_present_<sha>`). The
-features list itself remains a single cache entry per SHA
-(`ogc_geojson_features_<sha>`), filtered at request time by
+The geometry split adds one cache key per (commit_sha, artifact revision, group)
+tuple for the per-group bbox (`ogc_geojson_bbox_<sha>_<revision>_<group>`) and
+one key per stored artifact for the present-group set
+(`ogc_geojson_groups_present_<sha>_<revision>`). The features list itself
+remains a single cache entry per artifact
+(`ogc_geojson_features_<sha>_<revision>`), filtered at request time by
 `filter_features_by_geometry_group` (single-pass, O(n)). The `{id: feature}`
-index is unchanged and is shared across all groups for the same SHA. Synthetic
-feature ids are global per commit (`{sha}:{source-index}`), not renumbered
-within each `_points` or `_lines` layer.
+index and fill lock use the same revision and are shared across all groups.
+Rebuilding GeoJSON at the same SHA cannot reuse an obsolete cache entry.
+Synthetic feature ids are global per commit (`{sha}:{source-index}`), not
+renumbered within each `_points` or `_lines` layer.
+
+Project ETags also include that artifact revision, so same-commit rebuilds
+return new content when clients revalidate. The request's metadata, ETag and
+feature payload share one captured artifact. Retired storage objects remain
+available to in-flight readers and previously issued signed URLs; see the
+[artifact lifecycle and cleanup contract](../project-geojson-artifacts.md).
 
 Warm-cache cost for `/collections` listing N projects is one groups-present
 cache GET per project commit. Cold-cache discovery does load the normalized

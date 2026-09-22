@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import pathlib
+import re
 import shutil
 import uuid
 from tempfile import TemporaryDirectory
@@ -12,6 +13,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 
+import orjson
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -320,6 +322,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
             commit__id=hexsha,
         )
         initial_creation_date = initial_geojson.creation_date
+        initial_revision = initial_geojson.geojson_revision
 
         call_command("build_project_geojsons", *command_args)
         skipped_creation_date = ProjectGeoJSON.objects.get(
@@ -333,13 +336,31 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
             *command_args,
             "--force_recompute",
         )
-        recomputed_creation_date = ProjectGeoJSON.objects.get(
+        regenerated = ProjectGeoJSON.objects.get(
             project=self.project,
             commit__id=hexsha,
-        ).creation_date
-        assert recomputed_creation_date > initial_creation_date
+        )
+        assert regenerated.creation_date > initial_creation_date
+        assert regenerated.geojson_revision != initial_revision
+        with regenerated.file.open("rb") as source:
+            lines = [
+                feature
+                for feature in orjson.loads(source.read())["features"]
+                if feature["geometry"]["type"] == "LineString"
+            ]
+        assert lines
+        assert all("color" in feature["properties"] for feature in lines)
 
-    def test_command_builds_geojson_for_compass_project(self) -> None:
+        # A forced rebuild with no matching source must keep the usable artifact.
+        self.project.type = ProjectType.COMPASS
+        self.project.save(update_fields=["type"])
+        call_command("build_project_geojsons", *command_args, "--force_recompute")
+        retained = ProjectGeoJSON.objects.get(commit_id=hexsha)
+        assert retained.geojson_revision == regenerated.geojson_revision
+        assert retained.file.name is not None
+        assert retained.file.storage.exists(retained.file.name)
+
+    def test_command_builds_and_recomputes_geojson_for_compass_project(self) -> None:
         self.project.type = ProjectType.COMPASS
         self.project.exclude_geojson = True
         self.project.save(update_fields=["type", "exclude_geojson"])
@@ -363,10 +384,35 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         self.project.save(update_fields=["exclude_geojson"])
         call_command("build_project_geojsons", "--all")
 
-        assert ProjectGeoJSON.objects.filter(
-            project=self.project,
-            commit__id=hexsha,
-        ).exists()
+        artifact = ProjectGeoJSON.objects.get(project=self.project, commit_id=hexsha)
+        original_revision = artifact.geojson_revision
+        with artifact.file.open("rb") as source:
+            original_data = orjson.loads(source.read())
+        command_args = ("--project", str(self.project.id))
+        call_command("build_project_geojsons", *command_args)
+        artifact.refresh_from_db()
+        assert artifact.geojson_revision == original_revision
+
+        call_command("build_project_geojsons", *command_args, "--force_recompute")
+        artifact.refresh_from_db()
+        assert artifact.geojson_revision != original_revision
+        with artifact.file.open("rb") as source:
+            regenerated_data = orjson.loads(source.read())
+        for data in [original_data, regenerated_data]:
+            lines = [
+                feature
+                for feature in data["features"]
+                if feature["geometry"]["type"] == "LineString"
+            ]
+            assert lines
+            assert all(
+                re.fullmatch(r"#[0-9a-f]{6}", feature["properties"]["color"])
+                for feature in lines
+            )
+            for feature in data["features"]:
+                feature["properties"].pop("color", None)
+        # Random coloring may change; every other exported value must stay exact.
+        assert regenerated_data == original_data
 
     def test_all_mode_skips_projects_excluded_from_geojson(self) -> None:
         self.project.type = ProjectType.COMPASS

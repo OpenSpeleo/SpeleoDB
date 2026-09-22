@@ -72,6 +72,9 @@ Unlike product docs, these files prioritize:
 - `project-geojson-command.md`
   - management-command modes, Git clone lifecycle, GeoJSON recomputation,
     failure behavior, and performance boundaries
+- `project-geojson-artifacts.md`
+  - shot colors, stable artifact revisions, offline refresh and OGC cache
+    identity
 - `map-viewer/depth-domain-reactivity.md`
   - depth color mode architecture, cache model, and performance rationale
 - `map-viewer/map_viewer_depth_coloring.md`

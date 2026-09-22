@@ -136,7 +136,8 @@ flowchart TD
 | Feature                                       | Private |                             Public                             |
 | --------------------------------------------- | :-----: | :------------------------------------------------------------: |
 | Survey GeoJSON (lines, points)                |   Yes   |                              Yes                               |
-| Color modes (By Project / By Depth)           |   Yes   |                              Yes                               |
+| Color modes (By Survey / By Depth)            |   Yes   |                              Yes                               |
+| By Shot (source color with survey fallback)   |   Yes   |                               No                               |
 | Project colors (model-stored)                 |   Yes   |                      Yes (color from API)                      |
 | Country grouping in project panel             |   Yes   |                         No (flat list)                         |
 | Project visibility toggle panel               |   Yes   |                              Yes                               |

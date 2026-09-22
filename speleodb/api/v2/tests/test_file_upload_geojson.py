@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
+import re
 from typing import Any
 from typing import cast
 
+import orjson
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -44,6 +46,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         fileformat: FileFormat,
         artifact_paths: list[pathlib.Path],
         commit_message: str,
+        expected_status: int = status.HTTP_200_OK,
     ) -> dict[str, Any]:
         with contextlib.ExitStack() as stack:
             opened_files = [
@@ -62,8 +65,35 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
             )
 
-        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.status_code == expected_status, response.content
+        if expected_status == status.HTTP_304_NOT_MODIFIED:
+            return {}
         return cast("dict[str, Any]", response.data)
+
+    def _assert_stored_shot_colors(self, commit_sha: str) -> None:
+        artifact = ProjectGeoJSON.objects.get(commit_id=commit_sha)
+        with artifact.file.open("rb") as source:
+            data = orjson.loads(source.read())
+        lines = [
+            feature
+            for feature in data["features"]
+            if feature["geometry"]["type"] == "LineString"
+        ]
+        assert lines
+        for feature in lines:
+            color = feature["properties"]["color"]
+            assert isinstance(color, str)
+            assert re.fullmatch(r"#[0-9a-f]{6}|rgba\([0-9., ]+\)", color)
+        response = self.client.get(
+            reverse("api:v2:all-projects-geojson"),
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        metadata = next(
+            item for item in response.data if item["id"] == str(self.project.id)
+        )
+        assert metadata["geojson_file"]
+        assert metadata["geojson_revision"] == artifact.geojson_revision
 
     def test_upload_ariane_generates_geojson(self) -> None:
         self.project.type = ProjectType.ARIANE
@@ -84,6 +114,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             project=self.project,
             commit__id=str(data["hexsha"]),
         ).exists()
+        self._assert_stored_shot_colors(str(data["hexsha"]))
 
     def test_upload_ariane_skips_geojson_when_excluded(self) -> None:
         self.project.type = ProjectType.ARIANE
@@ -117,6 +148,17 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 artifact_paths=COMPASS_TEST_FILES,
                 commit_message="Compass upload with GeoJSON",
             )
+            artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
+            original_revision = artifact.geojson_revision
+            self._assert_stored_shot_colors(str(data["hexsha"]))
+            self._upload_files(
+                fileformat=FileFormat.AUTO,
+                artifact_paths=COMPASS_TEST_FILES,
+                commit_message="Identical Compass source",
+                expected_status=status.HTTP_304_NOT_MODIFIED,
+            )
+            artifact.refresh_from_db()
+            assert artifact.geojson_revision == original_revision
         finally:
             self.project.release_mutex(self.user)
 
@@ -124,6 +166,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             project=self.project,
             commit__id=str(data["hexsha"]),
         ).exists()
+        self._assert_stored_shot_colors(str(data["hexsha"]))
 
     def test_upload_auto_compass_skips_geojson_when_excluded(self) -> None:
         self.project.type = ProjectType.COMPASS

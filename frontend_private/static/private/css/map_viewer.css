@@ -1668,6 +1668,7 @@ select.form-input:focus {
 .map-settings-section + .map-settings-section { border-top: 1px solid #334155; }
 .map-settings-section h3 { margin: 0 0 0.75rem; color: #f8fafc; font-size: 0.9375rem; font-weight: 650; }
 .map-settings-help { margin: -0.25rem 0 0.75rem; color: #94a3b8; font-size: 0.75rem; line-height: 1.5; }
+.map-settings-color-help { margin: 0.75rem 0 0; color: #94a3b8; font-size: 0.75rem; line-height: 1.5; }
 .map-settings-error { margin: 0; padding: 0.5rem 1.5rem; color: #fda4af; font-size: 0.8125rem; line-height: 1.5; }
 
 .map-settings-color-mode {

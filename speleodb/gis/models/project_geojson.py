@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from typing import TYPE_CHECKING
 from typing import Any
+from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -18,7 +20,9 @@ if TYPE_CHECKING:
 
 
 def get_geojson_upload_path(instance: ProjectGeoJSON, filename: str) -> str:
-    return f"{instance.project.id}/{instance.commit.id}.json"
+    # A commit can be regenerated. Never reuse an earlier object's URL, even
+    # after its blob has been removed; mobile revisions hash this stored name.
+    return f"{instance.project.id}/{uuid4().hex}.json"
 
 
 class ProjectGeoJSON(models.Model):
@@ -78,6 +82,14 @@ class ProjectGeoJSON(models.Model):
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         self.file.delete(save=False)
         return super().delete(*args, **kwargs)
+
+    @property
+    def geojson_revision(self) -> str:
+        """Identify the stored artifact independently of its signed download URL."""
+        name = self.file.name
+        if not name:
+            raise ValidationError("No file to identify.")
+        return sha256(name.encode("utf-8")).hexdigest()
 
     # Backward-compatible properties for legacy code
     @property

@@ -197,6 +197,7 @@ export const DEFAULTS = Object.freeze({
 
     DISPLAY: {
         COLOR_MODE: 'project',
+        COLOR_MODES: Object.freeze(['project', 'depth', 'shot']),
         STORAGE_VERSION: 1,
         CATEGORIES: Object.freeze([
             { id: 'surveyStations', label: 'Survey stations' },

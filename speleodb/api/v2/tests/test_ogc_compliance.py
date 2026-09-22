@@ -67,6 +67,7 @@ from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.api.v2.urls.gis import urlpatterns as ogc_urlpatterns
 from speleodb.api.v2.views import gis_view as _gis_view_mod
+from speleodb.api.v2.views.gis_view import _geojson_cache_key
 from speleodb.api.v2.views.ogc_base import OGCLegacyMixedCollectionGoneView
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISProjectView
@@ -1880,9 +1881,23 @@ class TestOGCCacheSizeGuard(BaseAPITestCase):
             )
             assert resp.status_code == status.HTTP_200_OK
             # Cache must be empty for this SHA — payload was over the cap.
-            assert _cache.get(f"ogc_geojson_features_{self.commit_sha}") is None
+            assert (
+                _cache.get(
+                    _geojson_cache_key(
+                        ProjectGeoJSON.objects.get(pk=self.commit_sha), "features"
+                    )
+                )
+                is None
+            )
             # And the index cache is also empty (skipped together).
-            assert _cache.get(f"ogc_geojson_features_index_{self.commit_sha}") is None
+            assert (
+                _cache.get(
+                    _geojson_cache_key(
+                        ProjectGeoJSON.objects.get(pk=self.commit_sha), "features_index"
+                    )
+                )
+                is None
+            )
 
             # A second request also serves 200 — re-reads from S3 each time.
             resp_again = self.public_client.get(
@@ -2004,8 +2019,22 @@ class TestSingleFeatureIndex(BaseAPITestCase):
         lookups hit the index directly — no need to re-read the list.
         """
         # Cold: nothing cached.
-        assert _cache.get(f"ogc_geojson_features_{self.commit_sha}") is None
-        assert _cache.get(f"ogc_geojson_features_index_{self.commit_sha}") is None
+        assert (
+            _cache.get(
+                _geojson_cache_key(
+                    ProjectGeoJSON.objects.get(pk=self.commit_sha), "features"
+                )
+            )
+            is None
+        )
+        assert (
+            _cache.get(
+                _geojson_cache_key(
+                    ProjectGeoJSON.objects.get(pk=self.commit_sha), "features_index"
+                )
+            )
+            is None
+        )
 
         # Warm up via /items.
         items_resp = self.public_client.get(
@@ -2020,8 +2049,16 @@ class TestSingleFeatureIndex(BaseAPITestCase):
         assert items_resp.status_code == status.HTTP_200_OK
 
         # Both list and index are now populated.
-        cached_list = _cache.get(f"ogc_geojson_features_{self.commit_sha}")
-        cached_index = _cache.get(f"ogc_geojson_features_index_{self.commit_sha}")
+        cached_list = _cache.get(
+            _geojson_cache_key(
+                ProjectGeoJSON.objects.get(pk=self.commit_sha), "features"
+            )
+        )
+        cached_index = _cache.get(
+            _geojson_cache_key(
+                ProjectGeoJSON.objects.get(pk=self.commit_sha), "features_index"
+            )
+        )
         assert cached_list is not None
         assert cached_index is not None
         assert isinstance(cached_index, dict)
@@ -3291,7 +3328,9 @@ class TestOGCGeometrySplit(BaseAPITestCase):
         """A computed empty group set is cached as ``()`` and read as a hit."""
         sha = "9" * 40
         self._make_geojson(sha, include_points=False, include_lines=False)
-        groups_key = f"ogc_geojson_groups_present_{sha}"
+        groups_key = _geojson_cache_key(
+            ProjectGeoJSON.objects.get(pk=sha), "groups_present"
+        )
 
         assert _cache.get(groups_key) is None
         assert (
@@ -3301,7 +3340,9 @@ class TestOGCGeometrySplit(BaseAPITestCase):
 
         original_loader = _gis_view_mod._load_normalized_features  # noqa: SLF001
 
-        def _fail_if_cache_misses(commit_sha: str) -> list[dict[str, Any]]:
+        def _fail_if_cache_misses(
+            commit_sha: str | ProjectGeoJSON,
+        ) -> list[dict[str, Any]]:
             raise AssertionError(f"cache miss for already-computed empty {commit_sha}")
 
         _gis_view_mod._load_normalized_features = _fail_if_cache_misses  # noqa: SLF001
