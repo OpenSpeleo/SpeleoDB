@@ -169,7 +169,13 @@ export async function init(context) {
                     $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
                     $("#modal_error").css('display', 'flex');
                   } else {
-                    $("#modal_success_txt").html("The file(s) has/have been succesfully uploaded.");
+                    const status = data.geojson_status;
+                    const message = status === 'pending'
+                      ? 'Upload saved. The map will update in the background.'
+                      : status === 'unavailable'
+                        ? 'Upload saved. Map generation is currently unavailable.'
+                        : 'The files have been successfully uploaded.';
+                    $("#modal_success_txt").text(message);
                     $("#modal_success").css('display', 'flex');
 
                     window.setTimeout(function() {

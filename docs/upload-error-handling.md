@@ -18,15 +18,18 @@ FileUploadView.put()
   ├─ processor.add_to_project(file)             ← write to working tree
   ├─ commit_and_push_project()                  ← git add/commit/push
   │    └─ construct_git_history_from_project()  ← sync ProjectCommit rows
-  ├─ create_project_geojson()                   ← optional GeoJSON
+  ├─ request_uploaded_geojson()                 ← optional durable work record
   └─ return SuccessResponse
 ```
 
 Every step above can fail. The view preserves the appropriate client response
 (including 400, 415, and 500) while reporting upload input, file-processing, and
-Git failures to Sentry. Optional GeoJSON generation may fail after the source
-commit succeeds; those failures are reported without changing the successful
-upload response.
+Git failures to Sentry. Optional map bookkeeping uses its own savepoint after
+the successful push, preserving the source transaction even if bookkeeping
+fails. After SQL commit, the dispatcher queues the generation task. Conversion
+and artifact storage run in that worker and cannot change the upload response.
+See [background map generation](project-geojson-background.md) for ordering,
+status, and recovery.
 
 ---
 
@@ -125,9 +128,11 @@ endpoints retain their existing policies.
   response behavior. Unexpected exceptions that propagate beyond DRF retain
   Django's normal unhandled-exception reporting. Ordinary authentication and
   permission rejections are outside this processing policy.
-- Caught optional GeoJSON conversion and S3 failures are captured even when the
-  uploaded source has already been committed successfully. A secondary Git
-  cleanup failure is captured independently of the original upload failure.
+- Optional generation-bookkeeping failures are captured after their savepoint
+  unwinds, without rejecting the source upload. The worker reports conversion
+  and storage failures separately and records bounded user-facing diagnostics. A
+  secondary Git cleanup failure is captured independently of the original upload
+  failure.
 - Normal no-op outcomes remain unchanged: duplicate or unchanged files, absent
   GPS anchors, empty surveys, excluded GeoJSON generation, and an incomplete
   Compass bundle without a MAK file. They do not become processing failures.
@@ -219,19 +224,19 @@ always rolls back.
 
 ### Files covered by this protocol
 
-| File                  | View                          | Sentry | Rollback | Notes                                                                                                                                            |
-| --------------------- | ----------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `file.py`             | `FileUploadView`              | Yes    | Yes      | all upload processing failures; rollback through `handle_exception()`, separate reporting for input validation and optional conversion failures  |
-| `file.py`             | `FileDownloadView`            | Yes    | No       | read-only, no DB writes                                                                                                                          |
-| `gpx_import.py`       | `GPXImportView`               | Yes    | Yes      | `Landmark` + `GPSTrack` writes                                                                                                                   |
-| `kml_kmz_import.py`   | `KML_KMZ_ImportView`          | Yes    | Yes      | `Landmark` writes                                                                                                                                |
-| `project_explorer.py` | `ProjectGitExplorerApiView`   | Yes    | No       | read-only                                                                                                                                        |
-| `project.py`          | `ProjectSpecificApiView`      | Yes    | No       | read-only                                                                                                                                        |
-| `gis_view.py`         | `GISViewDataApiView`          | Yes    | No       | read-only                                                                                                                                        |
-| `gis_view.py`         | `PublicGISViewGeoJSONApiView` | Yes    | No       | read-only                                                                                                                                        |
-| `tools.py`            | `ToolDMP2JSON`                | Yes    | No       | temp file only                                                                                                                                   |
-| `tools.py`            | `ToolDMPDoctor`               | Yes    | No       | wraps `mnemo_lib.correct_dmp_cmd`; returns 400 but captures because `correct_dmp_cmd` failures can be either corrupt user input or upstream bugs |
-| `middleware.py`       | `DRFWrapResponseMiddleware`   | Yes    | No       | last-resort backstop (v1 only)                                                                                                                   |
+| File                  | View                          | Sentry | Rollback | Notes                                                                                                                                              |
+| --------------------- | ----------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file.py`             | `FileUploadView`              | Yes    | Yes      | all upload processing failures; rollback through `handle_exception()`, separate reporting for input validation and optional generation bookkeeping |
+| `file.py`             | `FileDownloadView`            | Yes    | No       | read-only, no DB writes                                                                                                                            |
+| `gpx_import.py`       | `GPXImportView`               | Yes    | Yes      | `Landmark` + `GPSTrack` writes                                                                                                                     |
+| `kml_kmz_import.py`   | `KML_KMZ_ImportView`          | Yes    | Yes      | `Landmark` writes                                                                                                                                  |
+| `project_explorer.py` | `ProjectGitExplorerApiView`   | Yes    | No       | read-only                                                                                                                                          |
+| `project.py`          | `ProjectSpecificApiView`      | Yes    | No       | read-only                                                                                                                                          |
+| `gis_view.py`         | `GISViewDataApiView`          | Yes    | No       | read-only                                                                                                                                          |
+| `gis_view.py`         | `PublicGISViewGeoJSONApiView` | Yes    | No       | read-only                                                                                                                                          |
+| `tools.py`            | `ToolDMP2JSON`                | Yes    | No       | temp file only                                                                                                                                     |
+| `tools.py`            | `ToolDMPDoctor`               | Yes    | No       | wraps `mnemo_lib.correct_dmp_cmd`; returns 400 but captures because `correct_dmp_cmd` failures can be either corrupt user input or upstream bugs   |
+| `middleware.py`       | `DRFWrapResponseMiddleware`   | Yes    | No       | last-resort backstop (v1 only)                                                                                                                     |
 
 ### Savepoint rule for catching `IntegrityError`
 

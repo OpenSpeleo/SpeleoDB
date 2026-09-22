@@ -70,7 +70,7 @@ class ProjectQuerySet(models.QuerySet["Project"]):
     def with_commits(self) -> Self:
         from speleodb.surveys.models import ProjectCommit  # noqa: PLC0415
 
-        latest_commit_qs = ProjectCommit.objects.order_by("-authored_date")
+        latest_commit_qs = ProjectCommit.objects.all()
 
         return self.prefetch_related(
             Prefetch(
@@ -318,7 +318,7 @@ class Project(models.Model):
     def latest_commit(self) -> ProjectCommit | None:
         if hasattr(self, "_prefetched_commits"):
             return self._prefetched_commits[0] if self._prefetched_commits else None
-        return self.commits.order_by("-authored_date").first()
+        return self.commits.first()
 
     def _active_mutex(self) -> ProjectMutex | None:
         if hasattr(self, "_prefetched_active_mutex"):

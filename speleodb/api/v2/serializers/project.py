@@ -259,6 +259,7 @@ class ProjectGeoJSONFileSerializer(serializers.ModelSerializer[ProjectGeoJSON]):
 class ProjectWithGeoJsonSerializer(ProjectSerializer):
     geojson_file = serializers.CharField(read_only=True, allow_null=True)
     geojson_revision = serializers.CharField(read_only=True, allow_null=True)
+    geojson_commit_sha = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta(ProjectSerializer.Meta):
         read_only_fields = ["__all__"]
@@ -274,4 +275,29 @@ class ProjectWithGeoJsonSerializer(ProjectSerializer):
         data["geojson_revision"] = (
             artifact.geojson_revision if artifact is not None else None
         )
+        data["geojson_commit_sha"] = (
+            artifact.commit_id if artifact is not None else None
+        )
         return data
+
+
+class ProjectGeoJSONStatusSerializer(serializers.Serializer[dict[str, Any]]):
+    state = serializers.ChoiceField(
+        choices=[
+            "pending",
+            "queued",
+            "running",
+            "ready",
+            "skipped",
+            "failed",
+            "not_requested",
+        ],
+        read_only=True,
+    )
+    source_commit_sha = serializers.CharField(read_only=True, allow_null=True)
+    generation_commit_sha = serializers.CharField(read_only=True, allow_null=True)
+    geojson_commit_sha = serializers.CharField(read_only=True, allow_null=True)
+    geojson_revision = serializers.CharField(read_only=True, allow_null=True)
+    error_code = serializers.CharField(read_only=True, allow_null=True)
+    error = serializers.CharField(read_only=True, allow_null=True)
+    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)

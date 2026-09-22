@@ -140,9 +140,7 @@ class GISView(models.Model):
         project_views = self.project_views.select_related("project").prefetch_related(
             Prefetch(
                 "project__geojsons",
-                queryset=ProjectGeoJSON.objects.select_related("commit").order_by(
-                    "-commit__authored_date"
-                ),
+                queryset=ProjectGeoJSON.objects.select_related("commit"),
             )
         )
 

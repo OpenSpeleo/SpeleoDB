@@ -15,12 +15,9 @@ from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
 
 from speleodb.common.enums import ProjectType
+from speleodb.gis.geojson_sources import materialize_geojson_source
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.project_geojson_services import replace_project_geojson
-from speleodb.git_engine.core import GitFile
-from speleodb.processors import ArianeTMLFileProcessor
-from speleodb.processors._impl.compass_toml import CompassTOML
-from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.exceptions import GeoJSONGenerationError
@@ -73,59 +70,10 @@ class Command(BaseCommand):
             help="Recompute and replace GeoJSON files that already exist.",
         )
 
-    def _materialize_ariane_source(
-        self, commit: GitCommit, tmp_dirpath: Path
-    ) -> Path | None:
-        try:
-            file = commit.tree / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
-        except KeyError:
-            return None
-
-        tmp_file = tmp_dirpath / ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
-        tmp_file.write_bytes(file.content.getvalue())
-        return tmp_file
-
-    def _materialize_compass_source(
-        self, commit: GitCommit, tmp_dirpath: Path
-    ) -> Path | None:
-        files_by_path: dict[str, GitFile] = {
-            str(item.path): item
-            for item in commit.tree.traverse()
-            if isinstance(item, GitFile)
-        }
-
-        compass_toml_file = files_by_path.get(CompassTOML.__FILENAME__)
-        if compass_toml_file is None:
-            return None
-
-        cfg = CompassTOML.from_toml(compass_toml_file.content)
-
-        for rel_path in cfg.files:
-            git_file = files_by_path.get(rel_path)
-            if git_file is None:
-                logger.warning(
-                    "Missing Compass file `%s` in commit `%s`",
-                    rel_path,
-                    commit.hexsha,
-                )
-                return None
-
-            target_path = tmp_dirpath / rel_path
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.write_bytes(git_file.content.getvalue())
-
-        return get_compass_mak_filepath(tmp_dirpath)
-
     def _materialize_geojson_source(
         self, project: Project, commit: GitCommit, tmp_dirpath: Path
     ) -> Path | None:
-        match project.type:
-            case ProjectType.ARIANE:
-                return self._materialize_ariane_source(commit, tmp_dirpath)
-            case ProjectType.COMPASS:
-                return self._materialize_compass_source(commit, tmp_dirpath)
-            case _:
-                return None
+        return materialize_geojson_source(project, commit, tmp_dirpath)
 
     @staticmethod
     def _remove_local_copy(project: Project) -> None:

@@ -1014,6 +1014,12 @@
         "decorators": ""
     },
     {
+        "url": "/api/v1/projects/<uuid:id>/geojson-status/",
+        "module": "speleodb.api.v2.views.project_geojson_status.ProjectGeoJSONStatusView",
+        "name": "api:v1:project-geojson-status",
+        "decorators": ""
+    },
+    {
         "url": "/api/v1/projects/<uuid:id>/geojson/",
         "module": "speleodb.api.v2.views.project_geojson.ProjectGeoJsonCommitsApiView",
         "name": "api:v1:project-geojson-commits",
@@ -1923,6 +1929,12 @@
         "url": "/api/v2/projects/<uuid:id>/exploration-leads/geojson/",
         "module": "speleodb.api.v2.views.exploration_lead.ProjectExplorationLeadsGeoJSONView",
         "name": "api:v2:project-exploration-leads-geojson",
+        "decorators": ""
+    },
+    {
+        "url": "/api/v2/projects/<uuid:id>/geojson-status/",
+        "module": "speleodb.api.v2.views.project_geojson_status.ProjectGeoJSONStatusView",
+        "name": "api:v2:project-geojson-status",
         "decorators": ""
     },
     {

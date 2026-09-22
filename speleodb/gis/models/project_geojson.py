@@ -65,7 +65,7 @@ class ProjectGeoJSON(models.Model):
             models.Index(fields=["project"]),
             models.Index(fields=["commit"]),
         ]
-        ordering = ["-commit__authored_date"]
+        ordering = ["-commit__authored_date", "-commit__creation_date", "-commit_id"]
 
     def __str__(self) -> str:
         return f"[ProjectGeoJSON] {self.project.name} @ {self.commit.id[:8]}"

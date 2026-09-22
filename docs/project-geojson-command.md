@@ -208,3 +208,17 @@ as a database migration or against a developer's working copy: the command's
 existing final cleanup removes each processed local Git checkout. No artificial
 survey commits or client offline-cache purge are needed. Existing offline maps
 remain usable in survey-color fallback until a successful refresh.
+
+## Relationship to upload generation
+
+Uploads now record optional background work only after Git push succeeds; the
+dispatcher enqueues it after the source SQL transaction commits. A map failure
+does not reject the upload. The generation administrator can retry a recorded
+source SHA, including a missing generation record, without uploading again. See
+[background generation](project-geojson-background.md) for status and recovery.
+
+This command remains the explicit historical-rebuild/replacement tool. The
+upload worker shares its source-materialization helpers but never invokes its
+full history scan or shared-checkout cleanup. Correct invalid source coordinates
+in the survey editor; neither the command nor worker reads corrections from
+comments or guesses a UTM zone.

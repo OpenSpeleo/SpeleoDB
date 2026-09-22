@@ -570,6 +570,7 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 CELERY_VISIBILITY_TIMEOUT = 3600
 CELERY_TASK_DEFAULT_QUEUE = "background_control"
 CELERY_TASK_ROUTES = {
+    "speleodb.gis.tasks.*": {"queue": "background_control"},
     "speleodb.background_jobs.tasks.generate_export": {"queue": "exports"},
     "speleodb.background_jobs.tasks.*": {"queue": "background_control"},
     "celery.backend_cleanup": {"queue": "background_control"},
@@ -644,6 +645,21 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-soft-time-limit
 # TODO: set to whatever value is adequate in your circumstances
 CELERY_TASK_SOFT_TIME_LIMIT = 60
+
+# Per-commit maps run outside uploads. Beat dispatches committed pending rows;
+# broker outages retain work without spending a conversion attempt.
+GEOJSON_GENERATION_SOFT_TIME_LIMIT = 5 * 60
+GEOJSON_GENERATION_HARD_TIME_LIMIT = 6 * 60
+GEOJSON_GENERATION_MAX_ATTEMPTS = 3
+GEOJSON_GENERATION_RETRY_BASE_SECONDS = 60
+GEOJSON_GENERATION_RETRY_MAX_SECONDS = 15 * 60
+GEOJSON_GENERATION_DISPATCH_LEASE_SECONDS = 10 * 60
+GEOJSON_GENERATION_DISPATCH_BATCH = 100
+GEOJSON_GENERATION_CLEANUP_GRACE_SECONDS = 5 * 60
+GEOJSON_GENERATION_SCRATCH_DIR = env.str(
+    "GEOJSON_GENERATION_SCRATCH_DIR",
+    default="/tmp/speleodb-geojson",  # noqa: S108
+)
 
 # A full survey-history rebuild is an explicit, long-running maintenance task.
 # Allow cleanup after its soft deadline before the worker forcibly stops it.

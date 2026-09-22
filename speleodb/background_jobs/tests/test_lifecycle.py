@@ -470,10 +470,11 @@ def test_scheduler_installation_is_idempotent_and_uses_control_queue() -> None:
     tasks = PeriodicTask.objects.filter(
         name__in=[
             "background-job-maintenance",
+            "project-geojson-dispatch",
             "export-artifact-cleanup",
             "celery.backend_cleanup",
         ]
     )
-    assert tasks.count() == 3  # noqa: PLR2004
+    assert tasks.count() == 4  # noqa: PLR2004
     assert set(tasks.values_list("queue", flat=True)) == {"background_control"}
     assert not tasks.filter(interval__isnull=True).exists()

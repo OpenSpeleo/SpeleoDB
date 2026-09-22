@@ -17,6 +17,11 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         schedules: tuple[tuple[str, str, int], ...] = (
             (
+                "project-geojson-dispatch",
+                "speleodb.gis.tasks.dispatch_project_geojsons",
+                60,
+            ),
+            (
                 "background-job-maintenance",
                 "speleodb.background_jobs.tasks.maintain_background_jobs",
                 60,

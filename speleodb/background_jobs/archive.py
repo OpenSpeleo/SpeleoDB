@@ -176,11 +176,7 @@ def _snapshot_sources(user: User) -> tuple[list[ArchiveSource], list[dict[str, s
         )
         for project in projects
     ]
-    latest = (
-        ProjectGeoJSON.objects.filter(project_id=OuterRef("pk"))
-        .order_by("-commit__authored_date", "-creation_date", "commit_id")
-        .values("pk")[:1]
-    )
+    latest = ProjectGeoJSON.objects.filter(project_id=OuterRef("pk")).values("pk")[:1]
     latest_ids = (
         Project.objects.filter(pk__in=[project.id for project in projects])
         .annotate(export_geojson_id=Subquery(latest))

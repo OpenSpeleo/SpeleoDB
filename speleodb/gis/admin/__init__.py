@@ -19,6 +19,7 @@ from speleodb.gis.admin.landmark import LandmarkCollectionAdmin
 from speleodb.gis.admin.log import StationLogEntryAdmin
 from speleodb.gis.admin.network import SurfaceMonitoringNetworkAdmin
 from speleodb.gis.admin.project_geojson import ProjectGeoJSONAdmin
+from speleodb.gis.admin.project_geojson_generation import ProjectGeoJSONGenerationAdmin
 from speleodb.gis.admin.resource import StationResourceAdmin
 from speleodb.gis.admin.sensor import SensorAdmin
 from speleodb.gis.admin.sensor import SensorFleetAdmin
@@ -44,6 +45,7 @@ __all__ = [
     "LandmarkAdmin",
     "LandmarkCollectionAdmin",
     "ProjectGeoJSONAdmin",
+    "ProjectGeoJSONGenerationAdmin",
     "SensorAdmin",
     "SensorFleetAdmin",
     "SensorInstallAdmin",

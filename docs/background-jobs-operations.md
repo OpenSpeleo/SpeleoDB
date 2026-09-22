@@ -466,3 +466,18 @@ smoke checks. Exact deployment IDs and runtime evidence are recorded in
 - [Redis Pub/Sub database scoping](https://redis.io/docs/latest/develop/pubsub/)
 - [Railway Infrastructure as Code](https://docs.railway.com/infrastructure-as-code)
 - [Railway health checks](https://docs.railway.com/deployments/healthchecks)
+
+## Survey GeoJSON generation
+
+The managed schedules also include the per-commit GeoJSON dispatcher, running
+every 60 seconds on `background_control`. It reads durable generation records
+created only after successful source Git pushes and committed upload SQL
+transactions. Generation uses the existing worker and read-only Git source
+utility; upload requests never contact the broker. Apply the additive generation
+migration and run `install_background_schedules` when enabling the new code.
+
+Use generation administration to inspect failures or retry a recorded commit.
+Monitor pending age, terminal failures, and worker timeouts; the single worker
+can defer map jobs behind long maintenance/export work. See
+[background survey maps](project-geojson-background.md) for limits, status API,
+publication fencing, and source-versus-map recovery.

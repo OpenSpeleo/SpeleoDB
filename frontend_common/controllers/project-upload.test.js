@@ -142,3 +142,30 @@ it('retains the title and files after a failed upload so form submission can ret
         expect(request.body).toContain('Retry this survey');
     }
 });
+
+it.each([
+    ['pending', 'Upload saved. The map will update in the background.'],
+    ['unavailable', 'Upload saved. Map generation is currently unavailable.'],
+    ['skipped', 'The files have been successfully uploaded.'],
+    [undefined, 'The files have been successfully uploaded.'],
+])('explains successful upload with map status %s and preserves the redirect', (geojson_status, expected) => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="modal_success"><p id="modal_success_txt"></p></div>');
+    const ajax = vi.spyOn($, 'ajax').mockImplementation(options => {
+        options.success({ browser_url: `${window.location.href}#saved`, geojson_status }, 'success', { status: 200 });
+    });
+    let redirect;
+    const timer = vi.spyOn(window, 'setTimeout').mockImplementation(callback => { redirect = callback; return 1; });
+    try {
+        $('#message').val('Updated survey');
+        selectFile();
+        document.getElementById('file_upload_form').requestSubmit();
+        expect($('#modal_success_txt').text()).toBe(expected);
+        expect($('#modal_error_txt').text()).not.toContain('identical');
+        expect(timer).toHaveBeenCalledWith(expect.any(Function), 2000);
+        redirect();
+        expect(window.location.hash).toBe('#saved');
+    } finally {
+        ajax.mockRestore();
+        timer.mockRestore();
+    }
+});

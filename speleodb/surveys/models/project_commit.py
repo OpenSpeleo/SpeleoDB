@@ -85,7 +85,7 @@ class ProjectCommit(models.Model):
     class Meta:
         verbose_name = "Project Commit"
         verbose_name_plural = "Project Commits"
-        ordering = ("-authored_date",)
+        ordering = ("-authored_date", "-creation_date", "-id")
         indexes = [
             models.Index(fields=["project"]),
             models.Index(fields=["project", "authored_date"]),

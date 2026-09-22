@@ -4,6 +4,15 @@ Survey source history and rendered artifacts have different lifetimes. Ariane
 and Compass Git commits identify source data; rebuilding their GeoJSON with a
 new exporter can change its rendering properties without changing that commit.
 
+## Upload and background generation
+
+Uploads save and push source data before recording optional map-generation work.
+Generation runs in Celery after the source database transaction commits. Upload
+success does not require a usable map; the project page shows pending/failed
+status and retains the last successful artifact. See
+[background generation](project-geojson-background.md) for ordering,
+diagnostics, worker recovery, and testing.
+
 ## Shot color contract
 
 Each exported survey LineString can carry `properties.color`, a CSS color
@@ -33,15 +42,16 @@ color settings and geometry/depth data retain their existing meanings.
 ## Metadata revision
 
 `GET /api/v2/projects/geojson/` includes the read-only `geojson_revision` field
-beside `geojson_file`. Both come from the same selected newest stored artifact.
-Both are `null` when the project has no generated GeoJSON. Revision is the
-SHA-256 hex digest of the storage-relative object name, an opaque equality token
-that requires no schema migration or object download. It is not a content hash
-or a Git commit SHA. New uploads use `<project UUID>/<artifact UUID>.json`,
-within the field's existing 100-character limit. A fresh artifact UUID prevents
-name reuse after deletion, including repeated rebuilds of the same source SHA.
-Older stored paths remain readable. Renewed signed URLs for the same object keep
-the same revision.
+beside `geojson_file` and `geojson_commit_sha`. All three come from the same
+selected newest stored artifact and are `null` when the project has no generated
+GeoJSON. The artifact SHA can differ from source `latest_commit` while
+generation is pending or has failed. Revision is the SHA-256 hex digest of the
+storage-relative object name, an opaque equality token that requires no schema
+migration or object download. It is not a content hash or a Git commit SHA. New
+uploads use `<project UUID>/<artifact UUID>.json`, within the field's existing
+100-character limit. A fresh artifact UUID prevents name reuse after deletion,
+including repeated rebuilds of the same source SHA. Older stored paths remain
+readable. Renewed signed URLs for the same object keep the same revision.
 
 The endpoint reuses its ordered artifact prefetch to select that row once,
 without an extra query for each revision or download URL. Ordinary project and
@@ -64,12 +74,15 @@ and source SHA and therefore survive artifact replacement.
 Successfully superseded immutable objects remain stored. Deleting one as soon as
 the row changes would break already issued signed URLs and in-flight OGC readers
 holding that artifact. Each successful replacement logs the retired object key.
-There is no automatic cleanup task or new database table. Operators can clean up
-logged retired objects after rollout verification, only after all issued signed
-URLs have expired (the GIS-view API allows up to 24 hours), active readers have
-finished, and the object is confirmed absent from current artifact references.
-Account for retained storage when scheduling large rebuilds; failed unpublished
-replacement uploads are cleaned up immediately.
+Object retirement has no automatic cleanup task or dedicated tracking table.
+Operators can clean up logged retired objects after rollout verification, only
+after all issued signed URLs have expired (the GIS-view API allows up to 24
+hours), active readers have finished, and the object is confirmed absent from
+current artifact references. Account for retained storage when scheduling large
+rebuilds. Failed unpublished replacement uploads attempt immediate cleanup;
+asynchronous generation also journals them for delayed cleanup after a hard kill
+or storage outage, as described in
+[background generation](project-geojson-background.md).
 
 OGC normalized features, single-feature indexes, geometry-group discovery,
 bounds and cache-fill locks include both source SHA and artifact revision. A

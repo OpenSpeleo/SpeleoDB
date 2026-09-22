@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import timedelta
 from hashlib import sha256
 from typing import TYPE_CHECKING
 from typing import Any
@@ -35,6 +36,7 @@ from speleodb.api.v2.views.gis_view import _load_feature_by_id
 from speleodb.api.v2.views.gis_view import _load_geometry_groups_present
 from speleodb.api.v2.views.gis_view import _load_normalized_features
 from speleodb.api.v2.views.project_geojson import ProjectUserOGCService
+from speleodb.background_jobs.archive import _snapshot_sources
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
@@ -244,6 +246,8 @@ def test_project_metadata_pairs_revision_and_url_without_extra_queries(
         first = ProjectWithGeoJsonSerializer(project).data
         renewed = ProjectWithGeoJsonSerializer(project).data
     assert len(queries) == 0
+    assert first["geojson_commit_sha"] == artifact.commit_id
+    assert renewed["geojson_commit_sha"] == artifact.commit_id
     assert first["geojson_file"] == "first"
     assert renewed["geojson_file"] == "renewed"
     assert (
@@ -259,6 +263,42 @@ def test_project_metadata_without_artifact_is_null(project: Project) -> None:
         data = ProjectWithGeoJsonSerializer(project).data
     assert data["geojson_file"] is None
     assert data["geojson_revision"] is None
+    assert data["geojson_commit_sha"] is None
+
+
+@pytest.mark.django_db
+def test_latest_map_order_agrees_for_ogc_authorization_and_archive(
+    artifact: ProjectGeoJSON, user: User
+) -> None:
+    newer = ProjectCommit.objects.create(
+        id="0" * 40,
+        project=artifact.project,
+        author_name="Test",
+        author_email="test@example.com",
+        authored_date=artifact.commit.authored_date,
+        message="New source with the same Git timestamp",
+    )
+    latest = replace_project_geojson(artifact.project, newer, POINT_DATA)
+    # The older source completes last; its artifact timestamp must not win.
+    ProjectGeoJSON.objects.filter(pk=artifact.pk).update(
+        creation_date=latest.creation_date + timedelta(seconds=1)
+    )
+    UserProjectPermissionFactory(
+        target=user, project=artifact.project, level=PermissionLevel.READ_ONLY
+    )
+    view = GISView.objects.create(name="Latest", owner=user, allow_precise_zoom=False)
+    GISProjectView.objects.create(
+        gis_view=view, project=artifact.project, use_latest=True
+    )
+    service = ProjectViewOGCService()
+    collection_id = f"{newer.pk}_points"
+    assert [item.id for item in service.list_collections(view)] == [collection_id]
+    assert service.get_collection(view, collection_id) is not None
+    assert service.get_collection(view, f"{artifact.commit_id}_points") is None
+    sources, _ = _snapshot_sources(user)
+    selected = [source for source in sources if source.category == "geojsons"]
+    assert len(selected) == 1
+    assert selected[0].resource.pk == newer.pk
 
 
 @pytest.mark.django_db

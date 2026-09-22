@@ -25,3 +25,12 @@ def test_url_configuration() -> None:
 
     ddiff = DeepDiff(json_data, url_config, ignore_order=True)
     assert ddiff.get("values_changed", None) is None
+
+    # Development-only pages/static routes vary with DEBUG. The API surface
+    # must match completely, including newly added or accidentally removed URLs.
+    api_diff = DeepDiff(
+        [entry for entry in json_data if entry["url"].startswith("/api/")],
+        [entry for entry in url_config if entry["url"].startswith("/api/")],
+        ignore_order=True,
+    )
+    assert not api_diff, api_diff

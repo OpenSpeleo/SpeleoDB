@@ -7,6 +7,7 @@ import pathlib
 import re
 from typing import Any
 from typing import cast
+from unittest.mock import patch
 
 import orjson
 import pytest
@@ -17,8 +18,12 @@ from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.gis.geojson_generation import dispatch_pending_geojsons
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.models import ProjectGeoJSONGeneration
+from speleodb.gis.tasks import generate_project_geojson
 from speleodb.surveys.models import FileFormat
+from speleodb.surveys.models import Project
 from speleodb.testing.gitlab_pool import get_pool
 
 BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
@@ -49,6 +54,25 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         expected_status: int = status.HTTP_200_OK,
     ) -> dict[str, Any]:
         with contextlib.ExitStack() as stack:
+            converter = stack.enter_context(
+                patch.object(
+                    Project,
+                    "build_geojson",
+                    side_effect=AssertionError("Upload must not generate maps"),
+                )
+            )
+            parser = stack.enter_context(
+                patch(
+                    "openspeleo_lib.interfaces.ArianeInterface.from_file",
+                    side_effect=AssertionError("Upload must not parse surveys"),
+                )
+            )
+            broker = stack.enter_context(
+                patch(
+                    "celery.current_app.send_task",
+                    side_effect=AssertionError("Upload must not contact the broker"),
+                )
+            )
             opened_files = [
                 stack.enter_context(path.open(mode="rb")) for path in artifact_paths
             ]
@@ -65,10 +89,25 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 headers={"authorization": self.auth},
             )
 
+        converter.assert_not_called()
+        parser.assert_not_called()
+        broker.assert_not_called()
         assert response.status_code == expected_status, response.content
         if expected_status == status.HTTP_304_NOT_MODIFIED:
             return {}
         return cast("dict[str, Any]", response.data)
+
+    def _run_generation(self, commit_sha: str) -> None:
+        assert not ProjectGeoJSON.objects.filter(commit_id=commit_sha).exists()
+        generation = ProjectGeoJSONGeneration.objects.get(commit_id=commit_sha)
+        assert generation.state == "pending"
+        with patch("speleodb.gis.geojson_generation.current_app.send_task") as publish:
+            dispatch_pending_geojsons()
+        publish.assert_called_once()
+        assert publish.call_args.kwargs["args"][0] == commit_sha
+        generation.refresh_from_db()
+        assert generation.state == "queued"
+        generate_project_geojson.run(commit_sha, str(generation.token))
 
     def _assert_stored_shot_colors(self, commit_sha: str) -> None:
         artifact = ProjectGeoJSON.objects.get(commit_id=commit_sha)
@@ -94,6 +133,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         )
         assert metadata["geojson_file"]
         assert metadata["geojson_revision"] == artifact.geojson_revision
+        assert metadata["geojson_commit_sha"] == commit_sha
 
     def test_upload_ariane_generates_geojson(self) -> None:
         self.project.type = ProjectType.ARIANE
@@ -110,6 +150,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         finally:
             self.project.release_mutex(self.user)
 
+        self._run_generation(str(data["hexsha"]))
         assert ProjectGeoJSON.objects.filter(
             project=self.project,
             commit__id=str(data["hexsha"]),
@@ -136,6 +177,11 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
+        assert data["geojson_status"] == "skipped"
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit_id=str(data["hexsha"])
+        ).exists()
+
     def test_upload_auto_compass_generates_geojson(self) -> None:
         self.project.type = ProjectType.COMPASS
         self.project.exclude_geojson = False
@@ -148,6 +194,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 artifact_paths=COMPASS_TEST_FILES,
                 commit_message="Compass upload with GeoJSON",
             )
+            self._run_generation(str(data["hexsha"]))
             artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
             original_revision = artifact.geojson_revision
             self._assert_stored_shot_colors(str(data["hexsha"]))
@@ -156,6 +203,12 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 artifact_paths=COMPASS_TEST_FILES,
                 commit_message="Identical Compass source",
                 expected_status=status.HTTP_304_NOT_MODIFIED,
+            )
+            assert (
+                ProjectGeoJSONGeneration.objects.filter(
+                    commit__project=self.project
+                ).count()
+                == 1
             )
             artifact.refresh_from_db()
             assert artifact.geojson_revision == original_revision
@@ -188,6 +241,11 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
+        assert data["geojson_status"] == "skipped"
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit_id=str(data["hexsha"])
+        ).exists()
+
     def test_upload_auto_compass_incomplete_bundle_skips_geojson(self) -> None:
         self.project.type = ProjectType.COMPASS
         self.project.exclude_geojson = False
@@ -207,3 +265,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             project=self.project,
             commit__id=str(data["hexsha"]),
         ).exists()
+
+        self._run_generation(str(data["hexsha"]))
+        generation = ProjectGeoJSONGeneration.objects.get(commit_id=str(data["hexsha"]))
+        assert generation.state == "skipped"

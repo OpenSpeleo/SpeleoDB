@@ -408,7 +408,6 @@ def _project_authorized_for_view(
         return True
     latest_commit_id = (
         ProjectGeoJSON.objects.filter(project=project_geojson.project)
-        .order_by("-commit__authored_date")
         .values_list("commit_id", flat=True)
         .first()
     )

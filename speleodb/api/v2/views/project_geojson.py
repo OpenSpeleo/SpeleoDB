@@ -76,7 +76,7 @@ class BaseUserProjectGeoJsonApiView(SDBAPIViewMixin):
             queryset=ProjectGeoJSON.objects.select_related(
                 "commit",
                 "project",
-            ).order_by("-commit__authored_date"),
+            ),
         )
 
         return Project.objects.filter(
@@ -263,7 +263,7 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         serializer = ProjectGeoJSONCommitSerializer(
-            project.geojsons.order_by("-commit__authored_date"),
+            project.geojsons.all(),
             many=True,
         )
         return SuccessResponse(serializer.data)

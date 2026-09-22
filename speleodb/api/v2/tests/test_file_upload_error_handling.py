@@ -12,6 +12,7 @@ import uuid
 from functools import partial
 from typing import TYPE_CHECKING
 from typing import cast
+from unittest.mock import patch
 from zipfile import BadZipFile
 from zipfile import ZipFile
 
@@ -20,7 +21,6 @@ import gitlab.exceptions
 import pytest
 import sentry_sdk
 from allauth.account.models import EmailAddress
-from compass_lib.geojson import NoKnownAnchorError as CompassNoKnownAnchorError
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -48,7 +48,9 @@ from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.gis.geojson_generation import request_geojson_generation
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.git_engine.core import GIT_COMMITTER
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
@@ -64,7 +66,6 @@ from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import canonical_user
 from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.exceptions import FileRejectedError
-from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.user_identity import DEFAULT_USER_NAME
 
 if TYPE_CHECKING:
@@ -225,6 +226,9 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         # persisted rows instead of inspecting a surrounding test's rollback flag.
         assert not connection.in_atomic_block
         assert not connection.needs_rollback
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit__project=self.project
+        ).exists()
         assert not Format.objects.filter(project=self.project).exists()
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
         assert (
@@ -448,7 +452,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         assert isinstance(self._reported_exception(), UnsupportedMediaType)
         self._assert_no_upload_writes()
 
-    def test_geojson_parser_failure_reports_after_source_upload(self) -> None:
+    def test_geojson_parser_failure_is_deferred_until_after_source_upload(self) -> None:
         self.project.exclude_geojson = False
         self.project.save(update_fields=["exclude_geojson"])
         content: io.BytesIO = io.BytesIO()
@@ -458,14 +462,75 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         response: Response = self._do_upload(content=content.getvalue())
 
         assert response.status_code == status.HTTP_200_OK
-        exception: BaseException = self._reported_exception()
-        assert isinstance(exception, OSError), exception
-        assert "specified file not found in archive" in str(exception)
+        assert not self.sentry_events
+        assert (
+            ProjectGeoJSONGeneration.objects.get(
+                commit_id=response.data["hexsha"]
+            ).state
+            == "pending"
+        )
         assert self._remote_head() != self.original_head
         assert Format.objects.filter(project=self.project).exists()
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
 
-    def test_compass_conversion_failure_reports_after_source_upload(self) -> None:
+    def test_geojson_record_is_created_only_after_push(self) -> None:
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["exclude_geojson"])
+        observed: list[str] = []
+
+        def record(project: Project, commit: ProjectCommit) -> ProjectGeoJSONGeneration:
+            # Observe the real remote, not merely a mocked local commit return.
+            assert self._remote_head() == commit.pk
+            assert commit.pk != self.original_head
+            assert connection.in_atomic_block
+            observed.append(commit.pk)
+            return request_geojson_generation(project, commit)
+
+        with patch(
+            "speleodb.api.v2.views.file.request_geojson_generation", side_effect=record
+        ):
+            response = self._do_upload()
+        assert response.status_code == status.HTTP_200_OK
+        assert observed == [response.data["hexsha"]]
+        assert (
+            ProjectGeoJSONGeneration.objects.get(commit_id=observed[0]).state
+            == "pending"
+        )
+
+    def test_optional_geojson_sql_failure_preserves_source_transaction(self) -> None:
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["exclude_geojson"])
+
+        def duplicate_commit(project: Project, commit: ProjectCommit) -> None:
+            # A real SQL uniqueness violation poisons the inner savepoint.
+            ProjectCommit.objects.create(
+                pk=commit.pk,
+                project=project,
+                author_name=commit.author_name,
+                author_email=commit.author_email,
+                authored_date=commit.authored_date,
+                message="Duplicate",
+            )
+
+        with patch(
+            "speleodb.api.v2.views.file.request_geojson_generation",
+            side_effect=duplicate_commit,
+        ):
+            response = self._do_upload()
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["geojson_status"] == "unavailable"
+        assert not connection.needs_rollback
+        assert self._remote_head() == response.data["hexsha"]
+        assert ProjectCommit.objects.filter(pk=response.data["hexsha"]).exists()
+        assert Format.objects.filter(project=self.project).exists()
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit__project=self.project
+        ).exists()
+        assert isinstance(self._reported_exception(), IntegrityError)
+
+    def test_compass_conversion_failure_is_deferred_until_after_source_upload(
+        self,
+    ) -> None:
         self.project.type = ProjectType.COMPASS
         self.project.exclude_geojson = False
         self.project.save(update_fields=["type", "exclude_geojson"])
@@ -477,10 +542,13 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        exception: BaseException = self._reported_exception()
-        assert isinstance(exception, GeoJSONGenerationError), exception
-        assert isinstance(exception.__cause__, CompassNoKnownAnchorError)
-        assert "no shots available" in str(exception.__cause__)
+        assert not self.sentry_events
+        assert (
+            ProjectGeoJSONGeneration.objects.get(
+                commit_id=response.data["hexsha"]
+            ).state
+            == "pending"
+        )
         assert self._remote_head() != self.original_head
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
 

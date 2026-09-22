@@ -76,6 +76,7 @@
     "controller-user-exports": "frontend_common/controllers/user-exports.js",
     "controller-experiment-form": "frontend_common/controllers/experiment-form.js",
     "controller-dashboard": "frontend_common/controllers/dashboard.js",
+    "controller-project-geojson-status": "frontend_common/controllers/project-geojson-status.js",
     "controller-project-upload": "frontend_common/controllers/project-upload.js",
     "controller-revision-history": "frontend_common/controllers/revision-history.js",
     "controller-git-instructions": "frontend_common/controllers/git-instructions.js",

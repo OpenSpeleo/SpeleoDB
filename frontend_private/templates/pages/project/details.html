@@ -9,10 +9,27 @@
 {% block extra_css %}
   {{ block.super }}
   {% vite_preload 'controller-entity-crud' %}
+  {% vite_preload 'controller-project-geojson-status' %}
   {% vite_styles 'style-template-frontend-private-templates-pages-project-details' %}
 {% endblock extra_css %}
 {% block right_panel %}
   <div class="grow">
+    <section id="project-geojson-status"
+             class="p-6 border-b border-slate-700"
+             aria-labelledby="project-map-heading">
+      <h2 id="project-map-heading"
+          class="text-lg font-semibold text-slate-100 mb-2">Project map</h2>
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <p data-geojson-message class="text-sm text-slate-300">Loading map status…</p>
+        <p data-geojson-error
+           class="text-sm text-rose-400 mt-2 whitespace-pre-wrap"
+           hidden></p>
+        <p data-geojson-artifact class="text-sm text-slate-400 mt-2 break-all"></p>
+      </div>
+      <noscript>
+        <p class="text-sm text-slate-400 mt-2">Enable JavaScript to check map generation status.</p>
+      </noscript>
+    </section>
     <form id="project_details_form" autocomplete="off">
       <fieldset {% if not has_write_access %}disabled{% endif %}>
         {% csrf_token %}
@@ -172,6 +189,11 @@
   </div>
 {% endblock right_panel %}
 {% block inline_extra_js %}
+  <script type="application/json" data-speleodb-controller="project-geojson-status">
+    {
+      "endpoint": "{% url 'api:v2:project-geojson-status' id=project.id %}"
+    }
+  </script>
   <script type="application/json" data-speleodb-controller="entity-crud">
     {
       "formId": "project_details_form",
