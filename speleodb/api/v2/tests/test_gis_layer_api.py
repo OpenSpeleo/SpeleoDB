@@ -114,6 +114,38 @@ class TestGISLayerAPI(BaseAPITestCase):
         )
         assert not GISLayer.objects.exists()
 
+    def test_kml_namespace_repair_preserves_the_uploaded_original(self) -> None:
+        source = (
+            _kml()
+            .read()
+            .replace(
+                b'xmlns="http://www.opengis.net/kml/2.2"',
+                b"xmlns=\"xmlns='http://earth.google.com/kml/2.0'\"",
+            )
+        )
+        response = self._create(SimpleUploadedFile("repair.kml", source))
+
+        assert response.status_code == status.HTTP_201_CREATED
+        layer = GISLayer.objects.get()
+        with layer.source_f.open("rb") as stored:
+            assert stored.read() == source
+        with layer.data_f.open("rb") as compiled:
+            assert orjson.loads(compiled.read())["features"][0]["geometry"][
+                "coordinates"
+            ] == [1, 2]
+
+    def test_invalid_kml_returns_source_line_without_creating_layer(self) -> None:
+        response = self._create(
+            SimpleUploadedFile("bad.kml", b"<kml>\n<name>Broken</wrong>\n</kml>")
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.data["code"] == "XML_INVALID"
+        assert response.data["details"]["line"] == 2  # noqa: PLR2004
+        assert response.data["details"]["column"] > 0
+        assert response.data["details"]["source_line"] == "<name>Broken</wrong>"
+        assert not GISLayer.objects.exists()
+
     def test_unsupported_extension_is_rejected_before_storage(self) -> None:
         response = self._create(
             SimpleUploadedFile(

@@ -144,6 +144,25 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+export function renderGISLayerUploadError(element, message, details = {}) {
+    element.textContent = message;
+    if (!Number.isInteger(details?.line) || details.line < 1) return;
+
+    const location = document.createElement('span');
+    location.className = 'block mt-2';
+    location.textContent = `Line ${details.line}`;
+    if (Number.isInteger(details.column) && details.column > 0) {
+        location.textContent += `, column ${details.column}`;
+    }
+    element.append(location);
+    if (typeof details.source_line === 'string' && details.source_line) {
+        const source = document.createElement('code');
+        source.className = 'block whitespace-pre-wrap break-words';
+        source.textContent = details.source_line;
+        element.append(source);
+    }
+}
+
 export function init(context) {
     let selectedFile = null;
     let uploadRequest = null;
@@ -182,8 +201,8 @@ export function init(context) {
         uploadDismissButtons.forEach(button => { button.disabled = disabled; });
     }
 
-    function showUploadError(message) {
-        document.getElementById('upload-layer-error-text').textContent = message;
+    function showUploadError(message, details) {
+        renderGISLayerUploadError(document.getElementById('upload-layer-error-text'), message, details);
         document.getElementById('upload-layer-error-message').classList.remove('hidden');
     }
 
@@ -245,9 +264,12 @@ export function init(context) {
             const fieldErrors = Object.values(data.errors || {}).flat().join(' ');
             const directFieldErrors = Object.values(data).flat()
                 .filter(value => typeof value === 'string').join(' ');
-            return data.detail || data.error || data.error_message || fieldErrors || directFieldErrors || 'Upload failed.';
+            return {
+                message: data.detail || data.error || data.error_message || fieldErrors || directFieldErrors || 'Upload failed.',
+                details: data.code === 'XML_INVALID' ? data.details : undefined,
+            };
         } catch {
-            return 'Upload failed.';
+            return { message: 'Upload failed.' };
         }
     }
 
@@ -297,7 +319,8 @@ export function init(context) {
                 listApi.reload();
                 return;
             }
-            showUploadError(parseUploadError());
+            const { message, details } = parseUploadError();
+            showUploadError(message, details);
             uploadRequest = null;
             setUploadDismissDisabled(false);
             uploadButton.disabled = false;

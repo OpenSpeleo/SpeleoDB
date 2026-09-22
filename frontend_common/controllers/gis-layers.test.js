@@ -1,4 +1,4 @@
-import { buildGISLayerListMarkup } from './gis-layers.js';
+import { buildGISLayerListMarkup, renderGISLayerUploadError } from './gis-layers.js';
 
 function layer(overrides = {}) {
     return {
@@ -14,6 +14,60 @@ beforeEach(() => {
         'api:v2:gis-layer-source': id => `/api/v2/gis-layers/${id}/source/`,
         'private:gis_layer_details': id => `/private/gis-layer/${id}/`,
     };
+});
+
+describe('GIS Layer upload error display', () => {
+    let errorElement;
+
+    beforeEach(() => {
+        errorElement = document.createElement('p');
+    });
+
+    it('shows the KML source line and parser location', () => {
+        renderGISLayerUploadError(errorElement, 'The KML document is not well-formed XML.', {
+            line: 12, column: 8, source_line: '    </Placemark',
+        });
+
+        expect(errorElement.textContent).toContain('The KML document is not well-formed XML.');
+        expect(errorElement.querySelector('span').textContent).toBe('Line 12, column 8');
+        expect(errorElement.querySelector('code').textContent).toBe('    </Placemark');
+        expect(errorElement.querySelector('code').classList.contains('whitespace-pre-wrap')).toBe(true);
+    });
+
+    it('renders malicious KML and error messages as text', () => {
+        const sourceLine = '<img src=x onerror="alert(1)"><script>alert(1)</script>';
+        const message = '<svg onload="alert(1)">Invalid XML</svg>';
+        renderGISLayerUploadError(errorElement, message, {
+            line: 2, column: 1, source_line: sourceLine,
+        });
+
+        expect(errorElement.textContent).toContain(message);
+        expect(errorElement.querySelector('code').textContent).toBe(sourceLine);
+        expect(errorElement.querySelector('img,script,svg,[onerror],[onload]')).toBeNull();
+    });
+
+    it('shows a line when a column or source snippet is unavailable', () => {
+        renderGISLayerUploadError(errorElement, 'Invalid XML.', { line: 4 });
+        expect(errorElement.querySelector('span').textContent).toBe('Line 4');
+        expect(errorElement.querySelector('code')).toBeNull();
+    });
+
+    it.each([undefined, null, {}, { line: 0 }, { line: '<img src=x>' }])(
+        'keeps generic errors readable when source details are unavailable: %j', details => {
+            renderGISLayerUploadError(errorElement, 'Upload failed.', details);
+            expect(errorElement.textContent).toBe('Upload failed.');
+            expect(errorElement.childElementCount).toBe(0);
+        },
+    );
+
+    it('clears previous source details when another upload fails', () => {
+        renderGISLayerUploadError(errorElement, 'Invalid XML.', {
+            line: 2, column: 9, source_line: '<kml>',
+        });
+        renderGISLayerUploadError(errorElement, 'The upload was interrupted. Try again.');
+        expect(errorElement.textContent).toBe('The upload was interrupted. Try again.');
+        expect(errorElement.childElementCount).toBe(0);
+    });
 });
 afterEach(() => { delete globalThis.Urls; });
 

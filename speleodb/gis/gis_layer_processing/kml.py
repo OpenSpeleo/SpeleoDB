@@ -38,6 +38,13 @@ _KML_NAMESPACES = {
     "http://www.opengis.net/kml/2.2",
 }
 _ROOT_KML_PATTERN = re.compile(rb"<(?:[A-Za-z_][\w.-]*:)?kml(?:\s|>)")
+_XML_PROLOG_PATTERN = re.compile(rb"\A(?:\s+|<\?.*?\?>|<!--.*?-->)*", re.DOTALL)
+_XML_ATTRIBUTE_PATTERN = re.compile(
+    rb"\s+(?P<name>[\w:.-]+)\s*=\s*(?P<quote>['\"])(?P<value>.*?)(?P=quote)",
+    re.DOTALL,
+)
+_XML_HEADER_BYTES = 64 * 1024
+_XML_ERROR_LINE_CHARS = 240
 _GEOMETRY_NAMES = {"Point", "LineString", "Polygon", "MultiGeometry"}
 _GX_NAMESPACE = "http://www.google.com/kml/ext/2.2"
 _METADATA_NAMESPACES = {
@@ -114,22 +121,24 @@ def analyze_kml(source: bytes, *, warnings: tuple[KMLWarning, ...] = ()) -> KMLA
     limits.check_source_size(len(source))
     _reject_unsafe_xml(source)
 
-    parse_source = source
+    parse_source = _repair_duplicated_kml_namespace(source)
     try:
-        scan = _scan_document(parse_source)
+        scan = _scan_document(parse_source, diagnostic_source=source)
     except etree.XMLSyntaxError as strict_error:
-        repaired = _repair_missing_xsi_namespace(parse_source)
+        repaired = (
+            _repair_missing_xsi_namespace(parse_source)
+            if strict_error.code == etree.ErrorTypes.NS_ERR_UNDEFINED_NAMESPACE
+            and strict_error.msg.startswith("Namespace prefix xsi ")
+            else None
+        )
         if repaired is None:
-            raise GISLayerProcessingError(
-                ProcessingErrorCode.XML_INVALID,
-                "The KML document is not well-formed XML.",
-            ) from strict_error
+            raise _xml_error(source, strict_error.position) from strict_error
         try:
-            scan = _scan_document(repaired)
+            scan = _scan_document(repaired, diagnostic_source=source)
         except etree.XMLSyntaxError as repaired_error:
-            raise GISLayerProcessingError(
-                ProcessingErrorCode.XML_INVALID,
-                "The KML document is not well-formed XML.",
+            # The inserted namespace changes columns on its line, not line numbers.
+            raise _xml_error(
+                source, (repaired_error.position[0], 0)
             ) from repaired_error
         parse_source = repaired
         scan.warnings["NAMESPACE_REPAIRED"] += 1
@@ -293,11 +302,11 @@ def _reject_unsafe_xml(source: bytes) -> None:
 def _repair_missing_xsi_namespace(source: bytes) -> bytes | None:
     if b"xsi:" not in source:
         return None
-    root_match = _ROOT_KML_PATTERN.search(source[: 64 * 1024])
+    root_match = _root_kml_match(source)
     if root_match is None:
         return None
     tag_end = _find_xml_tag_end(source, root_match.start())
-    if tag_end < 0 or tag_end >= 64 * 1024:
+    if tag_end < 0 or tag_end >= _XML_HEADER_BYTES:
         return None
     root_tag = source[root_match.start() : tag_end]
     if b"xmlns:xsi" in root_tag:
@@ -306,9 +315,111 @@ def _repair_missing_xsi_namespace(source: bytes) -> bytes | None:
     return source[:tag_end] + namespace + source[tag_end:]
 
 
+def _root_kml_match(source: bytes) -> re.Match[bytes] | None:
+    header = source[:_XML_HEADER_BYTES]
+    start = 3 if header.startswith(b"\xef\xbb\xbf") else 0
+    prolog = _XML_PROLOG_PATTERN.match(header[start:])
+    assert prolog is not None
+    return _ROOT_KML_PATTERN.match(header, start + prolog.end())
+
+
+def _repair_duplicated_kml_namespace(source: bytes) -> bytes:
+    """Repair one known exporter typo, never arbitrary XML or namespace URIs."""
+    root_match = _root_kml_match(source)
+    if root_match is None:
+        return source
+    tag_end = _find_xml_tag_end(source, root_match.start())
+    if tag_end < 0:
+        return source
+    root_tag = source[root_match.start() : tag_end]
+    # Match each attribute once. Searching again at every whitespace offset
+    # makes a valid root with a long trailing whitespace run quadratic.
+    attribute_start = root_match.end() - root_match.start() - 1
+    while attribute := _XML_ATTRIBUTE_PATTERN.match(root_tag, attribute_start):
+        attribute_start = attribute.end()
+        name = attribute["name"]
+        if name != b"xmlns" and not name.startswith(b"xmlns:"):
+            continue
+        value = attribute["value"]
+        if not value.startswith((b"xmlns='", b'xmlns="')) or value[-1:] != value[6:7]:
+            continue
+        namespace = value[7:-1]
+        if namespace.decode("ascii", errors="replace") not in _KML_NAMESPACES - {""}:
+            continue
+        # Pad after the attribute so original line/column locations stay valid.
+        start = root_match.start() + attribute.start("value")
+        end = root_match.start() + attribute.end()
+        replacement = (
+            namespace + attribute["quote"] + b" " * (len(value) - len(namespace))
+        )
+        return source[:start] + replacement + source[end:]
+    return source
+
+
+def _xml_error(
+    source: bytes,
+    position: tuple[int, int],
+    message: str = "The KML document is not well-formed XML.",
+) -> GISLayerProcessingError:
+    line, column = position
+    details: dict[str, Any] = {}
+    if line > 0:
+        details["line"] = line
+        if column > 0:
+            details["column"] = column
+        details["source_line"] = _xml_source_line(source, line)
+    return GISLayerProcessingError(
+        ProcessingErrorCode.XML_INVALID, message, details=details
+    )
+
+
+def _xml_source_line(source: bytes, line: int) -> str:
+    """Read only as far as the diagnostic, with bounded memory even for one-line XML."""
+    encoding = "utf-8-sig"
+    if source.startswith((b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")):
+        encoding = "utf-32"
+    elif source.startswith((b"\xff\xfe", b"\xfe\xff")):
+        encoding = "utf-16"
+    elif source.startswith(b"\x00\x00\x00<"):
+        encoding = "utf-32-be"
+    elif source.startswith(b"<\x00\x00\x00"):
+        encoding = "utf-32-le"
+    elif source.startswith(b"\x00<"):
+        encoding = "utf-16-be"
+    elif source.startswith(b"<\x00"):
+        encoding = "utf-16-le"
+    else:
+        declaration = re.match(
+            rb"<\?xml\s[^?]*encoding\s*=\s*['\"]([\w.-]+)['\"]", source[:256]
+        )
+        if declaration is not None:
+            encoding = declaration[1].decode("ascii")
+    try:
+        reader = io.TextIOWrapper(
+            io.BytesIO(source), encoding=encoding, errors="replace"
+        )
+    except LookupError:
+        return ""
+    try:
+        with reader:
+            current_line = 1
+            while current_line < line:
+                chunk = reader.readline(4096)
+                if not chunk:
+                    return ""
+                current_line += chunk.endswith("\n")
+            excerpt = reader.readline(_XML_ERROR_LINE_CHARS + 1).rstrip("\r\n")
+    except UnicodeError:
+        # A lying encoding declaration must not turn an XML rejection into a 500.
+        return ""
+    if len(excerpt) > _XML_ERROR_LINE_CHARS:
+        return excerpt[: _XML_ERROR_LINE_CHARS - 1] + "…"
+    return excerpt
+
+
 def _find_xml_tag_end(source: bytes, start: int) -> int:
     quote: int | None = None
-    for index in range(start, min(len(source), 64 * 1024)):
+    for index in range(start, min(len(source), _XML_HEADER_BYTES)):
         character = source[index]
         if quote is None and character in {ord('"'), ord("'")}:
             quote = character
@@ -319,7 +430,7 @@ def _find_xml_tag_end(source: bytes, start: int) -> int:
     return -1
 
 
-def _scan_document(source: bytes) -> _ScanResult:
+def _scan_document(source: bytes, *, diagnostic_source: bytes) -> _ScanResult:
     scan = _ScanResult()
     depth = 0
     protected_depth: int | None = None
@@ -334,6 +445,13 @@ def _scan_document(source: bytes) -> _ScanResult:
         huge_tree=True,
     )
     for event, element in context:
+        # libxml can record namespace errors but postpone raising until EOF.
+        # Inspect the current chunk before doing any Python feature processing.
+        error = context.error_log.last_error
+        if error is not None and error.level >= etree.ErrorLevels.ERROR:
+            raise etree.XMLSyntaxError(
+                error.message, error.type, error.line, error.column
+            )
         local_name = _local_name(element)
         if event == "start":
             depth += 1
@@ -374,6 +492,12 @@ def _scan_document(source: bytes) -> _ScanResult:
             if root_name is None:
                 root_name = local_name
                 root_namespace = _namespace(element)
+                if root_name != "kml" or root_namespace not in _KML_NAMESPACES:
+                    raise _xml_error(
+                        diagnostic_source,
+                        (element.sourceline or 1, 0),
+                        "The XML source is not a KML document.",
+                    )
             source_id = element.get("id")
             if (
                 source_id
@@ -436,11 +560,6 @@ def _scan_document(source: bytes) -> _ScanResult:
             _clear_element(element)
         depth -= 1
 
-    if root_name != "kml" or root_namespace not in _KML_NAMESPACES:
-        raise GISLayerProcessingError(
-            ProcessingErrorCode.XML_INVALID,
-            "The XML source is not a KML document.",
-        )
     return scan
 
 

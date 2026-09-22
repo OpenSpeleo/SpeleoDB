@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from unittest.mock import patch
 
 import orjson
 import pytest
@@ -291,6 +292,192 @@ def test_known_missing_xsi_namespace_is_repaired_and_reported() -> None:
     analysis = analyze_kml_kmz_bytes(source, filename="repair.kml")
     assert len(analysis.landmark_candidates) == 1
     assert "NAMESPACE_REPAIRED" in {warning.code for warning in analysis.warnings}
+
+
+@pytest.mark.parametrize("filename", ["repair.kml", "repair.kmz"])
+@pytest.mark.parametrize(
+    "namespace", ["http://earth.google.com/kml/2.0", "http://www.opengis.net/kml/2.2"]
+)
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_duplicated_root_namespace_is_repaired_silently(
+    filename: str, namespace: str, quote: str
+) -> None:
+    inner_quote = "'" if quote == '"' else '"'
+    source = (
+        '<?xml version="1.0"?>\r\n<!-- <kml xmlns="ignore"> -->\r\n'
+        f"<kml xmlns={quote}xmlns={inner_quote}{namespace}{inner_quote}{quote}>"
+        f"{_placemark(POINT)}</kml>"
+    ).encode()
+    if filename.endswith(".kmz"):
+        source = _archive({"doc.kml": source})
+    analysis = analyze_kml_kmz_bytes(source, filename=filename)
+    assert len(analysis.landmark_candidates) == 1
+    assert not analysis.warnings
+
+
+def test_prefixed_root_namespace_is_repaired() -> None:
+    source = (
+        b"\xef\xbb\xbf<k:kml xmlns:k=\"xmlns='http://earth.google.com/kml/2.0'\">"
+        b"<k:Placemark><k:Point><k:coordinates>1,2</k:coordinates>"
+        b"</k:Point></k:Placemark></k:kml>"
+    )
+    analysis = analyze_kml_kmz_bytes(source, filename="repair.kml")
+    assert len(analysis.landmark_candidates) == 1
+    assert not analysis.warnings
+
+
+def test_root_with_long_trailing_whitespace_is_accepted() -> None:
+    source = (
+        '<kml xmlns="http://www.opengis.net/kml/2.2"'
+        + " " * 60000
+        + f">{_placemark(POINT)}</kml>"
+    ).encode()
+    analysis = analyze_kml_kmz_bytes(source, filename="whitespace.kml")
+    assert len(analysis.landmark_candidates) == 1
+    assert not analysis.warnings
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    [
+        b'xsi:schemaLocation="unused"',
+        b"xmlns:aux=\"xmlns='http://earth.google.com/kml/2.0'\"",
+    ],
+)
+def test_invalid_root_reports_original_line_after_namespace_repair(
+    attribute: bytes,
+) -> None:
+    source = (
+        b'<kml xmlns="https://example.com/unknown" ' + attribute + b"><Document/></kml>"
+    )
+    with pytest.raises(GISLayerProcessingError) as error:
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+    assert error.value.details["line"] == 1
+    assert error.value.details["source_line"] == source.decode()
+
+
+@pytest.mark.parametrize(
+    "root",
+    [
+        '<kml xmlns="invalid namespace">',
+        "<kml xmlns=\"xmlns='https://example.com/unknown'\">",
+        '<kml xmlns="https://example.com/unknown">',
+        "<not-kml>",
+    ],
+)
+def test_bad_root_aborts_before_scanning_features(root: str) -> None:
+    source = (root + _placemark(POINT) * 1000).encode()
+    # A root error must win over a later feature-budget error. This assertion
+    # is deterministic and does not rely on machine-dependent timing.
+    with (
+        patch.object(limits, "MAX_KML_PLACEMARKS", 0),
+        patch(
+            "speleodb.gis.gis_layer_processing.kml._clear_element",
+            side_effect=AssertionError(
+                "Invalid root must abort before scanning children"
+            ),
+        ),
+        pytest.raises(GISLayerProcessingError) as error,
+    ):
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+    assert error.value.details["line"] == 1
+    assert error.value.details["source_line"].startswith(root)
+
+
+def test_namespace_error_aborts_before_processing_later_events() -> None:
+    source = (
+        '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+        '<Document xmlns:bad="invalid namespace">\n'
+        + _placemark(POINT) * 1000
+        + "</Document></kml>"
+    ).encode()
+    with (
+        patch.object(limits, "MAX_KML_PLACEMARKS", 0),
+        pytest.raises(GISLayerProcessingError) as error,
+    ):
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+    assert error.value.details["line"] == 2  # noqa: PLR2004
+    assert (
+        error.value.details["source_line"] == '<Document xmlns:bad="invalid namespace">'
+    )
+
+
+@pytest.mark.parametrize(
+    "encoding", ["utf-8", "utf-16", "utf-32-le", "utf-32-be", "iso-8859-1"]
+)
+def test_xml_error_includes_original_line_and_column(encoding: str) -> None:
+    source = (
+        f'<?xml version="1.0" encoding = "{encoding}"?>\n'
+        '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+        "<name>Café</wrong>\n</kml>"
+    ).encode(encoding)
+    with pytest.raises(GISLayerProcessingError) as error:
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+    assert error.value.details["line"] == 3  # noqa: PLR2004
+    assert error.value.details["column"] > 0
+    assert error.value.details["source_line"] == "<name>Café</wrong>"
+
+
+def test_namespace_warnings_do_not_abort_valid_kml() -> None:
+    source = _document(_placemark(POINT)).replace(
+        b"<kml ", b'<kml xmlns:unused="relative" '
+    )
+    analysis = analyze_kml_kmz_bytes(source, filename="warning.kml")
+    assert len(analysis.landmark_candidates) == 1
+
+
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-32", "not-an-encoding"])
+def test_invalid_encoding_declaration_still_returns_xml_error(encoding: str) -> None:
+    source = f'<?xml version="1.0" encoding="{encoding}"?><kml>'.encode()
+    with pytest.raises(GISLayerProcessingError) as error:
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+    assert error.value.details["line"] == 1
+
+
+@pytest.mark.parametrize("separator", [b"", b"\n"])
+def test_repair_does_not_hide_other_xml_errors_or_change_line_columns(
+    separator: bytes,
+) -> None:
+    source = (
+        b"<kml xmlns=\"xmlns='http://earth.google.com/kml/2.0'\">"
+        + separator
+        + b"<name>Broken</wrong></kml>"
+    )
+    with pytest.raises(GISLayerProcessingError) as error:
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    offending_line = source.splitlines()[-1].decode()
+    assert error.value.details["line"] == len(source.splitlines())
+    assert (
+        error.value.details["column"]
+        == offending_line.index("</wrong>") + len("</wrong>") + 1
+    )
+    assert error.value.details["source_line"] == offending_line
+
+
+def test_unrelated_xml_errors_do_not_retry_namespace_repair() -> None:
+    source = b"<kml><name>xsi: is just text</wrong></kml>"
+    with (
+        patch(
+            "speleodb.gis.gis_layer_processing.kml._repair_missing_xsi_namespace",
+            side_effect=AssertionError("Unrelated XML errors must not retry parsing"),
+        ),
+        pytest.raises(GISLayerProcessingError) as error,
+    ):
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert error.value.code == ProcessingErrorCode.XML_INVALID
+
+
+def test_error_excerpt_is_bounded_for_single_line_documents() -> None:
+    source = b'<kml xmlns="invalid namespace">' + b" " * 10000 + b"</kml>"
+    with pytest.raises(GISLayerProcessingError) as error:
+        analyze_kml_kmz_bytes(source, filename="bad.kml")
+    assert len(error.value.details["source_line"]) <= 240  # noqa: PLR2004
+    assert error.value.details["source_line"].endswith("…")
 
 
 def test_kmz_uses_primary_document_and_reports_unimported_extra_documents() -> None:

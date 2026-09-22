@@ -24,6 +24,28 @@ object unchanged to Mapbox. Parsing is limited to what display and bounding-box
 zoom require; there is no transformation or feature interpretation. There is no
 render-manifest request, revision lookup, artifact table, job state, or polling.
 
+KML/KMZ compilation silently corrects the known exporter typo
+`xmlns="xmlns='http://earth.google.com/kml/2.0'"` in the root namespace
+declaration. Only a duplicated declaration wrapping a supported KML namespace is
+repaired; arbitrary namespace values and malformed markup remain errors. The
+repair applies to the parsing copy, preserving the uploaded original for
+download. The existing missing-`xsi` repair still reports its inspection
+warning.
+
+The streaming scanner validates the root immediately and checks parser errors as
+each chunk becomes available, including namespace errors that libxml would
+otherwise delay until end of file. Invalid documents therefore stop before
+unnecessary feature processing; a valid large document still needs full
+synchronous conversion. DTD/entity, XInclude, size, depth, and geometry budgets
+remain enforced.
+
+XML rejection responses include `details.line`, `details.column` when reliable,
+and a source-line excerpt capped at 240 characters. The upload dialog renders
+these as text, never HTML. Diagnostics refer to the uploaded KML (the primary
+KML member for KMZ); snippets are not added to server logs. Tests cover silent
+repair and original-file preservation, early rejection, encoded XML diagnostics,
+bounded excerpts, and malicious markup in the error display.
+
 In the private Map Viewer, polygon zones and points retain the established GIS
 feature popup. Content is constructed with DOM nodes and `textContent`; title,
 description, and bounded source metadata are never inserted as raw HTML.
