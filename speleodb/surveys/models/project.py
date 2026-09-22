@@ -41,6 +41,7 @@ from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import ProjectNotFound
+from speleodb.utils.exceptions import reraise_task_timeout
 from speleodb.utils.timing_ctx import timed_section
 
 if TYPE_CHECKING:
@@ -574,6 +575,7 @@ class Project(models.Model):
                     raise GeoJSONGenerationError from e
 
                 except (OSError, Exception) as e:
+                    reraise_task_timeout(e)
                     logger.error(f"Error processing file `{file}`. Not a valid TML")  # noqa: TRY400
                     raise GeoJSONGenerationError from e
 
@@ -595,6 +597,7 @@ class Project(models.Model):
                     raise GeoJSONGenerationError from e
 
                 except Exception as e:
+                    reraise_task_timeout(e)
                     logger.error(  # noqa: TRY400
                         f"Error processing file `{file}`. Not a valid Compass Project"
                     )

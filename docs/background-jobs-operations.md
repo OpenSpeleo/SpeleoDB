@@ -33,6 +33,20 @@ including during deployment overlap. Only `install_background_schedules` owns
 the feature's periodic task installation. Run it after migrations. Celery result
 cleanup must also route to `background_control`.
 
+## One-shot GeoJSON rebuild
+
+Superusers can open **Background jobs** in Django admin
+(`/admin/background_jobs/backgroundjob/`) and use **Rebuild all GeoJSONs** in
+the maintenance panel above the list. Each submission queues one full-history
+rebuild and returns its Celery task ID. It creates no periodic schedule; monitor
+the task in Celery results or Kanchi. This maintenance task does not create an
+export-request row in the Background jobs list.
+
+The panel uses the admin theme colors, keyboard focus styling and a stacked
+layout on small screens. The endpoint requires a superuser, POST and a valid
+CSRF token. See [GeoJSON rebuild operations](project-geojson-command.md) for
+scope, worker readiness, time limits and regression coverage.
+
 ## Bounded failure recovery
 
 Generation has three attempts per automatic cycle. Broker publication failures

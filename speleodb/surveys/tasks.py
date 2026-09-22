@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from celery import shared_task
+from django.conf import settings
+from django.core.management import call_command
 
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
@@ -36,8 +38,10 @@ def refresh_project_geojson(project_id: UUID) -> None:
     #     project.refresh_geojson()
 
 
-@shared_task()
+@shared_task(
+    soft_time_limit=settings.GEOJSON_REBUILD_SOFT_TIME_LIMIT,
+    time_limit=settings.GEOJSON_REBUILD_HARD_TIME_LIMIT,
+)
 def refresh_all_projects_geojson() -> None:
-    """Refresh the geojson for all projects."""
-    for project in Project.objects.all():
-        _ = refresh_project_geojson.delay(project.id)
+    """Rebuild stored GeoJSON for every eligible project and historical commit."""
+    call_command("build_project_geojsons", all_projects=True, force_recompute=True)

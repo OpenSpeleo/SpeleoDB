@@ -12,9 +12,11 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
+from unittest.mock import patch
 
 import orjson
 import pytest
+from celery.exceptions import SoftTimeLimitExceeded
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -29,8 +31,10 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
+from speleodb.surveys.tasks import refresh_all_projects_geojson
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import get_pool
 
@@ -86,6 +90,25 @@ class TestBuildProjectGeoJSONCommand(TestCase):
                 "--project",
                 str(missing_project_id),
             )
+
+    def test_force_recompute_flag_accepts_both_spellings(self) -> None:
+        parser = Command().create_parser("manage.py", "build_project_geojsons")
+        for flag in ("--force_recompute", "--force-recompute"):
+            options = parser.parse_args(["--all", flag])
+            assert options.all_projects is True
+            assert options.force_recompute is True
+
+    def test_task_stops_when_gitlab_wraps_initialization_timeout(self) -> None:
+        with (
+            patch.object(GitlabManager, "_gl", None),
+            patch.object(
+                GitlabManager, "_initialize", side_effect=SoftTimeLimitExceeded
+            ),
+        ):
+            result = refresh_all_projects_geojson.apply(throw=False)
+        assert result.failed()
+        assert isinstance(result.result, SoftTimeLimitExceeded)
+        assert not self.project.git_repo_dir.exists()
 
     def test_command_rejects_excluded_project(self) -> None:
         self.project.exclude_geojson = True
@@ -331,11 +354,10 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         ).creation_date
         assert skipped_creation_date == initial_creation_date
 
-        call_command(
-            "build_project_geojsons",
-            *command_args,
-            "--force_recompute",
-        )
+        with self.assertLogs(Command.__module__, level="INFO") as logs:
+            result = refresh_all_projects_geojson.apply(throw=True)
+        assert result.successful()
+        assert all(record.levelno < logging.ERROR for record in logs.records)
         regenerated = ProjectGeoJSON.objects.get(
             project=self.project,
             commit__id=hexsha,
@@ -354,7 +376,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         # A forced rebuild with no matching source must keep the usable artifact.
         self.project.type = ProjectType.COMPASS
         self.project.save(update_fields=["type"])
-        call_command("build_project_geojsons", *command_args, "--force_recompute")
+        call_command("build_project_geojsons", *command_args, "--force-recompute")
         retained = ProjectGeoJSON.objects.get(commit_id=hexsha)
         assert retained.geojson_revision == regenerated.geojson_revision
         assert retained.file.name is not None
@@ -393,7 +415,10 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         artifact.refresh_from_db()
         assert artifact.geojson_revision == original_revision
 
-        call_command("build_project_geojsons", *command_args, "--force_recompute")
+        with self.assertLogs(Command.__module__, level="INFO") as logs:
+            result = refresh_all_projects_geojson.apply(throw=True)
+        assert result.successful()
+        assert all(record.levelno < logging.ERROR for record in logs.records)
         artifact.refresh_from_db()
         assert artifact.geojson_revision != original_revision
         with artifact.file.open("rb") as source:
@@ -429,9 +454,42 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         finally:
             self.project.release_mutex(self.user)
 
-        call_command("build_project_geojsons", "--all")
+        result = refresh_all_projects_geojson.apply(throw=True)
+        assert result.successful()
 
         assert not ProjectGeoJSON.objects.filter(
             project=self.project,
             commit__id=hexsha,
         ).exists()
+
+    def test_task_timeout_stops_rebuild_and_cleans_checkout(self) -> None:
+        self.project.type = ProjectType.ARIANE
+        self.project.exclude_geojson = True
+        self.project.save(update_fields=["type", "exclude_geojson"])
+        self.project.acquire_mutex(self.user)
+        try:
+            hexsha = self._upload_files(
+                fileformat=FileFormat.ARIANE_TML,
+                artifact_paths=[ARIANE_TEST_FILE],
+                commit_message="Ariane upload for task timeout",
+            )
+        finally:
+            self.project.release_mutex(self.user)
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["exclude_geojson"])
+
+        # The worker can interrupt either materialization or conversion. Both
+        # must escape the command's commit/project error-isolation handlers.
+        for target in (
+            f"{Command.__module__}.Command._materialize_geojson_source",
+            "speleodb.surveys.models.project.survey_to_geojson",
+        ):
+            with (
+                self.subTest(target=target),
+                patch(target, side_effect=SoftTimeLimitExceeded),
+            ):
+                result = refresh_all_projects_geojson.apply(throw=False)
+            assert result.failed()
+            assert isinstance(result.result, SoftTimeLimitExceeded)
+            assert not self.project.git_repo_dir.exists()
+            assert not ProjectGeoJSON.objects.filter(commit_id=hexsha).exists()

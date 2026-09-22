@@ -9,9 +9,14 @@ from urllib.parse import urlsplit
 from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.db.models import Max
 from django.db.models import Min
+from django.http import HttpResponse
+from django.http import HttpResponseNotAllowed
+from django.shortcuts import redirect
+from django.urls import path
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -20,6 +25,7 @@ from django_celery_results.admin import GroupResultAdmin as CeleryGroupResultAdm
 from django_celery_results.admin import TaskResultAdmin as CeleryTaskResultAdmin
 from django_celery_results.models import GroupResult
 from django_celery_results.models import TaskResult
+from kombu.exceptions import OperationalError
 
 from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
@@ -32,6 +38,7 @@ from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_cleanup as retry_job_cleanup
 from speleodb.background_jobs.services import retry_export
+from speleodb.surveys.tasks import refresh_all_projects_geojson
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -39,6 +46,7 @@ if TYPE_CHECKING:
 
     from django.db.models import QuerySet
     from django.http import HttpRequest
+    from django.urls import URLPattern
 
 
 class JobAttemptInline(admin.TabularInline):  # type: ignore[type-arg]
@@ -84,6 +92,43 @@ class JobAttemptInline(admin.TabularInline):  # type: ignore[type-arg]
 
 @admin.register(BackgroundJob)
 class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    change_list_template = "admin/background_jobs/backgroundjob/change_list.html"
+
+    def get_urls(self) -> list[URLPattern]:
+        return [
+            path(
+                "rebuild-geojson/",
+                self.admin_site.admin_view(self.rebuild_geojson),
+                name="background_jobs_backgroundjob_rebuild_geojson",
+            ),
+            *super().get_urls(),
+        ]
+
+    def rebuild_geojson(self, request: HttpRequest) -> HttpResponse:
+        """Publish one full-history rebuild without creating a schedule."""
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+
+        try:
+            result = refresh_all_projects_geojson.delay()
+        except OperationalError:
+            self.message_user(
+                request,
+                "Could not confirm that the rebuild was queued. "
+                "Check the worker monitor before trying again.",
+                level=messages.ERROR,
+            )
+        else:
+            self.message_user(
+                request,
+                "GeoJSON rebuild queued for all eligible projects. "
+                f"Task ID: {result.id}",
+                level=messages.SUCCESS,
+            )
+        return redirect(reverse("admin:background_jobs_backgroundjob_changelist"))
+
     list_display = (
         "id",
         "requester",

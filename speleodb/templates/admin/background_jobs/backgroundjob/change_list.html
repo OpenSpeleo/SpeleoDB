@@ -1,0 +1,28 @@
+{% extends "admin/change_list.html" %}
+
+{% load i18n vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block content %}
+  {% if request.user.is_superuser %}
+    <section class="job-maintenance" aria-labelledby="geojson-maintenance-title">
+      <div class="job-maintenance-copy">
+        <h2 id="geojson-maintenance-title">{% translate "Rebuild survey GeoJSONs" %}</h2>
+        <p id="geojson-maintenance-description">
+          {% translate "Run once for all eligible projects, including their full survey history." %}
+        </p>
+      </div>
+      <form method="post"
+            action="{% url 'admin:background_jobs_backgroundjob_rebuild_geojson' %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="button default job-maintenance-button"
+                aria-describedby="geojson-maintenance-description">{% translate "Rebuild all GeoJSONs" %}</button>
+      </form>
+    </section>
+  {% endif %}
+  {{ block.super }}
+{% endblock content %}

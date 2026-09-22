@@ -24,6 +24,7 @@ from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.utils.exceptions import GeoJSONGenerationError
+from speleodb.utils.exceptions import reraise_task_timeout
 
 if TYPE_CHECKING:
     import argparse
@@ -67,6 +68,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--force_recompute",
+            "--force-recompute",
             action="store_true",
             help="Recompute and replace GeoJSON files that already exist.",
         )
@@ -181,7 +183,8 @@ class Command(BaseCommand):
 
                         try:
                             geojson_data = project.build_geojson(source_path)
-                        except GeoJSONGenerationError:
+                        except GeoJSONGenerationError as exc:
+                            reraise_task_timeout(exc)
                             continue
 
                         commit_obj = ProjectCommit.get_or_create_from_commit(
@@ -196,7 +199,8 @@ class Command(BaseCommand):
                             replace_existing=force_recompute,
                         )
 
-                except Exception:
+                except Exception as exc:
+                    reraise_task_timeout(exc)
                     logger.exception(
                         "Error processing project source in commit %s", commit.hexsha
                     )
@@ -231,7 +235,8 @@ class Command(BaseCommand):
                         project,
                         force_recompute=force_recompute,
                     )
-                except Exception:
+                except Exception as exc:
+                    reraise_task_timeout(exc)
                     logger.exception("An error occurred with project: %s", project.id)
             return
 
@@ -258,6 +263,7 @@ class Command(BaseCommand):
                 fresh=fresh,
             )
         except Exception as exc:
+            reraise_task_timeout(exc)
             logger.exception("An error occurred with project: %s", project.id)
             raise CommandError(
                 f"Unable to build GeoJSON files for project `{project.id}`."

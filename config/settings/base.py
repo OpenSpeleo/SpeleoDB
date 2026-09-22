@@ -644,6 +644,15 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-soft-time-limit
 # TODO: set to whatever value is adequate in your circumstances
 CELERY_TASK_SOFT_TIME_LIMIT = 60
+
+# A full survey-history rebuild is an explicit, long-running maintenance task.
+# Allow cleanup after its soft deadline before the worker forcibly stops it.
+GEOJSON_REBUILD_SOFT_TIME_LIMIT = env.int(
+    "GEOJSON_REBUILD_SOFT_TIME_LIMIT", default=6 * 60 * 60
+)
+GEOJSON_REBUILD_HARD_TIME_LIMIT = env.int(
+    "GEOJSON_REBUILD_HARD_TIME_LIMIT", default=GEOJSON_REBUILD_SOFT_TIME_LIMIT + 60
+)
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#beat-scheduler
 CELERY_BEAT_SCHEDULER = (
     "speleodb.background_jobs.scheduler:ExponentialBackoffDatabaseScheduler"

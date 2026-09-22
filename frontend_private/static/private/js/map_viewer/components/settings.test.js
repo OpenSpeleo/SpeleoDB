@@ -47,7 +47,7 @@ describe('private map Settings', () => {
         }
         expect([...dialog.querySelectorAll('[name="map-settings-color-mode"]')].map(input => input.value))
             .toEqual(['project', 'depth', 'shot']);
-        expect(dialog.querySelector('#map-settings-color-help').textContent).toContain('Missing colors use the survey color');
+        expect(dialog.querySelector('#map-settings-color-help')).toBeNull();
         expect(dialog.querySelector('.map-settings-station-types').open).toBe(false);
         expect(dialog.querySelector('#map-settings-source')).toBeNull();
         expect(dialog.querySelector('#station-manager-button')).toBeNull();

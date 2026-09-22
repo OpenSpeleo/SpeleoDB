@@ -2,8 +2,20 @@
 
 from __future__ import annotations
 
+from celery.exceptions import SoftTimeLimitExceeded
 from rest_framework import status
 from rest_framework.exceptions import APIException
+
+
+def reraise_task_timeout(error: BaseException) -> None:
+    """Keep wrapped worker timeouts out of recoverable per-survey errors."""
+    current: BaseException | None = error
+    visited: set[int] = set()
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+        if isinstance(current, SoftTimeLimitExceeded):
+            raise current
+        current = current.__cause__ or current.__context__
 
 
 class GeoJSONGenerationError(Exception):

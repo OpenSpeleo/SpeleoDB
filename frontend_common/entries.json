@@ -1,5 +1,6 @@
 {
   "styles": {
+    "style-admin-background-jobs": "frontend_common/styles/admin-background-jobs.css",
     "style-gis-geometry-map": "frontend_common/styles/gis-geometry-map.css",
     "style-app": "tailwind_css/style.css",
     "style-public-shell": "frontend_public/static/css/custom.css",
