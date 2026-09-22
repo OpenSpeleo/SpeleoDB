@@ -38,7 +38,7 @@ afterEach(() => {
 describe('private map Settings', () => {
     it('contains appearance, marker categories, and station types', () => {
         expect([...dialog.querySelectorAll('[data-category]')].map(input => input.dataset.category))
-            .toEqual(['surveyStations', 'surfaceStations', 'landmarks', 'explorationLeads', 'cylinders']);
+            .toEqual(['caveEntrances', 'surveyStations', 'surfaceStations', 'landmarks', 'explorationLeads', 'cylinders']);
         expect(dialog.querySelectorAll('[data-station-type]')).toHaveLength(DEFAULTS.DISPLAY.STATION_TYPES.length);
         for (const { id, label } of DEFAULTS.DISPLAY.CATEGORIES) {
             const input = dialog.querySelector(`[data-category="${id}"]`);
@@ -105,12 +105,15 @@ describe('private map Settings', () => {
     it('applies color and category changes immediately and persists them while staying open', () => {
         MapSettings.open();
         dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();
+        dialog.querySelector('[data-category="caveEntrances"]').click();
         dialog.querySelector('[data-category="landmarks"]').click();
         expect(State.displayPreferences.colorMode).toBe('depth');
+        expect(State.displayPreferences.categories.caveEntrances).toBe(false);
         expect(State.displayPreferences.categories.landmarks).toBe(false);
         expect(dialog.open).toBe(true);
         const saved = JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES));
         expect(saved.colorMode).toBe('depth');
+        expect(saved.categories.caveEntrances).toBe(false);
         expect(saved.categories.landmarks).toBe(false);
     });
 
@@ -143,6 +146,7 @@ describe('private map Settings', () => {
         State.projectLayerStates.set('project-1', false);
         State.gpsTrackLayerStates.set('track-1', true);
         State.gisGeometryStates.set('geometry-1', true);
+        dialog.querySelector('[data-category="caveEntrances"]').click();
         dialog.querySelector('[data-category="landmarks"]').click();
         dialog.querySelector('[data-station-type="sensor"]').click();
         dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();

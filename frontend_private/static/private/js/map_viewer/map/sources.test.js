@@ -279,6 +279,20 @@ describe('MapSources', () => {
         }))).toBe(true);
     });
 
+    it('preserves hidden entrance stars when switching between raster sources and the base style', () => {
+        const { map, layers } = createMapMock();
+        const entrance = layers.find(layer => layer.id === 'project-points-p1');
+        entrance.layout = { visibility: 'none' };
+
+        for (const sourceId of ['esri-satellite', 'esri-world-hillshade', 'mapbox-satellite']) {
+            MapSources.applyMapSource(map, sourceId, 'token');
+            expect(entrance.layout.visibility).toBe('none');
+        }
+
+        expect(map.setLayoutProperty).not.toHaveBeenCalledWith('project-points-p1', 'visibility', expect.anything());
+        expect(map.setStyle).not.toHaveBeenCalled();
+    });
+
     it('switches ESRI sources by replacing one raster tile layer below overlays without setStyle', () => {
         const { map, layers } = createMapMock();
         const eventSpy = vi.fn();

@@ -200,6 +200,7 @@ export const DEFAULTS = Object.freeze({
         COLOR_MODES: Object.freeze(['project', 'depth', 'shot']),
         STORAGE_VERSION: 1,
         CATEGORIES: Object.freeze([
+            { id: 'caveEntrances', label: 'Cave entrances' },
             { id: 'surveyStations', label: 'Survey stations' },
             { id: 'surfaceStations', label: 'Surface stations' },
             { id: 'landmarks', label: 'Landmarks' },

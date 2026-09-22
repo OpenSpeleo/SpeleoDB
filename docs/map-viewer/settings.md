@@ -49,27 +49,36 @@ invalid. This mode stays available for legacy or mixed data and persists like
 the other modes. See [shot coloring](shot-coloring.md) for the rendering
 contract. Depth controls and the depth legend appear only in By Depth.
 
-All five marker categories/types default on; color defaults to By Survey.
-Individual GPS, GIS layer, and GIS geometry selections keep their existing
-session-off defaults. Reset restores marker/type visibility and color defaults,
-preserving map source, project, country, network, and item selections, cached
-data, and camera position.
+All six marker categories and all five station types default on; color defaults
+to By Survey. **Cave entrances** is the first visibility row and controls the
+yellow stars from Point features in project GeoJSONs. Existing version-1 saved
+preferences without this category keep entrances visible; other saved choices
+are preserved. The preference remains local to the private viewer. Individual
+GPS, GIS layer, and GIS geometry selections keep their existing session-off
+defaults. Reset restores marker/type visibility and color defaults, preserving
+map source, project, country, network, and item selections, cached data, and
+camera position.
 
 ## Visibility composition
 
-| Content                                      | Required conditions                            |
-| -------------------------------------------- | ---------------------------------------------- |
-| Survey lines, section labels, entrance stars | Country + project                              |
-| Survey stations and labels                   | Country + project + stations setting + subtype |
-| Surface stations and labels                  | Network + surface-stations setting             |
-| Exploration leads / safety cylinders         | Existing project filter + category setting     |
-| Landmarks and labels                         | Landmark setting                               |
-| GPS tracks / GIS layers                      | Item selection                                 |
-| Saved GIS geometries                         | Item selection + editing suppression           |
+| Content                              | Required conditions                            |
+| ------------------------------------ | ---------------------------------------------- |
+| Survey lines and section labels      | Country + project                              |
+| Cave entrance stars                  | Country + project + cave-entrances setting     |
+| Survey stations and labels           | Country + project + stations setting + subtype |
+| Surface stations and labels          | Network + surface-stations setting             |
+| Exploration leads / safety cylinders | Existing project filter + category setting     |
+| Landmarks and labels                 | Landmark setting                               |
+| GPS tracks / GIS layers              | Item selection                                 |
+| Saved GIS geometries                 | Item selection + editing suppression           |
 
 Linework remains controlled by project selection. Existing zoom thresholds and
 permissions still apply. Station parent off/on preserves subtype choices; it is
-not a select-all checkbox.
+not a select-all checkbox. Hiding entrances leaves linework and section labels
+visible, and showing them never reveals a project hidden by its individual or
+country selection. The entrance gate is applied to the existing project point
+layer, preserving its star appearance and zoom threshold without changing the
+GeoJSON schema.
 
 `Layers.setCategoryVisibility()`, `setStationTypeVisibility()`, and
 `setColorMode()` apply the shared model. Settings and persistence subscribe to
@@ -80,6 +89,12 @@ values.
 Creation, refresh, async completion, and style reconstruction must compose every
 gate. Type switches filter the shared station-label layer as well as symbols.
 Pending marker loads cannot bypass a category hidden while they were loading.
+
+`Layers.applyProjectLayerVisibility()` composes the entrance category with the
+effective project gate on creation and every project/country visibility change.
+This keeps async loads, source refreshes, and reconstructed layers consistent.
+Basemap changes preserve the existing overlay layout visibility. Entrance
+switches do not recompute depth domains or change station settings.
 
 ## Navigation, managers, and fullscreen
 
@@ -115,8 +130,11 @@ project domains; marker visibility does not discard or rescan those domains.
 
 Run tests only in the existing application container. Cover real rendered
 templates, persistence, visibility composition, late loads, public isolation,
-manager focus, and editor keyboard isolation. Inspect the authenticated browser
-at 320/390px, tablet, desktop, short landscape, fullscreen, 200% zoom, and
-reduced motion. Stop any watcher, build cleanly, and verify manifest-matching
-served assets before final screenshots. Check bounds/focus/network behavior as
-well as visuals; actual results live in the task checklist.
+manager focus, and editor keyboard isolation. Entrance regressions additionally
+cover legacy preference restoration, data refresh/reconstruction, basemap
+switching, project/country gate preservation, and unchanged linework/depth data.
+Inspect the authenticated browser at 320/390px, tablet, desktop, short
+landscape, fullscreen, 200% zoom, and reduced motion. Stop any watcher, build
+cleanly, and verify manifest-matching served assets before final screenshots.
+Check bounds/focus/network behavior as well as visuals; actual results live in
+the task checklist.

@@ -68,6 +68,26 @@ it('adds automatic feet defaults to legacy preferences without discarding their 
     expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject(expected);
 });
 
+it.each([undefined, null, 'false', 0, [], {}, true, false])(
+    'restores cave entrance visibility only from a boolean, defaulting older records on: %j', caveEntrances => {
+        localStorage.setItem(storageKey, JSON.stringify({
+            version: DEFAULTS.DISPLAY.STORAGE_VERSION,
+            colorMode: 'shot',
+            categories: { caveEntrances, landmarks: false },
+            stationTypes: { biology: false },
+        }));
+
+        DisplayPreferences.init({ persist: true });
+
+        expect(State.displayPreferences).toMatchObject({
+            colorMode: 'shot',
+            categories: { caveEntrances: caveEntrances !== false, landmarks: false },
+            stationTypes: { biology: false },
+        });
+        expect(JSON.parse(localStorage.getItem(storageKey)).categories.caveEntrances).toBe(caveEntrances !== false);
+    },
+);
+
 it.each(['0', '-1', '"100"', '"Infinity"', 'true', '[]', '{}', '1e309', '-1e309'])(
     'rejects invalid saved depth limit %s while preserving a valid unit and other settings', value => {
         localStorage.setItem(storageKey, `{"version":${DEFAULTS.DISPLAY.STORAGE_VERSION},"depthLimitFeet":${value},"depthUnit":"m","colorMode":"depth"}`);
@@ -133,6 +153,7 @@ it.each(['not JSON', 'null', '[]', '{"version":999,"colorMode":"depth"}'])('uses
 it.each(['depth', 'shot'])('resets public routes without reading or changing private %s preferences', mode => {
     DisplayPreferences.init({ persist: true });
     Layers.setColorMode(mode);
+    Layers.setCategoryVisibility('caveEntrances', false);
     Layers.setCategoryVisibility('surveyStations', false);
     Layers.setDepthLimit(125.75, 'm');
     const saved = localStorage.getItem(storageKey);
@@ -141,6 +162,7 @@ it.each(['depth', 'shot'])('resets public routes without reading or changing pri
     DisplayPreferences.init({ persist: false });
     Layers.setCategoryVisibility('landmarks', false);
     expect(State.displayPreferences.colorMode).toBe('project');
+    expect(State.displayPreferences.categories.caveEntrances).toBe(true);
     expect(State.displayPreferences.categories.surveyStations).toBe(true);
     expect(State.displayPreferences.depthLimitFeet).toBeNull();
     expect(State.displayPreferences.depthUnit).toBe('ft');
@@ -151,6 +173,7 @@ it.each(['depth', 'shot'])('resets public routes without reading or changing pri
 
     DisplayPreferences.init({ persist: true });
     expect(State.displayPreferences).toMatchObject({ depthLimitFeet: 125.75, depthUnit: 'm' });
+    expect(State.displayPreferences.categories.caveEntrances).toBe(false);
 });
 
 it('keeps settings usable when browser storage fails and reports the limitation', () => {

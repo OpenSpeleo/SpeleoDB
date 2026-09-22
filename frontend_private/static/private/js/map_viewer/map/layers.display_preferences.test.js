@@ -12,6 +12,17 @@ function point(id, properties = {}) {
 
 function collection(features) { return { type: 'FeatureCollection', features }; }
 
+function surveyCollection() {
+    return collection([
+        point('entrance', { name: 'Cave entrance' }),
+        {
+            type: 'Feature',
+            properties: { section_name: 'Passage', depth: 100 },
+            geometry: { type: 'LineString', coordinates: [[-87, 20], [-87.1, 20.1]] },
+        },
+    ]);
+}
+
 function createMap() {
     const layers = new Map();
     const sources = new Map();
@@ -50,6 +61,99 @@ afterEach(() => {
     State.displayPreferences = createDefaultDisplayPreferences();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+});
+
+it('shows cave entrances by default and composes their category with project and country gates', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => surveyCollection() }));
+    Config._projects.push({ id: 'p2', name: 'Hidden country', color: '#abcdef' });
+    Layers.applyProjectVisibility('p2', false);
+    await Layers.addProjectGeoJSON('p1', '/p1.geojson');
+    await Layers.addProjectGeoJSON('p2', '/p2.geojson');
+    expect(visibility('project-points-p1')).toBe('visible');
+    expect(visibility('project-points-p2')).toBe('none');
+    expect(State.map.getLayer('project-points-p1')).toMatchObject({
+        filter: ['==', '$type', 'Point'],
+        minzoom: DEFAULTS.ZOOM_LEVELS.PROJECT_ENTRY_SYMBOL,
+        layout: { 'text-field': '★' },
+    });
+
+    Layers.setCategoryVisibility('caveEntrances', false);
+    expect(visibility('project-points-p1')).toBe('none');
+    expect(visibility('project-layer-p1')).toBe('visible');
+    expect(visibility('project-labels-p1')).toBe('visible');
+    Layers.toggleProjectVisibility('p1', false);
+    Layers.toggleProjectVisibility('p1', true);
+    Layers.applyProjectVisibility('p2', true);
+    expect(visibility('project-points-p1')).toBe('none');
+    expect(visibility('project-points-p2')).toBe('none');
+    expect(visibility('project-layer-p2')).toBe('visible');
+
+    Layers.toggleProjectVisibility('p1', false);
+    Layers.applyProjectVisibility('p2', false);
+    Layers.setCategoryVisibility('caveEntrances', true);
+    expect(visibility('project-points-p1')).toBe('none');
+    expect(visibility('project-points-p2')).toBe('none');
+    expect(State.projectLayerStates.get('p1')).toBe(false);
+    expect(State.projectLayerStates.get('p2')).toBeUndefined();
+    Layers.toggleProjectVisibility('p1', true);
+    expect(visibility('project-points-p1')).toBe('visible');
+});
+
+it('honors hidden entrances through an in-flight load, source refresh, and layer reconstruction', async () => {
+    let resolveResponse;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { resolveResponse = resolve; })));
+    const pending = Layers.addProjectGeoJSON('p1', '/pending.geojson');
+    Layers.setCategoryVisibility('caveEntrances', false);
+    resolveResponse({ ok: true, json: async () => surveyCollection() });
+    await pending;
+    expect(visibility('project-points-p1')).toBe('none');
+    expect(visibility('project-layer-p1')).toBe('visible');
+
+    const source = State.map.getSource('project-geojson-p1');
+    fetch.mockResolvedValue({ ok: true, json: async () => surveyCollection() });
+    await Layers.addProjectGeoJSON('p1', '/refreshed.geojson');
+    expect(source.setData).toHaveBeenCalledOnce();
+    expect(visibility('project-points-p1')).toBe('none');
+
+    State.resetLayerState();
+    State.map = createMap();
+    await Layers.addProjectGeoJSON('p1', '/rebuilt.geojson');
+    expect(visibility('project-points-p1')).toBe('none');
+    expect(visibility('project-labels-p1')).toBe('visible');
+});
+
+it('changes entrance visibility without data work, depth-domain changes, camera movement, or unrelated preferences', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => surveyCollection() }));
+    await Layers.addProjectGeoJSON('p1', '/survey.geojson');
+    Layers.setColorMode('depth');
+    Layers.setDepthLimit(50, 'ft');
+    const domain = State.activeDepthDomain;
+    const projectDomain = State.projectDepthDomains.get('p1');
+    const source = State.map.getSource('project-geojson-p1');
+    const cache = vi.spyOn(Geometry, 'cacheLineFeatures');
+    const recompute = vi.spyOn(Layers, 'recomputeActiveDepthDomain');
+    fetch.mockClear();
+    State.map.addSource.mockClear();
+    State.map.setPaintProperty.mockClear();
+
+    Layers.setCategoryVisibility('caveEntrances', false);
+    Layers.setCategoryVisibility('caveEntrances', true);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(cache).not.toHaveBeenCalled();
+    expect(recompute).not.toHaveBeenCalled();
+    expect(source.setData).not.toHaveBeenCalled();
+    expect(State.map.addSource).not.toHaveBeenCalled();
+    expect(State.map.setPaintProperty).not.toHaveBeenCalled();
+    expect(State.map.fitBounds).not.toHaveBeenCalled();
+    expect(State.map.flyTo).not.toHaveBeenCalled();
+    expect(State.map.setStyle).not.toHaveBeenCalled();
+    expect(State.activeDepthDomain).toBe(domain);
+    expect(State.projectDepthDomains.get('p1')).toBe(projectDomain);
+    expect(State.displayPreferences).toMatchObject({
+        colorMode: 'depth', depthLimitFeet: 50, depthUnit: 'ft',
+        categories: { caveEntrances: true, surveyStations: true },
+    });
 });
 
 it('composes station and subtype gates with project and country visibility while preserving survey linework', () => {

@@ -280,7 +280,7 @@ describe('frontend_public gis_view_main', () => {
         const saved = JSON.stringify({
             version: DEFAULTS.DISPLAY.STORAGE_VERSION,
             colorMode: mode, depthLimitFeet: 125.75, depthUnit: 'm',
-            categories: { landmarks: false },
+            categories: { caveEntrances: false, landmarks: false },
         });
         localStorage.setItem(storageKey, saved);
         stateMock.displayPreferences = { colorMode: mode, depthLimitFeet: 125.75, depthUnit: 'm' };
@@ -292,7 +292,7 @@ describe('frontend_public gis_view_main', () => {
 
             expect(stateMock.displayPreferences).toMatchObject({
                 colorMode: 'project', depthLimitFeet: null, depthUnit: 'ft',
-                categories: { landmarks: true },
+                categories: { caveEntrances: true, landmarks: true },
             });
             expect(depthLegendMock.init).toHaveBeenCalledWith(mapMock);
             window.dispatchEvent(new CustomEvent('speleo:display-preferences-changed', {

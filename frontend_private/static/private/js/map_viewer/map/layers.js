@@ -373,6 +373,7 @@ export const Layers = {
     applyCategoryVisibility(id) {
         const visible = State.displayPreferences.categories[id];
         switch (id) {
+            case 'caveEntrances':
             case 'surveyStations':
                 State.allProjectLayers.forEach((_, projectId) => this.applyProjectLayerVisibility(projectId));
                 break;
@@ -574,7 +575,9 @@ export const Layers = {
         const projectLayerIds = State.allProjectLayers.get(pid) || [];
         projectLayerIds.forEach((layerId) => {
             if (layerId.startsWith(`stations-${pid}-`)) return;
-            applyLayerVisibility([layerId], isVisible);
+            const categoryVisible = layerId !== `project-points-${pid}`
+                || State.displayPreferences.categories.caveEntrances;
+            applyLayerVisibility([layerId], isVisible && categoryVisible);
         });
         this.applySurveyStationVisibility(pid, isVisible);
     },
