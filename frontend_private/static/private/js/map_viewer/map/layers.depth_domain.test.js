@@ -38,27 +38,27 @@ describe('Layers depth domain reactivity', () => {
         State.projectDepthDomains.set('2', { min: 0, max: 80 });
     });
 
-    it('recalculates merged depth domain when a deeper project is hidden', () => {
+    it('recalculates merged depth domain when a deeper project is hidden', async () => {
         Layers.saveProjectVisibilityPref('1', true);
         Layers.saveProjectVisibilityPref('2', true);
         Layers.recomputeActiveDepthDomain();
         expect(Layers.getActiveDepthDomain()).toEqual({ min: 0, max: 80 });
 
-        Layers.toggleProjectVisibility('2', false);
+        await Layers.toggleProjectVisibility('2', false);
         expect(Layers.getActiveDepthDomain()).toEqual({ min: 0, max: 25 });
     });
 
-    it('recalculates merged depth domain when a deeper project is shown', () => {
+    it('recalculates merged depth domain when a deeper project is shown', async () => {
         Layers.saveProjectVisibilityPref('1', true);
         Layers.saveProjectVisibilityPref('2', false);
         Layers.recomputeActiveDepthDomain();
         expect(Layers.getActiveDepthDomain()).toEqual({ min: 0, max: 25 });
 
-        Layers.toggleProjectVisibility('2', true);
+        await Layers.toggleProjectVisibility('2', true);
         expect(Layers.getActiveDepthDomain()).toEqual({ min: 0, max: 80 });
     });
 
-    it('records effective visibility even when map is null (pre-load country gate)', () => {
+    it('records effective visibility even when map is null (pre-load country gate)', async () => {
         // Simulate: map not ready, country gate hides project
         State.map = null;
         Layers.applyProjectLayerVisibility('1', false);
@@ -74,7 +74,7 @@ describe('Layers depth domain reactivity', () => {
         expect(visible).not.toContain('1');
     });
 
-    it('applyProjectLayerVisibility without override reads effectiveProjectVisibility', () => {
+    it('applyProjectLayerVisibility without override reads effectiveProjectVisibility', async () => {
         State.map = null;
         // Pre-set effective visibility to false (as country gate would)
         State.effectiveProjectVisibility.set('1', false);
@@ -85,7 +85,7 @@ describe('Layers depth domain reactivity', () => {
         expect(State.effectiveProjectVisibility.get('1')).toBe(false);
     });
 
-    it('effective visibility set before map ready is honored by later applyProjectLayerVisibility calls', () => {
+    it('effective visibility set before map ready is honored by later applyProjectLayerVisibility calls', async () => {
         // Simulate the real init sequence:
         // 1. Country gate hides project BEFORE map layers exist
         State.map = null;
@@ -110,7 +110,7 @@ describe('Layers depth domain reactivity', () => {
         expect(visible).toContain('2');
     });
 
-    it('if effectiveProjectVisibility.set is moved after map guard, this test fails', () => {
+    it('if effectiveProjectVisibility.set is moved after map guard, this test fails', async () => {
         // Regression guard: if someone moves the set() call below the
         // "if (!map) return" guard, this exact scenario breaks.
         State.map = null;
@@ -121,30 +121,30 @@ describe('Layers depth domain reactivity', () => {
         expect(State.effectiveProjectVisibility.get('2')).toBe(false);
     });
 
-    it('toggleProjectVisibility clears effectiveProjectVisibility so fresh pref is used', () => {
+    it('toggleProjectVisibility clears effectiveProjectVisibility so fresh pref is used', async () => {
         // Simulate: effective was set to false (e.g. country gate hid it)
         State.effectiveProjectVisibility.set('1', false);
         Layers.saveProjectVisibilityPref('1', false);
 
         // User toggles project ON
-        Layers.toggleProjectVisibility('1', true);
+        await Layers.toggleProjectVisibility('1', true);
 
         // The stale effective=false must be gone; new effective should be true
         expect(State.effectiveProjectVisibility.get('1')).toBe(true);
         expect(Layers.getVisibleProjectIds()).toContain('1');
     });
 
-    it('toggleProjectVisibility OFF clears effective and re-applies as false', () => {
+    it('toggleProjectVisibility OFF clears effective and re-applies as false', async () => {
         State.effectiveProjectVisibility.set('1', true);
         Layers.saveProjectVisibilityPref('1', true);
 
-        Layers.toggleProjectVisibility('1', false);
+        await Layers.toggleProjectVisibility('1', false);
 
         expect(State.effectiveProjectVisibility.get('1')).toBe(false);
         expect(Layers.getVisibleProjectIds()).not.toContain('1');
     });
 
-    it('full scenario: country gate OFF at init, then user toggles project ON (country still OFF)', () => {
+    it('full scenario: country gate OFF at init, then user toggles project ON (country still OFF)', async () => {
         // 1. Init: country gate hides project
         State.map = null;
         Layers.saveProjectVisibilityPref('1', true);
@@ -155,14 +155,14 @@ describe('Layers depth domain reactivity', () => {
         State.map = { getStyle: () => ({}), getLayer: () => null, setLayoutProperty: vi.fn() };
 
         // 3. User toggles project ON via toggleProjectVisibility
-        Layers.toggleProjectVisibility('1', true);
+        await Layers.toggleProjectVisibility('1', true);
 
         // 4. effective is now true (stale country gate was cleared by toggle)
         expect(State.effectiveProjectVisibility.get('1')).toBe(true);
         expect(Layers.getVisibleProjectIds()).toContain('1');
     });
 
-    it('full scenario: project OFF at load, country ON, user toggles project ON', () => {
+    it('full scenario: project OFF at load, country ON, user toggles project ON', async () => {
         State.map = { getStyle: () => ({}), getLayer: () => null, setLayoutProperty: vi.fn() };
 
         // Project individually OFF from previous session
@@ -171,14 +171,14 @@ describe('Layers depth domain reactivity', () => {
         expect(State.effectiveProjectVisibility.get('1')).toBe(false);
 
         // User toggles project ON
-        Layers.toggleProjectVisibility('1', true);
+        await Layers.toggleProjectVisibility('1', true);
 
         // Must be visible now
         expect(State.effectiveProjectVisibility.get('1')).toBe(true);
         expect(Layers.getVisibleProjectIds()).toContain('1');
     });
 
-    it('returns null merged domain and unavailable event when all projects are hidden', () => {
+    it('returns null merged domain and unavailable event when all projects are hidden', async () => {
         let lastDomainDetail = null;
         const handleDomainUpdate = (event) => {
             lastDomainDetail = event.detail;
@@ -189,8 +189,8 @@ describe('Layers depth domain reactivity', () => {
         Layers.saveProjectVisibilityPref('2', true);
         Layers.recomputeActiveDepthDomain();
 
-        Layers.toggleProjectVisibility('1', false);
-        Layers.toggleProjectVisibility('2', false);
+        await Layers.toggleProjectVisibility('1', false);
+        await Layers.toggleProjectVisibility('2', false);
 
         expect(Layers.getActiveDepthDomain()).toBeNull();
         expect(lastDomainDetail).not.toBeNull();

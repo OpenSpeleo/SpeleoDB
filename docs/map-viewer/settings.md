@@ -14,11 +14,13 @@ separate from display preferences. Settings contains compact color controls and
 marker visibility. Per-project and per-record panels remain on the map and own
 record selection. Hiding a marker category never rewrites those selections.
 
-Changes apply immediately. Close, Escape, and backdrop dismissal keep changes.
-Desktop uses a centered, constrained dialog; phones use the viewport with a
-scrolling body and persistent header/footer. Station types expand inline. A
-danger-styled Reset button sits left of Close. Managers remain available even
-when their marker category is off.
+Controls reflect changes immediately; map work follows a paint opportunity.
+Close, Escape, and backdrop dismissal keep changes. Desktop uses a centered,
+constrained dialog; phones use the viewport with a scrolling body and persistent
+header/footer. Station types expand inline. A danger-styled Reset button sits
+left of Close. Managers remain available even when their marker category is off.
+The backdrop uses a dark scrim without blur: filtering the live WebGL canvas can
+delay control frames even when application work yields before painting.
 
 The public viewer retains its existing color/source controls. Shared rendering
 supports both viewers, but public initialization does not load private display
@@ -41,6 +43,15 @@ Map-data resets preserve preferences. Malformed fields use defaults; unavailable
 storage leaves controls usable for the visit. Retired preference fields from the
 earlier linework/overlay controls are ignored, so removed controls cannot leave
 content hidden.
+
+Display, project, network, and country preferences update in memory before any
+storage write. `schedulePreferenceWrite()` coalesces each storage key until a
+frame and a subsequent task; it serializes the newest value at write time.
+Pending writes flush on `pagehide` and owner teardown. Country visibility and
+accordion state hydrate once per panel initialization, so a delayed storage
+write cannot change the country gate used by a concurrent project toggle or
+newly loaded source. Display persistence is registered only on the private
+route.
 
 The private color selector offers **By Survey**, **By Depth**, and **By Shot**.
 By Shot uses exported Ariane shot colors and generated Compass section colors,
@@ -100,9 +111,13 @@ switches do not recompute depth domains or change station settings.
 
 Ordinary toggles retain global gates and never move the camera. Explicit Go to /
 Show on map reveals the required category, subtype, and owning project/network
-before navigating. `ProjectPanel.revealProject()` owns country reveal: opening a
-country can reveal its previously selected projects, but never changes their
-individual preferences. GPS/GIS items keep their existing panel behavior.
+before navigating, waiting for queued display work to apply. One navigation
+intent spans the project, GPS, GIS, station, and landmark controls. A newer
+destination, hiding the target, a user camera gesture, or map teardown cancels
+an older pending camera move. `ProjectPanel.revealProject()` owns country
+reveal: opening a country can reveal its previously selected projects, but never
+changes their individual preferences. GPS/GIS items keep their existing panel
+behavior.
 
 The Managers menu closes before launching a manager. Manager focus handling
 suspends for details/child dialogs. Back uses an explicit manager callback, not
@@ -128,6 +143,15 @@ fetches, bulk selection, GeoJSON reconstruction, style resets, or camera
 movement. Individual selections retain lazy loading. Depth mode uses cached
 project domains; marker visibility does not discard or rescan those domains.
 
+The control handlers publish desired state before renderer work. GPS/GIS load
+indicators and Settings' busy state describe pending work without disabling
+visibility controls. A second click replaces the earlier choice. Panels patch
+their existing rows, preserving focus and scroll position; metadata changes can
+rebuild a list, and newly discovered GIS subtypes extend only their owning row.
+Only current renderer failures produce an error; superseded operations do not
+raise a failure notification. The source menu also selects and closes before its
+queued raster/style changes, and removal cancels queued source work.
+
 Run tests only in the existing application container. Cover real rendered
 templates, persistence, visibility composition, late loads, public isolation,
 manager focus, and editor keyboard isolation. Entrance regressions additionally
@@ -138,3 +162,10 @@ landscape, fullscreen, 200% zoom, and reduced motion. Stop any watcher, build
 cleanly, and verify manifest-matching served assets before final screenshots.
 Check bounds/focus/network behavior as well as visuals; actual results live in
 the task checklist.
+
+Concurrency coverage must exercise the actual control handlers: reverse a switch
+while its load is unresolved, change destination across panel types, hide a
+pending destination, and replace/remove the map. Assert immediate checked state,
+stable focused elements, newest final visibility, and absence of stale camera
+moves. Persistence tests verify one write for a burst, pagehide flushing,
+country-gate decisions before storage flush, and private/public isolation.

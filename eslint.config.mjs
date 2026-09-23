@@ -26,6 +26,8 @@ export default [
     {
         files: [
             'vite.config.mjs',
+            'playwright.config.mjs',
+            'tests/browser/**/*.mjs',
             'scripts/**/*.mjs',
             'frontend_common/**/*.js',
             'frontend_errors/static/js/**/*.js',

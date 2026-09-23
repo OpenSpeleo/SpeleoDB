@@ -4,7 +4,7 @@ import { Layers } from './layers.js';
 import { Colors } from './colors.js';
 import { Geometry } from './geometry.js';
 
-vi.mock('./geojson.js', () => ({ computeGeoJSONBounds: () => ({ isEmpty: () => false }) }));
+
 
 function point(id, properties = {}) {
     return { type: 'Feature', id, geometry: { type: 'Point', coordinates: [-87, 20] }, properties };
@@ -61,6 +61,10 @@ function widthAtZoom(expression, zoom) {
 }
 
 beforeEach(() => {
+    vi.stubGlobal('mapboxgl', { LngLatBounds: class {
+        constructor(west, east) { this.coordinates = [west, east]; }
+        isEmpty() { return false; }
+    } });
     State.resetLayerState();
     State.displayPreferences = createDefaultDisplayPreferences();
     State.map = createMap();
@@ -122,7 +126,7 @@ it('keeps GPS tracks visible at overview zooms without changing track geometry, 
 
 it.each(['project', 'depth', 'shot'])('preserves overview rendering and visibility through refresh and style rebuild in %s mode', async mode => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => surveyCollection() }));
-    Layers.setColorMode(mode);
+    await Layers.setColorMode(mode);
     Layers.applyProjectVisibility('p1', false);
     await Layers.addProjectGeoJSON('p1', '/survey.geojson');
     const source = State.map.getSource('project-geojson-p1');
@@ -147,10 +151,10 @@ it.each(['project', 'depth', 'shot'])('preserves overview rendering and visibili
         paint: { 'line-width': originalWidth, 'line-color': expectedColor },
     });
     Layers.applyProjectVisibility('p1', true);
-    Layers.setCategoryVisibility('caveEntrances', false);
+    await Layers.setCategoryVisibility('caveEntrances', false);
     expect(visibility('project-layer-p1')).toBe('visible');
     expect(visibility('project-points-p1')).toBe('none');
-    Layers.toggleProjectVisibility('p1', false);
+    await Layers.toggleProjectVisibility('p1', false);
     expect(visibility('project-layer-p1')).toBe('none');
     expect(State.displayPreferences.colorMode).toBe(mode);
 });
@@ -169,25 +173,25 @@ it('shows cave entrances by default and composes their category with project and
         layout: { 'text-field': '★' },
     });
 
-    Layers.setCategoryVisibility('caveEntrances', false);
+    await Layers.setCategoryVisibility('caveEntrances', false);
     expect(visibility('project-points-p1')).toBe('none');
     expect(visibility('project-layer-p1')).toBe('visible');
     expect(visibility('project-labels-p1')).toBe('visible');
-    Layers.toggleProjectVisibility('p1', false);
-    Layers.toggleProjectVisibility('p1', true);
+    await Layers.toggleProjectVisibility('p1', false);
+    await Layers.toggleProjectVisibility('p1', true);
     Layers.applyProjectVisibility('p2', true);
     expect(visibility('project-points-p1')).toBe('none');
     expect(visibility('project-points-p2')).toBe('none');
     expect(visibility('project-layer-p2')).toBe('visible');
 
-    Layers.toggleProjectVisibility('p1', false);
+    await Layers.toggleProjectVisibility('p1', false);
     Layers.applyProjectVisibility('p2', false);
-    Layers.setCategoryVisibility('caveEntrances', true);
+    await Layers.setCategoryVisibility('caveEntrances', true);
     expect(visibility('project-points-p1')).toBe('none');
     expect(visibility('project-points-p2')).toBe('none');
     expect(State.projectLayerStates.get('p1')).toBe(false);
     expect(State.projectLayerStates.get('p2')).toBeUndefined();
-    Layers.toggleProjectVisibility('p1', true);
+    await Layers.toggleProjectVisibility('p1', true);
     expect(visibility('project-points-p1')).toBe('visible');
 });
 
@@ -195,7 +199,7 @@ it('honors hidden entrances through an in-flight load, source refresh, and layer
     let resolveResponse;
     vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { resolveResponse = resolve; })));
     const pending = Layers.addProjectGeoJSON('p1', '/pending.geojson');
-    Layers.setCategoryVisibility('caveEntrances', false);
+    await Layers.setCategoryVisibility('caveEntrances', false);
     resolveResponse({ ok: true, json: async () => surveyCollection() });
     await pending;
     expect(visibility('project-points-p1')).toBe('none');
@@ -217,19 +221,20 @@ it('honors hidden entrances through an in-flight load, source refresh, and layer
 it('changes entrance visibility without data work, depth-domain changes, camera movement, or unrelated preferences', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => surveyCollection() }));
     await Layers.addProjectGeoJSON('p1', '/survey.geojson');
-    Layers.setColorMode('depth');
+    await Layers.setColorMode('depth');
     Layers.setDepthLimit(50, 'ft');
+    await Layers.whenDisplayApplied();
     const domain = State.activeDepthDomain;
     const projectDomain = State.projectDepthDomains.get('p1');
     const source = State.map.getSource('project-geojson-p1');
-    const cache = vi.spyOn(Geometry, 'cacheLineFeatures');
+    const cache = vi.spyOn(Geometry, 'cachePreparedSnapPoints');
     const recompute = vi.spyOn(Layers, 'recomputeActiveDepthDomain');
     fetch.mockClear();
     State.map.addSource.mockClear();
     State.map.setPaintProperty.mockClear();
 
-    Layers.setCategoryVisibility('caveEntrances', false);
-    Layers.setCategoryVisibility('caveEntrances', true);
+    await Layers.setCategoryVisibility('caveEntrances', false);
+    await Layers.setCategoryVisibility('caveEntrances', true);
 
     expect(fetch).not.toHaveBeenCalled();
     expect(cache).not.toHaveBeenCalled();
@@ -248,14 +253,14 @@ it('changes entrance visibility without data work, depth-domain changes, camera 
     });
 });
 
-it('composes station and subtype gates with project and country visibility while preserving survey linework', () => {
+it('composes station and subtype gates with project and country visibility while preserving survey linework', async () => {
     const map = State.map;
     map.addLayer({ id: 'project-layer-p1', type: 'line' });
     State.allProjectLayers.set('p1', ['project-layer-p1']);
     Layers.addSubSurfaceStationLayer('p1', collection([
         point('sensor'), point('legacy', { type: null }), point('bio', { type: 'biology' }),
     ]));
-    Layers.setStationTypeVisibility('biology', false);
+    await Layers.setStationTypeVisibility('biology', false);
     expect(visibility('project-layer-p1')).toBe('visible');
     expect(visibility('stations-p1-circles')).toBe('visible');
     expect(visibility('stations-p1-biology-icons')).toBe('none');
@@ -266,20 +271,20 @@ it('composes station and subtype gates with project and country visibility while
         'any', ['!', ['has', 'type']], ['==', ['get', 'type'], null], ['==', ['get', 'type'], 'sensor'],
     ]);
     Layers.applyProjectVisibility('p1', false);
-    Layers.setCategoryVisibility('surveyStations', false);
-    Layers.setCategoryVisibility('surveyStations', true);
+    await Layers.setCategoryVisibility('surveyStations', false);
+    await Layers.setCategoryVisibility('surveyStations', true);
     expect(visibility('stations-p1-circles')).toBe('none');
     Layers.applyProjectVisibility('p1', true);
     expect(visibility('stations-p1-circles')).toBe('visible');
     expect(visibility('stations-p1-biology-icons')).toBe('none');
     expect(visibility('project-layer-p1')).toBe('visible');
-    Layers.setCategoryVisibility('surveyStations', false);
+    await Layers.setCategoryVisibility('surveyStations', false);
     expect(visibility('stations-p1-circles')).toBe('none');
     expect(visibility('project-layer-p1')).toBe('visible');
 });
 
-it.each(DEFAULTS.DISPLAY.STATION_TYPES)('honors $id before creation and after station refresh', ({ id, layerSuffix }) => {
-    Layers.setStationTypeVisibility(id, false);
+it.each(DEFAULTS.DISPLAY.STATION_TYPES)('honors $id before creation and after station refresh', async ({ id, layerSuffix }) => {
+    await Layers.setStationTypeVisibility(id, false);
     const data = collection([point('station', { type: id })]);
     Layers.addSubSurfaceStationLayer('p1', data);
     Layers.addSubSurfaceStationLayer('p1', data);
@@ -287,20 +292,20 @@ it.each(DEFAULTS.DISPLAY.STATION_TYPES)('honors $id before creation and after st
     expect(State.map.getLayer('stations-p1-labels').filter[2][1]).not.toContain(id);
 });
 
-it('composes surface station preferences with network selection on refresh', () => {
-    Layers.setCategoryVisibility('surfaceStations', false);
+it('composes surface station preferences with network selection on refresh', async () => {
+    await Layers.setCategoryVisibility('surfaceStations', false);
     Layers.addSurfaceStationLayer('n1', collection([point('surface')]));
-    Layers.toggleNetworkVisibility('n1', true);
+    await Layers.toggleNetworkVisibility('n1', true);
     expect(visibility('surface-stations-n1')).toBe('none');
-    Layers.setCategoryVisibility('surfaceStations', true);
+    await Layers.setCategoryVisibility('surfaceStations', true);
     expect(visibility('surface-stations-n1')).toBe('visible');
-    Layers.toggleNetworkVisibility('n1', false);
+    await Layers.toggleNetworkVisibility('n1', false);
     Layers.addSurfaceStationLayer('n1', collection([point('surface')]));
     expect(visibility('surface-stations-n1-labels')).toBe('none');
 });
 
-it('keeps landmarks, leads and cylinders gated through creation and project changes', () => {
-    for (const category of ['landmarks', 'explorationLeads', 'cylinders']) Layers.setCategoryVisibility(category, false);
+it('keeps landmarks, leads and cylinders gated through creation and project changes', async () => {
+    for (const category of ['landmarks', 'explorationLeads', 'cylinders']) await Layers.setCategoryVisibility(category, false);
     Layers.addLandmarkLayer(collection([point('landmark')]));
     Layers.addExplorationLeadMarker('lead', [-87, 20], 'Survey', '', 'p1');
     Layers.addCylinderInstallsLayer(collection([point('cylinder', { project_id: 'p1' })]));
@@ -309,16 +314,16 @@ it('keeps landmarks, leads and cylinders gated through creation and project chan
     for (const id of ['landmarks-layer', 'landmarks-labels', 'exploration-leads-layer', 'cylinder-installs-layer', 'cylinder-installs-labels']) {
         expect(visibility(id)).toBe('none');
     }
-    Layers.setCategoryVisibility('explorationLeads', true);
+    await Layers.setCategoryVisibility('explorationLeads', true);
     expect(visibility('exploration-leads-layer')).toBe('visible');
     expect(State.map.getLayer('exploration-leads-layer').filter).toEqual(Layers.getProjectScopedMarkerFilter());
 });
 
-it('changes every category without fetching, moving the map, rebuilding data, or resetting the style', () => {
+it('changes every category without fetching, moving the map, rebuilding data, or resetting the style', async () => {
     vi.stubGlobal('fetch', vi.fn());
     for (const { id } of DEFAULTS.DISPLAY.CATEGORIES) {
-        Layers.setCategoryVisibility(id, false);
-        Layers.setCategoryVisibility(id, true);
+        await Layers.setCategoryVisibility(id, false);
+        await Layers.setCategoryVisibility(id, true);
     }
     expect(fetch).not.toHaveBeenCalled();
     expect(State.map.addSource).not.toHaveBeenCalled();
@@ -330,11 +335,11 @@ it('changes every category without fetching, moving the map, rebuilding data, or
     expect(State.gisGeometryStates.size).toBe(0);
 });
 
-it('reveals only the requested category and station subtype', () => {
-    Layers.setCategoryVisibility('surveyStations', false);
-    Layers.setCategoryVisibility('landmarks', false);
-    Layers.setStationTypeVisibility('biology', false);
-    Layers.setStationTypeVisibility('sensor', false);
+it('reveals only the requested category and station subtype', async () => {
+    await Layers.setCategoryVisibility('surveyStations', false);
+    await Layers.setCategoryVisibility('landmarks', false);
+    await Layers.setStationTypeVisibility('biology', false);
+    await Layers.setStationTypeVisibility('sensor', false);
     Layers.revealCategory('surveyStations', { stationType: 'biology' });
     expect(State.displayPreferences.categories.surveyStations).toBe(true);
     expect(State.displayPreferences.categories.landmarks).toBe(false);
@@ -344,17 +349,17 @@ it('reveals only the requested category and station subtype', () => {
     expect(State.displayPreferences.stationTypes.sensor).toBe(true);
 });
 
-it('emits color and preference changes once, sharing legacy accessors without rescanning features', () => {
+it('emits color and preference changes once, sharing legacy accessors without rescanning features', async () => {
     const colorChanged = vi.fn();
     const preferencesChanged = vi.fn();
     window.addEventListener('speleo:color-mode-changed', colorChanged);
     window.addEventListener('speleo:display-preferences-changed', preferencesChanged);
     State.projectDepthDomains.set('p1', { min: 0, max: 100 });
-    Layers.setColorMode('depth');
+    await Layers.setColorMode('depth');
     expect(colorChanged).toHaveBeenCalledTimes(1);
     expect(preferencesChanged).toHaveBeenCalledTimes(1);
     expect(Layers.colorMode).toBe(State.displayPreferences.colorMode);
-    Layers.setCategoryVisibility('surveyStations', false);
+    await Layers.setCategoryVisibility('surveyStations', false);
     expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
     State.landmarksVisible = false;
     expect(State.displayPreferences.categories.landmarks).toBe(false);
@@ -363,7 +368,7 @@ it('emits color and preference changes once, sharing legacy accessors without re
 });
 
 
-it('changes all survey modes using paint only, with each project fallback and no unrelated layer changes', () => {
+it('changes all survey modes using paint only, with each project fallback and no unrelated layer changes', async () => {
     const map = State.map;
     Config._projects.push({ id: 'p2', color: '#abcdef' });
     for (const id of ['p1', 'p2']) {
@@ -375,10 +380,10 @@ it('changes all survey modes using paint only, with each project fallback and no
     map.addLayer({ id: 'gps-track', type: 'line' });
     map.addLayer({ id: 'gis-outline', type: 'line' });
     vi.stubGlobal('fetch', vi.fn());
-    const cache = vi.spyOn(Geometry, 'cacheLineFeatures');
+    const cache = vi.spyOn(Geometry, 'cachePreparedSnapPoints');
     for (const mode of ['depth', 'shot', 'project', 'shot']) {
         map.setPaintProperty.mockClear();
-        Layers.setColorMode(mode);
+        await Layers.setColorMode(mode);
         expect(map.setPaintProperty).toHaveBeenCalledTimes(2);
         for (const id of ['p1', 'p2']) {
             expect(map.setPaintProperty).toHaveBeenCalledWith(
@@ -410,7 +415,7 @@ it('preserves shot properties through late loading, data refresh, and layer reco
     let resolveResponse;
     vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { resolveResponse = resolve; })));
     const pending = Layers.addProjectGeoJSON('p1', '/survey.geojson');
-    Layers.setColorMode('shot');
+    await Layers.setColorMode('shot');
     resolveResponse({ ok: true, json: async () => data });
     await pending;
     const expression = ['to-color', ['get', 'color'], '#123456'];
@@ -426,19 +431,19 @@ it('preserves shot properties through late loading, data refresh, and layer reco
     State.resetLayerState();
     State.map = createMap();
     await Layers.addProjectGeoJSON('p1', '/rebuilt.geojson');
-    Layers.applyDisplayPreferences();
+    await Layers.applyDisplayPreferences();
     expect(State.map.getLayer('project-layer-p1').paint['line-color']).toEqual(expression);
     expect(State.map.setPaintProperty).toHaveBeenCalledWith('project-layer-p1', 'line-color', expression);
     expect(State.map.getLayer('project-points-p1').paint).toEqual(entrancePaint);
 });
 
-it('ignores invalid color modes without changing preferences, paint, or events', () => {
-    Layers.setColorMode('shot');
+it('ignores invalid color modes without changing preferences, paint, or events', async () => {
+    await Layers.setColorMode('shot');
     const changed = vi.fn();
     window.addEventListener('speleo:color-mode-changed', changed);
     State.map.setPaintProperty.mockClear();
     try {
-        for (const mode of [null, undefined, 'invalid', {}, 1]) Layers.setColorMode(mode);
+        for (const mode of [null, undefined, 'invalid', {}, 1]) await Layers.setColorMode(mode);
         expect(State.displayPreferences.colorMode).toBe('shot');
         expect(State.map.setPaintProperty).not.toHaveBeenCalled();
         expect(changed).not.toHaveBeenCalled();

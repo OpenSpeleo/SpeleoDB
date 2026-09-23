@@ -4,6 +4,7 @@ import { State } from '../state.js';
 import { Utils } from '../utils.js';
 import { positionOverlayPanel } from './panel_position.js';
 import { fitGISGeometry } from '../map/geometry_camera.js';
+import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.js';
 
 function button(label, className, action) {
     const element = document.createElement('button');
@@ -20,6 +21,8 @@ export const GISGeometriesPanel = {
     mutations: null,
     panel: null,
     minimized: null,
+    rows: new Map(),
+    requests: new Map(),
 
     init(editor) {
         this.destroy();
@@ -123,6 +126,7 @@ export const GISGeometriesPanel = {
         const focusedId = focused?.closest('[data-geometry-id]')?.dataset.geometryId;
         const focusedAction = focused?.dataset.geometryAction;
         const records = [...Config.gisGeometries].sort((a, b) => a.name.localeCompare(b.name));
+        this.rows.clear();
         const notices = [];
         if (Config.gisGeometriesError) {
             const notice = document.createElement('div');
@@ -159,6 +163,7 @@ export const GISGeometriesPanel = {
             const row = document.createElement('div');
             row.className = 'gis-geometries-row';
             row.dataset.geometryId = record.id;
+            this.rows.set(String(record.id), row);
             const color = document.createElement('span');
             color.className = 'gis-geometries-color';
             color.style.backgroundColor = Utils.safeCssColor(record.color);
@@ -173,15 +178,10 @@ export const GISGeometriesPanel = {
             toggle.className = 'gis-geometries-visibility';
             toggle.dataset.geometryAction = 'visibility';
             toggle.checked = Layers.isGISGeometryVisible(record.id);
-            toggle.disabled = editing || State.gisGeometryLoading.has(record.id);
+            toggle.disabled = editing;
             toggle.setAttribute('aria-label', `Show ${record.name}`);
             toggle.addEventListener('change', async () => {
-                const requested = toggle.checked;
-                const hadFocus = document.activeElement === toggle;
-                toggle.disabled = true;
-                const shown = await Layers.toggleGISGeometryVisibility(record.id, requested);
-                this.refreshList(hadFocus ? toggle : null);
-                if (requested && !shown) Utils.showNotification('error', `Unable to show ${record.name}.`);
+                await this.toggleGeometry(record.id, toggle.checked);
             });
             row.append(color, name);
             if (Config.hasGISGeometryAccess(record.id, 'write')) {
@@ -197,6 +197,12 @@ export const GISGeometriesPanel = {
             slider.className = 'toggle-slider';
             visibility.append(toggle, slider);
             row.append(visibility);
+            const loading = document.createElement('span');
+            loading.className = 'gis-geometries-loading text-xs text-slate-400';
+            loading.textContent = 'Updating…';
+            loading.hidden = !this.requests.has(String(record.id));
+            loading.setAttribute('role', 'status');
+            row.append(loading);
             return row;
         }));
         this.positionPanel();
@@ -209,17 +215,45 @@ export const GISGeometriesPanel = {
     },
 
     async activateAndZoom(id) {
-        const shown = await Layers.toggleGISGeometryVisibility(id, true);
-        this.refreshList();
-        if (!shown) {
-            Utils.showNotification('error', 'Unable to show this geometry.');
-            return;
-        }
+        const map = State.map;
+        const navigation = beginMapNavigation(map, `gis-geometry:${id}`);
+        const shown = await this.toggleGeometry(id, true);
+        if (!shown || !navigation.isCurrent() || State.map !== map) return;
         const bounds = State.gisGeometryBounds.get(String(id));
-        fitGISGeometry(State.map, bounds);
+        fitGISGeometry(map, bounds);
+    },
+
+    async toggleGeometry(geometryId, visible) {
+        const id = String(geometryId);
+        const request = {};
+        this.requests.set(id, request);
+        if (!visible) cancelMapNavigation(`gis-geometry:${id}`);
+        const applying = Layers.toggleGISGeometryVisibility(id, visible);
+        this.updateRow(id);
+        const applied = await applying;
+        if (this.requests.get(id) !== request) return false;
+        this.requests.delete(id);
+        this.updateRow(id);
+        return applied;
+    },
+
+    updateRow(id) {
+        const row = this.rows.get(String(id));
+        if (!row) return;
+        const editing = State.gisGeometryEditingId === String(id);
+        const pending = this.requests.has(String(id));
+        const toggle = row.querySelector('.gis-geometries-visibility');
+        toggle.checked = Layers.isGISGeometryVisible(id);
+        toggle.disabled = editing;
+        row.querySelector('.gis-geometries-name').disabled = editing;
+        row.querySelector('.gis-geometries-loading').hidden = !pending;
+        row.setAttribute('aria-busy', String(pending));
     },
 
     destroy() {
+        this.requests.clear();
+        this.rows.forEach((_, id) => cancelMapNavigation(`gis-geometry:${id}`));
+        this.rows.clear();
         this.observer?.disconnect();
         this.mutations?.disconnect();
         this.panel?.remove();

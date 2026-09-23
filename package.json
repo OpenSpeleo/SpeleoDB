@@ -12,14 +12,16 @@
     "dev": "vite build --watch --mode development",
     "pre-commit": "npm run build",
     "update": "ncu --target minor -u && npm install && npx update-browserslist-db@latest",
-    "lint:js": "eslint \"vite.config.mjs\" \"scripts/**/*.mjs\" \"frontend_common/**/*.js\" \"frontend_private/static/private/js/**/*.js\" \"frontend_public/static/js/**/*.js\" \"frontend_errors/static/js/**/*.js\" --ignore-pattern \"frontend_private/static/private/js/dist/**\" --ignore-pattern \"frontend_private/static/private/js/vendors/**\" --ignore-pattern \"frontend_public/static/js/dist/**\" --ignore-pattern \"frontend_public/static/js/vendors/**\" --report-unused-disable-directives-severity off --max-warnings=0",
+    "lint:js": "eslint \"vite.config.mjs\" \"playwright.config.mjs\" \"tests/browser/**/*.mjs\" \"scripts/**/*.mjs\" \"frontend_common/**/*.js\" \"frontend_private/static/private/js/**/*.js\" \"frontend_public/static/js/**/*.js\" \"frontend_errors/static/js/**/*.js\" --ignore-pattern \"frontend_private/static/private/js/dist/**\" --ignore-pattern \"frontend_private/static/private/js/vendors/**\" --ignore-pattern \"frontend_public/static/js/dist/**\" --ignore-pattern \"frontend_public/static/js/vendors/**\" --report-unused-disable-directives-severity off --max-warnings=0",
     "lint:js:fix": "npm run lint:js -- --fix",
     "test:js": "vitest run --config ./vitest.config.mjs",
     "test:js:watch": "vitest --config ./vitest.config.mjs",
     "test:assets-watch": "node scripts/verify-vite-watch.mjs",
-    "typecheck:railway": "tsc --noEmit --strict --skipLibCheck --target es2023 --module preserve --moduleResolution bundler --types node .railway/railway.ts"
+    "typecheck:railway": "tsc --noEmit --strict --skipLibCheck --target es2023 --module preserve --moduleResolution bundler --types node .railway/railway.ts",
+    "test:browser": "playwright test --config ./playwright.config.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",

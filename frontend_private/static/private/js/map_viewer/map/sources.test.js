@@ -1,3 +1,4 @@
+import { ViewerUpdates } from '../viewer_updates.js';
 import { DEFAULTS } from '../config.js';
 import { MapSources } from './sources.js';
 
@@ -73,6 +74,8 @@ describe('MapSources', () => {
     });
 
     afterEach(() => {
+        ViewerUpdates.cancelAll();
+        vi.useRealTimers();
         localStorage.clear();
         document.body.innerHTML = '';
         vi.restoreAllMocks();
@@ -279,13 +282,13 @@ describe('MapSources', () => {
         }))).toBe(true);
     });
 
-    it('preserves hidden entrance stars when switching between raster sources and the base style', () => {
+    it('preserves hidden entrance stars when switching between raster sources and the base style', async () => {
         const { map, layers } = createMapMock();
         const entrance = layers.find(layer => layer.id === 'project-points-p1');
         entrance.layout = { visibility: 'none' };
 
         for (const sourceId of ['esri-satellite', 'esri-world-hillshade', 'mapbox-satellite']) {
-            MapSources.applyMapSource(map, sourceId, 'token');
+            await MapSources.applyMapSource(map, sourceId, 'token');
             expect(entrance.layout.visibility).toBe('none');
         }
 
@@ -293,12 +296,12 @@ describe('MapSources', () => {
         expect(map.setStyle).not.toHaveBeenCalled();
     });
 
-    it('switches ESRI sources by replacing one raster tile layer below overlays without setStyle', () => {
+    it('switches ESRI sources by replacing one raster tile layer below overlays without setStyle', async () => {
         const { map, layers } = createMapMock();
         const eventSpy = vi.fn();
         window.addEventListener('speleo:map-source-changed', eventSpy);
 
-        MapSources.applyMapSource(map, 'esri-world-hillshade-dark', 'token');
+        await MapSources.applyMapSource(map, 'esri-world-hillshade-dark', 'token');
 
         expect(map.setStyle).not.toHaveBeenCalled();
         expect(map.addSource).toHaveBeenCalledWith(
@@ -317,7 +320,7 @@ describe('MapSources', () => {
                 type: 'raster',
                 source: 'speleo-base-raster-source',
             }),
-            'project-layer-p1'
+            'background'
         );
         expect(map.setLayoutProperty).toHaveBeenCalledWith('background', 'visibility', 'none');
         expect(map.setLayoutProperty).toHaveBeenCalledWith('satellite', 'visibility', 'none');
@@ -345,7 +348,7 @@ describe('MapSources', () => {
         map.removeSource.mockClear();
         map.addSource.mockClear();
         map.addLayer.mockClear();
-        MapSources.applyMapSource(map, 'esri-world-hillshade', 'token');
+        await MapSources.applyMapSource(map, 'esri-world-hillshade', 'token');
 
         expect(map.removeLayer).toHaveBeenCalledWith('speleo-base-raster-layer');
         expect(map.removeSource).toHaveBeenCalledWith('speleo-base-raster-source');
@@ -360,10 +363,10 @@ describe('MapSources', () => {
         window.removeEventListener('speleo:map-source-changed', eventSpy);
     });
 
-    it('switches to ESRI Satellite as a non-destructive raster source', () => {
+    it('switches to ESRI Satellite as a non-destructive raster source', async () => {
         const { map } = createMapMock();
 
-        MapSources.applyMapSource(map, 'esri-satellite', 'token');
+        await MapSources.applyMapSource(map, 'esri-satellite', 'token');
 
         expect(map.setStyle).not.toHaveBeenCalled();
         expect(map.addSource).toHaveBeenCalledWith(
@@ -379,12 +382,12 @@ describe('MapSources', () => {
         expect(localStorage.getItem(DEFAULTS.STORAGE_KEYS.MAP_SOURCE)).toBe('esri-satellite');
     });
 
-    it('switches back to Mapbox by removing the raster tile layer without setStyle', () => {
+    it('switches back to Mapbox by removing the raster tile layer without setStyle', async () => {
         const { map } = createMapMock();
 
-        MapSources.applyMapSource(map, 'esri-world-hillshade-dark', 'token');
+        await MapSources.applyMapSource(map, 'esri-world-hillshade-dark', 'token');
         map.setLayoutProperty.mockClear();
-        MapSources.applyMapSource(map, 'mapbox-satellite', 'token');
+        await MapSources.applyMapSource(map, 'mapbox-satellite', 'token');
 
         expect(map.removeLayer).toHaveBeenCalledWith('speleo-base-raster-layer');
         expect(map.removeSource).toHaveBeenCalledWith('speleo-base-raster-source');
@@ -393,6 +396,47 @@ describe('MapSources', () => {
         expect(map.setLayoutProperty).toHaveBeenCalledWith('hillshade-shadow', 'visibility', 'none');
         expect(map.setLayoutProperty).not.toHaveBeenCalledWith('project-layer-p1', 'visibility', expect.anything());
         expect(map.setStyle).not.toHaveBeenCalled();
+    });
+
+    it('captures base layers before overlays and never serializes survey sources on later switches', async () => {
+        const { map } = createMapMock();
+        MapSources.applyInitialMapSource(map, 'mapbox-satellite', 'token');
+        expect(map.getStyle).toHaveBeenCalledTimes(1);
+        map.getStyle.mockImplementation(() => { throw new Error('Survey serialization is forbidden'); });
+        await MapSources.applyMapSource(map, 'esri-satellite', 'token');
+        await MapSources.applyMapSource(map, 'mapbox-satellite', 'token');
+        expect(map.setLayoutProperty).toHaveBeenCalledWith('satellite', 'visibility', 'visible');
+    });
+
+    it('keeps tokenless raster replacements below overlays with a permanent transparent anchor', async () => {
+        const { map, layers } = createMapMock();
+        layers.splice(0, layers.length, { id: 'speleo-base-raster-layer' });
+        MapSources.applyInitialMapSource(map, 'esri-satellite', '');
+        map.addLayer({ id: 'project-layer-late' });
+        map.getStyle.mockImplementation(() => { throw new Error('Survey serialization is forbidden'); });
+        await MapSources.applyMapSource(map, 'esri-world-hillshade', '');
+        await MapSources.applyMapSource(map, 'esri-satellite', '');
+        expect(layers.map(layer => layer.id)).toEqual([
+            'speleo-base-raster-layer', 'speleo-base-anchor', 'project-layer-late',
+        ]);
+        expect(map.addLayer).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'speleo-base-anchor', paint: { 'background-opacity': 0 },
+        }), 'speleo-base-raster-layer');
+        expect(map.removeLayer).not.toHaveBeenCalledWith('speleo-base-anchor');
+    });
+
+    it('yields base-layer changes and lets a newer intent restore a partially applied source', async () => {
+        const { map } = createMapMock();
+        MapSources.applyInitialMapSource(map, 'mapbox-satellite', 'token');
+        let current = true;
+        const context = { isCurrent: () => current, shouldYield: () => true,
+            yield: vi.fn(async () => { current = false; }) };
+        expect(await MapSources.applyMapSource(map, 'esri-satellite', 'token', context)).toBeNull();
+        expect(context.yield).toHaveBeenCalledTimes(1);
+        expect(map.addSource).not.toHaveBeenCalled();
+        await MapSources.applyMapSource(map, 'mapbox-satellite', 'token');
+        expect(map.setLayoutProperty).toHaveBeenLastCalledWith('hillshade-shadow', 'visibility', 'none');
+        expect(map.setLayoutProperty).toHaveBeenCalledWith('background', 'visibility', 'visible');
     });
 
     it('adds the map source selector through the Mapbox control API without duplicates', () => {
@@ -434,7 +478,7 @@ describe('MapSources', () => {
         canvas.remove();
     });
 
-    it('renders a Mapbox icon button under controls with a menu that switches sources', () => {
+    it('renders a Mapbox icon button under controls with a menu that switches sources', async () => {
         const { map } = createMapMock();
         const eventSpy = vi.fn();
         window.addEventListener('speleo:map-source-changed', eventSpy);
@@ -485,6 +529,10 @@ describe('MapSources', () => {
         radio.checked = true;
         radio.dispatchEvent(new Event('change', { bubbles: true }));
 
+        expect(radio.checked).toBe(true);
+        expect(menu.classList.contains('hidden')).toBe(true);
+        expect(map.addSource).not.toHaveBeenCalled();
+        await ViewerUpdates.whenIdle();
         expect(map.setStyle).not.toHaveBeenCalled();
         expect(localStorage.getItem(DEFAULTS.STORAGE_KEYS.MAP_SOURCE)).toBe('esri-world-hillshade-dark');
         expect(radio.checked).toBe(true);
@@ -494,5 +542,37 @@ describe('MapSources', () => {
         }));
 
         window.removeEventListener('speleo:map-source-changed', eventSpy);
+        control.onRemove();
+    });
+
+    it('coalesces rapid source choices and keeps selection ahead of map application', async () => {
+        vi.useFakeTimers();
+        const { map } = createMapMock();
+        const control = MapSources.createControl('token');
+        const element = control.onAdd(map);
+        document.body.append(element);
+        const light = element.querySelector('input[value="esri-world-hillshade"]');
+        const dark = element.querySelector('input[value="esri-world-hillshade-dark"]');
+        light.click();
+        dark.click();
+        expect(dark.checked).toBe(true);
+        expect(map.addSource).not.toHaveBeenCalled();
+        await vi.runAllTimersAsync();
+        await ViewerUpdates.whenIdle();
+        expect(map.addSource).toHaveBeenCalledTimes(1);
+        expect(MapSources.getCurrentMapSourceId('token')).toBe('esri-world-hillshade-dark');
+        control.onRemove();
+    });
+
+    it('cancels queued source changes when its control is removed', async () => {
+        vi.useFakeTimers();
+        const { map } = createMapMock();
+        const control = MapSources.createControl('token');
+        const element = control.onAdd(map);
+        document.body.append(element);
+        element.querySelector('input[value="esri-world-hillshade"]').click();
+        control.onRemove();
+        await vi.runAllTimersAsync();
+        expect(map.addSource).not.toHaveBeenCalled();
     });
 });

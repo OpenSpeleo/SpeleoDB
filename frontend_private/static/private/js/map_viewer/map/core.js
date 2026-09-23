@@ -30,6 +30,11 @@ export const MapCore = {
 
         // Set state
         State.map = map;
+        map.on('remove', () => {
+            if (State.map !== map) return;
+            Layers.cancelPendingWork();
+            State.map = null;
+        });
 
         // Setup Map Height
         this.setupMapHeight(map);

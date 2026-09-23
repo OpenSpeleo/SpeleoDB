@@ -90,7 +90,7 @@ describe('GIS Layers panel', () => {
         document.querySelector('.gis-layer-button').click();
 
         await vi.waitFor(() => expect(mocks.toggle).toHaveBeenCalledWith('layer-1', true));
-        expect(mocks.fitBounds).toHaveBeenCalledWith(bounds, { padding: 50, maxZoom: 16 });
+        await vi.waitFor(() => expect(mocks.fitBounds).toHaveBeenCalledWith(bounds, { padding: 50, maxZoom: 16 }));
     });
 
     it('keeps toggle clicks isolated from card zoom', async () => {
@@ -178,8 +178,8 @@ describe('GIS Layers panel', () => {
 
     it.each([
         { visible: false, loading: false },
-        { visible: true, loading: true },
-    ])('disables subcontrols while the parent is hidden or loading: %j', state => {
+        { visible: false, loading: true },
+    ])('disables subcontrols only while the parent is hidden: %j', state => {
         mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
         mocks.geometryTypes = ['Point', 'Polygon'];
         mocks.visible = state.visible;
@@ -215,4 +215,34 @@ describe('GIS Layers panel', () => {
         expect(mocks.setGeometryVisibility).not.toHaveBeenCalled();
         expect(mocks.fitBounds).not.toHaveBeenCalled();
     });
+    it('keeps master and subtype controls usable during load and rapid reversal', async () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = ['Point', 'Polygon'];
+        let finish;
+        mocks.toggle.mockImplementationOnce((_id, visible) => {
+            mocks.visible = visible;
+            mocks.loading = true;
+            return new Promise(resolve => { finish = resolve; });
+        });
+        GISLayersPanel.init();
+        const master = document.querySelector('.gis-layer-button input');
+        const point = document.querySelector('[data-geometry-type="Point"] input');
+        master.focus();
+        master.click();
+        expect(master.checked).toBe(true);
+        expect(master.disabled).toBe(false);
+        expect(point.disabled).toBe(false);
+        point.click();
+        expect(mocks.setGeometryVisibility).toHaveBeenLastCalledWith('layer-1', 'Point', false);
+        master.click();
+        expect(master.checked).toBe(false);
+        expect(point.disabled).toBe(true);
+        finish(false);
+        await vi.waitFor(() => expect(GISLayersPanel._requests.size).toBe(0));
+        expect(document.querySelector('.gis-layer-button input')).toBe(master);
+        expect(document.querySelector('[data-geometry-type="Point"] input')).toBe(point);
+        expect(master.checked).toBe(false);
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+
 });

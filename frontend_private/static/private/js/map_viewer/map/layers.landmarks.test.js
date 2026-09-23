@@ -7,7 +7,7 @@ describe('Layers landmark rendering', () => {
         State.landmarksVisible = true;
     });
 
-    it('colors landmark marker and label layers from collection_color', () => {
+    it('colors landmark marker and label layers from collection_color', async () => {
         const addedLayers = [];
         const mockMap = {
             getLayer: vi.fn(() => false),

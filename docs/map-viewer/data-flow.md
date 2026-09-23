@@ -413,7 +413,11 @@ User toggles GIS Layer ON
 ```
 
 - **GIS delivery**: activation refreshes detail metadata before fetching the
-  signed GeoJSON. No client transformation or feature interpretation occurs.
+  signed GeoJSON. The cache retains that exact payload. Cooperative
+  `prepareGISLayerGeoJSONAsync()` derives display features with canonical type
+  annotations, flattening geometry collections without copying coordinates;
+  subtype filters therefore remain independent after Mapbox tiles Multi*
+  geometries.
 - **Invalidation**: a page reload starts a new session; a style rebuild re-adds
   visible layers from the cache.
 - **Persistence**: session-only. No localStorage. All GIS Layers reset to OFF on
@@ -423,23 +427,25 @@ User toggles GIS Layer ON
 
 ### Snap Points — Computed Once Per Project
 
-When project GeoJSON is loaded, `Geometry.cacheLineFeatures()` extracts the
-start and end vertices of every `LineString` feature and caches them for
-magnetic snap calculations.
+When project GeoJSON is loaded, `prepareProjectGeoJSON()` extracts the start and
+end vertices of every `LineString` during cooperative preparation.
+`Geometry.cachePreparedSnapPoints()` publishes those endpoints only when the
+prepared source is still current, avoiding another synchronous feature scan.
 
 ```
 Layers.addProjectGeoJSON()
-  └─ Geometry.cacheLineFeatures(projectId, geojsonData)
+  └─ prepareProjectGeoJSON(geojsonData, { isCurrent, yieldWork })
       └─ For each LineString feature:
           ├─ Extract start coordinate (first vertex)
           └─ Extract end coordinate (last vertex)
-      └─ snapPointsCache.set(projectId, snapPoints[])
+      └─ Geometry.cachePreparedSnapPoints(projectId, snapPoints[])
 ```
 
 - **Storage**: Module-level `snapPointsCache` (`Map<string, SnapPoint[]>`)
 - **Used by**: `Geometry.findNearestSnapPointWithinRadius()` during drag
   operations for stations, exploration leads, and cylinder installs
-- **Invalidation**: Overwritten when project GeoJSON is reloaded
+- **Invalidation**: Replaced when current project GeoJSON is published; an empty
+  replacement clears old snap endpoints.
 - **Snap radius**: `MAGNETIC_SNAP_RADIUS = 10` meters (adjustable at runtime via
   `Geometry.setSnapRadius()`)
 
@@ -458,20 +464,65 @@ as flat `Map<id, stationObject>` lookups.
 
 ### Depth Domains — Per-Project + Merged
 
-Depth data is computed during GeoJSON processing and cached at two levels:
+Depth data is computed during cooperative GeoJSON preparation and cached at two
+levels:
 
 ```
-processGeoJSON(projectId, rawData)
+prepareProjectGeoJSON(rawData, { isCurrent, yieldWork, budgetMs })
   │
-  ├─ buildSectionDepthAverageMap(features)
-  │   └─ Point features: group by section_name, compute avg depth
-  │
-  ├─ computeProjectDepthDomain(processed, sectionDepthAvgMap)
-  │   └─ { min: 0, max: maxDepthAcrossAllSections }
-  │   └─ State.projectDepthDomains.set(projectId, domain)
-  │
-  └─ For each LineString: stamp depth_val, depth_norm onto feature.properties
+  ├─ Accumulate Point depth sums/counts by section_name
+  ├─ Resolve LineString direct depth or section average → { min: 0, max }
+  ├─ Copy changed geometry/properties, flatten Z, stamp depth_val/depth_norm
+  ├─ Collect snap endpoints and bounds in the same coordinate walk
+  └─ Return { data, domain, snapPoints, boundsCoordinates }
+      └─ Caller publishes only the current complete revision
 ```
+
+Preparation never mutates the downloaded object. Unchanged metadata and 2D
+coordinate leaves are structurally shared and must be treated as immutable.
+There is no stringify/parse clone. Coordinate traversal, section processing, and
+longitude sorting yield according to `DEFAULTS.VIEWER_WORK.BUDGET_MS`, including
+inside one very large line or polygon. Concurrent preparations share the same
+slice deadline and yield before starting, so many ready downloads do not
+multiply the allowed blocking time. The wrapped bounds algorithm still chooses
+the smallest antimeridian extent, and a valid authoritative GeoJSON `bbox` still
+wins. `prepareGeoJSONBounds()` provides the same cooperative bounds calculation
+for sources that do not need project depth preparation; `wrapLongitude: false`
+retains GIS authoring extents.
+
+`isCurrent()` is checked before starting, at yields, and before returning.
+Superseded work rejects with `AbortError` and never publishes partial data.
+Callers also check their source/style generation before applying a result.
+Depth-mode and visibility changes use the cached domain; they must not rerun
+preparation or traverse coordinates.
+
+Basemap switching captures base-layer IDs and their visibility before viewer
+sources load. Later changes update only those cached layers in cooperative
+batches and never call `getStyle()`, which would serialize every survey source.
+Tokenless raster styles retain a transparent background anchor so replacement
+raster layers stay below overlays without inspecting the complete style.
+
+The preparation tests cover source immutability, depth parity, authoritative
+bounds, nested coordinates, antimeridian handling, cancellation, and yielding
+inside a 100,000-vertex line. Runtime traces should distinguish preparation
+slices from JSON parsing and renderer ingestion, which are separate work.
+
+`readViewerGeoJSON(response, { isCurrent, yieldWork })` transfers downloaded
+buffers at or above `DEFAULTS.VIEWER_WORK.WORKER_PARSE_BYTES` to a Vite module
+worker for JSON parsing. It sends no network requests and carries no
+credentials. Parsed JSON returns in batches of tree nodes controlled by
+`DEFAULTS.VIEWER_WORK.WORKER_NODE_BATCH_SIZE`; the main thread yields before
+acknowledging each batch. This prevents a single large structured clone from
+replacing the parsing stall. Completion returns the original GeoJSON shape for
+existing caches; cancellation and errors terminate the worker, and parser errors
+never include private source excerpts.
+
+Small responses use direct parsing. Environments without Worker support retain
+native response parsing. Worker construction/CSP failures are reported as load
+failures, so deployment CSP must permit same-origin module workers. Arrays and
+objects are reconstructed incrementally, including inside a single large
+geometry; only small coordinate positions travel as complete arrays. This
+transport does not remove map renderer ingestion or GPU costs.
 
 When project visibility changes or new projects load:
 

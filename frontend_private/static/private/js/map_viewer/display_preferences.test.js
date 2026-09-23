@@ -1,9 +1,16 @@
+import { flushPreferenceWrites } from './display_preference_storage.js';
+import { ViewerUpdates } from './viewer_updates.js';
 import { DEFAULTS } from './config.js';
 import { DisplayPreferences } from './display_preferences.js';
 import { Layers } from './map/layers.js';
 import { State, createDefaultDisplayPreferences } from './state.js';
 
 const storageKey = DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES;
+
+function readSavedPreferences() {
+    flushPreferenceWrites();
+    return JSON.parse(localStorage.getItem(storageKey));
+}
 
 beforeEach(() => {
     State.resetLayerState();
@@ -14,6 +21,8 @@ beforeEach(() => {
 
 afterEach(() => {
     DisplayPreferences.destroy();
+    flushPreferenceWrites();
+    ViewerUpdates.cancelAll();
     vi.restoreAllMocks();
 });
 
@@ -32,7 +41,7 @@ it('restores only valid known preferences and saves instant changes in the priva
     expect(State.displayPreferences.stationTypes.biology).toBe(false);
     expect(State.displayPreferences.stationTypes.sensor).toBe(true);
     Layers.setCategoryVisibility('surfaceStations', false);
-    expect(JSON.parse(localStorage.getItem(storageKey)).categories.surfaceStations).toBe(false);
+    expect(readSavedPreferences().categories.surfaceStations).toBe(false);
 });
 
 it.each([
@@ -50,7 +59,7 @@ it.each([
     DisplayPreferences.init({ persist: true });
 
     expect(State.displayPreferences).toMatchObject(preferences);
-    expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject(preferences);
+    expect(readSavedPreferences()).toMatchObject(preferences);
 });
 
 it('adds automatic feet defaults to legacy preferences without discarding their settings', () => {
@@ -65,7 +74,7 @@ it('adds automatic feet defaults to legacy preferences without discarding their 
     const expected = { colorMode: 'depth', depthLimitFeet: null, depthUnit: 'ft' };
     expect(State.displayPreferences).toMatchObject(expected);
     expect(State.displayPreferences.categories.landmarks).toBe(false);
-    expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject(expected);
+    expect(readSavedPreferences()).toMatchObject(expected);
 });
 
 it.each([undefined, null, 'false', 0, [], {}, true, false])(
@@ -84,7 +93,7 @@ it.each([undefined, null, 'false', 0, [], {}, true, false])(
             categories: { caveEntrances: caveEntrances !== false, landmarks: false },
             stationTypes: { biology: false },
         });
-        expect(JSON.parse(localStorage.getItem(storageKey)).categories.caveEntrances).toBe(caveEntrances !== false);
+        expect(readSavedPreferences().categories.caveEntrances).toBe(caveEntrances !== false);
     },
 );
 
@@ -96,7 +105,7 @@ it.each(['0', '-1', '"100"', '"Infinity"', 'true', '[]', '{}', '1e309', '-1e309'
 
         const expected = { depthLimitFeet: null, depthUnit: 'm', colorMode: 'depth' };
         expect(State.displayPreferences).toMatchObject(expected);
-        expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject(expected);
+        expect(readSavedPreferences()).toMatchObject(expected);
     },
 );
 
@@ -112,7 +121,7 @@ it.each([null, 'meters', 'FT', 25, true, [], {}].map(depthUnit => ({ depthUnit }
 
         const expected = { depthLimitFeet: 175.25, depthUnit: 'ft' };
         expect(State.displayPreferences).toMatchObject(expected);
-        expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject(expected);
+        expect(readSavedPreferences()).toMatchObject(expected);
     },
 );
 
@@ -139,7 +148,7 @@ it('discards retired linework and overlay gates saved by an earlier settings lay
     expect(State.displayPreferences.categories.landmarks).toBe(false);
     for (const id of Object.keys(retired)) {
         expect(State.displayPreferences.categories).not.toHaveProperty(id);
-        expect(JSON.parse(localStorage.getItem(storageKey)).categories).not.toHaveProperty(id);
+        expect(readSavedPreferences().categories).not.toHaveProperty(id);
     }
 });
 
@@ -156,6 +165,7 @@ it.each(['depth', 'shot'])('resets public routes without reading or changing pri
     Layers.setCategoryVisibility('caveEntrances', false);
     Layers.setCategoryVisibility('surveyStations', false);
     Layers.setDepthLimit(125.75, 'm');
+    flushPreferenceWrites();
     const saved = localStorage.getItem(storageKey);
     const read = vi.spyOn(localStorage, 'getItem');
     const write = vi.spyOn(localStorage, 'setItem');
@@ -209,8 +219,8 @@ it('resets display preferences without clearing selections, data, or unrelated s
     expect(State.gpsTrackCache.has('track')).toBe(true);
     expect(localStorage.getItem(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY)).toBe('{"Mexico":false}');
     expect(localStorage.getItem(DEFAULTS.STORAGE_KEYS.MAP_SOURCE)).toBe('esri-satellite');
-    expect(JSON.parse(localStorage.getItem(storageKey)).stationTypes.sensor).toBe(true);
-    expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject({ depthLimitFeet: null, depthUnit: 'ft' });
+    expect(readSavedPreferences().stationTypes.sensor).toBe(true);
+    expect(readSavedPreferences()).toMatchObject({ depthLimitFeet: null, depthUnit: 'ft' });
 });
 
 it('keeps one persistence listener after repeated initialization and removes it on destroy', () => {
@@ -218,6 +228,7 @@ it('keeps one persistence listener after repeated initialization and removes it 
     DisplayPreferences.init({ persist: true });
     const write = vi.spyOn(localStorage, 'setItem');
     Layers.setCategoryVisibility('landmarks', false);
+    flushPreferenceWrites();
     expect(write).toHaveBeenCalledTimes(1);
     DisplayPreferences.destroy();
     Layers.setCategoryVisibility('landmarks', true);
@@ -228,11 +239,28 @@ it('keeps one persistence listener after repeated initialization and removes it 
 it('persists shot mode, restores it after layer-state resets, and resets to survey', () => {
     DisplayPreferences.init({ persist: true });
     Layers.setColorMode('shot');
-    expect(JSON.parse(localStorage.getItem(storageKey)).colorMode).toBe('shot');
+    expect(readSavedPreferences().colorMode).toBe('shot');
     State.resetLayerState();
     DisplayPreferences.init({ persist: true });
     expect(State.displayPreferences.colorMode).toBe('shot');
     DisplayPreferences.reset();
     expect(State.displayPreferences.colorMode).toBe('project');
-    expect(JSON.parse(localStorage.getItem(storageKey)).colorMode).toBe('project');
+    expect(readSavedPreferences().colorMode).toBe('project');
+});
+
+
+it('coalesces live display intent and flushes the newest choices before leaving the private route', () => {
+    DisplayPreferences.init({ persist: true });
+    flushPreferenceWrites();
+    const write = vi.spyOn(localStorage, 'setItem');
+    Layers.setCategoryVisibility('landmarks', false);
+    Layers.setColorMode('depth');
+    Layers.setCategoryVisibility('landmarks', true);
+    expect(State.displayPreferences.categories.landmarks).toBe(true);
+    expect(write).not.toHaveBeenCalled();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem(storageKey))).toMatchObject({ colorMode: 'depth', categories: { landmarks: true } });
+    DisplayPreferences.destroy();
+    expect(write).toHaveBeenCalledTimes(1);
 });

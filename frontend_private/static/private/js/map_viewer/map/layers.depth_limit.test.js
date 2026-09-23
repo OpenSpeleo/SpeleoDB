@@ -4,6 +4,7 @@ import { State, createDefaultDisplayPreferences } from '../state.js';
 import { Colors } from './colors.js';
 import { Geometry } from './geometry.js';
 import { Layers } from './layers.js';
+import { flushPreferenceWrites } from '../display_preference_storage.js';
 
 function createMapMock() {
     const sources = new Map();
@@ -23,13 +24,16 @@ function createMapMock() {
 
 describe('Layers custom depth maximum', () => {
     beforeEach(() => {
+        flushPreferenceWrites();
+        localStorage.clear();
+        ProjectPanel._countryVisibility = null;
         State.resetLayerState();
         State.displayPreferences = createDefaultDisplayPreferences();
         State.map = null;
         Config._projects = [{ id: '1', color: '#ff0000' }, { id: '2', color: '#00ff00' }];
         State.projectDepthDomains.set('1', Object.freeze({ min: 0, max: 25 }));
         State.projectDepthDomains.set('2', Object.freeze({ min: 0, max: 200 }));
-        vi.spyOn(Geometry, 'cacheLineFeatures').mockImplementation(() => {});
+        vi.spyOn(Geometry, 'cachePreparedSnapPoints').mockImplementation(() => {});
     });
 
     afterEach(() => {
@@ -38,25 +42,27 @@ describe('Layers custom depth maximum', () => {
         State.map = null;
     });
 
-    it('fixes the scale for shallow and deep visible projects without changing cached domains', () => {
+    it('fixes the scale for shallow and deep visible projects without changing cached domains', async () => {
         expect(Layers.setDepthLimit(100, 'ft')).toBe(true);
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
-        Layers.toggleProjectVisibility('2', false);
+        await Layers.toggleProjectVisibility('2', false);
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
         expect(State.projectDepthDomains.get('1')).toEqual({ min: 0, max: 25 });
         expect(State.projectDepthDomains.get('2')).toEqual({ min: 0, max: 200 });
-        Layers.toggleProjectVisibility('1', false);
+        await Layers.toggleProjectVisibility('1', false);
         expect(State.activeDepthDomain).toBeNull();
-        Layers.toggleProjectVisibility('2', true);
+        await Layers.toggleProjectVisibility('2', true);
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
     });
 
-    it('respects country gates independently of saved individual preferences', () => {
+    it('respects country gates independently of saved individual preferences', async () => {
         State.projectLayerStates.set('1', true);
         State.projectLayerStates.set('2', true);
         State.effectiveProjectVisibility.set('1', false);
         State.effectiveProjectVisibility.set('2', false);
         Layers.setDepthLimit(100, 'm');
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toBeNull();
         State.effectiveProjectVisibility.set('1', true);
         Layers.recomputeActiveDepthDomain();
@@ -69,7 +75,7 @@ describe('Layers custom depth maximum', () => {
         { limitFeet: 100, otherCountryVisible: true },
         { limitFeet: null, otherCountryVisible: false },
         { limitFeet: null, otherCountryVisible: true },
-    ])('keeps actual panel toggles inside a hidden country out of the depth domain: %j', ({ limitFeet, otherCountryVisible }) => {
+    ])('keeps actual panel toggles inside a hidden country out of the depth domain: %j', async ({ limitFeet, otherCountryVisible }) => {
         localStorage.clear();
         document.body.innerHTML = '<div id="map"></div>';
         Config._projects = [
@@ -90,9 +96,12 @@ describe('Layers custom depth maximum', () => {
         try {
             ProjectPanel.render();
             Layers.setDepthLimit(limitFeet, 'ft');
-            Layers.setColorMode('depth');
+            await Layers.whenDisplayApplied();
+            await Layers.setColorMode('depth');
             if (!otherCountryVisible) document.querySelector('[data-country="US"] .country-toggle').click();
+            await Layers.whenDisplayApplied();
             document.querySelector('[data-country="MX"] .country-toggle').click();
+            await Layers.whenDisplayApplied();
             const expectedDomain = otherCountryVisible ? { min: 0, max: limitFeet ?? 25 } : null;
             expect(State.activeDepthDomain).toEqual(expectedDomain);
             domains.length = 0;
@@ -100,7 +109,9 @@ describe('Layers custom depth maximum', () => {
 
             // Change the individual preference OFF and ON while its country stays hidden.
             document.querySelector('[data-project-id="2"] input').click();
+            await Layers.whenDisplayApplied();
             document.querySelector('[data-project-id="2"] input').click();
+            await Layers.whenDisplayApplied();
 
             expect(Layers.isProjectVisible('2')).toBe(true);
             expect(Layers.isProjectEffectivelyVisible('2')).toBe(false);
@@ -115,15 +126,23 @@ describe('Layers custom depth maximum', () => {
             ]);
 
             Layers.setDepthLimit(null, 'ft');
+
+            await Layers.whenDisplayApplied();
             expect(State.activeDepthDomain).toEqual(otherCountryVisible ? { min: 0, max: 25 } : null);
             Layers.setDepthLimit(limitFeet, 'ft');
+            await Layers.whenDisplayApplied();
             document.querySelector('[data-country="MX"] .country-toggle').click();
+            await Layers.whenDisplayApplied();
             expect(Layers.isProjectEffectivelyVisible('2')).toBe(true);
             expect(State.activeDepthDomain).toEqual({ min: 0, max: limitFeet ?? 200 });
 
             document.querySelector('[data-country="MX"] .country-toggle').click();
+
+            await Layers.whenDisplayApplied();
             document.querySelector('[data-project-id="2"] input').click();
+            await Layers.whenDisplayApplied();
             document.querySelector('[data-country="MX"] .country-toggle').click();
+            await Layers.whenDisplayApplied();
             expect(Layers.isProjectVisible('2')).toBe(false);
             expect(Layers.isProjectEffectivelyVisible('2')).toBe(false);
             expect(State.activeDepthDomain).toEqual(expectedDomain);
@@ -134,19 +153,21 @@ describe('Layers custom depth maximum', () => {
         }
     });
 
-    it('preserves unavailable and zero-depth meanings', () => {
+    it('preserves unavailable and zero-depth meanings', async () => {
         State.projectDepthDomains.set('1', null);
         State.projectDepthDomains.set('2', null);
         Layers.setDepthLimit(100, 'ft');
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toBeNull();
         State.projectDepthDomains.set('1', { min: 0, max: 0 });
         Layers.recomputeActiveDepthDomain();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
         Layers.setDepthLimit(null, 'ft');
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 0 });
     });
 
-    it('updates preferences and the legend event once without repainting survey colors', () => {
+    it('updates preferences and the legend event once without repainting survey colors', async () => {
         const repaint = vi.spyOn(Layers, 'applyDepthLineColors');
         const domainEvent = vi.fn();
         const preferencesEvent = vi.fn();
@@ -154,14 +175,17 @@ describe('Layers custom depth maximum', () => {
         window.addEventListener('speleo:display-preferences-changed', preferencesEvent);
         try {
             Layers.setDepthLimit(100, 'ft');
+            await Layers.whenDisplayApplied();
             expect(repaint).not.toHaveBeenCalled();
             expect(domainEvent).toHaveBeenCalledTimes(1);
             expect(preferencesEvent).toHaveBeenCalledTimes(1);
             expect(State.displayPreferences.depthLimitFeet).toBe(100);
             expect(Layers.setDepthLimit(100, 'ft')).toBe(true);
+            await Layers.whenDisplayApplied();
             expect(domainEvent).toHaveBeenCalledTimes(1);
             expect(preferencesEvent).toHaveBeenCalledTimes(1);
             Layers.setDepthLimit(100, 'm');
+            await Layers.whenDisplayApplied();
             expect(domainEvent).toHaveBeenCalledTimes(2);
             expect(preferencesEvent).toHaveBeenCalledTimes(2);
             expect(State.activeDepthDomain).toEqual({ min: 0, max: 100 });
@@ -172,43 +196,49 @@ describe('Layers custom depth maximum', () => {
     });
 
     it.each([[0, 'ft'], [-1, 'ft'], [NaN, 'm'], [Infinity, 'ft'], ['50', 'ft'], [50, 'yd']])(
-        'rejects invalid input %s %s without touching the previous setting', (value, unit) => {
+        'rejects invalid input %s %s without touching the previous setting', async (value, unit) => {
             Layers.setDepthLimit(100, 'ft');
+            await Layers.whenDisplayApplied();
             const emit = vi.spyOn(Layers, 'emitDisplayPreferencesChanged');
             expect(Layers.setDepthLimit(value, unit)).toBe(false);
+            await Layers.whenDisplayApplied();
             expect(State.displayPreferences.depthLimitFeet).toBe(100);
             expect(State.displayPreferences.depthUnit).toBe('ft');
             expect(emit).not.toHaveBeenCalled();
         }
     );
 
-    it('repaints only the effective scale and never reads raw sources during controls or visibility changes', () => {
+    it('repaints only the effective scale and never reads raw sources during controls or visibility changes', async () => {
         const { map, layerDefinitions } = createMapMock();
         State.map = map;
         layerDefinitions.set('project-layer-1', { type: 'line' });
         State.allProjectLayers.set('1', ['project-layer-1']);
-        Layers.setColorMode('depth');
+        await Layers.setColorMode('depth');
         map.setPaintProperty.mockClear();
         Layers.setDepthLimit(50, 'ft');
+        await Layers.whenDisplayApplied();
         expect(map.setPaintProperty).toHaveBeenLastCalledWith(
             'project-layer-1', 'line-color', Colors.getDepthPaint({ min: 0, max: 50 })
         );
         map.setPaintProperty.mockClear();
         Layers.setDepthLimit(50, 'm');
+        await Layers.whenDisplayApplied();
         expect(map.setPaintProperty).not.toHaveBeenCalled();
-        Layers.toggleProjectVisibility('2', false);
-        Layers.setColorMode('project');
+        await Layers.toggleProjectVisibility('2', false);
+        await Layers.setColorMode('project');
         Layers.setDepthLimit(250, 'ft');
-        Layers.setColorMode('depth');
+        await Layers.whenDisplayApplied();
+        await Layers.setColorMode('depth');
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 250 });
         expect(map.getSource).not.toHaveBeenCalled();
-        expect(Geometry.cacheLineFeatures).not.toHaveBeenCalled();
+        expect(Geometry.cachePreparedSnapPoints).not.toHaveBeenCalled();
     });
 
-    it('reset restores the automatic domain even while survey colors are active', () => {
+    it('reset restores the automatic domain even while survey colors are active', async () => {
         Layers.setDepthLimit(50, 'm');
+        await Layers.whenDisplayApplied();
         State.displayPreferences = createDefaultDisplayPreferences();
-        Layers.applyDisplayPreferences();
+        await Layers.applyDisplayPreferences();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 200 });
         expect(State.displayPreferences.depthLimitFeet).toBeNull();
         expect(State.displayPreferences.depthUnit).toBe('ft');
@@ -225,7 +255,8 @@ describe('Layers custom depth maximum', () => {
         vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { deliver = resolve; })));
         const pending = Layers.addProjectGeoJSON('1', '/survey.geojson');
         Layers.setDepthLimit(50, 'ft');
-        Layers.setColorMode('depth');
+        await Layers.whenDisplayApplied();
+        await Layers.setColorMode('depth');
         expect(State.activeDepthDomain).toBeNull();
         deliver({ ok: true, json: async () => ({
             type: 'FeatureCollection',
@@ -240,6 +271,7 @@ describe('Layers custom depth maximum', () => {
         expect(rawProperties.depth_val).toBe(200);
         expect(rawProperties.depth_norm).toBe(1);
         Layers.setDepthLimit(null, 'ft');
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 200 });
         expect(rawProperties.depth_val).toBe(200);
     });

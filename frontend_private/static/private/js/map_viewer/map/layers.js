@@ -3,23 +3,135 @@ import { State } from '../state.js';
 import { Colors } from './colors.js';
 import {
     applyDepthLimit,
-    buildSectionDepthAverageMap,
-    computeProjectDepthDomain,
     mergeDepthDomains,
-    isValidDepthLimit,
-    resolveLineDepthValue
+    isValidDepthLimit
 } from './depth.js';
 import { Geometry } from './geometry.js';
 import { computeGeoJSONBounds } from './geojson.js';
 import { addVectorOverlay, VECTOR_OVERLAY_GEOMETRY_TYPES } from './vector_overlay.js';
-import { gisLayerGeometryFilter, prepareGISLayerGeoJSON } from './gis_layer_geometry.js';
+import { gisLayerGeometryFilter } from './gis_layer_geometry.js';
 import { geoJSONLineWidth } from './line_rendering.js';
 import { API } from '../api.js';
 import { getRuntimeContext } from '../runtime_context.js';
+import { ViewerUpdates } from '../viewer_updates.js';
+import { schedulePreferenceWrite } from '../display_preference_storage.js';
+import { cancelMapNavigation, resetMapNavigation } from './navigation_intent.js';
+import { Utils } from '../utils.js';
+import { prepareProjectGeoJSON, prepareGeoJSONBounds, prepareGISLayerGeoJSONAsync } from './preparation.js';
+import { readViewerGeoJSON } from './read_geojson.js';
 
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
 const gisFeaturePopups = new WeakMap();
+
+// Data requests are shared independently of the serial map-application queue.
+const overlayRequests = new Map();
+const overlayIntents = new Map();
+const overlayCachedVersions = new Map();
+const overlayAppliedVersions = new Map();
+const gisGeometryAppliedRecords = new Map();
+
+async function toggleLazyOverlay({ kind, id, visible, cache, states, layers, details, prepare, install, show, loading, metadata }) {
+    const key = `${kind}:${id}`;
+    const intent = {};
+    overlayIntents.set(key, intent);
+    states.set(id, visible);
+    const map = State.map;
+    const generation = State.layerGeneration;
+    const tracksMetadata = Boolean(metadata?.());
+    const revision = () => metadata?.()?.modified_date ?? null;
+    const sameSession = () => State.layerGeneration === generation && State.map === map;
+    const ownsIntent = () => sameSession() && overlayIntents.get(key) === intent;
+    const entityExists = () => !tracksMetadata || Boolean(metadata?.());
+    const current = () => ownsIntent() && entityExists();
+    if (!visible) {
+        loading?.(false);
+        cancelMapNavigation(key);
+        const result = await ViewerUpdates.schedule(key, () => { if (current()) show(false); });
+        return current() && result.status === 'applied';
+    }
+    try {
+        while (current() && states.get(id)) {
+            const version = revision();
+            const versionCurrent = () => current() && revision() === version;
+            try {
+                let data = cache.get(id);
+                const cached = overlayCachedVersions.get(key);
+                if (data && cached?.generation !== generation) {
+                    // Adopt cached sources restored before this intent tracker first saw them.
+                    const ids = layers.get(id);
+                    if (ids?.length && map?.getLayer(ids[0])) {
+                        overlayAppliedVersions.set(key, { generation, revision: version, data });
+                    }
+                }
+                if (data && cached?.generation === generation && cached.data === data && cached.revision !== version) {
+                    cache.delete(id);
+                    data = undefined;
+                }
+                if (!data) {
+                    loading?.(true);
+                    let request = overlayRequests.get(key);
+                    if (!request || request.generation !== generation || request.revision !== version) {
+                        request?.controller.abort();
+                        const controller = new AbortController();
+                        request = { generation, revision: version, controller };
+                        request.promise = details(controller.signal);
+                        overlayRequests.set(key, request);
+                        // An older finalizer must not clear its replacement.
+                        void request.promise.finally(() => {
+                            if (overlayRequests.get(key) === request) overlayRequests.delete(key);
+                        }).catch(() => {});
+                    }
+                    data = await request.promise;
+                    if (!sameSession() || !entityExists()) return false;
+                    // A list refresh may have published a newer file during the download.
+                    if (revision() !== version) continue;
+                    cache.set(id, data);
+                }
+                overlayCachedVersions.set(key, { generation, revision: version, data });
+                if (!versionCurrent() || !states.get(id)) return false;
+                const needsInstall = () => {
+                    const ids = layers.get(id);
+                    const applied = overlayAppliedVersions.get(key);
+                    return !ids?.length || !map?.getLayer(ids[0]) || applied?.generation !== generation
+                        || applied.revision !== version || applied.data !== data;
+                };
+                const prepared = needsInstall() && prepare ? await prepare(data, versionCurrent) : undefined;
+                if (!current()) return false;
+                if (!versionCurrent()) continue;
+                const result = await ViewerUpdates.schedule(key, async context => {
+                    if (!versionCurrent() || !context.isCurrent()) return;
+                    if (needsInstall()) {
+                        await install(data, () => versionCurrent() && context.isCurrent(), prepared);
+                        if (!versionCurrent() || !context.isCurrent()) return;
+                        overlayAppliedVersions.set(key, { generation, revision: version, data });
+                    }
+                    show(states.get(id) === true);
+                });
+                if (!current()) return false;
+                if (!versionCurrent()) continue;
+                if (result.status === 'failed') throw result.error;
+                return result.status === 'applied' && states.get(id) === true;
+            } catch (error) {
+                // Retry only a changed metadata revision, never a genuine failed request.
+                if (current() && revision() !== version) continue;
+                throw error;
+            }
+        }
+        return false;
+    } catch (error) {
+        if (!current()) return false;
+        states.set(id, false);
+        cache.delete(id);
+        show(false);
+        console.error(`Failed to display ${kind}:`, error);
+        Utils.showNotification('error', 'Unable to display this item. Toggle it on to retry.');
+        return false;
+    } finally {
+        // Metadata removal invalidates rendering, but this intent still owns its spinner.
+        if (ownsIntent()) loading?.(false);
+    }
+}
 
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
@@ -32,7 +144,7 @@ const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
 
 function applyLayerVisibility(layerIds, visible) {
     const map = State.map;
-    if (!map || !map.getStyle()) return;
+    if (!map) return;
     for (const id of layerIds) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
     }
@@ -298,52 +410,88 @@ function withProjectScopedMarkerProperties(properties, projectId) {
     };
 }
 
-// Process project GeoJSON once on load/refresh and cache project-level depth domain.
-function processGeoJSON(projectId, geojsonData) {
-    const pid = String(projectId);
-    if (!geojsonData || !Array.isArray(geojsonData.features)) {
-        State.projectDepthDomains.set(pid, null);
-        return geojsonData;
-    }
-
-    const processed = JSON.parse(JSON.stringify(geojsonData));
-    const sectionDepthAvgMap = buildSectionDepthAverageMap(processed.features);
-    const projectDepthDomain = computeProjectDepthDomain(processed, sectionDepthAvgMap);
-    State.projectDepthDomains.set(pid, projectDepthDomain);
-    const maxVal = projectDepthDomain ? Math.max(1e-9, projectDepthDomain.max) : 1;
-
-    function forceZero(c) {
-        if (!Array.isArray(c) || c.length === 0) return c;
-        if (typeof c[0] === 'number') return c.length >= 3 ? [c[0], c[1], 0] : c;
-        return c.map(forceZero);
-    }
-
-    processed.features.forEach((feature) => {
-        // Stamp canonical depth values on lines once; style expressions use depth_val.
-        if (feature?.geometry?.type === 'LineString' && feature.properties) {
-            const depthValue = resolveLineDepthValue(feature.properties, sectionDepthAvgMap);
-            if (typeof depthValue === 'number' && Number.isFinite(depthValue)) {
-                const norm = depthValue / maxVal;
-                feature.properties.depth_norm = Math.min(Math.max(norm, 0), 1);
-                feature.properties.depth_val = depthValue;
-            } else {
-                delete feature.properties.depth_norm;
-                delete feature.properties.depth_val;
-            }
-        }
-
-        // Force Z=0
-        if (feature?.geometry?.coordinates) {
-            feature.geometry.coordinates = forceZero(feature.geometry.coordinates);
-        }
-    });
-
-    return processed;
-}
-
 export const Layers = {
     get colorMode() { return State.displayPreferences.colorMode; },
     set colorMode(mode) { State.displayPreferences.colorMode = mode; },
+
+    whenDisplayApplied() { return ViewerUpdates.whenIdle(); },
+
+    cancelPendingWork() {
+        for (const request of overlayRequests.values()) request.controller.abort();
+        overlayRequests.clear();
+        overlayIntents.clear();
+        overlayCachedVersions.clear();
+        overlayAppliedVersions.clear();
+        gisGeometryAppliedRecords.clear();
+        ViewerUpdates.cancelAll();
+        State.layerGeneration += 1;
+        State.displayUpdatePending = false;
+        resetMapNavigation();
+    },
+
+    scheduleDisplayUpdate(...concerns) {
+        concerns.forEach(concern => State.displayDirty.add(concern));
+        const generation = State.layerGeneration;
+        State.displayUpdatePending = true;
+        window.dispatchEvent(new CustomEvent('speleo:display-update-pending'));
+        return ViewerUpdates.schedule('display', async context => {
+            const map = State.map;
+            const valid = () => context.isCurrent() && State.map === map && State.layerGeneration === generation;
+            if (!valid()) return;
+            const dirty = State.displayDirty;
+            const applyProjects = dirty.has('projects') || dirty.has('categories');
+            if (applyProjects) {
+                for (const projectId of State.allProjectLayers.keys()) {
+                    if (!valid()) return;
+                    this.applyProjectLayerVisibility(projectId);
+                    if (context.shouldYield()) await context.yield();
+                }
+            }
+            if (dirty.has('networks') || dirty.has('categories')) {
+                for (const networkId of State.allNetworkLayers.keys()) {
+                    if (!valid()) return;
+                    this.applyNetworkLayerVisibility(networkId);
+                    if (context.shouldYield()) await context.yield();
+                }
+            }
+            if (!valid()) return;
+            if (applyProjects) this.applyProjectScopedMarkerVisibility();
+            if (dirty.has('categories')) this.applyCategoryVisibility('landmarks');
+            if (dirty.has('depth')) this.recomputeActiveDepthDomain(false);
+            if (dirty.has('colors') || (dirty.has('depth') && this.colorMode === 'depth')) {
+                for (const [projectId, layerIds] of State.allProjectLayers) {
+                    for (const layerId of layerIds) {
+                        if (!valid()) return;
+                        if (map?.getLayer(layerId)?.type === 'line') {
+                            map.setPaintProperty(layerId, 'line-color', Colors.getSurveyPaint(projectId, this.colorMode, State.activeDepthDomain));
+                        }
+                        if (context.shouldYield()) await context.yield();
+                    }
+                }
+            }
+            if (!valid()) return;
+            const depthChanged = dirty.has('depth') || dirty.has('depth-labels');
+            const colorsChanged = dirty.has('colors');
+            dirty.clear();
+            State.displayUpdatePending = false;
+            if (depthChanged) this.emitDepthDomainUpdated();
+            if (colorsChanged) window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode: this.colorMode } }));
+            window.dispatchEvent(new CustomEvent('speleo:display-update-applied'));
+        }, { onError: error => {
+            if (State.layerGeneration !== generation) return;
+            State.displayUpdatePending = false;
+            window.dispatchEvent(new CustomEvent('speleo:display-update-failed', { detail: { error } }));
+        } });
+    },
+
+    setProjectVisibilityBatch(updates) {
+        for (const { projectId, visible } of updates) {
+            const id = String(projectId);
+            State.effectiveProjectVisibility.set(id, visible);
+            if (!visible) cancelMapNavigation(`project:${id}`);
+        }
+        return this.scheduleDisplayUpdate('projects', 'depth');
+    },
 
     emitDisplayPreferencesChanged() {
         window.dispatchEvent(new CustomEvent('speleo:display-preferences-changed', {
@@ -355,16 +503,16 @@ export const Layers = {
         if (!Object.hasOwn(State.displayPreferences.categories, id) || typeof visible !== 'boolean') return;
         if (State.displayPreferences.categories[id] === visible) return;
         State.displayPreferences.categories[id] = visible;
-        this.applyCategoryVisibility(id);
         this.emitDisplayPreferencesChanged();
+        return this.scheduleDisplayUpdate('categories');
     },
 
     setStationTypeVisibility(type, visible) {
         if (!Object.hasOwn(State.displayPreferences.stationTypes, type) || typeof visible !== 'boolean') return;
         if (State.displayPreferences.stationTypes[type] === visible) return;
         State.displayPreferences.stationTypes[type] = visible;
-        this.applyCategoryVisibility('surveyStations');
         this.emitDisplayPreferencesChanged();
+        return this.scheduleDisplayUpdate('categories');
     },
 
     revealCategory(id, options = {}) {
@@ -395,14 +543,13 @@ export const Layers = {
     },
 
     applyDisplayPreferences() {
-        for (const { id } of DEFAULTS.DISPLAY.CATEGORIES) this.applyCategoryVisibility(id);
-        if (State.displayPreferences.colorMode !== 'depth') this.recomputeActiveDepthDomain();
-        this.setColorMode(State.displayPreferences.colorMode);
+        this.emitDisplayPreferencesChanged();
+        return this.scheduleDisplayUpdate('categories', 'depth', 'colors');
     },
 
     applySurveyStationVisibility(projectId, projectVisible) {
         const map = State.map;
-        if (!map || !map.getStyle()) return;
+        if (!map) return;
         const visible = projectVisible && State.displayPreferences.categories.surveyStations;
         for (const { id, layerSuffix } of DEFAULTS.DISPLAY.STATION_TYPES) {
             applyLayerVisibility([`stations-${projectId}-${layerSuffix}`], visible && State.displayPreferences.stationTypes[id]);
@@ -438,19 +585,9 @@ export const Layers = {
     },
 
     saveProjectVisibilityPref: function (projectId, isVisible) {
-        try {
-            State.projectLayerStates.set(String(projectId), isVisible);
-
-            // Serialize Map to Object for storage
-            const prefsObj = {};
-            State.projectLayerStates.forEach((value, key) => {
-                prefsObj[key] = value;
-            });
-
-            localStorage.setItem(Config.VISIBILITY_PREFS_STORAGE_KEY, JSON.stringify(prefsObj));
-        } catch (e) {
-            console.error('Error saving visibility pref', e);
-        }
+        State.projectLayerStates.set(String(projectId), isVisible);
+        const preferences = State.projectLayerStates;
+        schedulePreferenceWrite(Config.VISIBILITY_PREFS_STORAGE_KEY, () => Object.fromEntries(preferences));
     },
 
     isProjectVisible: function (projectId) {
@@ -505,14 +642,14 @@ export const Layers = {
         window.dispatchEvent(new CustomEvent('speleo:depth-data-updated', { detail }));
     },
 
-    recomputeActiveDepthDomain: function () {
+    recomputeActiveDepthDomain: function (emit = true) {
         const activeDomains = this.getVisibleProjectIds().map((projectId) => {
             return State.projectDepthDomains.get(String(projectId)) || null;
         });
         State.activeDepthDomain = applyDepthLimit(
             mergeDepthDomains(activeDomains), State.displayPreferences.depthLimitFeet
         );
-        this.emitDepthDomainUpdated();
+        if (emit) this.emitDepthDomainUpdated();
         return State.activeDepthDomain;
     },
 
@@ -535,7 +672,7 @@ export const Layers = {
      */
     applyProjectScopedMarkerVisibility: function () {
         const map = State.map;
-        if (!map || !map.getStyle()) return;
+        if (!map) return;
 
         const filter = this.getProjectScopedMarkerFilter();
         PROJECT_SCOPED_MARKER_LAYER_IDS.forEach((layerId) => {
@@ -572,7 +709,7 @@ export const Layers = {
         State.effectiveProjectVisibility.set(pid, isVisible);
 
         const map = State.map;
-        if (!map || !map.getStyle()) return;
+        if (!map) return;
 
         const projectLayerIds = State.allProjectLayers.get(pid) || [];
         projectLayerIds.forEach((layerId) => {
@@ -610,16 +747,9 @@ export const Layers = {
     },
 
     saveNetworkVisibilityPref: function (networkId, isVisible) {
-        try {
-            State.networkLayerStates.set(String(networkId), isVisible);
-            const prefsObj = {};
-            State.networkLayerStates.forEach((value, key) => {
-                prefsObj[key] = value;
-            });
-            localStorage.setItem(Config.NETWORK_VISIBILITY_PREFS_STORAGE_KEY, JSON.stringify(prefsObj));
-        } catch (e) {
-            console.error('Error saving network visibility pref', e);
-        }
+        State.networkLayerStates.set(String(networkId), isVisible);
+        const preferences = State.networkLayerStates;
+        schedulePreferenceWrite(Config.NETWORK_VISIBILITY_PREFS_STORAGE_KEY, () => Object.fromEntries(preferences));
     },
 
     isNetworkVisible: function (networkId) {
@@ -656,54 +786,29 @@ export const Layers = {
 
     // Toggle GPS track visibility - handles lazy loading of GeoJSON
     toggleGPSTrackVisibility: async function (trackId, isVisible) {
-        const tid = String(trackId);
-
-        // Update in-memory state (no persistence)
-        State.gpsTrackLayerStates.set(tid, isVisible);
-
-        if (isVisible) {
-            // Check if we need to download the GeoJSON (lazy loading)
-            if (!State.gpsTrackCache.has(tid)) {
-                // Start loading
-                this.setGPSTrackLoading(tid, true);
-
-                try {
-                    console.log(`🔄 Downloading GPS track GeoJSON: ${trackId}`);
-                    const track = await API.getGPSTrackDetails(trackId);
-                    if (!track?.file) throw new Error('The GPS Track has no display file.');
-                    const response = await fetch(track.file);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const geojsonData = await response.json();
-
-                    // Add the layer to the map
-                    await this.addGPSTrackLayer(tid, geojsonData);
-
-                    // Cache only after installation so a failed display can be retried.
-                    State.gpsTrackCache.set(tid, geojsonData);
-                    console.log(`✅ Cached GPS track GeoJSON: ${trackId}`);
-                } catch (e) {
-                    console.error(`❌ Failed to download GPS track ${trackId}:`, e);
-                    // Revert visibility state on error
-                    State.gpsTrackLayerStates.set(tid, false);
-                    this.setGPSTrackLoading(tid, false);
-                    return;
-                }
-
-                this.setGPSTrackLoading(tid, false);
-            } else {
-                // Data is cached - just show the existing layers
-                this.showGPSTrackLayers(tid, true);
-            }
-        } else {
-            // Hide the layers (don't remove - keep cached)
-            this.showGPSTrackLayers(tid, false);
-        }
+        const id = String(trackId);
+        return toggleLazyOverlay({
+            metadata: () => Config.getGPSTrackById?.(id),
+            kind: 'gps', id, visible: isVisible,
+            cache: State.gpsTrackCache, states: State.gpsTrackLayerStates, layers: State.allGPSTrackLayers,
+            details: async signal => {
+                const record = await API.getGPSTrackDetails(id, { signal });
+                if (!record?.file) throw new Error('The GPS Track has no display file.');
+                const response = await fetch(record.file, { signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return readViewerGeoJSON(response, { isCurrent: () => !signal.aborted });
+            },
+            prepare: async (data, isCurrent) => ({ boundsCoordinates: await prepareGeoJSONBounds(data, { isCurrent }) }),
+            install: (data, isCurrent, prepared) => this.addGPSTrackLayer(id, data, { isCurrent, prepared }),
+            show: visible => this.showGPSTrackLayers(id, visible),
+            loading: value => this.setGPSTrackLoading(id, value),
+        });
     },
 
     // Show/hide GPS track layers
     showGPSTrackLayers: function (trackId, isVisible) {
         const map = State.map;
-        if (!map || !map.getStyle()) return;
+        if (!map) return;
 
         const layers = State.allGPSTrackLayers.get(String(trackId)) || [];
         layers.forEach(layerId => {
@@ -714,9 +819,11 @@ export const Layers = {
     },
 
     // Add GPS track GeoJSON layers to the map
-    addGPSTrackLayer: async function (trackId, geojsonData) {
+    addGPSTrackLayer: async function (trackId, geojsonData, { isCurrent = () => true, prepared } = {}) {
         const map = State.map;
         if (!map) return;
+        const boundsCoordinates = prepared ? prepared.boundsCoordinates : await prepareGeoJSONBounds(geojsonData, { isCurrent });
+        if (!isCurrent() || State.map !== map) return;
 
         const tid = String(trackId);
         const sourceId = `gps-track-source-${tid}`;
@@ -741,7 +848,8 @@ export const Layers = {
         if (!State.allGPSTrackLayers.has(tid)) {
             State.allGPSTrackLayers.set(tid, []);
         }
-        const trackLayers = State.allGPSTrackLayers.get(tid);
+        const trackLayers = [];
+        State.allGPSTrackLayers.set(tid, trackLayers);
 
         // GPS track line - simple dotted pattern for clear distinction from survey lines
         map.addLayer({
@@ -764,10 +872,12 @@ export const Layers = {
         });
         trackLayers.push(lineLayerId);
 
-        const bounds = computeGeoJSONBounds(geojsonData);
-        if (!bounds.isEmpty()) {
+        if (boundsCoordinates) {
+            const bounds = new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]);
             State.gpsTrackBounds.set(tid, bounds);
             console.log(`📍 Calculated bounds for GPS track ${trackId}`);
+        } else {
+            State.gpsTrackBounds.delete(tid);
         }
 
         console.log(`📍 Added GPS track layers for ${trackId}`);
@@ -798,16 +908,20 @@ export const Layers = {
         const states = State.gisLayerGeometryTypeStates.get(id);
         if (!states?.has(geometryType)) return;
         states.set(geometryType, isVisible);
-        const enabledTypes = [...states].filter(([, visible]) => visible).map(([type]) => type);
-        const map = State.map;
-        if (!map || !map.getStyle()) return;
-        const layerIds = State.allGISLayerLayers.get(id) || [];
-        layerIds.forEach((renderLayerId, index) => {
-            if (map.getLayer(renderLayerId)) {
-                map.setFilter(renderLayerId, gisLayerGeometryFilter(VECTOR_OVERLAY_GEOMETRY_TYPES[index], enabledTypes));
-            }
-        });
         if (!isVisible) this.closeGISFeaturePopups();
+        const generation = State.layerGeneration;
+        return ViewerUpdates.schedule(`gis-types:${id}`, () => {
+            if (generation !== State.layerGeneration) return;
+            const enabledTypes = [...states].filter(([, visible]) => visible).map(([type]) => type);
+            const map = State.map;
+            if (!map) return;
+            const layerIds = State.allGISLayerLayers.get(id) || [];
+            layerIds.forEach((renderLayerId, index) => {
+                if (map.getLayer(renderLayerId)) {
+                    map.setFilter(renderLayerId, gisLayerGeometryFilter(VECTOR_OVERLAY_GEOMETRY_TYPES[index], enabledTypes));
+                }
+            });
+        });
     },
 
     setGISLayerLoading: function (layerId, isLoading) {
@@ -820,47 +934,30 @@ export const Layers = {
 
     toggleGISLayerVisibility: async function (layerId, isVisible) {
         const id = String(layerId);
-        State.gisLayerStates.set(id, isVisible);
-
-        if (!isVisible) {
-            this.showGISLayerLayers(id, false);
-            return true;
-        }
-
-        if (State.gisLayerCache.has(id)) {
-            if ((State.allGISLayerLayers.get(id) || []).length === 0) {
-                await this.addGISLayer(id, State.gisLayerCache.get(id));
-            } else {
-                this.showGISLayerLayers(id, true);
-            }
-            return true;
-        }
-
-        this.setGISLayerLoading(id, true);
-        try {
-            // Detail is intentionally refreshed here so an expired signed URL
-            // from the list response is never used for the file request.
-            const layer = await API.getGISLayerDetails(id);
-            if (!layer?.file) throw new Error('The GIS Layer has no display file.');
-            const response = await fetch(layer.file);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const geojsonData = await response.json();
-            State.gisLayerCache.set(id, geojsonData);
-            if (!this.isGISLayerVisible(id)) return false;
-            await this.addGISLayer(id, geojsonData);
-            return true;
-        } catch (error) {
-            console.error(`Failed to display GIS Layer ${id}:`, error);
-            State.gisLayerStates.set(id, false);
-            return false;
-        } finally {
-            this.setGISLayerLoading(id, false);
-        }
+        return toggleLazyOverlay({
+            metadata: () => Config.getGISLayerById?.(id),
+            kind: 'gis-layer', id, visible: isVisible,
+            cache: State.gisLayerCache, states: State.gisLayerStates, layers: State.allGISLayerLayers,
+            details: async signal => {
+                const record = await API.getGISLayerDetails(id, { signal });
+                if (!record?.file) throw new Error('The GIS Layer has no display file.');
+                const response = await fetch(record.file, { signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return readViewerGeoJSON(response, { isCurrent: () => !signal.aborted });
+            },
+            prepare: async (data, isCurrent) => ({
+                boundsCoordinates: await prepareGeoJSONBounds(data, { isCurrent }),
+                ...await prepareGISLayerGeoJSONAsync(data, { isCurrent }),
+            }),
+            install: (data, isCurrent, prepared) => this.addGISLayer(id, data, { isCurrent, prepared }),
+            show: visible => this.showGISLayerLayers(id, visible),
+            loading: value => this.setGISLayerLoading(id, value),
+        });
     },
 
     showGISLayerLayers: function (layerId, isVisible) {
         const map = State.map;
-        if (!map || !map.getStyle()) return;
+        if (!map) return;
         const layerIds = State.allGISLayerLayers.get(String(layerId)) || [];
         layerIds.forEach(id => {
             if (map.getLayer(id)) {
@@ -882,9 +979,12 @@ export const Layers = {
         openGISFeaturePopup(map, feature, lngLat);
     },
 
-    addGISLayer: async function (layerId, geojsonData) {
+    addGISLayer: async function (layerId, geojsonData, { isCurrent = () => true, prepared } = {}) {
         const map = State.map;
         if (!map) return;
+        const boundsCoordinates = prepared ? prepared.boundsCoordinates : await prepareGeoJSONBounds(geojsonData, { isCurrent });
+        const { data, geometryTypes } = prepared || await prepareGISLayerGeoJSONAsync(geojsonData, { isCurrent });
+        if (!isCurrent() || State.map !== map) return;
 
         const id = String(layerId);
         const sourceId = `gis-layer-source-${id}`;
@@ -897,7 +997,6 @@ export const Layers = {
         State.gisLayerClickableLayerIds.delete(pointLayerId);
         removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
 
-        const { data, geometryTypes } = prepareGISLayerGeoJSON(geojsonData);
         const previousStates = State.gisLayerGeometryTypeStates.get(id);
         const typeStates = new Map(geometryTypes.map(type => [
             type, geometryTypes.length === 1 || previousStates?.get(type) !== false
@@ -913,8 +1012,8 @@ export const Layers = {
         State.allGISLayerLayers.set(id, layerIds);
         State.gisLayerClickableLayerIds.add(fillLayerId);
         State.gisLayerClickableLayerIds.add(pointLayerId);
-        const bounds = computeGeoJSONBounds(geojsonData);
-        if (!bounds.isEmpty()) State.gisLayerBounds.set(id, bounds);
+        if (boundsCoordinates) State.gisLayerBounds.set(id, new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
+        else State.gisLayerBounds.delete(id);
         this.reorderLayers();
     },
 
@@ -934,43 +1033,62 @@ export const Layers = {
 
     async toggleGISGeometryVisibility(id, visible) {
         const key = String(id);
+        const operationKey = `gis-geometry:${key}`;
+        const intent = {};
+        overlayIntents.set(operationKey, intent);
+        const map = State.map;
+        const generation = State.layerGeneration;
+        const sessionCurrent = () => State.map === map && State.layerGeneration === generation;
+        const isCurrent = () => sessionCurrent() && overlayIntents.get(operationKey) === intent;
         State.gisGeometryStates.set(key, visible);
         if (!visible) {
-            this.showGISGeometryLayers(key, false);
-            return true;
+            cancelMapNavigation(operationKey);
+            await ViewerUpdates.schedule(operationKey, () => {
+                if (isCurrent()) this.showGISGeometryLayers(key, false);
+            });
+            return isCurrent();
         }
         let record = State.gisGeometryCache.get(key);
+        let pending;
         try {
             if (!record) {
-                // Reuse the in-flight detail request if visibility changes rapidly.
-                let pending = State.gisGeometryLoading.get(key);
+                pending = State.gisGeometryLoading.get(key);
                 if (!pending) {
                     pending = API.getGISGeometryDetails(key);
                     State.gisGeometryLoading.set(key, pending);
                 }
                 record = await pending;
+                if (!sessionCurrent()) return false;
                 if (!record?.geojson) throw new Error('The geometry is unavailable.');
-                const current = State.gisGeometryCache.get(key);
-                if (current && current.revision > record.revision) record = current;
+                const cached = State.gisGeometryCache.get(key);
+                if (cached && cached.revision > record.revision) record = cached;
                 State.gisGeometryCache.set(key, record);
                 Config.upsertGISGeometry(record);
             }
-            if (!this.isGISGeometryVisible(key)) return false;
-            const ids = State.allGISGeometryLayers.get(key);
-            if (!ids?.length || !State.map?.getLayer(ids[0])) this.addGISGeometry(record);
-            this.showGISGeometryLayers(key, true);
-            return true;
+            if (!isCurrent() || !this.isGISGeometryVisible(key)) return false;
+            const result = await ViewerUpdates.schedule(operationKey, () => {
+                if (!isCurrent()) return;
+                // An editor save may have replaced the baseline during our paint wait.
+                record = State.gisGeometryCache.get(key) || record;
+                const ids = State.allGISGeometryLayers.get(key);
+                const applied = gisGeometryAppliedRecords.get(key);
+                if (!ids?.length || !State.map?.getLayer(ids[0]) || applied?.record !== record
+                    || applied.generation !== generation || applied.map !== map) this.addGISGeometry(record);
+                this.showGISGeometryLayers(key, this.isGISGeometryVisible(key));
+            });
+            if (result.status === 'failed') throw result.error;
+            return isCurrent() && result.status === 'applied';
         } catch (error) {
-            // An independent editor fetch/save may have supplied a newer record
-            // while this request was pending. Its visibility remains authoritative.
-            const current = State.gisGeometryCache.get(key);
-            if (current && current !== record) return this.isGISGeometryVisible(key);
+            if (!isCurrent()) return false;
+            const cached = State.gisGeometryCache.get(key);
+            if (cached && cached !== record) return this.isGISGeometryVisible(key);
             State.gisGeometryStates.set(key, false);
             this.showGISGeometryLayers(key, false);
             console.error('Failed to show GIS Geometry:', error);
+            Utils.showNotification('error', 'Unable to display this geometry. Toggle it on to retry.');
             return false;
         } finally {
-            State.gisGeometryLoading.delete(key);
+            if (sessionCurrent() && State.gisGeometryLoading.get(key) === pending) State.gisGeometryLoading.delete(key);
         }
     },
 
@@ -988,6 +1106,7 @@ export const Layers = {
             fillOpacity: DEFAULTS.GIS_GEOMETRY.FILL_OPACITY,
         });
         State.allGISGeometryLayers.set(id, layerIds);
+        gisGeometryAppliedRecords.set(id, { record, map, generation: State.layerGeneration });
         // Stored Geometry never has a trusted caller-supplied bbox.
         const bounds = computeGeoJSONBounds(record.geojson, { wrapLongitude: false });
         if (!bounds.isEmpty()) State.gisGeometryBounds.set(id, bounds);
@@ -1000,7 +1119,9 @@ export const Layers = {
         Config.upsertGISGeometry(record);
         State.gisGeometryCache.set(id, record);
         State.gisGeometryStates.set(id, true);
-        this.addGISGeometry(record);
+        return ViewerUpdates.schedule(`gis-geometry:${id}`, () => {
+            if (State.gisGeometryCache.get(id) === record) this.addGISGeometry(record);
+        });
     },
 
     refreshGISGeometry(record) {
@@ -1008,35 +1129,23 @@ export const Layers = {
         Config.upsertGISGeometry(record);
         State.gisGeometryCache.set(id, record);
         // Refresh the saved baseline without changing the pre-edit visibility.
-        this.addGISGeometry(record);
+        return ViewerUpdates.schedule(`gis-geometry:${id}`, () => {
+            if (State.gisGeometryCache.get(id) === record) this.addGISGeometry(record);
+        });
     },
 
     toggleNetworkVisibility: function (networkId, isVisible) {
         const nid = String(networkId);
         this.saveNetworkVisibilityPref(nid, isVisible);
-
-        this.applyNetworkLayerVisibility(nid);
+        if (!isVisible) cancelMapNavigation(`network:${nid}`);
+        return this.scheduleDisplayUpdate('networks');
     },
 
-    // A country gate may override on-map visibility without changing the saved preference.
+    // Country gates change effective visibility without rewriting individual choices.
     toggleProjectVisibility: function (projectId, isVisible, visibilityOverride) {
         const pid = String(projectId);
-
-        // Update state and storage
         this.saveProjectVisibilityPref(pid, isVisible);
-
-        // Clear stale effective state so applyProjectLayerVisibility reads
-        // the fresh individual preference instead of a cached value.
-        State.effectiveProjectVisibility.delete(pid);
-
-        // Update map visibility in one place for project layers and scoped markers.
-        // Panel UI is updated by ProjectPanel.refreshList() which callers invoke.
-        this.applyProjectVisibility(pid, visibilityOverride);
-
-        this.recomputeActiveDepthDomain();
-        if (this.colorMode === 'depth') {
-            this.applyDepthLineColors();
-        }
+        return this.setProjectVisibilityBatch([{ projectId: pid, visible: visibilityOverride ?? isVisible }]);
     },
 
     forEachProjectLineLayer: function (callback) {
@@ -1070,10 +1179,8 @@ export const Layers = {
         if (!Colors.isValidColorMode(mode)) return;
         this.colorMode = mode;
 
-        if (mode === 'depth') this.recomputeActiveDepthDomain();
-        this.applyLineColors();
-        window.dispatchEvent(new CustomEvent('speleo:color-mode-changed', { detail: { mode } }));
         this.emitDisplayPreferencesChanged();
+        return this.scheduleDisplayUpdate('depth', 'colors');
     },
 
     setDepthLimit(limitFeet, unit) {
@@ -1084,9 +1191,8 @@ export const Layers = {
 
         preferences.depthLimitFeet = limitFeet;
         preferences.depthUnit = unit;
-        this.recomputeActiveDepthDomain();
-        if (limitChanged && this.colorMode === 'depth') this.applyDepthLineColors();
         this.emitDisplayPreferencesChanged();
+        this.scheduleDisplayUpdate(...(limitChanged ? ['depth'] : ['depth-labels']));
         return true;
     },
 
@@ -1095,14 +1201,18 @@ export const Layers = {
         if (!map) return;
 
         const sourceId = `project-geojson-${projectId}`;
+        const generation = State.layerGeneration;
+        const isCurrent = () => State.map === map && State.layerGeneration === generation;
 
         try {
             const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const rawData = await response.json();
-            const data = processGeoJSON(projectId, rawData);
-
-            Geometry.cacheLineFeatures(projectId, data);
+            const rawData = await readViewerGeoJSON(response, { isCurrent });
+            const prepared = await prepareProjectGeoJSON(rawData, { isCurrent });
+            if (!isCurrent()) return;
+            const { data, domain, snapPoints, boundsCoordinates } = prepared;
+            State.projectDepthDomains.set(String(projectId), domain);
+            Geometry.cachePreparedSnapPoints(projectId, snapPoints);
 
             if (map.getSource(sourceId)) {
                 map.getSource(sourceId).setData(data);
@@ -1192,18 +1302,13 @@ export const Layers = {
 
             }
 
-            const bounds = computeGeoJSONBounds(data);
-            if (!bounds.isEmpty()) {
-                State.projectBounds.set(String(projectId), bounds);
+            if (boundsCoordinates) {
+                State.projectBounds.set(String(projectId), new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
             }
-
-            this.recomputeActiveDepthDomain();
-            if (this.colorMode === 'depth') {
-                this.applyDepthLineColors();
-            }
+            await this.scheduleDisplayUpdate('depth');
 
         } catch (e) {
-            console.error(`Error loading GeoJSON for project ${projectId}`, e);
+            if (isCurrent()) console.error(`Error loading GeoJSON for project ${projectId}`, e);
         }
     },
 
@@ -1723,173 +1828,66 @@ export const Layers = {
      * GPS tracks should be below survey lines but visible.
      * Call this after all layers are loaded to fix z-ordering.
      */
-    reorderLayers: function () {
+    reorderLayers() {
+        const map = State.map;
+        const generation = State.layerGeneration;
+        return ViewerUpdates.schedule('layer-order', context => {
+            if (map === State.map && generation === State.layerGeneration) return this.reorderLayersNow(context);
+        });
+    },
+
+    async reorderLayersNow(context) {
         const map = State.map;
         if (!map) return;
-
-        console.log('🔄 Reordering layers to ensure proper z-ordering...');
-
-        // Get all layer IDs
-        const style = map.getStyle();
-        if (!style || !style.layers) return;
-
-        const allLayerIds = style.layers.map(l => l.id);
-
-        // Find all layer types
-        const gpsTrackLineLayers = allLayerIds.filter(id => id.startsWith('gps-track-line-'));
-        const gpsTrackPointLayers = allLayerIds.filter(id => id.startsWith('gps-track-points-'));
-        const gisLayerLayers = allLayerIds.filter(id => id.startsWith('gis-layer-'));
-        const gisGeometryLayers = allLayerIds.filter(id => id.startsWith('gis-geometry-') && !id.startsWith('gis-geometry-draft-'));
-        const stationCircleLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'));
-        const stationBiologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-biology-icons'));
-        const stationBoneIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-bone-icons'));
-        const stationArtifactIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-artifact-icons'));
-        const stationGeologyIconLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-geology-icons'));
-        const stationLabelLayers = allLayerIds.filter(id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'));
-        const surfaceStationSymbolLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && !id.includes('-labels'));
-        const surfaceStationLabelLayers = allLayerIds.filter(id => id.startsWith('surface-stations-') && id.includes('-labels'));
-        const landmarkLayers = allLayerIds.filter(id => id.startsWith('landmarks-'));
-        const cylinderInstallLayers = allLayerIds.filter(id => id.startsWith('cylinder-installs'));
-        const explorationLeadLayers = allLayerIds.filter(id => id.startsWith('exploration-leads'));
-
-        // Move layers to top in order (later moves go on top)
-        // Order: GPS track lines -> GPS track points -> subsurface stations -> surface stations -> Landmarks
-
-        // GPS track line layers
-        gpsTrackLineLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
+        // Use our registries: getStyle serializes every GeoJSON source, even
+        // when the only information needed is a few hundred layer IDs.
+        function* registeredLayerIds() {
+            for (const registry of [State.allGPSTrackLayers, State.allGISLayerLayers,
+                State.allGISGeometryLayers, State.allProjectLayers, State.allNetworkLayers]) {
+                for (const ids of registry.values()) yield* ids;
             }
-        });
-
-        // GPS track point layers
-        gpsTrackPointLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // GIS display products render above GPS tracks but below stations and
-        // editable survey features. One logical GIS Layer can own many roles.
-        [...gisLayerLayers, ...gisGeometryLayers].forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might have been removed during permission reconciliation.
-            }
-        });
-
-        // Subsurface station circles (sensor stations)
-        stationCircleLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Subsurface station biology icons
-        stationBiologyIconLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Subsurface station bone icons
-        stationBoneIconLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Subsurface station artifact icons
-        stationArtifactIconLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Subsurface station geology icons
-        stationGeologyIconLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Subsurface station labels
-        stationLabelLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Surface station symbols
-        surfaceStationSymbolLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Surface station labels
-        surfaceStationLabelLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Move cylinder install and exploration lead layers
-        cylinderInstallLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        explorationLeadLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Finally move Landmark layers (on top of everything)
-        landmarkLayers.forEach(layerId => {
-            try {
-                map.moveLayer(layerId);
-            } catch (e) {
-                // Layer might not exist
-            }
-        });
-
-        // Temporary measurements stay legible after asynchronous overlay refreshes.
-        for (const role of DEFAULTS.MEASUREMENT.LAYER_ROLES) {
-            const id = `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${role}`;
-            if (map.getLayer(id)) map.moveLayer(id);
+            yield* PROJECT_SCOPED_MARKER_LAYER_IDS;
+            yield* ['landmarks-layer', 'landmarks-labels'];
         }
-
-        // Draft handles must stay above every selectable survey overlay.
-        allLayerIds.filter(id => id.startsWith('gis-geometry-draft-')).forEach(id => map.moveLayer(id));
-        console.log('✅ Layer reordering complete');
+        const matches = [
+            id => id.startsWith('gps-track-line-'),
+            id => id.startsWith('gps-track-points-'),
+            id => id.startsWith('gis-layer-'),
+            id => id.startsWith('gis-geometry-') && !id.startsWith('gis-geometry-draft-'),
+            id => id.includes('stations-') && id.includes('-circles') && !id.includes('surface-'),
+            id => id.includes('stations-') && id.includes('-biology-icons'),
+            id => id.includes('stations-') && id.includes('-bone-icons'),
+            id => id.includes('stations-') && id.includes('-artifact-icons'),
+            id => id.includes('stations-') && id.includes('-geology-icons'),
+            id => id.includes('stations-') && id.includes('-labels') && !id.includes('surface-'),
+            id => id.startsWith('surface-stations-') && !id.includes('-labels'),
+            id => id.startsWith('surface-stations-') && id.includes('-labels'),
+            id => id.startsWith('cylinder-installs'),
+            id => id.startsWith('exploration-leads'),
+            id => id.startsWith('landmarks-'),
+        ];
+        const groups = matches.map(() => []);
+        const seen = new Set();
+        for (const id of registeredLayerIds()) {
+            if (context.shouldYield() && !await context.yield()) return;
+            if (!context.isCurrent() || map !== State.map) return;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            for (let index = 0; index < matches.length; index++) {
+                if (matches[index](id)) groups[index].push(id);
+            }
+        }
+        // Later moves appear above earlier ones. Measurements and draft handles
+        // stay above survey overlays, even when another update interrupts us.
+        groups.push(DEFAULTS.MEASUREMENT.LAYER_ROLES.map(role => `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${role}`),
+            DEFAULTS.GIS_GEOMETRY.DRAFT_LAYER_ROLES.map(role => `${DEFAULTS.GIS_GEOMETRY.DRAFT_LAYER_PREFIX}${role}`));
+        for (const group of groups) {
+            for (const id of group) {
+                if (context.shouldYield() && !await context.yield()) return;
+                if (!context.isCurrent() || map !== State.map) return;
+                if (map.getLayer(id)) map.moveLayer(id);
+            }
+        }
     },
 
     /**

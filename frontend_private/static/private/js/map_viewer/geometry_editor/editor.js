@@ -8,7 +8,7 @@ import {
 } from './geometry.js';
 
 const SOURCE = 'gis-geometry-draft-source';
-const LAYERS = ['fill', 'line', 'bbox', 'midpoints', 'vertices'].map(role => `gis-geometry-draft-${role}`);
+const LAYERS = DEFAULTS.GIS_GEOMETRY.DRAFT_LAYER_ROLES.map(role => `${DEFAULTS.GIS_GEOMETRY.DRAFT_LAYER_PREFIX}${role}`);
 
 function element(tag, className, text) {
     const node = document.createElement(tag);

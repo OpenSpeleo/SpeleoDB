@@ -1,3 +1,4 @@
+import { flushPreferenceWrites } from '../display_preference_storage.js';
 import { ProjectPanel } from './project_panel.js';
 import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
@@ -32,7 +33,8 @@ vi.mock('../map/layers.js', () => ({
         saveProjectVisibilityPref: vi.fn(),
         isProjectVisible: vi.fn(() => true),
         toggleProjectVisibility: vi.fn(),
-        applyProjectVisibility: vi.fn(),
+        setProjectVisibilityBatch: vi.fn(),
+        whenDisplayApplied: vi.fn(async () => {}),
         recomputeActiveDepthDomain: vi.fn(),
         applyDepthLineColors: vi.fn(),
         colorMode: 'project',
@@ -58,10 +60,13 @@ describe('ProjectPanel', () => {
         Config.projects = [];
         State.projectBounds = new Map();
         State.map = null;
+        ProjectPanel.destroy();
         vi.clearAllMocks();
+        Config.getProjectById.mockImplementation(id => Config.projects.find(project => project.id === String(id)));
     });
 
     afterEach(() => {
+        ProjectPanel.destroy();
         document.body.innerHTML = '';
     });
 
@@ -205,15 +210,20 @@ describe('ProjectPanel', () => {
             expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', false, false);
         });
 
-        it('refreshes the list after toggling', () => {
+        it('patches the existing row without replacing the focused toggle', () => {
             Config.projects = [{ id: 'p-1', name: 'Test' }];
             Config.getProjectById.mockReturnValue({ id: 'p-1', name: 'Test' });
             ProjectPanel.render();
             const spy = vi.spyOn(ProjectPanel, 'refreshList');
 
-            ProjectPanel.toggleProject('p-1', true);
+            const input = document.querySelector('.project-button input');
+            input.focus();
+            ProjectPanel.toggleProject('p-1', false);
 
-            expect(spy).toHaveBeenCalled();
+            expect(input.checked).toBe(false);
+            expect(document.activeElement).toBe(input);
+            expect(document.querySelector('.project-button input')).toBe(input);
+            expect(spy).not.toHaveBeenCalled();
             spy.mockRestore();
         });
     });
@@ -340,9 +350,9 @@ describe('ProjectPanel', () => {
 
             ProjectPanel.init();
 
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-1', false);
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-2', false);
-            expect(Layers.applyProjectVisibility).not.toHaveBeenCalledWith('p-3', false);
+            expect(Layers.setProjectVisibilityBatch).toHaveBeenCalledExactlyOnceWith([
+                { projectId: 'p-1', visible: false }, { projectId: 'p-2', visible: false },
+            ]);
         });
 
         it('does not call applyProjectVisibility on init when all countries are visible', () => {
@@ -353,7 +363,7 @@ describe('ProjectPanel', () => {
 
             ProjectPanel.init();
 
-            expect(Layers.applyProjectVisibility).not.toHaveBeenCalled();
+            expect(Layers.setProjectVisibilityBatch).not.toHaveBeenCalled();
         });
 
         it('country toggle OFF hides projects on map via applyProjectVisibility', () => {
@@ -368,8 +378,9 @@ describe('ProjectPanel', () => {
             toggle.checked = false;
             toggle.dispatchEvent(new Event('change', { bubbles: true }));
 
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-1', false);
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-2', false);
+            expect(Layers.setProjectVisibilityBatch).toHaveBeenCalledExactlyOnceWith([
+                { projectId: 'p-1', visible: false }, { projectId: 'p-2', visible: false },
+            ]);
         });
 
         it('country toggle OFF does not call toggleProjectVisibility (preserves prefs)', () => {
@@ -401,17 +412,16 @@ describe('ProjectPanel', () => {
             const toggle = document.querySelector('.country-toggle');
             toggle.checked = false;
             toggle.dispatchEvent(new Event('change', { bubbles: true }));
-            Layers.applyProjectVisibility.mockClear();
+            Layers.setProjectVisibilityBatch.mockClear();
 
             // Now turn country back ON
             const toggle2 = document.querySelector('.country-toggle');
             toggle2.checked = true;
             toggle2.dispatchEvent(new Event('change', { bubbles: true }));
 
-            // p-1 was individually ON -> should be visible
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-1', true);
-            // p-2 was individually OFF -> should stay hidden
-            expect(Layers.applyProjectVisibility).toHaveBeenCalledWith('p-2', false);
+            expect(Layers.setProjectVisibilityBatch).toHaveBeenCalledExactlyOnceWith([
+                { projectId: 'p-1', visible: true }, { projectId: 'p-2', visible: false },
+            ]);
         });
 
         it('shows country toggle as checked by default (country visible)', () => {
@@ -436,13 +446,15 @@ describe('ProjectPanel', () => {
             toggle.checked = false;
             toggle.dispatchEvent(new Event('change', { bubbles: true }));
 
+            expect(localStorage.setItem).not.toHaveBeenCalled();
+            flushPreferenceWrites();
             expect(localStorage.setItem).toHaveBeenCalledWith(
                 'speleo_country_visibility',
                 expect.any(String)
             );
         });
 
-        it('country toggle triggers depth domain recomputation', () => {
+        it('delegates one country batch for shared marker and depth reconciliation', () => {
             Config.projects = [
                 { id: 'p-1', name: 'Alpha', country: 'FR' },
             ];
@@ -454,7 +466,30 @@ describe('ProjectPanel', () => {
             toggle.checked = false;
             toggle.dispatchEvent(new Event('change', { bubbles: true }));
 
-            expect(Layers.recomputeActiveDepthDomain).toHaveBeenCalled();
+            expect(Layers.setProjectVisibilityBatch).toHaveBeenCalledExactlyOnceWith([{ projectId: 'p-1', visible: false }]);
+            expect(Layers.recomputeActiveDepthDomain).not.toHaveBeenCalled();
+        });
+
+        it('uses country intent before its deferred write and preserves existing controls', () => {
+            Config.projects = [{ id: 'p-1', name: 'Alpha', country: 'FR' }];
+            Config.getProjectById.mockReturnValue(Config.projects[0]);
+            Layers.isProjectVisible.mockReturnValue(true);
+            ProjectPanel.render();
+            const country = document.querySelector('.country-toggle');
+            const project = document.querySelector('.project-button input');
+            country.click();
+            expect(localStorage.setItem).not.toHaveBeenCalled();
+            expect(ProjectPanel.isCountryVisible('FR')).toBe(false);
+            ProjectPanel.toggleProject('p-1', true);
+            expect(Layers.toggleProjectVisibility).toHaveBeenLastCalledWith('p-1', true, false);
+            expect(document.querySelector('.country-toggle')).toBe(country);
+            expect(document.querySelector('.project-button input')).toBe(project);
+            expect(document.querySelector('.project-button').classList.contains('opacity-50')).toBe(true);
+            country.click();
+            expect(ProjectPanel.isCountryVisible('FR')).toBe(true);
+            flushPreferenceWrites();
+            expect(JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY))).toEqual({});
+            expect(localStorage.setItem).toHaveBeenCalledTimes(1);
         });
 
         it('individual toggle ON when country OFF saves pref but stays hidden on map', () => {
@@ -467,7 +502,7 @@ describe('ProjectPanel', () => {
             ProjectPanel.toggleProject('p-1', true);
 
             expect(Layers.toggleProjectVisibility).toHaveBeenCalledWith('p-1', true, false);
-            expect(Layers.applyProjectVisibility).not.toHaveBeenCalled();
+            expect(Layers.setProjectVisibilityBatch).not.toHaveBeenCalled();
         });
     });
 
@@ -512,6 +547,8 @@ describe('ProjectPanel', () => {
             const header = document.querySelector('.country-group-header');
             header.click();
 
+            expect(localStorage.setItem).not.toHaveBeenCalled();
+            flushPreferenceWrites();
             expect(localStorage.setItem).toHaveBeenCalledWith(
                 'speleo_country_collapsed',
                 expect.any(String)

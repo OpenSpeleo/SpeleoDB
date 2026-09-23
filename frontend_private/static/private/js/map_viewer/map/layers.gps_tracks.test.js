@@ -6,19 +6,6 @@ vi.mock('../api.js', () => ({
     API: { getGPSTrackDetails: mocks.getGPSTrackDetails },
 }));
 
-vi.mock('../config.js', () => ({
-    Config: {},
-    DEFAULTS: { ZOOM_LEVELS: {} },
-}));
-
-vi.mock('../state.js', () => ({
-    State: {
-        gpsTrackLayerStates: new Map(),
-        gpsTrackLoadingStates: new Map(),
-        gpsTrackCache: new Map(),
-    },
-}));
-
 vi.mock('./colors.js', () => ({ Colors: {} }));
 vi.mock('./geometry.js', () => ({ Geometry: {} }));
 
@@ -27,6 +14,7 @@ import { Layers } from './layers.js';
 
 describe('GPS Track lazy loading', () => {
     beforeEach(() => {
+        State.resetLayerState();
         State.gpsTrackLayerStates.clear();
         State.gpsTrackLoadingStates.clear();
         State.gpsTrackCache.clear();
@@ -47,8 +35,8 @@ describe('GPS Track lazy loading', () => {
 
         await Layers.toggleGPSTrackVisibility('track-1', true);
 
-        expect(mocks.getGPSTrackDetails).toHaveBeenCalledWith('track-1');
-        expect(fetch).toHaveBeenCalledWith('/fresh-signed-url');
+        expect(mocks.getGPSTrackDetails).toHaveBeenCalledWith('track-1', { signal: expect.any(AbortSignal) });
+        expect(fetch).toHaveBeenCalledWith('/fresh-signed-url', { signal: expect.any(AbortSignal) });
         expect(State.gpsTrackCache.has('track-1')).toBe(true);
     });
 
@@ -74,7 +62,7 @@ describe('GPS Track lazy loading', () => {
         expect(mocks.getGPSTrackDetails).toHaveBeenCalledTimes(2);
         expect(fetch).toHaveBeenCalledTimes(2);
         expect(install).toHaveBeenCalledTimes(2);
-        expect(install).toHaveBeenLastCalledWith('track-1', geojson);
+        expect(install).toHaveBeenLastCalledWith('track-1', geojson, { isCurrent: expect.any(Function), prepared: { boundsCoordinates: null } });
         expect(Layers.isGPSTrackVisible('track-1')).toBe(true);
         expect(Layers.isGPSTrackLoading('track-1')).toBe(false);
         expect(State.gpsTrackCache.get('track-1')).toEqual(geojson);

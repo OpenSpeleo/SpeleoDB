@@ -17,10 +17,10 @@ function createMapMock() {
     return { map, handlers };
 }
 
-function initializeDepthLegend(limitFeet = null, unit = 'ft', measuredMaximum = 200) {
+async function initializeDepthLegend(limitFeet = null, unit = 'ft', measuredMaximum = 200) {
     State.projectDepthDomains.set('1', measuredMaximum === null ? null : { min: 0, max: measuredMaximum });
     Layers.setDepthLimit(limitFeet, unit);
-    Layers.setColorMode('depth');
+    await Layers.setColorMode('depth');
     const { map, handlers } = createMapMock();
     DepthLegend.init(map);
     return {
@@ -48,7 +48,7 @@ describe('DepthLegend', () => {
         document.body.innerHTML = '';
     });
 
-    it('shows N/A labels when in depth mode with no active domain', () => {
+    it('shows N/A labels when in depth mode with no active domain', async () => {
         const { map } = createMapMock();
         DepthLegend.init(map);
 
@@ -63,7 +63,7 @@ describe('DepthLegend', () => {
         expect(legend.textContent).toContain('N/A');
     });
 
-    it('starts with restored depth preferences and keeps the scale when station markers are hidden', () => {
+    it('starts with restored depth preferences and keeps the scale when station markers are hidden', async () => {
         State.displayPreferences.colorMode = 'depth';
         State.activeDepthDomain = { min: 0, max: 80 };
         const { map } = createMapMock();
@@ -71,12 +71,28 @@ describe('DepthLegend', () => {
         const legend = document.getElementById('depth-scale-fixed');
         expect(legend.style.display).toBe('block');
         expect(legend.textContent).toContain('80 ft');
-        Layers.setCategoryVisibility('surveyStations', false);
+        await Layers.setCategoryVisibility('surveyStations', false);
         expect(legend.style.display).toBe('block');
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 80 });
     });
 
-    it('updates gauge labels when depth domain max changes', () => {
+    it('withholds the legend after partial application failure until a successful retry', async () => {
+        await initializeDepthLegend();
+        const legend = document.getElementById('depth-scale-fixed');
+        expect(legend.style.display).toBe('block');
+        State.displayUpdatePending = true;
+        window.dispatchEvent(new CustomEvent('speleo:display-update-pending'));
+        State.displayUpdatePending = false;
+        window.dispatchEvent(new CustomEvent('speleo:display-update-failed'));
+        window.dispatchEvent(new CustomEvent('speleo:depth-domain-updated', {
+            detail: { domain: { min: 0, max: 80 } },
+        }));
+        expect(legend.style.display).toBe('none');
+        await Layers.setColorMode('depth');
+        expect(legend.style.display).toBe('block');
+    });
+
+    it('updates gauge labels when depth domain max changes', async () => {
         const { map } = createMapMock();
         DepthLegend.init(map);
 
@@ -92,7 +108,7 @@ describe('DepthLegend', () => {
         expect(document.getElementById('depth-scale-fixed').textContent).toContain('25 ft');
     });
 
-    it('updates cursor position and label on mouse move with line depth', () => {
+    it('updates cursor position and label on mouse move with line depth', async () => {
         const { map, handlers } = createMapMock();
         DepthLegend.init(map);
 
@@ -123,16 +139,16 @@ describe('DepthLegend', () => {
         [10.06, 'ft', '10.06 ft'],
         [1e-12, 'ft', '1e-12 ft'],
         [1e-12, 'm', '3.048e-13 m'],
-    ])('shows the precise fixed maximum %s in %s', (maximum, unit, expected) => {
-        const { hover } = initializeDepthLegend(maximum, unit);
+    ])('shows the precise fixed maximum %s in %s', async (maximum, unit, expected) => {
+        const { hover } = await initializeDepthLegend(maximum, unit);
         expect(document.getElementById('depth-scale-fixed').textContent).toContain(expected);
         hover({ depth_val: 200 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe(expected);
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(100% - 1px)');
     });
 
-    it('uses the selected unit for unsaturated readings and preserves actual negative readings', () => {
-        const { hover } = initializeDepthLegend(100, 'm');
+    it('uses the selected unit for unsaturated readings and preserves actual negative readings', async () => {
+        const { hover } = await initializeDepthLegend(100, 'm');
         hover({ depth_val: 40 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe('12.2 m');
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(40% - 1px)');
@@ -141,37 +157,40 @@ describe('DepthLegend', () => {
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(0% - 1px)');
     });
 
-    it('never rounds a displayed reading above the custom maximum', () => {
-        const { hover } = initializeDepthLegend(1.06);
+    it('never rounds a displayed reading above the custom maximum', async () => {
+        const { hover } = await initializeDepthLegend(1.06);
         hover({ depth_val: 1.059 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe('1.06 ft');
     });
 
-    it('preserves the public default axis rounding and unbounded raw readings', () => {
-        const { hover } = initializeDepthLegend(null, 'ft', 80.2);
+    it('preserves the public default axis rounding and unbounded raw readings', async () => {
+        const { hover } = await initializeDepthLegend(null, 'ft', 80.2);
         expect(document.getElementById('depth-scale-fixed').textContent).toContain('81 ft');
         hover({ depth_val: 90 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe('90.0 ft');
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(100% - 1px)');
     });
 
-    it('refreshes a stationary cursor on limit, unit and reset without querying the map again', () => {
-        const { map, hover } = initializeDepthLegend(100);
+    it('refreshes a stationary cursor on limit, unit and reset without querying the map again', async () => {
+        const { map, hover } = await initializeDepthLegend(100);
         hover({ depth_val: 80 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe('80.0 ft');
         Layers.setDepthLimit(50, 'ft');
+        await Layers.whenDisplayApplied();
         expect(document.getElementById('depth-cursor-label').textContent).toBe('50 ft');
         Layers.setDepthLimit(50, 'm');
+        await Layers.whenDisplayApplied();
         expect(document.getElementById('depth-cursor-label').textContent).toBe('15.24 m');
         expect(document.getElementById('depth-cursor-label').style.display).toBe('block');
         Layers.setDepthLimit(null, 'ft');
+        await Layers.whenDisplayApplied();
         expect(document.getElementById('depth-cursor-label').textContent).toBe('80.0 ft');
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(40% - 1px)');
         expect(map.queryRenderedFeatures).toHaveBeenCalledTimes(1);
     });
 
-    it('recovers legacy normalized readings from the cached project domain before clipping', () => {
-        const { hover } = initializeDepthLegend(100);
+    it('recovers legacy normalized readings from the cached project domain before clipping', async () => {
+        const { hover } = await initializeDepthLegend(100);
         hover({ depth_norm: 0.75 });
         expect(document.getElementById('depth-cursor-label').textContent).toBe('100 ft');
         hover({ depth_norm: 0.25 });
@@ -179,22 +198,22 @@ describe('DepthLegend', () => {
         expect(document.getElementById('depth-cursor-indicator').style.left).toBe('calc(50% - 1px)');
     });
 
-    it('keeps the legacy normalized fallback for a source without a project cache', () => {
-        const { hover } = initializeDepthLegend(100);
+    it('keeps the legacy normalized fallback for a source without a project cache', async () => {
+        const { hover } = await initializeDepthLegend(100);
         hover({ depth_norm: 0.25 }, 'unknown-source');
         expect(document.getElementById('depth-cursor-label').textContent).toBe('25.0 ft');
     });
 
     it.each([{ depth_val: null }, { depth_val: '' }, { depth_val: 'bad' }, {}])(
-        'does not invent a cursor value for missing or invalid depth %s', properties => {
-            const { hover } = initializeDepthLegend(100);
+        'does not invent a cursor value for missing or invalid depth %s', async properties => {
+            const { hover } = await initializeDepthLegend(100);
             hover(properties);
             expect(document.getElementById('depth-cursor-label').style.display).toBe('none');
         }
     );
 
-    it('leaves unavailable depth N/A with a cap and recognizes measured zero depth', () => {
-        const { hover } = initializeDepthLegend(100, 'm', null);
+    it('leaves unavailable depth N/A with a cap and recognizes measured zero depth', async () => {
+        const { hover } = await initializeDepthLegend(100, 'm', null);
         expect(document.getElementById('depth-scale-fixed').textContent).toContain('N/A');
         hover({ depth_val: 40 });
         expect(document.getElementById('depth-cursor-label').style.display).toBe('none');
@@ -205,25 +224,26 @@ describe('DepthLegend', () => {
         expect(document.getElementById('depth-cursor-label').textContent).toBe('0.0 m');
     });
 
-    it.each(['mouseout', 'colorMode', 'shotMode', 'visibility'])('clears cached hover on %s', trigger => {
-        const { hover, handlers } = initializeDepthLegend(100);
+    it.each(['mouseout', 'colorMode', 'shotMode', 'visibility'])('clears cached hover on %s', async trigger => {
+        const { hover, handlers } = await initializeDepthLegend(100);
         hover({ depth_val: 80 });
         if (trigger === 'mouseout') handlers.mouseout();
-        if (trigger === 'colorMode') Layers.setColorMode('project');
-        if (trigger === 'shotMode') Layers.setColorMode('shot');
-        if (trigger === 'visibility') Layers.toggleProjectVisibility('1', false);
+        if (trigger === 'colorMode') await Layers.setColorMode('project');
+        if (trigger === 'shotMode') await Layers.setColorMode('shot');
+        if (trigger === 'visibility') await Layers.toggleProjectVisibility('1', false);
         expect(document.getElementById('depth-cursor-label').style.display).toBe('none');
         expect(DepthLegend.hoveredLineFeature).toBeNull();
         Layers.setDepthLimit(50, 'm');
+        await Layers.whenDisplayApplied();
         expect(document.getElementById('depth-cursor-label').style.display).toBe('none');
     });
 
-    it.each(['toggle', 'preference', 'removed'])('clears stale project hover after %s while another project keeps the domain', change => {
-        const { hover } = initializeDepthLegend(100);
+    it.each(['toggle', 'preference', 'removed'])('clears stale project hover after %s while another project keeps the domain', async change => {
+        const { hover } = await initializeDepthLegend(100);
         Config._projects.push({ id: '2' });
         State.projectDepthDomains.set('2', { min: 0, max: 400 });
         hover({ depth_val: 80 });
-        if (change === 'toggle') Layers.toggleProjectVisibility('1', false);
+        if (change === 'toggle') await Layers.toggleProjectVisibility('1', false);
         if (change === 'preference') {
             State.projectLayerStates.set('1', false);
             Layers.recomputeActiveDepthDomain();

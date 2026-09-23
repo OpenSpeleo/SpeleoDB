@@ -76,6 +76,8 @@ export async function initPrivateMapViewer() {
     console.log('🚀 SpeleoDB Map Viewer Initializing...');
 
     // 1. Initialize State
+    ProjectPanel.destroy?.();
+    Layers.cancelPendingWork?.();
     State.resetLayerState();
     DisplayPreferences.init({ persist: true });
 
@@ -562,14 +564,9 @@ export async function initPrivateMapViewer() {
 
     async function loadVisibleGPSTrackLayers() {
         const visibleTracks = Config.gpsTracks.filter(track => Layers.isGPSTrackVisible(track.id));
-        await Promise.all(visibleTracks.map(async (track) => {
-            const trackId = String(track.id);
-            if (State.gpsTrackCache.has(trackId)) {
-                await Layers.addGPSTrackLayer(trackId, State.gpsTrackCache.get(trackId));
-            } else {
-                await Layers.toggleGPSTrackVisibility(trackId, true);
-            }
-        }));
+        await Promise.all(visibleTracks.map(track => (
+            Layers.toggleGPSTrackVisibility(track.id, true)
+        )));
         GPSTracksPanel.refreshList();
     }
 
@@ -650,8 +647,8 @@ export async function initPrivateMapViewer() {
                     measurementTool.setAvailable(available);
                 },
                 palette: getRuntimeContext().geometryColors || [],
-                onLoaded(record) {
-                    Layers.refreshGISGeometry(record);
+                async onLoaded(record) {
+                    await Layers.refreshGISGeometry(record);
                     GISGeometriesPanel.refreshList();
                 },
                 onPreview(id, active) {
@@ -663,8 +660,8 @@ export async function initPrivateMapViewer() {
                         fitGISGeometry(map, State.gisGeometryBounds.get(String(id)));
                     }
                 },
-                onSaved(record) {
-                    Layers.acceptGISGeometry(record);
+                async onSaved(record) {
+                    await Layers.acceptGISGeometry(record);
                     GISGeometriesPanel.refreshList();
                 },
             });

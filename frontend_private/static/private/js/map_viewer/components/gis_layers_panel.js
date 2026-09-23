@@ -2,6 +2,7 @@ import { Config, DEFAULTS } from '../config.js';
 import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Utils } from '../utils.js';
+import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.js';
 
 import { positionOverlayPanel } from './panel_position.js';
 
@@ -9,8 +10,11 @@ export const GISLayersPanel = {
     _resizeObserver: null,
     _mutationObserver: null,
     _loadingListener: null,
+    _rows: new Map(),
+    _requests: new Map(),
 
     init() {
+        this.destroy();
         if (Config.gisLayers.length === 0) return;
         this.render();
         this.bindEvents();
@@ -88,6 +92,7 @@ export const GISLayersPanel = {
             return;
         }
         if (!list) return;
+        this._rows.clear();
         if (panel?.style.display === 'none' && minimized?.style.display === 'none') {
             minimized.style.display = 'block';
         }
@@ -104,6 +109,7 @@ export const GISLayersPanel = {
             item.className = 'gis-layer-button bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
             if (!isVisible) item.classList.add('opacity-50');
             item.dataset.layerId = layer.id;
+            this._rows.set(String(layer.id), item);
             item.innerHTML = Utils.safeHtml`
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2 overflow-hidden flex-1">
@@ -113,7 +119,7 @@ export const GISLayersPanel = {
                     <div class="flex items-center gap-2">
                         <div class="gis-layer-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" aria-label="Loading GIS Layer"></div>
                         <label class="toggle-switch m-0 scale-75 origin-right">
-                            <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')} aria-label="Show ${layer.name}">
+                            <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} aria-label="Show ${layer.name}">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -126,16 +132,20 @@ export const GISLayersPanel = {
             });
             checkbox.addEventListener('change', async event => {
                 event.stopPropagation();
-                checkbox.disabled = true;
-                const displayed = await Layers.toggleGISLayerVisibility(layer.id, checkbox.checked);
-                checkbox.disabled = false;
-                this.refreshList();
-                if (checkbox.checked && !displayed) {
-                    Utils.showNotification('error', `Unable to display ${layer.name}.`);
-                }
+                await this.toggleLayer(layer.id, checkbox.checked);
             });
             item.querySelector('.toggle-switch').addEventListener('click', event => event.stopPropagation());
-            const geometryTypes = Layers.getGISLayerGeometryTypes(layer.id);
+            this.updateGeometryControls(item, layer);
+            return item;
+        }));
+    },
+
+    updateGeometryControls(item, layer) {
+        const geometryTypes = Layers.getGISLayerGeometryTypes(layer.id);
+        const signature = JSON.stringify(geometryTypes);
+        if (item.dataset.geometryTypes !== signature) {
+            item.querySelector('[data-geometry-type-controls]')?.remove();
+            item.dataset.geometryTypes = signature;
             if (geometryTypes.length > 1) {
                 const controls = document.createElement('div');
                 controls.className = 'ml-5 mt-2 pl-2 border-l border-slate-600 flow-y-1';
@@ -153,7 +163,7 @@ export const GISLayersPanel = {
                         </span>`;
                     const typeCheckbox = row.querySelector('input');
                     typeCheckbox.checked = Layers.isGISLayerGeometryTypeVisible(layer.id, type);
-                    typeCheckbox.disabled = !isVisible || isLoading;
+                    typeCheckbox.disabled = !Layers.isGISLayerVisible(layer.id);
                     typeCheckbox.addEventListener('change', event => {
                         event.stopPropagation();
                         if (typeCheckbox.disabled) return;
@@ -163,28 +173,55 @@ export const GISLayersPanel = {
                 }
                 item.append(controls);
             }
-            return item;
-        }));
+        }
+        item.querySelectorAll('[data-geometry-type]').forEach(row => {
+            const input = row.querySelector('input');
+            input.checked = Layers.isGISLayerGeometryTypeVisible(layer.id, row.dataset.geometryType);
+            input.disabled = !Layers.isGISLayerVisible(layer.id);
+        });
     },
 
     async activateAndZoom(layerId) {
         const id = String(layerId);
-        if (Layers.isGISLayerLoading(id)) return;
-        if (!Layers.isGISLayerVisible(id)) {
-            const displayed = await Layers.toggleGISLayerVisibility(id, true);
-            this.refreshList();
-            if (!displayed) {
-                Utils.showNotification('error', `Unable to display ${Config.getGISLayerById(id)?.name || 'GIS Layer'}.`);
-                return;
-            }
-        }
+        const map = State.map;
+        const navigation = beginMapNavigation(map, `gis-layer:${id}`);
+        const displayed = await this.toggleLayer(id, true);
+        if (!displayed || !navigation.isCurrent() || State.map !== map) return;
         const bounds = State.gisLayerBounds.get(id);
-        if (bounds && State.map) {
-            State.map.fitBounds(bounds, {
+        if (bounds && map) {
+            map.fitBounds(bounds, {
                 padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING,
                 maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM
             });
         }
+    },
+
+    async toggleLayer(layerId, visible) {
+        const id = String(layerId);
+        const request = {};
+        this._requests.set(id, request);
+        if (!visible) cancelMapNavigation(`gis-layer:${id}`);
+        const applying = Layers.toggleGISLayerVisibility(id, visible);
+        this.updateRow(id);
+        const applied = await applying;
+        if (this._requests.get(id) !== request) return false;
+        this._requests.delete(id);
+        this.updateRow(id);
+        return applied;
+    },
+
+    updateRow(layerId) {
+        const id = String(layerId);
+        const row = this._rows.get(id);
+        if (!row) return;
+        const visible = Layers.isGISLayerVisible(id);
+        const loading = Layers.isGISLayerLoading(id) || this._requests.has(id);
+        row.querySelector('input').checked = visible;
+        row.classList.toggle('opacity-50', !visible);
+        row.querySelector('.gis-layer-loading-spinner').classList.toggle('hidden', !loading);
+        row.setAttribute('aria-busy', String(loading));
+        const layer = Config.getGISLayerById(id);
+        if (layer) this.updateGeometryControls(row, layer);
     },
 
     bindEvents() {
@@ -204,7 +241,7 @@ export const GISLayersPanel = {
         if (this._loadingListener) return;
         this._loadingListener = event => {
             const { layerId } = event.detail || {};
-            if (layerId) this.refreshList();
+            if (layerId) this.updateRow(layerId);
         };
         window.addEventListener('speleo:gis-layer-loading-changed', this._loadingListener);
     },
@@ -229,6 +266,9 @@ export const GISLayersPanel = {
     },
 
     destroy() {
+        this._requests.clear();
+        this._rows.forEach((_, id) => cancelMapNavigation(`gis-layer:${id}`));
+        this._rows.clear();
         this._resizeObserver?.disconnect();
         this._mutationObserver?.disconnect();
         this._resizeObserver = null;

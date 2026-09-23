@@ -31,8 +31,11 @@ export const DepthLegend = {
     colorMode: 'project',
     depthDomain: null,
     initialized: false,
+    displayReady: true,
     onColorModeChangedHandler: null,
     onDepthDomainUpdatedHandler: null,
+    onDisplayPendingHandler: null,
+    onDisplayAppliedHandler: null,
     onMapMouseMoveHandler: null,
     onMapMouseOutHandler: null,
     hoveredLineFeature: null,
@@ -44,6 +47,7 @@ export const DepthLegend = {
         this.colorMode = State.displayPreferences.colorMode;
         this.depthDomain = State.activeDepthDomain;
         this.initialized = true;
+        this.displayReady = !State.displayUpdatePending;
 
         this.onColorModeChangedHandler = (event) => {
             this.colorMode = event?.detail?.mode === 'depth' ? 'depth' : 'project';
@@ -71,9 +75,23 @@ export const DepthLegend = {
             this.updateDepthCursor(event);
         };
         this.onMapMouseOutHandler = () => this.hideDepthCursor();
+        this.onDisplayPendingHandler = () => {
+            this.displayReady = false;
+            const feature = this.hoveredLineFeature;
+            this.hideDepthCursor();
+            this.updateDepthLegendVisibility();
+            this.hoveredLineFeature = feature;
+        };
+        this.onDisplayAppliedHandler = () => {
+            this.displayReady = true;
+            this.updateDepthLegendVisibility();
+            this.renderDepthCursor();
+        };
 
         window.addEventListener('speleo:color-mode-changed', this.onColorModeChangedHandler);
         window.addEventListener('speleo:depth-domain-updated', this.onDepthDomainUpdatedHandler);
+        window.addEventListener('speleo:display-update-pending', this.onDisplayPendingHandler);
+        window.addEventListener('speleo:display-update-applied', this.onDisplayAppliedHandler);
 
         this.map.on('mousemove', this.onMapMouseMoveHandler);
         this.map.on('mouseout', this.onMapMouseOutHandler);
@@ -86,6 +104,8 @@ export const DepthLegend = {
 
         window.removeEventListener('speleo:color-mode-changed', this.onColorModeChangedHandler);
         window.removeEventListener('speleo:depth-domain-updated', this.onDepthDomainUpdatedHandler);
+        window.removeEventListener('speleo:display-update-pending', this.onDisplayPendingHandler);
+        window.removeEventListener('speleo:display-update-applied', this.onDisplayAppliedHandler);
 
         if (this.map && typeof this.map.off === 'function') {
             this.map.off('mousemove', this.onMapMouseMoveHandler);
@@ -155,18 +175,18 @@ export const DepthLegend = {
         try {
             const depthLegend = document.getElementById('depth-scale-fixed');
             if (!depthLegend) return;
-            const shouldShow = this.colorMode === 'depth';
+            const shouldShow = this.displayReady && !State.displayUpdatePending && this.colorMode === 'depth';
             depthLegend.style.display = shouldShow ? 'block' : 'none';
             if (!shouldShow) {
-                this.hideDepthCursor();
+                this.hideDepthCursor(!this.displayReady || State.displayUpdatePending);
             }
         } catch (e) {
             // Ignore visual update errors.
         }
     },
 
-    hideDepthCursor: function () {
-        this.hoveredLineFeature = null;
+    hideDepthCursor: function (preserveFeature = false) {
+        if (!preserveFeature) this.hoveredLineFeature = null;
         const indicator = document.getElementById('depth-cursor-indicator');
         const label = document.getElementById('depth-cursor-label');
         if (indicator) indicator.style.display = 'none';
@@ -204,8 +224,8 @@ export const DepthLegend = {
 
     renderDepthCursor() {
         const lineFeature = this.hoveredLineFeature;
-        if (this.colorMode !== 'depth' || !this.depthDomain || !lineFeature) {
-            this.hideDepthCursor();
+        if (!this.displayReady || State.displayUpdatePending || this.colorMode !== 'depth' || !this.depthDomain || !lineFeature) {
+            this.hideDepthCursor(!this.displayReady || State.displayUpdatePending);
             return;
         }
 

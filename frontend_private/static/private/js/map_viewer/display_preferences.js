@@ -3,6 +3,7 @@ import { Layers } from './map/layers.js';
 import { Colors } from './map/colors.js';
 import { isValidDepthLimit } from './map/depth.js';
 import { State, createDefaultDisplayPreferences } from './state.js';
+import { flushPreferenceWrites, schedulePreferenceWrite } from './display_preference_storage.js';
 
 function restorePreferences(stored) {
     if (!stored || Array.isArray(stored) || stored.version !== DEFAULTS.DISPLAY.STORAGE_VERSION) return;
@@ -38,15 +39,12 @@ export const DisplayPreferences = {
                 try { restorePreferences(JSON.parse(stored)); } catch { /* Malformed preferences use defaults. */ }
             }
             this._onChange = () => {
-                try {
-                    localStorage.setItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES, JSON.stringify({
+                schedulePreferenceWrite(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES,
+                    () => ({
                         version: DEFAULTS.DISPLAY.STORAGE_VERSION,
                         ...State.displayPreferences,
-                    }));
-                    this.storageAvailable = true;
-                } catch {
-                    this.storageAvailable = false;
-                }
+                    }),
+                    error => { this.storageAvailable = !error; });
             };
             window.addEventListener('speleo:display-preferences-changed', this._onChange);
         }
@@ -59,6 +57,7 @@ export const DisplayPreferences = {
     },
 
     destroy() {
+        flushPreferenceWrites(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES);
         if (this._onChange) window.removeEventListener('speleo:display-preferences-changed', this._onChange);
         this._onChange = null;
     },

@@ -15,6 +15,11 @@ beforeEach(() => {
     Config._gisGeometries = [];
     Config.gisGeometriesError = false;
     State.resetLayerState();
+    Layers.isGISGeometryVisible.mockImplementation(id => State.gisGeometryStates.get(String(id)) === true);
+    Layers.toggleGISGeometryVisibility.mockImplementation(async (id, visible) => {
+        State.gisGeometryStates.set(String(id), visible);
+        return true;
+    });
     State.map = { fitBounds: vi.fn() };
     editor = { create: vi.fn(), edit: vi.fn() };
 });
@@ -63,22 +68,28 @@ it('toggles without zoom and frames only on an explicit name click', async () =>
     }));
 });
 
-it('reflects visible geometry and disables the toggle while visibility is loading', async () => {
+it('keeps a pending toggle usable and ignores an older completion after reversal', async () => {
     Config._gisGeometries = [{ id: 'g1', name: 'Outline', color: '#123456' }];
     Layers.isGISGeometryVisible.mockReturnValueOnce(true);
     let finish;
-    Layers.toggleGISGeometryVisibility.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    Layers.toggleGISGeometryVisibility.mockImplementationOnce((id, visible) => {
+        State.gisGeometryStates.set(String(id), visible);
+        return new Promise(resolve => { finish = resolve; });
+    });
     GISGeometriesPanel.init(editor);
     const toggle = document.querySelector('.toggle-switch input');
     expect(toggle.checked).toBe(true);
     document.querySelector('.toggle-slider').click();
     expect(Layers.toggleGISGeometryVisibility).toHaveBeenCalledWith('g1', false);
-    expect(toggle.disabled).toBe(true);
+    expect(toggle.disabled).toBe(false);
+    expect(toggle.checked).toBe(false);
     document.querySelector('.toggle-slider').click();
-    expect(Layers.toggleGISGeometryVisibility).toHaveBeenCalledTimes(1);
+    expect(Layers.toggleGISGeometryVisibility).toHaveBeenCalledTimes(2);
+    expect(toggle.checked).toBe(true);
     finish(false);
-    await vi.waitFor(() => expect(document.querySelector('.toggle-switch input').disabled).toBe(false));
-    expect(document.querySelector('.toggle-switch input').checked).toBe(false);
+    await vi.waitFor(() => expect(GISGeometriesPanel.requests.size).toBe(0));
+    expect(document.querySelector('.toggle-switch input')).toBe(toggle);
+    expect(toggle.checked).toBe(true);
 });
 
 it('moves keyboard focus between the visible expand and collapse controls', () => {
@@ -91,27 +102,33 @@ it('moves keyboard focus between the visible expand and collapse controls', () =
     expect(document.activeElement).toBe(GISGeometriesPanel.minimized);
 });
 
-it('restores keyboard focus after a visibility toggle rebuilds the list', async () => {
+it('preserves the same focused control during a pending visibility change', async () => {
     Config._gisGeometries = [{ id: 'g1', name: 'Outline', color: '#123456' }];
     let finish;
-    Layers.toggleGISGeometryVisibility.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    Layers.toggleGISGeometryVisibility.mockImplementationOnce((id, visible) => {
+        State.gisGeometryStates.set(String(id), visible);
+        return new Promise(resolve => { finish = resolve; });
+    });
     GISGeometriesPanel.init(editor);
     GISGeometriesPanel.setExpanded(true);
     const toggle = document.querySelector('.gis-geometries-visibility');
     toggle.focus();
     toggle.click();
-    // Browsers blur a focused input when it becomes disabled during the request.
-    toggle.blur();
+    expect(toggle.disabled).toBe(false);
+    expect(document.activeElement).toBe(toggle);
     finish(true);
     await vi.waitFor(() => expect(document.activeElement).toBe(document.querySelector('.gis-geometries-visibility')));
-    expect(document.activeElement).not.toBe(toggle);
+    expect(document.activeElement).toBe(toggle);
     expect(document.activeElement.disabled).toBe(false);
 });
 
 it('does not steal focus moved elsewhere during a pending visibility change', async () => {
     Config._gisGeometries = [{ id: 'g1', name: 'Outline', color: '#123456' }];
     let finish;
-    Layers.toggleGISGeometryVisibility.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    Layers.toggleGISGeometryVisibility.mockImplementationOnce((id, visible) => {
+        State.gisGeometryStates.set(String(id), visible);
+        return new Promise(resolve => { finish = resolve; });
+    });
     GISGeometriesPanel.init(editor);
     GISGeometriesPanel.setExpanded(true);
     const toggle = document.querySelector('.gis-geometries-visibility');
@@ -121,7 +138,8 @@ it('does not steal focus moved elsewhere during a pending visibility change', as
     document.body.append(other);
     other.focus();
     finish(true);
-    await vi.waitFor(() => expect(toggle.isConnected).toBe(false));
+    await vi.waitFor(() => expect(GISGeometriesPanel.requests.size).toBe(0));
+    expect(toggle.isConnected).toBe(true);
     expect(document.activeElement).toBe(other);
 });
 

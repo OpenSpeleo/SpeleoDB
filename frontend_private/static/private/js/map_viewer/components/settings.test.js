@@ -1,3 +1,5 @@
+import { flushPreferenceWrites } from '../display_preference_storage.js';
+import { ViewerUpdates } from '../viewer_updates.js';
 import { readFileSync } from 'node:fs';
 import { DEFAULTS } from '../config.js';
 import { DisplayPreferences } from '../display_preferences.js';
@@ -32,6 +34,7 @@ afterEach(() => {
     DisplayPreferences.destroy();
     State.map = null;
     document.body.innerHTML = '';
+    ViewerUpdates.cancelAll();
     vi.restoreAllMocks();
 });
 
@@ -63,6 +66,7 @@ describe('private map Settings', () => {
         expect(State.displayPreferences.colorMode).toBe('shot');
         expect(shot.checked).toBe(true);
         expect(dialog.querySelector('#map-settings-depth-limit').hidden).toBe(true);
+        flushPreferenceWrites();
         expect(JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES)).colorMode).toBe('shot');
         MapSettings.destroy();
         DisplayPreferences.init({ persist: true });
@@ -111,6 +115,7 @@ describe('private map Settings', () => {
         expect(State.displayPreferences.categories.caveEntrances).toBe(false);
         expect(State.displayPreferences.categories.landmarks).toBe(false);
         expect(dialog.open).toBe(true);
+        flushPreferenceWrites();
         const saved = JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES));
         expect(saved.colorMode).toBe('depth');
         expect(saved.categories.caveEntrances).toBe(false);
@@ -186,6 +191,7 @@ describe('private map Settings', () => {
         vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
         dialog.querySelector('[data-category="landmarks"]').click();
         expect(State.displayPreferences.categories.landmarks).toBe(false);
+        flushPreferenceWrites();
         expect(DisplayPreferences.storageAvailable).toBe(false);
     });
 
@@ -347,6 +353,7 @@ describe('private depth limit controls', () => {
         Layers.setColorMode('depth');
         chooseUnit('m');
         commit('30');
+        flushPreferenceWrites();
         const stored = JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES));
         expect(stored.depthLimitFeet).toBeCloseTo(30 / 0.3048, 10);
         expect(stored.depthUnit).toBe('m');
@@ -364,4 +371,23 @@ describe('private depth limit controls', () => {
         expect(control('error').hidden).toBe(true);
         expect(control('value').value).toBe('');
     });
+});
+
+
+it('shows the newest switch intent while map application is pending', async () => {
+    let finish;
+    vi.spyOn(Layers, 'whenDisplayApplied').mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const input = dialog.querySelector('[data-category="landmarks"]');
+    input.focus();
+    input.click();
+    expect(input.checked).toBe(false);
+    expect(input.disabled).toBe(false);
+    expect(dialog.getAttribute('aria-busy')).toBe('true');
+    input.click();
+    expect(input.checked).toBe(true);
+    expect(State.displayPreferences.categories.landmarks).toBe(true);
+    expect(document.activeElement).toBe(input);
+    finish();
+    await vi.waitFor(() => expect(dialog.hasAttribute('aria-busy')).toBe(false));
+    expect(dialog.querySelector('[data-category="landmarks"]')).toBe(input);
 });

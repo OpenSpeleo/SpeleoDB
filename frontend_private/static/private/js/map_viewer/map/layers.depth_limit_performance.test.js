@@ -4,6 +4,10 @@ import { Geometry } from './geometry.js';
 import { Layers } from './layers.js';
 
 it('changes depth settings and visibility using cached domains after ingesting 20,000 survey lines', async () => {
+    // This checks data-work counts, not browser frame latency. Advance frames
+    // with real tasks so 300 reconciliations do not wait for 300 display refreshes.
+    vi.stubGlobal('requestAnimationFrame', callback => setTimeout(() => callback(performance.now()), 0));
+    vi.stubGlobal('cancelAnimationFrame', timer => clearTimeout(timer));
     State.resetLayerState();
     State.displayPreferences = createDefaultDisplayPreferences();
     localStorage.clear();
@@ -43,7 +47,7 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         },
     });
     // Keep the real preprocessing and snap-cache work in the ingest path.
-    const cache = vi.spyOn(Geometry, 'cacheLineFeatures');
+    const cache = vi.spyOn(Geometry, 'cachePreparedSnapPoints');
     const snapshots = [];
     const restore = [];
     const forbidRead = () => { throw new Error('Depth controls must not read survey feature data'); };
@@ -74,17 +78,20 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         map.getSource.mockClear();
         map.getSource.mockImplementation(forbidRead);
 
-        Layers.setColorMode('depth');
+        await Layers.setColorMode('depth');
         for (let index = 0; index < 100; index += 1) {
             const limit = 50 + index;
             Layers.setDepthLimit(limit, 'ft');
+            await Layers.whenDisplayApplied();
             Layers.setDepthLimit(limit, 'm');
+            await Layers.whenDisplayApplied();
             const project = projects[index % projects.length];
-            Layers.toggleProjectVisibility(project.id, Math.floor(index / projects.length) % 2 === 1);
+            await Layers.toggleProjectVisibility(project.id, Math.floor(index / projects.length) % 2 === 1);
             expect(State.activeDepthDomain).toEqual(Layers.getVisibleProjectIds().length ? { min: 0, max: limit } : null);
         }
-        Layers.toggleProjectVisibility(projects.at(-1).id, true);
+        await Layers.toggleProjectVisibility(projects.at(-1).id, true);
         Layers.setDepthLimit(null, 'ft');
+        await Layers.whenDisplayApplied();
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 20000 });
         expect(download).toHaveBeenCalledTimes(20);
         expect(cache).toHaveBeenCalledTimes(20);

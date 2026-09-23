@@ -33,6 +33,7 @@ export const MapSettings = {
     listeners: [],
     restoreFocus: true,
     depthDraftDirty: false,
+    applyRevision: 0,
 
     init({ managers = {} } = {}) {
         this.destroy();
@@ -89,8 +90,26 @@ export const MapSettings = {
         });
         this.listen(document.getElementById('map-settings-reset'), 'click', () => this.reset());
         this.listen(window, 'speleo:display-preferences-changed', () => this.sync());
+        this.listen(window, 'speleo:display-update-failed', () => {
+            this.setError('Unable to apply display settings. Please try again.');
+        });
 
         this.sync();
+        this.reflectPending();
+    },
+
+    reflectPending() {
+        const dialog = this.dialog;
+        if (!dialog) return;
+        const revision = ++this.applyRevision;
+        dialog.setAttribute('aria-busy', 'true');
+        void Layers.whenDisplayApplied().then(() => {
+            if (this.dialog === dialog && this.applyRevision === revision) dialog.removeAttribute('aria-busy');
+        }).catch(() => {
+            if (this.dialog !== dialog || this.applyRevision !== revision) return;
+            dialog.removeAttribute('aria-busy');
+            this.setError('Unable to apply display settings. Please try again.');
+        });
     },
 
     listen(target, event, handler) {
@@ -130,6 +149,7 @@ export const MapSettings = {
 
     handleChange(event) {
         const input = event.target;
+        this.setError('');
         if (input.id === 'map-settings-depth-value') {
             this.commitDepthLimit();
             return;
@@ -146,6 +166,7 @@ export const MapSettings = {
             Layers.setStationTypeVisibility(input.dataset.stationType, input.checked);
         }
         this.sync();
+        this.reflectPending();
     },
 
     validateDepthLimit() {
@@ -171,6 +192,7 @@ export const MapSettings = {
         this.depthDraftDirty = false;
         Layers.setDepthLimit(value, State.displayPreferences.depthUnit);
         this.syncDepthLimit();
+        this.reflectPending();
         return true;
     },
 
@@ -218,6 +240,7 @@ export const MapSettings = {
             this.depthDraftDirty = false;
             this.dialog.querySelector('#map-settings-depth-limit').open = false;
             DisplayPreferences.reset();
+            this.reflectPending();
             this.setError('');
         } catch {
             this.setError('Unable to reset display settings. Please try again.');
@@ -248,6 +271,7 @@ export const MapSettings = {
     },
 
     destroy() {
+        this.applyRevision++;
         this.close({ restoreFocus: false });
         this.listeners.forEach(remove => remove());
         this.listeners = [];

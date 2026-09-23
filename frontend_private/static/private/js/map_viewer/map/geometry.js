@@ -12,6 +12,12 @@ export const Geometry = {
     // Calculate distance in meters between two lat/lng points using Haversine formula
     calculateDistanceInMeters,
 
+    // Publish endpoints prepared with the source, without another feature scan.
+    cachePreparedSnapPoints(projectId, snapPoints) {
+        if (snapPoints.length) snapPointsCache.set(String(projectId), snapPoints);
+        else snapPointsCache.delete(String(projectId));
+    },
+
     // Cache line features and extract start/end snap points from a project's GeoJSON source
     cacheLineFeatures: function(projectId, geojsonData) {
         if (!geojsonData || !geojsonData.features) return;

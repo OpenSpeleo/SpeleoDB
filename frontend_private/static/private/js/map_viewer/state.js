@@ -1,4 +1,5 @@
 import { DEFAULTS } from './config.js';
+import { ViewerUpdates } from './viewer_updates.js';
 
 export function createDefaultDisplayPreferences() {
     return {
@@ -12,6 +13,9 @@ export function createDefaultDisplayPreferences() {
 
 export const State = {
     map: null,
+    layerGeneration: 0,
+    displayUpdatePending: false,
+    displayDirty: new Set(),
     displayPreferences: createDefaultDisplayPreferences(),
     projectLayerStates: new Map(), // Individual user preference per project
     effectiveProjectVisibility: new Map(), // Actual map visibility (preference AND country gate)
@@ -69,6 +73,10 @@ export const State = {
     // userTags, tagColors, currentStationForTagging, currentProjectId, or display
     // preferences. Route initialization, not a map-data reload, resets preferences.
     resetLayerState: function () {
+        ViewerUpdates.cancelAll();
+        this.layerGeneration += 1;
+        this.displayUpdatePending = false;
+        this.displayDirty = new Set();
         this.projectLayerStates = new Map();
         this.effectiveProjectVisibility = new Map();
         this.networkLayerStates = new Map();

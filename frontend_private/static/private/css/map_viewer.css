@@ -1616,7 +1616,6 @@ select.form-input:focus {
 
 .map-settings-dialog::backdrop {
     background: rgb(2 6 23 / 72%);
-    backdrop-filter: blur(4px);
 }
 
 .map-settings-frame {

@@ -2,7 +2,7 @@
 // the original type on display features so those types remain independently
 // selectable. The downloaded GeoJSON and its properties are never mutated.
 export const GIS_GEOMETRY_TYPE_PROPERTY = '__speleodb_geometry_type';
-const GEOMETRY_TYPES = Object.freeze([
+export const GEOMETRY_TYPES = Object.freeze([
     'Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'
 ]);
 

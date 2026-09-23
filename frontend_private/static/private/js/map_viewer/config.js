@@ -6,6 +6,11 @@ import geometryContract from '../../../../../speleodb/gis/geometry_contract.json
 // in the map viewer. No magic numbers anywhere else.
 // ============================================================
 export const DEFAULTS = Object.freeze({
+    VIEWER_WORK: {
+        BUDGET_MS: 8,
+        WORKER_PARSE_BYTES: 4 * 1024 * 1024,
+        WORKER_NODE_BATCH_SIZE: 1000,
+    },
     MAP: {
         STYLE: 'mapbox://styles/mapbox/satellite-streets-v12',
         DEFAULT_SOURCE_ID: 'mapbox-satellite',
@@ -161,6 +166,8 @@ export const DEFAULTS = Object.freeze({
     },
 
     GIS_GEOMETRY: {
+        DRAFT_LAYER_PREFIX: 'gis-geometry-draft-',
+        DRAFT_LAYER_ROLES: ['fill', 'line', 'bbox', 'midpoints', 'vertices'],
         TYPES: Object.freeze(geometryContract.types),
         NAME_MAX_LENGTH: geometryContract.name_max_length,
         POSITION_DIMENSIONS: geometryContract.position_dimensions,

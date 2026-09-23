@@ -3,9 +3,26 @@ import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
 import { Utils } from '../utils.js';
+import { flushPreferenceWrites, schedulePreferenceWrite } from '../display_preference_storage.js';
+import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.js';
+
+function readRecord(key) {
+    try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch {
+        return {};
+    }
+}
 
 export const ProjectPanel = {
+    _countryVisibility: null,
+    _collapsedCountries: null,
+    _rows: new Map(),
+    _groups: new Map(),
+
     init: function() {
+        this.destroy();
         this.render();
         this.bindEvents();
         this._applyInitialCountryVisibility();
@@ -58,43 +75,25 @@ export const ProjectPanel = {
     // ── Country collapsed state (UI accordion) ─────────────────────
 
     _loadCollapsedCountries: function() {
-        try {
-            const data = localStorage.getItem(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED);
-            if (!data) return {};
-            const parsed = JSON.parse(data);
-            return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
-        } catch (e) {
-            return {};
-        }
+        this._collapsedCountries ??= readRecord(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED);
+        return this._collapsedCountries;
     },
 
     _saveCollapsedCountries: function(collapsed) {
-        try {
-            localStorage.setItem(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED, JSON.stringify(collapsed));
-        } catch (e) {
-            // localStorage unavailable
-        }
+        this._collapsedCountries = collapsed;
+        schedulePreferenceWrite(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED, () => this._collapsedCountries);
     },
 
     // ── Country visibility state (layer gate) ───────────────────────
 
     _loadCountryVisibility: function() {
-        try {
-            const data = localStorage.getItem(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY);
-            if (!data) return {};
-            const parsed = JSON.parse(data);
-            return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
-        } catch (e) {
-            return {};
-        }
+        this._countryVisibility ??= readRecord(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY);
+        return this._countryVisibility;
     },
 
     _saveCountryVisibility: function(vis) {
-        try {
-            localStorage.setItem(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY, JSON.stringify(vis));
-        } catch (e) {
-            // localStorage unavailable
-        }
+        this._countryVisibility = vis;
+        schedulePreferenceWrite(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY, () => this._countryVisibility);
     },
 
     isCountryVisible: function(country) {
@@ -108,14 +107,11 @@ export const ProjectPanel = {
 
     _syncCountryToMap: function(country, projects) {
         const countryOn = this.isCountryVisible(country);
-        projects.forEach(p => {
-            const individualOn = Layers.isProjectVisible(p.id);
-            Layers.applyProjectVisibility(p.id, individualOn && countryOn);
-        });
-        Layers.recomputeActiveDepthDomain();
-        if (Layers.colorMode === 'depth') {
-            Layers.applyDepthLineColors();
-        }
+        Layers.setProjectVisibilityBatch(projects.map(project => ({
+            projectId: project.id,
+            visible: Layers.isProjectVisible(project.id) && countryOn,
+        })));
+        if (!countryOn) projects.forEach(project => cancelMapNavigation(`project:${project.id}`));
     },
 
     /** Explicit navigation opens the country gate without replacing other choices. */
@@ -128,7 +124,7 @@ export const ProjectPanel = {
         this._saveCountryVisibility(visibility);
         Layers.saveProjectVisibilityPref(project.id, true);
         this._syncCountryToMap(country, Config.projects.filter(candidate => (candidate.country || 'Unknown') === country));
-        this.refreshList();
+        this.updateCountryRows(country);
     },
 
     _applyInitialCountryVisibility: function() {
@@ -138,16 +134,9 @@ export const ProjectPanel = {
         const hasHiddenCountries = Object.values(vis).some(v => v === false);
         if (!hasHiddenCountries) return;
 
-        Config.projects.forEach(p => {
-            const country = p.country || 'Unknown';
-            if (vis[country] === false) {
-                Layers.applyProjectVisibility(p.id, false);
-            }
-        });
-        Layers.recomputeActiveDepthDomain();
-        if (Layers.colorMode === 'depth') {
-            Layers.applyDepthLineColors();
-        }
+        Layers.setProjectVisibilityBatch(Config.projects
+            .filter(project => vis[project.country || 'Unknown'] === false)
+            .map(project => ({ projectId: project.id, visible: false })));
     },
 
     // ── Rendering ───────────────────────────────────────────────────
@@ -161,6 +150,8 @@ export const ProjectPanel = {
         if (!list) return;
 
         list.innerHTML = '';
+        this._rows.clear();
+        this._groups.clear();
 
         const validProjects = [...Config.projects].sort((a, b) =>
             a.name.toLowerCase().localeCompare(b.name.toLowerCase())
@@ -205,6 +196,7 @@ export const ProjectPanel = {
         group.className = 'country-group';
         if (isCollapsed) group.classList.add('collapsed');
         group.dataset.country = country;
+        this._groups.set(country, { group, projects });
 
         const countryOn = this.isCountryVisible(country);
         const flag = Utils.countryFlag(country);
@@ -237,7 +229,7 @@ export const ProjectPanel = {
                 }
                 this._saveCountryVisibility(vis);
                 this._syncCountryToMap(country, projects);
-                this.refreshList();
+                this.updateCountryRows(country);
             });
 
             const toggleLabel = header.querySelector('.toggle-switch');
@@ -280,6 +272,7 @@ export const ProjectPanel = {
         if (!effectiveVisible) item.classList.add('opacity-50');
         item.dataset.projectId = project.id;
         item.dataset.color = color;
+        this._rows.set(String(project.id), item);
 
         item.innerHTML = Utils.safeHtml`
             <div class="flex items-center gap-2 overflow-hidden flex-1">
@@ -294,14 +287,18 @@ export const ProjectPanel = {
 
         const checkbox = item.querySelector('input[type="checkbox"]');
 
-        item.addEventListener('click', (e) => {
+        item.addEventListener('click', async (e) => {
             if (e.target !== checkbox && e.target !== checkbox.nextElementSibling && e.target.closest('.toggle-switch') === null) {
+                const map = State.map;
+                const navigation = beginMapNavigation(map, `project:${project.id}`);
                 if (document.getElementById('map-viewer-shell')) {
                     this.revealProject(project.id);
                 }
+                await Layers.whenDisplayApplied();
+                if (!navigation.isCurrent() || State.map !== map || !item.isConnected) return;
                 const bounds = State.projectBounds.get(String(project.id));
                 if (bounds) {
-                    State.map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
+                    map.fitBounds(bounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
                 }
             }
         });
@@ -324,8 +321,36 @@ export const ProjectPanel = {
         const countryOn = !project || this.isCountryVisible(project.country || 'Unknown');
         // Publish only the final visibility so depth domains never include a gated project.
         Layers.toggleProjectVisibility(projectId, isVisible, isVisible && countryOn);
+        if (!isVisible) cancelMapNavigation(`project:${projectId}`);
+        this.updateRow(projectId, isVisible);
+    },
 
-        this.refreshList();
+    updateRow(projectId, individualOn = Layers.isProjectVisible(projectId)) {
+        const row = this._rows.get(String(projectId));
+        if (!row) return;
+        const project = Config.getProjectById(projectId);
+        const visible = individualOn && (!project || this.isCountryVisible(project.country || 'Unknown'));
+        row.querySelector('input').checked = individualOn;
+        row.classList.toggle('opacity-50', !visible);
+        row.querySelector('.project-color-dot').style.backgroundColor = Utils.safeCssColor(
+            visible ? this.getProjectColor(projectId) : DEFAULTS.COLORS.FALLBACK,
+        );
+    },
+
+    updateCountryRows(country) {
+        const entry = this._groups.get(country);
+        if (!entry) return;
+        entry.group.querySelector('.country-toggle').checked = this.isCountryVisible(country);
+        entry.projects.forEach(project => this.updateRow(project.id));
+    },
+
+    destroy() {
+        flushPreferenceWrites(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY);
+        flushPreferenceWrites(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED);
+        this._countryVisibility = null;
+        this._collapsedCountries = null;
+        this._rows.clear();
+        this._groups.clear();
     },
 
     bindEvents: function() {

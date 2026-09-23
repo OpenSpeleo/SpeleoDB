@@ -1,8 +1,11 @@
 import { DEFAULTS, MAP_SOURCES } from '../config.js';
 import { Utils } from '../utils.js';
+import { ViewerUpdates } from '../viewer_updates.js';
 
 const RASTER_SOURCE_ID = 'speleo-base-raster-source';
 const RASTER_LAYER_ID = 'speleo-base-raster-layer';
+const BASE_ANCHOR_ID = 'speleo-base-anchor';
+const baseStyles = new WeakMap();
 const CHECKED_TILE_PROTOCOL = 'speleo-checked-tile';
 const OVERLAY_LAYER_PREFIXES = Object.freeze([
     'project-layer-',
@@ -110,63 +113,41 @@ function isSpeleoOverlayLayer(layerId) {
     return OVERLAY_LAYER_PREFIXES.some(prefix => layerId.startsWith(prefix));
 }
 
-function getFirstOverlayLayerId(map) {
-    const layers = map.getStyle()?.layers || [];
-    const firstOverlay = layers.find(layer => isSpeleoOverlayLayer(layer.id));
-    return firstOverlay?.id;
-}
-
-function hideBaseStyleLayers(map) {
-    const layers = map.getStyle()?.layers || [];
-    if (!map.__speleoBaseLayerVisibility) {
-        map.__speleoBaseLayerVisibility = new Map();
+/** Capture before survey sources are installed: getStyle serializes their data. */
+function captureBaseStyle(map) {
+    if (baseStyles.has(map)) return baseStyles.get(map);
+    const layers = (map.getStyle()?.layers || [])
+        .filter(layer => layer.id !== RASTER_LAYER_ID && !isSpeleoOverlayLayer(layer.id));
+    // Tokenless raster styles otherwise have no permanent insertion point. The
+    // transparent anchor keeps replacement raster layers below every overlay.
+    if (!layers.length) {
+        const anchor = { id: BASE_ANCHOR_ID, type: 'background', paint: { 'background-opacity': 0 } };
+        map.addLayer(anchor, map.getLayer(RASTER_LAYER_ID) ? RASTER_LAYER_ID : undefined);
+        layers.push(anchor);
     }
-
-    layers.forEach(layer => {
-        if (layer.id === RASTER_LAYER_ID || isSpeleoOverlayLayer(layer.id)) return;
-        if (!map.__speleoBaseLayerVisibility.has(layer.id)) {
-            map.__speleoBaseLayerVisibility.set(layer.id, layer.layout?.visibility ?? 'visible');
-        }
-        map.setLayoutProperty(layer.id, 'visibility', 'none');
-    });
-}
-
-function restoreBaseStyleLayers(map) {
-    if (!map.__speleoBaseLayerVisibility) return;
-
-    map.__speleoBaseLayerVisibility.forEach((visibility, layerId) => {
-        if (map.getLayer?.(layerId)) {
-            map.setLayoutProperty(layerId, 'visibility', visibility);
-        }
-    });
-    map.__speleoBaseLayerVisibility.clear();
+    const base = layers.map(layer => ({ id: layer.id, visibility: layer.layout?.visibility ?? 'visible' }));
+    baseStyles.set(map, base);
+    return base;
 }
 
 function removeRasterLayer(map) {
-    if (map.getLayer?.(RASTER_LAYER_ID)) {
-        map.removeLayer(RASTER_LAYER_ID);
-    }
-    if (map.getSource?.(RASTER_SOURCE_ID)) {
-        map.removeSource(RASTER_SOURCE_ID);
-    }
+    if (map.getLayer?.(RASTER_LAYER_ID)) map.removeLayer(RASTER_LAYER_ID);
+    if (map.getSource?.(RASTER_SOURCE_ID)) map.removeSource(RASTER_SOURCE_ID);
 }
 
-function addRasterLayer(map, source, accessToken = '') {
+function* mapSourceChanges(map, source, accessToken) {
+    const base = captureBaseStyle(map);
     removeRasterLayer(map);
-    hideBaseStyleLayers(map);
-
-    map.addSource(RASTER_SOURCE_ID, buildRasterSourceConfig(source, accessToken));
-
-    const layerConfig = {
-        id: RASTER_LAYER_ID,
-        type: 'raster',
-        source: RASTER_SOURCE_ID,
-    };
-    const beforeId = getFirstOverlayLayerId(map);
-    if (beforeId) {
-        map.addLayer(layerConfig, beforeId);
-    } else {
-        map.addLayer(layerConfig);
+    for (const layer of base) {
+        if (map.getLayer(layer.id)) {
+            map.setLayoutProperty(layer.id, 'visibility', source.type === 'raster' ? 'none' : layer.visibility);
+            yield;
+        }
+    }
+    if (source.type === 'raster') {
+        map.addSource(RASTER_SOURCE_ID, buildRasterSourceConfig(source, accessToken));
+        map.addLayer({ id: RASTER_LAYER_ID, type: 'raster', source: RASTER_SOURCE_ID },
+            base.find(layer => map.getLayer(layer.id))?.id);
     }
 }
 
@@ -354,30 +335,29 @@ export const MapSources = {
     },
 
     applyInitialMapSource: function (map, sourceId, accessToken = '') {
+        captureBaseStyle(map);
         const source = getMapSourceById(sourceId) || getFirstUsableSource(accessToken);
         if (source.type === 'raster' && accessToken) {
-            addRasterLayer(map, source, accessToken);
+            const changes = mapSourceChanges(map, source, accessToken);
+            while (!changes.next().done) { /* Initial base style precedes viewer data. */ }
         }
     },
 
-    applyMapSource: function (map, sourceId, accessToken = '') {
-        const selectedSourceId = this.setCurrentMapSourceId(sourceId, accessToken);
-        const source = getMapSourceById(selectedSourceId) || getFirstUsableSource(accessToken);
-
-        if (source.type === 'raster') {
-            addRasterLayer(map, source, accessToken);
-            window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
-                detail: { sourceId: selectedSourceId, reloadRequired: false }
-            }));
-            return selectedSourceId;
+    applyMapSource: async function (map, sourceId, accessToken = '', context = null) {
+        const source = getMapSourceById(sourceId) || getFirstUsableSource(accessToken);
+        const selectedSourceId = hasRequiredToken(source, accessToken) ? source.id : getFirstUsableSource(accessToken).id;
+        const changes = mapSourceChanges(map, getMapSourceById(selectedSourceId), accessToken);
+        while (!context || context.isCurrent()) {
+            if (changes.next().done) {
+                this.setCurrentMapSourceId(selectedSourceId, accessToken);
+                window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
+                    detail: { sourceId: selectedSourceId, reloadRequired: false }
+                }));
+                return selectedSourceId;
+            }
+            if (context?.shouldYield()) await context.yield();
         }
-
-        removeRasterLayer(map);
-        restoreBaseStyleLayers(map);
-        window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
-            detail: { sourceId: selectedSourceId, reloadRequired: false }
-        }));
-        return selectedSourceId;
+        return null;
     },
 
     requiresDataReload: function (event) {
@@ -393,6 +373,8 @@ export const MapSources = {
             _container: null,
             _onDocumentClick: null,
             _onDocumentKeyDown: null,
+            _updateKey: {},
+            _appliedSourceId: selectedSourceId,
 
             onAdd: function (map) {
                 const control = document.createElement('div');
@@ -467,24 +449,36 @@ export const MapSources = {
                     toggleMenu();
                 });
 
+                const showSelection = sourceId => {
+                    menu.querySelectorAll('.map-source-option').forEach(item => {
+                        const isActive = item.dataset.sourceId === sourceId;
+                        item.classList.toggle('active', isActive);
+                        item.querySelector('input').checked = isActive;
+                    });
+                };
+
                 menu.addEventListener('change', (event) => {
                     if (!event.target.matches('input[type="radio"][name="map-source"]')) return;
                     const option = event.target.closest('.map-source-option');
                     if (!option) return;
                     const nextSourceId = event.target.value;
-                    try {
-                        sourceApi.applyMapSource(map, nextSourceId, accessToken);
-                        menu.querySelectorAll('.map-source-option').forEach(item => {
-                            const isActive = item.dataset.sourceId === nextSourceId;
-                            item.classList.toggle('active', isActive);
-                            const radio = item.querySelector('input[type="radio"]');
-                            if (radio) radio.checked = isActive;
-                        });
-                        closeMenu();
-                    } catch (error) {
+                    showSelection(nextSourceId);
+                    closeMenu();
+                    button.setAttribute('aria-busy', 'true');
+                    void ViewerUpdates.schedule(this._updateKey, async context => {
+                        if (!context.isCurrent() || this._container !== control) return;
+                        const applied = await sourceApi.applyMapSource(map, nextSourceId, accessToken, context);
+                        if (!context.isCurrent() || this._container !== control || !applied) return;
+                        this._appliedSourceId = applied;
+                        button.removeAttribute('aria-busy');
+                    }, { onError: error => {
+                        if (this._container !== control) return;
+                        showSelection(this._appliedSourceId);
+                        button.removeAttribute('aria-busy');
+                        void ViewerUpdates.schedule(this._updateKey, context => sourceApi.applyMapSource(map, this._appliedSourceId, accessToken, context));
                         console.error('Error switching map source:', error);
                         Utils.showNotification('error', 'Failed to switch map source');
-                    }
+                    } });
                 });
 
                 this._onDocumentClick = (event) => {
@@ -510,6 +504,7 @@ export const MapSources = {
             },
 
             onRemove: function () {
+                ViewerUpdates.cancel(this._updateKey);
                 if (this._onDocumentClick) {
                     document.removeEventListener('click', this._onDocumentClick);
                     this._onDocumentClick = null;

@@ -32,10 +32,23 @@ function authoredFiles(roots, extension) {
 
 describe('first-party Vite graph', () => {
     it('bundles every authored JavaScript source', async () => {
+        const workerModules = new Set();
         const result = await viteBuild({
             configFile: path.join(ROOT, 'vite.config.mjs'),
             logLevel: 'silent',
             build: { write: false },
+            worker: {
+                plugins: () => [{
+                    name: 'test-worker-module-coverage',
+                    generateBundle(_options, bundle) {
+                        for (const output of Object.values(bundle)) {
+                            if (output.type === 'chunk') {
+                                for (const moduleId of Object.keys(output.modules)) workerModules.add(moduleId);
+                            }
+                        }
+                    },
+                }],
+            },
         });
         const outputs = Array.isArray(result)
             ? result.flatMap(environment => environment.output)
@@ -46,6 +59,8 @@ describe('first-party Vite graph', () => {
                 .flatMap(output => Object.keys(output.modules))
                 .map(moduleId => path.resolve(moduleId.split('?')[0])),
         );
+        for (const moduleId of workerModules) bundledModules.add(path.resolve(moduleId.split('?')[0]));
+        expect([...workerModules].some(moduleId => moduleId.endsWith('/map/geojson_worker.js'))).toBe(true);
         expect(
             [...bundledModules]
                 .filter(moduleId => moduleId.endsWith('.test.js'))

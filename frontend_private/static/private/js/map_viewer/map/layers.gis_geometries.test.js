@@ -152,10 +152,12 @@ it('does not let an older pending detail response replace a saved revision', asy
     expect(Config.getGISGeometryById('g1').name).toBe('Saved');
 });
 
-it('refreshes a collaborator change as the revert baseline without revealing hidden geometry', () => {
-    Layers.refreshGISGeometry(record({ name: 'Collaborator edit', revision: 2 }));
+it('refreshes a collaborator change as the revert baseline without revealing hidden geometry', async () => {
+    const refreshing = Layers.refreshGISGeometry(record({ name: 'Collaborator edit', revision: 2 }));
     expect(State.gisGeometryCache.get('g1').revision).toBe(2);
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
+    expect(State.map.setLayoutProperty).not.toHaveBeenCalled();
+    await refreshing;
     expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
 });
 
@@ -163,11 +165,12 @@ it.each(['acceptGISGeometry', 'refreshGISGeometry'])('ignores a stale request fa
     let reject;
     API.getGISGeometryDetails.mockReturnValueOnce(new Promise((resolve, fail) => { reject = fail; }));
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
-    Layers[replaceRecord](record({ name: 'Newer saved baseline', revision: 2 }));
+    const replacing = Layers[replaceRecord](record({ name: 'Newer saved baseline', revision: 2 }));
     reject(new Error('The older request failed'));
     expect(await showing).toBe(true);
     expect(Layers.isGISGeometryVisible('g1')).toBe(true);
     expect(State.gisGeometryCache.get('g1').revision).toBe(2);
+    await replacing;
     expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'visible');
     expect(State.gisGeometryLoading.size).toBe(0);
 });
@@ -181,7 +184,7 @@ it('preserves an explicit hide after saving when an older request fails', async 
     reject(new Error('The older request failed'));
     expect(await showing).toBe(false);
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
-    expect(State.map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
+    expect(State.map.addSource).not.toHaveBeenCalled();
 });
 
 it('hides existing rendered layers when an ordinary show attempt fails', async () => {
@@ -203,7 +206,7 @@ it('fails closed on missing access and permits retry', async () => {
     expect(await Layers.toggleGISGeometryVisibility('g1', true)).toBe(true);
 });
 
-it('centralizes read/write/delete capabilities and forgets session visibility on reset', () => {
+it('centralizes read/write/delete capabilities and forgets session visibility on reset', async () => {
     Config.upsertGISGeometry(record({ can_write: false, can_delete: false }));
     expect(Config.getScopedAccess('gis_geometry', 'g1')).toEqual({ read: true, write: false, delete: false });
     expect(Config.hasGISGeometryAccess('absent', 'read')).toBe(false);
@@ -212,12 +215,12 @@ it('centralizes read/write/delete capabilities and forgets session visibility on
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
 });
 
-it('restores measurement order above saved overlays and below editor handles', () => {
+it('restores measurement order above saved overlays and below editor handles', async () => {
     const measurementIds = DEFAULTS.MEASUREMENT.LAYER_ROLES.map(role => `${DEFAULTS.MEASUREMENT.LAYER_PREFIX}${role}`);
     for (const id of [...measurementIds].reverse()) State.map.addLayer({ id });
     State.map.addLayer({ id: 'landmarks-layer' });
     State.map.addLayer({ id: 'gis-geometry-draft-vertices' });
-    Layers.reorderLayers();
+    await Layers.reorderLayers();
     const moved = State.map.moveLayer.mock.calls.map(([id]) => id);
     expect(moved.slice(-(measurementIds.length + 1))).toEqual([
         ...measurementIds, 'gis-geometry-draft-vertices',

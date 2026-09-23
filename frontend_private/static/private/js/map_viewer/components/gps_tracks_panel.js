@@ -3,9 +3,14 @@ import { Layers } from '../map/layers.js';
 import { State } from '../state.js';
 import { Colors } from '../map/colors.js';
 import { Utils } from '../utils.js';
+import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.js';
 
 export const GPSTracksPanel = {
+    _rows: new Map(),
+    _requests: new Map(),
+
     init: function() {
+        this.destroy();
         // Only render if user has at least 1 GPS track
         if (Config.gpsTracks.length === 0) {
             console.log('📍 No GPS tracks available - hiding GPS Tracks panel');
@@ -157,6 +162,9 @@ export const GPSTracksPanel = {
     },
 
     destroy: function() {
+        this._requests.clear();
+        this._rows.forEach((_, id) => cancelMapNavigation(`gps:${id}`));
+        this._rows.clear();
         if (this._resizeObserver) {
             this._resizeObserver.disconnect();
             this._resizeObserver = null;
@@ -177,6 +185,7 @@ export const GPSTracksPanel = {
         if (!list) return;
 
         list.innerHTML = '';
+        this._rows.clear();
 
         const tracks = Config.gpsTracks;
 
@@ -196,6 +205,7 @@ export const GPSTracksPanel = {
             item.dataset.trackId = track.id;
             item.dataset.trackUrl = track.file;
             item.dataset.color = color;
+            this._rows.set(String(track.id), item);
 
             // Truncate long track names
             const maxLen = DEFAULTS.UI.TRACK_NAME_MAX_LENGTH;
@@ -211,7 +221,7 @@ export const GPSTracksPanel = {
                 <div class="flex items-center gap-2">
                     <div class="gps-track-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" style="width: 16px; height: 16px; border: 2px solid rgba(56, 189, 248, 0.3); border-left-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
                     <label class="toggle-switch m-0 scale-75 origin-right">
-                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')}>
+                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} aria-label="Show ${track.name}">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -232,15 +242,7 @@ export const GPSTracksPanel = {
                 e.stopPropagation();
                 const newState = e.target.checked;
 
-                // Disable checkbox while loading
-                if (newState && !State.gpsTrackCache.has(String(track.id))) {
-                    checkbox.disabled = true;
-                }
-
                 await this.toggleTrack(track.id, newState);
-
-                // Re-enable checkbox
-                checkbox.disabled = false;
             });
 
             // Stop propagation on toggle switch container click
@@ -257,15 +259,10 @@ export const GPSTracksPanel = {
 
     activateAndFlyToTrack: async function(trackId) {
         const tid = String(trackId);
-        const isVisible = Layers.isGPSTrackVisible(tid);
-
-        // If track is not visible, activate it first
-        if (!isVisible) {
-            await this.toggleTrack(trackId, true);
-        }
-
-        // Now fly to the track (bounds should be available after loading)
-        this.flyToTrack(trackId);
+        const map = State.map;
+        const navigation = beginMapNavigation(map, `gps:${tid}`);
+        const shown = await this.toggleTrack(trackId, true);
+        if (shown && navigation.isCurrent() && State.map === map) this.flyToTrack(trackId);
     },
 
     flyToTrack: function(trackId) {
@@ -280,8 +277,32 @@ export const GPSTracksPanel = {
     },
 
     toggleTrack: async function(trackId, isVisible) {
-        await Layers.toggleGPSTrackVisibility(trackId, isVisible);
-        this.refreshList(); // Refresh to update opacity/colors
+        const id = String(trackId);
+        const request = {};
+        this._requests.set(id, request);
+        if (!isVisible) cancelMapNavigation(`gps:${id}`);
+        const applying = Layers.toggleGPSTrackVisibility(id, isVisible);
+        this.updateRow(id);
+        const applied = await applying;
+        if (this._requests.get(id) !== request) return false;
+        this._requests.delete(id);
+        this.updateRow(id);
+        return applied;
+    },
+
+    updateRow(trackId) {
+        const id = String(trackId);
+        const row = this._rows.get(id);
+        if (!row) return;
+        const visible = Layers.isGPSTrackVisible(id);
+        const loading = Layers.isGPSTrackLoading(id) || this._requests.has(id);
+        row.querySelector('input').checked = visible;
+        row.classList.toggle('opacity-50', !visible);
+        row.querySelector('.gps-track-loading-spinner').classList.toggle('hidden', !loading);
+        row.setAttribute('aria-busy', String(loading));
+        const dot = row.querySelector('.gps-track-color-dot');
+        dot.style.backgroundColor = Utils.safeCssColor(visible ? this.getTrackColor(id) : DEFAULTS.COLORS.FALLBACK);
+        dot.style.border = visible ? '2px dashed rgba(255,255,255,0.5)' : '';
     },
 
     bindEvents: function() {
@@ -308,25 +329,9 @@ export const GPSTracksPanel = {
     setupLoadingListener: function() {
         // Listen for loading state changes to update UI
         this._loadingListener = (e) => {
-            const { trackId, isLoading } = e.detail || {};
+            const { trackId } = e.detail || {};
             if (!trackId) return;
-            const item = document.querySelector(`.gps-track-button[data-track-id="${trackId}"]`);
-            if (item) {
-                const spinner = item.querySelector('.gps-track-loading-spinner');
-                const checkbox = item.querySelector('input[type="checkbox"]');
-
-                if (spinner) {
-                    if (isLoading) {
-                        spinner.classList.remove('hidden');
-                    } else {
-                        spinner.classList.add('hidden');
-                    }
-                }
-
-                if (checkbox) {
-                    checkbox.disabled = isLoading;
-                }
-            }
+            this.updateRow(trackId);
         };
         window.addEventListener('speleo:gps-track-loading-changed', this._loadingListener);
     },

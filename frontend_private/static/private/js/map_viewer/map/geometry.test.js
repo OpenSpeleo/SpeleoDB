@@ -63,6 +63,17 @@ describe('Geometry', () => {
 
     // ── cacheLineFeatures ──────────────────────────────────────────────
 
+    it('publishes prepared snap points and clears obsolete endpoints on an empty refresh', () => {
+        Geo.cachePreparedSnapPoints('prepared', [
+            { coordinates: [1, 2], lineName: 'Survey', type: 'start', lineIndex: 0 },
+        ]);
+        expect(Geo.findMagneticSnapPoint([1, 2], 'prepared')).toMatchObject({
+            snapped: true, projectId: 'prepared', lineName: 'Survey',
+        });
+        Geo.cachePreparedSnapPoints('prepared', []);
+        expect(Geo.findMagneticSnapPoint([1, 2], 'prepared').snapped).toBe(false);
+    });
+
     describe('cacheLineFeatures', () => {
         it('caches start and end points from LineString features', () => {
             Geo.cacheLineFeatures('proj-1', makeLineGeoJSON([

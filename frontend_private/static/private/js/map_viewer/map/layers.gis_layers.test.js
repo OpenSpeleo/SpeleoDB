@@ -16,21 +16,9 @@ vi.mock('../config.js', async () => {
         Config: { getGISLayerById: vi.fn(() => ({ color: '#6366f1' })) },
     };
 });
-vi.mock('../state.js', () => ({
-    State: {
-        gisLayerStates: new Map(),
-        gisLayerLoadingStates: new Map(),
-        gisLayerCache: new Map(),
-        gisLayerGeometryTypeStates: new Map(),
-        allGISLayerLayers: new Map(),
-        gisLayerBounds: new Map(),
-        gisLayerClickableLayerIds: new Set(),
-        map: null,
-    },
-}));
 vi.mock('./colors.js', () => ({ Colors: {} }));
 vi.mock('./geometry.js', () => ({ Geometry: {} }));
-vi.mock('./geojson.js', () => ({ computeGeoJSONBounds: vi.fn(() => mocks.bounds) }));
+
 
 import { State } from '../state.js';
 import { GIS_GEOMETRY_TYPE_PROPERTY, gisLayerGeometryFilter } from './gis_layer_geometry.js';
@@ -43,6 +31,7 @@ import {
 
 describe('GIS Layer display', () => {
     beforeEach(() => {
+        State.resetLayerState();
         State.gisLayerStates.clear();
         State.gisLayerLoadingStates.clear();
         State.gisLayerCache.clear();
@@ -64,7 +53,7 @@ describe('GIS Layer display', () => {
         };
         mocks.getGISLayerDetails.mockReset();
         globalThis.fetch = vi.fn();
-        globalThis.mapboxgl = {};
+        globalThis.mapboxgl = { LngLatBounds: class { constructor() { return mocks.bounds; } } };
     });
 
     afterEach(() => {
@@ -84,8 +73,8 @@ describe('GIS Layer display', () => {
 
         await expect(Layers.toggleGISLayerVisibility('layer-1', true)).resolves.toBe(true);
 
-        expect(mocks.getGISLayerDetails).toHaveBeenCalledWith('layer-1');
-        expect(fetch).toHaveBeenCalledWith('/fresh-signed-url');
+        expect(mocks.getGISLayerDetails).toHaveBeenCalledWith('layer-1', { signal: expect.any(AbortSignal) });
+        expect(fetch).toHaveBeenCalledWith('/fresh-signed-url', { signal: expect.any(AbortSignal) });
         expect(State.map.addSource).toHaveBeenCalledWith('gis-layer-source-layer-1', {
             type: 'geojson',
             data: { type: 'FeatureCollection', features: [{
@@ -178,7 +167,7 @@ describe('GIS Layer display', () => {
         expect(body.querySelector('.gis-layer-feature-card__scroll-rail').getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('closes map-owned GIS popups through their native lifecycle', () => {
+    it('closes map-owned GIS popups through their native lifecycle', async () => {
         const closed = [];
         class Popup {
             once(name, handler) { if (name === 'close') this.onClose = handler; return this; }
@@ -223,7 +212,7 @@ describe('GIS Layer display', () => {
         ]);
     });
 
-    it('preserves bounded metadata and the exact scoped popup CSS', () => {
+    it('preserves bounded metadata and the exact scoped popup CSS', async () => {
         const popup = buildGISFeaturePopup({
             geometry: { type: 'Point' },
             properties: {
@@ -246,7 +235,7 @@ describe('GIS Layer display', () => {
         expect(css).toContain('.gis-layer-feature-card__scroll-thumb');
     });
 
-    it('preserves the custom overflow affordance and scroll isolation', () => {
+    it('preserves the custom overflow affordance and scroll isolation', async () => {
         const card = buildGISFeaturePopup({ properties: { description: 'Description' } });
         const viewport = card.querySelector('.gis-layer-feature-card__scroll');
         const rail = card.querySelector('.gis-layer-feature-card__scroll-rail');
@@ -325,7 +314,7 @@ describe('GIS Layer display', () => {
         await Layers.toggleGISLayerVisibility('layer-1', true);
         State.map.getLayer.mockReturnValue({});
 
-        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Polygon', false);
+        await Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Polygon', false);
 
         expect(Layers.getGISLayerGeometryTypes('layer-1')).toEqual(types);
         expect(Layers.isGISLayerGeometryTypeVisible('layer-1', 'Polygon')).toBe(false);
@@ -362,13 +351,13 @@ describe('GIS Layer display', () => {
         await Layers.addGISLayer('layer-1', geojson);
         await Layers.addGISLayer('layer-2', geojson);
         State.map.getLayer.mockReturnValue({});
-        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', false);
-        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'LineString', false);
+        await Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', false);
+        await Layers.setGISLayerGeometryTypeVisibility('layer-1', 'LineString', false);
         expect(State.map.setFilter).toHaveBeenLastCalledWith(
             'gis-layer-layer-1-point', gisLayerGeometryFilter('Point', [])
         );
         expect(Layers.isGISLayerGeometryTypeVisible('layer-2', 'Point')).toBe(true);
-        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', true);
+        await Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', true);
         expect(State.map.setFilter).toHaveBeenLastCalledWith(
             'gis-layer-layer-1-point', gisLayerGeometryFilter('Point', ['Point'])
         );

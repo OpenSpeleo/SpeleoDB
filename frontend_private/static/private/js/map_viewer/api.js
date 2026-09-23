@@ -47,7 +47,7 @@ const getErrorMessage = (response, data) => {
     return response.statusText || 'API request failed';
 };
 
-const apiRequest = async (url, method = 'GET', body = null, isFormData = false) => {
+const apiRequest = async (url, method = 'GET', body = null, isFormData = false, { signal } = {}) => {
     const headers = {
         'X-CSRFToken': Utils.getCSRFToken()
     };
@@ -59,7 +59,8 @@ const apiRequest = async (url, method = 'GET', body = null, isFormData = false) 
     const config = {
         method,
         headers,
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        ...(signal ? { signal } : {}),
     };
 
     if (body) {
@@ -87,7 +88,7 @@ const apiRequest = async (url, method = 'GET', body = null, isFormData = false) 
 
 export const API = {
     getGISGeometries: () => apiRequest(Urls['api:v2:gis-geometry-list']()),
-    getGISGeometryDetails: id => apiRequest(Urls['api:v2:gis-geometry-detail'](id)),
+    getGISGeometryDetails: (id, options) => apiRequest(Urls['api:v2:gis-geometry-detail'](id), 'GET', null, false, options),
     createGISGeometry: data => apiRequest(Urls['api:v2:gis-geometry-list'](), 'POST', data),
     updateGISGeometry: (id, data) => apiRequest(Urls['api:v2:gis-geometry-detail'](id), 'PATCH', data),
 
@@ -277,15 +278,15 @@ export const API = {
     getGPSTracks: () =>
         apiRequest(Urls['api:v2:gps-tracks']()),
 
-    getGPSTrackDetails: (trackId) =>
-        apiRequest(Urls['api:v2:gps-track-detail'](trackId)),
+    getGPSTrackDetails: (trackId, options) =>
+        apiRequest(Urls['api:v2:gps-track-detail'](trackId), 'GET', null, false, options),
 
     // GIS Layers (private viewer only)
     getGISLayers: () =>
         apiRequest(Urls['api:v2:gis-layers']()),
 
-    getGISLayerDetails: (layerId) =>
-        apiRequest(Urls['api:v2:gis-layer-detail'](layerId)),
+    getGISLayerDetails: (layerId, options) =>
+        apiRequest(Urls['api:v2:gis-layer-detail'](layerId), 'GET', null, false, options),
 
     // GPX Import
     importGPX: (formData) =>
