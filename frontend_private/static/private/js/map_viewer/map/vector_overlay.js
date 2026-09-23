@@ -1,19 +1,29 @@
 import { DEFAULTS } from '../config.js';
+import { geoJSONLineWidth } from './line_rendering.js';
+
+// Geometry families in the same order as the fill, outline, line and point IDs.
+export const VECTOR_OVERLAY_GEOMETRY_TYPES = Object.freeze(['Polygon', 'Polygon', 'LineString', 'Point']);
 
 /** Shared, presentation-only renderer; each owner retains its own data lifecycle. */
-export function addVectorOverlay(map, { sourceId, layerIds, data, color, fillOpacity = DEFAULTS.GIS_LAYER_RENDER.FILL_OPACITY }) {
+export function addVectorOverlay(map, {
+    sourceId, layerIds, data, color,
+    fillOpacity = DEFAULTS.GIS_LAYER_RENDER.FILL_OPACITY,
+    filterForGeometry = type => ['==', '$type', type]
+}) {
     const [fillLayerId, outlineLayerId, lineLayerId, pointLayerId] = layerIds;
+    const filters = VECTOR_OVERLAY_GEOMETRY_TYPES.map(filterForGeometry);
     const render = DEFAULTS.GIS_LAYER_RENDER;
     map.addSource(sourceId, {
         type: 'geojson',
         data: data,
-        generateId: true
+        generateId: true,
+        tolerance: DEFAULTS.GEOJSON_RENDER.TOLERANCE
     });
     map.addLayer({
         id: fillLayerId,
         type: 'fill',
         source: sourceId,
-        filter: ['==', '$type', 'Polygon'],
+        filter: filters[0],
         layout: { visibility: 'visible' },
         paint: { 'fill-color': color, 'fill-opacity': fillOpacity }
     });
@@ -21,11 +31,11 @@ export function addVectorOverlay(map, { sourceId, layerIds, data, color, fillOpa
         id: outlineLayerId,
         type: 'line',
         source: sourceId,
-        filter: ['==', '$type', 'Polygon'],
+        filter: filters[1],
         layout: { visibility: 'visible' },
         paint: {
             'line-color': color,
-            'line-width': render.OUTLINE_WIDTH,
+            'line-width': geoJSONLineWidth(render.OUTLINE_WIDTH),
             'line-opacity': render.LINE_OPACITY
         }
     });
@@ -33,11 +43,11 @@ export function addVectorOverlay(map, { sourceId, layerIds, data, color, fillOpa
         id: lineLayerId,
         type: 'line',
         source: sourceId,
-        filter: ['==', '$type', 'LineString'],
+        filter: filters[2],
         layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
         paint: {
             'line-color': color,
-            'line-width': render.LINE_WIDTH,
+            'line-width': geoJSONLineWidth(render.LINE_WIDTH),
             'line-opacity': render.LINE_OPACITY
         }
     });
@@ -45,7 +55,7 @@ export function addVectorOverlay(map, { sourceId, layerIds, data, color, fillOpa
         id: pointLayerId,
         type: 'circle',
         source: sourceId,
-        filter: ['==', '$type', 'Point'],
+        filter: filters[3],
         layout: { visibility: 'visible' },
         paint: {
             'circle-color': color,

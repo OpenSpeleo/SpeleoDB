@@ -1,4 +1,5 @@
 import { DEFAULTS } from '../config.js';
+import { geoJSONLineWidth } from '../map/line_rendering.js';
 import { createMeasurement, measurementFeatures } from './geometry.js';
 
 const settings = DEFAULTS.MEASUREMENT;
@@ -42,13 +43,16 @@ function capsuleImage() {
 function layersFor(kind) {
     const source = sourceId(kind);
     const lineFilter = ['==', ['get', 'role'], 'line'];
-    const linePaint = { 'line-color': settings.LINE_COLOR, 'line-width': settings.LINE_WIDTH };
+    const linePaint = { 'line-color': settings.LINE_COLOR, 'line-width': geoJSONLineWidth(settings.LINE_WIDTH) };
     if (kind === 'draft') linePaint['line-dasharray'] = settings.DRAFT_DASH_ARRAY;
     const layers = [
         {
             id: `${source}-casing`, type: 'line', source, filter: lineFilter,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': settings.CASING_COLOR, 'line-width': settings.CASING_WIDTH },
+            paint: {
+                'line-color': settings.CASING_COLOR,
+                'line-width': geoJSONLineWidth(settings.CASING_WIDTH, settings.CASING_WIDTH, settings.CASING_OVERVIEW_WIDTH_OFFSET),
+            },
         },
         {
             id: `${source}-line`, type: 'line', source, filter: lineFilter,
@@ -190,7 +194,9 @@ export class MeasurementRenderer {
         }
         for (const kind of ['completed', 'draft']) {
             const data = kind === 'completed' ? this.completedData : this.draftData;
-            if (!this.map.getSource(sourceId(kind))) this.map.addSource(sourceId(kind), { type: 'geojson', data });
+            if (!this.map.getSource(sourceId(kind))) this.map.addSource(sourceId(kind), {
+                type: 'geojson', data, tolerance: DEFAULTS.GEOJSON_RENDER.TOLERANCE,
+            });
             for (const layer of layersFor(kind)) {
                 if (!this.map.getLayer(layer.id)) this.map.addLayer(layer);
             }

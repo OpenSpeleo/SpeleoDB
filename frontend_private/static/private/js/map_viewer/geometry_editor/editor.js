@@ -1,5 +1,6 @@
 import { API } from '../api.js';
 import { Config, DEFAULTS } from '../config.js';
+import { geoJSONLineWidth } from '../map/line_rendering.js';
 import { isMapDialogOpen } from '../components/overlay_host.js';
 import { Utils } from '../utils.js';
 import {
@@ -891,10 +892,10 @@ export const GeometryEditor = {
         }
         const data = { type: 'FeatureCollection', features };
         if (this.map.getSource(SOURCE)) { this.map.getSource(SOURCE).setData(data); return; }
-        this.map.addSource(SOURCE, { type: 'geojson', data });
+        this.map.addSource(SOURCE, { type: 'geojson', data, tolerance: DEFAULTS.GEOJSON_RENDER.TOLERANCE });
         this.map.addLayer({ id: LAYERS[0], type: 'fill', source: SOURCE, filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': settings.DRAFT_FILL_OPACITY } });
-        this.map.addLayer({ id: LAYERS[1], type: 'line', source: SOURCE, filter: ['in', 'role', 'shape', 'preview'], paint: { 'line-color': ['get', 'color'], 'line-width': settings.LINE_WIDTH } });
-        this.map.addLayer({ id: LAYERS[2], type: 'line', source: SOURCE, filter: ['==', 'role', 'bbox'], paint: { 'line-color': ['get', 'color'], 'line-width': settings.BBOX_LINE_WIDTH, 'line-dasharray': settings.BBOX_DASH_ARRAY } });
+        this.map.addLayer({ id: LAYERS[1], type: 'line', source: SOURCE, filter: ['in', 'role', 'shape', 'preview'], paint: { 'line-color': ['get', 'color'], 'line-width': geoJSONLineWidth(settings.LINE_WIDTH) } });
+        this.map.addLayer({ id: LAYERS[2], type: 'line', source: SOURCE, filter: ['==', 'role', 'bbox'], paint: { 'line-color': ['get', 'color'], 'line-width': geoJSONLineWidth(settings.BBOX_LINE_WIDTH), 'line-dasharray': settings.BBOX_DASH_ARRAY } });
         this.map.addLayer({ id: LAYERS[3], type: 'circle', source: SOURCE, filter: ['==', 'role', 'midpoint'], paint: { 'circle-radius': settings.MIDPOINT_RADIUS, 'circle-color': settings.COLORS.HANDLE, 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': settings.VERTEX_STROKE_WIDTH } });
         this.map.addLayer({ id: LAYERS[4], type: 'circle', source: SOURCE, filter: ['==', 'role', 'vertex'], paint: { 'circle-radius': ['case', ['get', 'selected'], settings.SELECTED_VERTEX_RADIUS, settings.VERTEX_RADIUS], 'circle-color': ['case', ['get', 'selected'], settings.COLORS.SELECTED, settings.COLORS.HANDLE], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': settings.VERTEX_STROKE_WIDTH } });
     },

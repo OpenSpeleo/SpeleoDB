@@ -11,7 +11,9 @@ import {
 } from './depth.js';
 import { Geometry } from './geometry.js';
 import { computeGeoJSONBounds } from './geojson.js';
-import { addVectorOverlay } from './vector_overlay.js';
+import { addVectorOverlay, VECTOR_OVERLAY_GEOMETRY_TYPES } from './vector_overlay.js';
+import { gisLayerGeometryFilter, prepareGISLayerGeoJSON } from './gis_layer_geometry.js';
+import { geoJSONLineWidth } from './line_rendering.js';
 import { API } from '../api.js';
 import { getRuntimeContext } from '../runtime_context.js';
 
@@ -731,7 +733,8 @@ export const Layers = {
         map.addSource(sourceId, {
             type: 'geojson',
             data: geojsonData,
-            generateId: true
+            generateId: true,
+            tolerance: DEFAULTS.GEOJSON_RENDER.TOLERANCE
         });
 
         // Track layers for this GPS track
@@ -753,7 +756,7 @@ export const Layers = {
             },
             paint: {
                 'line-color': color,
-                'line-width': ['interpolate', ['linear'], ['zoom'], 6, 3, 10, 4, 14, 5, 18, 7],
+                'line-width': geoJSONLineWidth(DEFAULTS.GPS_TRACK_RENDER.DETAIL_WIDTH, DEFAULTS.GPS_TRACK_RENDER.CLOSE_WIDTH),
                 'line-opacity': 1,
                 // Simple dots: tiny dash with gap creates dotted effect
                 'line-dasharray': [0.1, 1.5]
@@ -780,6 +783,31 @@ export const Layers = {
 
     isGISLayerLoading: function (layerId) {
         return State.gisLayerLoadingStates.get(String(layerId)) === true;
+    },
+
+    getGISLayerGeometryTypes: function (layerId) {
+        return [...(State.gisLayerGeometryTypeStates.get(String(layerId))?.keys() || [])];
+    },
+
+    isGISLayerGeometryTypeVisible: function (layerId, geometryType) {
+        return State.gisLayerGeometryTypeStates.get(String(layerId))?.get(geometryType) !== false;
+    },
+
+    setGISLayerGeometryTypeVisibility: function (layerId, geometryType, isVisible) {
+        const id = String(layerId);
+        const states = State.gisLayerGeometryTypeStates.get(id);
+        if (!states?.has(geometryType)) return;
+        states.set(geometryType, isVisible);
+        const enabledTypes = [...states].filter(([, visible]) => visible).map(([type]) => type);
+        const map = State.map;
+        if (!map || !map.getStyle()) return;
+        const layerIds = State.allGISLayerLayers.get(id) || [];
+        layerIds.forEach((renderLayerId, index) => {
+            if (map.getLayer(renderLayerId)) {
+                map.setFilter(renderLayerId, gisLayerGeometryFilter(VECTOR_OVERLAY_GEOMETRY_TYPES[index], enabledTypes));
+            }
+        });
+        if (!isVisible) this.closeGISFeaturePopups();
     },
 
     setGISLayerLoading: function (layerId, isLoading) {
@@ -869,8 +897,18 @@ export const Layers = {
         State.gisLayerClickableLayerIds.delete(pointLayerId);
         removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
 
+        const { data, geometryTypes } = prepareGISLayerGeoJSON(geojsonData);
+        const previousStates = State.gisLayerGeometryTypeStates.get(id);
+        const typeStates = new Map(geometryTypes.map(type => [
+            type, geometryTypes.length === 1 || previousStates?.get(type) !== false
+        ]));
+        State.gisLayerGeometryTypeStates.set(id, typeStates);
+        const enabledTypes = geometryTypes.filter(type => typeStates.get(type));
         const color = Config.getGISLayerById(id)?.color || DEFAULTS.COLORS.FALLBACK;
-        addVectorOverlay(map, { sourceId, layerIds, data: geojsonData, color });
+        addVectorOverlay(map, {
+            sourceId, layerIds, data, color,
+            filterForGeometry: type => gisLayerGeometryFilter(type, enabledTypes)
+        });
 
         State.allGISLayerLayers.set(id, layerIds);
         State.gisLayerClickableLayerIds.add(fillLayerId);
@@ -1073,7 +1111,7 @@ export const Layers = {
                     type: 'geojson',
                     data: data,
                     generateId: true,
-                    tolerance: 0  // Prevent line simplification at low zoom levels
+                    tolerance: DEFAULTS.GEOJSON_RENDER.TOLERANCE
                 });
 
                 // Track layers
@@ -1096,8 +1134,7 @@ export const Layers = {
                     },
                     paint: {
                         'line-color': Colors.getSurveyPaint(projectId, this.colorMode, State.activeDepthDomain),
-                        // Thicker lines at low zoom for visibility from high altitude
-                        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 2.5, 10, 3, 14, 4, 18, 6],
+                        'line-width': geoJSONLineWidth(DEFAULTS.PROJECT_RENDER.DETAIL_WIDTH, DEFAULTS.PROJECT_RENDER.CLOSE_WIDTH),
                         'line-opacity': 1
                     }
                 });

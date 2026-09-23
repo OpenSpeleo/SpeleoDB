@@ -69,6 +69,10 @@ export const GISLayersPanel = {
         ], mapContainer);
     },
 
+    /**
+     * Stable DOM hooks: data-geometry-type-controls identifies a card's subtype
+     * group; data-geometry-type identifies each row by its exact GeoJSON type.
+     */
     refreshList() {
         const list = document.getElementById('gis-layers-map-list');
         const panel = document.getElementById('gis-layers-panel');
@@ -97,20 +101,22 @@ export const GISLayersPanel = {
                 ? `${layer.name.substring(0, maxLength - 3)}...`
                 : layer.name;
             const item = document.createElement('div');
-            item.className = 'gis-layer-button flex items-center justify-between bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
+            item.className = 'gis-layer-button bg-srgb-slate-700-50 hover:bg-slate-700 p-2 rounded-sm cursor-pointer transition-all duration-200';
             if (!isVisible) item.classList.add('opacity-50');
             item.dataset.layerId = layer.id;
             item.innerHTML = Utils.safeHtml`
-                <div class="flex items-center gap-2 overflow-hidden flex-1">
-                    <div class="gis-layer-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(color)}"></div>
-                    <span class="text-slate-200 text-sm font-medium truncate select-none" title="${layer.name}">${displayName}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="gis-layer-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" aria-label="Loading GIS Layer"></div>
-                    <label class="toggle-switch m-0 scale-75 origin-right">
-                        <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')} aria-label="Show ${layer.name}">
-                        <span class="toggle-slider"></span>
-                    </label>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden flex-1">
+                        <div class="gis-layer-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(color)}"></div>
+                        <span class="text-slate-200 text-sm font-medium truncate select-none" title="${layer.name}">${displayName}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="gis-layer-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" aria-label="Loading GIS Layer"></div>
+                        <label class="toggle-switch m-0 scale-75 origin-right">
+                            <input type="checkbox" ${Utils.raw(isVisible ? 'checked' : '')} ${Utils.raw(isLoading ? 'disabled' : '')} aria-label="Show ${layer.name}">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>`;
 
             const checkbox = item.querySelector('input[type="checkbox"]');
@@ -129,6 +135,34 @@ export const GISLayersPanel = {
                 }
             });
             item.querySelector('.toggle-switch').addEventListener('click', event => event.stopPropagation());
+            const geometryTypes = Layers.getGISLayerGeometryTypes(layer.id);
+            if (geometryTypes.length > 1) {
+                const controls = document.createElement('div');
+                controls.className = 'ml-5 mt-2 pl-2 border-l border-slate-600 flow-y-1';
+                controls.dataset.geometryTypeControls = '';
+                controls.addEventListener('click', event => event.stopPropagation());
+                for (const type of geometryTypes) {
+                    const row = document.createElement('label');
+                    row.className = 'flex items-center justify-between gap-2 text-xs text-slate-300 cursor-pointer';
+                    row.dataset.geometryType = type;
+                    row.innerHTML = Utils.safeHtml`
+                        <span>${type}</span>
+                        <span class="toggle-switch m-0 scale-[0.6] origin-right">
+                            <input type="checkbox" aria-label="Show ${type} in ${layer.name}">
+                            <span class="toggle-slider"></span>
+                        </span>`;
+                    const typeCheckbox = row.querySelector('input');
+                    typeCheckbox.checked = Layers.isGISLayerGeometryTypeVisible(layer.id, type);
+                    typeCheckbox.disabled = !isVisible || isLoading;
+                    typeCheckbox.addEventListener('change', event => {
+                        event.stopPropagation();
+                        if (typeCheckbox.disabled) return;
+                        Layers.setGISLayerGeometryTypeVisibility(layer.id, type, typeCheckbox.checked);
+                    });
+                    controls.append(row);
+                }
+                item.append(controls);
+            }
             return item;
         }));
     },

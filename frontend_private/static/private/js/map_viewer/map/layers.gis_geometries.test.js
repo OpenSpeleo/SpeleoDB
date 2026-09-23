@@ -47,6 +47,12 @@ it('loads once on show, caches and toggles without moving the camera', async () 
     expect(State.map.fitBounds).not.toHaveBeenCalled();
     expect(Config.getGISGeometryById('g1').geojson).toBeUndefined();
     expect(State.gisGeometryCache.get('g1').geojson).toEqual(record().geojson);
+    const line = State.map.addLayer.mock.calls.map(([layer]) => layer)
+        .find(layer => layer.type === 'line' && layer.filter[2] === 'LineString');
+    expect(State.map.addSource.mock.calls[0][1].tolerance).toBe(0);
+    expect(line.paint['line-width']).toEqual(['interpolate', ['linear'], ['zoom'],
+        0, 1, 8, 1, 12, 1.5, 14, 2, 16, 2.5, 18, 2.5]);
+    expect(line.paint['line-color']).toBe(record().color);
 });
 
 it('retries failed metadata loading even after locally saving a geometry', async () => {

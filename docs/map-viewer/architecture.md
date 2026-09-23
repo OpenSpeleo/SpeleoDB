@@ -466,11 +466,15 @@ neither loads GIS Layer metadata nor calls its API.
 
 GIS Layers deliberately use the established GPS Track architecture: API calls
 live in `api.js`, metadata in `Config`, session state in `State`, and rendering
-in `map/layers.js`. First activation refreshes the authenticated detail
-response, downloads the current signed GeoJSON, and passes that same object
-unchanged to Mapbox. The one parse needed for display also provides the bounds
-used by the existing `fitBounds` behavior. Polygon fill/outline, line, and point
-are the only rendering roles.
+in `map/layers.js`. First activation refreshes the authenticated detail response
+and downloads the current signed GeoJSON. The original object stays unchanged in
+the session cache and supplies the full-layer `fitBounds` bounds.
+`map/gis_layer_geometry.js` creates display features tagged with their original
+geometry type because Mapbox's tile geometry families collapse `Multi*` types.
+GeometryCollections expand recursively into their constituent types, preserving
+feature metadata and coordinates. Polygon fill/outline, line, and point remain
+the only rendering roles; subtype changes update their filters without fetching,
+replacing the source, or rescanning features.
 
 Polygon fill and point clicks open the established GIS feature card. Popup
 clicks use the Map Viewer's single global interaction dispatcher. The active
@@ -486,6 +490,24 @@ interaction conventions without owning or duplicating Project/GPS controls. It
 is hidden at the same established mobile breakpoint as those panels. Clicking
 the card shows the layer if necessary and calls only `fitBounds`; the toggle
 changes visibility without moving the camera.
+
+After the first load, cards containing more than one geometry type show indented
+sub-toggles for exactly the types discovered: `Point`, `MultiPoint`,
+`LineString`, `MultiLineString`, `Polygon`, and/or `MultiPolygon`. Unknown,
+empty, and single-type layers keep only the main toggle. All types start on;
+their session-only choices live in `State.gisLayerGeometryTypeStates` and
+survive main-toggle off/on and basemap rebuilding. A feature is displayed only
+when both its layer and its type are enabled. Polygon controls affect both fill
+and outline. Sub-toggles never move the camera, and are disabled while the layer
+is hidden or loading. All types can be switched off independently. Existing GIS
+feature popups close when a type is hidden to avoid stale details.
+
+Renderer tests cover type discovery, nested collections, source preservation,
+filtering, independent layers, and style rebuilding. Panel tests cover
+conditional controls, disabled states, click isolation, keyboard focus, and
+escaped names. This feature belongs to imported GIS Layers in the private web
+viewer; saved GIS Geometries retain their existing single-geometry renderer and
+controls.
 
 ---
 

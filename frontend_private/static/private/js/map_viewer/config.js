@@ -63,6 +63,7 @@ export const DEFAULTS = Object.freeze({
         CASING_COLOR: '#0f172a',
         LINE_WIDTH: 2,
         CASING_WIDTH: 5,
+        CASING_OVERVIEW_WIDTH_OFFSET: 1,
         DRAFT_DASH_ARRAY: [2, 2],
         ENDPOINT_RADIUS: 4,
         ENDPOINT_STROKE_WIDTH: 2,
@@ -80,8 +81,26 @@ export const DEFAULTS = Object.freeze({
         LABEL_FONTS: ['Open Sans Semibold', 'Arial Unicode MS Regular'],
     },
 
+    GEOJSON_RENDER: {
+        // Keep short lines; simplification can discard whole features.
+        TOLERANCE: 0,
+        OVERVIEW_WIDTH_STOPS: [[0, 1], [8, 1], [12, 1.5], [14, 2]],
+        DETAIL_ZOOM: 16,
+        CLOSE_ZOOM: 18,
+    },
+
+    PROJECT_RENDER: {
+        DETAIL_WIDTH: 5,
+        CLOSE_WIDTH: 6,
+    },
+
+    GPS_TRACK_RENDER: {
+        DETAIL_WIDTH: 6,
+        CLOSE_WIDTH: 7,
+    },
+
     ZOOM_LEVELS: {
-        PROJECT_LINE: 8,
+        PROJECT_LINE: 0,
         PROJECT_LINE_LABEL: 14,
         PROJECT_ENTRY_SYMBOL: 10,
         LANDMARK_SYMBOL: 12,
@@ -93,7 +112,7 @@ export const DEFAULTS = Object.freeze({
         CYLINDER_INSTALL_SYMBOL: 12,
         CYLINDER_INSTALL_LABEL: 16,
         EXPLORATION_LEAD_SYMBOL: 12,
-        GPS_TRACK_LINE: 8,
+        GPS_TRACK_LINE: 0,
     },
 
     SNAP: {

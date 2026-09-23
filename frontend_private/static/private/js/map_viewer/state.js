@@ -51,6 +51,7 @@ export const State = {
     // GIS Layers state (session-only, default OFF)
     gisLayerStates: new Map(),
     gisLayerCache: new Map(),
+    gisLayerGeometryTypeStates: new Map(), // Layer ID -> Map of discovered types and their toggles
     gisLayerLoadingStates: new Map(),
     allGISLayerLayers: new Map(),
     gisLayerBounds: new Map(),
@@ -92,6 +93,7 @@ export const State = {
         // GIS Layers
         this.gisLayerStates = new Map();
         this.gisLayerCache = new Map();
+        this.gisLayerGeometryTypeStates = new Map();
         this.gisLayerLoadingStates = new Map();
         this.allGISLayerLayers = new Map();
         this.gisLayerBounds = new Map();

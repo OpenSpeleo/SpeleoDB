@@ -47,6 +47,19 @@ function createMap() {
 
 function visibility(id) { return State.map.getLayer(id)?.layout?.visibility; }
 
+function widthAtZoom(expression, zoom) {
+    expect(expression.slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
+    const stops = expression.slice(3);
+    if (zoom <= stops[0]) return stops[1];
+    for (let index = 2; index < stops.length; index += 2) {
+        if (zoom <= stops[index]) {
+            const fraction = (zoom - stops[index - 2]) / (stops[index] - stops[index - 2]);
+            return stops[index - 1] + fraction * (stops[index + 1] - stops[index - 1]);
+        }
+    }
+    return stops.at(-1);
+}
+
 beforeEach(() => {
     State.resetLayerState();
     State.displayPreferences = createDefaultDisplayPreferences();
@@ -61,6 +74,85 @@ afterEach(() => {
     State.displayPreferences = createDefaultDisplayPreferences();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+});
+
+it('keeps survey lines enabled at country scale with thin continuous overview strokes', async () => {
+    const data = surveyCollection();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => data }));
+    await Layers.addProjectGeoJSON('p1', '/survey.geojson');
+
+    const source = State.map.getSource('project-geojson-p1');
+    const layer = State.map.getLayer('project-layer-p1');
+    expect(source.tolerance).toBe(0);
+    expect(source.data.features[1].geometry).toEqual(data.features[1].geometry);
+    expect(layer).toMatchObject({
+        type: 'line',
+        filter: ['==', '$type', 'LineString'],
+        minzoom: 0,
+        paint: { 'line-color': '#123456', 'line-opacity': 1 },
+    });
+    for (const [zoom, width] of [[0, 1], [5, 1], [7.99, 1], [8, 1], [10, 1.25], [11.5, 1.4375], [12, 1.5], [14, 2], [16, 5], [17, 5.5], [18, 6], [20, 6]]) {
+        expect(widthAtZoom(layer.paint['line-width'], zoom)).toBeCloseTo(width);
+    }
+});
+
+it('keeps GPS tracks visible at overview zooms without changing track geometry, color or dash pattern', async () => {
+    const data = surveyCollection();
+    vi.spyOn(Colors, 'getGPSTrackColor').mockReturnValue('#abcdef');
+    await Layers.addGPSTrackLayer('t1', data);
+    const source = State.map.getSource('gps-track-source-t1');
+    const layer = State.map.getLayer('gps-track-line-t1');
+    expect(source).toMatchObject({ tolerance: 0, data });
+    expect(layer).toMatchObject({
+        minzoom: 0,
+        filter: ['==', '$type', 'LineString'],
+        paint: { 'line-color': '#abcdef', 'line-dasharray': [0.1, 1.5] },
+    });
+    for (const [zoom, width] of [[5, 1], [8, 1], [11.5, 1.4375], [14, 2], [16, 6], [17, 6.5], [18, 7]]) {
+        expect(widthAtZoom(layer.paint['line-width'], zoom)).toBeCloseTo(width);
+    }
+    Layers.showGPSTrackLayers('t1', false);
+    expect(visibility(layer.id)).toBe('none');
+    Layers.showGPSTrackLayers('t1', true);
+    expect(visibility(layer.id)).toBe('visible');
+    await Layers.addGPSTrackLayer('t1', data);
+    expect(State.map.getSource('gps-track-source-t1').tolerance).toBe(0);
+    expect(State.map.getLayer(layer.id).paint).toEqual(layer.paint);
+});
+
+it.each(['project', 'depth', 'shot'])('preserves overview rendering and visibility through refresh and style rebuild in %s mode', async mode => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => surveyCollection() }));
+    Layers.setColorMode(mode);
+    Layers.applyProjectVisibility('p1', false);
+    await Layers.addProjectGeoJSON('p1', '/survey.geojson');
+    const source = State.map.getSource('project-geojson-p1');
+    const originalLayer = State.map.getLayer('project-layer-p1');
+    const originalWidth = structuredClone(originalLayer.paint['line-width']);
+    const expectedColor = Colors.getSurveyPaint('p1', mode, State.activeDepthDomain);
+
+    await Layers.addProjectGeoJSON('p1', '/refreshed.geojson');
+    expect(source.setData).toHaveBeenCalledOnce();
+    expect(State.map.addSource).toHaveBeenCalledOnce();
+    expect(State.map.getLayer('project-layer-p1')).toBe(originalLayer);
+    expect(visibility('project-layer-p1')).toBe('none');
+
+    // A base-style replacement discards map sources/layers, not display preferences.
+    State.map = createMap();
+    State.allProjectLayers = new Map();
+    await Layers.addProjectGeoJSON('p1', '/rebuilt.geojson');
+    expect(State.map.getSource('project-geojson-p1').tolerance).toBe(0);
+    expect(State.map.getLayer('project-layer-p1')).toMatchObject({
+        minzoom: 0,
+        layout: { visibility: 'none' },
+        paint: { 'line-width': originalWidth, 'line-color': expectedColor },
+    });
+    Layers.applyProjectVisibility('p1', true);
+    Layers.setCategoryVisibility('caveEntrances', false);
+    expect(visibility('project-layer-p1')).toBe('visible');
+    expect(visibility('project-points-p1')).toBe('none');
+    Layers.toggleProjectVisibility('p1', false);
+    expect(visibility('project-layer-p1')).toBe('none');
+    expect(State.displayPreferences.colorMode).toBe(mode);
 });
 
 it('shows cave entrances by default and composes their category with project and country gates', async () => {

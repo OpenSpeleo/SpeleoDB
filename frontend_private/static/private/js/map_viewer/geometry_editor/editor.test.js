@@ -367,6 +367,13 @@ describe('native GIS geometry editor', () => {
         expect(map.sources.size).toBe(1);
         expect(map.layers.size).toBe(5);
         expect(GeometryEditor.session.draft.vertices).toEqual(existing.geojson.coordinates);
+        expect(map.sources.get('gis-geometry-draft-source').tolerance).toBe(0);
+        expect(map.layers.get('gis-geometry-draft-line').paint['line-width'])
+            .toEqual(['interpolate', ['linear'], ['zoom'], 0, 1, 8, 1, 12, 1.5, 14, 2, 16, 3, 18, 3]);
+        expect(map.layers.get('gis-geometry-draft-bbox').paint['line-width'])
+            .toEqual(['interpolate', ['linear'], ['zoom'], 0, 1, 8, 1, 12, 1, 14, 1, 16, 1, 18, 1]);
+        expect(map.layers.get('gis-geometry-draft-bbox').paint['line-dasharray'])
+            .toEqual(DEFAULTS.GIS_GEOMETRY.BBOX_DASH_ARRAY);
     });
 
     it('treats names as text and gives keyboard users selectable vertex rows', async () => {

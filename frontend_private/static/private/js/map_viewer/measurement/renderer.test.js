@@ -20,6 +20,19 @@ function makeMap() {
     };
 }
 
+function widthAtZoom(expression, zoom) {
+    expect(expression.slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
+    const stops = expression.slice(3);
+    if (zoom <= stops[0]) return stops[1];
+    for (let index = 2; index < stops.length; index += 2) {
+        if (zoom <= stops[index]) {
+            const fraction = (zoom - stops[index - 2]) / (stops[index] - stops[index - 2]);
+            return stops[index - 1] + fraction * (stops[index + 1] - stops[index - 1]);
+        }
+    }
+    return stops.at(-1);
+}
+
 describe('measurement native renderer', () => {
     let map;
     let renderer;
@@ -59,6 +72,22 @@ describe('measurement native renderer', () => {
         expect(image.options.stretchX).toEqual([[DEFAULTS.MEASUREMENT.LABEL_IMAGE_RADIUS,
             image.image.width - DEFAULTS.MEASUREMENT.LABEL_IMAGE_RADIUS]]);
         expect(label.layout['icon-text-fit-padding']).toEqual(DEFAULTS.MEASUREMENT.LABEL_PADDING);
+    });
+
+    it('retains contrasting casing around completed and draft lines through overview zooms', () => {
+        renderer.setMeasurements([createMeasurement([0, 0], [1, 0], 'one')]);
+        for (const kind of ['completed', 'draft']) {
+            const foreground = map.layers.get(`${MEASUREMENT_LAYER_PREFIX}${kind}-line`).paint['line-width'];
+            const casing = map.layers.get(`${MEASUREMENT_LAYER_PREFIX}${kind}-casing`).paint['line-width'];
+            for (const zoom of [0, 5, 8, 10.5, 12, 13.5, 14]) {
+                expect(widthAtZoom(casing, zoom) - widthAtZoom(foreground, zoom)).toBeCloseTo(1);
+            }
+            expect(widthAtZoom(casing, 15) - widthAtZoom(foreground, 15)).toBeCloseTo(2);
+            for (const zoom of [16, 17.5, 18, 22]) {
+                expect(widthAtZoom(foreground, zoom)).toBe(2);
+                expect(widthAtZoom(casing, zoom)).toBe(5);
+            }
+        }
     });
 
     it('prioritizes newer measurements and preserves older complete geometry on pointer movement', () => {
@@ -174,6 +203,15 @@ describe('measurement native renderer', () => {
         map.sources.clear(); map.layers.clear(); map.images.clear();
         map.listeners.get('style.load')();
         expect(map.sources.get(`${MEASUREMENT_LAYER_PREFIX}completed`).data).toBe(original);
+        for (const kind of ['completed', 'draft']) {
+            expect(map.sources.get(`${MEASUREMENT_LAYER_PREFIX}${kind}`).tolerance).toBe(0);
+            expect(map.layers.get(`${MEASUREMENT_LAYER_PREFIX}${kind}-line`).paint['line-width'])
+                .toEqual(['interpolate', ['linear'], ['zoom'], 0, 1, 8, 1, 12, 1.5, 14, 2, 16, 2, 18, 2]);
+            expect(map.layers.get(`${MEASUREMENT_LAYER_PREFIX}${kind}-casing`).paint['line-width'])
+                .toEqual(['interpolate', ['linear'], ['zoom'], 0, 2, 8, 2, 12, 2.5, 14, 3, 16, 5, 18, 5]);
+        }
+        expect(map.layers.get(`${MEASUREMENT_LAYER_PREFIX}draft-line`).paint['line-dasharray'])
+            .toEqual(DEFAULTS.MEASUREMENT.DRAFT_DASH_ARRAY);
         const count = map.addLayer.mock.calls.length;
         renderer.restore();
         expect(map.addLayer).toHaveBeenCalledTimes(count);

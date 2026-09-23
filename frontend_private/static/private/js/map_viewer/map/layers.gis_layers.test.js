@@ -21,6 +21,7 @@ vi.mock('../state.js', () => ({
         gisLayerStates: new Map(),
         gisLayerLoadingStates: new Map(),
         gisLayerCache: new Map(),
+        gisLayerGeometryTypeStates: new Map(),
         allGISLayerLayers: new Map(),
         gisLayerBounds: new Map(),
         gisLayerClickableLayerIds: new Set(),
@@ -32,6 +33,7 @@ vi.mock('./geometry.js', () => ({ Geometry: {} }));
 vi.mock('./geojson.js', () => ({ computeGeoJSONBounds: vi.fn(() => mocks.bounds) }));
 
 import { State } from '../state.js';
+import { GIS_GEOMETRY_TYPE_PROPERTY, gisLayerGeometryFilter } from './gis_layer_geometry.js';
 import {
     bindGISPopupScrollIsolation,
     buildGISFeaturePopup,
@@ -44,6 +46,7 @@ describe('GIS Layer display', () => {
         State.gisLayerStates.clear();
         State.gisLayerLoadingStates.clear();
         State.gisLayerCache.clear();
+        State.gisLayerGeometryTypeStates.clear();
         State.allGISLayerLayers.clear();
         State.gisLayerBounds.clear();
         State.gisLayerClickableLayerIds.clear();
@@ -56,6 +59,7 @@ describe('GIS Layer display', () => {
             removeLayer: vi.fn(),
             removeSource: vi.fn(),
             setLayoutProperty: vi.fn(),
+            setFilter: vi.fn(),
             moveLayer: vi.fn(),
         };
         mocks.getGISLayerDetails.mockReset();
@@ -69,7 +73,7 @@ describe('GIS Layer display', () => {
         vi.restoreAllMocks();
     });
 
-    it('refreshes detail, downloads once, and renders the GeoJSON unchanged', async () => {
+    it('refreshes detail, downloads once, and preserves the cached GeoJSON', async () => {
         const geojson = { type: 'FeatureCollection', features: [{
             type: 'Feature',
             properties: { untouched: true },
@@ -84,10 +88,15 @@ describe('GIS Layer display', () => {
         expect(fetch).toHaveBeenCalledWith('/fresh-signed-url');
         expect(State.map.addSource).toHaveBeenCalledWith('gis-layer-source-layer-1', {
             type: 'geojson',
-            data: geojson,
+            data: { type: 'FeatureCollection', features: [{
+                ...geojson.features[0],
+                properties: { untouched: true, [GIS_GEOMETRY_TYPE_PROPERTY]: 'Point' },
+            }] },
             generateId: true,
+            tolerance: 0,
         });
         expect(State.gisLayerCache.get('layer-1')).toBe(geojson);
+        expect(geojson.features[0].properties).toEqual({ untouched: true });
         expect(State.gisLayerBounds.get('layer-1')).toBe(mocks.bounds);
     });
 
@@ -106,11 +115,19 @@ describe('GIS Layer display', () => {
         await Layers.addGISLayer('layer-1', { type: 'FeatureCollection', features: [] });
 
         expect(State.map.addLayer.mock.calls.map(([layer]) => [layer.id, layer.type, layer.filter])).toEqual([
-            ['gis-layer-layer-1-fill', 'fill', ['==', '$type', 'Polygon']],
-            ['gis-layer-layer-1-outline', 'line', ['==', '$type', 'Polygon']],
-            ['gis-layer-layer-1-line', 'line', ['==', '$type', 'LineString']],
-            ['gis-layer-layer-1-point', 'circle', ['==', '$type', 'Point']],
+            ['gis-layer-layer-1-fill', 'fill', gisLayerGeometryFilter('Polygon', [])],
+            ['gis-layer-layer-1-outline', 'line', gisLayerGeometryFilter('Polygon', [])],
+            ['gis-layer-layer-1-line', 'line', gisLayerGeometryFilter('LineString', [])],
+            ['gis-layer-layer-1-point', 'circle', gisLayerGeometryFilter('Point', [])],
         ]);
+        const [, outline, line] = State.map.addLayer.mock.calls.map(([layer]) => layer);
+        expect(outline.paint['line-width']).toEqual(['interpolate', ['linear'], ['zoom'],
+            0, 1, 8, 1, 12, 1.5, 14, 1.5, 16, 1.5, 18, 1.5]);
+        expect(line.paint['line-width']).toEqual(['interpolate', ['linear'], ['zoom'],
+            0, 1, 8, 1, 12, 1.5, 14, 2, 16, 2.5, 18, 2.5]);
+        expect(outline.minzoom ?? 0).toBe(0);
+        expect(line.minzoom ?? 0).toBe(0);
+        expect(line.paint['line-color']).toBe('#6366f1');
     });
 
     it('opens the exact safe feature card from polygon and point clicks', async () => {
@@ -285,7 +302,7 @@ describe('GIS Layer display', () => {
         expect(fetch).not.toHaveBeenCalled();
         expect(State.map.addSource).toHaveBeenCalledWith(
             'gis-layer-source-layer-1',
-            expect.objectContaining({ data: geojson }),
+            expect.objectContaining({ data: geojson, tolerance: 0 }),
         );
     });
 
@@ -297,5 +314,63 @@ describe('GIS Layer display', () => {
 
         expect(Layers.isGISLayerVisible('layer-1')).toBe(false);
         expect(Layers.isGISLayerLoading('layer-1')).toBe(false);
+    });
+
+    it('filters exact geometry types without downloading or replacing the source', async () => {
+        const types = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'];
+        const geojson = { type: 'FeatureCollection', features: types.map(type => ({
+            type: 'Feature', properties: {}, geometry: { type, coordinates: [] }
+        })) };
+        State.gisLayerCache.set('layer-1', geojson);
+        await Layers.toggleGISLayerVisibility('layer-1', true);
+        State.map.getLayer.mockReturnValue({});
+
+        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Polygon', false);
+
+        expect(Layers.getGISLayerGeometryTypes('layer-1')).toEqual(types);
+        expect(Layers.isGISLayerGeometryTypeVisible('layer-1', 'Polygon')).toBe(false);
+        expect(Layers.isGISLayerVisible('layer-1')).toBe(true);
+        const enabledTypes = types.filter(type => type !== 'Polygon');
+        const roles = [['fill', 'Polygon'], ['outline', 'Polygon'], ['line', 'LineString'], ['point', 'Point']];
+        expect(State.map.setFilter.mock.calls).toEqual(roles.map(([role, family]) => [
+            `gis-layer-layer-1-${role}`, gisLayerGeometryFilter(family, enabledTypes)
+        ]));
+        expect(State.map.addSource).toHaveBeenCalledTimes(1);
+        expect(fetch).not.toHaveBeenCalled();
+
+        // Master visibility is a separate gate and keeps the chosen type filters.
+        await Layers.toggleGISLayerVisibility('layer-1', false);
+        await Layers.toggleGISLayerVisibility('layer-1', true);
+        expect(Layers.isGISLayerGeometryTypeVisible('layer-1', 'Polygon')).toBe(false);
+        expect(State.map.setFilter).toHaveBeenCalledTimes(4);
+
+        // A style rebuild recreates the four roles with those same preferences.
+        State.allGISLayerLayers.clear();
+        State.map.addLayer.mockClear();
+        await Layers.toggleGISLayerVisibility('layer-1', true);
+        expect(State.map.addLayer.mock.calls.map(([layer]) => layer.filter)).toEqual(
+            roles.map(([, family]) => gisLayerGeometryFilter(family, enabledTypes))
+        );
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('allows all types to be hidden and restored, independently for each layer', async () => {
+        const geojson = { type: 'GeometryCollection', geometries: [
+            { type: 'Point', coordinates: [1, 2] },
+            { type: 'LineString', coordinates: [[1, 2], [3, 4]] }
+        ] };
+        await Layers.addGISLayer('layer-1', geojson);
+        await Layers.addGISLayer('layer-2', geojson);
+        State.map.getLayer.mockReturnValue({});
+        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', false);
+        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'LineString', false);
+        expect(State.map.setFilter).toHaveBeenLastCalledWith(
+            'gis-layer-layer-1-point', gisLayerGeometryFilter('Point', [])
+        );
+        expect(Layers.isGISLayerGeometryTypeVisible('layer-2', 'Point')).toBe(true);
+        Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Point', true);
+        expect(State.map.setFilter).toHaveBeenLastCalledWith(
+            'gis-layer-layer-1-point', gisLayerGeometryFilter('Point', ['Point'])
+        );
     });
 });

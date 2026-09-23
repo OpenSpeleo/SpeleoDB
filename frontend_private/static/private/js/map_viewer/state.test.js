@@ -138,6 +138,7 @@ describe('State', () => {
         it('resets all GIS Layer Maps', () => {
             State.gisLayerStates.set('g1', true);
             State.gisLayerCache.set('g1', {});
+            State.gisLayerGeometryTypeStates.set('g1', new Map([['Point', false]]));
             State.gisLayerLoadingStates.set('g1', true);
             State.allGISLayerLayers.set('g1', ['layer-1']);
             State.gisLayerBounds.set('g1', [0, 0, 1, 1]);
@@ -147,6 +148,7 @@ describe('State', () => {
 
             expect(State.gisLayerStates.size).toBe(0);
             expect(State.gisLayerCache.size).toBe(0);
+            expect(State.gisLayerGeometryTypeStates.size).toBe(0);
             expect(State.gisLayerLoadingStates.size).toBe(0);
             expect(State.allGISLayerLayers.size).toBe(0);
             expect(State.gisLayerBounds.size).toBe(0);
