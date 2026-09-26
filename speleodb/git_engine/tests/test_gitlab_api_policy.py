@@ -101,10 +101,17 @@ def test_real_unauthorized_response_is_not_retried(live_gitlab: Gitlab) -> None:
 
 
 @pytest.mark.skip_if_lighttest
-def test_real_missing_project_preserves_response_and_is_not_retried(
-    live_gitlab: Gitlab, live_project: Project
+@pytest.mark.parametrize("retry_not_found", [False, True])
+def test_real_missing_project_obeys_opt_in_not_found_retries(
+    live_gitlab: Gitlab,
+    live_project: Project,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    retry_not_found: bool,
 ) -> None:
     responses: list[Response] = []
+    delays: list[float] = []
+    monkeypatch.setattr("speleodb.utils.gitlab_client.time.sleep", delays.append)
 
     def observe(response: Response, **kwargs: Any) -> None:
         responses.append(response)
@@ -112,11 +119,27 @@ def test_real_missing_project_preserves_response_and_is_not_retried(
     live_gitlab.session.hooks["response"].append(observe)
     try:
         with pytest.raises(gitlab.exceptions.GitlabGetError) as raised:
-            live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{live_project.id}")
+            live_gitlab.projects.get(
+                f"{settings.GITLAB_GROUP_NAME}/{live_project.id}",
+                retry_not_found=retry_not_found,
+            )
         assert raised.value.response_code == HTTPStatus.NOT_FOUND
-        assert len(responses) == 1
-        assert raised.value.response_body == responses[0].content
-        assert raised.value.error_message == responses[0].json()["message"]
+        expected_attempts: int = (
+            settings.DJANGO_GIT_RETRY_ATTEMPTS if retry_not_found else 1
+        )
+        assert len(responses) == expected_attempts
+        assert delays == [
+            min(
+                settings.DJANGO_GIT_RETRY_BASE_DELAY_SECONDS * 2**attempt,
+                settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS,
+            )
+            for attempt in range(expected_attempts - 1)
+        ]
+        assert all(
+            "retry_not_found" not in str(response.request.url) for response in responses
+        )
+        assert raised.value.response_body == responses[-1].content
+        assert raised.value.error_message == responses[-1].json()["message"]
     finally:
         live_gitlab.session.hooks["response"].remove(observe)
 

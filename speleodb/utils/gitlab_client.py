@@ -99,8 +99,13 @@ class BoundedGitlabClient(gitlab.Gitlab):
         retry_transient_errors: bool | None = None,
         max_retries: int | None = None,
         extra_headers: dict[str, Any] | None = None,
+        *,
+        retry_not_found: bool = False,
         **kwargs: Any,
     ) -> Response:
+        """Opted-in missing reads share the existing transient retry budget."""
+        if retry_not_found and verb.upper() not in {"GET", "HEAD"}:
+            raise ValueError("GitLab retry_not_found is only supported for GET/HEAD")
         if max_retries is not None and (
             isinstance(max_retries, bool)
             or not isinstance(max_retries, int)
@@ -144,15 +149,19 @@ class BoundedGitlabClient(gitlab.Gitlab):
                 )
             except GitlabHttpError as error:
                 retryable: bool = (
-                    error.response_code == HTTPStatus.TOO_MANY_REQUESTS
-                    and obey_rate_limit
-                ) or (
-                    retry_transient
-                    and (
-                        error.response_code in RETRYABLE_TRANSIENT_ERROR_CODES
-                        or (
-                            error.response_code == HTTPStatus.CONFLICT
-                            and self._resource_lock_conflict.get()
+                    (retry_not_found and error.response_code == HTTPStatus.NOT_FOUND)
+                    or (
+                        error.response_code == HTTPStatus.TOO_MANY_REQUESTS
+                        and obey_rate_limit
+                    )
+                    or (
+                        retry_transient
+                        and (
+                            error.response_code in RETRYABLE_TRANSIENT_ERROR_CODES
+                            or (
+                                error.response_code == HTTPStatus.CONFLICT
+                                and self._resource_lock_conflict.get()
+                            )
                         )
                     )
                 )

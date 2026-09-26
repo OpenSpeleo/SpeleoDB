@@ -217,10 +217,12 @@ value or prove the historical job's identity.
 ## Repository and cleanup boundaries
 
 `GitlabManager._ensure_remote_project()` first looks up the exact namespace and
-project UUID. An existing remote requires no creation POST. Only a real 404
-permits creation; other lookup failures propagate. Creation conflicts still
-require a successful lookup before cloning, which handles concurrent creation
-without treating authentication, validation, or throttling errors as success.
+project UUID. An existing remote requires no creation POST. Acquisition retries
+HTTP 404 within the bounded REST attempt budget before permitting creation;
+other exhausted lookup failures propagate. Creation conflicts still require a
+successful lookup before cloning, using the same opt-in HTTP 404 backoff without
+restarting creation or treating authentication, validation, or throttling errors
+as success.
 
 Upload cleanup opens a working copy only if its directory already exists. It
 never accesses the provisioning property. Cleanup failures remain secondary to
@@ -266,9 +268,12 @@ status and body. See [GitLab reliability](gitlab-reliability.md).
   GitLab's delayed-deletion state.
 
 No patched SDK methods, HTTP fakes, or replacement GitLab services are used by
-these tests. Local bare repositories remain appropriate for Git-only behavior.
-The existing `skip_if_lighttest` marker explicitly selects an offline test mode;
-a required live service becoming unavailable must not trigger an automatic skip.
+these integration tests. Separate deterministic existence/backoff policy tests
+script SDK-boundary outcomes for retry decisions and conflict handling; they do
+not replace live-service coverage or participate in repository provisioning.
+Local bare repositories remain appropriate for Git-only behavior. The existing
+`skip_if_lighttest` marker explicitly selects an offline test mode; a required
+live service becoming unavailable must not trigger an automatic skip.
 
 Local bootstrap provisioning tests additionally require the local administrator
 bootstrap token. They run only against the local infrastructure addresses and
@@ -365,10 +370,10 @@ results and measured creation counts belong in the task's review record; this
 document describes the required behavior rather than claiming a particular run
 passed.
 
-The lookup-first path adds one GET to new creation and removes a rejected POST
-from existing-remote acquisition. Four reusable remote identities bound
-provisioning independently of the number of database fixtures or upload
-parameters. Lease restoration adds bounded Git/ref operations, but prevents
-unbounded remote history and cross-test contamination. The immutable creation
-allocations provide a stronger regression check than counting repositories left
-in a group after teardown.
+The lookup-first path adds up to five GETs and 15 seconds of default backoff to
+new creation, and removes a rejected POST from existing-remote acquisition. Four
+reusable remote identities bound provisioning independently of the number of
+database fixtures or upload parameters. Lease restoration adds bounded Git/ref
+operations, but prevents unbounded remote history and cross-test contamination.
+The immutable creation allocations provide a stronger regression check than
+counting repositories left in a group after teardown.
