@@ -15,6 +15,12 @@ ensure_bootstrap_token() {
 curl --fail --max-time 15 --silent --show-error \
     "${gitlab_url}/-/readiness?all=1" >/dev/null
 
+# Exercise the Host header used by Compose clients as well as localhost.
+# A competing virtual host (for example Pages) can otherwise hide the API.
+curl --fail --max-time 15 --silent --show-error \
+    --header "Host: gitlab:9080" \
+    "${gitlab_url}/-/readiness?all=1" >/dev/null
+
 if [[ ! -f "${bootstrap_marker}" ]]; then
     ensure_bootstrap_token
 fi

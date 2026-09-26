@@ -135,6 +135,20 @@ def test_setup_client_returns_none_only_for_real_missing_group(
     assert setup_client.find_group(f"{settings.GITLAB_GROUP_NAME}/{uuid4()}") is None
 
 
+@LOCAL_GITLAB
+@pytest.mark.skip_if_lighttest
+@pytest.mark.parametrize("host", ["localhost:9080", "gitlab:9080"])
+def test_local_api_accepts_browser_and_compose_hosts(
+    setup_client: PythonGitLabClient, host: str
+) -> None:
+    # Connect to the configured endpoint while exercising both NGINX routes.
+    # A localhost-only probe misses Pages intercepting the Compose hostname.
+    setup_client.admin.session.headers["Host"] = host
+    group = setup_client.find_group(settings.GITLAB_GROUP_NAME)
+    assert group is not None
+    assert str(group["id"]) == str(settings.GITLAB_GROUP_ID)
+
+
 @pytest.mark.skip_if_lighttest
 def test_setup_client_rejects_invalid_group_credential(
     setup_client: PythonGitLabClient,

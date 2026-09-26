@@ -106,6 +106,10 @@ workspace and `django-webserver`. Compose does not start either application
 service until PostgreSQL, Redis, RustFS, and GitLab are healthy and `setup`
 exits successfully. GitLab uses its full readiness probe, including its own
 database, Redis, and Gitaly checks; a first GitLab boot can take many minutes.
+The probe checks both the browser's `localhost:9080` Host header and the
+`gitlab:9080` header used by Compose clients. Local GitLab Pages is disabled:
+its virtual host can otherwise capture internal API requests on port 9080 and
+return an HTML 404 while the localhost readiness probe still succeeds.
 
 On its first run, the setup job copies `.env.dist` to the ignored `.env` and
 `.envs/test.env.dist` to the ignored `.envs/test.env`. Existing files are never

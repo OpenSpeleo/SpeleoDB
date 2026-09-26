@@ -181,7 +181,9 @@ services:
       GITLAB_GROUP_TOKEN_NAME: speleodb-local-development
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'http://localhost:9080'
-        pages_external_url "http://localhost:9080/"
+        # Pages can capture requests to the Compose hostname on this port.
+        gitlab_pages['enable'] = false
+        pages_nginx['enable'] = false
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         prometheus_monitoring['enable'] = false
         alertmanager['enable'] = false
