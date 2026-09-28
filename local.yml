@@ -1,6 +1,5 @@
 volumes:
   speleodb_local_postgres_data: {}
-  speleodb_local_postgres_data_backups: {}
   speleodb_local_web_node_modules: {}
   speleodb_local_gitlab_config: {}
   speleodb_local_gitlab_logs: {}
@@ -10,11 +9,6 @@ volumes:
   speleodb_local_redis_data: {}
 
 x-django: &django
-  build:
-    context: .
-    dockerfile: ./compose/Dockerfile
-    args:
-      - DOCKER_BUILDKIT=1
   image: speleodb_local_django
   user: dev-user
   depends_on:
@@ -44,19 +38,20 @@ x-django: &django
 services:
   django:
     <<: *django
+    # Only one service builds this tag; setup and Celery reuse its image.
+    build: &django-build
+      context: .
+      dockerfile: ./compose/Dockerfile
+      target: development
+      args:
+        - DOCKER_BUILDKIT=1
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
 
   postgres:
-    build:
-      context: .
-      dockerfile: ./compose/postgres/Dockerfile
-      args:
-        - DOCKER_BUILDKIT=1
-    image: speleodb_production_postgres
+    image: docker.io/postgres:16
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_postgres"
     volumes:
       - speleodb_local_postgres_data:/var/lib/postgresql/data
-      - speleodb_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.postgres
     ports:
@@ -88,6 +83,7 @@ services:
 
   django-webserver:
     <<: *django
+    build: *django-build
     image: speleodb_local_django_webserver
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django_webserver"
     command: /start
@@ -198,8 +194,8 @@ services:
       - speleodb_local_gitlab_config:/etc/gitlab
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
-      - ./compose/gitlab/healthcheck:/opt/speleodb/healthcheck:ro
-      - ./compose/gitlab/ensure_bootstrap_token.rb:/opt/speleodb/ensure_bootstrap_token.rb:ro
+      # Directory mounts survive atomic file replacement by editors and Git.
+      - ./compose/gitlab:/opt/speleodb:ro
     healthcheck:
       test: ["CMD", "/bin/bash", "/opt/speleodb/healthcheck"]
       interval: 30s
@@ -208,7 +204,7 @@ services:
       start_period: 15m
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-rc.1
+    image: rustfs/rustfs:1.0.0
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_rustfs"
     environment:
       - RUSTFS_ACCESS_KEY=access_key

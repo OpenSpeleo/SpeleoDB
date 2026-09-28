@@ -13,7 +13,6 @@ Procfile
 *.yaml
 *.toml
 !pyproject.toml
-!railpack.json
 !uv.lock
 
 # Directories
@@ -30,9 +29,32 @@ node_modules
 .ruff_cache
 .venv
 .vscode
-.workdir/emails/
-.workdir/git_projects/
-.workdir/tmp_dl_dir/
+.workdir/**
+!.workdir/test_wheels/
+!.workdir/test_wheels/.gitkeep
 .uv
 docs
 fixtures
+.artifacts
+.direnv
+result
+result-*
+**/.env
+**/.env.local
+**/.env.*
+!.env.dist
+.devcontainer/bash_history
+.cache
+.npm
+.coverage*
+coverage*
+htmlcov
+staticfiles
+speleodb/media
+speleodb/common/static/speleodb/vite
+**/*.db
+**/*.sqlite3*
+**/*.log
+**/*.pid
+test_log.txt
+celerybeat-schedule*

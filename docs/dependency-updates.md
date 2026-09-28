@@ -13,10 +13,13 @@ resolvers decide which combined graph is actually valid.
 Python direct requirements and extras are owned by `pyproject.toml`, with the
 complete cross-extra graph in `uv.lock`. JavaScript tooling is one root
 workspace owned by `package.json` and `package-lock.json`. `.node-version` owns
-the Node major used by local containers, GitHub Actions, and Railpack; the root
-package engine mirrors it as `<major>.*`. GitHub Actions own other CI tool
-bootstrap versions, and `compose/Dockerfile` owns the local Python image. Cargo
-and Bun workflows do not apply unless their manifests exist in the tree.
+the Node major used by local containers, GitHub Actions, and Railway; the root
+package engine mirrors it as `<major>.*`. `flake.nix` and `flake.lock` own the
+Python/Node toolchains and system libraries, while `compose/Dockerfile` starts
+from the official Nix image, installs those packages, and runs uv/npm. Update
+the flake lock explicitly when changing those toolchains; it does not replace
+either application lockfile. GitHub Actions own other CI bootstrap versions.
+Cargo and Bun workflows do not apply unless their manifests exist in the tree.
 
 Fetch the authoritative list of open Dependabot PRs targeting `dev`, merge all
 of their heads locally, and then consolidate overlaps in the manifests. Run

@@ -7,9 +7,11 @@ published distributions and remains Rust-free by default. The enclosing monorepo
 can opt into `DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=1` to develop the
 PyO3-backed `openspeleo_core` web runtime dependency from local source.
 
-This option installs stable Rust and Cargo before the Dockerfile's Python
-dependency layer. It does not install or build Compass, Tauri, Trunk, wasm-pack,
-Java, mobile tooling, or another application repository.
+This option selects the flake's monorepo package set, including pinned stable
+Rust and Cargo before the Dockerfile's Python dependency layer. These tools are
+available through `/opt/development/bin`; rustup is not required. It does not
+install or build Compass, Tauri, Trunk, wasm-pack, Java, mobile tooling, or
+another application repository.
 
 ## Editable Build
 

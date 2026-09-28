@@ -562,6 +562,7 @@ the public custom stylesheet. Production builds use `--minify`.
   which performs the clean production Vite build.
 - **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
 - **Railway deploy** (`.railway/railway.ts`): Service and deployment settings;
-  `railpack.json` owns the production asset build via root npm commands.
+  `compose/Dockerfile` builds production assets with root npm commands using
+  Node supplied by `flake.nix`.
 - **Django**: Templates reference the bundled output files in `dist/`
   directories.

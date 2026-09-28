@@ -58,34 +58,42 @@ def test_github_actions_read_node_version_file() -> None:
         assert "node-version" not in inputs
 
 
-def test_compose_dockerfile_reads_node_version_file() -> None:
-    dockerfile = (REPOSITORY_ROOT / "compose" / "Dockerfile").read_text(
-        encoding="utf-8"
+def test_application_services_build_the_development_target() -> None:
+    compose_config: dict[str, Any] = yaml.safe_load(
+        (REPOSITORY_ROOT / "local.yml").read_text(encoding="utf-8")
     )
+    for service_name in (
+        "django",
+        "django-webserver",
+        "celery-worker",
+        "celery-beat",
+        "setup",
+    ):
+        build: dict[str, Any] = compose_config["services"][service_name]["build"]
+        assert build["dockerfile"] == "./compose/Dockerfile"
+        assert build["target"] == "development"
 
-    assert "COPY .node-version /tmp/.node-version" in dockerfile
-    assert "< /tmp/.node-version" in dockerfile
-    assert "setup_${NODE_MAJOR}.x" in dockerfile
-    assert 'grep -Eq "^v${NODE_MAJOR}\\\\."' in dockerfile
-    assert "setup_22.x" not in dockerfile
-    assert "setup_26.x" not in dockerfile
 
-
-def test_railpack_reads_node_version_file_for_node_commands() -> None:
-    railpack: dict[str, Any] = json.loads(
-        (REPOSITORY_ROOT / "railpack.json").read_text(encoding="utf-8")
+def test_production_ci_builds_the_standalone_image_without_publication() -> None:
+    workflow: dict[str, Any] = yaml.safe_load(
+        (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
     )
-    commands: list[str] = [
-        command["cmd"] for command in railpack["steps"]["build"]["commands"]
-    ]
-    expected_prefix = "mise exec -- "
-    node_commands = [
-        command for command in commands if command.startswith(expected_prefix)
-    ]
+    build_step: dict[str, Any] = next(
+        step
+        for step in workflow["jobs"]["production-image"]["steps"]
+        if str(step.get("uses", "")).startswith("docker/build-push-action@")
+    )
+    inputs: dict[str, Any] = build_step["with"]
+    assert inputs["context"] == "."
+    assert inputs["file"] == "compose/Dockerfile"
+    assert inputs["target"] == "production"
+    assert inputs["platforms"] == "linux/amd64"
+    assert inputs["push"] is False
 
-    assert "node" not in railpack["packages"]
-    assert node_commands == [
-        f"{expected_prefix}node --version",
-        f"{expected_prefix}npm ci",
-        f"{expected_prefix}npm run build",
-    ]
+
+def test_flake_selects_node_major_from_the_shared_version_file() -> None:
+    flake: str = (REPOSITORY_ROOT / "flake.nix").read_text(encoding="utf-8")
+    assert "builtins.readFile ./.node-version" in flake
+    assert 'pkgs."nodejs_${nodeMajor}"' in flake

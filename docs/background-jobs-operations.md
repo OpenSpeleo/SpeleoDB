@@ -299,11 +299,12 @@ for this repository. The deprecated `railway.toml` was removed to avoid
 competing deployment settings. Preserve the existing named partial and its
 current web service; do not recreate legacy TOML/JSON service configuration or
 take ownership of unrelated services by importing/applying an incomplete
-whole-project graph. `railpack.json` separately owns image construction,
-including dependencies and frontend assets. Service configuration changes
-require a reviewed `railway config plan` and `railway config apply`; application
-Git pushes alone do not apply IaC edits. Consolidating these settings has no
-application runtime or performance effect.
+whole-project graph. All three application services build the production target
+of `compose/Dockerfile`, which starts from the official Nix image, installs
+packages defined in `flake.nix`, and runs uv/npm directly. Service configuration
+changes require a reviewed `railway config plan` and `railway config apply`;
+application Git pushes alone do not apply IaC edits. Consolidating these
+settings has no application runtime or performance effect.
 
 The root Node manifest and lockfile pin `railway@3.11.0`, TypeScript, and Node
 type definitions. `npm run typecheck:railway` validates the authoring file and

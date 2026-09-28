@@ -120,8 +120,8 @@ The repository now uses a single Node workspace at the repo root.
 - Canonical Node manifests are:
   - `package.json`
   - `package-lock.json`
-- `.node-version` is the canonical Node major for local containers, CI, and
-  Railpack. The root `engines.node` value mirrors it as `<major>.*`; do not
+- `.node-version` is the canonical Node major for local containers, CI, and the
+  Nix flake. The root `engines.node` value mirrors it as `<major>.*`; do not
   hard-code a separate Node version in those integrations.
 - Do not re-introduce nested `package.json` files for frontend tooling.
 - Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
@@ -172,9 +172,31 @@ The repository now uses a single Node workspace at the repo root.
 
 ### Related system hooks
 
-- Dev container/webserver bootstrap: `compose/start` (root npm commands).
-- Railpack image build: `railpack.json` (Node from `.node-version` via Mise,
-  `npm ci && npm run build`).
+- Dev container/webserver bootstrap: `compose/start` runs `npm ci` and the root
+  npm watcher directly.
+- Image build: `flake.nix` and `flake.lock` define tools and system libraries.
+  `compose/Dockerfile` starts from the official Nix image, installs those
+  packages, then runs ordinary `uv sync`, `npm ci`, and `npm run build`
+  commands. Preserve this boundary and uv/npm lock ownership. Runtime tools live
+  in `/opt/runtime`, development tools in `/opt/development`, and Python
+  dependencies in `/opt/speleodb-venv`. `.node-version` selects the Node major;
+  the flake lock pins patches. Rust remains opt-in for monorepo development. See
+  `docs/nix-builds.md`. Nix builds run directly in a writable Docker cache mount
+  at `/nix`, containing unpacked store paths and the Nix database, seeded from
+  the pinned official base image. Copy required closures into the final images
+  so runtime containers remain independent of the cache. Do not add host cache
+  folders, APFS setup, preparation helpers, editor initialization hooks, or
+  named build contexts. Docker owns this cache and may garbage-collect it;
+  existing CI layer caching does not transfer mutable cache mounts. uv/npm
+  remain ordinary application installation steps.
+- Compose image ownership: only `django` builds the shared Django image;
+  `setup`, `celery-worker`, and `celery-beat` reuse it without `build` blocks.
+  `django-webserver` builds its separate tag using the same build configuration.
+  Keep one build owner per tag: Compose's service labels otherwise produce
+  distinct images that overwrite each other's tags. Preserve the full normal
+  Compose/editor lifecycle and setup dependency gates. PostgreSQL uses the
+  upstream `postgres:16` image directly, with no custom Dockerfile or
+  maintenance scripts; preserve its database volume and readiness check.
 - Railway service configuration: `.railway/railway.ts` is the sole authority;
   predeploy runs migrations, `install_background_schedules`, and
   `collectstatic`. Do not reintroduce legacy `railway.toml` or `railway.json`

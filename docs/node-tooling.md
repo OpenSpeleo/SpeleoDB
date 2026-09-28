@@ -10,10 +10,10 @@ development server, proxy, HMR client, or HTML transformer.
 The supported Node major is declared once in `.node-version`. The root
 `package.json` engine mirrors that value as `26.*`, making the compatibility
 contract explicit without creating another independently selected runtime.
-GitHub Actions reads the version file directly, the Compose/devcontainer image
-derives its NodeSource channel from it, and Railpack passes it to Mise for the
-frontend build. The major-only value intentionally follows compatible 26.x patch
-releases across all environments.
+GitHub Actions reads the version file directly, and the shared Nix flake selects
+the same major for Compose/devcontainer and Railway builds. `flake.lock` pins
+the exact Nix toolchain versions; updating that lock advances compatible
+patches.
 
 Exact direct dependency versions live only in `package.json` and
 `package-lock.json` so documentation cannot drift from the install graph.
@@ -69,13 +69,14 @@ loudly. DEBUG/test may fall back to registry-derived stable names before the
 first watcher build. URLs pass through Django static storage, preserving local
 serving and S3/CloudFront behavior.
 
-Railpack retains the Python provider and uses `mise exec` to run `node`,
-`npm ci`, and `npm run build` with the major read from `.node-version`. Node is
-therefore versioned by the repository rather than duplicated in Railpack's
-package map. The runtime retains generated assets and manifest but not
-`node_modules`. Railway pre-deploy runs only migrations and `collectstatic`,
-because pre-deploy filesystem changes are not persisted. SPA serving is disabled
-and Gunicorn/Django remains the start command.
+The shared flake supplies Node in the development package set.
+`compose/Dockerfile` runs `npm ci` and `npm run build` directly and packages the
+production target for Railway. The runtime retains generated assets and the
+manifest but excludes Node/npm and `node_modules`. Railway pre-deploy runs
+migrations, background schedule installation, and `collectstatic`; frontend
+compilation belongs to image build because pre-deploy filesystem changes are not
+persisted. Gunicorn/Django remains the start command. See
+[Nix builds](nix-builds.md).
 
 When updating tooling, regenerate the root lockfile independently of the
 installed tree; npm's hidden `node_modules/.package-lock.json` is not an

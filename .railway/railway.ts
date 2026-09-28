@@ -65,7 +65,7 @@ export default defineRailway(() => {
   ];
   const SpeleoDB_Prod = service("SpeleoDB-Prod", {
     source: github("OpenSpeleo/SpeleoDB", { branch: "master", checkSuites: true }),
-    build: { builder: "RAILPACK", buildCommand: "", buildEnvironment: "V3" },
+    build: { builder: "DOCKERFILE", dockerfilePath: "compose/Dockerfile", buildEnvironment: "V3" },
     start: "gunicorn config.wsgi:application --workers ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} --max-requests 128 --preload",
     replicas: { "us-east4-eqdc4a": 1 },
     preDeploy: "python /app/manage.py migrate && python /app/manage.py install_background_schedules && python /app/manage.py collectstatic --noinput --verbosity=3 --ignore='django_countries/static/flags/*'",
@@ -138,7 +138,7 @@ export default defineRailway(() => {
   // exports and background_control using the same start script.
   const worker = service("Celery-Worker", {
     source: applicationSource,
-    build: { builder: "RAILPACK", watchPatterns: [] },
+    build: { builder: "DOCKERFILE", dockerfilePath: "compose/Dockerfile", watchPatterns: [] },
     start: "bash compose/celery/worker/start",
     replicas: { "us-east4-eqdc4a": 1 },
     env: applicationEnvironment,
@@ -149,7 +149,7 @@ export default defineRailway(() => {
   });
   const beat = service("Celery-Beat", {
     source: applicationSource,
-    build: { builder: "RAILPACK", watchPatterns: [] },
+    build: { builder: "DOCKERFILE", dockerfilePath: "compose/Dockerfile", watchPatterns: [] },
     start: "python manage.py run_background_beat",
     replicas: { "us-east4-eqdc4a": 1 },
     env: applicationEnvironment,

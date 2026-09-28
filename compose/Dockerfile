@@ -1,129 +1,115 @@
-FROM python:3.14.7-bookworm
+# syntax=docker/dockerfile:1
+FROM nixos/nix:2.35.2 AS nix-base
+ARG TARGETARCH
+RUN cp -L /etc/nix/nix.conf /tmp/nix.conf \
+    && printf '%s\n' 'experimental-features = nix-command flakes read-only-local-store' \
+      'sandbox = false' 'filter-syscalls = false' >> /tmp/nix.conf \
+    && mv /tmp/nix.conf /etc/nix/nix.conf
 
-ARG BUILD_ENVIRONMENT=local
-ARG APP_HOME=/app
+FROM nix-base AS flake
+WORKDIR /opt/flake
+COPY flake.nix flake.lock .node-version ./
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV BUILD_ENV=${BUILD_ENVIRONMENT}
+# Seed the writable cache from the base image so /nix still contains Nix itself.
+# Bump the cache generation when upgrading the pinned base image.
+FROM flake AS runtime-tools
+RUN --mount=type=cache,id=speleodb-nix-v1-${TARGETARCH},target=/nix,from=nix-base,source=/nix,sharing=locked \
+    XDG_CACHE_HOME=/nix/var/cache nix build --no-update-lock-file .#runtime -o /opt/runtime \
+    && nix copy --no-check-sigs --to /closure /opt/runtime \
+    && readlink /opt/runtime > /closure/profile-path
 
-WORKDIR ${APP_HOME}
+# Import packages into the image; runtime containers do not need the build cache.
+FROM flake AS runtime
+RUN --mount=type=bind,from=runtime-tools,source=/closure,target=/closure \
+    nix copy --no-check-sigs --from 'local?root=/closure&read-only=true' "$(cat /closure/profile-path)" \
+    && ln -s "$(cat /closure/profile-path)" /opt/runtime \
+    && ln -s /opt/runtime/bin/bash /bin/bash \
+    && ln -sf /opt/runtime/bin/bash /bin/sh
 
-# devcontainer dependencies and utils
-RUN apt-get update && apt-get install -y \
-    sudo \
-    git \
-    bash-completion \
-    ca-certificates \
-    curl \
-    wget \
-    vim \
-    ssh \
-    make \
-    gcc \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install required system dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    # psycopg dependencies
-    libpq-dev \
-    # Translations dependencies
-    gettext \
-    # Automatic Reloads
-    watchman \
-    # FFMPEG for video processing
-    ffmpeg \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install the NodeJS major declared by the repository.
-COPY .node-version /tmp/.node-version
-RUN NODE_MAJOR="$(tr -d '[:space:]' < /tmp/.node-version)" \
-    && case "${NODE_MAJOR}" in \
-        ""|*[!0-9]*) echo "Invalid Node major in .node-version: ${NODE_MAJOR}" >&2; exit 1 ;; \
-    esac \
-    && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install --no-install-recommends -y \
-    nodejs \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/* && \
-    # update npm to latest
-    npm install -g npm \
-    && node --version | grep -Eq "^v${NODE_MAJOR}\\." \
-    && npm cache clean --force \
-    && rm /tmp/.node-version
-
-# Install uv.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# The standalone image remains Rust-free. The monorepo devcontainer enables
-# this layer because it develops the local PyO3-backed openspeleo_core package.
-# Keep it before the Python dependency layer so changing application
-# dependencies does not invalidate the comparatively expensive toolchain.
-ARG DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=0
-ENV RUSTUP_HOME=/usr/local/rustup
-ENV CARGO_HOME=/usr/local/cargo
-ENV PATH="/usr/local/cargo/bin:${PATH}"
-RUN if [ "${DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN}" = "1" ]; then \
-    curl --proto '=https' --tlsv1.2 -sSf \
-        https://sh.rustup.rs -o /tmp/rustup-init.sh \
-    && sh /tmp/rustup-init.sh \
-        -y \
-        --no-modify-path \
-        --profile minimal \
-        --default-toolchain stable \
-    && rm /tmp/rustup-init.sh \
-    && chmod -R a+rX "${CARGO_HOME}" "${RUSTUP_HOME}"; \
-    fi
-
-# UV settings
-ENV VIRTUAL_ENV="/opt/speleodb-venv"
-ENV UV_PROJECT_ENVIRONMENT="${VIRTUAL_ENV}"
+ENV PATH="/opt/speleodb-venv/bin:/usr/local/bin:/opt/runtime/bin:/nix/var/nix/profiles/default/bin:/bin:/usr/bin"
+# Native Python wheels need these libraries. Never put glibc on this path.
+ENV LD_LIBRARY_PATH=/opt/runtime/lib
+ENV VIRTUAL_ENV=/opt/speleodb-venv
+ENV UV_PROJECT_ENVIRONMENT=/opt/speleodb-venv
+ENV UV_PYTHON=/opt/runtime/bin/python3.14
+ENV UV_PYTHON_DOWNLOADS=never
 ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
-ENV UV_PYTHON_DOWNLOADS=0
-ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app
 
-# Install Project Dependencies
+FROM flake AS development-tools
+ARG DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=0
+RUN --mount=type=cache,id=speleodb-nix-v1-${TARGETARCH},target=/nix,from=nix-base,source=/nix,sharing=locked \
+    if [ "$DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN" = 1 ]; then \
+      nix_environment=monorepo; \
+    else \
+      nix_environment=development; \
+    fi \
+    && XDG_CACHE_HOME=/nix/var/cache nix build --no-update-lock-file "/opt/flake#$nix_environment" -o /opt/development \
+    && nix copy --no-check-sigs --to /closure /opt/development \
+    && readlink /opt/development > /closure/profile-path
+
+FROM runtime AS build
+RUN --mount=type=bind,from=development-tools,source=/closure,target=/closure \
+    nix copy --no-check-sigs --from 'local?root=/closure&read-only=true' "$(cat /closure/profile-path)" \
+    && ln -s "$(cat /closure/profile-path)" /opt/development
+ENV PATH="/opt/speleodb-venv/bin:/usr/local/bin:/opt/development/bin:/opt/runtime/bin:/nix/var/nix/profiles/default/bin:/bin:/usr/bin"
+COPY pyproject.toml uv.lock ./
+
+FROM build AS development
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=.workdir/test_wheels/,target=.workdir/test_wheels/ \
-    uv sync --frozen --extra ${BUILD_ENV}
+    uv sync --frozen --extra local
 
-COPY ./compose/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
-
-COPY ./compose/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
-
-COPY ./compose/celery/worker/start /start-celeryworker
-RUN sed -i 's/\r$//g' /start-celeryworker
-RUN chmod +x /start-celeryworker
-
-COPY ./compose/celery/beat/start /start-celerybeat
-RUN sed -i 's/\r$//g' /start-celerybeat
-RUN chmod +x /start-celerybeat
-
-# Create devcontainer user and add it to sudoers
-RUN groupadd --gid 1000 dev-user \
+# Preserve the devcontainer user and passwordless sudo.
+RUN for account_file in passwd group shadow; do \
+      cp -L --preserve=mode /etc/$account_file /tmp/$account_file \
+      && mv /tmp/$account_file /etc/$account_file; \
+    done \
+    && groupadd --gid 1000 dev-user \
     && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
-    && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
-    && chmod 0440 /etc/sudoers.d/dev-user \
-    && chown -R dev-user:dev-user "${VIRTUAL_ENV}"
+    && mkdir -p /usr/local/bin /etc/pam.d /run/sudo /var/db/sudo \
+    && cp /opt/development/bin/sudo /usr/local/bin/sudo \
+    && chmod 4755 /usr/local/bin/sudo \
+    && printf '%s\n' 'root ALL=(ALL) ALL' 'dev-user ALL=(root) NOPASSWD:ALL' \
+      'Defaults secure_path="/opt/speleodb-venv/bin:/usr/local/bin:/opt/development/bin:/opt/runtime/bin:/bin:/usr/bin"' > /etc/sudoers \
+    && chmod 0440 /etc/sudoers \
+    && printf '%s\n' 'account required /opt/development/lib/security/pam_permit.so' \
+      'session required /opt/development/lib/security/pam_permit.so' > /etc/pam.d/sudo \
+    && chown -R dev-user:dev-user /opt/speleodb-venv
 
-# copy application code to WORKDIR
-COPY . ${APP_HOME}
-RUN mkdir -p "${APP_HOME}/node_modules" \
-    && chown dev-user:dev-user "${APP_HOME}/node_modules"
+# Editor servers use the conventional Linux ELF loader supplied by nix-ld.
+# VS Code's prerequisite checker also needs conventional library paths.
+RUN mkdir -p /lib /lib64 /usr/lib \
+    && ln -s /opt/runtime/lib/libstdc++.so.6 /usr/lib/libstdc++.so.6 \
+    && ln -s /opt/development/lib/libc.so.6 /usr/lib/libc.so.6 \
+    && ln -s /opt/development/libexec/nix-ld /lib64/ld-linux-x86-64.so.2 \
+    && ln -s /opt/development/libexec/nix-ld /lib/ld-linux-aarch64.so.1 \
+    && ln -s /opt/development/lib/ld-linux-*.so.* /opt/ld.so \
+    && test -x /opt/ld.so
+ENV NIX_LD=/opt/ld.so
+ENV NIX_LD_LIBRARY_PATH=/opt/runtime/lib:/opt/development/lib
 
-# UV settings
+COPY compose/entrypoint /entrypoint
+COPY compose/start /start
+COPY compose/celery/worker/start /start-celeryworker
+COPY compose/celery/beat/start /start-celerybeat
+RUN chmod +x /entrypoint /start /start-celeryworker /start-celerybeat
+COPY . /app
+RUN bash /app/compose/prepare_node_modules
 ENV UV_CACHE_DIR=/app/.uv/cache
-
 ENTRYPOINT ["/entrypoint"]
+
+FROM build AS production-build
+RUN uv sync --frozen --extra production
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . /app
+RUN npm run build && rm -rf node_modules
+
+# Railway uses the final target. Build tools stay in the build stage.
+FROM runtime AS production
+COPY --from=production-build /opt/speleodb-venv /opt/speleodb-venv
+COPY --from=production-build /app /app
+CMD ["gunicorn", "config.wsgi:application"]

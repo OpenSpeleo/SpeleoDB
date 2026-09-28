@@ -88,7 +88,20 @@ celery -A config.celery_app worker -B -l info
 
 ## Deployment
 
-The following details how to deploy this application.
+Local development and Railway use `compose/Dockerfile` on the official Nix
+container image. `flake.nix` pins the tools and system libraries; the Dockerfile
+runs ordinary uv and npm commands with the existing application lockfiles. See
+[Nix builds](docs/nix-builds.md) for the build layout and production packaging.
+
+Nix builds write directly into a Docker-managed cache mounted at `/nix`, holding
+unpacked packages and the store database. Required packages are copied into the
+images, so running containers do not need the cache. No host cache directory or
+preparation command is required. Docker may garbage-collect this cache, and the
+existing CI layer cache does not transfer its contents.
+
+Compose builds the shared image once through `django`; setup and Celery reuse
+it. The webserver retains a separate tag. Each image tag has a single build
+owner, avoiding redundant exports that leave untagged images behind.
 
 ### Docker
 
