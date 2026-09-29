@@ -9,6 +9,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+if TYPE_CHECKING:
+    from django.db.models.fields.related_descriptors import RelatedManager
+
 
 class JobState(models.TextChoices):
     QUEUED = "queued", "Queued"
@@ -47,7 +50,7 @@ class BackgroundJob(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     if TYPE_CHECKING:
-        attempts: models.Manager[JobAttempt]
+        attempts: RelatedManager[JobAttempt]
         artifact: JobArtifact
 
     class Meta:
