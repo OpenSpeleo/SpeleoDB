@@ -20,7 +20,7 @@ GitLab root password remains in the GitLab Railway service variables.
 - Environment: `test` (`6d34d1bb-ba2e-4d36-ab57-216b936f8ce3`).
 - Service: `GitLab` (`6dcb6ffb-5767-4526-a42b-aaa7c629e2f3`).
 - Canonical URL: `https://gitlab-test.speleodb.org`.
-- Connected Docker image source: `gitlab/gitlab-ce:19.3.2-ce.0`.
+- Connected Docker image source: `gitlab/gitlab-ce:latest`.
 - Start command: `/bin/bash /data/speleodb/start`.
 - Automatic updates: patches only, daily 09:00–10:00 UTC (04:00–05:00 Cancún).
 - Startup/configuration sources: `compose/gitlab-railway/`, installed on the

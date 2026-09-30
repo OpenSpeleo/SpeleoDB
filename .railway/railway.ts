@@ -157,7 +157,7 @@ export default defineRailway(() => {
   });
 
   const kanchi = service("Kanchi", {
-    source: image("getkanchi/kanchi:2.0.1@sha256:96e799547cce75b9f23e11cde00823a5e2752bc9f4f4135933b392551d703e28"),
+    source: image("getkanchi/kanchi:2.0.1"),
     replicas: { "us-east4-eqdc4a": 1 },
     domains: [{ domain: "kanchi.speleodb.org", port: 8765 }],
     healthcheck: "/api/health",

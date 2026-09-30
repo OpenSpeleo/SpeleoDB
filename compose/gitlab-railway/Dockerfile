@@ -1,4 +1,4 @@
-FROM gitlab/gitlab-ce:19.3.2-ce.0@sha256:05453dd1d9aba27c2c487613141596868409b4d03247647f7d66cb0b36f321b8
+FROM gitlab/gitlab-ce:latest
 
 COPY --chmod=755 start /opt/speleodb/start
 COPY gitlab.rb bootstrap.rb /opt/speleodb/

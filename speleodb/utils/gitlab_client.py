@@ -10,10 +10,13 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import override
+from urllib.parse import SplitResult
+from urllib.parse import urlsplit
 
 import gitlab
 from gitlab.const import RETRYABLE_TRANSIENT_ERROR_CODES
 from gitlab.exceptions import GitlabHttpError
+from requests import Session
 from requests.exceptions import ChunkedEncodingError
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout
@@ -25,6 +28,31 @@ if TYPE_CHECKING:
     from requests import Response
 
 logger = logging.getLogger(__name__)
+
+
+class _BaseURLSession(Session):
+    """Keep API read redirects on the explicitly configured GitLab origin."""
+
+    def __init__(self, base_url: str) -> None:
+        super().__init__()
+        self._base_url: SplitResult = urlsplit(base_url)
+        self._api_prefix: str = f"{self._base_url.path.rstrip('/')}/api/v4/"
+
+    @override
+    def get_redirect_target(self, response: Response) -> str | None:
+        target: str | None = super().get_redirect_target(response)
+        if target is None or response.request.method not in {"GET", "HEAD"}:
+            return target
+        parsed: SplitResult = urlsplit(target)
+        if (
+            parsed.netloc
+            and parsed.scheme in {"", "http", "https"}
+            and parsed.path.startswith(self._api_prefix)
+        ):
+            return parsed._replace(
+                scheme=self._base_url.scheme, netloc=self._base_url.netloc
+            ).geturl()
+        return target
 
 
 class BoundedGitlabClient(gitlab.Gitlab):
@@ -71,6 +99,8 @@ class BoundedGitlabClient(gitlab.Gitlab):
             keep_base_url=keep_base_url,
             timeout=timeout,
             retry_transient_errors=False,
+            # The SDK's keep_base_url covers pagination, not HTTP redirects.
+            session=_BaseURLSession(url) if keep_base_url else None,
         )
         self.session.hooks["response"].append(self._capture_resource_lock_conflict)
 

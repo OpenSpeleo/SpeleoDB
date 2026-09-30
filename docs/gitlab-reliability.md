@@ -60,6 +60,30 @@ transient error: a subsequent duplicate response can be resolved by confirming
 the repository exists. New repositories retain their initial commit behavior;
 existing empty repositories receive their initial commit after cloning.
 
+## Local API redirects
+
+Local GitLab advertises `http://localhost:9080` for browser access, while
+bridged Compose clients reach it at `http://gitlab:9080`. After a project is
+renamed (including GitLab's delayed-deletion rename), looking up its old path
+returns an absolute redirect to its numeric API ID using the advertised host.
+Following that URL unchanged would connect to the application container's own
+loopback.
+
+Local callers already opt into `keep_base_url=True`. The shared
+`BoundedGitlabClient` extends the SDK's pagination policy to HTTP redirects via
+a Requests session that resolves API GET/HEAD redirect targets against the
+configured origin. It preserves the target path, query and fragment, including
+GitLab installation subpaths. Relative redirects, non-API destinations, write
+redirects, and clients without the option keep Requests' existing behavior.
+Original response headers remain available for diagnostics; Requests still owns
+redirect limits and the SDK still handles responses and errors. This adds no
+requests or retries and leaves browser URLs and container configuration intact.
+
+Pure redirect-policy tests cover origin preservation and its boundaries. The
+real write-check and manager deletion lifecycles verify cleanup through the old
+project path using their existing repository allocations. Cleanup must still
+prove a real 404 or a deletion mark; a connection failure is never success.
+
 ## Git subprocess retries and working-copy recovery
 
 Clone, fetch, pull, push, and credential-bearing origin configuration share a

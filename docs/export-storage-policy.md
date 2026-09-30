@@ -121,7 +121,7 @@ objects retain their stored headers; generating a new archive after deployment
 writes the new cache metadata.
 
 Direct S3 downloads also use an ordinary signed file URL, containing only SigV4
-authentication parameters. Local Compose and CI pin RustFS `1.0.0-rc.1`, whose
+authentication parameters. Local Compose and CI pin RustFS `1.0.0`, whose
 ordinary GETs return the stored filename, content type, and cache headers. The
 provider's [GET cache-header fix](https://github.com/rustfs/rustfs/pull/5241)
 applies to every backend, including unsigned public files. No response-header

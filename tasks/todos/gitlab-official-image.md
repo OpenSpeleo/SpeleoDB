@@ -16,7 +16,7 @@ test environment. The service originally ran uploaded Dockerfile deployment
 3debd5be without a connected source. Keep the same service, domain, volume, and
 GitLab version for the source migration; only later patch updates advance it.
 
-Official source: `gitlab/gitlab-ce:19.3.2-ce.0`. Persist the existing `start`,
+Official source: `gitlab/gitlab-ce:latest`. Persist the existing `start`,
 `gitlab.rb`, and `bootstrap.rb` under `/data/speleodb`, configure the
 environment variables formerly supplied by the Dockerfile, and use
 `/bin/bash /data/speleodb/start`. The wrapper restores the existing persistent

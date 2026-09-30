@@ -3,11 +3,11 @@
 ## Intent and Ownership
 
 Local development and backend tests use RustFS as an S3-compatible object store.
-Local Compose and CI pin `rustfs/rustfs:1.0.0-rc.1`. This release serves stored
+Local Compose and CI pin `rustfs/rustfs:1.0.0`. This release serves stored
 `Cache-Control` and `Content-Disposition` headers on ordinary object GETs. The
 upstream [GET cache-header fix](https://github.com/rustfs/rustfs/pull/5241) and
-[release notes](https://github.com/rustfs/rustfs/releases/tag/1.0.0-rc.1)
-document the provider fixes; the release also includes the
+[release notes](https://github.com/rustfs/rustfs/releases/tag/1.0.0) document
+the provider fixes; the release also includes the
 [file-metadata compatibility fix](https://github.com/rustfs/rustfs/pull/5689).
 
 Django serves the private and public map viewers from `http://localhost:8000`,

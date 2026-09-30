@@ -14,11 +14,11 @@ jobs:
 
     services:
       redis:
-        image: redis:6
+        image: redis:8-alpine
         ports:
           - 6379:6379
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         ports:
           - 5432:5432
         env:

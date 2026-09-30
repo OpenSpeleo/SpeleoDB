@@ -47,12 +47,7 @@ services:
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
 
   postgres:
-    build:
-      context: .
-      dockerfile: ./compose/postgres/Dockerfile
-      args:
-        - DOCKER_BUILDKIT=1
-    image: speleodb_production_postgres
+    image: postgres:16-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_postgres"
     volumes:
       - speleodb_local_postgres_data:/var/lib/postgresql/data
@@ -72,7 +67,7 @@ services:
       retries: 20
 
   redis:
-    image: redis:7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    image: redis:8-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_redis"
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
@@ -110,7 +105,7 @@ services:
     command: /start-celerybeat
 
   kanchi:
-    image: getkanchi/kanchi:2.0.1@sha256:96e799547cce75b9f23e11cde00823a5e2752bc9f4f4135933b392551d703e28
+    image: getkanchi/kanchi:2.0.1
     restart: unless-stopped
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_kanchi"
     depends_on:
@@ -155,7 +150,7 @@ services:
   # A different Redis process isolates Pub/Sub events and remote-control traffic,
   # which Redis logical database numbers alone do not isolate.
   celery-test-redis:
-    image: redis:7.4@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    image: redis:8-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_test_celery_redis"
     profiles: ["integration-test"]
     command: ["redis-server", "--save", "", "--appendonly", "no"]
@@ -208,7 +203,7 @@ services:
       start_period: 15m
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-rc.1
+    image: rustfs/rustfs:1.0.0
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_rustfs"
     environment:
       - RUSTFS_ACCESS_KEY=access_key
