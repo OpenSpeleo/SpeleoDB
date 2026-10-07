@@ -68,7 +68,7 @@ export default defineRailway(() => {
     build: { builder: "RAILPACK", buildCommand: "", buildEnvironment: "V3" },
     start: "gunicorn config.wsgi:application --workers ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} --max-requests 128 --preload",
     replicas: { "us-east4-eqdc4a": 1 },
-    preDeploy: "python /app/manage.py migrate && python /app/manage.py install_background_schedules && python /app/manage.py collectstatic --noinput --verbosity=3 --ignore='django_countries/static/flags/*'",
+    preDeploy: "python /app/manage.py migrate && python /app/manage.py install_background_schedules && python /app/manage.py collectstatic --noinput --verbosity=3 --ignore=flags",
     env: {
       ...Object.fromEntries(preservedWebVariables.map((key) => [key, preserve()])),
       CELERY_BROKER_URL: brokerUrl,
