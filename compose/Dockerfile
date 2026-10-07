@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     bash-completion \
     ca-certificates \
     curl \
+    unzip \
     wget \
     vim \
     ssh \
@@ -39,23 +40,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the NodeJS major declared by the repository.
-COPY .node-version /tmp/.node-version
-RUN NODE_MAJOR="$(tr -d '[:space:]' < /tmp/.node-version)" \
-    && case "${NODE_MAJOR}" in \
-        ""|*[!0-9]*) echo "Invalid Node major in .node-version: ${NODE_MAJOR}" >&2; exit 1 ;; \
-    esac \
-    && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
-    && apt-get update && apt-get install --no-install-recommends -y \
-    nodejs \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/* && \
-    # update npm to latest
-    npm install -g npm \
-    && node --version | grep -Eq "^v${NODE_MAJOR}\\." \
-    && npm cache clean --force \
-    && rm /tmp/.node-version
+# Install the Bun runtime and package manager declared by the repository.
+ENV BUN_INSTALL=/opt/bun
+ENV BUN_INSTALL_CACHE_DIR=/home/dev-user/.cache/bun
+ENV PATH="/opt/bun/bin:${PATH}"
+COPY .bun-version /tmp/.bun-version
+RUN BUN_VERSION="$(tr -d '[:space:]' < /tmp/.bun-version)" \
+    && test -n "${BUN_VERSION}" \
+    && curl -fsSL https://bun.com/install -o /tmp/install-bun.sh \
+    && bash /tmp/install-bun.sh "bun-v${BUN_VERSION}" \
+    && test "$(bun --version)" = "${BUN_VERSION}" \
+    && rm /tmp/install-bun.sh /tmp/.bun-version
 
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
@@ -116,6 +111,8 @@ RUN groupadd --gid 1000 dev-user \
     && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
     && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
     && chmod 0440 /etc/sudoers.d/dev-user \
+    && mkdir -p "${BUN_INSTALL_CACHE_DIR}" \
+    && chown -R dev-user:dev-user /home/dev-user/.cache \
     && chown -R dev-user:dev-user "${VIRTUAL_ENV}"
 
 # copy application code to WORKDIR

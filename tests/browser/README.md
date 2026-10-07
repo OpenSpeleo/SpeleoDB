@@ -1,10 +1,10 @@
 # Viewer responsiveness browser checks
 
 Run these tests inside the existing Django application container after a clean
-`npm run build`, with other CPU-intensive suites stopped:
+`bun run build`, with other CPU-intensive suites stopped:
 
 ```bash
-npm run test:browser
+bun run test:browser
 ```
 
 The suite uses Chromium and WebKit with the real Mapbox renderer, a minimal
@@ -53,7 +53,7 @@ result. A separate 4,000-segment settings baseline uses the same assertions and
 does not replace the stress case. To run the baseline and overlay cases alone:
 
 ```bash
-npm run test:browser -- --grep 'settings baseline|GPS toggle|GIS load'
+bun run test:browser --grep 'settings baseline|GPS toggle|GIS load'
 ```
 
 The Settings backdrop retains its dark scrim without blurring the live WebGL

@@ -156,7 +156,7 @@ selector text is expected to change because v4 emits native nesting, registered
 properties, and range media syntax; keyframe and breakpoint sets must remain
 behaviorally equivalent.
 
-The root manifest owns Playwright and `npm run test:browser`; the checked-in
+The root manifest owns Playwright and `bun run test:browser`; the checked-in
 suite currently exercises viewer responsiveness in Chromium and WebKit. That
 suite is not a full migration-parity certificate. Run tests inside the existing
 application container, without starting a second stack. Temporary audit
@@ -180,7 +180,7 @@ script did concatenate custom CSS, so the failure has not been shown to come
 from omitting `custom.css`. The proven causes are synthetic template rendering,
 hard-coded markup, and stale generated CSS.
 
-Before final browser verification, stop the watcher, run a clean `npm run build`
+Before final browser verification, stop the watcher, run a clean `bun run build`
 in the existing application container, and prove Django serves the expected
 fresh assets. Preserve baseline evidence separately without replacing the
 running application's data or starting another stack. A browser manifest must
@@ -188,7 +188,7 @@ fail rather than skip a route, role, state, viewport, or engine that it claims
 to cover.
 
 Required repository gates remain the root builds, JavaScript lint/tests, Django
-template validation, pytest, pre-commit, a clean install on the `.node-version`
+template validation, pytest, pre-commit, a clean install on the `.bun-version`
 runtime, watcher isolation, and deployment build contracts.
 
 Historical live comparisons established focused Git-control parity and a
@@ -219,7 +219,7 @@ performance and is not a benchmark of the current dependency versions.
 Migration-era Tailwind watch mode retained a candidate after its sole template
 occurrence was deleted; a clean one-shot build removed it. Therefore watcher
 output is useful during development but is never parity evidence; browser
-certification begins from `npm run build` and a verified served manifest hash.
+certification begins from `bun run build` and a verified served manifest hash.
 The Vite watcher does correctly rebuild imported CSS changes and deletions,
 Tailwind source additions, shared modules, and route controllers. The isolated
 watcher contract reproduces those boundaries without disturbing Django or a

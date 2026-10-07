@@ -1,9 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        execArgv: ['--preload', fileURLToPath(new URL('./scripts/jsdom-runtime.mjs', import.meta.url))],
         setupFiles: ['./frontend_common/test/setup.js'],
         // Vite and Tailwind builds spawn their own parallel work. Limiting
         // file workers prevents those builds from starving JSDOM test event

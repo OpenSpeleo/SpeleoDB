@@ -22,8 +22,8 @@ every repository-required check.
    authoritative.
 2. Before creating the repository-required task plan, require a completely clean
    tracked and untracked worktree. Do not stash, overwrite, or absorb
-   pre-existing user changes. Treat the plan and review file created by this
-   workflow as an explicit workflow-owned change, not as pre-existing work.
+   pre-existing user changes. Keep the plan, review, and lessons files in the
+   external temporary task directory required by `AGENTS.md`.
 3. Treat the currently checked-out branch as the merge target. Require a named
    branch rather than detached `HEAD`, and do not switch branches.
 4. Record the branch name and immutable starting SHA as `start_branch` and
@@ -45,7 +45,7 @@ requests it.
 
 Process all recorded branch refs in deterministic refname order. Branches
 updating GitHub Actions, Docker, and other non-lockfile dependencies are part of
-the same required set. Do not run uv, npm, or another package manager inside
+the same required set. Do not run uv, Bun, or another package manager inside
 this per-branch loop.
 
 For each branch ref:
@@ -60,10 +60,10 @@ For each branch ref:
    - Preserve the combined intent of manifest, configuration, workflow, and
      source changes. Do not discard one dependency update merely to finish the
      merge.
-   - If `uv.lock` or `package-lock.json` conflicts, always take `--ours`, stage
-     the file, and continue. Do not inspect, combine, or regenerate either lock
-     during the merge; both are provisional until the single consolidated
-     regeneration phase.
+   - If `uv.lock` or `bun.lock` conflicts, always take `--ours`, stage the file,
+     and continue. Do not inspect, combine, or regenerate either lock during the
+     merge; both are provisional until the single consolidated regeneration
+     phase.
    - Inspect the resolved staged diff, stage the resolutions, and finish the
      merge commit with its default message.
 
@@ -84,17 +84,29 @@ all merges:
   `uv tree --outdated --depth 1`. Document every direct dependency held back by
   an explicit compatibility constraint; do not relax a known compatibility bound
   merely to make the report empty.
-- For npm, run `npx --yes npm-check-updates -u --peer`, then generate a fresh
-  `package-lock.json` independently of `node_modules` and its hidden lockfile.
-  Use `npm install --package-lock-only --ignore-scripts` from a temporary
-  working directory containing the final combined `package.json` and repository
-  npm configuration, then copy the result back. Verify that the root dependency
-  graph matches `package.json`, package keys are only the root and
-  `node_modules/...`, and every registry package retains `resolved` and
-  `integrity` metadata. The canonical filename is `package-lock.json`; do not
-  invent `packages.lock`. Then run `npm install` from the repository root and
-  require it to succeed before rebuilding containers. Revalidate the manifest,
-  lock graph, and registry metadata after the install.
+- For JavaScript, use the Bun release in `.bun-version`, matching the root
+  `packageManager` and `engines.bun`. Keep `[run] bun = true` so tools execute
+  with Bun. Inspect available versions with `bun outdated` from `/app` in the
+  existing application container. Resolve independently of `node_modules` in an
+  empty external temporary directory containing the final combined
+  `package.json`, `bun.lock`, `bunfig.toml`, and `.bun-version`. Use that
+  directory as the actual working directory and run
+  `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` once. Keep
+  the patterns quoted, preserve the jsdom runtime compatibility pin, and exclude
+  any future documented blockers. Review peer constraints explicitly; Bun does
+  not provide peer-compatible candidate filtering. Verify JSONC workspace
+  requirements match the manifest, package identities and dependency edges are
+  portable, and registry tuples retain exact versions and archive checksums.
+  Bundled package entries inherit the containing archive's integrity; do not
+  fabricate independent checksums. Preserve optional platform variants and
+  review explicit lifecycle approvals in `trustedDependencies`. Copy the
+  validated `package.json` and `bun.lock` back, then require
+  `test -s bun.lock && bun install --frozen-lockfile` to succeed from `/app`
+  without rewriting the lock before rebuilding containers. Inspect
+  `bun pm untrusted`. The `/app` mount isolates the web graph from Bun's parent
+  workspace discovery; do not install from `/workspace/apps/web` or the host
+  checkout. This refresh workflow is for authorized dependency upgrades, never a
+  package-manager transition that must retain existing versions.
 - If another package-manager manifest is actually present, run its complete
   repository-documented upgrade and lock workflow once. Do not introduce a
   package manager merely to satisfy this checklist.
@@ -114,8 +126,9 @@ never start a second verification stack. For SpeleoDB, use `local.yml` and
 recreate the current application with
 `docker compose -f local.yml up -d --build --remove-orphans`. Wait until the
 required services are healthy, including the repository's container startup
-`npm ci` against the finalized `package-lock.json`. Confirm the test container
-is `speleodb_local_django` with the repository mounted at `/app`.
+`test -s bun.lock && bun install --frozen-lockfile` against the finalized
+`bun.lock`. Confirm the test container is `speleodb_local_django` with the
+repository mounted at `/app`.
 
 Run the hook autoupdate inside the application container:
 
@@ -133,7 +146,7 @@ lock, and rebuild Compose again before testing.
 Run the complete test suites inside the already-running application container:
 
 ```bash
-docker exec -w /app speleodb_local_django npm run test:js
+docker exec -w /app speleodb_local_django bun run test:js
 docker exec -w /app speleodb_local_django make test-py
 ```
 
@@ -163,11 +176,11 @@ head SHA changed, return to the merge-all phase, then run one new consolidated
 upgrade-and-lock phase followed by every build, test, audit, and hook gate. Do
 not inspect pull requests.
 
-Complete the repository task file's review section and make a temporary commit
-for any remaining workflow-owned documentation. Then verify every recorded
-branch head is an ancestor of the current pre-squash tip, the current branch is
-still `start_branch`, `start_sha` is an ancestor of `HEAD`, and the worktree is
-clean. Record `pre_squash_tip`.
+Complete the external task file's review section and make a temporary commit for
+any remaining product documentation. Never commit agent working files. Then
+verify every recorded branch head is an ancestor of the current pre-squash tip,
+the current branch is still `start_branch`, `start_sha` is an ancestor of
+`HEAD`, and the worktree is clean. Record `pre_squash_tip`.
 
 Squash exactly the range after `start_sha`:
 

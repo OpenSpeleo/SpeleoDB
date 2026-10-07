@@ -94,9 +94,9 @@ Unlike product docs, these files prioritize:
 
 - `map-viewer/testing-and-quality.md`
   - frontend test map, validation commands, and regression checklist
-- `node-tooling.md`
-  - root npm workspace constraints, Node runtime compatibility, install-script
-    approval policy, and verification commands
+- `bun-tooling.md`
+  - root Bun workspace and runtime constraints, DOM compatibility,
+    install-script approval policy, and verification commands
 - `dependency-updates.md`
   - consolidated update workflow, resolver and lockfile ownership, compatibility
     blocker policy, and release verification

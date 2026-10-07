@@ -554,22 +554,22 @@ stylesheet and records it in its manifest. Public GIS therefore receives the
 Tailwind asset once; its private custom/modal/map styles continue to load after
 the public custom stylesheet. Production builds use `--minify`.
 
-### Key npm Scripts
+### Key Bun Scripts
 
-| Script                      | Purpose                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| `npm run dev`               | One Vite disk-build watcher; Django remains the server                       |
-| `npm run build`             | Full clean + production build                                                |
-| `npm run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof                              |
-| `npm run lint:js`           | ESLint across frontend and Node tooling JS (excludes `dist/` and `vendors/`) |
-| `npm run test:js`           | Jest test runner for frontend tests                                          |
+| Script                      | Purpose                                                                 |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `bun run dev`               | One Vite disk-build watcher; Django remains the server                  |
+| `bun run build`             | Full clean + production build                                           |
+| `bun run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof                         |
+| `bun run lint:js`           | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
+| `bun run test:js`           | Vitest test runner for frontend tests                                   |
 
 ### Integration Points
 
-- **Pre-commit hooks** (`.pre-commit-config.yaml`): Run `npm run pre-commit`,
+- **Pre-commit hooks** (`.pre-commit-config.yaml`): Run `bun run pre-commit`,
   which performs the clean production Vite build.
 - **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
 - **Railway deploy** (`.railway/railway.ts`): Service and deployment settings;
-  `railpack.json` owns the production asset build via root npm commands.
+  `railpack.json` owns the production asset build via root Bun commands.
 - **Django**: Templates reference the bundled output files in `dist/`
   directories.

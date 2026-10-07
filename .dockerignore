@@ -13,6 +13,7 @@ Procfile
 *.yaml
 *.toml
 !pyproject.toml
+!bunfig.toml
 !railpack.json
 !uv.lock
 

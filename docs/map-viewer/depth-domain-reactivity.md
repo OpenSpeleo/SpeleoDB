@@ -192,9 +192,9 @@ Watch for these common mistakes:
 
 After depth-domain changes, run inside the existing application container:
 
-- `docker exec -w /app speleodb_local_django npm run lint:js`
-- `docker exec -w /app speleodb_local_django npm run test:js`
-- `docker exec -w /app speleodb_local_django npm run build`
+- `docker exec -w /app speleodb_local_django bun run lint:js`
+- `docker exec -w /app speleodb_local_django bun run test:js`
+- `docker exec -w /app speleodb_local_django bun run build`
 
 And manually verify:
 

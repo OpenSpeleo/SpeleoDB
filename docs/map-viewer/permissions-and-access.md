@@ -128,8 +128,8 @@ When touching permission code:
 1. Ensure all new checks use central Config APIs.
 2. Verify no special-case feature bypasses write/delete rules.
 3. Run:
-   - `npm run lint:js`
-   - `npm run test:js`
+   - `bun run lint:js`
+   - `bun run test:js`
 4. Confirm UI and action availability is consistent for:
    - `WEB_VIEWER`
    - `READ_ONLY`

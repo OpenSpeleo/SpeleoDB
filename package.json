@@ -2,21 +2,21 @@
   "name": "speleodb",
   "private": true,
   "engines": {
-    "node": "26.*"
+    "bun": "1.4.2"
   },
   "scripts": {
-    "start": "npm run dev",
-    "build": "npm run build:clean && npm run build:assets",
+    "start": "bun run dev",
+    "build": "bun run build:clean && bun run build:assets",
     "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/js/dist/ ./frontend_public/static/js/dist/",
     "build:assets": "vite build --mode production",
     "dev": "vite build --watch --mode development",
-    "pre-commit": "npm run build",
-    "update": "ncu --target minor -u && npm install && npx update-browserslist-db@latest",
+    "pre-commit": "bun run build",
+    "update": "bun update && bunx --bun update-browserslist-db@latest",
     "lint:js": "eslint \"vite.config.mjs\" \"playwright.config.mjs\" \"tests/browser/**/*.mjs\" \"scripts/**/*.mjs\" \"frontend_common/**/*.js\" \"frontend_private/static/private/js/**/*.js\" \"frontend_public/static/js/**/*.js\" \"frontend_errors/static/js/**/*.js\" --ignore-pattern \"frontend_private/static/private/js/dist/**\" --ignore-pattern \"frontend_private/static/private/js/vendors/**\" --ignore-pattern \"frontend_public/static/js/dist/**\" --ignore-pattern \"frontend_public/static/js/vendors/**\" --report-unused-disable-directives-severity off --max-warnings=0",
-    "lint:js:fix": "npm run lint:js -- --fix",
+    "lint:js:fix": "bun run lint:js --fix",
     "test:js": "vitest run --config ./vitest.config.mjs",
     "test:js:watch": "vitest --config ./vitest.config.mjs",
-    "test:assets-watch": "node scripts/verify-vite-watch.mjs",
+    "test:assets-watch": "bun scripts/verify-vite-watch.mjs",
     "typecheck:railway": "tsc --noEmit --strict --skipLibCheck --target es2023 --module preserve --moduleResolution bundler --types node .railway/railway.ts",
     "test:browser": "playwright test --config ./playwright.config.mjs"
   },
@@ -29,13 +29,17 @@
     "cross-env": "^10.1.0",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
-    "jsdom": "^30.1.0",
-    "npm-check-updates": "^23.1.0",
+    "jsdom": "29.1.1",
     "railway": "3.11.0",
     "rimraf": "^6.1.3",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vitest": "^5.0.1"
-  }
+  },
+  "packageManager": "bun@1.4.2",
+  "trustedDependencies": [
+    "esbuild",
+    "fsevents"
+  ]
 }

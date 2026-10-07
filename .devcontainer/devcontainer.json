@@ -11,7 +11,7 @@
     "service": "django",
     // "remoteEnv": {"PATH": "/home/dev-user/.local/bin:${containerEnv:PATH}"},
     "remoteUser": "dev-user",
-    // Every Compose service that writes the shared Node volume uses UID 1000.
+    // Every Compose service that writes the shared dependency volume uses UID 1000.
     // Do not let Dev Containers rewrite only the interactive service's UID.
     "updateRemoteUserUID": false,
     "workspaceFolder": "/app",

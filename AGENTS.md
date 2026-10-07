@@ -59,7 +59,7 @@ files.
 
 ## Workflow Orchestration
 
-### 1. Plan Node Default
+### 1. Plan by Default
 
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
@@ -119,14 +119,29 @@ files.
 
 ## JavaScript Workspace Contract
 
-The repository now uses a single Node workspace at the repo root.
+The web application uses a single Bun-managed JavaScript workspace at its root.
 
-- Canonical Node manifests are:
+- Canonical JavaScript manifests are:
   - `package.json`
-  - `package-lock.json`
-- `.node-version` is the canonical Node major for local containers, CI, and
-  Railpack. The root `engines.node` value mirrors it as `<major>.*`; do not
-  hard-code a separate Node version in those integrations.
+  - `bun.lock` (text JSONC)
+- `.bun-version` is the canonical exact Bun version for local containers, CI,
+  and Railpack. The root `packageManager` mirrors it as `bun@<version>`, and
+  `engines.bun` mirrors the exact version. Use
+  `test -s bun.lock && bun install --frozen-lockfile` for reproducible installs;
+  the guard rejects a missing or empty lock before resolution.
+- Bun is the JavaScript runtime for Vite, Vitest, Playwright, and tool
+  subprocesses. Keep `[run] bun = true` in `bunfig.toml` so package scripts and
+  their executable children use the declared Bun runtime. Retain Vitest and its
+  existing test configuration; `bun test` is a different runner.
+- The jsdom runtime preload in `scripts/jsdom-runtime.mjs` selects jsdom's
+  declared HTTP-client dependency before DOM environment creation. Keep it
+  scoped to Vitest workers and the standalone upload harness, with real HTTP
+  coverage. See `docs/bun-tooling.md` before changing or removing it.
+- `trustedDependencies` explicitly approves `esbuild` and `fsevents` install
+  scripts. Review this list whenever the dependency graph changes.
+- Run web installs and checks from `/app` inside the application container. This
+  standalone mount prevents Bun from discovering the enclosing monorepo
+  workspace and changing its dependency graph or lockfile.
 - Do not re-introduce nested `package.json` files for frontend tooling.
 - Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
   is the logical-entry registry consumed by `vite.config.mjs` and the Django
@@ -159,46 +174,53 @@ The repository now uses a single Node workspace at the repo root.
   application event attributes, compatibility globals, or direct first-party
   `{% static %}` references. CDN/vendored libraries and Django's generated
   `url_reverse.js` remain external globals in their established order.
-- `npm run dev` is a Vite disk-build watcher; Django remains the only server.
+- `bun run dev` is a Vite disk-build watcher; Django remains the only server.
   There is no Vite dev server, proxy, HMR client, or HTML transformation.
   Tailwind's in-process candidate set can retain a removed template class, so
-  stop the watcher and run `npm run build` before final browser evidence.
+  stop the watcher and run `bun run build` before final browser evidence.
   Confirm the manifest hash actually served by Django.
 
 ### Root JS commands
 
-- `npm run lint:js`
-- `npm run test:js`
-- `npm run build`
-- `npm run build:assets`
-- `npm run dev`
-- `npm run test:assets-watch`
+- `bun run lint:js`
+- `bun run test:js`
+- `bun run build`
+- `bun run build:assets`
+- `bun run dev`
+- `bun run test:assets-watch`
 
 ### Related system hooks
 
-- Dev container/webserver bootstrap: `compose/start` (root npm commands).
-- Railpack image build: `railpack.json` (Node from `.node-version` via Mise,
-  `npm ci && npm run build`).
+- Dev container/webserver bootstrap: `compose/start` (root Bun commands).
+- Railpack image build: `railpack.json` (Bun from `.bun-version` via Mise,
+  guarded frozen install followed by `bun run build`).
 - Railway service configuration: `.railway/railway.ts` is the sole authority;
   predeploy runs migrations, `install_background_schedules`, and
   `collectstatic`. Do not reintroduce legacy `railway.toml` or `railway.json`
   files.
-- CI jobs: `.github/workflows/ci.yml` (root npm install + test/lint paths).
-- Pre-commit hooks: `.pre-commit-config.yaml` (root npm scripts).
+- CI jobs: `.github/workflows/ci.yml` (root Bun install + test/lint paths).
+- Pre-commit hooks: `.pre-commit-config.yaml` (root Bun scripts).
+- Dependabot: `.github/dependabot.yml` uses the `bun` ecosystem for the root
+  manifest and lockfile; preserve the existing scheduling and grouping policy.
 
 ## Dependency Update Workflow
 
 - Treat the open Dependabot PRs targeting `dev` as the authoritative branch set.
   Fetch and merge every open `dependabot/*` head before consolidating the
   manifests and lockfiles.
-- Run `npx --yes npm-check-updates -u --peer`. Generate `package-lock.json`
-  independently of `node_modules` and its hidden lockfile, then verify that
-  package keys are portable, the root dependency graph matches `package.json`,
-  and every registry package retains `resolved` and `integrity` metadata.
+- Use `bun outdated` to inspect available releases and `bun run update` for
+  updates within declared ranges. For an authorized major-version refresh, use
+  `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` in an
+  isolated external directory; preserve the jsdom compatibility pin and review
+  peer compatibility explicitly. Resolve `bun.lock` independently of the
+  installed tree, then verify workspace/manifest agreement, portable package
+  identities, dependency edges, and registry integrity. Bundled packages inherit
+  their parent archive's integrity; do not fabricate separate checksums. See
+  `docs/dependency-updates.md` for the lockfile workflow.
 - Apply compatible Python direct updates, run `uv lock --upgrade`, and use
   `uv tree --outdated --depth 1` to prove that every remaining old direct
   dependency has an explicit incompatibility.
-- Run Cargo or Bun update and lockfile workflows only when their manifests are
+- Run Cargo or other update and lockfile workflows only when their manifests are
   present. Do not introduce a new package manager to satisfy this checklist.
 - Run `prek update`, review every hook revision change, and keep duplicated tool
   hooks such as ruff and djLint aligned with their project pins.
@@ -207,6 +229,11 @@ The repository now uses a single Node workspace at the repo root.
 
 ### Current Dependency Blockers
 
+- Can't update jsdom beyond the exact `29.1.1` pin until its DOM event
+  implementation works with the declared Bun runtime. Both `30.1.0` and `30.1.2`
+  fail with EventTarget private-brand errors on Bun `1.4.2`; event, window
+  evaluation, and jQuery probes pass with `29.1.1`. Recheck those paths and the
+  full Vitest suite before relaxing the pin.
 - Can't update Django to 6.1.x until `django-celery-beat` supports Django 6.1;
   version 2.9.0 requires Django `<6.1`.
 - Can't update orjson to 3.12.x until `compass-lib` relaxes its `orjson<3.12`
@@ -254,7 +281,7 @@ container is `speleodb_local_django`, with the repository mounted at `/app`.
 
 For frontend (public or private) changes, validate tests:
 
-- `docker exec -w /app speleodb_local_django npm run test:js`
+- `docker exec -w /app speleodb_local_django bun run test:js`
 
 Backend/API changes should also run relevant `pytest` targets:
 
@@ -309,7 +336,7 @@ New tests should respects coding existing structures
 
 Both frontend and backend include linting:
 
-- Javascript: `npm run lint:js`
+- Javascript: `bun run lint:js`
 - Python: `ruff` & `mypy`
 
 All python code must include type checking for every variable or function.
@@ -358,7 +385,7 @@ Before finishing map viewer work, check:
 - Duplicate code or logic
 - Introduce "quick patches" that hinder long term maintainability.
 - Add expensive computations.
-- Reintroduce nested Node toolchains.
+- Reintroduce nested JavaScript toolchains.
 - Bypass centralized permission APIs.
 - Use `Utils.raw()` on strings that contain unescaped user data.
 - Put user-supplied strings into `innerHTML` / `.html()` without escaping.

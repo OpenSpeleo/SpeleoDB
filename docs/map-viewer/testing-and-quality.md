@@ -6,13 +6,13 @@ considering a change complete.
 ## Core Commands (Existing Application Container Only)
 
 - Lint JavaScript:
-  - `docker exec -w /app speleodb_local_django npm run lint:js`
+  - `docker exec -w /app speleodb_local_django bun run lint:js`
 - Run frontend unit tests:
-  - `docker exec -w /app speleodb_local_django npm run test:js`
+  - `docker exec -w /app speleodb_local_django bun run test:js`
 - Run backend tests:
   - `docker exec -w /app speleodb_local_django pytest <targets>`
 - Clean production build:
-  - `docker exec -w /app speleodb_local_django npm run build`
+  - `docker exec -w /app speleodb_local_django bun run build`
 
 Do not start another stack or run tests on the host. Run GitLab-backed tests
 serially under the repository audit contract.
@@ -131,8 +131,8 @@ See [Settings design](settings.md) for the complete behavioral contract.
 When frontend build scripts, registry entries, or Tailwind sources change:
 
 1. run
-   - `docker exec -w /app speleodb_local_django npm run build`
-   - `docker exec -w /app speleodb_local_django npm run test:assets-watch`
+   - `docker exec -w /app speleodb_local_django bun run build`
+   - `docker exec -w /app speleodb_local_django bun run test:assets-watch`
 2. ensure no "No utility classes were detected" warnings
 3. validate `.vite/manifest.json`, `style-app`, the bootstrap, and all map
    controller entries are generated under

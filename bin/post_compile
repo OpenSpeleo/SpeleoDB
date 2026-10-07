@@ -28,8 +28,8 @@ else:
 END
 }
 
-npm ci
-npm run build
+test -s bun.lock && bun install --frozen-lockfile || exit "$?"
+bun run build
 python manage.py collectstatic --noinput
 # python manage.py compilemessages -i site-packages
 

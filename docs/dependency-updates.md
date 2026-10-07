@@ -12,19 +12,21 @@ resolvers decide which combined graph is actually valid.
 
 Python direct requirements and extras are owned by `pyproject.toml`, with the
 complete cross-extra graph in `uv.lock`. JavaScript tooling is one root
-workspace owned by `package.json` and `package-lock.json`. `.node-version` owns
-the Node major used by local containers, GitHub Actions, and Railpack; the root
-package engine mirrors it as `<major>.*`. GitHub Actions own other CI tool
+workspace owned by `package.json` and the JSONC text lockfile `bun.lock`.
+`.bun-version` owns the exact runtime and package-manager release, mirrored by
+the manifest's `packageManager` and `engines.bun` values. Local containers,
+GitHub Actions, and Railpack read that file. GitHub Actions own other CI tool
 bootstrap versions, and `compose/Dockerfile` owns the local Python image. Cargo
-and Bun workflows do not apply unless their manifests exist in the tree.
+workflows do not apply unless their manifests exist in the tree.
 
 Fetch the authoritative list of open Dependabot PRs targeting `dev`, merge all
-of their heads locally, and then consolidate overlaps in the manifests. Run
-`npx --yes npm-check-updates -u --peer` for direct JavaScript releases and
-`uv lock --upgrade` for the complete Python graph. Finally inspect
-`uv tree --outdated --depth 1`; an older direct dependency is acceptable only
-when the resolver proves a concrete upstream constraint, which must be logged in
-`AGENTS.md` in the form `Can't update A until X is satisfied`.
+of their heads locally, and then consolidate overlaps in the manifests. Inspect
+JavaScript candidates with `bun outdated`, then use the isolated Bun refresh
+below for authorized major upgrades. Run `uv lock --upgrade` for the complete
+Python graph. Finally inspect `uv tree --outdated --depth 1`; an older direct
+dependency is acceptable only when the resolver proves a concrete upstream
+constraint, which must be logged in `AGENTS.md` in the form
+`Can't update A until X is satisfied`.
 
 Run `prek update` and review all hook changes as part of the same refresh. Hooks
 that wrap project tools, including ruff and djLint, must remain aligned with the
@@ -33,20 +35,61 @@ commit-time validation enforce different rule sets.
 
 ## Lockfile invariants
 
-Generate the npm lockfile without consulting `node_modules` or its hidden
-lockfile. A safe process copies the root manifest to an empty temporary
-directory, changes the process working directory to that directory, generates
-the lockfile, validates it, and only then replaces the committed lockfile. Do
-not use npm's `--prefix` for this process: npm can encode the temporary prefix
-into the root metadata and package keys.
+Routine `bun run update` (also exposed as `make update`) runs `bun update`
+within declared ranges, preserving exact pins, then refreshes Browserslist data.
+Use `bun update --interactive` for selection. This policy follows manifest
+ranges rather than advancing every exact pin to its newest minor release. Major
+upgrades require the explicit workflow below. Bun's update command does not
+provide peer-compatible candidate filtering; review peer constraints and
+resolver warnings before accepting a refreshed graph.
 
-The generated npm lockfile must meet all of these conditions:
+Resolve the Bun lockfile independently of `node_modules`. Copy the combined
+`package.json`, `bun.lock`, `bunfig.toml`, and `.bun-version` into an empty
+operating-system temporary directory outside every checkout. Use that directory
+as the actual working directory and the Bun release selected by `.bun-version`;
+run `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` once to
+refresh the combined graph. Quote both patterns so the shell cannot expand them.
+The jsdom exclusion preserves its documented runtime compatibility pin; add any
+future compatibility blockers to this exclusion list. Validate the resulting
+manifest and lockfile before copying both back. This is an intentional
+dependency-update workflow, not the workflow for a package-manager transition
+that must preserve existing versions.
 
-- every package key is either the empty root key or starts with `node_modules/`;
-- root dependencies exactly match `package.json`;
-- every registry-backed node retains its `resolved` URL and `integrity`
-  checksum;
-- a clean install does not rewrite the committed graph.
+The generated text lockfile must meet all of these conditions:
+
+- its JSONC workspace requirements agree with `package.json`;
+- package identities and dependency references contain no temporary or host
+  paths, and all resolved dependency edges identify existing locked packages;
+- registry package tuples retain exact names, versions, and archive checksums;
+  bundled entries inherit their parent archive's integrity and must not acquire
+  fabricated independent checksums;
+- optional platform archive identities and required nested versions remain
+  represented, subject to the platform-filter limits below;
+- explicit `trustedDependencies` approvals cover only reviewed lifecycle
+  scripts; the current approvals are `esbuild` and `fsevents`;
+- `test -s bun.lock && bun install --frozen-lockfile` succeeds from `/app` in
+  the existing application container and does not rewrite the committed graph.
+
+The nonempty-lock guard is required in startup, CI, and image builds because an
+installer must fail when the authoritative lock is missing. Keep the hoisted
+linker configured for the existing tool and subprocess layout. Inspect
+`bun pm untrusted` after a clean install and review any newly blocked scripts.
+Compare lock graphs by package identity and resolved edges, rather than treating
+physical hoisting differences as version changes.
+
+Do not require byte-for-byte platform-field equality when comparing imported
+locks. The pinned Bun importer uses `none` for CPU targets `loong64`,
+`mips64el`, `riscv64`, and `wasm32`, and OS targets `netbsd` and `openharmony`;
+it also omits the source lock's `libc` field. Preserve all archive identities,
+checksums, and resolved dependency/peer edges despite those representation
+changes. Record the limits and verify native dependency loading on supported
+Linux/container and developer platforms. Unchanged archive identities alone do
+not establish successful installation on every upstream platform.
+
+Dependabot uses the `bun` ecosystem for this workspace and updates `bun.lock`.
+The Browserslist workflow uses `bunx --bun update-browserslist-db@latest` and
+commits the text lockfile. Keep its existing branch, schedule, and review
+policy.
 
 `uv.lock` is regenerated with all project extras in one resolution. Direct pins
 that make the combined graph unsatisfiable are reverted to the newest compatible
@@ -55,13 +98,35 @@ to make a candidate version resolve.
 
 ## Compatibility and performance
 
-The Node engine must match the major selected by `.node-version`, and every
-Node-consuming build environment must read that file rather than carry a second
-version. Major updates to test environments, compilers, framework packages,
-serializers, database clients, or geospatial/media bindings require the same
-relevant-suite evidence as a source change. Dependency updates must not add
-runtime queries, frontend work, or new services; any performance change should
-come only from the selected upstream implementations.
+The Bun `packageManager` and `engines.bun` mirrors must match `.bun-version`.
+Every build environment reads that file rather than carrying a second version.
+Bun owns installation and execution of Vite, Vitest, Playwright, and tool
+subprocesses. Keep `[run] bun = true` in `bunfig.toml` and use `bunx --bun` for
+executables launched outside package scripts. Major updates to test
+environments, compilers, framework packages, serializers, database clients, or
+geospatial/media bindings require the same relevant-suite evidence as a source
+change. Dependency updates must not add runtime queries, frontend work, or new
+services; any performance change should come only from the selected upstream
+implementations.
+
+The exact jsdom `29.1.1` pin is a runtime compatibility constraint. The tested
+`30.1.0` and `30.1.2` releases fail with EventTarget private-brand errors under
+Bun `1.4.2`; `29.1.1` passes focused event dispatch, window evaluation, and
+vendored jQuery probes. Keep that pin until the selected jsdom/Bun pair passes
+those probes and the full Vitest suite. The runtime transition authorizes this
+jsdom change and its required transitive dependency changes only; preserve
+unrelated direct requirements and locked package versions. General update
+commands belong to separately authorized dependency refreshes.
+
+JSDOM's HTTP transport additionally uses the locked `undici` package selected by
+`scripts/jsdom-runtime.mjs`. Bun's built-in export currently shadows that
+dependency and lacks `Dispatcher.request`; the preload selects the installed
+entrypoint through `createRequire` and `require.cache` before jsdom loads. Keep
+this isolated to the Vitest worker preload and standalone browser-upload
+harness. Future Bun/jsdom updates must retain real HTTP request, progress, and
+cancellation coverage. Remove the selection layer once those tests pass using
+the runtime's built-in export; do not patch installed packages or substitute
+mock transports to claim compatibility.
 
 The DRF 3.18 typing contract accurately models parsed request data as either a
 JSON object or array. Object-only handlers narrow that shape through
@@ -85,7 +150,8 @@ scripts before creating the single `[Dependency Update]` commit.
 
 Tests should assert graph properties rather than duplicate installed release
 numbers from manifests: package presence, manifest/lock agreement, portable
-keys, registry integrity, and install-script approvals. Do not pin package
-releases, lockfile format numbers, or versioned install keys in unit tests
-merely to repeat the resolver output. Product formats, protocol versions, and
-intentionally frozen compatibility fixtures remain valid version contracts.
+identities, dependency edges, registry integrity, and install-script approvals.
+Do not pin package releases, lockfile format numbers, or versioned install keys
+in unit tests merely to repeat the resolver output. Product formats, protocol
+versions, and intentionally frozen compatibility fixtures remain valid version
+contracts.

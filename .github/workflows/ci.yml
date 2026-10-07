@@ -55,11 +55,11 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
-      - uses: actions/setup-node@v7
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version-file: .node-version
+          bun-version-file: .bun-version
 
-      - run: npm ci
+      - run: test -s bun.lock && bun install --frozen-lockfile
 
       - run: |
           prek run \
@@ -70,25 +70,33 @@ jobs:
           DJANGO_DEBUG: True # necessary to collect all URLs
 
   js-tests:
-    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version-file: .node-version
+          bun-version-file: .bun-version
 
       - name: Install JS Dependencies
-        run: npm ci
+        run: test -s bun.lock && bun install --frozen-lockfile
 
       - name: Build Django-served assets
-        run: npm run build
+        run: bun run build
+
+      - name: Lint JavaScript
+        run: bun run lint:js
+
+      - name: Type-check Railway infrastructure
+        run: bun run typecheck:railway
 
       - name: Run JS Unit Tests
-        run: npm run test:js
+        run: bun run test:js
+
+      - name: Verify Vite watcher invalidation
+        run: bun run test:assets-watch
 
   # With no caching at all the entire ci process takes 3m to complete!
   pytest:
@@ -159,13 +167,13 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
-      - name: Set up Node for real browser upload integration
-        uses: actions/setup-node@v7
+      - name: Set up Bun for real browser upload integration
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version-file: .node-version
+          bun-version-file: .bun-version
 
       - name: Install browser test dependencies
-        run: npm ci
+        run: test -s bun.lock && bun install --frozen-lockfile
 
       - name: Run Tests
         run: |

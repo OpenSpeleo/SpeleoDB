@@ -67,13 +67,14 @@ Any Rust source change invalidates the cached editable build. Python source is
 not part of the native cache key because editable imports read those files
 directly.
 
-## Node Dependency Ownership
+## JavaScript Dependency Ownership
 
 The monorepo override gives `/app/node_modules` an explicit volume name derived
 from `COMPOSE_INSTANCE_PREFIX`. The default is
 `speleodb_devcontainer_local_web_node_modules`, which is distinct from the
-standalone Compose project's Node volume. This prevents a standalone root-run
-`/start` from leaving files that the monorepo's `dev-user` cannot replace.
+standalone Compose project's dependency volume. This prevents a standalone
+root-run `/start` from leaving files that the monorepo's `dev-user` cannot
+replace.
 
 All monorepo application services mount that same volume at both
 `/app/node_modules` and `/workspace/apps/web/node_modules`. The second mount is
@@ -84,5 +85,12 @@ wrong platform's optional native packages.
 The one-shot setup service calls `.devcontainer/prepare-web-node-modules.sh` as
 root before application startup. It recursively migrates ownership only when the
 volume root is not already owned by `dev-user`. The workspace and webserver
-services themselves run as `dev-user`, so subsequent `npm ci`, Vite temporary
-files, prek builds, and editor commands preserve ownership without another scan.
+services themselves run as `dev-user`, so subsequent Bun installs, Vite
+temporary files, prek builds, and editor commands preserve ownership without
+another scan.
+
+Run web dependency installation from `/app`, using
+`test -s bun.lock && bun install --frozen-lockfile`. The standalone application
+mount isolates Bun from the enclosing `/workspace` workspace and its lockfile.
+Running an install from `/workspace/apps/web` can discover the parent workspace;
+reserve that path for hooks that launch the already-installed web tools.

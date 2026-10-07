@@ -124,7 +124,7 @@ def _manifest() -> dict[str, ManifestEntry] | None:
         if getattr(settings, "VITE_ALLOW_MISSING_MANIFEST", False):
             return None
         raise ImproperlyConfigured(
-            f"Vite manifest is missing at {path}; run npm run build"
+            f"Vite manifest is missing at {path}; run bun run build"
         ) from exc
 
     with _cache_lock:

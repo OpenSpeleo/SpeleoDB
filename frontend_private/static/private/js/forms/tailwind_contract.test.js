@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -233,7 +234,10 @@ const candidateSourceText = (relativePath, source) => {
 
 describe('Tailwind v4 single-bundle contract', () => {
     const packageJson = readJson('package.json');
-    const packageLock = readJson('package-lock.json');
+    const packageLock = JSON.parse(execFileSync('bun', [
+        '--eval',
+        'process.stdout.write(JSON.stringify(Bun.JSONC.parse(await Bun.stdin.text())))',
+    ], { input: read('bun.lock'), encoding: 'utf8' }));
     const v3Contract = readJson('frontend_private/static/private/js/forms/fixtures/tailwind-v3.4.19-contract.json');
     const entryCss = read('tailwind_css/style.css');
     const privateCss = read('tailwind_css/private/style.css');
@@ -242,7 +246,7 @@ describe('Tailwind v4 single-bundle contract', () => {
     const privateCustomCss = read('frontend_private/static/private/css/custom.css');
     const gitViewTemplate = read('frontend_private/templates/pages/project/git_view.html');
     const designSystemCss = read('tailwind_css/shared/design-system.css');
-    it('keeps compiler dependencies, lockfile, and install-script graph aligned', () => {
+    it('keeps compiler dependencies and lockfile aligned', () => {
         const requiredPackages = [
             '@tailwindcss/forms',
             '@tailwindcss/typography',
@@ -251,27 +255,21 @@ describe('Tailwind v4 single-bundle contract', () => {
             'vite',
         ];
 
-        expect(packageLock.packages[''].devDependencies).toEqual(packageJson.devDependencies);
+        expect(packageLock.workspaces[''].devDependencies).toEqual(packageJson.devDependencies);
 
         for (const packageName of requiredPackages) {
             expect(packageJson.devDependencies).toHaveProperty(packageName);
-            const lockNode = packageLock.packages[`node_modules/${packageName}`];
-            expect(lockNode, `Missing package-lock node for ${packageName}`).toBeDefined();
-            expect(lockNode.integrity).toMatch(/^sha512-/);
+            const lockNode = packageLock.packages[packageName];
+            expect(lockNode, `Missing Bun lockfile package for ${packageName}`).toBeDefined();
+            expect(lockNode[0]).toBe(`${packageName}@${packageJson.devDependencies[packageName]}`);
+            expect(lockNode[3]).toMatch(/^sha512-/);
         }
-
-        const lockedInstallScripts = Object.entries(packageLock.packages)
-            .filter(([, metadata]) => metadata.hasInstallScript)
-            .map(([lockPath]) => lockPath.replace(/^node_modules\//, ''))
-            .sort();
-        expect(packageJson.allowScripts).toBeUndefined();
-        expect(read('.npmrc').trim()).toBe(`allow-scripts=${lockedInstallScripts.join(',')}`);
     });
 
     it('exposes exactly one neutral build, watch, and pre-commit interface', () => {
         expect(packageJson.scripts['build:assets']).toBe('vite build --mode production');
         expect(packageJson.scripts.dev).toBe('vite build --watch --mode development');
-        expect(packageJson.scripts['pre-commit']).toBe('npm run build');
+        expect(packageJson.scripts['pre-commit']).toBe('bun run build');
 
         for (const obsoleteName of [
             'build:tailwind:public',
@@ -293,8 +291,8 @@ describe('Tailwind v4 single-bundle contract', () => {
             expect(packageJson.scripts[obsoleteName]).toBeUndefined();
         }
 
-        expect(packageJson.scripts.build).toBe('npm run build:clean && npm run build:assets');
-        expect(packageJson.scripts.start).toBe('npm run dev');
+        expect(packageJson.scripts.build).toBe('bun run build:clean && bun run build:assets');
+        expect(packageJson.scripts.start).toBe('bun run dev');
         expect(packageJson.scripts['build:clean']).toContain('speleodb/common/static/speleodb/vite');
         expect(packageJson.scripts['build:clean']).toContain('frontend_public/static/css/style.css');
         expect(packageJson.scripts['build:clean']).toContain('frontend_private/static/private/css/style.css');

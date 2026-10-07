@@ -8,14 +8,16 @@ does not take ownership of unrelated services or databases.
 
 `railpack.json` is the image-build recipe, including Python dependencies and
 frontend assets. It keeps the Python provider and runs frontend commands through
-Mise with the Node major read from `.node-version`; do not duplicate that major
-in the Railpack package map. Service start commands, predeployment commands,
-resources, and environment references belong in `.railway/railway.ts`.
+Mise with the exact Bun release read from `.bun-version`; do not duplicate that
+version in the Railpack package map. Bun installs the committed graph and
+executes the Vite build with the runtime policy in `bunfig.toml`. Service start
+commands, predeployment commands, resources, and environment references belong
+in `.railway/railway.ts`.
 
 Validate edits in the running application container:
 
 ```bash
-docker exec -w /app speleodb_local_django npm run typecheck:railway
+docker exec -w /app speleodb_local_django bun run typecheck:railway
 ```
 
 For the intended Railway project/environment, preview with `railway config plan`
@@ -99,9 +101,9 @@ Verify
 
   ▸ build
     $ uv sync --extra production --frozen
-    $ mise exec -- node --version
-    $ mise exec -- npm ci
-    $ mise exec -- npm run build
+    $ mise exec -- bun --version
+    $ sh -c 'test -s bun.lock && mise exec -- bun install --frozen-lockfile'
+    $ mise exec -- bun run build
     $ rm -rf node_modules
 
   Deploy
@@ -109,6 +111,10 @@ Verify
     $ python manage.py migrate && gunicorn backend.wsgi:application
 ```
 
-Mise discovers Node from `.node-version`; `mise exec --` activates that
-repository-owned version without duplicating the major in `railpack.json`. Use
-`railpack prepare --plan-out out.json .` to inspect the effective plan.
+Mise discovers Bun from `.bun-version` for each invocation. The manifest's
+`packageManager` and `engines.bun` mirror that exact release. The install guard
+rejects a missing or empty `bun.lock`, and the frozen install must leave the
+lockfile unchanged. This applies the same version and dependency contract as
+local Compose and CI while retaining the Python provider and generated frontend
+assets. Use `railpack prepare --plan-out out.json .` to inspect the effective
+plan.

@@ -22,7 +22,7 @@ test-py:
 	pytest
 
 test-js:
-	npm run test:js
+	bun run test:js
 
 # OGC API - Features focused targets. The OGC compliance suite has its
 # own coverage / mutation / Team-Engine entry points so changes to the
@@ -100,5 +100,4 @@ generate_enc_key:
 	python manage.py generate_field_encryption_key
 
 update:
-	npx --yes npm-check-updates -u --peer
-	npm install
+	bun run update

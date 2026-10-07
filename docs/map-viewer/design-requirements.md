@@ -150,8 +150,8 @@ on every menu open.
 
 When changing these feature areas:
 
-- run `npm run lint:js`
-- run `npm run test:js`
+- run `bun run lint:js`
+- run `bun run test:js`
 - verify private/public parity for shared map behavior
 
 For the broader validation playbook, see:

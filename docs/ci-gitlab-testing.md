@@ -314,6 +314,14 @@ FormData implementations; requests reach Django and persist files in the
 configured S3-compatible service. Python reads those files back to verify exact
 bytes and checks the database for unexpected writes.
 
+The script imports `scripts/jsdom-runtime.mjs` before jsdom. It selects jsdom's
+installed `undici` dependency because the runtime's built-in compatibility
+export lacks `Dispatcher.request`. This dependency-selection boundary preserves
+the real XMLHttpRequest implementation and network transport; it does not
+replace request methods or mutate installed dependencies. The same module runs
+before Vitest creates its DOM environments. See [Bun tooling](bun-tooling.md)
+for ownership and removal criteria.
+
 The integration observes real progress events, DOM mutations, and completed list
 requests. It covers modal dismissal while uploading, one successful list
 refresh, processor rejection, CSRF rejection, alternate HTTP methods, empty HEAD
@@ -322,11 +330,11 @@ It does not synthesize HTTP status codes or replace upload callbacks. Empty HEAD
 responses exercise the no-content behavior without claiming a real 204 outcome.
 Pure progress rendering remains in Vitest with the actual upload component.
 
-Node and the root npm dependencies are required in the pytest job. Missing Node,
-an unavailable server, a failed upload, or an unreadable stored file fails the
-test; none of these conditions silently removes coverage. Session credentials
-travel through the child process's stdin and are never printed or put in its
-command arguments.
+Bun and the root locked dependencies are required in the pytest job. Missing
+Bun, an unavailable server, a failed upload, or an unreadable stored file fails
+the test; none of these conditions silently removes coverage. Session
+credentials travel through the child process's stdin and are never printed or
+put in its command arguments.
 
 ## Running and validating tests
 

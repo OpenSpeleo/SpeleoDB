@@ -44,8 +44,8 @@ def test_browser_uploads_use_real_django_and_storage(
             "value": client.cookies[settings.SESSION_COOKIE_NAME].value,
         },
     }
-    node: str | None = shutil.which("node")
-    assert node is not None, "Node.js is required for real browser upload tests"
+    bun: str | None = shutil.which("bun")
+    assert bun is not None, "Bun is required for real browser upload tests"
     try:
         with socket.socket() as unavailable:
             unavailable.bind(("127.0.0.1", 0))
@@ -53,7 +53,7 @@ def test_browser_uploads_use_real_django_and_storage(
                 f"http://127.0.0.1:{unavailable.getsockname()[1]}/upload"
             )
             result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603 - fixed script, private stdin
-                [node, "scripts/test-frontend-uploads.mjs"],
+                [bun, "scripts/test-frontend-uploads.mjs"],
                 cwd=BASE_DIR,
                 input=json.dumps(browser_configuration),
                 capture_output=True,

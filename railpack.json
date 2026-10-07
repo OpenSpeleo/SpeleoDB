@@ -11,13 +11,13 @@
           "cmd": "uv sync --extra production --frozen"
         },
         {
-          "cmd": "mise exec -- node --version"
+          "cmd": "mise exec -- bun --version"
         },
         {
-          "cmd": "mise exec -- npm ci"
+          "cmd": "sh -c 'test -s bun.lock && mise exec -- bun install --frozen-lockfile'"
         },
         {
-          "cmd": "mise exec -- npm run build"
+          "cmd": "mise exec -- bun run build"
         },
         {
           "cmd": "rm -rf node_modules"

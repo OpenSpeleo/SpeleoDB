@@ -44,9 +44,9 @@ reviewed file. Run checks in the existing application container:
 - `prek run djlint-reformat-django --all-files`
 - `prek run djlint-django --all-files`
 - `pytest frontend_private/tests/test_template_lint_regressions.py`
-- `npm run test:js`
-- `npm run lint:js`
-- `npm run build`
+- `bun run test:js`
+- `bun run lint:js`
+- `bun run build`
 
 Rendered Django tests cover permissions, team badges, and private navigation.
 DOM/controller tests cover native map toggles and modal visibility. Compile all

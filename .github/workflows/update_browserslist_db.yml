@@ -18,16 +18,16 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version-file: .node-version
+          bun-version-file: .bun-version
 
       - name: Install JS dependencies
-        run: npm ci
+        run: test -s bun.lock && bun install --frozen-lockfile
 
       - name: Update browserslist database
-        run: npx update-browserslist-db@latest
+        run: bunx --bun update-browserslist-db@latest
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
@@ -38,7 +38,7 @@ jobs:
           title: "chore: update browserslist database"
           commit-message: "chore: update browserslist database"
           add-paths: |
-            package-lock.json
+            bun.lock
           body: |
             Automated update for Browserslist's caniuse-lite data.
 
@@ -46,4 +46,4 @@ jobs:
             Keep browser compatibility data fresh for Tailwind/PostCSS tooling and remove stale caniuse-lite warnings.
 
             ## Changes
-            - Updated `package-lock.json` via `npx update-browserslist-db@latest`
+            - Updated `bun.lock` via `bunx --bun update-browserslist-db@latest`

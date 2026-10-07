@@ -166,14 +166,15 @@ Do not use `down --volumes` to troubleshoot bootstrap or dependency failures.
 
 ## Container-only verification and isolated live tests
 
-Run Python, Node, lint, type checks, and builds inside the Django container:
+Run Python, JavaScript, lint, type checks, and builds inside the Django
+container:
 
 ```bash
 docker compose -f local.yml exec -T django uv sync --frozen --extra local
 docker compose -f local.yml exec -T django pytest compose/tests/
-docker compose -f local.yml exec -T django npm run test:js
-docker compose -f local.yml exec -T django npm run lint:js
-docker compose -f local.yml exec -T django npm run build
+docker compose -f local.yml exec -T django bun run test:js
+docker compose -f local.yml exec -T django bun run lint:js
+docker compose -f local.yml exec -T django bun run build
 ```
 
 Enable the dedicated ephemeral broker for real-worker integration tests:
@@ -305,21 +306,21 @@ require a reviewed `railway config plan` and `railway config apply`; application
 Git pushes alone do not apply IaC edits. Consolidating these settings has no
 application runtime or performance effect.
 
-The root Node manifest and lockfile pin `railway@3.11.0`, TypeScript, and Node
-type definitions. `npm run typecheck:railway` validates the authoring file and
-runs through pre-commit/CI. Its native IaC runner requires Railway CLI 5.42.1 or
-newer; the read-only production plan was checked with CLI 5.57.1. The web
-service, worker, and Beat track the repository's `master` release branch with
-GitHub check suites enabled. Worker and Beat sources have no fixed commit SHA,
-and their empty watch-pattern lists allow every repository change to trigger a
-rebuild after checks pass. This keeps application tasks aligned with releases
-that update shared code, dependencies, or build configuration. Kanchi follows
-its pinned image digest and upgrades independently of application Git pushes.
-Check the live web service's source branch and migration history before applying
-the prepared graph, and record the actual commit on each resulting deployment.
-After service creation, read back the worker and Beat source settings to confirm
-the `master` branch, absent commit pin, and enabled GitHub check suites were
-retained.
+The root JavaScript manifest and lockfile pin `railway@3.11.0`, TypeScript, and
+the tool's type definitions. `bun run typecheck:railway` validates the authoring
+file and runs through pre-commit/CI. Its native IaC runner requires Railway CLI
+5.42.1 or newer; the read-only production plan was checked with CLI 5.57.1. The
+web service, worker, and Beat track the repository's `master` release branch
+with GitHub check suites enabled. Worker and Beat sources have no fixed commit
+SHA, and their empty watch-pattern lists allow every repository change to
+trigger a rebuild after checks pass. This keeps application tasks aligned with
+releases that update shared code, dependencies, or build configuration. Kanchi
+follows its pinned image digest and upgrades independently of application Git
+pushes. Check the live web service's source branch and migration history before
+applying the prepared graph, and record the actual commit on each resulting
+deployment. After service creation, read back the worker and Beat source
+settings to confirm the `master` branch, absent commit pin, and enabled GitHub
+check suites were retained.
 
 Railway may normalize omitted fields to default restart-policy or watch-pattern
 values on read-back. Compare any `null`-to-default plan differences with the

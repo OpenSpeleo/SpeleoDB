@@ -1,9 +1,12 @@
 // Invoked by pytest with an authenticated Django live_server configuration on
 // stdin. JSDOM's unmodified XMLHttpRequest sends real HTTP and multipart bodies.
+import './jsdom-runtime.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { CookieJar, JSDOM, VirtualConsole } from 'jsdom';
+
+// Defer JSDOM until its installed HTTP dependency has been selected.
+const { CookieJar, JSDOM, VirtualConsole } = await import('jsdom');
 
 const configuration = JSON.parse(readFileSync(0, 'utf8'));
 const cookieJar = new CookieJar();

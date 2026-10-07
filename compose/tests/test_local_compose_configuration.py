@@ -160,7 +160,7 @@ def test_node_modules_preparation_migrates_legacy_root_volume(
 
     result = _run_ownership_preparation(node_modules_dir, owner=dev_user.pw_name)
 
-    assert "Migrating Node dependency volume ownership" in result.stdout
+    assert "Migrating JavaScript dependency volume ownership" in result.stdout
     for path in (node_modules_dir, vite_temp_dir, config_file):
         path_stat = path.stat()
         assert path_stat.st_uid == dev_user.pw_uid

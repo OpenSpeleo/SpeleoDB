@@ -118,8 +118,8 @@ try {
     await symlink(path.join(repositoryRoot, 'node_modules'), path.join(mirrorRoot, 'node_modules'));
 
     watcher = spawn(
-        path.join(repositoryRoot, 'node_modules/.bin/vite'),
-        ['build', '--watch', '--mode', 'development'],
+        process.execPath,
+        [path.join(repositoryRoot, 'node_modules/.bin/vite'), 'build', '--watch', '--mode', 'development'],
         { cwd: mirrorRoot, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     watcher.stdout.on('data', (chunk) => {

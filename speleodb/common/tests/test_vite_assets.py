@@ -197,7 +197,7 @@ def test_missing_production_manifest_fails(registry: Path, tmp_path: Path) -> No
             VITE_MANIFEST_PATH=tmp_path / "missing.json",
             VITE_ALLOW_MISSING_MANIFEST=False,
         ),
-        pytest.raises(ImproperlyConfigured, match="run npm run build"),
+        pytest.raises(ImproperlyConfigured, match="run bun run build"),
     ):
         render("{% load vite_assets %}{% vite_script 'app' %}")
 

@@ -3,6 +3,7 @@ import globals from 'globals';
 const sharedGlobals = {
     ...globals.browser,
     ...globals.node,
+    Bun: 'readonly',
     $: 'readonly',
     jQuery: 'readonly',
     AOS: 'readonly',

@@ -67,6 +67,9 @@ repos:
     hooks:
       - id: prettier
         name: prettier markdown
+        entry: bun run --bun prettier --write --ignore-unknown
+        language: bun
+        language_version: system
         types_or: [markdown]
         args: [--prose-wrap=always]
         # args: [--prose-wrap=always, --embedded-language-formatting=off]
@@ -129,7 +132,7 @@ repos:
         types_or: [python, pyi]
       - id: typecheck-railway
         name: Type-check Railway infrastructure
-        entry: npm run typecheck:railway
+        entry: bun run typecheck:railway
         language: system
         files: ^\.railway/.*\.ts$
         pass_filenames: false
@@ -166,13 +169,13 @@ repos:
     hooks:
       - id: lint-map-viewer-js
         name: Lint map viewer JavaScript
-        entry: npm run lint:js
+        entry: bun run lint:js
         language: system
         pass_filenames: false
         always_run: true
       - id: build-vite-assets
         name: Build Django-served Vite assets
-        entry: npm run pre-commit
+        entry: bun run pre-commit
         language: system
         pass_filenames: false
         always_run: true
