@@ -107,6 +107,72 @@ schedules. Setup stops on failure. Kanchi also waits for this setup service and
 the shared database/Redis health checks; there is no separate PostgreSQL
 container for it.
 
+### Kanchi application versus database provisioning
+
+**The Kanchi image contains the application; its PostgreSQL database is
+external.** In this Compose configuration, `DATABASE_URL` points to
+`postgres:5432/kanchi` on the same PostgreSQL server that hosts Django's
+separate database. Redis is also an external service. Packaging Kanchi in its
+own container does not create its database or login on that server.
+
+| Component                                                  | Responsibility                                                                                                        |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Shared `postgres` service                                  | Runs PostgreSQL and persists both applications' separate databases in its existing volume.                            |
+| Our `setup` service and `compose/setup_kanchi_database.py` | Create Kanchi's database and restricted login, check existing ownership, and manage its password and database access. |
+| Upstream `getkanchi/kanchi` image                          | Runs Kanchi and manages its own schema/migrations inside the provisioned database.                                    |
+
+Startup order is: PostgreSQL becomes healthy, our setup provisions the database
+and role, then Kanchi starts against that database. The Django migrations run by
+`compose/setup` belong to Django; they do not install Kanchi's tables. Keeping
+provisioning in setup lets Kanchi use a restricted login rather than PostgreSQL
+administrator credentials and supports existing development volumes without
+recreating them.
+
+New Kanchi databases explicitly clone PostgreSQL's pristine `template0` because
+Kanchi migrations own the schema; local additions to `template1` must not leak
+into it. This also avoids inheriting a recorded `template1` collation version
+that the current container runtime cannot determine, as can happen when a
+development volume moves from glibc to Alpine/musl. PostgreSQL records the new
+database's current collation version during creation. See
+[PostgreSQL template databases](https://www.postgresql.org/docs/16/manage-ag-templatedbs.html).
+Provisioning does not repair cluster-wide collation metadata or rebuild existing
+databases. Repeated setup preserves Kanchi history and only rotates its
+dedicated role's password and reapplies database access restrictions. Template
+selection adds no queries or ongoing runtime cost.
+
+### What the Kanchi database tests cover
+
+**`compose/tests/test_kanchi_database.py` tests our provisioning script, not the
+Kanchi application.** It creates temporary databases and roles on real local
+PostgreSQL and removes them afterward. It does not launch or call the Kanchi
+container, run Kanchi migrations, or use Kanchi's existing database.
+
+The tests verify database creation, ownership, restricted access, password
+rotation, quoted identifiers, and CLI secret handling. The `kanchi_history`
+table in these tests is a dummy table created by the test, not an assertion
+about Kanchi's schema. It proves that repeating our setup preserves stored data.
+Ownership and privilege checks prove that our setup refuses to take over an
+unrelated database or reuse an unsafe role.
+
+The collation regression checks that new database metadata matches the running
+provider. Another test holds an active connection to `template1`, preventing
+PostgreSQL from cloning it, and confirms that our provisioning still succeeds
+using `template0`. This tests independence from the shared template without
+changing its contents or metadata. Together these tests protect startup against
+the provisioning failures that otherwise block Kanchi from starting.
+
+A passing suite does **not** establish that Kanchi starts successfully, applies
+its migrations, serves its UI, authenticates users, or observes Celery tasks.
+The Compose `/api/health` check separately probes the running Kanchi service; it
+is not an end-to-end task-monitoring test. Run the provisioning tests inside the
+already-running application devcontainer:
+
+```bash
+pytest compose/tests/test_kanchi_database.py
+```
+
+### Local credentials and configuration
+
 The local username/password are `kanchi-local` / `kanchi-local-only`.
 Authentication stays enabled. Override local credentials and token secrets in
 the private root `.env`. These defaults are for loopback development only. If

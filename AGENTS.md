@@ -9,6 +9,18 @@ Read the current root `AGENTS.md` at the start of every session and follow its
 instructions. Do not rely on memory from previous sessions; conventions and
 workflow requirements may have changed.
 
+## Git commits run on the host only
+
+**NEVER execute `git commit` inside Docker or a devcontainer.** Run every
+authorized commit directly on the host from the owning repository checkout. This
+includes commits invoked indirectly by scripts, tools, skills, or subagents; do
+not use `docker exec`, `docker compose exec`, or any other container execution
+path to create a commit.
+
+The requirement to run tests and application checks inside the running
+devcontainer does not apply to Git commits. Commit authorization is still
+required; this rule only specifies where an authorized commit must run.
+
 ## Core Principles
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal

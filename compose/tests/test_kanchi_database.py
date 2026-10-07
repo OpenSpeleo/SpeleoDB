@@ -1,5 +1,9 @@
 """Exercise provisioning against isolated databases/roles on real local PostgreSQL."""
 
+# Scope: our setup script only. These tests do not run Kanchi, its migrations,
+# UI, or Celery integration. The kanchi_history table is dummy test data.
+# See docs/background-jobs-operations.md for service ownership and test coverage.
+
 from __future__ import annotations
 
 import os
@@ -108,6 +112,12 @@ def test_provisioned_role_owns_private_database_and_can_create_tables(
         (fixture.database,),
     ).fetchone()
     assert owner == (fixture.username,)
+    assert fixture.connection.execute(
+        "SELECT datcollversion IS NOT DISTINCT FROM "
+        "pg_database_collation_actual_version(oid) "
+        "FROM pg_database WHERE datname = %s",
+        (fixture.database,),
+    ).fetchone() == (True,)
     public_access: tuple[Any, ...] | None = fixture.connection.execute(
         "SELECT EXISTS (SELECT 1 FROM pg_database, aclexplode(datacl) AS acl "
         "WHERE datname = %s AND acl.grantee = 0)",
@@ -121,6 +131,23 @@ def test_provisioned_role_owns_private_database_and_can_create_tables(
                 sql.SQL("ALTER ROLE {} CREATEDB").format(
                     sql.Identifier(fixture.username)
                 )
+            )
+
+
+def test_provisioning_is_independent_of_template1(
+    isolated_database: IsolatedDatabase,
+) -> None:
+    fixture: IsolatedDatabase = isolated_database
+    # An active session prevents PostgreSQL from cloning template1 even on a
+    # fresh cluster, without changing the shared template or its metadata.
+    with psycopg.connect(
+        make_conninfo(**(fixture.parameters | {"dbname": "template1"})),
+        autocommit=True,
+    ):
+        fixture.provision()
+        with fixture.connect() as connection:
+            assert connection.execute("SELECT current_database()").fetchone() == (
+                fixture.database,
             )
 
 
@@ -154,7 +181,9 @@ def test_existing_database_with_different_owner_is_untouched(
 ) -> None:
     fixture: IsolatedDatabase = isolated_database
     fixture.connection.execute(
-        sql.SQL("CREATE DATABASE {}").format(sql.Identifier(fixture.database))
+        sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(
+            sql.Identifier(fixture.database)
+        )
     )
     with pytest.raises(DatabaseSetupError, match="different owner"):
         fixture.provision()

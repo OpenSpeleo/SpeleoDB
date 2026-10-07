@@ -122,8 +122,12 @@ def _provision_locked(
             sql.SQL("ALTER ROLE {} PASSWORD {}").format(role, sql.Literal(password))
         )
     if existing_database is None:
+        # Kanchi owns its schema; template1 may contain site-local objects or a
+        # collation version from a different PostgreSQL container runtime.
         connection.execute(
-            sql.SQL("CREATE DATABASE {} OWNER {}").format(database_name, role)
+            sql.SQL("CREATE DATABASE {} OWNER {} TEMPLATE template0").format(
+                database_name, role
+            )
         )
     connection.execute(
         sql.SQL("REVOKE ALL ON DATABASE {} FROM PUBLIC").format(database_name)

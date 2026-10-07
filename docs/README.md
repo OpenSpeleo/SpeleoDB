@@ -13,6 +13,10 @@ Unlike product docs, these files prioritize:
 
 ### Architecture and System Design
 
+- [Background jobs and Kanchi](background-jobs-operations.md)
+  - Celery operations, Kanchi's external database and provisioning ownership,
+    startup order, and the boundary between provisioning tests and application
+    health checks.
 - `local-object-storage.md`
   - local RustFS ownership, automatic `.env`/GitLab/bucket/superuser bootstrap,
     isolated Compose projects, signed URL flow, production boundaries,
