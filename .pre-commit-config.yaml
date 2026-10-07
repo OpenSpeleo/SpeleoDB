@@ -33,7 +33,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.8
+    rev: v0.16.10
     hooks:
       # Linter
       - id: ruff
@@ -44,7 +44,7 @@ repos:
         exclude: ^speleodb/api/v2/tests/artifacts/
 
   - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.46.2
+    rev: v1.46.4
     hooks:
       - id: djlint-reformat-django
       - id: djlint-django
@@ -63,7 +63,7 @@ repos:
         additional_dependencies: ["autoflake"]
 
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.9.8
+    rev: v3.9.9
     hooks:
       - id: prettier
         name: prettier markdown
@@ -79,14 +79,14 @@ repos:
   # ========================================================================= #
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.32.0"
+    rev: "1.33.0"
     hooks:
       - id: django-upgrade
         args: ["--target-version", "6.0"]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.12.17
+    rev: 0.12.23
     hooks:
       - id: uv-lock
         args: ["--check"]

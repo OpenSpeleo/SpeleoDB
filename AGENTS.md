@@ -145,10 +145,6 @@ The web application uses a single Bun-managed JavaScript workspace at its root.
   subprocesses. Keep `[run] bun = true` in `bunfig.toml` so package scripts and
   their executable children use the declared Bun runtime. Retain Vitest and its
   existing test configuration; `bun test` is a different runner.
-- The jsdom runtime preload in `scripts/jsdom-runtime.mjs` selects jsdom's
-  declared HTTP-client dependency before DOM environment creation. Keep it
-  scoped to Vitest workers and the standalone upload harness, with real HTTP
-  coverage. See `docs/bun-tooling.md` before changing or removing it.
 - `trustedDependencies` explicitly approves `esbuild` and `fsevents` install
   scripts. Review this list whenever the dependency graph changes.
 - Run web installs and checks from `/app` inside the application container. This
@@ -222,13 +218,12 @@ The web application uses a single Bun-managed JavaScript workspace at its root.
   manifests and lockfiles.
 - Use `bun outdated` to inspect available releases and `bun run update` for
   updates within declared ranges. For an authorized major-version refresh, use
-  `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` in an
-  isolated external directory; preserve the jsdom compatibility pin and review
-  peer compatibility explicitly. Resolve `bun.lock` independently of the
-  installed tree, then verify workspace/manifest agreement, portable package
-  identities, dependency edges, and registry integrity. Bundled packages inherit
-  their parent archive's integrity; do not fabricate separate checksums. See
-  `docs/dependency-updates.md` for the lockfile workflow.
+  `bun update --latest '*' --lockfile-only --ignore-scripts` in an isolated
+  external directory; review peer compatibility explicitly. Resolve `bun.lock`
+  independently of the installed tree, then verify workspace/manifest agreement,
+  portable package identities, dependency edges, and registry integrity. Bundled
+  packages inherit their parent archive's integrity; do not fabricate separate
+  checksums. See `docs/dependency-updates.md` for the lockfile workflow.
 - Apply compatible Python direct updates, run `uv lock --upgrade`, and use
   `uv tree --outdated --depth 1` to prove that every remaining old direct
   dependency has an explicit incompatibility.
@@ -241,11 +236,6 @@ The web application uses a single Bun-managed JavaScript workspace at its root.
 
 ### Current Dependency Blockers
 
-- Can't update jsdom beyond the exact `29.1.1` pin until its DOM event
-  implementation works with the declared Bun runtime. Both `30.1.0` and `30.1.2`
-  fail with EventTarget private-brand errors on Bun `1.4.2`; event, window
-  evaluation, and jQuery probes pass with `29.1.1`. Recheck those paths and the
-  full Vitest suite before relaxing the pin.
 - Can't update Django to 6.1.x until `django-celery-beat` supports Django 6.1;
   version 2.9.0 requires Django `<6.1`.
 - Can't update orjson to 3.12.x until `compass-lib` relaxes its `orjson<3.12`

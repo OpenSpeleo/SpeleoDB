@@ -433,6 +433,53 @@ class CloneRetryTests(LocalGitTests):
 
 
 class GitProcessDeadlineTests(TestCase):
+    def test_execute_accepts_gitpython_positional_options(self) -> None:
+        with tempfile.TemporaryFile() as source:
+            source.write(b"input details\n")
+            for command in (git.Git(), BoundedGit()):
+                with self.subTest(command=type(command).__name__):
+                    source.seek(0)
+                    result: object = command.execute(
+                        [
+                            sys.executable,
+                            "-c",
+                            "import os, sys; "
+                            "sys.stdout.buffer.write(sys.stdin.buffer.read()); "
+                            "sys.stderr.write(os.environ['SDB_EXECUTE_TEST']); "
+                            "sys.exit(3)",
+                        ],
+                        source,
+                        True,  # noqa: FBT003 - positional with_extended_output
+                        False,  # noqa: FBT003 - positional with_exceptions
+                        False,  # noqa: FBT003 - positional as_process
+                        None,  # output_stream
+                        False,  # noqa: FBT003 - positional stdout_as_string
+                        2.0,  # kill_after_timeout
+                        True,  # noqa: FBT003 - positional with_stdout
+                        False,  # noqa: FBT003 - positional universal_newlines
+                        False,  # noqa: FBT003 - positional shell
+                        {"SDB_EXECUTE_TEST": "error details"},
+                        8192,  # max_chunk_size
+                        False,  # noqa: FBT003 - positional strip_newline_in_stdout
+                    )
+                    assert result == (3, b"input details\n", "error details")
+
+    def test_positional_process_options_enforce_deadline(self) -> None:
+        process: DeadlineGitProcess = BoundedGit().execute(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            None,  # istream
+            False,  # noqa: FBT003 - positional with_extended_output
+            True,  # noqa: FBT003 - positional with_exceptions
+            True,  # noqa: FBT003 - positional as_process
+            None,  # output_stream
+            True,  # noqa: FBT003 - positional stdout_as_string
+            0.1,  # kill_after_timeout
+        )
+        assert isinstance(process, DeadlineGitProcess)
+        with pytest.raises(GitCommandError, match="deadline"):
+            process.wait()
+        assert process.proc is None
+
     def test_synchronous_failure_preserves_stdout_and_stderr(self) -> None:
         with pytest.raises(GitCommandError) as error:
             BoundedGit().execute(

@@ -490,6 +490,10 @@ describe('native GIS geometry editor', () => {
 
     it('shows the retained draft when asynchronous clipboard access is denied', async () => {
         await GeometryEditor.edit(existing);
+        inputName('Keep this draft');
+        API.updateGISGeometry.mockRejectedValue(Object.assign(new Error('Conflict'), { status: 409 }));
+        await GeometryEditor.save();
+        expect(GeometryEditor.nodes.conflict.hidden).toBe(false);
         let reject;
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
             writeText: () => new Promise((_, rejectPromise) => { reject = rejectPromise; }),

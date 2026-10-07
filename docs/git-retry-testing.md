@@ -22,6 +22,13 @@ advanced by exactly one commit, asserts one commit invocation, and verifies no
 application retry sleep occurred. Positive retry tests still verify attempt
 counts and exponential delay values.
 
+`BoundedGit.execute()` retains GitPython's positional and keyword parameter
+contract. It normalizes both forms into the existing deadline handling so
+positional input streams, output options, and process timeouts cannot bypass
+that policy. Regression tests compare positional synchronous execution with
+GitPython and verify that positional streamed execution still enforces its
+deadline. Normalization adds only a fixed-size option mapping per command.
+
 Run the affected tests inside the existing Docker container:
 
 ```sh

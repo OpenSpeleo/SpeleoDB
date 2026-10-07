@@ -12,7 +12,7 @@ from PIL import Image
 from PIL.ImageOps import exif_transpose
 
 # Register HEIF plugin with Pillow on import
-from pillow_heif import register_heif_opener  # type: ignore[attr-defined]
+from pillow_heif import register_heif_opener
 
 register_heif_opener()
 

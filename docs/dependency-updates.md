@@ -35,25 +35,20 @@ commit-time validation enforce different rule sets.
 
 ## Lockfile invariants
 
-Routine `bun run update` (also exposed as `make update`) runs `bun update`
-within declared ranges, preserving exact pins, then refreshes Browserslist data.
-Use `bun update --interactive` for selection. This policy follows manifest
-ranges rather than advancing every exact pin to its newest minor release. Major
-upgrades require the explicit workflow below. Bun's update command does not
-provide peer-compatible candidate filtering; review peer constraints and
-resolver warnings before accepting a refreshed graph.
+`bun run update` (also exposed as `make update`) runs `bun update --latest` for
+all dependencies, including major upgrades, then refreshes Browserslist data.
+Review peer constraints and resolver warnings before accepting the refreshed
+graph.
 
 Resolve the Bun lockfile independently of `node_modules`. Copy the combined
 `package.json`, `bun.lock`, `bunfig.toml`, and `.bun-version` into an empty
 operating-system temporary directory outside every checkout. Use that directory
 as the actual working directory and the Bun release selected by `.bun-version`;
-run `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` once to
-refresh the combined graph. Quote both patterns so the shell cannot expand them.
-The jsdom exclusion preserves its documented runtime compatibility pin; add any
-future compatibility blockers to this exclusion list. Validate the resulting
-manifest and lockfile before copying both back. This is an intentional
-dependency-update workflow, not the workflow for a package-manager transition
-that must preserve existing versions.
+run `bun update --latest '*' --lockfile-only --ignore-scripts` once to refresh
+the combined graph. Quote the pattern so the shell cannot expand it. Validate
+the resulting manifest and lockfile before copying both back. This is an
+intentional dependency-update workflow, not the workflow for a package-manager
+transition that must preserve existing versions.
 
 The generated text lockfile must meet all of these conditions:
 
@@ -108,25 +103,6 @@ geospatial/media bindings require the same relevant-suite evidence as a source
 change. Dependency updates must not add runtime queries, frontend work, or new
 services; any performance change should come only from the selected upstream
 implementations.
-
-The exact jsdom `29.1.1` pin is a runtime compatibility constraint. The tested
-`30.1.0` and `30.1.2` releases fail with EventTarget private-brand errors under
-Bun `1.4.2`; `29.1.1` passes focused event dispatch, window evaluation, and
-vendored jQuery probes. Keep that pin until the selected jsdom/Bun pair passes
-those probes and the full Vitest suite. The runtime transition authorizes this
-jsdom change and its required transitive dependency changes only; preserve
-unrelated direct requirements and locked package versions. General update
-commands belong to separately authorized dependency refreshes.
-
-JSDOM's HTTP transport additionally uses the locked `undici` package selected by
-`scripts/jsdom-runtime.mjs`. Bun's built-in export currently shadows that
-dependency and lacks `Dispatcher.request`; the preload selects the installed
-entrypoint through `createRequire` and `require.cache` before jsdom loads. Keep
-this isolated to the Vitest worker preload and standalone browser-upload
-harness. Future Bun/jsdom updates must retain real HTTP request, progress, and
-cancellation coverage. Remove the selection layer once those tests pass using
-the runtime's built-in export; do not patch installed packages or substitute
-mock transports to claim compatibility.
 
 The DRF 3.18 typing contract accurately models parsed request data as either a
 JSON object or array. Object-only handlers narrow that shape through

@@ -91,16 +91,15 @@ all merges:
   empty external temporary directory containing the final combined
   `package.json`, `bun.lock`, `bunfig.toml`, and `.bun-version`. Use that
   directory as the actual working directory and run
-  `bun update --latest '*' '!jsdom' --lockfile-only --ignore-scripts` once. Keep
-  the patterns quoted, preserve the jsdom runtime compatibility pin, and exclude
-  any future documented blockers. Review peer constraints explicitly; Bun does
-  not provide peer-compatible candidate filtering. Verify JSONC workspace
-  requirements match the manifest, package identities and dependency edges are
-  portable, and registry tuples retain exact versions and archive checksums.
-  Bundled package entries inherit the containing archive's integrity; do not
-  fabricate independent checksums. Preserve optional platform variants and
-  review explicit lifecycle approvals in `trustedDependencies`. Copy the
-  validated `package.json` and `bun.lock` back, then require
+  `bun update --latest '*' --lockfile-only --ignore-scripts` once. Keep the
+  pattern quoted and review peer constraints explicitly; Bun does not provide
+  peer-compatible candidate filtering. Verify JSONC workspace requirements match
+  the manifest, package identities and dependency edges are portable, and
+  registry tuples retain exact versions and archive checksums. Bundled package
+  entries inherit the containing archive's integrity; do not fabricate
+  independent checksums. Preserve optional platform variants and review explicit
+  lifecycle approvals in `trustedDependencies`. Copy the validated
+  `package.json` and `bun.lock` back, then require
   `test -s bun.lock && bun install --frozen-lockfile` to succeed from `/app`
   without rewriting the lock before rebuilding containers. Inspect
   `bun pm untrusted`. The `/app` mount isolates the web graph from Bun's parent

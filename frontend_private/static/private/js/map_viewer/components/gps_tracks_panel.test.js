@@ -37,8 +37,10 @@ it('shows intent immediately and preserves a usable focused switch during load a
         return new Promise(resolve => { finish = resolve; });
     });
     GPSTracksPanel.init();
+    document.getElementById('gps-panel-expand').click();
     const toggle = document.querySelector('.gps-track-button input');
     toggle.focus();
+    expect(document.activeElement).toBe(toggle);
     toggle.click();
     expect(toggle.checked).toBe(true);
     expect(toggle.disabled).toBe(false);

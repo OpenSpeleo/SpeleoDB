@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import math
 import os
 import re
@@ -25,7 +26,9 @@ from speleodb.utils.helpers import retry_with_backoff
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from collections.abc import Mapping
     from collections.abc import Sequence
+    from typing import BinaryIO
 
 _PERSISTENT_CAT_FILE_TIMEOUT: object = object()
 
@@ -195,7 +198,41 @@ class BoundedGit(Git):
         return stdout
 
     @override
-    def execute(self, command: str | Sequence[Any], **kwargs: Any) -> Any:
+    def execute(
+        self,
+        command: str | Sequence[Any],
+        istream: int | BinaryIO | None = None,
+        with_extended_output: bool = False,
+        with_exceptions: bool = True,
+        as_process: bool = False,
+        output_stream: BinaryIO | None = None,
+        stdout_as_string: bool = True,
+        kill_after_timeout: float | None = None,
+        with_stdout: bool = True,
+        universal_newlines: bool = False,
+        shell: bool | None = None,
+        env: Mapping[str, str] | None = None,
+        max_chunk_size: int = io.DEFAULT_BUFFER_SIZE,
+        strip_newline_in_stdout: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        # Normalize GitPython's positional and keyword options before applying
+        # deadlines, including recursive execution through _command_output.
+        kwargs.update(
+            istream=istream,
+            with_extended_output=with_extended_output,
+            with_exceptions=with_exceptions,
+            as_process=as_process,
+            output_stream=output_stream,
+            stdout_as_string=stdout_as_string,
+            kill_after_timeout=kill_after_timeout,
+            with_stdout=with_stdout,
+            universal_newlines=universal_newlines,
+            shell=shell,
+            env=env,
+            max_chunk_size=max_chunk_size,
+            strip_newline_in_stdout=strip_newline_in_stdout,
+        )
         if kwargs.get("kill_after_timeout") is _PERSISTENT_CAT_FILE_TIMEOUT:
             kwargs.pop("kill_after_timeout")
             return super().execute(command, **kwargs)

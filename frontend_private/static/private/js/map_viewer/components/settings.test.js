@@ -137,9 +137,11 @@ describe('private map Settings', () => {
     });
 
     it('reflects external reveal events without rebuilding controls or losing focus', () => {
+        MapSettings.open();
         const landmarks = dialog.querySelector('[data-category="landmarks"]');
         landmarks.click();
         landmarks.focus();
+        expect(document.activeElement).toBe(landmarks);
         Layers.revealCategory('landmarks');
         expect(landmarks.checked).toBe(true);
         expect(dialog.querySelector('[data-category="landmarks"]')).toBe(landmarks);
@@ -293,12 +295,15 @@ describe('private depth limit controls', () => {
     });
 
     it.each(['0', '-1', '-0.01'])('rejects %s without changing the cap and preserves the draft during unrelated changes', value => {
+        dialog.querySelector('[name="map-settings-color-mode"][value="depth"]').click();
+        control('limit').querySelector('summary').click();
         Layers.setDepthLimit(100, 'ft');
         commit(value);
         expect(State.displayPreferences.depthLimitFeet).toBe(100);
         expect(control('error').hidden).toBe(false);
         expect(control('value').getAttribute('aria-invalid')).toBe('true');
         control('value').focus();
+        expect(document.activeElement).toBe(control('value'));
         Layers.setCategoryVisibility('landmarks', false);
         expect(control('value').value).toBe(value);
         expect(document.activeElement).toBe(control('value'));
@@ -375,10 +380,12 @@ describe('private depth limit controls', () => {
 
 
 it('shows the newest switch intent while map application is pending', async () => {
+    MapSettings.open();
     let finish;
     vi.spyOn(Layers, 'whenDisplayApplied').mockReturnValue(new Promise(resolve => { finish = resolve; }));
     const input = dialog.querySelector('[data-category="landmarks"]');
     input.focus();
+    expect(document.activeElement).toBe(input);
     input.click();
     expect(input.checked).toBe(false);
     expect(input.disabled).toBe(false);

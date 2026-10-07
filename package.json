@@ -11,7 +11,7 @@
     "build:assets": "vite build --mode production",
     "dev": "vite build --watch --mode development",
     "pre-commit": "bun run build",
-    "update": "bun update && bunx --bun update-browserslist-db@latest",
+    "update": "bun update --latest && bunx --bun update-browserslist-db@latest",
     "lint:js": "eslint \"vite.config.mjs\" \"playwright.config.mjs\" \"tests/browser/**/*.mjs\" \"scripts/**/*.mjs\" \"frontend_common/**/*.js\" \"frontend_private/static/private/js/**/*.js\" \"frontend_public/static/js/**/*.js\" \"frontend_errors/static/js/**/*.js\" --ignore-pattern \"frontend_private/static/private/js/dist/**\" --ignore-pattern \"frontend_private/static/private/js/vendors/**\" --ignore-pattern \"frontend_public/static/js/dist/**\" --ignore-pattern \"frontend_public/static/js/vendors/**\" --report-unused-disable-directives-severity off --max-warnings=0",
     "lint:js:fix": "bun run lint:js --fix",
     "test:js": "vitest run --config ./vitest.config.mjs",
@@ -21,21 +21,21 @@
     "test:browser": "playwright test --config ./playwright.config.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
-    "@types/node": "26.6.2",
+    "@types/node": "26.6.4",
     "cross-env": "^10.1.0",
-    "eslint": "^10.11.0",
-    "globals": "^17.12.0",
-    "jsdom": "29.1.1",
-    "railway": "3.11.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "jsdom": "30.1.2",
+    "railway": "3.13.0",
     "rimraf": "^6.1.3",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vite": "8.3.0",
-    "vitest": "^5.0.1"
+    "vite": "8.3.3",
+    "vitest": "^5.0.3"
   },
   "packageManager": "bun@1.4.2",
   "trustedDependencies": [

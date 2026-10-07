@@ -85,42 +85,13 @@ use the same runtime. Retain the existing Vitest configuration and argument
 forwarding; `bun test` selects a different test runner. Package executables used
 outside scripts run through `bunx --bun`. Use `bun outdated` to inspect releases
 and `bun update --interactive` to select updates. `bun run update` and
-`make update` share the routine `bun update` command, respecting declared ranges
-and exact compatibility pins, followed by the Browserslist data refresh. For
-authorized major upgrades, use the isolated workflow in
-[Dependency Updates](dependency-updates.md), which excludes jsdom and requires
-explicit peer-compatibility review.
+`make update` run `bun update --latest` for all dependencies, followed by the
+Browserslist data refresh. See [Dependency Updates](dependency-updates.md).
 
 The Prettier hook uses prek's `bun` language for installation and an explicit
 `bun run --bun prettier` entry for execution. Selecting an installation language
 alone does not override the upstream executable's shebang. Validate hook runtime
 selection as well as package-script execution.
-
-The runtime transition pins jsdom to `29.1.1`: the tested `30.1.0` and `30.1.2`
-releases fail with EventTarget private-brand errors under Bun `1.4.2`. Event
-dispatch, window evaluation, and vendored jQuery probes establish the compatible
-baseline; the full Vitest suite remains the acceptance gate. This pin and its
-required transitive graph changes are the authorized dependency exception for
-the runtime transition. Keep unrelated versions unchanged. See
-[Dependency Updates](dependency-updates.md) before relaxing the pin.
-
-JSDOM also needs its installed HTTP client. Bun's built-in `undici` export
-shadows the package declared by jsdom and lacks the `Dispatcher.request` method
-used by XMLHttpRequest. `scripts/jsdom-runtime.mjs` resolves the installed
-`undici/index.js` relative to jsdom through `createRequire` and registers it in
-`require.cache` before jsdom loads. This keeps jsdom on its declared, locked
-dependency and preserves its real request implementation.
-
-Vitest loads this module through worker `execArgv` preloading because
-environment construction precedes ordinary test setup files. The standalone
-browser-upload harness imports it before jsdom for the same reason. These test
-entrypoints own the compatibility boundary; production browser modules do not
-import it. It does not edit installed packages, replace DOM prototypes, or mock
-network traffic, and requires no additional dependency changes. Remove the
-preload when the selected Bun runtime supplies the required client API and the
-real HTTP transport tests pass without it. Verify successful/error responses,
-request bodies, progress, and cancellation alongside the full Vitest suite when
-changing this boundary.
 
 The watcher test mirrors sources under the operating-system temporary directory
 and reuses the installed dependency tree. It proves imported CSS
@@ -157,9 +128,9 @@ Use the workflow in [Dependency Updates](dependency-updates.md), then verify a
 guarded frozen install without rewriting the lock. A package-manager transition
 preserves the direct specifications, exact package/version/integrity identities,
 and resolved dependency edges, including optional platform variants, except for
-explicitly authorized compatibility changes such as the jsdom pin above. Do not
-run general dependency-update commands during a transition. Different physical
-hoisting does not authorize changing a package version.
+explicitly authorized compatibility changes. Do not run general
+dependency-update commands during a transition. Different physical hoisting does
+not authorize changing a package version.
 
 Verification covers the full Vitest suite, JavaScript lint, Railway
 typechecking, the isolated watcher, a clean production build, and the browser

@@ -158,10 +158,12 @@ describe('GIS Layers panel', () => {
         mocks.visible = true;
         mocks.bounds.set('layer-1', { bbox: true });
         GISLayersPanel.init();
+        document.getElementById('gis-panel-expand').click();
         const master = document.querySelector('.gis-layer-button input');
         const row = document.querySelector('[data-geometry-type="MultiLineString"]');
         const checkbox = row.querySelector('input');
         checkbox.focus();
+        expect(document.activeElement).toBe(checkbox);
         checkbox.click();
 
         expect(mocks.setGeometryVisibility).toHaveBeenLastCalledWith('layer-1', 'MultiLineString', false);
