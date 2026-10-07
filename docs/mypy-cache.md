@@ -36,8 +36,7 @@ process accessing the same bind-mounted cache run under different kernels.
 Keeping their live cache databases separate removes this unsafe sharing. See
 [SQLite WAL constraints](https://www.sqlite.org/wal.html).
 
-The old directory was preserved at
-`/tmp/speleodb-mypy-cache-gu6ey5ly/.mypy_cache`, rather than discarded. A later
+The old directory was preserved outside the checkout for diagnosis. A later
 read-only `PRAGMA quick_check` on its moved shards returned `ok`; this did not
 independently reproduce persistent on-disk corruption. The evidence establishes
 the original mypy database error and the shared cache configuration, not the
@@ -76,6 +75,16 @@ Verified results on September 15, 2026, all with exit code 0:
 Source discovery increased to 716 files while other task work continued; it was
 not a type-checking exclusion difference. No test database, pre-commit hooks, or
 commits were used to validate this configuration change.
+
+## Hook scope
+
+The repository's local `mypy` prek hook invokes regular
+`mypy --config-file pyproject.toml .` using the environment's installed project
+dependencies. It does not use a daemon. `pass_filenames: false` keeps the same
+whole-project scope for manual, changed-file, and all-file invocations;
+`require_serial: true` avoids parallel hook batches. The same environment-owned
+cache applies to direct and hook commands. A successful check of selected files
+is not equivalent to this complete-project contract.
 
 ## Performance and limitations
 

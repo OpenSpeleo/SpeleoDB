@@ -154,3 +154,14 @@ Before finalizing changes:
 3. no duplicated logic introduced where centralized API exists
 4. docs updated for architecture-impacting behavior
 5. public/private parity confirmed for shared map features
+
+## Boundary evidence
+
+Use real API requests and database rows for authorization/mutation assertions,
+real rendered Django templates for route contracts, and configured storage for
+storage/rollback evidence. Pure frontend rendering should be directly callable
+with its real helpers so capability and XSS checks do not replace the behavior
+under test. A mocked HTTP failure is unit-level control-flow evidence; it does
+not establish real transaction, transport, storage compensation, or browser
+behavior. Use the real integration paths for those claims, following the shared
+[GitLab test contract](../ci-gitlab-testing.md) where applicable.

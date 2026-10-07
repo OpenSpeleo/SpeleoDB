@@ -41,10 +41,10 @@ require ownership of that current attempt. Old or replayed invocations cannot
 publish results.
 
 Generation moves through queued, running, retry_wait, ready, partial, and
-failed. The initial cycle has at most three attempts, separated by one and five
-minutes. Manual retry starts another bounded cycle while preserving attempt
-history. Maintenance reclaims interrupted attempts after the deadline plus five
-minutes.
+failed. The initial cycle has at most three attempts, separated by one and two
+minutes using the shared capped exponential retry schedule. Manual retry starts
+another bounded cycle while preserving attempt history. Maintenance reclaims
+interrupted attempts after the deadline plus five minutes.
 
 Expiry and email delivery are independent of generation outcome. A partial
 archive is a successfully completed Celery invocation whose business result
@@ -236,3 +236,9 @@ Deploy one reviewed release to web and workers after checking storage access and
 retention configuration. Verify exports from an ordinary active account, a real
 retention cycle, and a representative large archive. See
 `background-jobs-operations.md` for Compose and Railway details.
+
+Export generation time limits are owned by Django settings. Celery options,
+recorded attempt deadlines, and abandoned scratch retention derive from those
+settings; recovery grace and operation-specific timeouts remain separate
+budgets. Access uses ordinary active-account/resource permissions, without a
+feature-enable or staff-only rollout switch.

@@ -33,11 +33,12 @@ toggle switch markup and styles as GIS Layers and the other map panels, keeping
 keyboard access and loading/editing locks. The visibility toggle does not change
 the camera; clicking a name shows and frames the shape. The geometry panel stays
 discoverable when empty and uses the same chevrons as other map panels. Create
-Geometry sits immediately before Import GPS in the compact viewer toolbar; the
-geometry panel holds visibility and editing controls. Coordinates are fetched
-only on demand. Each new draft starts with a randomly selected color from the
-server-provided palette; editing preserves the stored color. The initial color
-remains stable during drawing and can be changed with the existing swatches.
+Geometry sits immediately before Import GPX/KML in the compact viewer toolbar;
+the geometry panel holds visibility and editing controls. Coordinates are
+fetched only on demand. Each new draft starts with a randomly selected color
+from the server-provided palette; editing preserves the stored color. The
+initial color remains stable during drawing and can be changed with the existing
+swatches.
 
 Metadata retries preserve successful local saves made while a request is in
 flight, without retaining unchanged records omitted by the server. A failed
@@ -256,5 +257,8 @@ it does not implement row-level `SELECT FOR UPDATE` locking.
 Visual checks exercise desktop/mobile, fullscreen, keyboard/GPS-only authoring,
 touch, oversize correction, Save/Revert, raw JSON, and retained failed drafts.
 Always use a clean production Vite build and verify the manifest served by
-Django before recording browser evidence. Results are tracked in the feature
-todo and repository review log.
+Django before recording browser evidence.
+
+Collection headings, map cards, loading/empty/error states, tooltips, and
+accessible labels use **GIS Geometries**. Individual record settings and actions
+use **GIS Geometry**. Keep all related states aligned when changing copy.

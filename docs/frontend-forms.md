@@ -19,8 +19,8 @@ Consolidating into shared modules:
 - One place to fix bugs and tune UX (keyboard handling, debounce, etc.)
 - One set of tests per module instead of N near-duplicate suites
 - Stops new pages from copy-pasting the latest stale version
-- Removed ~2400 lines across ~20 templates so far (remaining templates tracked
-  in `tasks/todos/api-v2-coverage-backfill.md`)
+- Keep reusable form behavior in modules while Vite route controllers own page
+  wiring.
 
 ## Directory
 
@@ -41,22 +41,26 @@ frontend_private/static/private/js/forms/
 ├── fleet_watchlist.js           attachFleetWatchlist({...})
 ├── fleet_settings_form.js       attachFleetSettingsForm({...})
 ├── fleet_entity_crud.js         attachFleetEntityCrud({...})
+├── fleet_modal_helpers.js       shared cylinder/sensor field helpers
 ├── gis_view_form.js             attachGisViewForm({...})
 ├── tagged_entity_list.js        attachTaggedEntityList({...})
 ├── tool_file_upload.js          attachToolFileUpload({...})
 └── survey_table_tool.js         attachSurveyTableTool({...})
 
-frontend_private/templates/snippets/
-├── cylinder_modal_helpers.js    cylinder{Reset,Populate,Collect}* helpers
-└── sensor_modal_helpers.js      sensor{Reset,Populate,Collect}* helpers
-
 frontend_public/static/js/
 └── auth_form.js                 attachAuthForm({...}), validateEmail(email)
 ```
 
-Every module is a plain `<script src>`-loadable file (no ES module import) so
-Django templates can pull it via `{% static %}`. The public symbols are named
-functions / namespaces attached to `window` implicitly via declaration.
+These are ES modules imported by route controllers under
+`frontend_common/controllers/`. Controllers export `init(context)`, consume
+inert JSON from Django, and import each helper explicitly. Vite owns the
+dependency graph and template loading; functions are not published on `window`.
+jQuery and Django's generated `Urls` remain established external globals.
+
+The examples below describe JavaScript options inside controllers. Server URLs
+and scalar values arrive through `context`; callbacks remain in JavaScript and
+must not be serialized into template JSON. See
+[Vite integration](vite-assets.md).
 
 Dependencies:
 
@@ -65,7 +69,7 @@ flowchart LR
     jquery[jQuery] --> ac[user_autocomplete.js]
     jquery --> errors[ajax_errors.js]
     jquery --> modals[modals.js]
-    xss[xss-helpers.js escapeHtml] --> errors
+    xss[xss-helpers.js ES exports] --> errors
     errors --> danger[danger_zone.js]
     modals --> danger
     errors --> crud[entity_crud_form.js]
@@ -122,9 +126,9 @@ One call wires the full "Delete with confirmation" flow:
 
 ```js
 attachDangerZone({
-  deleteUrl: "{% url 'api:v2:project-detail' id=project.id %}",
+  deleteUrl: context.deleteUrl,
   successMessage: "The project has been deleted successfully.",
-  successRedirect: "{% url 'private:projects' %}",
+  successRedirect: context.successRedirect,
   redirectDelayMs: 2000, // optional
 });
 ```
@@ -140,10 +144,10 @@ Generic "new/edit" JSON form handler.
 ```js
 attachEntityCrudForm({
   formId: "new_team_form",
-  endpoint: "{% url 'api:v2:teams' %}",
+  endpoint: context.endpoint,
   method: "POST", // or PUT / PATCH
   successMessage: "The team has been created.",
-  successRedirect: "{% url 'private:teams' %}",
+  successRedirect: context.successRedirect,
   // optional:
   submitBtnId: "btn_submit",
   beforeSubmit: function (payload) {
@@ -176,8 +180,8 @@ page.
 
 ```js
 attachPermissionModal({
-  endpoint: "{% url 'api:v2:project-user-permissions-detail' id=project.id %}",
-  autocompleteUrl: "{% url 'api:v2:user-autocomplete' %}",
+  endpoint: context.endpoint,
+  autocompleteUrl: context.autocompleteUrl,
   addModalTitle: "Add a collaborator to the project",
   addModalHeader: "Who would you like to add?",
   editModalTitle: "How shall we modify this user's access?",
@@ -213,8 +217,8 @@ For `team/memberships.html` (which renames the DOM nodes to `#membership_modal`,
 
 ```js
 attachPermissionModal({
-  endpoint: "{% url 'api:v2:team-memberships-detail' id=team.id %}",
-  autocompleteUrl: "{% url 'api:v2:user-autocomplete' %}",
+  endpoint: context.endpoint,
+  autocompleteUrl: context.autocompleteUrl,
   fieldName: "role",
   fieldLabel: "Membership Role",
   selectors: {
@@ -236,7 +240,7 @@ a static `<select>` (not an autocomplete input). Used by
 
 ```js
 attachTeamPermissionModal({
-  endpoint: "{% url 'api:v2:project-team-permissions-detail' id=project.id %}",
+  endpoint: context.endpoint,
   addModalTitle: "Add a Team to the project",
   addModalHeader: "What team would you like to add?",
   editModalTitle: "How shall we modify this team's access?",
@@ -255,8 +259,8 @@ Wires the project lock / unlock buttons on `project/mutex_history.html`:
 
 ```js
 attachMutexLock({
-  unlockUrl: "{% url 'api:v2:project-release' id=project.id %}",
-  lockUrl: "{% url 'api:v2:project-acquire' id=project.id %}", // optional
+  unlockUrl: context.unlockUrl,
+  lockUrl: context.lockUrl, // optional
 });
 ```
 
@@ -269,7 +273,7 @@ button.
 ### `auth_form.js` - `attachAuthForm(options)`
 
 Lives under `frontend_public/static/js/auth_form.js` (outside the `forms/`
-folder because the public templates load differently). Used by the allauth
+folder because it owns the public authentication flow). Used by the allauth
 headless pages: `login`, `signup`, `password_reset`, `password_reset_from_key`.
 
 Renders errors in the inline `#error_div` (not the modal), walks
@@ -278,9 +282,9 @@ Renders errors in the inline `#error_div` (not the modal), walks
 ```js
 attachAuthForm({
     formId: 'login_form',
-    endpoint: "{% url 'headless:browser:account:login' %}",
+    endpoint: context.endpoint,
     onSuccess: function () {
-        window.location.href = "{% url 'private:user_dashboard' %}";
+        window.location.href = context.successRedirect;
     },
     validators: [
         (payload) => validateEmail(payload.email) ? null : 'Invalid email',
@@ -339,10 +343,9 @@ the cylinder watchlist page for edit-only flows.
 
 Domain-specific field wiring (which modal inputs map to which JSON fields) is
 injected via callbacks: `resetForCreate()`, `populateForEdit($button)`, and
-`collectPayload(isEdit)`. The cylinder and sensor modal helpers live in template
-snippets (`snippets/cylinder_modal_helpers.js`,
-`snippets/sensor_modal_helpers.js`) and are shared between watchlist and details
-pages.
+`collectPayload(isEdit)`. The cylinder and sensor field helpers live in
+`forms/fleet_modal_helpers.js` and are imported by the fleet controller for
+watchlist and details pages.
 
 ```js
 attachFleetEntityCrud({
@@ -360,7 +363,7 @@ attachFleetEntityCrud({
   modalTitleSelector: "#cylinder_modal_title",
   addTitle: "Add Cylinder",
   editTitle: "Edit Cylinder",
-  listEndpoint: "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=fleet.id %}",
+  listEndpoint: context.listEndpoint,
   detailEndpoint: function (id) {
     return Urls["api:v2:cylinder-detail"](id);
   },
@@ -380,9 +383,9 @@ commit selected" validation.
 ```js
 // CREATE
 attachGisViewForm({
-    endpoint: "{% url 'api:v2:gis-views' %}",
+    endpoint: context.endpoint,
     method: 'POST',
-    projectsEndpoint: "{% url 'api:v2:projects' %}",
+    projectsEndpoint: context.projectsEndpoint,
     commitsEndpointBuilder: function (pid) {
         return Urls['api:v2:project-geojson-commits'](pid);
     },
@@ -395,13 +398,13 @@ attachGisViewForm({
 // EDIT - set `seedFromExistingRows: true` + a `newRowIdPrefix` so the
 // dynamic ids of newly-added rows don't collide with server-rendered ones.
 attachGisViewForm({
-    endpoint: "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
+    endpoint: context.endpoint,
     method: 'PUT',
-    projectsEndpoint: "{% url 'api:v2:projects' %}",
+    projectsEndpoint: context.projectsEndpoint,
     commitsEndpointBuilder: ...,
     successMessage: 'The GIS view has been updated successfully.',
     seedFromExistingRows: true,
-    initialProjectCounter: {{ gis_view.project_views.count }},
+    initialProjectCounter: context.initialProjectCounter,
     newRowIdPrefix: 'new_',
 });
 ```
@@ -425,7 +428,7 @@ shared settings pages.
 
 ```js
 const listApi = attachTaggedEntityList({
-    listEndpoint: "{% url 'api:v2:station-tags' %}",
+    listEndpoint: context.listEndpoint,
     detailEndpointBuilder: function (id) { return Urls['api:v2:station-tag-detail'](id); },
     editMethod: 'PUT',
     renderList: renderTags,
@@ -488,7 +491,7 @@ workflow has intentional domain-specific markup.
 Drop-zone + file-validation helper for the DMP tool pages (`tools/dmp2json.html`
 and `tools/dmp_doctor.html`). Handles drag/drop, click-to-browse, extension
 validation, and the shared `#fileNameDisplay` / `#fileErrorDisplay` UI. The AJAX
-call-site (convert to JSON vs download) stays in each template.
+call-site (convert to JSON vs download) stays in each route controller.
 
 ```js
 const dropzone = attachToolFileUpload({
@@ -544,34 +547,30 @@ if (!surveyTable.validateTable()) { return; }
 const rows = surveyTable.collectRowObjects();  // [{col: value, ...}, ...]
 ```
 
-## Load order in templates
+## Route integration
 
-Because these files don't use ES modules, load order matters:
+Templates load logical assets with `vite_styles`, `vite_preload`, and
+`vite_script`, and declare controller context using inert JSON. The
+`danger-zone` controller, for example, imports `attachDangerZone` and passes its
+context after `afterWindowLoad()`. The `permission-modal` controller similarly
+imports `attachPermissionModal`. Shared dependencies such as `FormModals`,
+`showAjaxErrorModal`, and `escapeHtml` are imported by the consuming modules;
+templates must not manually order first-party script tags or run inline setup.
 
-```html
-{% block inline_extra_js %}
-<script src="{% static 'private/js/forms/modals.js' %}"></script>
-<script src="{% static 'private/js/forms/ajax_errors.js' %}"></script>
-<script src="{% static 'private/js/forms/danger_zone.js' %}"></script>
-<script>
-  $(window).on('load', function () {
-      attachDangerZone({ ... });
-  });
-</script>
-{% endblock %}
-```
-
-`ajax_errors.js` requires the global `escapeHtml` from `xss-helpers.js` (loaded
-in `base_private.html`). `permission_modal.js` additionally requires
-`user_autocomplete.js`.
+Register/build new controller entries before referencing them on live routes;
+Django's process-cached registry and the served manifest must agree. Established
+vendor loading order remains outside Vite.
 
 ## Testing conventions
 
-Each shared module has a co-located `*.test.js` run by Vitest. The tests load
-the real jQuery (from `frontend_public/static/js/vendors/jquery-3.7.1.js`), the
-real `xss-helpers.js`, and the real module source via `readFileSync` + `eval`,
-so production code is exercised verbatim. This mirrors the pattern in
-`frontend_private/static/private/js/tests/dashboard.test.js`.
+Colocated `*.test.js` suites run with Vitest and import the real application ES
+modules. Existing jQuery-based unit suites load the vendored jQuery source into
+their DOM environment; they do not evaluate application modules as classic
+scripts. Unit transport spies below exercise helper control flow only. Real
+Django/API/storage integration tests establish rendered routes, permissions,
+transport, and transaction behavior; see
+[testing boundaries](map-viewer/testing-and-quality.md). Run tests inside the
+already-running application container.
 
 Common mocks:
 
@@ -583,26 +582,12 @@ Common mocks:
 - `vi.useFakeTimers()` + `vi.advanceTimersByTime(...)` to skip the
   success-redirect delay.
 
-## Remaining work
+## Extension boundaries
 
-All 12 originally-planned shared modules have landed. Going forward, when the
-same ~80-line jQuery pattern appears in more than one template, extract it
-following the conventions above.
-
-The remaining templates that still inline
-`{% include 'snippets/ajax_error_modal_management.js' %}` (and therefore haven't
-been migrated to `showAjaxErrorModal`) are:
-
-- `pages/projects.html`
-- `pages/project/upload.html`
-- `pages/user/dashboard.html`
-- `pages/experiment/new.html`
-- `pages/experiment/details.html`
-
-These are each a single non-duplicated inline block; they're functionally
-correct and not blocking anything. Replace the include with
-`<script src="forms/ajax_errors.js"></script>` + `showAjaxErrorModal(xhr)` if
-you happen to be modifying them for another reason.
-
-Follow-up candidates for per-template JS test coverage are tracked in
-`tasks/todos/api-v2-coverage-backfill.md`.
+A feature used as a precedent defines the existing interaction contract. Reuse
+its templates/controllers and change domain labels, fields, and URLs; do not
+change its state, caching, breakpoints, or navigation merely to introduce a new
+entity. Extract shared behavior only when both consumers have the same concrete
+contract. Preserve established product labels unless copy changes are part of
+the feature requirement. Parser diagnostics belong in actionable errors and
+operator evidence, not a new user-visible lifecycle.

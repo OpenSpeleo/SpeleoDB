@@ -43,6 +43,15 @@ grouped route's current-page marker. Controller tests cover default collapse,
 automatic expansion, and manual toggling. Browser checks cover pointer/keyboard
 interaction in the desktop sidebar and mobile drawer.
 
+## Account backup navigation
+
+The account settings shell (`pages/user/base.html`) exposes Export / Backup in
+one **Backup your data** group between Account Settings and Feedback, in both
+the desktop settings sidebar and mobile dropdown. Its cloud-download outline
+uses `fill="none"` and a 2.5 stroke width, with the existing settings icon
+spacing and active/inactive colors. Keep the complete link and group together
+when changing responsive navigation so both layouts retain the same action.
+
 ## Outline icons
 
 The main private sidebar's Give us Feedback paper-plane icon uses an explicit

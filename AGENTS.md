@@ -5,6 +5,10 @@ Guidance for AI/code agents working in the SpeleoDB repository.
 This file is intentionally opinionated and feature-focused so agents can make
 correct changes without re-discovering architecture every session.
 
+Read the current root `AGENTS.md` at the start of every session and follow its
+instructions. Do not rely on memory from previous sessions; conventions and
+workflow requirements may have changed.
+
 ## Core Principles
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal
@@ -28,8 +32,8 @@ correct changes without re-discovering architecture every session.
 Keep agent plans, task lists, TODO tracking, progress notes, review notes, and
 scratch lessons outside the repository tree, including all submodules. Use a
 unique task directory under `/tmp/` (for example, create one with
-`mktemp -d /tmp/speleodb-task.XXXXXX`) or another OS temporary directory whose
-resolved path is outside every checkout.
+`mktemp -d /tmp/sdb-website-task.XXXXXX`) or another OS temporary directory
+whose resolved path is outside every checkout.
 
 Never create or update these working files inside the checkout, even in ignored
 directories such as `tasks/`, `todos/`, or `plans/`. Never stage or commit them.
@@ -312,8 +316,10 @@ All python code must include type checking for every variable or function.
 
 ## Documentation Expectations for Agents
 
-When changing feature behavior or architecture, update docs under `docs/` for
-the impacted topic:
+When changing feature behavior or architecture, inspect `docs/` and read the
+existing documentation for the impacted topic. Update it in the same change. If
+no relevant document exists, create one and link it from `docs/README.md`.
+Cover:
 
 - feature intent
 - engineering scope and ownership boundaries
@@ -321,6 +327,7 @@ the impacted topic:
 - performance implications
 
 Do not only document "what changed"; include "why this architecture exists".
+Undocumented behavior or architecture changes are incomplete.
 
 ## Performance and Regression Checklist
 
@@ -358,6 +365,46 @@ Before finishing map viewer work, check:
 
 ### Coding rules
 
-See `docs/coding-rules.md` for JavaScript constant centralization, XSS escaping
-requirements, Python import ordering, and Django ORM rules. These are **hard
-rules** — violations must be fixed before merging.
+Before writing or editing Python or JavaScript in each session, read the current
+`docs/coding-rules.md`. Do not rely on a remembered or paraphrased version. Its
+JavaScript constant centralization, XSS escaping, Python import ordering, and
+Django ORM requirements are **hard rules** — violations must be fixed before
+merging.
+
+### Preserve existing code comments
+
+Never remove or modify existing code comments unless your code change makes them
+factually incorrect. Keep comments above edited code and carry comments inside
+refactored blocks with the code. Do not remove comments because they seem
+redundant or rephrase them for style.
+
+### Python exception syntax
+
+The project targets Python 3.14 and uses PEP 758 bare commas when catching
+multiple exception types. Only add parentheses when binding the exception with
+`as`:
+
+```python
+except ValueError, TypeError:
+    ...
+
+except (ValueError, TypeError) as exc:
+    ...
+```
+
+### Python imports
+
+All imports belong at module scope. Never place imports inside functions,
+methods, `setUp`, tests, or other local scopes, even for a symbol used only
+once. Ruff enforces this with PLC0415. The only permitted guarded imports are in
+module-level `if TYPE_CHECKING:` blocks for type-only dependencies that must not
+create runtime circular imports:
+
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
+```

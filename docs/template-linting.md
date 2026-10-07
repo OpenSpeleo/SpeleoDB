@@ -53,3 +53,9 @@ DOM/controller tests cover native map toggles and modal visibility. Compile all
 Django templates and verify every logical asset entry in the clean Vite
 manifest. These changes add no database queries or map feature scans; native
 labels remove redundant click handling.
+
+Behavioral template contracts should inspect the relevant element's attributes,
+classes, and rendered dimensions rather than exact HTML serialization. Void-tag
+slash spelling is immaterial. Match charts to their actual container/canvas, and
+keep dark-scheme values, Dark Reader lock placement, private-only `.dark`, and
+stylesheet order assertions explicit when extracting styles.

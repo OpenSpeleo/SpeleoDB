@@ -76,3 +76,49 @@ template candidate. Release verification compares manifest-served hashes, route
 request graphs, computed styles, behavior, accessibility, pixels, and
 transfer/parse/init/style-recalculation performance against the preserved
 baseline.
+
+## Adding entries to a running application
+
+Register and build a new logical entry before a live shared template references
+it. The registry is cached for the Django process lifetime even in DEBUG;
+manifest mtime reload does not reload `entries.json`. Trigger development Python
+autoreload after registry edits and verify the running process resolves the new
+entry. JSON edits alone need not trigger that reload. Confirm the manifest entry
+and asset hash actually served by Django before reporting the new route ready.
+
+When extracting a static inline style, preserve every declaration and add the
+replacement class even to a tag that previously had no other attributes.
+Unlayered application CSS can override layered utilities, so verify computed
+styles on the real route. Keep runtime inline sizing/visibility effective; avoid
+`!important` on properties changed by map resizing or modal state.
+
+When editing live templates and their CSS/controllers together, verify the root
+disk watcher is running or build the companion assets before exposing the
+markup. Otherwise Django can serve new controls with old handlers/styles.
+Smoke-test an integrated slice on the authenticated route early, including
+primary actions and served hashes. Stop the watcher and clean-build for final
+browser evidence.
+
+The disk watcher shares the Django container console. Keep stdout/stderr
+attached and `clearScreen: false` so rebuilds cannot erase application logs.
+Controller discovery must retain the negative `!./controllers/*.test.js` glob
+alongside its positive JavaScript glob. Check a clean production graph excludes
+test modules; Vitest globals must never reach a browser controller chunk.
+
+## Verification boundaries
+
+The original Vite migration demonstrated deterministic builds, watcher
+invalidation, focused manifest/controller tests, a public-route cross-engine
+comparison, and production-shaped local static-file MIME/CORS behavior. Those
+results did not certify the complete authenticated role/map/interaction matrix,
+production S3/CloudFront delivery, deployed lifecycle, or all runtime
+performance budgets. Local static-file checks are not proof of a production CDN
+deployment.
+
+For current changes, run the repository's focused checks inside the existing
+application container and report the routes, engines, data states, and delivery
+environment actually exercised. The checked-in browser suite focuses on viewer
+responsiveness; it does not replace a full baseline/candidate asset migration
+comparison. Verify runtime performance as well as compressed size before making
+a performance-parity claim. Build hashes and historical test counts apply only
+to the exact revision that produced them.

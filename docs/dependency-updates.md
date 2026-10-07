@@ -82,3 +82,10 @@ JavaScript lint and unit tests, the full Django/Python test suite, and
 native wheels still install. Review the final manifest and lockfile diff for
 unrelated packages, nonportable paths, missing checksums, and unapproved install
 scripts before creating the single `[Dependency Update]` commit.
+
+Tests should assert graph properties rather than duplicate installed release
+numbers from manifests: package presence, manifest/lock agreement, portable
+keys, registry integrity, and install-script approvals. Do not pin package
+releases, lockfile format numbers, or versioned install keys in unit tests
+merely to repeat the resolver output. Product formats, protocol versions, and
+intentionally frozen compatibility fixtures remain valid version contracts.

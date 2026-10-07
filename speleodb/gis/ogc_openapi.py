@@ -511,8 +511,8 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
     (every other path is also without trailing slash). OGC clients
     that join ``servers.url`` + ``paths.*`` would otherwise produce
     ``view/<token>//conformance`` (double slash, 404) when the landing
-    URL ended in ``/``. See ``tasks/lessons/ogc-trailing-slash-and-
-    geometry-split.md`` for the regression history.
+    URL ended in ``/``. See
+    ``docs/map-viewer/ogc-url-and-geometry-contract.md`` for the contract.
     """
     prefix = family["prefix"]
     family_id = family["id"]

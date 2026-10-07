@@ -184,6 +184,25 @@ before attributing a stall to database cleanup, Git transport, or REST retries.
 The upload tests use real GitLab; a successful local Compose run establishes
 local behavior but does not establish the health of CI's remote GitLab service.
 
+### Git explorer error reporting
+
+`ProjectGitExplorerApiView` catches Git and GitLab failures, logs a traceback,
+calls `sentry_sdk.capture_exception`, and returns a JSON HTTP 500 response.
+Django also logs returned 5xx responses, so an additional request error log does
+not imply the exception escaped its handler. The checkout error wording covers
+the preceding default-branch pull too; inspect the underlying sanitized Git
+failure to identify which operation failed.
+
+The `git-view` controller currently logs failed explorer requests to the browser
+console without rendering an error notice. Treat missing UI feedback separately
+from backend exception capture. Production Sentry initialization depends on
+`SENTRY_DSN`; a capture call or local test proves neither remote delivery nor
+that a missing-repository message means deletion rather than
+access/configuration failure. Confirm service configuration and received events
+when investigating an operational report. Existing explorer regressions verify
+the response and capture boundary without assuming that the external observer
+received an event.
+
 ## Performance and limits
 
 New creation follows up to five lookup GETs before the POST. A consistently

@@ -111,22 +111,22 @@ credentials, Git payloads, or infrastructure details to clients or logs.
 
 ## Verification
 
-Automated tests should mock GitLab and cover:
+`speleodb/git_proxy/tests.py` exercises the configured real GitLab service and
+actual Git packets, reusing the audited read/write repository. Coverage includes
+byte-preserving advertisements and binary packs, receive-pack media types,
+header and credential isolation, authentication and project permissions,
+first-404 provisioning through the allocated lifecycle, rejection of POST
+recovery, mutex/branch restrictions, and partial-stream cleanup. Invalid real
+credentials and a reserved non-listening port exercise sanitized failure paths.
 
-- Exact byte preservation for advertisements and result streams, including
-  binary data, arbitrary chunk boundaries, multiple pkt-lines, and payloads
-  containing `GitLab`.
-- Rejection of HTML (including `<!DOCTYPE...GitLab`), redirects, unexpected
-  content types, and upstream `4xx`/`5xx` responses with a sanitized `502`.
-- Correct phase-specific content-type validation and protocol response headers.
-- Header allowlisting, separate internal authentication, credential-free URLs,
-  and disabled redirects.
-- First-`404` recovery followed by success, repeated-`404` failure, and response
-  closure on every branch.
-- Bounded transient discovery recovery/exhaustion, numeric/date rate-limit
-  delays, and refusal to replay POSTs or partially delivered responses.
-- Connection timeouts, request failures, deferred stream failures, and public
-  endpoint authentication and permission enforcement.
+Pure delay-policy tests cover numeric/date `Retry-After` values, capped backoff,
+valid attempt budgets, and discovery-only retry selection. Arbitrary upstream
+5xx sequences or truncated HTTP chunks are not manufactured by these
+integrations; those outcomes need faults in an actual service before claiming
+live coverage. Preserve the distinction between protocol requirements above and
+what a particular test run demonstrates. See the
+[GitLab integration contract](ci-gitlab-testing.md) for allocation and cleanup
+rules.
 
 Disconnect coverage must close Django's test-client WSGI iterator after partial
 consumption, rather than calling `response.close()` directly. The iterator owns
@@ -134,13 +134,14 @@ the test client's `request_finished` signal isolation. Bypassing it can close a
 `TestCase` transaction's PostgreSQL connection; SQLite's in-memory backend
 ignores that close and can mask the test-lifecycle bug.
 
-Run the focused backend tests and static checks, followed by the full suite:
+Run focused checks in the already-running application container, followed by the
+full suite when changing proxy behavior:
 
 ```bash
-uv run pytest -q speleodb/git_proxy/tests.py
-uv run ruff check speleodb/git_proxy
-uv run mypy speleodb/git_proxy
-uv run pytest
+docker exec -w /app speleodb_local_django pytest -q speleodb/git_proxy/tests.py
+docker exec -w /app speleodb_local_django ruff check speleodb/git_proxy
+docker exec -w /app speleodb_local_django mypy speleodb/git_proxy
+docker exec -w /app speleodb_local_django make test-py
 ```
 
 Operational verification should run `git ls-remote` through SpeleoDB and a

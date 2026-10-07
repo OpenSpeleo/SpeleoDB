@@ -443,20 +443,21 @@ independently.
 
 ### Production rollout verification
 
-The infrastructure rollout completed on September 15, 2026. The worker, Beat,
-web, and pinned Kanchi deployments all reached `SUCCESS`. One worker consumes
-both queues, one PostgreSQL advisory-lock owner runs Beat, and scheduled
-maintenance/cleanup dispatch is visible. Read-only application tasks completed
-in Django and appeared as successful in Kanchi; normal web task dispatch also
-completed. Kanchi's 30-day retention and daily cleanup are stored, its first
-automatic cleanup succeeded, and workflow automation remains disabled.
+The September 15, 2026 rollout verified successful worker, Beat, web, and pinned
+Kanchi deployments. At that time one worker consumed both queues, one PostgreSQL
+advisory-lock owner ran Beat, and scheduled maintenance/cleanup dispatch was
+visible. Read-only application tasks completed in Django and appeared as
+successful in Kanchi; normal web task dispatch also completed. Kanchi stored
+30-day retention and daily cleanup, its first automatic cleanup succeeded, and
+workflow automation was disabled.
 
 HTTPS web/health/login-page availability and rejection of anonymous config API
-requests were verified. A successful session using the operator's sealed
-password was not tested. Real-account export, notification email, authenticated
-download, and the full expiry/deletion cycle remain separate future operator
-smoke checks. Exact deployment IDs and runtime evidence are recorded in
-[the rollout review](../tasks/todos/railway-background-rollout.md).
+requests were verified. This historical infrastructure check did not establish
+successful operator login, retention persistence across a restart, real-account
+export, notification email, authenticated download, or the full expiry/deletion
+cycle. Verify those feature paths and the exact deployed revisions when
+assessing a release; the historical result is not a current production health
+check.
 
 ## Sources
 

@@ -236,3 +236,16 @@ And manually verify:
 - Keep map mutation concentrated in layer/legend modules.
 - Prefer extending existing helpers over introducing parallel utilities.
 - If event payload shape changes, update all listeners and tests together.
+
+The expanded control explains why the cap exists: one unusually deep cave can
+compress the shared scale and hide differences in shallower passages. It uses
+**Full range** for the uncapped summary/placeholder, concise help **Colors and
+depth readings stop at this limit.**, and a full-width secondary **Reset to Full
+Depth Range** button with a minimum 44px target. Keep these controls quiet when
+collapsed and verify both cap behavior and rendered touch targets.
+
+Project-panel toggles must resolve the individual preference together with the
+country gate before invoking the layer operation that publishes a depth-domain
+change. Persist the individual choice separately from effective map visibility.
+Regression coverage must use the real panel entry point: directly assigning
+`effectiveProjectVisibility` cannot expose a gate/event ordering defect.

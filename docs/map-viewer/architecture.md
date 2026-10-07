@@ -397,6 +397,14 @@ Do not duplicate a placeholder in `.envs/.django`, because OS environment values
 take precedence over Django's root `.env` loading and would silently replace the
 real token in both private and public map contexts.
 
+After changing the root token, reconcile the application services through the
+normal Compose build/up lifecycle. A raw container restart retains the old
+container environment even though bind-mounted source changes appear
+immediately. Compare the rendered Compose configuration with the running
+container's token classification without printing the token, then verify the
+rendered map uses the configured source. Recreate affected services through
+Compose when necessary; preserve their existing volumes.
+
 The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.js`. That SVG is
 inserted with `innerHTML` only as trusted static markup so the user can replace
 the icon manually. Do not interpolate user or API data into that constant.

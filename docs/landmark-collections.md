@@ -49,6 +49,25 @@ collection management API. Personal collections can still regenerate their GIS
 token through the owner's ADMIN permission, but the private details page does
 not expose editable personal collection name, description, or color controls.
 
+## Migration compatibility
+
+Migration `0037_landmark_collections` preserves creator-email provenance,
+assigns previously unassigned landmarks to each owner's personal collection, and
+creates or reactivates the owner's ADMIN grant before removing the old
+`Landmark.user` foreign key. Normal deletion remains soft; physical collection
+deletion cascades to its member landmarks.
+
+Reversing this migration restores the old user column as nullable, reconstructs
+owners, then restores the old non-null and per-user coordinate constraints.
+Owner selection prefers personal ownership and collection permissions, with
+creator and existing-user fallbacks. Rows are processed in creation-date/ID
+order; those that cannot fit an unused `(user, latitude, longitude)` identity
+are deleted. The old schema cannot represent every valid collection-based
+dataset, so this rollback is potentially lossy; preserve a database backup
+before reversing it. Migration tests cover backfill, reconstructed ownership,
+and duplicate-coordinate rollback behavior. This work runs during migration, not
+ordinary map requests.
+
 ## API Surface
 
 Authenticated management:
@@ -97,7 +116,7 @@ database failures do not leave partial imported Landmark rows behind.
 
 Public OGC API Features for active collections:
 
-- `/api/v2/gis-ogc/landmark-collection/<gis_token>/`
+- `/api/v2/gis-ogc/landmark-collection/<gis_token>`
 - `/api/v2/gis-ogc/landmark-collection/<gis_token>/conformance`
 - `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections`
 - `/api/v2/gis-ogc/landmark-collection/<gis_token>/collections/landmarks`
@@ -106,7 +125,7 @@ Public OGC API Features for active collections:
 User-scoped OGC API Features for all active collections the application-token
 owner can READ:
 
-- `/api/v2/gis-ogc/landmark-collections/user/<user_token>/`
+- `/api/v2/gis-ogc/landmark-collections/user/<user_token>`
 - `/api/v2/gis-ogc/landmark-collections/user/<user_token>/conformance`
 - `/api/v2/gis-ogc/landmark-collections/user/<user_token>/collections`
 - `/api/v2/gis-ogc/landmark-collections/user/<user_token>/collections/<collection_uuid>`
@@ -118,8 +137,9 @@ commit proxy, which remains SHA and LineString based. Personal and shared
 collection GIS tokens are both public read secrets: anyone with the token can
 read active Landmarks in that one collection until the token is regenerated or
 the collection is deactivated. The private GIS tab exposes the landing-page URL
-so QGIS can discover the standards-shaped `/collections` resource. The older
-bare-token collection URLs remain as compatibility aliases. The user-scoped
+so QGIS can discover the standards-shaped `/collections` resource. The
+slash-free landing URL is the supported discovery entry point; obsolete
+collection aliases are not the user-facing connection URL. The user-scoped
 Landmark Collection OGC service reuses the existing DRF application token, like
 Personal GIS View for projects; regenerating that token invalidates the
 all-collections Landmark OGC link.
@@ -157,9 +177,10 @@ modal shows a collection picker (excludes the current collection, only writable
 targets). The batch delete modal requires confirmation. Both operations reload
 the page on success. An inline hint below the section header reads "Select
 landmarks to batch transfer or delete" to guide discovery. The table hides until
-DataTables finishes initialization to prevent layout shift. In debug mode the
-page loads the ES module source directly; in production it loads the minified
-esbuild bundle.
+DataTables finishes initialization to prevent layout shift. The page uses the
+registered `landmark-details` Vite controller, which lazily imports
+`details_main.js`. Django serves the manifest-backed assets in both development
+and production.
 
 The shared `forms.js` module is the single source of truth for all landmark
 create/edit/delete/bulk-transfer/bulk-delete modal markup and validation. It is

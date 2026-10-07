@@ -306,7 +306,7 @@ a non-landing URL as the user-facing entry point.
 
 ### Response shape (uniform across all four families)
 
-Every `/items` response includes the OGC-mandated envelope:
+Every `/items` response includes this tested envelope:
 
 ```json
 {
@@ -346,9 +346,10 @@ Every collection metadata document includes:
 }
 ```
 
-`CRS84h` (the 3-D variant) is advertised because cave-survey data carries
-`Z = depth in metres` as the third coordinate; without it, ArcGIS Pro silently
-drops the Z values when it builds the layer schema.
+`CRS84h` (the 3-D variant) is advertised because cave-survey data carries a
+third coordinate. Preserve the declared CRS metadata and verify its
+interpretation in the actual client; declarations alone do not establish client
+rendering or vertical-unit correctness.
 
 ### Query parameters (OGC core)
 
@@ -378,12 +379,12 @@ QGIS / ArcGIS Pro). Polygons are intentionally not part of the contract —
 SpeleoDB cave-survey data does not produce them; a stray polygon is dropped with
 a structured warning.
 
-This split is the universal GIS-client convention: **1 OGC collection = 1 GIS
-layer = 1 uniform geometry type**. Every major platform (QGIS, ArcGIS Pro,
-GeoServer, pygeoapi, MapServer) enforces it at the layer-schema level. Serving a
-mixed-geometry collection caused QGIS to silently drop one geometry type per
-layer — the original empty-layer regression documented in
-`tasks/lessons/ogc-arcgis-empty-layers.md`.
+This is SpeleoDB's tested interoperability contract: station points and passage
+lines are independently discoverable collections, with one supported geometry
+group per collection. It addresses the application's mixed-layer regressions
+without claiming that all GIS platforms prohibit mixed geometries. See the
+[URL and geometry contract](ogc-url-and-geometry-contract.md) for ownership,
+cache behavior, and extension requirements.
 
 The pre-split collection URL `<base>/collections/<sha>` (without `_points` or
 `_lines` suffix) returns **`410 Gone`** with a `Link: rel="alternate"` header
@@ -516,7 +517,7 @@ Test coverage:
   integration tests.
 - `pytest speleodb/api/v2/tests/test_landmark_collection_ogc.py` — landmark
   family integration tests.
-- `make test-ogc-coverage` — 100 % line + branch coverage gate on the OGC core
+- `make test-ogc-coverage` — line and branch coverage report on the OGC core
   (`ogc_helpers.py`, `ogc_base.py`, the four service modules).
 - `make test-ogc-mutations` — `mutmut`-based mutation testing on the OGC core
   (run ad-hoc; `uv pip install mutmut` first).
@@ -525,9 +526,11 @@ External conformance suite (optional, post-merge):
 
 - `make test-ogc-teamengine` — runs the official OGC API - Features 1.0 Core +
   GeoJSON conformance suite via the
-  [OGC Team Engine](https://github.com/opengeospatial/teamengine) docker-compose
-  harness against a local SpeleoDB instance. Slow (~5 min); intended for weekly
-  CI or pre-release smoke.
+  [OGC Team Engine](https://github.com/opengeospatial/teamengine) container
+  against the explicitly selected `BASE_URL`. This is a separate staged-service
+  check; its availability does not establish a completed conformance run.
+
+Run repository pytest/coverage checks inside the existing application container.
 
 ### 3.6 Manual smoke test (post-deploy)
 
@@ -550,9 +553,10 @@ Pro 3.6.1 regression dimensions.
    - _Insert ▸ Connections ▸ Add OGC API Server_ and paste the personal-GIS-View
      landing URL.
    - Drag the project's `_points` and `_lines` layers onto the map.
-   - Pin: features visible, attribute table populated. The pre-fix behavior was
-     an empty layer; if ArcGIS still shows no features the `links[*][rel=self]`
-     / `numberMatched` / `crs` / `CRS84h` envelope is regressed.
+   - Pin: features visible, attribute table populated. If a layer is empty,
+     capture network responses and inspect discovery, query parameters, payload,
+     and client diagnostics. The envelope is one possible failure boundary, not
+     proof of the cause.
 
 3. **`curl` envelope sanity** (validates per-request semantics):
 

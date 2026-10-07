@@ -10,7 +10,12 @@ without receiving Django admin access.
 ## Access Flag
 
 `User.has_api_doc_access` is a Boolean account flag stored on the custom user
-model. It defaults to `False` for existing and newly created users.
+model. It defaults to `False` for existing and newly created users. The model
+and `users.0008_user_has_api_doc_access` migration specify both `default=False`
+and `db_default=False`: historical-model inserts during another app's rollback
+can omit this newer column, so the database must provide the same value without
+relying on the current Python model. Cross-app migration rollback/reapply tests
+protect that compatibility.
 
 The flag is managed from Django admin in the user permissions section. It is
 also visible in the user changelist and available as a changelist filter.
@@ -39,5 +44,5 @@ Run the focused users/admin and private dashboard tests after applying the
 migration:
 
 ```bash
-pytest speleodb/users/tests/test_admin.py frontend_private/tests/test_dashboard_views.py
+docker exec -w /app speleodb_local_django pytest speleodb/users/tests/test_admin.py frontend_private/tests/test_dashboard_views.py
 ```

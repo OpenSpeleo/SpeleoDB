@@ -31,43 +31,21 @@ design (see §1.3).
 
 ### Why this matters
 
-The OGC API - Features 1.0 spec, GeoServer, pygeoapi, and ArcGIS Server all use
-slash-free path templates. Two real failure modes flow from a trailing slash on
-the landing URL:
+SpeleoDB uses the same slash-free convention in Django routes, generated OpenAPI
+paths, copied landing URLs, and discovery links. This prevents mismatched URL
+construction and pins the interface used by its QGIS/ArcGIS regression fixtures.
+It is a repository interoperability contract, not a claim that every OGC
+implementation must use this URL style.
 
-1. **OpenAPI 3.0 path-template inconsistency.** OAS-driven clients construct
-   request URLs as `<servers.url>` + `<paths.*>`. If landing is `/view/{token}/`
-   and conformance is `/view/{token}/conformance`, joining yields
-   `/view/{token}//conformance` → 404.
-2. **GIS-client URL normalisation.** QGIS 3.34+ and ArcGIS Pro 3.6+ construct
-   child URLs by appending `/conformance`, `/collections`, etc. to the
-   user-pasted landing URL. If the landing ends in `/`, naive concatenation
-   produces a double slash (`view/<token>//conformance`) which 404s in
-   production.
-
-The historical regression and live forensics are documented in
-`tasks/lessons/ogc-trailing-slash-and-geometry-split.md`.
-
-### Why hard-break instead of redirect
-
-Django's `APPEND_SLASH` middleware can only **add** trailing slashes (turning
-`view/<token>` into `view/<token>/` when the latter matches). It cannot strip
-them. So the user-facing options were:
-
-- **(chosen) Hard-break.** Landing URL is `view/<token>` (no slash); requesting
-  `view/<token>/` returns 404. The integration page renders the new URL
-  automatically through `{% url %}`, so users re-copy once and the next paste
-  works.
-- **(rejected) Make every URL trailing-slash.** Would have re-introduced the
-  OpenAPI inconsistency on the other end (sub-paths don't end in `/` per OGC
-  convention).
-- **(rejected) Custom middleware that strips trailing slashes.** Would silently
-  mask future regressions instead of failing loudly.
+A trailing-slash landing request intentionally returns 404; no redirect strips
+it. Django's `APPEND_SLASH` only adds a slash when that resolves a route. Users
+with an old connection should re-copy the landing URL from the integration page.
+The canonical route and its child discovery links are tested together.
 
 ### Verifying the convention is honoured
 
 ```bash
-pytest speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCURLCanonicalForm
+docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCURLCanonicalForm
 ```
 
 The class pins:
@@ -101,34 +79,12 @@ URL routing layer enforces the shape via the `ogc_typed_id` converter (regex
 
 ### Why two collections — even though it shows up as "two objects" in QGIS
 
-This is the universal GIS-client convention: **1 OGC collection = 1 GIS layer =
-1 uniform geometry type**. Every major platform enforces it:
-
-| Tool                          | Layer model                                                        |
-| ----------------------------- | ------------------------------------------------------------------ |
-| QGIS (WFS / OGC API Features) | One layer = one geometry type. Mixed → only one type renders.      |
-| ArcGIS Pro / ArcGIS Server    | Feature classes have a fixed `geometry_type` set at creation.      |
-| GeoServer                     | Publishes one layer per geometry type from the same PostGIS table. |
-| pygeoapi                      | Recommends one geometry type per collection in its docs.           |
-| MapServer                     | `LAYER` block has a single `TYPE` (POINT, LINE, POLYGON).          |
-| ESRI Shapefile                | The format itself stores only one geometry type per file.          |
-
-So serving a mixed-geometry collection wasn't merely "non-ideal" — it was the
-actual bug from `tasks/lessons/ogc-arcgis-empty-layers.md`: QGIS picked one
-geometry type and silently dropped the rest, leaving the user with an "empty
-layer" they couldn't diagnose.
-
-The "two objects" in QGIS is therefore the right outcome — and the standard
-pattern GIS users have for every multi-geometry data source. The usual UX
-softener is **client-side**:
-
-- **In QGIS**: drag both collections into a Group in the Layers panel
-  (right-click → "Group Selected"), collapse the group, and save the project.
-  Visually appears as one expandable entry.
-- **In ArcGIS Pro**: drag both into a Group Layer in the Contents pane.
-
-Both clients persist the grouping in the project file, so users do this once per
-project and never see the split again in their day-to-day workflow.
+SpeleoDB exposes station points and passage lines as independently typed
+collections to avoid the mixed-layer interoperability failures encountered by
+its GIS consumers. Tests pin discovery, uniform feature groups, and both point
+and line availability. This does not assert that all GIS clients or the OGC
+specification forbid mixed geometry. Users may group the two layers in their GIS
+project for presentation without changing the service's collection identities.
 
 ### Why no polygons
 
@@ -139,15 +95,11 @@ warning** rather than silently materialising an unexpected `_polygons`
 collection that no other code is prepared to handle. Pinned by
 `test_polygon_features_are_dropped_with_warning`.
 
-Adding a polygon group later is a one-line change:
-
-1. Add `"polygons": frozenset({"Polygon", "MultiPolygon"})` to `GEOMETRY_GROUPS`
-   in `speleodb/gis/ogc_helpers.py`.
-2. Extend the `ogc_typed_id` converter regex to
-   `[0-9a-fA-F]{6,40}_(?:points|lines|polygons)`.
-
-The polygon-dropped warning will then stop firing, and the new group will appear
-in `/collections` automatically for any project whose GeoJSON contains polygons.
+Supporting polygons would be a product/API extension. Update `GEOMETRY_GROUPS`,
+the `ogc_typed_id` converter, OpenAPI schemas/examples, migration-link
+candidates, service assumptions, documentation, and positive/negative client
+regression fixtures together. Verify actual discovery and rendering before
+advertising the new group.
 
 ### Migration path for clients added before the split
 
@@ -184,7 +136,7 @@ signal across deploys.
 ### Verifying the split contract is honoured
 
 ```bash
-pytest speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCGeometrySplit
+docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCGeometrySplit
 ```
 
 The class pins:
@@ -211,15 +163,12 @@ The class pins:
 
 ## 3. Why these two contracts live together
 
-Both regressions originated from the same hardening commit (`06032e70`, Apr 27
-2026): the trailing slash on the landing URL broke OGC client URL construction,
-and the mixed-geometry collection broke layer rendering. They are independent
-failure modes but share a root cause — a SpeleoDB-internal API shape that worked
-in unit tests but mismatched what real GIS clients expect.
-
-The lesson document `tasks/lessons/ogc-trailing-slash-and-geometry-split.md`
-captures the regression history so a future agent can't reintroduce either issue
-without tripping the regression-killer tests above.
+URL discovery and geometry typing share the OGC service boundary. Tests cover
+both because a valid item payload is insufficient when a client cannot discover
+it or interprets a mixed collection incorrectly. The canonical source modules,
+regression classes above, and
+[API verification guide](api-reference.md#35-conformance-and-verification) are
+the maintained references; historical task notes are not part of the contract.
 
 ## 4. Performance implications
 
@@ -247,3 +196,24 @@ feature list once per commit to compute which groups are present; the expensive
 per-group bbox walk is still deferred to `/collections/{id}` per the same
 rationale as the pre-split design — see
 `ProjectViewOGCService.list_collections`.
+
+## Response ownership and verification
+
+`OGCFeatureService` and `ogc_helpers.py` own all four discovery families.
+`build_items_envelope` builds response-specific self/collection/pagination
+links, counts, and timestamps; cache normalized features rather than a host- or
+time-specific envelope. `normalize_features` supplies stable top-level IDs,
+while `parse_ogc_query`/`apply_ogc_query` own supported filtering and
+pagination. Collection metadata and advertised capabilities must stay aligned
+with those implementations.
+
+Run focused OGC tests inside the existing application container. The repository
+also provides coverage reporting, mutation, and staged Team Engine targets;
+these are verification tools, not evidence of a completed conformance run or an
+automatically enforced 100% coverage gate. Follow the API reference's
+real-client smoke procedure for deployment changes. Verify pagination preserves
+`bbox` and `datetime` values, including commas, interval slashes, and time
+colons, and that following emitted links succeeds. When cache-fill code changes,
+measure cold and warm storage reads under representative concurrent access. Do
+not flush shared production caches or infer a capacity guarantee from an old
+local load sample.

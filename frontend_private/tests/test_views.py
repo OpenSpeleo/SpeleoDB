@@ -925,7 +925,7 @@ class GISViewTemplateOGCURLTest(BaseTestCase):
     """ws7g: pin that the GIS-View integration pages render the OGC
     landing-page URL, NOT the raw collections URL.
 
-    Per ``tasks/lessons/ogc-qgis-discovery.md``, user-facing OGC URLs
+    Per ``docs/map-viewer/ogc-url-and-geometry-contract.md``, OGC URLs
     must be landing pages so QGIS / ArcGIS Pro can run the standard
     discovery sequence (landing → conformance → collections → items).
     The previous ``user-data`` / ``view-data`` URL names returned a

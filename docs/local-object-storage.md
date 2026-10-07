@@ -121,7 +121,17 @@ missing, expired, or invalid. Group IDs are discovered independently and never
 assumed. The local GitLab bootstrap disables access-token expiration enforcement
 and rotates any older expiring token. Normal Django settings load the
 development resources from `.env`, while `config.settings.test` loads only the
-test resources from `.envs/test.env`.
+test resources from `.envs/test.env`. Both generated private files retain mode
+`0600`, and updates preserve unrelated developer-owned settings.
+
+The test environment also supplies `GIT_CONFIG_COUNT=1`,
+`GIT_CONFIG_KEY_0=safe.directory`, and `GIT_CONFIG_VALUE_0=*`. Generated test
+repositories live under UUID paths on the bind-mounted work directory, where
+Docker Desktop can report transient ownership differences. The image's Git 2.39
+does not support a recursive `safe.directory` pattern, so this wildcard trust is
+scoped to test processes and their Git subprocesses. Do not copy it into the
+development environment or a global Git configuration; normal development keeps
+its explicit trusted workspace paths. Bootstrap tests verify this separation.
 
 The same job then runs `create_s3_local_buckets`. The command creates missing
 RustFS buckets and reapplies the canonical local policy and CORS configuration
@@ -135,25 +145,24 @@ After object-storage setup, the same one-shot job applies migrations and runs
 `ensure_local_superuser`. The DEBUG-only command creates or repairs
 `contact@speleodb.org` with password `contact`, bypasses password validation for
 that fixed local credential, sets its country to USA (stored as `US`), and marks
-its allauth email record verified and primary.
+its allauth email record verified and primary. New accounts use the name
+`SpeleoDB Administrator`; existing missing or whitespace-only names are repaired
+to that value, while valid existing names are preserved. This satisfies the
+required account-name contract on repeated setup runs.
 
 Every `docker compose up` may rerun the one-shot job. Existing valid GitLab and
 RustFS resources are reused. If either persistent volume is reset, the next run
 recreates the missing resources and refreshes stale development and test env
 values without requiring a hard-coded group ID.
 
-For a clean test without touching existing volumes, use a different Compose
-project and container prefix:
-
-```bash
-COMPOSE_INSTANCE_PREFIX=speleodb_fresh \
-  docker compose -p speleodb_fresh -f local.yml up --build
-```
-
-Compose creates new project-prefixed volumes. The old stack must be stopped so
-the standard host ports are available, but its containers and volumes do not
-need to be removed. `docker compose ... down` preserves the fresh volumes too;
-avoid `--volumes` unless deletion is explicitly intended.
+Run repository verification inside the already-running application container.
+Development and tests share service instances but use separately provisioned
+GitLab groups/tokens and storage buckets. Do not start another stack or stop the
+developer stack for routine checks. Linux ownership tests need generated state
+on a native Docker volume rather than a macOS bind mount; keep source read-only
+when a test exercises ownership semantics. Run heavy checks serially and inspect
+service health/memory pressure before treating infrastructure stalls as retry
+policy defects.
 
 The project also owns `/app/node_modules` as a named volume. Container-side
 Linux optional dependencies therefore remain separate from host-native npm
@@ -243,3 +252,14 @@ Provisioning adds a few GitLab and S3 control-plane calls before local services
 start. It adds no Django request-path work, no map feature rescans, and no
 production runtime cost. RustFS evaluates the stored CORS rule while serving the
 object response.
+
+## Environment precedence diagnostics
+
+Compose `env_file` values become process environment and take precedence over
+Django's root dotenv load. Compose separately reads the root `.env` for `${...}`
+interpolation. Keep each credential's owner explicit in `local.yml`; a tracked
+placeholder must not shadow a private root value. Inspect the merged Compose
+model and verify the active setting without printing secrets before changing
+application fallbacks. Container environments are immutable: after a Compose
+environment change, a plain restart does not apply the new model. Standalone and
+devcontainer startup must preserve the complete dependency graph.

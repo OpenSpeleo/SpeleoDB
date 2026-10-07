@@ -169,6 +169,21 @@ and instructions remain inside the fullscreen host. Private coarse pointer
 controls use consistent touch targets, with a two-column rail for short map
 viewports.
 
+## Rendering and viewport checks
+
+Renderer readiness checks `map.getStyle()` rather than `isStyleLoaded()`;
+background tile requests must not block a small measurement overlay. Verify
+activation immediately after a basemap change. Wait for rendered native label
+features and glyph placement before assessing completed capsules, and inspect
+the live marker while the pointer is moving. Stretchable-image content insets
+and text-fit padding must not both own the same text padding.
+
+Control, helper, and keyboard-target layout use the map's intersection with the
+visual viewport, including resize, scroll, fullscreen, and sibling overlay
+panels. A map container's minimum height can extend below a short screen;
+container bounds alone do not prove a visible keyboard target or usable
+controls.
+
 ## Verification
 
 Run all tests in the already-running application container. Colocated tests
@@ -184,7 +199,8 @@ keyboard placement, dialogs, editor launch, source/style changes, globe edges,
 label contrast/collisions, fullscreen, small mobile and landscape layouts, 200%
 zoom, reduced motion, and repeated activation/teardown. Confirm the served
 manifest hash and inspect runtime errors. Record outcomes and remaining limits
-in the task review; JSDOM results alone are not visual or gesture evidence.
+in external temporary verification notes; JSDOM results alone are not visual or
+gesture evidence.
 
 Future route length, snapping, editing, area measurement, persistence, or export
 must be designed as explicit product extensions. Keep their data contracts

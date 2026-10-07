@@ -331,15 +331,19 @@ replace or generalize this established GPS Track lifecycle.
 
 GIS Layers are authenticated KML, KMZ, GeoJSON, TopoJSON, or zipped Shapefile
 overlays. Every layer defaults OFF. First activation refreshes the authenticated
-detail response, fetches its current signed GeoJSON once, and hands that exact
-object to Mapbox without transformation. The standard Map Viewer State/Layers
-cache then handles show/hide and style restoration exactly like GPS Tracks. Only
-polygon fill/outline, line, and point roles are created.
+detail response and fetches its current signed GeoJSON. The standard Map Viewer
+State/Layers cache retains that original document; cooperative preparation
+derives bounds and a separate display copy for geometry-type filtering. GPS
+Tracks and GIS Layers share `toggleLazyOverlay` in `map/layers.js`, which checks
+map generation, latest visibility intent, and metadata modification time, and
+aborts replaced requests. Only current results reach scheduled map installation.
+Polygon fill/outline, line, and point roles are created.
 
 Clicking a row shows the layer if necessary and calls only `fitBounds` with its
 computed GeoJSON bounds. The toggle changes visibility without moving the
-camera. There are no source timers, generation IDs, eviction policy, or
-GIS-specific runtime. The feature is not loaded by the public viewer.
+camera. There is no separate GIS runtime or server job lifecycle. The shared
+concurrency guards prevent stale loads from undoing a later toggle or metadata
+refresh. The feature is not loaded by the public viewer.
 
 Polygon-zone and point clicks open the established GIS-scoped Mapbox popup. It
 uses DOM creation and `textContent` only, shows the feature title and optional
@@ -752,3 +756,9 @@ Map behavior:
   actions are disabled or rejected before the API call.
 - API responses include `can_write` and `can_delete`; the frontend uses these
   server-derived flags instead of reimplementing collection permission logic.
+
+`MAP_SOURCES` order is part of the UI/default contract: it determines menu order
+and the first token-satisfied fallback. A registry reorder must update the
+order-sensitive available-source and tokenless-default expectations in
+`map/sources.test.js` and the documented list together. Verify the intended
+default and manifest-owned output after a clean build.

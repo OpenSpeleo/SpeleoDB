@@ -2080,7 +2080,7 @@ class TestExperimentEndpointIsNotOGC(BaseAPITestCase):
     Wrapping the experiment endpoint in a full OGC tree
     (landing/conformance/collections/items/feature) is out of scope
     for this PR but is documented in
-    ``tasks/lessons/ogc-arcgis-empty-layers.md``. This test ensures
+    ``docs/map-viewer/api-reference.md``. This test ensures
     that until that work happens, the response stays a single flat
     GeoJSON FeatureCollection — a regression that accidentally adds
     ``links``/``conformsTo`` to it would mislead clients into
@@ -3014,7 +3014,7 @@ class TestOGCURLCanonicalForm(BaseAPITestCase):
     """Pin the OGC URL convention: landing URLs MUST NOT end with ``/``.
 
     Captures the regression history documented in
-    ``tasks/lessons/ogc-trailing-slash-and-geometry-split.md``: a
+    ``docs/map-viewer/ogc-url-and-geometry-contract.md``: a
     landing URL that ends in ``/`` causes QGIS / ArcGIS Pro to
     construct child URLs with a double slash (``view/<token>//``)
     that 404 in production. The canonical no-trailing-slash form

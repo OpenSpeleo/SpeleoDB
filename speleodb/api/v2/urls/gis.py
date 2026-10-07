@@ -30,8 +30,8 @@ silently misbehaving.
 The previous bare-token aliases (``view/<token>``, ``user/<token>``,
 ``landmark-collection/<token>/<id>`` and friends) are intentionally
 removed: handing out a non-landing URL violated the OGC discovery
-pattern and the project's own ``tasks/lessons/ogc-qgis-discovery.md``
-lesson.
+pattern documented in
+``docs/map-viewer/ogc-url-and-geometry-contract.md``.
 
 Project per-commit collections are split by geometry type so each
 OGC collection contains a uniform geometry (the universal GIS-client

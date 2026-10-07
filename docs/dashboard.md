@@ -56,6 +56,14 @@ The old profile page lives at:
 /private/profile/ → ProfileView → pages/user/dashboard.html
 ```
 
+The monthly window, response labels, and `TruncMonth` aggregation use Django's
+configured local timezone consistently. The view starts from
+`timezone.localtime(timezone.now())` and keys both totals and user-authored
+counts by `YYYY-MM`; a UTC first-of-month commit can belong to the previous
+local month. Regression fixtures anchor commits within explicit local months
+rather than subtracting a few days from today, so the total/user split remains
+stable on the first days of a month.
+
 ## Performance
 
 - **Single API call** fetches all dashboard data — no N+1 queries.
@@ -97,5 +105,6 @@ Three test files cover the dashboard exhaustively:
 
 1. Add the query to `UserDashboardStatsView._build_summary()` in the API view.
 2. Add a stat card in `pages/dashboard.html` with a unique `id`.
-3. Add the ID to the `populateStatCards()` function in the inline JS.
+3. Add the ID to `populateStatCards()` in the registered Vite controller
+   `frontend_common/controllers/dashboard.js`.
 4. Add corresponding tests in both the API and frontend test files.

@@ -55,11 +55,12 @@ and reuses the installed dependency tree. It proves imported CSS
 change/deletion, Tailwind source additions, shared-module invalidation,
 route-controller invalidation, and unrelated-route output stability.
 
-Tailwind 4.3.1's Vite plugin accumulates discovered utility candidates during
-one watch process. Removing a template class therefore may leave harmless CSS
-until restart; imported CSS deletion is removed correctly. Final evidence must
-always stop the watcher, run `npm run build`, and verify the served manifest
-hash. A running watcher is development convenience, never release evidence.
+The migration-era Tailwind Vite plugin accumulated discovered utility candidates
+during one watch process. Treat a deleted template class as potentially retained
+until restart; the watcher contract separately covers imported CSS deletion.
+Final evidence must always stop the watcher, run `npm run build`, and verify the
+served manifest hash. A running watcher is development convenience, never
+release evidence.
 
 ## Django and deployment
 
@@ -73,9 +74,10 @@ Railpack retains the Python provider and uses `mise exec` to run `node`,
 `npm ci`, and `npm run build` with the major read from `.node-version`. Node is
 therefore versioned by the repository rather than duplicated in Railpack's
 package map. The runtime retains generated assets and manifest but not
-`node_modules`. Railway pre-deploy runs only migrations and `collectstatic`,
-because pre-deploy filesystem changes are not persisted. SPA serving is disabled
-and Gunicorn/Django remains the start command.
+`node_modules`. Railway pre-deploy runs migrations,
+`install_background_schedules`, and `collectstatic`. Asset compilation belongs
+to the image build because pre-deploy filesystem changes are not persisted. SPA
+serving is disabled and Gunicorn/Django remains the start command.
 
 When updating tooling, regenerate the root lockfile independently of the
 installed tree; npm's hidden `node_modules/.package-lock.json` is not an
@@ -87,3 +89,11 @@ every registry-backed package retains its checksum. Then run a clean install on
 the `.node-version` runtime, audit pending scripts, run the complete
 build/lint/test suite, exercise watcher invalidation, and verify `collectstatic`
 plus production module MIME/CORS behavior.
+
+## Monorepo command scope
+
+Here, root Node commands mean the web application's `apps/web` root. For a
+web-scoped change, run that workspace's commands and prek hooks; enclosing
+monorepo aggregate commands can enter unrelated applications. Execute tests in
+the already-running application container at `/app`, not a new stack or host
+runtime.

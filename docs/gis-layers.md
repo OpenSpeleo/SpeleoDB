@@ -19,10 +19,13 @@ an original source file, one directly renderable GeoJSON file, and timestamps.
 The browser sends the selected file in one multipart request. It performs no
 file reading or transformation. The list API includes a signed `file` URL for
 display. The private Map Viewer refreshes the authenticated detail response on
-first activation, fetches the current signed GeoJSON once, and passes that same
-object unchanged to Mapbox. Parsing is limited to what display and bounding-box
-zoom require; there is no transformation or feature interpretation. There is no
-render-manifest request, revision lookup, artifact table, job state, or polling.
+first activation and fetches its current signed GeoJSON. The original cached
+document remains unchanged; cooperative preparation derives bounds and a display
+copy for geometry-type filtering. The shared lazy-overlay lifecycle checks map
+generation, current visibility intent, and metadata modification time, aborting
+replaced requests and ignoring stale completions. This is client concurrency
+control, not a server job: there is no render-manifest request, artifact table,
+background processing state, or polling.
 
 KML/KMZ compilation silently corrects the known exporter typo
 `xmlns="xmlns='http://earth.google.com/kml/2.0'"` in the root namespace
@@ -101,3 +104,50 @@ and derives `source_format` from the original filename.
 The list and permission querysets annotate access in bulk and prefetch related
 users, respectively. The new workflow does not add per-row requests or model
 queries to listing rendering.
+
+## Conversion fidelity
+
+KML/KMZ support means the compiler's supported 2-D vector interpretation, not
+Google Earth scene/runtime parity. Altitude modes, models, PhotoOverlays, Tours,
+and network-refresh behavior are not implied by accepting the extension. Keep
+the original source and report unsupported or simplified content. Verify polygon
+holes, multipart geometry, hierarchy, styles, assets, and parser diagnostics;
+feature counts alone cannot establish fidelity. Measure parsing memory and
+browser rendering separately. Arbitrary feature-count splitting does not solve a
+single oversized geometry; a future tiling/LOD design requires explicit scope.
+
+## Popup presentation
+
+The GIS popup shell is scoped beneath its feature-specific Mapbox class. Apply
+overscroll/input isolation to the actual scrolling description viewport; keep
+the header and ellipsized metadata footer outside it. Show the custom
+pointer-transparent rail only when that viewport overflows, update it on scroll
+and resize, and remove external listeners when the popup closes. Tests must
+cover safe content, scoped selectors, and cleanup, not only the inner text.
+
+## Compiler feature identities
+
+The KML/KMZ compiler assigns renderer IDs from document position
+(`kml-feature:<index>`) and preserves producer IDs separately as `source_id`.
+Exploded GeometryCollection children derive IDs from that renderer-owned base
+and retain source metadata. Appending a geometry suffix to an untrusted source
+ID would permit a producer to collide with another generated child. Regression
+fixtures should deliberately use that old derived-ID shape. Direct GeoJSON stays
+byte-preserving; this compiler identity policy is not permission to rewrite its
+uploaded source.
+
+## Publication boundary
+
+Converted-format uploads return success only after conversion, source/display
+persistence, and database publication complete. Failure must leave no published
+layer; storage writes are nontransactional, so the publication service tracks
+and deletes objects written before a later failure. Direct GeoJSON shares one
+source object instead of adding a display copy in storage. There is no upload
+job model, queue state, retry endpoint, or polling lifecycle. Browser upload
+percentage measures bytes transferred in the already-running request; server
+processing continues while awaiting its response.
+
+Upload dialogs preserve selected files and form state on backdrop clicks. Close
+only through explicit close/Cancel controls or the supported Escape action,
+subject to in-flight request guards. Keep this contract aligned with shared GPX
+imports and cover event wiring changes with regression tests.

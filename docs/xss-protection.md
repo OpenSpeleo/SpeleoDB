@@ -1,208 +1,122 @@
 # XSS Protection
 
-## Why
+## Rendering boundary
 
-Users can enter names like `<WIP> Sensor Type` or `A & B`. These must display
-correctly -- not get stripped, not execute as HTML. The fix is **render-side
-escaping**: the backend stores raw text, the frontend escapes before inserting
-into the DOM.
+User and API values must remain text when displayed. Escape at the function that
+writes HTML, rather than relying on callers to pre-escape. Backend sanitization
+is defense in depth on designated fields; it is not a substitute for output
+encoding and does not cover every data source.
 
-## Core API (ES module files)
+Prefer DOM `textContent` or jQuery `.text()` for plain messages, names, and
+labels. `innerHTML`, `insertAdjacentHTML`, and jQuery `.html()` all parse markup
+and need an explicit trust boundary.
 
-### `Utils.escapeHtml(text)`
+## Shared ES module APIs
 
-Escapes `<`, `>`, `&`, `"`, `'` so the value is safe in both HTML text content
-**and** HTML attribute positions. Returns empty string for `null`/`undefined`.
+`frontend_private/static/private/js/xss-helpers.js` exports `escapeHtml`,
+`isValidCssColor`, `safeCssColor`, and `sanitizeUrl` for form/route modules. Map
+viewer modules use the equivalent `Utils` API in `map_viewer/utils.js`, which
+also provides `safeHtml` and `raw`. Both currently implement escaping; keep
+their behavior aligned when changing either and run their regression tests.
+Neither helper is a template global. Vite controllers import dependencies, and
+Django templates provide inert context rather than executable inline scripts.
+
+```js
+import { escapeHtml } from "../xss-helpers.js";
+
+tableBody.html(`<td>${escapeHtml(tag.name)}</td>`);
+$("#error").text(errorMessage);
+```
+
+`escapeHtml` converts values with `String()`, returns an empty string for
+null/undefined, and escapes `<`, `>`, `&`, double quotes, and apostrophes. Quote
+escaping is required for quoted attribute values; using a DOM element solely to
+escape text does not escape attribute quotes automatically.
 
 ```js
 import { Utils } from "../utils.js";
 
-container.innerHTML = `<h3>${Utils.escapeHtml(station.name)}</h3>`;
-```
-
-### `Utils.safeHtml` tagged template
-
-Auto-escapes all interpolations. Use for multi-line innerHTML assignments:
-
-```js
 container.innerHTML = Utils.safeHtml`
     <h3>${station.name}</h3>
+    <input value="${station.name}">
     <p>${station.description}</p>
     ${Utils.raw(trustedIconMarkup)}
 `;
 ```
 
-### `Utils.raw(htmlString)`
+`Utils.safeHtml` escapes direct interpolations. `Utils.raw()` only marks a value
+as trusted; it does not sanitize anything. Use it for static markup or a helper
+whose HTML is already safely constructed. An unsafe nested template literal or
+helper result wrapped in `raw()` bypasses protection. Prefer `safeHtml` within
+the helper itself so the escaping boundary stays visible.
 
-Marks a value as pre-trusted (static HTML, SVG icons, conditional blocks).
-**Never** wrap strings that contain unescaped user data.
+## Attribute-specific validation
 
-### `Utils.isValidCssColor(color)` / `Utils.safeCssColor(color, fallback)`
-
-Validates that a color string is a valid hex color (`#RGB` or `#RRGGBB`). Use
-before interpolating user-supplied colors into `style` attributes to prevent CSS
-injection. Returns the fallback (default `#94a3b8`) for invalid values.
-
-```js
-const safeColor = Utils.safeCssColor(tag.color);
-el.innerHTML = `<span style="background-color: ${safeColor}">...</span>`;
-
-// Inside Utils.safeHtml, wrap in Utils.raw() since safeCssColor already validates
-el.innerHTML = Utils.safeHtml`<span style="background-color: ${Utils.raw(Utils.safeCssColor(tag.color))}">...</span>`;
-```
-
-### `Utils.sanitizeUrl(url)`
-
-Validates that a URL is safe for use in `href` and `src` attributes. Allows
-`http:`, `https:`, and relative URLs. Rejects `javascript:`, `data:`,
-`vbscript:`, and other dangerous schemes. Returns empty string for invalid URLs.
+URL validation and HTML escaping solve different problems. `sanitizeUrl` accepts
+HTTP(S) and relative URLs and rejects dangerous schemes such as `javascript:`.
+Its returned string still needs attribute escaping if inserted into HTML. Prefer
+safe interpolation or assign a validated value through the DOM:
 
 ```js
-// Always sanitize API-supplied URLs before inserting into href/src
-`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
-`<img src="${Utils.sanitizeUrl(resource.miniature)}">`;
+container.innerHTML = Utils.safeHtml`
+    <a href="${Utils.sanitizeUrl(resource.file)}">View</a>
+    <img src="${Utils.sanitizeUrl(resource.miniature)}" alt="">
+`;
+link.href = Utils.sanitizeUrl(log.attachment);
 ```
 
-## Shared global helpers (`xss-helpers.js`)
-
-`frontend_private/static/private/js/xss-helpers.js` defines `escapeHtml`,
-`safeCssColor`, `isValidCssColor`, and `sanitizeUrl` as global functions. It is
-loaded in `base_private.html` before any page-specific scripts, so every inline
-`<script>` block can call these directly without redefining them.
+Colors inserted into styles must pass `isValidCssColor` or `safeCssColor`. They
+accept only `#RGB`/`#RRGGBB`; the map utility defaults to the configured
+fallback `#94a3b8`. Validation prevents CSS declarations or URLs from being
+smuggled into a color value. Keep the interpolation escaped too:
 
 ```js
-// In any inline <script> block or non-module .js file:
-tableBody.html(`<td>${escapeHtml(tag.name)}</td>`);
-const safe = safeCssColor(tag.color);
+container.innerHTML = Utils.safeHtml`
+    <span style="background-color: ${Utils.safeCssColor(tag.color)}">Tag</span>
+`;
 ```
 
-**Do not** define local copies of `escapeHtml` in templates or standalone
-scripts. Use the global.
+Do not interpolate user values into application event handlers. Use delegated
+`data-*` actions or listeners in modules. Static SVG/HTML may be trusted, but a
+value's presence inside `raw()` is never evidence that it is safe. Numbers and
+booleans must be validated as such before treating them as non-string data.
 
-For ES module files (map viewer), import from `utils.js` instead:
+## Sink ownership and verification
 
-```js
-import { Utils } from "../utils.js";
-html += `<td>${Utils.escapeHtml(value)}</td>`;
-```
+Names, notes, descriptions, tags, field names, filenames, author/status labels,
+errors, and resource text are all user/API-controlled. The function assembling
+the final markup owns their escaping, including helper return values accepted by
+modal builders. `forms/ajax_errors.js` imports the shared escape helper and uses
+`.text()` where markup is unnecessary; templates no longer include the old
+executable error snippet.
 
-jQuery `.text()` is also safe for plain text (error messages, labels):
+Use real escaping helpers in rendering tests. A stub that escapes fewer
+characters can conceal a regression. Exercise text and attribute breakouts,
+malicious URL schemes, CSS injection, null/non-string inputs, and nested helper
+results. Run frontend tests inside the already-running application container.
+Encoding performs local string work and adds no network or database access.
 
-```js
-$("#error").text(errorMsg); // GOOD
-$("#error").html(errorMsg); // BAD
-```
+## Server-side sanitization
 
-## What to escape
+`speleodb/utils/serializer_mixins.py::SanitizedFieldsMixin` transforms only
+incoming string fields named in a serializer's `sanitized_fields`. It does not
+sanitize outgoing representations, arbitrary stored rows, or every application
+text field. After field-level validation, it invokes `sanitize_text` during
+`to_internal_value`; invariants that can be invalidated by sanitization need
+validation after that transformation.
 
-Any field a user or API can control: names, descriptions, notes, titles, tag
-names, sensor names, experiment field names, cell values, GPS track names, line
-names, error messages, file names, author names, status labels, resource URLs
-(`resource.file`, `resource.miniature`, `log.attachment`), and resource text
-content (`resource.text_content`).
+`speleodb/utils/sanitize.py` owns both transformations:
 
-## What NOT to escape
+- `sanitize_text`: remove tags with `nh3`, decode HTML entities, decompose
+  Unicode to NFD, remove combining marks, recompose to NFC, remove
+  non-whitespace control/format characters, collapse spaces/tabs, and trim
+  edges. Accents are deliberately removed by this variant.
+- `sanitize_field_name`: remove tags and decode entities, preserve accents with
+  NFC normalization, then apply the same control/whitespace cleanup. Experiment
+  field names use this variant through their schema validator.
 
-Static HTML, SVG icons, CSS classes, numeric coordinates, boolean attributes,
-values already inside `Utils.raw()`.
-
-## Attribute contexts
-
-`escapeHtml` escapes both `"` and `'`, making it safe for attribute values:
-
-```js
-// Safe -- quotes in station.name won't break out of value=""
-el.innerHTML = Utils.safeHtml`<input value="${station.name}">`;
-```
-
-## URL attributes
-
-API-supplied URLs in `href` and `src` attributes must be validated with
-`Utils.sanitizeUrl()` to block `javascript:` and other dangerous schemes:
-
-```js
-// BAD -- javascript: protocol executes on click
-`<a href="${resource.file}">View</a>`;
-
-// GOOD -- sanitizeUrl rejects non-http(s) URLs
-`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
-```
-
-## HTML sinks to watch
-
-All of these parse HTML and are XSS vectors if given unescaped user data:
-
-- `element.innerHTML = ...`
-- `element.insertAdjacentHTML('beforeend', ...)`
-- `$(selector).html(...)`
-- `Modal.base(title, content, footer)` -- callers must pre-escape
-- `href="${url}"` / `src="${url}"` -- use `Utils.sanitizeUrl()`
-
-Safe alternatives that never parse HTML:
-
-- `element.textContent = ...`
-- `$(selector).text(...)`
-
-## Architecture: two canonical locations
-
-1. **`xss-helpers.js`** -- global functions for inline `<script>` blocks and
-   non-module JS files. Loaded once in `base_private.html`.
-2. **`Utils` in `utils.js`** -- same functions wrapped in the ES module API for
-   map viewer modules. Tested via `utils.test.js`.
-
-Both implement the same escaping logic. When changing the algorithm, update
-**both** files and run `npm run test:js`.
-
-## `ajax_error_modal_management.js`
-
-This shared snippet is included in 28+ Django templates. It calls `escapeHtml()`
-(from `xss-helpers.js`) on all API error fields before inserting into the error
-modal.
-
----
-
-## Server-side sanitization (defense-in-depth)
-
-The backend strips HTML tags from all user text fields before saving to the
-database. This is defense-in-depth -- even if a frontend escaping path is
-missed, the stored data cannot contain executable HTML.
-
-### Pipeline
-
-`speleodb/utils/sanitize.py` defines two sanitization functions:
-
-**`sanitize_text()`** -- aggressive, strips accents (anti-zalgo):
-
-1. **`nh3.clean(value, tags=set())`** -- strips ALL HTML tags, keeps text
-   content only. `<script>alert(1)</script>` becomes `alert(1)`.
-2. Unicode NFD decomposition + combining mark removal (anti-zalgo).
-3. NFC recomposition.
-4. Control/format character removal.
-5. Whitespace normalization.
-
-**`sanitize_field_name()`** -- accent-preserving variant:
-
-Same pipeline but skips steps 2-3 (NFD + mark removal), only performing NFC
-normalization. Used for experiment field names and other user-visible labels
-where accented characters (e.g. `température`, `señal`) must be preserved.
-
-### Integration
-
-`SanitizedFieldsMixin` (in `speleodb/utils/serializer_mixins.py`) runs
-`sanitize_text()` on every field listed in a serializer's `sanitized_fields`
-during `to_internal_value()`. 21 serializer classes across the codebase use this
-mixin, covering ~50 text fields.
-
-Experiment field names use `sanitize_field_name()` via the Pydantic validator on
-`ExperimentFieldDefinition.name`.
-
-### What this means for users
-
-Angle brackets in text fields are stripped: `<WIP> Station` becomes
-`WIP Station`. This is an explicit trade-off for security.
-
-### Tag color validation
-
-`StationTagSerializer.validate_color` rejects any value that is not a 6-digit
-hex code (`#RRGGBB`). This prevents CSS injection via
-`style="background-color: ${tag.color}"` on the frontend.
+These functions store plain text, not pre-escaped HTML. Entity decoding and
+other ingestion paths make render-side escaping necessary even after a value has
+passed a sanitizer. `StationTagSerializer.validate_color` separately requires
+six-digit hex colors; frontend validation remains necessary at the rendering
+boundary.

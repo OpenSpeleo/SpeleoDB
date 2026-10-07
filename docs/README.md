@@ -26,6 +26,10 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- [Shared frontend forms](frontend-forms.md)
+  - Reusable form APIs, Vite controller wiring, shared entity settings, and
+    integration boundaries.
+
 - [Map file import](map-viewer/import.md)
   - Explicit editable-place versus single-overlay intent, shared KML/KMZ
     inspection, compatibility reporting, publication, and verification.
@@ -58,8 +62,8 @@ Unlike product docs, these files prioritize:
 
 - `xss-protection.md`
   - render-side HTML escaping strategy, `Utils.escapeHtml` / `Utils.safeHtml` /
-    `Utils.raw` API, attribute-context escaping, jQuery `.html()` patterns,
-    inline `escapeHtml` alignment, CSS color validation
+    `Utils.raw` API, attribute-context escaping, jQuery `.html()` patterns, ES
+    module helper alignment, CSS color validation
 
 ### Specialized Topics
 
@@ -83,6 +87,10 @@ Unlike product docs, these files prioritize:
   - centralized permission model and scope-routing behavior
 
 ### Quality and Testing
+
+- [Vite assets](vite-assets.md)
+  - Logical entries, template/controller integration, live registry and asset
+    coherence, and production verification.
 
 - `map-viewer/testing-and-quality.md`
   - frontend test map, validation commands, and regression checklist

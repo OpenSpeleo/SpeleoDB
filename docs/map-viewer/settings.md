@@ -160,8 +160,8 @@ switching, project/country gate preservation, and unchanged linework/depth data.
 Inspect the authenticated browser at 320/390px, tablet, desktop, short
 landscape, fullscreen, 200% zoom, and reduced motion. Stop any watcher, build
 cleanly, and verify manifest-matching served assets before final screenshots.
-Check bounds/focus/network behavior as well as visuals; actual results live in
-the task checklist.
+Check bounds/focus/network behavior as well as visuals, and record actual
+results in external temporary verification notes.
 
 Concurrency coverage must exercise the actual control handlers: reverse a switch
 while its load is unresolved, change destination across panel types, hide a

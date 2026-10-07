@@ -2,10 +2,10 @@
 
 ## Intent
 
-SpeleoDB compiles CSS with exact `tailwindcss@4.3.1` and
-`@tailwindcss/vite@4.3.1` inside the Vite 8.1.0 graph. The migration is required
-to retain the rendered contract established by Tailwind 3.4.19; parity is a
-release condition, not an assumption. The private application is the
+SpeleoDB compiles CSS with `tailwindcss` and `@tailwindcss/vite` inside the Vite
+graph. Exact versions belong to the root manifest and lockfile. The migration is
+required to retain the rendered contract established by Tailwind 3.4.19; parity
+is a release condition, not an assumption. The private application is the
 visual/configuration reference. The public application intentionally converges
 on its typography tokens while retaining namespaced marketing components.
 
@@ -135,19 +135,20 @@ Application CSS and runtime JavaScript must not depend on Tailwind's private
 and public decorative gradients are owned by stable declarations. The
 Git-browser action surface is intended to use the native
 `bg-linear-to-b/srgb from-white to-gray-100` utility stack; `.git_btn` remains
-only as its responsive sizing hook. A clean-build, hash-checked live-route
-matrix proves both rendered anchors at 360/767/768/769/1440, DPR 1/2, and the
-default, hover, focus, focus-visible, active, and touch-hover states in pinned
-Chromium, Firefox, and WebKit. The design-system stylesheet may set v4 internals
-only when it is implementing a compiler-facing utility.
+only as its responsive sizing hook. Verification must cover both rendered
+anchors after a clean build with checked served hashes, including breakpoint
+boundaries, DPR 1/2, default, hover, focus, focus-visible, active, and
+touch-hover states in Chromium, Firefox, and WebKit. The design-system
+stylesheet may set v4 internals only when it is implementing a compiler-facing
+utility.
 
 ## Verification strategy
 
-The migration baseline is a clean Tailwind 3.4.19 worktree. Baseline and final
-candidate hashes, sizes, inventories, timings, and test counts belong in the
-active adversarial review record only after they have been regenerated. Values
-from the original migration handoff and existing `/tmp` artifacts are stale or
-untrusted and must not be copied forward as release evidence.
+Tailwind 3.4.19 is the historical migration baseline. For a new change, compare
+a known baseline with the actual candidate and regenerate hashes, inventories,
+timings, and test results. Keep run-specific evidence in an external temporary
+directory. Historical handoff numbers and leftover generated artifacts are not
+evidence for a later revision.
 
 Structural comparison covers selectors, at-rules, media queries, keyframes,
 plugin selectors, custom properties, and source candidate inventories. Raw
@@ -155,15 +156,19 @@ selector text is expected to change because v4 emits native nesting, registered
 properties, and range media syntax; keyframe and breakpoint sets must remain
 behaviorally equivalent.
 
-A temporary Playwright 1.61.1 harness must live outside the root workspace. It
-must navigate separate live baseline and candidate Django servers with cloned,
-deterministic databases and real authentication/permission fixtures. It must
-verify served asset hashes, rendered DOM alignment, production stylesheet order,
-computed styles including pseudo-elements, interactions, accessibility,
-responsive states, and deterministic pixels in Chromium, Firefox, and WebKit.
-Every serialization normalizer and screenshot mask requires structured,
-reproducible justification. The temporary harness and browser dependencies are
-not repository dependencies.
+The root manifest owns Playwright and `npm run test:browser`; the checked-in
+suite currently exercises viewer responsiveness in Chromium and WebKit. That
+suite is not a full migration-parity certificate. Run tests inside the existing
+application container, without starting a second stack. Temporary audit
+harnesses and artifacts belong outside the checkout.
+
+Parity evidence must use real Django-rendered pages and deterministic data and
+permission states. Verify served asset hashes, DOM alignment, production
+stylesheet order, computed styles including pseudo-elements, interactions,
+accessibility, responsive states, and deterministic pixels. Broad cross-engine
+claims require Chromium, Firefox, and WebKit evidence, even though the current
+viewer suite configures only two engines. Every serialization normalizer and
+screenshot mask requires a reproducible justification.
 
 The original parity result is invalid as live-route evidence. Its broad capture
 script sanitized raw Django template source and injected it through
@@ -175,30 +180,31 @@ script did concatenate custom CSS, so the failure has not been shown to come
 from omitting `custom.css`. The proven causes are synthetic template rendering,
 hard-coded markup, and stale generated CSS.
 
-Before any browser run, stop the watcher, run `npm run build` (or clean and
-rebuild every output required by the route), start isolated servers on separate
-ports, and prove that each server returns the expected fresh asset. A browser
-manifest must fail rather than skip a route, role, state, viewport, or engine
-that it claims to cover.
+Before final browser verification, stop the watcher, run a clean `npm run build`
+in the existing application container, and prove Django serves the expected
+fresh assets. Preserve baseline evidence separately without replacing the
+running application's data or starting another stack. A browser manifest must
+fail rather than skip a route, role, state, viewport, or engine that it claims
+to cover.
 
 Required repository gates remain the root builds, JavaScript lint/tests, Django
 template validation, pytest, pre-commit, a clean install on the `.node-version`
 runtime, watcher isolation, and deployment build contracts.
 
-The focused Git route is not a substitute for the release matrix. The active
-adversarial review deliberately remains incomplete until every required
-public/private route, role and permission state, breakpoint/device/DPR,
-interaction and accessibility state, animation point, and map composition has
-the same live, deterministic evidence. The superseded raw-template capture total
-must not be quoted as that evidence.
+Historical live comparisons established focused Git-control parity and a
+representative public/private route subset. They did not certify every route,
+role, permission, interaction, accessibility state, animation, or map
+composition. Do not generalize that subset or the invalid raw-template capture
+total into exhaustive product parity. For each new change, state the actual
+coverage and its limits.
 
 ## Performance and removal plan
 
 Automatic source discovery is disabled, which bounds the single compiler to the
 explicit union source set. The design-system foundation adds no runtime
-JavaScript or DOM scans. Exact hashes, compressed sizes, structural inventories,
-and environment details live in the active single-bundle review rather than this
-architecture document.
+JavaScript or DOM scans. Measure compressed sizes, structural inventories, style
+recalculation, and runtime costs against the same revision's clean build; record
+the environment with the measurements outside the checkout.
 
 A real-route Chromium probe over 20 forced full-style passes found public-home
 style recalculation approximately flat (10.00→9.86 ms median for 292 nodes) and
@@ -207,10 +213,11 @@ ms per forced pass. An in-transit ablation attributed the private increase to
 Tailwind 4's compiler-generated registered/custom-property surface, not
 application runtime work. Removing or postprocessing that compiler-owned
 cross-engine fallback would be a compatibility change and is not part of this
-migration. Representative map-page timing remains an open release-evidence item.
+migration. That historical probe did not establish representative map-page
+performance and is not a benchmark of the current dependency versions.
 
-Tailwind watch mode retains a candidate after its sole template occurrence is
-deleted. Restarting with a clean one-shot build removes it. Therefore watcher
+Migration-era Tailwind watch mode retained a candidate after its sole template
+occurrence was deleted; a clean one-shot build removed it. Therefore watcher
 output is useful during development but is never parity evidence; browser
 certification begins from `npm run build` and a verified served manifest hash.
 The Vite watcher does correctly rebuild imported CSS changes and deletions,
@@ -222,3 +229,11 @@ Custom design-system rules may be removed only after all consumers of the
 affected product behavior have been intentionally redesigned and the same
 structural, computed-style, and pixel suites approve the change. Do not remove a
 rule just because a v4 utility has a similar name.
+
+## Candidate rewrite boundary
+
+Derive mechanical class-rewrite inputs from the entrypoints' explicit `@source`
+sets. Restrict rewrites to class-bearing sources in those sets; backend strings,
+fixtures, documentation, vendored files, and generated CSS are not blanket
+rewrite targets. Review changed filenames and scan for retired candidates after
+a rewrite to catch accidental changes outside compiler ownership.

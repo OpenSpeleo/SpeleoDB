@@ -86,23 +86,20 @@ after network retries stop.
 
 ## Verification and limits
 
-Regression cases cover SDK exhaustion and hostile delay headers, Git process and
-hook hangs, descendant-held pipes, cleanup timeouts, broker and lock retry
+Run retry regressions inside the existing application container. Cover Git
+process and hook hangs, descendant-held pipes, cleanup timeouts, broker and lock
 budgets, durable publication failures, lost workers, stale completion tokens,
-cleanup retention/admin recovery, and browser cancellation/body timeouts.
-Existing lifecycle/live-worker expectations were updated to the new contracts.
+cleanup retention/admin recovery, and browser cancellation/body timeouts. Use
+real PostgreSQL and the isolated worker broker for database/worker recovery, and
+verify the additive migration path.
 
-**Python and JavaScript tests have not been rerun**, following the user's
-instruction. Earlier successful test runs in other documents predate this change
-and do not validate it. When test execution is authorized, run them inside
-Docker, including real PostgreSQL/worker/process-containment cases and the
-migration path.
-
-After correcting the user's reported typing/lint failures, direct Docker checks
-passed: mypy checked all 705 source files, and Ruff checked `speleodb`,
-`config`, and `compose`. This included new unstaged files omitted by the hook's
-tracked file inventory. No full pre-commit hook run was performed by the
-assistant.
+GitLab integrations exercise the real configured service and actual connection
+refusal. Separate deterministic policy tests cover scripted SDK-boundary
+outcomes and delay budgets; they do not establish the behavior of a live server
+under arbitrary 429/5xx responses or hostile delay headers. Keep those evidence
+boundaries explicit and preserve the audited repository budget. See
+[GitLab test design](ci-gitlab-testing.md) and
+[Git process retry isolation](git-retry-testing.md).
 
 These limits do not impose one wall clock over every
 repository/database/filesystem operation. HTTP read timeouts bound inactivity,
