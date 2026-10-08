@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
+from time import monotonic
+from time import sleep
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypedDict
@@ -24,7 +26,10 @@ from django.templatetags.static import static
 from django.views import View
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError
 from requests.exceptions import RequestException
+from requests.exceptions import Timeout
 
 from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
@@ -55,6 +60,10 @@ COMPASS_SIDECAR_RELEASES_URL = (
 COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY = "frontend_public:compass_sidecar:release_info"
 COMPASS_SIDECAR_RELEASE_CACHE_TIMEOUT_SECONDS = 60 * 60  # 1 hour
 COMPASS_SIDECAR_FETCH_TIMEOUT_SECONDS = 5.0
+COMPASS_SIDECAR_FETCH_BUDGET_SECONDS = 1.0
+COMPASS_SIDECAR_RETRY_DELAY_SECONDS = 0.1
+COMPASS_SIDECAR_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+COMPASS_SIDECAR_CACHE_MISS = object()
 COMPASS_SIDECAR_GITHUB_RELEASE_DOWNLOAD_PATH_PATTERN = re.compile(
     r"/OpenSpeleo/speleodb_compass_sidecar/releases/download/[^/]+/[^/]+\.msi",
     flags=re.IGNORECASE,
@@ -138,6 +147,7 @@ def _resolve_compass_sidecar_msi_url(
     msi_url: str,
     *,
     fetch_timeout: float,
+    deadline: float,
 ) -> str:
     if _is_compass_sidecar_msi_download_url(msi_url):
         return msi_url
@@ -145,13 +155,12 @@ def _resolve_compass_sidecar_msi_url(
     if not _is_compass_sidecar_github_asset_api_url(msi_url):
         raise LatestReleaseError("Invalid Windows MSI release URL")
 
-    asset_response = requests.api.get(
+    asset_data: object = _fetch_compass_sidecar_json(
         msi_url,
         headers=COMPASS_SIDECAR_GITHUB_API_HEADERS,
-        timeout=fetch_timeout,
+        fetch_timeout=fetch_timeout,
+        deadline=deadline,
     )
-    asset_response.raise_for_status()
-    asset_data = asset_response.json()
     if not isinstance(asset_data, dict):
         raise LatestReleaseError("Invalid GitHub release asset payload")
 
@@ -162,6 +171,48 @@ def _resolve_compass_sidecar_msi_url(
         raise LatestReleaseError("Invalid GitHub browser download URL")
 
     return browser_download_url
+
+
+def _fetch_compass_sidecar_json(
+    url: str,
+    *,
+    fetch_timeout: float,
+    deadline: float,
+    headers: dict[str, str] | None = None,
+) -> object:
+    """Share a bounded retry budget across release and asset metadata requests."""
+    delay: float = COMPASS_SIDECAR_RETRY_DELAY_SECONDS
+    while True:
+        remaining: float = deadline - monotonic()
+        if remaining <= 0:
+            raise Timeout("Compass Sidecar release lookup budget exhausted")
+        response: requests.Response | None = None
+        try:
+            timeout: float = min(fetch_timeout, remaining)
+            if headers is None:
+                response = requests.api.get(url, timeout=timeout)
+            else:
+                response = requests.api.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()
+            payload: object = response.json()
+        except (RequestsConnectionError, Timeout, HTTPError) as exc:
+            if isinstance(exc, HTTPError) and (
+                exc.response is None
+                or exc.response.status_code
+                not in COMPASS_SIDECAR_RETRYABLE_STATUS_CODES
+            ):
+                raise
+            if delay >= deadline - monotonic():
+                raise
+        else:
+            if monotonic() >= deadline:
+                raise Timeout("Compass Sidecar release lookup budget exhausted")
+            return payload
+        finally:
+            if response is not None:
+                response.close()
+        sleep(delay)
+        delay *= 2
 
 
 def get_mobile_store_links() -> dict[str, str]:
@@ -196,26 +247,21 @@ def get_compass_sidecar_release_info(
     cache_timeout: int = COMPASS_SIDECAR_RELEASE_CACHE_TIMEOUT_SECONDS,
     fetch_timeout: float = COMPASS_SIDECAR_FETCH_TIMEOUT_SECONDS,
     releases_fallback_url: str = COMPASS_SIDECAR_RELEASES_URL,
-) -> CompassSidecarReleaseInfo:
-    fallback_payload: CompassSidecarReleaseInfo = {
-        "windows_url": releases_fallback_url,
-        "version": "latest",
-        "pub_date": None,
-    }
-
-    cached_payload = cache.get(cache_key)
+) -> CompassSidecarReleaseInfo | None:
+    cached_payload = cache.get(cache_key, COMPASS_SIDECAR_CACHE_MISS)
+    if cached_payload is None:
+        return None
 
     if isinstance(cached_payload, dict):
         cached_windows_url = cached_payload.get("windows_url")
+        if cached_windows_url == releases_fallback_url:
+            return None
         cached_version = cached_payload.get("version")
         cached_pub_date = cached_payload.get("pub_date")
         if (
             isinstance(cached_windows_url, str)
             and cached_windows_url
-            and (
-                cached_windows_url == releases_fallback_url
-                or _is_compass_sidecar_msi_download_url(cached_windows_url)
-            )
+            and _is_compass_sidecar_msi_download_url(cached_windows_url)
             and isinstance(cached_version, str)
             and cached_version
             and (cached_pub_date is None or isinstance(cached_pub_date, str))
@@ -227,13 +273,12 @@ def get_compass_sidecar_release_info(
             }
 
     try:
-        response = requests.api.get(
+        deadline: float = monotonic() + COMPASS_SIDECAR_FETCH_BUDGET_SECONDS
+        data: object = _fetch_compass_sidecar_json(
             latest_json_url,
-            timeout=fetch_timeout,
+            fetch_timeout=fetch_timeout,
+            deadline=deadline,
         )
-        response.raise_for_status()
-
-        data = response.json()
         if not isinstance(data, dict):
             raise LatestReleaseError("Invalid latest.json payload format")  # noqa: TRY301
 
@@ -251,6 +296,7 @@ def get_compass_sidecar_release_info(
         msi_url = _resolve_compass_sidecar_msi_url(
             msi_url,
             fetch_timeout=fetch_timeout,
+            deadline=deadline,
         )
 
         version = data.get("version")
@@ -280,10 +326,10 @@ def get_compass_sidecar_release_info(
         )
         cache.set(
             cache_key,
-            fallback_payload,
+            None,
             timeout=cache_timeout,
         )
-        return fallback_payload
+        return None
 
 
 def redirect_authenticated_user[RT](
@@ -403,9 +449,17 @@ class MobileDownloadPageView(TemplateView):
         context = super().get_context_data(**kwargs)
         context.update(get_mobile_store_links())
         release_info = get_compass_sidecar_release_info()
-        context["compass_sidecar_windows_url"] = release_info["windows_url"]
-        context["compass_sidecar_version"] = release_info["version"]
-        context["compass_sidecar_pub_date"] = release_info["pub_date"]
+        context["compass_sidecar_windows_url"] = (
+            release_info["windows_url"]
+            if release_info
+            else COMPASS_SIDECAR_RELEASES_URL
+        )
+        context["compass_sidecar_version"] = (
+            release_info["version"] if release_info else "latest"
+        )
+        context["compass_sidecar_pub_date"] = (
+            release_info["pub_date"] if release_info else None
+        )
         context["compass_sidecar_releases_url"] = COMPASS_SIDECAR_RELEASES_URL
         return context
 

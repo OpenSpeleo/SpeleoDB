@@ -61,39 +61,51 @@ rejected.
 
 ## Cache, Failure, and Request Behavior
 
-The resolved payload contains the Windows URL, version, and optional publication
-date. It uses Django's cache for one hour by default. A cached payload is reused
-only when its Windows URL is either a valid direct Sidecar MSI link or the
-configured releases-page fallback. An old cached asset API URL or any invalid
-cached URL is ignored so that SpeleoDB performs a fresh resolution instead of
-serving a non-browser or unsafe link.
+The resolver returns the Windows URL, version, and optional publication date, or
+`None` when release information is unavailable. Both results use Django's cache
+for one hour by default. Cached direct URLs must still pass validation. Legacy
+cached releases-page fallbacks are treated as empty results; stale asset API
+URLs or invalid cached URLs trigger fresh resolution.
 
 On a cache miss, a direct URL requires one request for `latest.json`; an asset
-API URL requires one additional small JSON metadata request. A valid cache hit
-requires no network request. SpeleoDB never downloads or buffers the MSI, so
-request cost and memory use are independent of installer size.
+API URL requires one additional small JSON metadata request. Both requests and
+all retries share a one-second monotonic deadline. Each request's timeout is
+capped by the remaining budget. Connection errors, timeouts, and HTTP 429, 500,
+502, 503, and 504 are retried with exponential delays starting at 100 ms, then
+200 ms and 400 ms when time remains. No retry starts after the deadline, and no
+sleep is taken if it would consume the remaining budget. Permanent HTTP errors,
+invalid JSON, and failed payload or URL validation are not retried.
 
-If `latest.json`, the GitHub asset lookup, payload parsing, or URL validation
-fails, SpeleoDB logs a warning and returns the configured GitHub releases page
-with version `latest` and no publication date. That fallback is cached using the
-same timeout to avoid repeatedly calling a failing upstream during page loads.
-The separate “View all releases” link remains available on the page.
+When resolution fails, the resolver logs one warning and caches `None`, avoiding
+repeated requests during an upstream outage. The download view owns
+presentation: an empty result displays the GitHub releases-page link with
+version `latest` and no publication date. The separate “View all releases” link
+remains available. A valid cache hit requires no network request. SpeleoDB never
+downloads or buffers the MSI, so request cost and memory use are independent of
+installer size.
 
 ## Testing and Operational Verification
 
-Automated tests should use mocked responses for deterministic coverage of:
+`CompassSidecarReleaseFetchTests` uses controlled responses and a monotonic
+clock to test successful extraction, caching, URL validation, retryable and
+permanent failures, the exponential delay sequence, and the budget shared by
+release and asset requests. Tests also verify that exhaustion returns and caches
+`None` without further requests, and that the view renders its releases-page
+fallback.
 
-- A valid direct MSI URL, which must be returned without an asset API request.
-- A valid asset API URL resolved through `browser_download_url`.
-- Rejection of wrong repositories, schemes, hosts, path forms, nonnumeric asset
-  IDs, credentials, query strings, fragments, and non-MSI download URLs.
-- Missing or malformed GitHub metadata and invalid resolved download URLs.
-- Valid direct and fallback cache hits, plus fresh resolution for stale API or
-  invalid cached URLs.
-- Network failures at either request and the releases-page fallback behavior.
+The live GitHub check remains in the ordinary suite without an offline skip. It
+validates a direct MSI URL and metadata when available, or the explicit cached
+empty result after a failed lookup. It does not require GitHub to be available
+for the application contract to pass. Deterministic success tests independently
+require valid metadata, so a broken resolver cannot pass merely by always
+returning `None`.
 
-The live GitHub test verifies that the current `latest.json` shape resolves to
-an HTTPS download URL under the Sidecar repository and ending in `.msi`.
+Run these checks inside the existing application container:
+
+```sh
+docker exec -w /app speleodb-monorepo-django pytest frontend_public/tests/test_views.py
+```
+
 Operational checks should also open the public download page, confirm the
 Windows button targets that browser URL, and verify that following it downloads
 the installer rather than displaying GitHub API JSON. If releases begin falling
