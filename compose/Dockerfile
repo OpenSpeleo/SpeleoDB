@@ -10,7 +10,7 @@ ENV BUILD_ENV=${BUILD_ENVIRONMENT}
 WORKDIR ${APP_HOME}
 
 # devcontainer dependencies and utils
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --no-install-recommends -y \
     sudo \
     git \
     bash-completion \
@@ -91,23 +91,19 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --extra ${BUILD_ENV}
 
 COPY ./compose/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && chmod +x /entrypoint
 
 COPY ./compose/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
+RUN sed -i 's/\r$//g' /start && chmod +x /start
 
 COPY ./compose/celery/worker/start /start-celeryworker
-RUN sed -i 's/\r$//g' /start-celeryworker
-RUN chmod +x /start-celeryworker
+RUN sed -i 's/\r$//g' /start-celeryworker && chmod +x /start-celeryworker
 
 COPY ./compose/celery/beat/start /start-celerybeat
-RUN sed -i 's/\r$//g' /start-celerybeat
-RUN chmod +x /start-celerybeat
-
 # Create devcontainer user and add it to sudoers
-RUN groupadd --gid 1000 dev-user \
+RUN sed -i 's/\r$//g' /start-celerybeat \
+    && chmod +x /start-celerybeat \
+    && groupadd --gid 1000 dev-user \
     && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
     && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
     && chmod 0440 /etc/sudoers.d/dev-user \

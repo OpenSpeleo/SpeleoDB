@@ -1,9 +1,11 @@
+---
 name: Manual GitLab Cleanup
 
 on:
   # schedule:
-  #   - cron: "0 10 * * *" # 10 AM UTC corresponds to 5 AM ET during Standard Time
-  workflow_dispatch: # Allows manual triggering
+  #   - cron: "0 10 * * *"
+  #     # 10 AM UTC corresponds to 5 AM ET during Standard Time
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   cleanup:
@@ -26,7 +28,7 @@ jobs:
 
     env:
       DJANGO_DEBUG: True
-      USE_DOCKER: yes
+      USE_DOCKER: True
       # no effect. This job does not access the DB
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
       POSTGRES_HOST: localhost

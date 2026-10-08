@@ -1,3 +1,4 @@
+---
 exclude: "^bin/|/migrations/|.*.dist|.workdir/|.uv/|.venv/"
 
 default_language_version:
@@ -50,7 +51,7 @@ repos:
       - id: djlint-django
 
   - repo: https://github.com/PyCQA/autoflake
-    rev: v2.4.0 # check for the latest version
+    rev: v2.4.0  # check for the latest version
     hooks:
       - id: autoflake
         args:
@@ -73,6 +74,39 @@ repos:
         types_or: [markdown]
         args: [--prose-wrap=always]
         # args: [--prose-wrap=always, --embedded-language-formatting=off]
+
+  # -------------------------
+  # CI formatting
+  # -------------------------
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        # Accept GitHub Actions `on` and capitalized YAML booleans.
+        args:
+          - --config-data
+          - |
+            extends: default
+            rules:
+              truthy:
+                allowed-values: ['true', 'false', 'True', 'False', 'on']
+
+  - repo: https://github.com/shenxianpeng/hadolint-pre-commit
+    # This wrapper bundles Hadolint 2.15.1 in prek's isolated environment.
+    rev: v2.15.1.2
+    hooks:
+      - id: hadolint
+        # Allow latest image tags and distro-managed APT package versions.
+        args:
+          - --ignore
+          - DL3007  # Allow `latest` Docker image tags.
+          - --ignore
+          - DL3008  # Allow APT packages without explicit version pins.
 
   # ========================================================================= #
   #                           DEPENDENCY MANAGEMENT                           #
@@ -117,7 +151,8 @@ repos:
   #                               TYPE CHECKING                               #
   # ========================================================================= #
 
-  # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date dependencies
+  # Use a Local Workflow to ensure that `mypy` picks up all the local up-to-date
+  # dependencies
   - repo: local
     hooks:
       - args: ["--config-file", "pyproject.toml", "."]
@@ -134,7 +169,9 @@ repos:
         name: Type-check all three TypeScript environments
         entry: bun run typecheck
         language: system
-        files: (\.ts$|(^|/)tsconfig[^/]*\.json$|(^|/)(package\.json|bun\.lock|bunfig\.toml|entries\.json)$)
+        files: >-
+          (?x)(\.ts$|(^|/)tsconfig[^/]*\.json$|
+          (^|/)(package\.json|bun\.lock|bunfig\.toml|entries\.json)$)
         pass_filenames: false
         require_serial: true
 
@@ -154,7 +191,8 @@ repos:
             python manage.py dump_url_config > /dev/null;
             HASH_AFTER=$(sha256sum "$FILE" | awk "{print \$1}");
             if [ "$HASH_BEFORE" != "$HASH_AFTER" ]; then
-              echo "❌ URL config changed after running dump_url_config. Please review the changes to \`$FILE\`.";
+              echo "❌ URL config changed after running dump_url_config." \
+                "Please review the changes to \`$FILE\`.";
               exit 1;
             fi;
           '
@@ -162,7 +200,7 @@ repos:
         pass_filenames: false
 
   # ========================================================================= #
-  #                               FRONTEND TYPESCRIPT                             #
+  #                            FRONTEND TYPESCRIPT                            #
   # ========================================================================= #
 
   - repo: local

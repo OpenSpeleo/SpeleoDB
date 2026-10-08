@@ -1,3 +1,4 @@
+---
 volumes:
   speleodb_local_postgres_data: {}
   speleodb_local_postgres_data_backups: {}
@@ -70,7 +71,12 @@ services:
     image: redis:8-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_redis"
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
     volumes:
       - speleodb_local_redis_data:/data
     ports:
@@ -84,7 +90,8 @@ services:
   django-webserver:
     <<: *django
     image: speleodb_local_django_webserver
-    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django_webserver"
+    container_name: >-
+      ${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django_webserver
     command: /start
 
   celery-worker: &celery-worker
@@ -119,7 +126,8 @@ services:
       # Kanchi uses Compose DNS and its own database. Never inherit Django's
       # entrypoint, source mount, storage, GitLab, or email credentials here.
       CELERY_BROKER_URL: "${KANCHI_CELERY_BROKER_URL:-redis://redis:6379/1}"
-      DATABASE_URL: "postgresql+psycopg://kanchi:${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}@postgres:5432/kanchi"
+      DATABASE_URL: "postgresql+psycopg://kanchi:\
+        ${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}@postgres:5432/kanchi"
       WS_HOST: "0.0.0.0"
       WS_PORT: "8765"
       AUTH_ENABLED: "true"
@@ -128,8 +136,10 @@ services:
       AUTH_GITHUB_ENABLED: "false"
       BASIC_AUTH_USERNAME: "${KANCHI_USERNAME:-kanchi-local}"
       BASIC_AUTH_PASSWORD: "${KANCHI_PASSWORD:-kanchi-local-only}"
-      SESSION_SECRET_KEY: "${KANCHI_SESSION_SECRET_KEY:-speleodb-local-session-secret-not-for-production}"
-      TOKEN_SECRET_KEY: "${KANCHI_TOKEN_SECRET_KEY:-speleodb-local-token-secret-not-for-production}"
+      SESSION_SECRET_KEY: "${KANCHI_SESSION_SECRET_KEY:-\
+        speleodb-local-session-secret-not-for-production}"
+      TOKEN_SECRET_KEY: "${KANCHI_TOKEN_SECRET_KEY:-\
+        speleodb-local-token-secret-not-for-production}"
       ALLOWED_EMAIL_PATTERNS: "${KANCHI_USERNAME:-kanchi-local}"
       ALLOWED_HOSTS: "localhost,127.0.0.1,kanchi"
       ALLOWED_ORIGINS: "http://localhost:8765,http://127.0.0.1:8765"
@@ -141,14 +151,16 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8765/api/health', timeout=5)"
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:8765/api/health', timeout=5)
       interval: 15s
       timeout: 10s
       retries: 20
       start_period: 30s
 
-  # A different Redis process isolates Pub/Sub events and remote-control traffic,
-  # which Redis logical database numbers alone do not isolate.
+  # A different Redis process isolates Pub/Sub events and remote-control
+  # traffic, which Redis logical database numbers alone do not isolate.
   celery-test-redis:
     image: redis:8-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_test_celery_redis"
@@ -194,7 +206,8 @@ services:
       - speleodb_local_gitlab_logs:/var/log/gitlab
       - speleodb_local_gitlab_data:/var/opt/gitlab
       - ./compose/gitlab/healthcheck:/opt/speleodb/healthcheck:ro
-      - ./compose/gitlab/ensure_bootstrap_token.rb:/opt/speleodb/ensure_bootstrap_token.rb:ro
+      - "./compose/gitlab/ensure_bootstrap_token.rb:\
+        /opt/speleodb/ensure_bootstrap_token.rb:ro"
     healthcheck:
       test: ["CMD", "/bin/bash", "/opt/speleodb/healthcheck"]
       interval: 30s

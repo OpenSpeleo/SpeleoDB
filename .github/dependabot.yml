@@ -1,3 +1,4 @@
+---
 # Config for Dependabot updates. See Documentation here:
 # https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 
@@ -14,8 +15,9 @@ updates:
       interval: "weekly"
 
   # Enable version updates for Docker
-  # We need to specify each Dockerfile in a separate entry because Dependabot doesn't
-  # support wildcards or recursively checking subdirectories. Check this issue for updates:
+  # We need to specify each Dockerfile in a separate entry because Dependabot
+  # doesn't support wildcards or recursively checking subdirectories. Check this
+  # issue for updates:
   # https://github.com/dependabot/dependabot-core/issues/2178
   - package-ecosystem: "docker"
     open-pull-requests-limit: 25

@@ -1,3 +1,4 @@
+---
 name: CI
 
 # Enable Buildkit and let compose use it to speed up image building
@@ -67,7 +68,7 @@ jobs:
             --show-diff-on-failure \
             --color always
         env:
-          DJANGO_DEBUG: True # necessary to collect all URLs
+          DJANGO_DEBUG: True  # necessary to collect all URLs
 
   js-tests:
     runs-on: ubuntu-latest
@@ -163,10 +164,10 @@ jobs:
       - uses: FedericoCarboni/setup-ffmpeg@v3
         id: setup-ffmpeg
         with:
-          # A specific version to download, may also be "release" or a specific version
-          # like "6.1.0". At the moment semver specifiers (i.e. >=6.1.0) are supported
-          # only on Windows, on other platforms they are allowed but version is matched
-          # exactly regardless.
+          # A specific version to download, may also be "release" or a specific
+          # version like "6.1.0". At the moment semver specifiers (i.e. >=6.1.0)
+          # are supported only on Windows, on other platforms they are allowed
+          # but version is matched exactly regardless.
           ffmpeg-version: release
 
       - name: Install Dependencies
@@ -186,9 +187,12 @@ jobs:
       - name: Run Tests
         run: |
           # Repository writes belong to pytest's audited nine-repository budget.
-          python manage.py check_gitlab --read-only --settings config.settings.test
-          python manage.py create_s3_local_buckets --settings config.settings.test
-          python manage.py validate_templates --settings config.settings.test --ignore-app allauth
+          python manage.py check_gitlab --read-only \
+            --settings config.settings.test
+          python manage.py create_s3_local_buckets \
+            --settings config.settings.test
+          python manage.py validate_templates --settings config.settings.test \
+            --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
           pytest -o faulthandler_timeout=60 --durations=20
         env:
@@ -240,7 +244,6 @@ jobs:
       AWS_S3_REGION_NAME: us-east-1
       AWS_STORAGE_BUCKET_NAME: browser-tests
       AWS_S3_CUSTOM_DOMAIN: storage.invalid
-      VIEWER_BROWSER_ARTIFACTS: ${{ runner.temp }}/speleodb-viewer-browser
 
     steps:
       - name: Checkout Code Repository
@@ -272,6 +275,8 @@ jobs:
       - name: Run serial browser workloads against the Django live server
         # This pytest case wraps the complete browser suite, bounded at 1800s.
         # Diagnose a stuck wrapper/teardown after that deadline, not at 60s.
+        env:
+          VIEWER_BROWSER_ARTIFACTS: ${{ runner.temp }}/speleodb-viewer-browser
         run:
           pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create
           -o faulthandler_timeout=1860 --durations=20

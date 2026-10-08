@@ -1,3 +1,4 @@
+---
 name: Update Browserslist DB
 
 on:
@@ -43,7 +44,8 @@ jobs:
             Automated update for Browserslist's caniuse-lite data.
 
             ## Why
-            Keep browser compatibility data fresh for Tailwind/PostCSS tooling and remove stale caniuse-lite warnings.
+            Keep browser compatibility data fresh for Tailwind/PostCSS tooling
+            and remove stale caniuse-lite warnings.
 
             ## Changes
             - Updated `bun.lock` via `bunx --bun update-browserslist-db@latest`
