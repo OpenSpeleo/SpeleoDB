@@ -54,15 +54,20 @@ def collected_static_root() -> Generator[str]:
 
 @pytest.fixture
 def live_server(
-    live_server: LiveServer, collected_static_root: str
+    request: pytest.FixtureRequest, collected_static_root: str
 ) -> Generator[LiveServer]:
     """Let pytest-django serve a locally collected production asset tree."""
     # With an explicit staticfiles AppConfig, pytest-django serves STATIC_ROOT.
     # Use standard collection and preserve its server lifecycle and DB helpers.
     with override_settings(
-        STATIC_ROOT=collected_static_root, STORAGES=_local_static_storage_backends()
+        STATIC_ROOT=collected_static_root,
+        STATIC_URL="/static/",
+        STORAGES=_local_static_storage_backends(),
     ):
-        yield live_server
+        # Resolve the underlying fixture after overriding STATIC_URL: Django's
+        # handler captures it at startup and refuses absolute CDN URLs.
+        server: LiveServer = request.getfixturevalue("live_server")
+        yield server
 
 
 @pytest.fixture

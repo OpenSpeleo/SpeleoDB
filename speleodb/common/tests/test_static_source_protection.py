@@ -18,6 +18,7 @@ from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.apps import StaticFilesConfig
 from django.contrib.staticfiles.views import serve
 from django.core.management import call_command
+from django.http import FileResponse
 from django.test import Client
 from django.test import override_settings
 from django.urls import path
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from urllib.parse import SplitResult
 
+    from pytest_django.fixtures import Settings
     from pytest_django.live_server_helper import LiveServer
 
     from speleodb.common.templatetags.vite_assets import ManifestEntry
@@ -105,6 +107,14 @@ def test_application_configures_both_source_protected_finders() -> None:
         *StaticFilesConfig.ignore_patterns,
         "*.ts",
     ]
+
+
+@pytest.fixture
+def live_server(request: pytest.FixtureRequest, settings: Settings) -> LiveServer:
+    # CI starts with a CDN URL; set it before the server captures its static URL.
+    settings.STATIC_URL = "https://assets.example.test/staticfiles/"
+    server: LiveServer = request.getfixturevalue("live_server")
+    return server
 
 
 @pytest.mark.django_db(transaction=True)
@@ -207,10 +217,12 @@ def test_emitted_scripts_workers_vendors_and_styles_remain_deliverable(
     )
     client = Client()
     response = client.get(f"/static/{filename}")
-    try:
-        assert response.status_code == HTTPStatus.OK
-    finally:
-        response.close()
+    assert response.status_code == HTTPStatus.OK
+    assert isinstance(response, FileResponse)
+    # Exhaust Django's test-client wrapper so it closes the file without
+    # closing the surrounding test transaction's database connection.
+    assert b"".join(response) == f"fixture: {filename}".encode()
+    assert response.closed
 
 
 @pytest.mark.parametrize(

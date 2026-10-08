@@ -91,14 +91,22 @@ remove files previously published outside Django's collection workflow.
 The root pytest `live_server` fixture collects assets once per session into a
 temporary local `STATIC_ROOT`, preserving the configured media storage. It wraps
 pytest-django's existing server fixture without replacing its lifecycle or HTTP
-handler. Settings are overridden only while collecting and during each
-live-server test, so other tests retain their original storage configuration.
-This is necessary because pytest-django recognizes only the literal
-`django.contrib.staticfiles` entry when choosing finder-backed serving; an
-explicit `AppConfig` uses its normal collected-file handler instead. Browser and
-upload integration tests therefore exercise the standard collected artifact. A
-real HTTP contract compares the served compiled script with its build output,
-checks vendor delivery, and verifies raw TypeScript returns 404.
+handler. Before resolving the underlying server fixture, it sets `STATIC_URL` to
+`/static/`: Django captures that URL when the handler starts and does not serve
+local requests for an absolute CDN URL. Settings are overridden only while
+collecting and during each live-server test, so other tests retain their
+original storage configuration. This is necessary because pytest-django
+recognizes only the literal `django.contrib.staticfiles` entry when choosing
+finder-backed serving; an explicit `AppConfig` uses its normal collected-file
+handler instead. Browser and upload integration tests therefore exercise the
+standard collected artifact. A real HTTP contract compares the served compiled
+script with its build output, checks vendor delivery, and verifies raw
+TypeScript returns 404, starting from an absolute CDN URL as used in CI.
+Static-view tests consume streaming responses through Django's test client
+instead of calling `response.close()` directly; the client's wrapper preserves
+the enclosing database transaction while closing the file. Run these contracts
+on PostgreSQL as well as local SQLite, whose in-memory backend ignores
+connection closes and can mask teardown errors.
 
 ## Verification and performance
 
