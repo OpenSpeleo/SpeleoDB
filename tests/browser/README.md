@@ -139,8 +139,21 @@ return deterministic JSON without opening a repository. The wrapper verifies URL
 resolution before launching browsers, and browser cases assert fixture headers
 and data. Controller contexts, URL reversal, native XHR and its synchronous
 timing remain unchanged. Mutations use browser interception. The manifest is
-required. CI runs this step after the serial backend suite so database test load
-does not overlap browser measurements.
+required. CI runs the `browser-tests` job (displayed as **Chromium and WebKit**)
+on its own runner, independently of the `pytest` backend job. The browser job
+installs its own locked dependencies, builds assets and runs both engines
+serially, with its own PostgreSQL service. Backend tests cannot compete with
+browser measurements for that runner's CPU or memory. The backend job still
+installs Bun and builds assets for its upload subprocess and asset contracts,
+but does not install or run Playwright browsers.
+
+The browser job supplies dummy GitLab/storage settings and does not receive a
+GitLab token or start S3/Redis services: route fixtures are database-only,
+mutations are intercepted and static assets are collected locally. It also
+passes `--gitlab-audit-deny-create`, enforcing zero remote project creations.
+Its audit artifact is `browser-gitlab-creation-audit`, separate from the backend
+job's `gitlab-creation-audit`; the browser report remains
+`browser-verification`.
 
 Playwright's per-case progress streams directly to the console while the Django
 wrapper runs. The wrapper has a 30-minute subprocess deadline and terminates the

@@ -106,7 +106,6 @@ jobs:
       - name: Build checked Django-served assets
         run: bun run build
 
-  # With no caching at all the entire ci process takes 3m to complete!
   pytest:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
@@ -178,7 +177,7 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      - name: Install browser test dependencies
+      - name: Install frontend dependencies for upload and asset contracts
         run: test -s bun.lock && bun install --frozen-lockfile
 
       - name: Build checked assets for Django contracts
@@ -192,7 +191,7 @@ jobs:
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
           pytest -o faulthandler_timeout=60 --durations=20
-        env: &django-test-environment
+        env:
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}
@@ -204,7 +203,68 @@ jobs:
           AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
           AWS_S3_ENDPOINT_URL: "http://localhost:9000"
           AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
-          VIEWER_BROWSER_ARTIFACTS: ${{ runner.temp }}/speleodb-viewer-browser
+
+      - name: Upload GitLab creation audit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitlab-creation-audit
+          path: .artifacts/gitlab/
+          include-hidden-files: true
+
+  browser-tests:
+    name: Chromium and WebKit
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+
+    env:
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      # Browser fixtures create database rows only. No remote GitLab credentials
+      # or S3 service are needed; uploads and viewer APIs are intercepted.
+      GITLAB_GROUP_ID: "0"
+      GITLAB_GROUP_NAME: browser-tests
+      GITLAB_HOST_URL: gitlab.invalid
+      GITLAB_TOKEN: unused
+      MAPBOX_API_TOKEN: ${{ secrets.MAPBOX_API_TOKEN }}
+      AWS_ACCESS_KEY_ID: unused
+      AWS_SECRET_ACCESS_KEY: unused
+      AWS_S3_REGION_NAME: us-east-1
+      AWS_STORAGE_BUCKET_NAME: browser-tests
+      AWS_S3_CUSTOM_DOMAIN: storage.invalid
+      VIEWER_BROWSER_ARTIFACTS: ${{ runner.temp }}/speleodb-viewer-browser
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "latest-known"
+          python-version: "3.14"
+          activate-environment: true
+
+      - name: Install Django harness dependencies
+        run: uv sync --extra local --frozen
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install frontend dependencies
+        run: test -s bun.lock && bun install --frozen-lockfile
+
+      - name: Build checked assets for browser workloads
+        run: bun run build
 
       - name: Install the unchanged Chromium and WebKit runtimes
         run: bunx --bun playwright install --with-deps chromium webkit
@@ -213,15 +273,14 @@ jobs:
         # This pytest case wraps the complete browser suite, bounded at 1800s.
         # Diagnose a stuck wrapper/teardown after that deadline, not at 60s.
         run:
-          pytest tests/browser/test_django_browser.py -o faulthandler_timeout=1860
-          --durations=20
-        env: *django-test-environment
+          pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create
+          -o faulthandler_timeout=1860 --durations=20
 
       - name: Upload GitLab creation audit
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gitlab-creation-audit
+          name: browser-gitlab-creation-audit
           path: .artifacts/gitlab/
           include-hidden-files: true
 
