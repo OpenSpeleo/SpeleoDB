@@ -109,6 +109,40 @@ describe('Modal', () => {
             vi.useRealTimers();
         });
 
+        it.each(['close', 'Escape'])('does not initialize a dialog removed by %s before its delayed callback', method => {
+            vi.useFakeTimers();
+            try {
+                const onOpen = vi.fn(() => document.getElementById('dialog-input')!.focus());
+                Modal.open('m1', Modal.base('m1', 'Title', '<input id="dialog-input">'), onOpen);
+                if (method === 'close') Modal.close('m1');
+                else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+                expect(document.getElementById('m1')).toBeNull();
+                expect(() => vi.advanceTimersByTime(50)).not.toThrow();
+                expect(onOpen).not.toHaveBeenCalled();
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it('initializes only the current dialog after replacement with the same id', () => {
+            vi.useFakeTimers();
+            try {
+                const staleSetup = vi.fn();
+                const currentSetup = vi.fn(() => document.getElementById('current-input')!.focus());
+                Modal.open('m1', Modal.base('m1', 'Previous', '<input id="previous-input">'), staleSetup);
+                Modal.open('m1', Modal.base('m1', 'Current', '<input id="current-input">'), currentSetup);
+                vi.advanceTimersByTime(50);
+
+                expect(staleSetup).not.toHaveBeenCalled();
+                expect(currentSetup).toHaveBeenCalledOnce();
+                expect(document.activeElement).toBe(document.getElementById('current-input'));
+                Modal.close('m1');
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
         it('works without onOpen callback', () => {
             const html = Modal.base('m1', 'Title', 'Content');
 

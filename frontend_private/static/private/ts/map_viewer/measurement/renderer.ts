@@ -1,7 +1,8 @@
+import { Renderer } from '../map/renderer.ts';
 import type { Point } from 'geojson';
 import type { MeasurementFeature, MeasurementRecord, MeasurementDraft } from '../../../../../../ts-types/domain/measurement.ts';
 import type { MeasurementCollection, MeasurementPreview, MeasurementRendererMap } from '../../../../../../ts-types/domain/measurement-renderer.ts';
-import type { MapboxLayer, MapboxPaint, MapboxMarker } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer, RendererPaint, RendererMarker } from '../../../../../../ts-types/domain/renderer.ts';
 import { DEFAULTS } from '../config.ts';
 import { geoJSONLineWidth } from '../map/line_rendering.ts';
 import { createMeasurement, measurementFeatures } from './geometry.ts';
@@ -44,12 +45,12 @@ function capsuleImage() {
     return { width: size, height: size, data };
 }
 
-function layersFor(kind: string): MapboxLayer[] {
+function layersFor(kind: string): RendererLayer[] {
     const source = sourceId(kind);
     const lineFilter = ['==', ['get', 'role'], 'line'];
-    const linePaint: MapboxPaint = { 'line-color': settings.LINE_COLOR, 'line-width': geoJSONLineWidth(settings.LINE_WIDTH) };
+    const linePaint: RendererPaint = { 'line-color': settings.LINE_COLOR, 'line-width': geoJSONLineWidth(settings.LINE_WIDTH) };
     if (kind === 'draft') linePaint['line-dasharray'] = settings.DRAFT_DASH_ARRAY;
-    const layers: MapboxLayer[] = [
+    const layers: RendererLayer[] = [
         {
             id: `${source}-casing`, type: 'line', source, filter: lineFilter,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -97,7 +98,7 @@ export class MeasurementRenderer {
     declare destroyed: boolean;
     declare draft: MeasurementPreview | null;
     declare draftFrame: number | null;
-    declare liveMarker: MapboxMarker | null;
+    declare liveMarker: RendererMarker | null;
     declare liveLabel: HTMLDivElement | null;
     declare completedData: MeasurementCollection;
     declare draftData: MeasurementCollection;
@@ -179,10 +180,10 @@ export class MeasurementRenderer {
                 this.liveLabel.style.setProperty(`--measurement-label-${name}`, value);
             }
             // One live Marker bypasses symbol-placement fading when numeric text
-            // changes continuously. Mapbox still owns projection and occlusion.
-            this.liveMarker = new mapboxgl.Marker({
+            // changes continuously. Renderer still owns projection and occlusion.
+            this.liveMarker = new Renderer.Marker({
                 element: this.liveLabel, anchor: 'center',
-                occludedOpacity: settings.LIVE_LABEL_OCCLUDED_OPACITY,
+                opacityWhenCovered: settings.LIVE_LABEL_OCCLUDED_OPACITY,
             }).setLngLat((feature.geometry as Point).coordinates).addTo(this.map);
         } else {
             this.liveMarker.setLngLat((feature.geometry as Point).coordinates);

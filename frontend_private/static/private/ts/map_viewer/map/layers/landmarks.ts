@@ -1,11 +1,13 @@
+import { createLandmarkLayers } from '@speleodb/map-viewer';
+import type { ExpressionSpecification } from 'maplibre-gl';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
-import type { MapPointCollection, MapboxValue, LandmarkPointProperties } from '../../../../../../../ts-types/domain/mapbox.ts';
+import type { MapPointCollection, RendererLayer, LandmarkPointProperties } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { DisplayCategory } from '../../../../../../../ts-types/domain/map-display.ts';
 import { Colors } from '../colors.ts';
-import { removeLayersAndSource } from './source_lifecycle.ts';
+import { removeLayersAndSource, addOwnedSource, getSourceData } from './source_lifecycle.ts';
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 interface LandmarkLayerOwner {
     setCategoryVisibility(category: DisplayCategory, visible: boolean): Promise<ViewerUpdateResult> | undefined;
@@ -27,23 +29,22 @@ export function addLandmarkLayer(data: MapPointCollection<LandmarkPointPropertie
         return;
     }
 
-    // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
+    // MapLibre requires promoteId for string IDs - copy feature.id to properties.id
     data.features.forEach(feature => {
         if (feature.id && !feature.properties.id) {
             feature.properties.id = feature.id;
         }
     });
 
-    map.addSource(sourceId, {
+    addOwnedSource(map, sourceId, {
         type: 'geojson',
         data: data,
         promoteId: 'id'
     });
 
     // Determine initial visibility based on state
-    const visibility = State.landmarksVisible ? 'visible' : 'none';
-    const landmarkColorExpression: MapboxValue = ['coalesce', ['get', 'collection_color'], Colors.FALLBACK_COLOR];
-    const landmarkHaloColorExpression: MapboxValue = [
+    const landmarkColorExpression: ExpressionSpecification = ['coalesce', ['get', 'collection_color'], Colors.FALLBACK_COLOR];
+    const landmarkHaloColorExpression: ExpressionSpecification = [
         'case',
         ['==', ['get', 'collection_color'], '#ffffff'],
         '#0f172a',
@@ -51,48 +52,17 @@ export function addLandmarkLayer(data: MapPointCollection<LandmarkPointPropertie
     ];
 
     // Landmark symbol layer (triangle marker visible from far zoom)
-    map.addLayer({
-        id: 'landmarks-layer',
-        type: 'symbol',
-        source: sourceId,
-        minzoom: ZOOM_LEVELS.LANDMARK_SYMBOL,
-        layout: {
-            'text-field': '▼',  // Triangle pointing down
-            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-size': ['interpolate', ['linear'], ['zoom'], 6, 10, 10, 14, 14, 20, 18, 28],
-            'text-allow-overlap': true,
-            'text-ignore-placement': true,
-            'visibility': visibility
-        },
-        paint: {
-            'text-color': landmarkColorExpression,
-            'text-halo-color': landmarkHaloColorExpression,
-            'text-halo-width': 2,
-            'text-halo-blur': 0.5
-        }
-    });
-
     // Landmark labels (visible from moderate zoom)
-    map.addLayer({
-        id: 'landmarks-labels',
-        type: 'symbol',
-        source: sourceId,
-        minzoom: ZOOM_LEVELS.LANDMARK_LABEL,
-        layout: {
-            'text-field': ['get', 'name'],
-            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 1.5],
-            'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 12, 18, 14],
-            'text-anchor': 'top',
-            'text-allow-overlap': false,
-            'visibility': visibility
-        },
-        paint: {
-            'text-color': landmarkColorExpression,
-            'text-halo-color': landmarkHaloColorExpression,
-            'text-halo-width': 1.5
-        }
+    // Triangle pointing down is supplied by the common landmark layer factory.
+    const layers = createLandmarkLayers({
+        sourceId, markerId: 'landmarks-layer', labelId: 'landmarks-labels',
+        markerMinZoom: ZOOM_LEVELS.LANDMARK_SYMBOL, labelMinZoom: ZOOM_LEVELS.LANDMARK_LABEL,
+        markerSize: ['interpolate', ['linear'], ['zoom'], 6, 10, 10, 14, 14, 20, 18, 28],
+        labelSize: ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 12, 18, 14],
+        color: landmarkColorExpression, haloColor: landmarkHaloColorExpression,
+        visible: State.landmarksVisible,
     });
+    layers.forEach(layer => map.addLayer(layer as RendererLayer));
 }
 
 export function toggleLandmarkVisibility(this: Pick<LandmarkLayerOwner, 'setCategoryVisibility'>, isVisible: boolean) {
@@ -104,8 +74,8 @@ export function revertLandmarkPosition(landmarkId: EntityId, originalCoords: [nu
     if (!map) return;
 
     const source = map.getSource('landmarks-source');
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === landmarkId);
         if (feature) {
             feature.geometry.coordinates = originalCoords;

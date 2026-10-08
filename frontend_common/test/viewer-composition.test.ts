@@ -1,7 +1,10 @@
+import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
+import type { GlobeAtmosphereMap } from '@speleodb/map-viewer';
+import type { CustomLayerInterface, SkySpecification } from 'maplibre-gl';
 import { StationManager } from '../../frontend_private/static/private/ts/map_viewer/stations/manager.ts';
 import { SurfaceStationManager } from '../../frontend_private/static/private/ts/map_viewer/surface_stations/manager.ts';
 import { ExplorationLeadManager } from '../../frontend_private/static/private/ts/map_viewer/exploration_leads/manager.ts';
-import type { MapboxLayer } from '../../ts-types/domain/mapbox.ts';
+import type { RendererLayer } from '../../ts-types/domain/renderer.ts';
 import { GeometryEditor } from '../../frontend_private/static/private/ts/map_viewer/geometry_editor/editor.ts';
 import { ProjectPanel } from '../../frontend_private/static/private/ts/map_viewer/components/project_panel.ts';
 import { GPSTracksPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gps_tracks_panel.ts';
@@ -25,24 +28,26 @@ class VendorBounds {
     isEmpty() { return this.points.length === 0; }
 }
 interface VendorSource { data?: unknown; setData(data: unknown): void }
-class VendorMap {
+type VendorLayer = Omit<RendererLayer, 'type'> & { type: RendererLayer['type'] | CustomLayerInterface['type'] };
+class VendorMap implements GlobeAtmosphereMap {
     sources = new Map<string, VendorSource>();
-    layers = new Map<string, MapboxLayer>();
+    layers = new Map<string, VendorLayer>();
     images = new Set<string>();
+    styleLoaded = false;
+    sky: SkySpecification | undefined;
     fits: { bounds: unknown; options: unknown }[] = [];
     addSource(id: string, definition: { data?: unknown }) {
         this.sources.set(id, { ...definition, setData(data) { this.data = data; } });
     }
     removeSource(id: string) { this.sources.delete(id); }
-    addLayer(layer: MapboxLayer) { this.layers.set(layer.id, layer); }
+    addLayer(layer: VendorLayer) { this.layers.set(layer.id, layer); }
     removeLayer(id: string) { this.layers.delete(id); }
     setLayoutProperty(id: string, name: string, value: unknown) { Object.assign(this.layers.get(id)!.layout ??= {}, { [name]: value }); }
     setPaintProperty(id: string, name: string, value: unknown) { Object.assign(this.layers.get(id)!.paint ??= {}, { [name]: value }); }
     setFilter(id: string, filter: unknown) { Object.assign(this.layers.get(id)!, { filter }); }
     moveLayer() {}
-    loadImage(_url: string, callback: (error: null, image: { width: number; height: number; data: Uint8Array }) => void) {
-        callback(null, { width: 1, height: 1, data: new Uint8Array(4) });
-    }
+    async loadImage(_url: string) { return { data: {} }; }
+
     addImage(id: string) { this.images.add(id); }
     fitBounds(bounds: unknown, options: unknown) { this.fits.push({ bounds, options }); }
 
@@ -54,7 +59,10 @@ class VendorMap {
         this.handlers.get(name)!.add(handler);
     }
     off(name: string, handler: (event: unknown) => unknown) { this.handlers.get(name)?.delete(handler); }
-    async fire(name: string) { await Promise.all([...this.handlers.get(name) || []].map(handler => handler(undefined))); }
+    async fire(name: string) {
+        if (name === 'style.load') this.styleLoaded = true;
+        await Promise.all([...this.handlers.get(name) || []].map(handler => handler(undefined)));
+    }
     getContainer() { return document.getElementById('map')!; }
     getCanvas() { return this.getContainer().querySelector('canvas')!; }
     addControl(control: VendorControl) {
@@ -64,6 +72,16 @@ class VendorMap {
     }
     setMaxZoom(zoom: number) { this.maxZoom = zoom; }
     resize() {}
+    jumpTo() {}
+    setStyle() {
+        this.styleLoaded = false;
+        this.sources.clear(); this.layers.clear(); this.images.clear();
+        this.sky = undefined;
+    }
+    isStyleLoaded() { return this.styleLoaded; }
+    getSky() { return this.sky; }
+    setSky(sky: SkySpecification) { this.sky = sky; }
+    getLayersOrder() { return [...this.layers.keys()]; }
     getStyle() { return { layers: [...this.layers.values()], sources: Object.fromEntries(this.sources) }; }
     getLayer(id: string) { return this.layers.get(id); }
     getSource(id: string) { return this.sources.get(id); }
@@ -129,8 +147,12 @@ beforeEach(() => {
         'api:v2:gis-ogc:view-geojson': (token: string) => `/view-geojson/${token}`,
     });
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
-    vi.stubGlobal('mapboxgl', {
+    vi.stubGlobal('__mapRenderer', {
         Map: class extends VendorMap { constructor() { super(); captureMap(this); } },
+        AttributionControl: class {
+            onAdd() { return document.createElement('div'); }
+            onRemove() {}
+        },
         NavigationControl: class {}, FullscreenControl: class {}, ScaleControl: class {},
         addProtocol() {}, LngLatBounds: VendorBounds,
     });
@@ -196,6 +218,11 @@ it.each(['private', 'public'] as const)('hydrates the real %s viewer and restore
         : { icons: {} });
 
     await (mode === 'public' ? initPublicGISViewer() : initPrivateMapViewer());
+    expect(map.isStyleLoaded()).toBe(false);
+    expect(map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID)).toBeUndefined();
+    await map.fire('style.load');
+    const atmosphere = map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID);
+    expect(atmosphere).toMatchObject({ type: 'custom' });
     await map.fire('load');
     await ViewerUpdates.whenIdle();
 
@@ -212,7 +239,10 @@ it.each(['private', 'public'] as const)('hydrates the real %s viewer and restore
     expect(requests).toEqual(requestsBefore);
 
     // A source requiring a style replacement has removed the former renderer state.
-    map.sources.clear(); map.layers.clear();
+    map.setStyle();
+    await map.fire('style.load');
+    expect(map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID)).toMatchObject({ type: 'custom' });
+    expect(map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID)).not.toBe(atmosphere);
     await sourceChanged(true);
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(State.projectBounds.has('project')).toBe(true);
@@ -234,6 +264,7 @@ it('consumes a failed public prefetch and retries through the real source-change
     responses.set('/survey.geojson', survey);
     configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
     await initPublicGISViewer();
+    await map.fire('style.load');
     await map.fire('load');
     await ViewerUpdates.whenIdle();
     expect(requests).toEqual(['/view-geojson/shared']);

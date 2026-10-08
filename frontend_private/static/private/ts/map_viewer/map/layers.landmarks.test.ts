@@ -1,5 +1,5 @@
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
-import type { MapboxLayer } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 import { State } from '../state.ts';
 import { Layers } from './layers.ts';
 
@@ -10,14 +10,14 @@ describe('Layers landmark rendering', () => {
     });
 
     it('colors landmark marker and label layers from collection_color', async () => {
-        const addedLayers: MapboxLayer[] = [];
+        const addedLayers: RendererLayer[] = [];
         const mockMap = {
             getLayer: vi.fn(() => false),
             removeLayer: vi.fn(),
             getSource: vi.fn(() => false),
             removeSource: vi.fn(),
             addSource: vi.fn(),
-            addLayer: vi.fn((layer: MapboxLayer) => addedLayers.push(layer)),
+            addLayer: vi.fn((layer: RendererLayer) => addedLayers.push(layer)),
         };
         State.map = mockMap as unknown as ViewerMap;
 

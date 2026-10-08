@@ -7,7 +7,7 @@ Run these tests inside the existing Django application container after a clean
 bun run test:browser
 ```
 
-The suite uses Chromium and WebKit with the real Mapbox renderer, a minimal
+The suite uses Chromium and WebKit with the real MapLibre renderer, a minimal
 local style, deterministic intercepted viewer APIs, and the normal Django
 headless login endpoint. It does not create, change, or delete project records.
 Authenticated cases reuse the initial real login's storage state within each
@@ -16,9 +16,10 @@ limit. The snapshot stays in memory and is captured before application
 navigation; each test still gets a fresh browser context and independent
 preferences. Anonymous cases do not apply it. The stress case loads 60 projects
 and 120,000 segments. Other cases isolate a 100,000-vertex GPS geometry and
-nested GIS geometry types. The harness limits Mapbox to one renderer worker to
-bound memory in the shared development container; all fixtures, production
-application work, and real rendering remain enabled.
+nested GIS geometry types. The harness observes the imported engine instance
+through `speleo:map-created` and intercepts provider HTTP data. Native engine
+worker behavior, all fixtures, production application work and real rendering
+remain enabled.
 
 `VIEWER_BROWSER_BASE_URL` defaults to `http://127.0.0.1:8000`.
 `VIEWER_BROWSER_EMAIL` and `VIEWER_BROWSER_PASSWORD` default to the documented
@@ -109,7 +110,7 @@ stress workload.
 The Playwright configuration, fixture and specs are TypeScript, checked in the
 development project alongside unit tests, tools and the upload subprocess.
 Browser instrumentation is declared in `ts-types/testing/browser/viewer.ts` and
-excluded from production and worker checking. Its structural Mapbox interface
+excluded from production and worker checking. Its structural MapLibre interface
 records only the methods wrapped or inspected by the harness; the browser still
 loads and uses the real CDN renderer. Worker construction, callback receivers,
 workloads and timing budgets are unchanged by the type annotations.
@@ -187,14 +188,19 @@ fullscreen without dispatching it; the next Escape closes the dialog. Both paths
 verify focus restoration, and ordinary dialog Escape behavior is tested
 independently.
 
-`development-reload.spec.ts` exercises the actual typed reload client in both
-engines, using deterministic HTML and generation responses. It covers completed
-publication, the first-poll race, stale HTML, unavailable storage, malformed
-responses and recovery. The browser performs real full-page navigation; the test
-compiles the client with Vite. Complementary unit, Django and disk-watcher tests
-cover atomic publication, one manifest snapshot per render, retained
-worker/chunk generations and supervisor shutdown. Production builds exclude the
-reload client and production URL configuration excludes its endpoint.
+Frontend assets are rebuilt manually with
+`docker exec -w /app speleodb-monorepo-django bun run build`. Wait for
+completion before starting browser checks or refreshing a page. Container
+startup and source edits do not trigger builds; there is no asset reload client
+or generation polling endpoint. `dev` and `start` are finite build aliases.
+
+`viewer-assets.spec.ts` opens the real survey context menu, station manager and
+station, exploration-lead and cylinder dialogs. Every shared icon must decode,
+and image failures or requests containing an `undefined` path fail the test.
+Provider attribution coverage switches from Mapbox to ESRI and back through the
+source picker, preserving source credits and the provider logo while excluding
+only the provider's Improve this map action. API and tile data are intercepted;
+compiled application assets and the native attribution control remain real.
 
 For a focused diagnostic wrapper run, set `VIEWER_BROWSER_GREP` to a Playwright
 test-name regular expression. The wrapper passes it as a separate `--grep`

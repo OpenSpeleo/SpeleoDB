@@ -53,11 +53,11 @@ manifest-backed tags. Entries preserve route boundaries: one Tailwind sheet,
 separate public/private shell styles, route/modal/map styles, one small
 bootstrap, and lazy route controllers. Shared imports become shared chunks.
 
-Production writes hashed files and `.vite/manifest.json` under
-`speleodb/common/static/speleodb/vite/`. Development publishes immutable
-`assets/dev/<session>/<generation>/` trees with source maps. The complete
-manifest is atomically replaced after all referenced output exists. Django
-serves those files and a development-only client reloads after publication.
+Explicit builds write hashed files and `.vite/manifest.json` directly under
+`speleodb/common/static/speleodb/vite/`. Production output is minified; an
+explicit development-mode build includes source maps. Django serves the compiled
+files after the user refreshes the browser. Asset rebuilds and page refreshes
+are manual, with no watcher, reload client, or generation polling.
 
 All SpeleoDB-authored CSS/JS belongs in the graph as an entry, transitive
 module, test, or intentionally removed source. Templates load it with
@@ -74,11 +74,8 @@ Django-generated `url_reverse.js` remain outside Vite.
   production output.
 - `bun run build`: check types and both audits before cleaning and building
   assets.
-- `bun run dev`: supervises the Vite disk watcher and TypeScript semantic
-  watcher.
-- `bun run start`: alias for `bun run dev`.
+- `bun run dev` and `bun run start`: finite aliases for `bun run build`.
 - `bun run pre-commit`: the same clean production build contract.
-- `bun run test:assets-watch`: isolated watcher invalidation matrix.
 - `bun run lint:frontend` and `bun run test:frontend`: source quality gates.
 - `bun run typecheck`: strict checking across three environments.
 - `bun run typecheck:development`: unit/browser tests, upload subprocesses,
@@ -86,41 +83,40 @@ Django-generated `url_reverse.js` remain outside Vite.
 - `bun run test:browser`: the existing Playwright browser suite.
 
 `bun run` executes the existing Vite, Vitest/jsdom, Playwright, lint, and
-typecheck scripts with Bun. The watcher verifier and browser-upload subprocess
-use the same runtime. Retain the existing Vitest configuration and argument
-forwarding; `bun test` selects a different test runner. Package executables used
-outside scripts run through `bunx --bun`. Use `bun outdated` to inspect releases
-and `bun update --interactive` to select updates. `bun run update` and
-`make update` run `bun update --latest` for all dependencies, followed by the
-Browserslist data refresh. See [Dependency Updates](dependency-updates.md).
+typecheck scripts with Bun. The browser-upload subprocess uses the same runtime.
+Retain the existing Vitest configuration and argument forwarding; `bun test`
+selects a different test runner. Package executables used outside scripts run
+through `bunx --bun`. Use `bun outdated` to inspect releases and
+`bun update --interactive` to select updates. `bun run update` and `make update`
+run `bun update --latest` for all dependencies, followed by the Browserslist
+data refresh. See [Dependency Updates](dependency-updates.md).
 
 The Prettier hook uses prek's `bun` language for installation and an explicit
 `bun run --bun prettier` entry for execution. Selecting an installation language
 alone does not override the upstream executable's shebang. Validate hook runtime
 selection as well as package-script execution.
 
-The watcher test mirrors sources under the operating-system temporary directory
-and reuses the installed dependency tree. It proves imported CSS
-change/deletion, Tailwind source additions, shared-module invalidation,
-route-controller invalidation, unrelated-route output stability, failed-build
-publication, retained old assets and worker generation ownership.
-
-The migration-era Tailwind Vite plugin accumulated discovered utility candidates
-during one watch process. Treat a deleted template class as potentially retained
-until restart; the watcher contract separately covers imported CSS deletion.
-Final evidence must always stop the watcher, run `bun run build`, and verify the
-served manifest hash. A running watcher is development convenience, never
-release evidence.
+To update frontend assets in local development, run
+`docker exec -w /app speleodb-monorepo-django bun run build`, wait for success,
+then refresh the browser. Final evidence uses that clean build and verifies the
+served manifest hash. The migration-era Tailwind compiler retained some removed
+utility candidates during long-running watch sessions; finite clean builds avoid
+that state.
 
 ## Django and deployment
 
 The Django manifest reader reloads by manifest mtime in DEBUG and caches in
 production. Every template render shares one snapshot across asset tags and
-includes, so a rebuild cannot mix generations within a page. Missing, malformed,
-unsafe, duplicate, or wrong-type entries fail loudly. DEBUG/test may fall back
-to registry-derived stable names before the first watcher build. URLs pass
-through Django static storage, preserving local serving and S3/CloudFront
-behavior.
+includes, so a render uses one manifest version. Missing, malformed, unsafe,
+duplicate, or wrong-type entries fail loudly. DEBUG/test may fall back to
+registry-derived stable names before the first explicit build. URLs pass through
+Django static storage, preserving local serving and S3/CloudFront behavior.
+
+`compose/start` installs locked dependencies and launches Django without an
+asset build or watcher. Build explicitly after a fresh checkout and after source
+changes. Neither `dev` nor `start` launches Django; both are finite asset-build
+aliases. See
+[manual development builds](vite-assets.md#manual-development-builds).
 
 Railpack retains the Python provider and uses Mise to activate Bun from
 `.bun-version`. It checks the runtime version, performs the guarded frozen
@@ -147,16 +143,15 @@ dependency-update commands during a transition. Different physical hoisting does
 not authorize changing a package version.
 
 Verification covers the full Vitest suite, JavaScript lint, Railway
-typechecking, the isolated watcher, a clean production build, and the browser
-cases relevant to the change. Tooling contract tests check the shared version
-authorities, frozen-install commands, script trust, lock metadata, and
-deployment automation. They also assert Bun execution for scripts and spawned
-tools, so a compatible API surface cannot conceal a different runtime. Run the
-migrated JavaScript and TypeScript checks inside the existing application
-container. Preserve historical browser timing and memory limitations when
-reporting results. The package manager adds no application runtime work; native
-tool loading, output coherence, and watcher invalidation prove the build remains
-usable without changing frontend behavior.
+typechecking, a clean production build, and the browser cases relevant to the
+change. Tooling contract tests check the shared version authorities,
+frozen-install commands, script trust, lock metadata, and deployment automation.
+They also assert Bun execution for scripts and spawned tools, so a compatible
+API surface cannot conceal a different runtime. Run the migrated JavaScript and
+TypeScript checks inside the existing application container. Preserve historical
+browser timing and memory limitations when reporting results. The package
+manager adds no application runtime work; native tool loading and output
+coherence prove the build remains usable without changing frontend behavior.
 
 Deployment verification also checks `collectstatic` and production module
 MIME/CORS behavior. Full dependency refreshes retain the broader Python and hook

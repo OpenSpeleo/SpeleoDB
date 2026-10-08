@@ -406,17 +406,17 @@ User toggles GIS Layer ON
   │   ├─ refresh authenticated detail metadata for a current signed URL
   │   ├─ fetch and parse the GeoJSON once
   │   ├─ cache that exact object and compute its bounds
-  │   └─ add fill, outline, line, and point Mapbox layers
+  │   └─ add fill, outline, line, and point MapLibre layers
   │
   └─ YES (cached):
-      └─ show the existing Mapbox layers
+      └─ show the existing MapLibre layers
 ```
 
 - **GIS delivery**: activation refreshes detail metadata before fetching the
   signed GeoJSON. The cache retains that exact payload. Cooperative
   `prepareGISLayerGeoJSONAsync()` derives display features with canonical type
   annotations, flattening geometry collections without copying coordinates;
-  subtype filters therefore remain independent after Mapbox tiles Multi*
+  subtype filters therefore remain independent after MapLibre tiles Multi*
   geometries.
 - **Invalidation**: a page reload starts a new session; a style rebuild re-adds
   visible layers from the cache.
@@ -541,7 +541,7 @@ Layers.recomputeActiveDepthDomain()
 - **Per-project storage**: `State.projectDepthDomains`
   (`Map<string, {min,max}|null>`)
 - **Merged storage**: `State.activeDepthDomain` (`{min, max}|null`)
-- **Used by**: `Colors.getDepthPaint(depthDomain)` which produces a Mapbox
+- **Used by**: `Colors.getDepthPaint(depthDomain)` which produces a MapLibre
   `interpolate` expression mapping `depth_val` to a blue→yellow→red gradient
 - **Recomputed when**: Project visibility toggled, new GeoJSON loaded, color
   mode switched to depth
@@ -572,7 +572,7 @@ changes:
 Layers.applyProjectScopedMarkerVisibility()
   │
   ├─ Build list of visible project IDs (from effectiveProjectVisibility)
-  ├─ Construct Mapbox filter expression:
+  ├─ Construct MapLibre filter expression:
   │   ['any',
   │     ['!', ['has', 'project_id']],     ← markers without project scope stay visible
   │     ['==', ['get', 'project_id'], null],
@@ -584,7 +584,7 @@ Layers.applyProjectScopedMarkerVisibility()
 ```
 
 This avoids rebuilding these layers when project visibility changes — only the
-Mapbox filter expression is updated.
+MapLibre filter expression is updated.
 
 ### Landmark Collections
 

@@ -1,3 +1,4 @@
+import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode, DisplayConcern } from '../../../../../../../ts-types/domain/map-display.ts';
 import type { ViewerGeoJSON } from '../../../../../../../ts-types/domain/map-geometry.ts';
@@ -124,7 +125,7 @@ export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode'
         }
 
         if (boundsCoordinates) {
-            State.projectBounds.set(String(projectId), new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
+            State.projectBounds.set(String(projectId), new Renderer.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
         }
         await this.scheduleDisplayUpdate('depth');
 

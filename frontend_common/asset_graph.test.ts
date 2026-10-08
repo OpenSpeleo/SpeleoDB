@@ -76,10 +76,11 @@ describe('first-party Vite graph', () => {
             expect(fs.existsSync(path.join(ROOT, source))).toBe(true);
         }
     });
-    it('bundles every production browser source and excludes the development reload client', async () => {
+    it.each(['production', 'development'])('bundles every browser source without reload polling in %s mode', async mode => {
         const workerModules = new Set<string>();
         const result = await viteBuild({
             configFile: path.join(ROOT, 'vite.config.ts'),
+            mode,
             logLevel: 'silent',
             build: { write: false },
             worker: {
@@ -113,7 +114,10 @@ describe('first-party Vite graph', () => {
                     || /\/(?:frontend_common\/test|tests\/browser|scripts)\//.test(moduleId))
                 .map(relative),
         ).toEqual([]);
-        expect(outputs.map(output => output.fileName).filter(file => /\.(?:ts|map)$/.test(file))).toEqual([]);
+        expect(outputs.map(output => output.fileName).filter(file => /\.ts$/.test(file))).toEqual([]);
+        if (mode === 'production') {
+            expect(outputs.map(output => output.fileName).filter(file => /\.map$/.test(file))).toEqual([]);
+        }
         const authored = authoredFiles(
             [
                 'frontend_common',
@@ -126,10 +130,13 @@ describe('first-party Vite graph', () => {
 
         expect(
             authored.filter(filePath => !bundledModules.has(path.resolve(filePath))).map(relative),
-        ).toEqual(['frontend_common/development/reload.ts']);
+        ).toEqual([]);
         expect(outputs.some(output => output.fileName.includes('assets/dev/'))).toBe(false);
         for (const output of outputs) {
-            if (output.type === 'chunk') expect(output.code).not.toContain('speleo_dev_reload_target');
+            if (output.type !== 'chunk') continue;
+            for (const marker of ['speleo_dev_reload_target', 'startDevelopmentReload', '__assets__/generation/', 'speleodbReload']) {
+                expect(output.code, output.fileName).not.toContain(marker);
+            }
         }
     });
 

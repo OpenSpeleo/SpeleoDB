@@ -1,5 +1,6 @@
 import { getMapOverlayHost } from './overlay_host.ts';
 import { openMapDialog, closeMapDialog } from './dialog_lifecycle.ts';
+import { DEFAULTS } from '../defaults.ts';
 
 export const Modal = {
     base(id: string, title: string, content: string, footer: string | null = null, maxWidth = 'max-w-2xl') {
@@ -38,7 +39,10 @@ export const Modal = {
             btn.onclick = () => this.close(id);
         });
 
-        if (onOpen) setTimeout(onOpen, 50);
+        if (onOpen) setTimeout(() => {
+            // Closing or replacing a dialog invalidates its delayed form setup.
+            if (element?.isConnected && document.getElementById(id) === element) onOpen();
+        }, DEFAULTS.UI.MODAL_SETUP_DELAY_MS);
     },
 
     close(id: string) {

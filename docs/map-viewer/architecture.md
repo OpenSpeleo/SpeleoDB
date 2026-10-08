@@ -2,9 +2,9 @@
 
 ## Overview
 
-The SpeleoDB map viewer is a **Mapbox GL JS** based application for visualizing
-cave survey data, stations, landmarks, exploration leads, GPS tracks, and safety
-cylinders. It has two entry points:
+The SpeleoDB map viewer is a **MapLibre GL JS** based application for
+visualizing cave survey data, stations, landmarks, exploration leads, GPS
+tracks, and safety cylinders. It has two entry points:
 
 | Entry point | File                                                    | Purpose                                                                                                                                                                                           |
 | ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -331,11 +331,11 @@ IDs.
 
 | Field                        | Type                           | Purpose                                                                     |
 | ---------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
-| `map`                        | `mapboxgl.Map`                 | The Mapbox GL map instance                                                  |
+| `map`                        | `maplibregl.Map`               | The MapLibre GL map instance                                                |
 | `projectLayerStates`         | `Map<string, boolean>`         | Per-project visibility toggle (persisted to localStorage)                   |
 | `networkLayerStates`         | `Map<string, boolean>`         | Per-network visibility toggle (persisted to localStorage)                   |
-| `allProjectLayers`           | `Map<string, string[]>`        | Mapbox layer IDs belonging to each project                                  |
-| `allNetworkLayers`           | `Map<string, string[]>`        | Mapbox layer IDs belonging to each network                                  |
+| `allProjectLayers`           | `Map<string, string[]>`        | MapLibre layer IDs belonging to each project                                |
+| `allNetworkLayers`           | `Map<string, string[]>`        | MapLibre layer IDs belonging to each network                                |
 | `allStations`                | `Map<string, object>`          | All subsurface stations by ID                                               |
 | `allSurfaceStations`         | `Map<string, object>`          | All surface stations by ID                                                  |
 | `allLandmarks`               | `Map<string, object>`          | All landmarks by ID                                                         |
@@ -353,7 +353,7 @@ IDs.
 | `gpsTrackLayerStates`        | `Map<string, boolean>`         | Per-track visibility (session-only, default OFF)                            |
 | `gpsTrackCache`              | `Map<string, object>`          | Downloaded GeoJSON data keyed by track ID                                   |
 | `gpsTrackLoadingStates`      | `Map<string, boolean>`         | Which tracks are currently downloading                                      |
-| `allGPSTrackLayers`          | `Map<string, string[]>`        | Mapbox layer IDs belonging to each GPS track                                |
+| `allGPSTrackLayers`          | `Map<string, string[]>`        | MapLibre layer IDs belonging to each GPS track                              |
 | `gpsTrackBounds`             | `Map<string, LngLatBounds>`    | Geographic bounds per GPS track                                             |
 | `effectiveProjectVisibility` | `Map<string, boolean>`         | Actual on-map visibility (respects both country gate and individual toggle) |
 
@@ -363,7 +363,7 @@ IDs.
 
 ### Naming Conventions
 
-All Mapbox sources and layers follow consistent naming:
+All MapLibre sources and layers follow consistent naming:
 
 | Entity              | Source ID                             | Layer IDs                                                                                                                                                                 |
 | ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -421,18 +421,25 @@ token is available, and builds either a Mapbox style URL or a raster style
 object for tile APIs. Raster tile URLs may include `{accessToken}` for future
 tokenized providers; ESRI hillshade sources do not need a token. ESRI hillshade
 raster sources use provider `maxzoom: 16`: the map can still zoom beyond 16, but
-Mapbox GL overzooms zoom-16 ESRI tiles instead of requesting ESRI zoom 17+
+MapLibre GL overzooms zoom-16 ESRI tiles instead of requesting ESRI zoom 17+
 tiles, which showed unavailable-data imagery in Mexico testing. ESRI Satellite
 uses the public World Imagery raster endpoint with provider `maxzoom: 18`.
 `DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing tile image hash
 list applied systematically to every configured raster source, not a
 per-provider opt-in. Matching tile responses are rejected by JavaScript when the
-viewer can inspect the image bytes. The Mapbox CDN builds currently loaded by
-SpeleoDB do not expose a documented custom tile protocol API, so ESRI raster
-sources keep their normal provider URLs to avoid breaking rendering.
-`MapCore.init()` installs a JavaScript `fetch` wrapper fallback that hashes
-matching configured raster tile responses when those requests pass through page
-`fetch`. Tile validation is implemented in browser JavaScript, not in Python.
+viewer can inspect the image bytes. MapLibre's asynchronous custom protocol
+loads configured ESRI raster URLs, forwards the renderer's abort signal and
+cache metadata, and rejects known missing-data hashes before image decoding. It
+does not replace the global `fetch`, so API and survey data requests are
+unaffected.
+
+The renderer is a package import bundled by Vite; there is no Mapbox GL CDN
+runtime or global. Mapbox remains a provider: the classic Satellite Streets v12
+style, its imagery, vector city/place labels, sprites and glyphs use the
+documented HTTPS APIs through `map/mapbox_provider.ts`. Street-level label
+filtering and saved provider IDs stay unchanged. See
+[Shared map packages and renderer](shared-packages.md) for the package ownership
+and renderer integration contract.
 
 Local token ownership follows the same private-root configuration path as the
 other developer credentials: the repository-root `.env` owns `MAPBOX_API_TOKEN`,
@@ -522,7 +529,7 @@ in `map/layers.ts`. First activation refreshes the authenticated detail response
 and downloads the current signed GeoJSON. The original object stays unchanged in
 the session cache and supplies the full-layer `fitBounds` bounds.
 `map/gis_layer_geometry.ts` creates display features tagged with their original
-geometry type because Mapbox's tile geometry families collapse `Multi*` types.
+geometry type because MapLibre's tile geometry families collapse `Multi*` types.
 GeometryCollections expand recursively into their constituent types, preserving
 feature metadata and coordinates. Polygon fill/outline, line, and point remain
 the only rendering roles; subtype changes update their filters without fetching,
@@ -531,10 +538,10 @@ replacing the source, or rescanning features.
 Polygon fill and point clicks open the established GIS feature card. Popup
 clicks use the Map Viewer's single global interaction dispatcher. The active
 fill and point layer IDs live in `State.gisLayerClickableLayerIds`; one rendered
-feature query selects Mapbox's topmost result across every GIS Layer. Replacing
-a source updates that ID set, while a destructive style rebuild clears it, so
-there are no per-layer handlers to accumulate. The popup owns presentation only;
-it does not introduce a second data-loading lifecycle.
+feature query selects MapLibre's topmost result across every GIS Layer.
+Replacing a source updates that ID set, while a destructive style rebuild clears
+it, so there are no per-layer handlers to accumulate. The popup owns
+presentation only; it does not introduce a second data-loading lifecycle.
 
 The GIS panel is an isolated sibling positioned below the existing GPS panel in
 the left-side stack. It copies the GPS card, toggle, loading, and minimize
@@ -597,9 +604,11 @@ imports its existing module root:
 | `landmark-details` | `frontend_private/static/private/ts/landmark_collection/details_main.ts` |
 
 Common map modules become shared chunks. Public pages do not preload or fetch
-the private map controller. Vite owns compilation and disk watching while Django
-remains the server; production is minified and hashed, development uses stable
-entry names and source maps.
+the private map controller. Vite compiles assets on explicit request while
+Django remains the server. Both build modes use hashed filenames; production is
+minified and development mode includes source maps. Run
+`docker exec -w /app speleodb-monorepo-django bun run build`, wait for success,
+then refresh the browser. No asset watcher or reload client runs at startup.
 
 ### Tailwind CSS
 
@@ -617,13 +626,12 @@ the public custom stylesheet. Production builds use `--minify`.
 
 ### Key Bun Scripts
 
-| Script                      | Purpose                                                                 |
-| --------------------------- | ----------------------------------------------------------------------- |
-| `bun run dev`               | One Vite disk-build watcher; Django remains the server                  |
-| `bun run build`             | Full clean + production build                                           |
-| `bun run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof                         |
-| `bun run lint:frontend`     | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
-| `bun run test:frontend`     | Vitest test runner for frontend tests                                   |
+| Script                         | Purpose                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `bun run dev`, `bun run start` | Finite aliases for the clean production build                           |
+| `bun run build`                | Full clean + production build                                           |
+| `bun run lint:frontend`        | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
+| `bun run test:frontend`        | Vitest test runner for frontend tests                                   |
 
 ### Integration Points
 
@@ -637,12 +645,10 @@ the public custom stylesheet. Production builds use `--minify`.
 
 The source, bootstrap, and pointer adapters have separate structural contracts
 in `ts-types/domain/map-sources.ts`, `map-core.ts`, and `map-interactions.ts`.
-Their interfaces describe the calls consumed by each owner while the Mapbox CDN
-runtime remains external. The source control uses an object scheduler key to
-keep work local to that control instance. Checked fetch keeps the original
-receiver and input objects, marks its wrapper to avoid double installation, and
-returns the original response unless a configured missing-tile hash matches.
-Bun-only fetch helpers are outside this browser wrapper's contract.
+Their interfaces describe the calls consumed by each owner, with one imported
+MapLibre SDK boundary. The source control uses an object scheduler key to keep
+work local to that control instance. Raster hash checks use MapLibre's scoped
+async protocol; application fetch requests retain their native behavior.
 
 `MapSources.createControl` and `Interactions.setupDragHandlers` retain their
 existing `this` aliases so nested callbacks keep the original facade receiver.

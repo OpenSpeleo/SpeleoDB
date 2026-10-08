@@ -1,3 +1,7 @@
+vi.mock('../../frontend_private/static/private/ts/map_viewer/map/renderer.ts', () => ({
+    get Renderer() { return globalThis.__mapRenderer; },
+}));
+
 function createMemoryStorage() {
     const values = new Map<string, string>();
     return {

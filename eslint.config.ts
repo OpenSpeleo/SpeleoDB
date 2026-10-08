@@ -1,5 +1,6 @@
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
+import './scripts/shared-map-packages.ts';
 
 export default defineConfig([
     {
@@ -24,11 +25,7 @@ export default defineConfig([
         linterOptions: { reportUnusedDisableDirectives: 'off' },
         languageOptions: {
             parserOptions: {
-                project: [
-                    './tsconfig.json',
-                    './tsconfig.worker.json',
-                    './tsconfig.development.json',
-                ],
+                project: ['tsconfig.json', 'tsconfig.worker.json', 'tsconfig.development.json'],
                 tsconfigRootDir: import.meta.dirname,
             },
         },

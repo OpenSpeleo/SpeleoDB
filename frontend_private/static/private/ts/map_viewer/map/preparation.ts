@@ -1,3 +1,4 @@
+import { createPreparationRunner, transformGeometrySteps } from '@speleodb/map-core/preparation';
 import type { FeatureCollection, Geometry, Position } from 'geojson';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
 import type { BoundedData, BoundsPreparationOptions, PreparationBounds, PreparationOptions, PreparedBounds, PreparedProject, PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
@@ -6,38 +7,7 @@ import { DEFAULTS } from '../config.ts';
 import { DepthUtils, resolveLineDepthValue } from './depth.ts';
 import { GEOMETRY_TYPES, GIS_GEOMETRY_TYPE_PROPERTY } from './gis_layer_geometry.ts';
 
-// Parallel downloads can resume in the same task. They share a CPU allowance
-// instead of each starting another full slice before the browser gets a turn.
-let preparationSliceStarted: number | null = null;
-
-/** Run CPU work in bounded tasks, including within one large geometry. */
-async function runPreparation<Result>(steps: Generator<void, Result, unknown>, {
-    isCurrent = () => true,
-    yieldWork = () => new Promise<void>(resolve => setTimeout(resolve, 0)),
-    budgetMs = DEFAULTS.VIEWER_WORK.BUDGET_MS,
-}: PreparationOptions = {}): Promise<Result> {
-    const assertCurrent = () => {
-        if (!isCurrent()) throw new DOMException('Viewer preparation superseded', 'AbortError');
-    };
-    assertCurrent();
-    await yieldWork();
-    assertCurrent();
-    const started = performance.now();
-    if (preparationSliceStarted === null || started < preparationSliceStarted) preparationSliceStarted = started;
-    for (;;) {
-        const step = steps.next();
-        if (step.done) {
-            assertCurrent();
-            return step.value;
-        }
-        if (performance.now() - preparationSliceStarted >= budgetMs) {
-            assertCurrent();
-            await yieldWork();
-            assertCurrent();
-            preparationSliceStarted = performance.now();
-        }
-    }
-}
+const runPreparation = createPreparationRunner({ budgetMs: DEFAULTS.VIEWER_WORK.BUDGET_MS });
 
 function readBBox(data: BoundedData | null | undefined): PreparedBounds | null {
     const bbox = data?.bbox;
@@ -118,35 +88,11 @@ function* finishBounds(bounds: PreparationBounds): Generator<void, PreparedBound
     return [[west, bounds.south], [east, bounds.north]];
 }
 
-function* prepareCoordinates<Coordinates>(coordinates: Coordinates, bounds: PreparationBounds, flatten: boolean): Generator<void, Coordinates, unknown> {
-    if (!Array.isArray(coordinates) || !coordinates.length) return coordinates;
-    if (typeof coordinates[0] === 'number') {
-        extendBounds(bounds, coordinates as Position);
-        yield;
-        return (flatten && coordinates.length >= 3 ? [coordinates[0], coordinates[1], 0] : coordinates) as Coordinates;
-    }
-    const output: unknown[] = flatten ? [] : coordinates;
-    for (const child of coordinates as unknown[]) {
-        const prepared = yield* prepareCoordinates(child, bounds, flatten);
-        if (flatten) output.push(prepared);
-        yield;
-    }
-    return output as Coordinates;
-}
-
 function* prepareGeometry<G extends Geometry | null | undefined>(geometry: G, bounds: PreparationBounds, flatten: boolean): Generator<void, G, unknown> {
-    if (!geometry) return geometry;
-    if (geometry.type === 'GeometryCollection') {
-        const geometries: Geometry[] = [];
-        for (const child of geometry.geometries || []) {
-            const prepared = yield* prepareGeometry(child, bounds, flatten);
-            if (flatten) geometries.push(prepared);
-            yield;
-        }
-        return (flatten ? { ...geometry, geometries } : geometry);
-    }
-    const coordinates = yield* prepareCoordinates(geometry.coordinates, bounds, flatten);
-    return (flatten ? { ...geometry, coordinates } : geometry);
+    return yield* transformGeometrySteps(geometry, {
+        visitPosition: position => extendBounds(bounds, position),
+        flattenAltitude: flatten,
+    });
 }
 
 function* boundsSteps(data: ViewerGeoJSON | null | undefined, wrapLongitude: boolean): Generator<void, PreparedBounds | null, unknown> {

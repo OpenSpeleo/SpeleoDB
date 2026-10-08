@@ -21,6 +21,8 @@ Unlike product docs, these files prioritize:
   - local RustFS ownership, automatic `.env`/GitLab/bucket/superuser bootstrap,
     isolated Compose projects, signed URL flow, production boundaries,
     diagnostics, and regression coverage
+- [Shared map packages and MapLibre integration](map-viewer/shared-packages.md)
+
 - `map-viewer/architecture.md`
   - module dependency graph, private vs public comparison, initialization
     sequences, state management, layer system, event system, build pipeline

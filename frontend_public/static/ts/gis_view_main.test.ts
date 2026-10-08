@@ -172,7 +172,7 @@ describe('frontend_public gis_view_main', () => {
         testWindow.MAPVIEWER_CONTEXT = {};
         fetchMock = vi.fn();
         vi.stubGlobal('fetch', fetchMock);
-        vi.stubGlobal('mapboxgl', { LngLatBounds: MockLngLatBounds });
+        vi.stubGlobal('__mapRenderer', { LngLatBounds: MockLngLatBounds });
         vi.stubGlobal('Urls', new Proxy(
             {},
             {

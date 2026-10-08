@@ -2,13 +2,13 @@ import type { Mock, MockInstance } from 'vitest';
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry } from 'geojson';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
 import type { GISGeometryResponse, GPSTrackResponse } from '../../../../../../ts-types/domain/map-config.ts';
-import type { MapboxSourceOptions } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererSourceOptions } from '../../../../../../ts-types/domain/renderer.ts';
 import type { DisplayGeometry } from '../../../../../../ts-types/domain/map-geometry.ts';
 type FixtureCollection = FeatureCollection<GeoJSONGeometry, JSONObject> & { url?: string };
 interface FixtureMap {
     getLayer: Mock; getStyle: Mock; setLayoutProperty: Mock; setFilter: Mock; setPaintProperty: Mock;
-    getSource: (id: string) => MapboxSourceOptions | undefined;
-    addSource: Mock<(id: string, source: MapboxSourceOptions) => unknown>;
+    getSource: (id: string) => RendererSourceOptions | undefined;
+    addSource: Mock<(id: string, source: RendererSourceOptions) => unknown>;
     removeSource: (id: string) => unknown; removeLayer: Mock; addLayer: Mock;
 }
 function currentMap() { return State.map as unknown as FixtureMap; }
@@ -230,14 +230,14 @@ describe.each([
 });
 
 it.each(['refreshGISGeometry', 'acceptGISGeometry'] as const)('keeps the latest saved GIS baseline after %s is superseded by hide', async update => {
-    const sources = new Map<string, MapboxSourceOptions>();
+    const sources = new Map<string, RendererSourceOptions>();
     currentMap().getSource = id => sources.get(id);
     currentMap().addSource = vi.fn((id, source) => sources.set(id, source));
     currentMap().removeSource = id => sources.delete(id);
     currentMap().removeLayer = vi.fn();
     currentMap().addLayer = vi.fn();
     vi.spyOn(Layers, 'reorderLayers').mockImplementation((() => {}) as unknown as typeof Layers.reorderLayers);
-    vi.stubGlobal('mapboxgl', { LngLatBounds: class {
+    vi.stubGlobal('__mapRenderer', { LngLatBounds: class {
         extend() { return this; }
         isEmpty() { return false; }
     } });

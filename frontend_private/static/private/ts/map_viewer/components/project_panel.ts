@@ -1,3 +1,4 @@
+import { isEffectivelyVisible } from '@speleodb/map-core/visibility';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerProject } from '../../../../../../ts-types/domain/map-config.ts';
 import { Config, DEFAULTS } from '../config.ts';
@@ -111,7 +112,7 @@ export const ProjectPanel = {
         const countryOn = this.isCountryVisible(country);
         void Layers.setProjectVisibilityBatch(projects.map(project => ({
             projectId: project.id,
-            visible: Layers.isProjectVisible(project.id) && countryOn,
+            visible: isEffectivelyVisible({ individual: Layers.isProjectVisible(project.id), country: countryOn }),
         })));
         if (!countryOn) projects.forEach(project => cancelMapNavigation(`project:${project.id}`));
     },
@@ -323,7 +324,7 @@ export const ProjectPanel = {
         const project = Config.getProjectById(projectId);
         const countryOn = !project || this.isCountryVisible(project.country || 'Unknown');
         // Publish only the final visibility so depth domains never include a gated project.
-        void Layers.toggleProjectVisibility(projectId, isVisible, isVisible && countryOn);
+        void Layers.toggleProjectVisibility(projectId, isVisible, isEffectivelyVisible({ individual: isVisible, country: countryOn }));
         if (!isVisible) cancelMapNavigation(`project:${projectId}`);
         this.updateRow(projectId, isVisible);
     },
@@ -332,7 +333,7 @@ export const ProjectPanel = {
         const row = this._rows.get(String(projectId));
         if (!row) return;
         const project = Config.getProjectById(projectId);
-        const visible = individualOn && (!project || this.isCountryVisible(project.country || 'Unknown'));
+        const visible = isEffectivelyVisible({ individual: individualOn, country: !project || this.isCountryVisible(project.country || 'Unknown') });
         row.querySelector('input')!.checked = individualOn;
         row.classList.toggle('opacity-50', !visible);
         row.querySelector<HTMLElement>('.project-color-dot')!.style.backgroundColor = Utils.safeCssColor(

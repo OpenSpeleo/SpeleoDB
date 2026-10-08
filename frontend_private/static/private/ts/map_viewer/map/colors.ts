@@ -1,3 +1,4 @@
+import { createDepthColorExpression, createShotColorExpression } from '@speleodb/map-viewer';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { DepthDomain } from '../../../../../../ts-types/domain/map-display.ts';
 import type { DepthPaint, SurveyPaint } from '../../../../../../ts-types/domain/map-depth.ts';
@@ -19,7 +20,7 @@ export const Colors = {
     getSurveyPaint(projectId: EntityId, mode: string, depthDomain: Pick<DepthDomain, 'max'> & Partial<Pick<DepthDomain, 'min'>> | null = null): SurveyPaint {
         if (mode === 'depth') return this.getDepthPaint(depthDomain);
         const projectColor = this.getProjectColor(projectId);
-        if (mode === 'shot') return ['to-color', ['get', 'color'], projectColor];
+        if (mode === 'shot') return createShotColorExpression(projectColor);
         return projectColor;
     },
 
@@ -66,24 +67,16 @@ export const Colors = {
     },
 
     getDepthPaint: function(depthDomain: Pick<DepthDomain, 'max'> & Partial<Pick<DepthDomain, 'min'>> | null = null): string | DepthPaint {
-        const maxDepth = depthDomain && Number.isFinite(depthDomain.max)
-            ? (depthDomain.max > 0 ? depthDomain.max : DEFAULTS.DEPTH.ZERO_DOMAIN_MAX_FEET)
-            : null;
-        if (!maxDepth) {
-            return DEFAULTS.COLORS.DEPTH_NONE;
-        }
-
-        const midDepth = maxDepth / 2;
-        const stops = midDepth > 0
-            ? [0, DEFAULTS.COLORS.DEPTH_SHALLOW, midDepth, DEFAULTS.COLORS.DEPTH_MID, maxDepth, DEFAULTS.COLORS.DEPTH_DEEP]
-            : [0, DEFAULTS.COLORS.DEPTH_SHALLOW, maxDepth, DEFAULTS.COLORS.DEPTH_DEEP];
-        return [
-            'case',
-            ['has', 'depth_val'],
-            ['interpolate', ['linear'], ['max', 0, ['coalesce', ['to-number', ['get', 'depth_val']], 0]],
-                ...stops
+        return createDepthColorExpression({
+            domain: depthDomain ? { min: depthDomain.min ?? 0, max: depthDomain.max } : null,
+            property: 'depth_val',
+            fallbackColor: DEFAULTS.COLORS.DEPTH_NONE,
+            zeroDomainMax: DEFAULTS.DEPTH.ZERO_DOMAIN_MAX_FEET,
+            stops: [
+                { ratio: 0, color: DEFAULTS.COLORS.DEPTH_SHALLOW },
+                { ratio: 0.5, color: DEFAULTS.COLORS.DEPTH_MID },
+                { ratio: 1, color: DEFAULTS.COLORS.DEPTH_DEEP },
             ],
-            DEFAULTS.COLORS.DEPTH_NONE
-        ];
+        }) as string | DepthPaint;
     }
 };

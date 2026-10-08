@@ -190,13 +190,14 @@ lives in typed function-valued bindings with inert template identifiers.
   application event attributes, compatibility globals, or direct first-party
   `{% static %}` references. CDN/vendored libraries and Django's generated
   `url_reverse.js` remain external globals in their established order.
-- `bun run dev` supervises Vite disk builds and TypeScript semantic checking;
-  Django remains the only server. Development assets publish as immutable
-  generations before a DEBUG-only client requests a full-page reload. There is
-  no Vite dev server, proxy, HMR client, or HTML transformation. Tailwind's
-  in-process candidate set can retain a removed template class, so stop the
-  watcher and run `bun run build` before final browser evidence. Confirm the
-  manifest hash actually served by Django.
+- Asset rebuilds and browser refreshes are manual. Run
+  `docker exec -w /app speleodb-monorepo-django bun run build`, wait for
+  success, then refresh the browser. `dev` and `start` are finite aliases for
+  that build; neither starts a server or watcher. Django remains the only
+  server. Do not add automatic asset rebuilding, reload clients, generation
+  polling, a Vite development server, proxy, HMR, or HTML transformation.
+  Confirm the manifest hash actually served by Django before final browser
+  evidence.
 
 ### Root frontend commands
 
@@ -208,11 +209,12 @@ lives in typed function-valued bindings with inert template identifiers.
 - `bun run build`
 - `bun run build:assets`
 - `bun run dev`
-- `bun run test:assets-watch`
+- `bun run start`
 
 ### Related system hooks
 
-- Dev container/webserver bootstrap: `compose/start` (root Bun commands).
+- Dev container/webserver bootstrap: `compose/start` installs dependencies and
+  launches Django without an asset build or watcher. Build assets explicitly.
 - Railpack image build: `railpack.json` (Bun from `.bun-version` via Mise,
   guarded frozen install followed by `bun run build`).
 - Railway service configuration: `.railway/railway.ts` is the sole authority;

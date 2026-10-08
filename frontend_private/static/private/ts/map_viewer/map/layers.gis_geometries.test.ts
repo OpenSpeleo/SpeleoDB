@@ -1,5 +1,5 @@
 import type { GISGeometryResponse } from '../../../../../../ts-types/domain/map-config.ts';
-import type { MapboxLayer, MapboxSourceOptions } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer, RendererSourceOptions } from '../../../../../../ts-types/domain/renderer.ts';
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
 import { Config, DEFAULTS } from '../config.ts';
 import { State } from '../state.ts';
@@ -15,14 +15,14 @@ function record(overrides: Partial<GISGeometryResponse> = {}): GISGeometryRespon
 }
 
 function createMap() {
-    const layers = new Map<string, MapboxLayer>();
-    const sources = new Map<string, MapboxSourceOptions>();
+    const layers = new Map<string, RendererLayer>();
+    const sources = new Map<string, RendererSourceOptions>();
     return {
         getStyle: () => ({ layers: [...layers.values()] }),
         getLayer: (id: string) => layers.get(id),
         getSource: (id: string) => sources.get(id),
-        addSource: vi.fn((id: string, source: MapboxSourceOptions) => sources.set(id, source)),
-        addLayer: vi.fn((layer: MapboxLayer) => layers.set(layer.id, layer)),
+        addSource: vi.fn((id: string, source: RendererSourceOptions) => sources.set(id, source)),
+        addLayer: vi.fn((layer: RendererLayer) => layers.set(layer.id, layer)),
         removeLayer: vi.fn((id: string) => layers.delete(id)),
         removeSource: vi.fn((id: string) => sources.delete(id)),
         setLayoutProperty: vi.fn(), moveLayer: vi.fn<(id: string) => void>(), fitBounds: vi.fn(),

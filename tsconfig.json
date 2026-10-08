@@ -8,6 +8,8 @@
     "exactOptionalPropertyTypes": true,
     "module": "preserve",
     "moduleResolution": "bundler",
+    "customConditions": ["speleodb-source"],
+    "preserveSymlinks": true,
     "target": "ES2023",
     "verbatimModuleSyntax": true,
     "isolatedModules": true,

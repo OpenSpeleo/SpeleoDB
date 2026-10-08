@@ -1,6 +1,8 @@
 import type { BrowserContext, Page, Locator } from '@playwright/test';
 import type { Feature, FeatureCollection } from 'geojson';
-import type { EvidenceMapbox, ViewerEvidence, ViewerTrace } from '../../ts-types/testing/browser/viewer.ts';
+import type { StyleSpecification } from 'maplibre-gl';
+import type { EvidenceMap, ViewerEvidence, ViewerTrace } from '../../ts-types/testing/browser/viewer.ts';
+import type { StationFeatureCollection } from '../../ts-types/domain/map-entities.ts';
 import { expect } from '@playwright/test';
 import { BROWSER_TEST_BUDGETS } from './budgets.ts';
 
@@ -58,9 +60,20 @@ export async function login(page: Page) {
     authenticatedState = await page.context().storageState();
 }
 
-/** Test-only instrumentation retains the production Mapbox renderer and map methods. */
-export async function installFixture(page: Page, { stress = false, readOnly = false, publicUrl = '' } = {}) {
-    const selectedProjects = (stress ? projects : projects.slice(0, 2))
+interface ViewerFixtureOptions {
+    stress?: boolean;
+    readOnly?: boolean;
+    publicUrl?: string;
+    liveProvider?: boolean;
+    emptyProjects?: boolean;
+    providerCamera?: Pick<StyleSpecification, 'center' | 'zoom' | 'bearing' | 'pitch' | 'roll'>;
+    providerAttribution?: string;
+    stations?: StationFeatureCollection;
+}
+
+/** Test-only instrumentation retains the production MapLibre renderer and map methods. */
+export async function installFixture(page: Page, { stress = false, readOnly = false, publicUrl = '', liveProvider = false, emptyProjects = false, providerCamera, providerAttribution, stations }: ViewerFixtureOptions = {}) {
+    const selectedProjects = (emptyProjects ? [] : stress ? projects : projects.slice(0, 2))
         .map(project => readOnly ? { ...project, permission: 'READ_ONLY' } : project);
     const requests = new Map<string, number>();
     const gates = new Map<string, Promise<void>>();
@@ -75,62 +88,56 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
                 });
             }
         };
-        const instrument = (library: EvidenceMapbox) => {
-            // Bound renderer parallel memory in the shared development container.
-            library.workerCount = 1;
-            const Original = library.Map;
-            library.Map = class extends Original {
-                constructor(options: object) {
-                    super({ ...options, style: {
-                        version: 8, glyphs: `${location.origin}/viewer-fixtures/fonts/{fontstack}/{range}.pbf`,
-                        sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#16202a' } }],
-                    }, center: [-86.7, 20], zoom: 8, projection: 'mercator' });
-                    const stats: ViewerEvidence = { map: this, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0 };
-                    window.__viewerEvidence = stats;
-                    for (const name of ['setLayoutProperty', 'setPaintProperty', 'setFilter', 'moveLayer'] as const) {
-                        const original = this[name];
-                        this[name] = (...args) => { stats.mutations++; return original.apply(this, args); };
-                    }
-                    const addSource = this.addSource;
-                    this.addSource = (id: string, source: unknown) => {
-                        stats.sourceAdds++;
-                        const result = addSource.call(this, id, source);
-                        const instance = this.getSource(id);
-                        if (instance?.setData) {
-                            const setData = instance.setData;
-                            instance.setData = (...args) => { stats.sourceUpdates++; return setData.apply(instance, args); };
-                        }
-                        return result;
-                    };
-                    if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
-                        new PerformanceObserver(list => stats.longTasks.push(...list.getEntries().map(entry => ({ duration: entry.duration, start: entry.startTime }))))
-                            .observe({ type: 'longtask' });
-                    }
-                    document.addEventListener('change', event => {
-                        if (!(event.target instanceof HTMLInputElement)) return;
-                        const trace: ViewerTrace = { key: event.target.dataset.category || event.target.name || event.target.getAttribute('aria-label'), checked: event.target.checked,
-                            start: performance.now(), mutations: stats.mutations };
-                        stats.traces.push(trace);
-                        requestAnimationFrame(() => {
-                            trace.firstFrameMs = performance.now() - trace.start;
-                            trace.firstFrameChecked = (event.target as HTMLInputElement).checked;
-                            trace.mutationsBeforeFrame = stats.mutations - trace.mutations;
-                            // A second frame follows an intervening paint opportunity;
-                            // the first rAF alone runs before that opportunity.
-                            requestAnimationFrame(() => {
-                                trace.feedbackFrameMs = performance.now() - trace.start;
-                            });
-                        });
-                    }, true);
+        window.addEventListener('speleo:map-created', event => {
+            const { map } = (event as CustomEvent<{ map: EvidenceMap }>).detail;
+            const stats: ViewerEvidence = { map: map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0 };
+            window.__viewerEvidence = stats;
+            for (const name of ['setLayoutProperty', 'setPaintProperty', 'setFilter', 'moveLayer'] as const) {
+                const original = map[name];
+                map[name] = (...args) => { stats.mutations++; return original.apply(map, args); };
+            }
+            const addSource = map.addSource;
+            map.addSource = (id: string, source: unknown) => {
+                stats.sourceAdds++;
+                const result = addSource.call(map, id, source);
+                const instance = map.getSource(id);
+                if (instance?.setData) {
+                    const setData = instance.setData;
+                    instance.setData = (...args) => { stats.sourceUpdates++; return setData.apply(instance, args); };
                 }
+                return result;
             };
-            return library;
-        };
-        let library: EvidenceMapbox;
-        Object.defineProperty(window, 'mapboxgl', { configurable: true,
-            get: () => library, set: (value: EvidenceMapbox) => { library = instrument(value); },
+            if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
+                new PerformanceObserver(list => stats.longTasks.push(...list.getEntries().map(entry => ({ duration: entry.duration, start: entry.startTime }))))
+                    .observe({ type: 'longtask' });
+            }
+            document.addEventListener('change', event => {
+                if (!(event.target instanceof HTMLInputElement)) return;
+                const trace: ViewerTrace = { key: event.target.dataset.category || event.target.name || event.target.getAttribute('aria-label'), checked: event.target.checked,
+                    start: performance.now(), mutations: stats.mutations };
+                stats.traces.push(trace);
+                requestAnimationFrame(() => {
+                    trace.firstFrameMs = performance.now() - trace.start;
+                    trace.firstFrameChecked = (event.target as HTMLInputElement).checked;
+                    trace.mutationsBeforeFrame = stats.mutations - trace.mutations;
+                    // A second frame follows an intervening paint opportunity;
+                    // the first rAF alone runs before that opportunity.
+                    requestAnimationFrame(() => {
+                        trace.feedbackFrameMs = performance.now() - trace.start;
+                    });
+                });
+            }, true);
         });
     });
+    if (!liveProvider) await page.route('https://api.mapbox.com/styles/v1/**', route => route.fulfill({ json: {
+        version: 8, glyphs: `${new URL(page.url()).origin}/viewer-fixtures/fonts/{fontstack}/{range}.pbf`,
+        ...providerCamera,
+        sources: providerAttribution ? { 'fixture-attribution': { type: 'geojson', data: empty, attribution: providerAttribution } } : {},
+        layers: [
+            { id: 'background', type: 'background', paint: { 'background-color': '#16202a' } },
+            ...(providerAttribution ? [{ id: 'fixture-attribution', type: 'circle', source: 'fixture-attribution' }] : []),
+        ],
+    } }));
     await page.route('**/viewer-fixtures/**', async route => {
         const path = new URL(route.request().url()).pathname;
         requests.set(path, (requests.get(path) || 0) + 1);
@@ -151,6 +158,7 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
         else if (path === `/api/v2/gps_tracks/${trackId}/`) data = { id: trackId, file: '/viewer-fixtures/track.geojson' };
         else if (path === '/api/v2/gis-layers/') data = [{ id: gisId, name: 'Mixed GIS layer', color: '#6366f1' }];
         else if (path === `/api/v2/gis-layers/${gisId}/`) data = { id: gisId, file: '/viewer-fixtures/gis.geojson' };
+        else if (path === '/api/v2/stations/subsurface/geojson/' && stations) data = stations;
         else if (path.includes('geojson')) data = empty;
         await route.fulfill({ json: data });
     });

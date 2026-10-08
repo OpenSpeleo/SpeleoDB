@@ -271,9 +271,10 @@ describe('Tailwind v4 single-bundle contract', () => {
         }
     });
 
-    it('exposes exactly one neutral build, watch, and pre-commit interface', () => {
+    it('exposes a finite manual build through the development and pre-commit interfaces', () => {
         expect(packageJson.scripts['build:assets']).toBe('bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --mode production');
-        expect(packageJson.scripts.dev).toBe('bun scripts/dev.ts');
+        expect(packageJson.scripts.dev).toBe('bun run build');
+        expect(packageJson.scripts['test:assets-watch']).toBeUndefined();
         expect(packageJson.scripts['pre-commit']).toBe('bun run build');
 
         for (const obsoleteName of [
@@ -297,7 +298,7 @@ describe('Tailwind v4 single-bundle contract', () => {
         }
 
         expect(packageJson.scripts.build).toBe('bun run typecheck && bun run audit:javascript && bun run audit:templates && bun run build:clean && vite build --mode production');
-        expect(packageJson.scripts.start).toBe('bun run dev');
+        expect(packageJson.scripts.start).toBe('bun run build');
         expect(packageJson.scripts['build:clean']).toContain('speleodb/common/static/speleodb/vite');
         expect(packageJson.scripts['build:clean']).toContain('frontend_public/static/css/style.css');
         expect(packageJson.scripts['build:clean']).toContain('frontend_private/static/private/css/style.css');
@@ -572,12 +573,13 @@ describe('Tailwind v4 single-bundle contract', () => {
         ]);
         expectInOrder(publicMap, [
             "{% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}",
-            'https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css',
         ]);
         expect(publicMap).not.toContain('private/css/style.css');
+        expect(publicMap).not.toContain('mapbox-gl-js');
+        expect(privateMap).not.toContain('mapbox-gl-js');
+        expect(read('frontend_private/static/private/css/map_viewer.css')).toContain('@import "maplibre-gl/dist/maplibre-gl.css";');
         expect(ariane).toContain("{% vite_styles 'style-app' %}");
         expectInOrder(privateMap, [
-            'https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css',
             "{% vite_styles 'style-shared-modal' 'style-map-viewer' 'style-gis-geometry-map' 'style-map-import' %}",
         ]);
         expect(allTemplates).not.toContain("{% static 'css/style.css' %}");

@@ -106,8 +106,8 @@ selectors beneath Layers and Geometry. Geometry no longer imports Layers, while
 Layers retains its singleton facade and receiver-based selector overrides.
 Selectors read current State containers, including replacements after reset,
 without storing another visibility cache. Layer request revision, generation,
-and intent checks remain distinct from scheduling. Mapbox declarations cover the
-actual source, layer, image, popup, and camera calls; domain records remain
+and intent checks remain distinct from scheduling. MapLibre declarations cover
+the actual source, layer, image, popup, and camera calls; domain records remain
 separate from imported GeoJSON properties. Layer tests verify source reuse and
 depth cache merging without scans. Both snapping queries use effective
 visibility, so country gates invalidate snap eligibility immediately without

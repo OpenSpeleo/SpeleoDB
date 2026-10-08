@@ -1,3 +1,5 @@
+@import "maplibre-gl/dist/maplibre-gl.css";
+
 /* Map Viewer Styles */
 
 /* Preserve the authored initial height over the mobile fallback below.
@@ -191,7 +193,7 @@ input[type="number"] {
     position: relative;
 }
 
-.mapboxgl-ctrl-group button.map-source-button {
+.maplibregl-ctrl-group button.map-source-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,14 +206,14 @@ input[type="number"] {
     height: 18px;
 }
 
-.mapboxgl-ctrl-attrib {
+.maplibregl-ctrl-attrib {
     background-color: #ffffff !important;
     border: 1px solid #64748b;
     color: #111827 !important;
     opacity: 1;
 }
 
-.mapboxgl-ctrl-attrib a {
+.maplibregl-ctrl-attrib a {
     color: #111827 !important;
 }
 
@@ -2040,12 +2042,12 @@ select.form-input:focus {
 }
 
 /* GIS feature popups: scope every Mapbox override to this feature. */
-.mapboxgl-popup.gis-layer-feature-popup {
+.maplibregl-popup.gis-layer-feature-popup {
     max-width: calc(100vw - 24px) !important;
     z-index: 8;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-content {
+.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-content {
     padding: 0;
     overflow: hidden;
     color: #e2e8f0;
@@ -2056,7 +2058,7 @@ select.form-input:focus {
     backdrop-filter: blur(12px);
 }
 
-.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-close-button {
+.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-close-button {
     top: 7px;
     right: 7px;
     display: grid;
@@ -2073,35 +2075,35 @@ select.form-input:focus {
     transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-close-button:hover {
+.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-close-button:hover {
     color: #f8fafc;
     background: #334155;
     border-color: #64748b;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-close-button:focus-visible {
+.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-close-button:focus-visible {
     color: #f8fafc;
     outline: 2px solid #818cf8;
     outline-offset: 2px;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
     border-bottom-color: #0f172a;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
     border-top-color: #0f172a;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
     border-right-color: #0f172a;
 }
 
-.mapboxgl-popup.gis-layer-feature-popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+.maplibregl-popup.gis-layer-feature-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
     border-left-color: #0f172a;
 }
 
@@ -2444,7 +2446,7 @@ select.form-input:focus {
 }
 
 /* Temporary measurement belongs to the private map, including fullscreen. */
-.mapboxgl-ctrl-group button.measurement-button {
+.maplibregl-ctrl-group button.measurement-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2452,16 +2454,16 @@ select.form-input:focus {
     background-image: none;
 }
 .measurement-button svg { width: 18px; height: 18px; }
-.mapboxgl-ctrl-group button.measurement-button[aria-pressed="true"] {
+.maplibregl-ctrl-group button.measurement-button[aria-pressed="true"] {
     color: #0369a1;
     background: #e0f2fe;
     box-shadow: inset 0 0 0 1px #7dd3fc;
 }
-.mapboxgl-ctrl-group button.measurement-button:focus-visible {
+.maplibregl-ctrl-group button.measurement-button:focus-visible {
     outline: 3px solid #0284c7;
     outline-offset: 2px;
 }
-.mapboxgl-ctrl-group button.measurement-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.maplibregl-ctrl-group button.measurement-button:disabled { opacity: 0.45; cursor: not-allowed; }
 .measurement-instructions {
     position: absolute;
     z-index: 3;
@@ -2526,19 +2528,19 @@ select.form-input:focus {
     border: 0;
 }
 @media (pointer: coarse) {
-    .map-viewer-shell .mapboxgl-ctrl-top-right .mapboxgl-ctrl-group > button { width: 44px; height: 44px; }
+    .map-viewer-shell .maplibregl-ctrl-top-right .maplibregl-ctrl-group > button { width: 44px; height: 44px; }
     .map-viewer-shell .map-source-menu { top: 48px; }
     .measurement-instructions { right: 66px; }
     .measurement-heading { min-height: 44px; }
 }
 /* Two narrow control columns leave room for the ruler on short maps. */
-.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right {
+.map-viewer-shell .measurement-compact-map .maplibregl-ctrl-top-right {
     display: grid;
     grid-template-columns: auto auto;
     align-items: start;
 }
-.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right > .mapboxgl-ctrl { grid-column: 2; }
-.map-viewer-shell .measurement-compact-map .mapboxgl-ctrl-top-right > .mapboxgl-ctrl:has(.mapboxgl-ctrl-zoom-in) {
+.map-viewer-shell .measurement-compact-map .maplibregl-ctrl-top-right > .maplibregl-ctrl { grid-column: 2; }
+.map-viewer-shell .measurement-compact-map .maplibregl-ctrl-top-right > .maplibregl-ctrl:has(.maplibregl-ctrl-zoom-in) {
     grid-column: 1;
     grid-row: 1 / span 3;
     margin-right: 0;
@@ -2561,4 +2563,9 @@ select.form-input:focus {
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
+}
+
+/* Provider artwork is displayed unaltered; source text attribution stays native. */
+.map-provider-attribution img {
+    display: block;
 }

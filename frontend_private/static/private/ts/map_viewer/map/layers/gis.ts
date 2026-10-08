@@ -1,3 +1,4 @@
+import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerGeoJSON, DisplayGeometryType } from '../../../../../../../ts-types/domain/map-geometry.ts';
 import type { OverlayInstallOptions, PreparedGISOverlay } from '../../../../../../../ts-types/domain/map-layers.ts';
@@ -136,7 +137,7 @@ export async function addGISLayer(this: Pick<GISLayerOwner, 'reorderLayers'>, la
     State.allGISLayerLayers.set(id, layerIds);
     State.gisLayerClickableLayerIds.add(fillLayerId);
     State.gisLayerClickableLayerIds.add(pointLayerId);
-    if (boundsCoordinates) State.gisLayerBounds.set(id, new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
+    if (boundsCoordinates) State.gisLayerBounds.set(id, new Renderer.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
     else State.gisLayerBounds.delete(id);
     void this.reorderLayers();
 }

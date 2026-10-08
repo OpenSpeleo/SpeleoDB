@@ -8,6 +8,9 @@
     "build": {
       "commands": [
         {
+          "cmd": "mise exec -- bun scripts/check-shared-package-pins.ts"
+        },
+        {
           "cmd": "uv sync --extra production --frozen"
         },
         {
@@ -48,5 +51,8 @@
       "git",
       "libpq5"
     ]
-  }
+  },
+  "buildAptPackages": [
+    "git"
+  ]
 }

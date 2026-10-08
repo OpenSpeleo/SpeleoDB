@@ -41,6 +41,34 @@ function installedPackages(modulesDirectory: string): PackageManifest[] {
 }
 
 describe('Bun package manager contract', () => {
+    it('starts Django without building or watching frontend assets', () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-manual-assets-'));
+        try {
+            const bin = path.join(directory, 'bin');
+            const trace = path.join(directory, 'commands');
+            fs.mkdirSync(bin);
+            fs.writeFileSync(path.join(directory, 'bun.lock'), '{}\n');
+            for (const command of ['bun', 'python']) {
+                fs.writeFileSync(path.join(bin, command), `#!/bin/sh\nprintf '${command} %s\\n' "$*" >> "$SPELEO_TEST_TRACE"\n`, { mode: 0o755 });
+            }
+            const result = spawnSync('bash', [path.join(ROOT, 'compose/start')], {
+                cwd: directory,
+                env: { ...process.env, SPELEODB_LOCAL_PACKAGES: '0', PATH: `${bin}:${process.env.PATH}`, SPELEO_TEST_TRACE: trace },
+                encoding: 'utf8', timeout: 5000,
+            });
+            expect(result.error).toBeUndefined();
+            expect(result.status).toBe(0);
+            expect(fs.readFileSync(trace, 'utf8').trim().split('\n')).toEqual([
+                'python manage.py migrate',
+                'bun scripts/check-shared-package-pins.ts',
+                'bun install --frozen-lockfile',
+                'python manage.py runserver_plus 0000:8000',
+            ]);
+        } finally {
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
     it.each([
         { failedStage: 'install', exitCode: 97, expectedCommands: ['bun install --frozen-lockfile'] },
         { failedStage: 'build', exitCode: 98, expectedCommands: ['bun install --frozen-lockfile', 'bun run build'] },
@@ -91,7 +119,7 @@ exit 0
             fs.writeFileSync(path.join(bin, 'bun'), '#!/bin/sh\nexit 97\n', { mode: 0o755 });
             const result = spawnSync('bash', [path.join(ROOT, script)], {
                 cwd: directory,
-                env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+                env: { ...process.env, SPELEODB_LOCAL_PACKAGES: '0', PATH: `${bin}:${process.env.PATH}` },
                 encoding: 'utf8',
                 timeout: 5000,
             });
@@ -140,11 +168,57 @@ exit 0
             expect(lock.workspaces[''][group] ?? {}).toEqual(packageJson[group] ?? {});
         }
 
+        expect(packageJson.overrides?.['@speleodb/map-core']).toBe(packageJson.dependencies?.['@speleodb/map-core']);
+        expect(lock.overrides).toEqual(packageJson.overrides);
+
         for (const [packagePath, lockedPackage] of Object.entries(lock.packages)) {
+            if (packagePath === '@speleodb/map-core' || packagePath === '@speleodb/map-viewer') {
+                // The manifest preserves the full immutable revision; Bun's
+                // GitHub archive identity abbreviates it in the package tuple.
+                const declaration = packageJson.dependencies?.[packagePath];
+                expect(declaration).toMatch(/^git\+https:\/\/github\.com\/[^/]+\/[^#]+#[a-f0-9]{40}$/);
+                const repository = new URL(declaration!.replace(/^git\+/, ''));
+                const archive = repository.pathname.slice(1).replace(/\.git$/, '');
+                expect(lockedPackage[0]).toBe(`${packagePath}@github:${archive}${repository.hash.slice(0, 8)}`);
+                expect(lockedPackage[3]).toMatch(/^sha512-/);
+                continue;
+            }
             expect(lockedPackage[0], packagePath).toMatch(/@\d+\.\d+\.\d+/);
             if (!lockedPackage[2].bundled) {
                 expect(lockedPackage[3], `Missing integrity for ${packagePath}`).toMatch(/^sha512-/);
             }
+        }
+    });
+
+    it.each([
+        { description: 'published immutable revisions', replacement: undefined, override: undefined, status: 0 },
+        { description: 'local paths', replacement: 'file:./packages/map-core', override: undefined, status: 1 },
+        { description: 'floating branches', replacement: 'git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#master', override: undefined, status: 1 },
+        { description: 'abbreviated revisions', replacement: 'git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#6ce4262', override: undefined, status: 1 },
+        { description: 'a mismatched core override', replacement: undefined, override: '^0.1.0', status: 1 },
+    ])('checks shared-package release pins for $description', ({ replacement, override, status }) => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-package-pins-'));
+        try {
+            const dependencies = { ...packageJson.dependencies };
+            if (replacement !== undefined) dependencies['@speleodb/map-core'] = replacement;
+            fs.mkdirSync(path.join(directory, 'scripts'));
+            const script = path.join(directory, 'scripts/check-shared-package-pins.ts');
+            fs.writeFileSync(script, read('scripts/check-shared-package-pins.ts'));
+            fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({
+                dependencies,
+                overrides: { '@speleodb/map-core': override ?? dependencies['@speleodb/map-core'] },
+            }));
+            const result = spawnSync('bun', [script], {
+                cwd: directory,
+                encoding: 'utf8',
+                timeout: 5000,
+            });
+            expect(result.error).toBeUndefined();
+            expect(result.status).toBe(status);
+            if (status === 0) expect(result.stderr).toBe('');
+            else expect(result.stderr).toMatch(/full 40-character commit SHA|override must exactly match/);
+        } finally {
+            fs.rmSync(directory, { recursive: true, force: true });
         }
     });
 

@@ -5,26 +5,25 @@
     "bun": "1.4.2"
   },
   "scripts": {
-    "start": "bun run dev",
+    "start": "bun run build",
     "build": "bun run typecheck && bun run audit:javascript && bun run audit:templates && bun run build:clean && vite build --mode production",
     "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/ts/dist/ ./frontend_public/static/ts/dist/",
     "build:assets": "bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --mode production",
-    "dev": "bun scripts/dev.ts",
+    "dev": "bun run build",
     "pre-commit": "bun run build",
     "update": "bun update --latest && bunx --bun update-browserslist-db@latest",
-    "test:assets-watch": "bun scripts/verify-vite-watch.ts",
     "test:browser": "playwright test --config ./playwright.config.ts",
     "lint:frontend": "eslint --config eslint.config.ts . --max-warnings=0",
     "test:frontend": "vitest run --config ./vitest.config.ts",
     "test:frontend:watch": "vitest --config ./vitest.config.ts",
-    "typecheck:runtime": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.json",
-    "typecheck:worker": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.worker.json",
-    "typecheck": "bun ./node_modules/@typescript/native/bin/tsc --build tsconfig.json tsconfig.worker.json tsconfig.development.json",
-    "typecheck:watch": "bun ./node_modules/@typescript/native/bin/tsc --build tsconfig.json tsconfig.worker.json tsconfig.development.json --watch --preserveWatchOutput",
+    "typecheck:runtime": "bun scripts/typecheck.ts --scope=runtime",
+    "typecheck:worker": "bun scripts/typecheck.ts --scope=worker",
+    "typecheck": "bun scripts/typecheck.ts",
     "audit:javascript": "bun scripts/audit-javascript.ts",
     "audit:templates": "bun scripts/audit-templates.ts",
     "lint:frontend:fix": "bun run lint:frontend --fix",
-    "typecheck:development": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.development.json"
+    "typecheck:development": "bun scripts/typecheck.ts --scope=development",
+    "check:shared-packages": "bun scripts/check-shared-package-pins.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
@@ -56,5 +55,13 @@
     "esbuild",
     "fsevents"
   ],
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#cb1cb131ae10dc57727ddf671f54df3c57bbd019",
+    "@speleodb/map-viewer": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer.git#a1fcbc080a8da87fe86baeb7b16e27957e433916",
+    "maplibre-gl": "6.10.0"
+  },
+  "overrides": {
+    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#cb1cb131ae10dc57727ddf671f54df3c57bbd019"
+  }
 }

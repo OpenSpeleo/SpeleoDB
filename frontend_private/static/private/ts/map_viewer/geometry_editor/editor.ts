@@ -614,7 +614,7 @@ export const GeometryEditor: GeometryEditorFacade = {
         if (this.session.saving) return true;
         if ((event.points?.length as number) > 1) { this.cancelDrag(); return true; }
         if (event.originalEvent?.button !== undefined && event.originalEvent.button !== 0) return true;
-        // Mapbox may omit the click after a drag. Suppress only that gesture's
+        // MapLibre may omit the click after a drag. Suppress only that gesture's
         // click, never a new deliberate mouse/touch action.
         this.session.suppressClick = false;
         const hit = this.hit(event);

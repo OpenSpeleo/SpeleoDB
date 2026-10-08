@@ -1,3 +1,4 @@
+import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerGeoJSON } from '../../../../../../../ts-types/domain/map-geometry.ts';
 import type { OverlayInstallOptions, PreparedGPSOverlay } from '../../../../../../../ts-types/domain/map-layers.ts';
@@ -134,7 +135,7 @@ export async function addGPSTrackLayer(this: Pick<GPSLayerOwner, 'reorderLayers'
     trackLayers.push(lineLayerId);
 
     if (boundsCoordinates) {
-        const bounds = new mapboxgl.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]);
+        const bounds = new Renderer.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]);
         State.gpsTrackBounds.set(tid, bounds);
         console.log(`📍 Calculated bounds for GPS track ${trackId}`);
     } else {

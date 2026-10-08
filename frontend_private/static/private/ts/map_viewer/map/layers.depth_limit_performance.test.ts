@@ -1,7 +1,7 @@
 import type { FeatureCollection, Geometry as GeoJSONGeometry } from 'geojson';
 import type { Mock } from 'vitest';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
-import type { MapboxLayer } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 import type { DepthDomain } from '../../../../../../ts-types/domain/map-display.ts';
 type Collection = FeatureCollection<GeoJSONGeometry, JSONObject>;
 interface Source { data: Collection; setData: Mock }
@@ -20,14 +20,14 @@ it('changes depth settings and visibility using cached domains after ingesting 2
     localStorage.clear();
     const previousProjects = Config._projects;
     const sources = new Map<string, Source>();
-    const definitions = new Map<string, MapboxLayer>();
+    const definitions = new Map<string, RendererLayer>();
     const setData = vi.fn();
     const map = {
         getStyle: () => ({}),
         getSource: vi.fn((id: string) => sources.get(id)),
         addSource: vi.fn((id: string, source: { data: Collection }) => sources.set(id, { ...source, setData })),
         getLayer: (id: string) => definitions.get(id),
-        addLayer: vi.fn((layer: MapboxLayer) => definitions.set(layer.id, layer)),
+        addLayer: vi.fn((layer: RendererLayer) => definitions.set(layer.id, layer)),
         setPaintProperty: vi.fn(),
         setLayoutProperty: vi.fn(),
         setFilter: vi.fn(),
@@ -47,7 +47,7 @@ it('changes depth settings and visibility using cached domains after ingesting 2
     }]));
     const download = vi.fn(async (projectId: string) => ({ ok: true, json: async () => input.get(projectId) }));
     vi.stubGlobal('fetch', download);
-    vi.stubGlobal('mapboxgl', {
+    vi.stubGlobal('__mapRenderer', {
         LngLatBounds: class {
             extend() { return this; }
             isEmpty() { return false; }

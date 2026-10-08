@@ -43,6 +43,7 @@ function formatGasMix(o2Percentage: number | undefined, hePercentage: number) {
  * Open the cylinder modal
  */
 function openCylinderModal(title = 'Safety Cylinder') {
+    setupCylinderModalControls();
     const modal = document.getElementById('cylinder-modal');
     const titleEl = document.getElementById('cylinder-modal-title');
 
@@ -1160,8 +1161,8 @@ export const CylinderInstalls = {
     clearCache
 };
 
-// Set up close button listener when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+// Set up close controls when opening this lazily loaded modal.
+function setupCylinderModalControls() {
     const closeBtn = document.getElementById('cylinder-modal-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', closeCylinderModal);
@@ -1170,12 +1171,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Also close on backdrop click
     const modal = document.getElementById('cylinder-modal');
     if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeCylinderModal();
-            }
-        });
+        modal.addEventListener('click', closeCylinderModalOnBackdrop);
     }
-});
+}
+
+function closeCylinderModalOnBackdrop(event: Event) {
+    if (event.target === event.currentTarget) {
+        closeCylinderModal();
+    }
+}
 
 // Make available globally

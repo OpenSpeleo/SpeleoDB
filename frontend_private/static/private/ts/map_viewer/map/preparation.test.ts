@@ -146,7 +146,7 @@ describe('cooperative bounds', () => {
             extend(coordinates: Coordinate2D) { this.coordinates.push(coordinates); return this; }
             isEmpty() { return this.coordinates.length === 0; }
         }
-        vi.stubGlobal('mapboxgl', { LngLatBounds: Bounds });
+        vi.stubGlobal('__mapRenderer', { LngLatBounds: Bounds });
         try {
             for (const wrapLongitude of [true, false]) {
                 const options = { ...immediate, wrapLongitude };

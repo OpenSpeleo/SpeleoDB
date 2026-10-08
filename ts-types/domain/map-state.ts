@@ -2,14 +2,14 @@ import type { Position } from 'geojson';
 import type { EntityId } from './identifiers.ts';
 import type { DisplayConcern, DisplayPreferences, DepthDomain } from './map-display.ts';
 import type { CameraBounds, DisplayGeometryType, ViewerGeoJSON } from './map-geometry.ts';
-import type { MapboxMap } from './mapbox.ts';
+import type { RendererMap } from './renderer.ts';
 import type { StationRecord, StationTagRecord } from './station-records.ts';
 import type { ViewerLandmark, ViewerLandmarkCollection } from './map-entities.ts';
 export type { ViewerLandmark } from './map-entities.ts';
 import type { CylinderInstallRecord } from './fleet-records.ts';
 import type { GISGeometryResponse } from './map-config.ts';
 
-export type ViewerMap = MapboxMap;
+export type ViewerMap = RendererMap;
 export interface ViewerExplorationLead {
     id: EntityId;
     coordinates: Position;

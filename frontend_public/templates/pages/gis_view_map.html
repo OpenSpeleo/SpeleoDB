@@ -17,8 +17,6 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
   {% vite_styles 'style-private-shell' 'style-shared-modal' 'style-map-viewer' %}
   {% vite_preload 'controller-public-gis' %}
-  <link href='https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css'
-        rel='stylesheet' />
 {% endblock extra_css %}
 {% block content %}
   {% include "snippets/welcome_modal.html" %}
@@ -63,7 +61,6 @@
   </main>
 {% endblock content %}
 {% block extra_js %}
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.js"></script>
   <script src="{% url 'url_reverse.js' %}"></script>
 {% endblock extra_js %}
 {% block inline_extra_js %}

@@ -10,9 +10,21 @@ export function runtimeClosure(entry: string, root = process.cwd()): Set<string>
         visited.add(file);
         const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
         function dependency(specifier: string): void {
-            if (specifier.startsWith('.') && specifier.endsWith('.ts')) {
-                follow(path.resolve(path.dirname(file), specifier));
+            const sharedPackage = specifier.startsWith('@speleodb/map-core')
+                || specifier.startsWith('@speleodb/map-viewer');
+            if (!sharedPackage && !specifier.startsWith('.')) return;
+            if (/\.(?:json|png|css)(?:\?|$)/.test(specifier)) return;
+            if (!sharedPackage && !/\.[cm]?[jt]s$/.test(specifier)) return;
+            const resolved = ts.resolveModuleName(specifier, file, {
+                moduleResolution: ts.ModuleResolutionKind.Bundler,
+                customConditions: ['speleodb-source'],
+                allowImportingTsExtensions: true,
+            }, ts.sys).resolvedModule?.resolvedFileName;
+            if (!resolved) throw new Error(`Unresolved first-party runtime import ${specifier} in ${file}`);
+            if (/\.d\.[cm]?ts$/.test(resolved)) {
+                throw new Error(`First-party runtime import must resolve to source: ${specifier} in ${file}`);
             }
+            follow(resolved);
         }
         function visit(node: ts.Node): void {
             // Inline `type` specifiers retain an empty runtime import/export under

@@ -1,8 +1,9 @@
+import { Renderer } from './renderer.ts';
 import type { Geometry } from 'geojson';
 import type { ViewerGeoJSON } from '../../../../../../ts-types/domain/map-geometry.ts';
 
 export function computeGeoJSONBounds(geojsonData: ViewerGeoJSON | null | undefined, { wrapLongitude = true } = {}) {
-    const bounds = new mapboxgl.LngLatBounds();
+    const bounds = new Renderer.LngLatBounds();
     if (
         Array.isArray(geojsonData?.bbox)
         && geojsonData.bbox.length >= 4

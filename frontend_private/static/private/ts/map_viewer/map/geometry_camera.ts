@@ -36,7 +36,7 @@ export function geometryCameraPadding(map: Rectangle, viewport: Rectangle, obsta
 
 export function fitGISGeometry(map: GeometryCameraMap, bounds: CameraBounds | null | undefined) {
     if (!bounds) return;
-    // RFC 7946 crossing bounds use west > east. Mapbox fits projected corners
+    // RFC 7946 crossing bounds use west > east. MapLibre fits projected corners
     // directly, so unwrap east to keep the camera on the short longitude span.
     const cameraBounds: CameraBounds = Array.isArray(bounds) && bounds.length === 4 && bounds[0] > bounds[2]
         ? [(bounds as FlatBounds)[0], (bounds as FlatBounds)[1], (bounds as FlatBounds)[2] + DEFAULTS.MAP.ANTIMERIDIAN_WRAP_DEGREES, (bounds as FlatBounds)[3]]
@@ -51,7 +51,7 @@ export function fitGISGeometry(map: GeometryCameraMap, bounds: CameraBounds | nu
     const selectors = ['.gis-geometry-editor', '#project-panel', '#project-panel-minimized',
         '#gps-tracks-panel', '#gps-tracks-panel-minimized', '#gis-layers-panel',
         '#gis-layers-panel-minimized', '#gis-geometries-panel', '#gis-geometries-panel-minimized',
-        '.mapboxgl-ctrl-top-right'];
+        '.maplibregl-ctrl-top-right'];
     const obstacles = selectors.flatMap(selector => [...document.querySelectorAll<HTMLElement>(selector)])
         .filter(element => !element.hidden && getComputedStyle(element).display !== 'none')
         .map(element => element.getBoundingClientRect());

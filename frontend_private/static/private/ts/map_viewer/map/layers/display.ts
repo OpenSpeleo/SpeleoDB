@@ -1,3 +1,4 @@
+import { stationTypesFilter } from '@speleodb/map-viewer/expressions';
 import { publishDisplayEvent } from './display_events.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode, DepthDomain, DisplayCategory, DisplayConcern, DisplayStationType } from '../../../../../../../ts-types/domain/map-display.ts';
@@ -163,9 +164,7 @@ export function applySurveyStationVisibility(projectId: EntityId, projectVisible
     }
     const labelId = `stations-${projectId}-labels`;
     if (map.getLayer(labelId)) {
-        const enabledTypes = DEFAULTS.DISPLAY.STATION_TYPES
-            .filter(({ id }) => State.displayPreferences.stationTypes[id]).map(({ id }) => id);
-        map.setFilter(labelId, ['in', ['coalesce', ['get', 'type'], 'sensor'], ['literal', enabledTypes]]);
+        map.setFilter(labelId, stationTypesFilter(State.displayPreferences.stationTypes));
         applyLayerVisibility([labelId], visible);
     }
 }

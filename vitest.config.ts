@@ -1,7 +1,9 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+import { sharedMapResolution } from './scripts/shared-map-packages.ts';
 
 export default defineConfig({
+    resolve: sharedMapResolution,
     test: {
         environment: 'jsdom',
         globals: true,

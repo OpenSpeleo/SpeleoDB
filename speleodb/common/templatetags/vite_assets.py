@@ -14,7 +14,6 @@ from django import template
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.templatetags.static import static
-from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.html import format_html_join
 
@@ -243,22 +242,6 @@ def _render_manifest(context: Context) -> dict[str, ManifestEntry] | None:
     return cast("dict[str, ManifestEntry] | None", frame[key])
 
 
-def development_generation(manifest: dict[str, ManifestEntry] | None) -> str | None:
-    if not settings.DEBUG or manifest is None:
-        return None
-    source = _entry_registry()["scripts"].get("app")
-    entry = manifest.get(source) if source else None
-    parts = entry["file"].split("/") if entry else []
-    match parts:
-        case ["assets", "dev", session, generation, *assets] if assets:
-            return f"{session}/{generation}"
-    return None
-
-
-def current_development_generation() -> str | None:
-    return development_generation(_manifest())
-
-
 @register.simple_tag(takes_context=True)
 def vite_styles(context: Context, *names: str) -> SafeString:
     manifest = _render_manifest(context)
@@ -301,15 +284,6 @@ def vite_preload(context: Context, *names: str) -> SafeString:
 def vite_script(context: Context, name: str) -> SafeString:
     manifest = _render_manifest(context)
     asset_file = _entry_file(name, "script", manifest)
-    generation = development_generation(manifest) if name == "app" else None
-    if generation is not None:
-        return format_html(
-            '<script type="module" src="{}" crossorigin '
-            'data-speleodb-generation="{}" data-speleodb-reload="{}"></script>',
-            _static_asset_url(asset_file),
-            generation,
-            reverse("vite-development-generation"),
-        )
     return format_html(
         '<script type="module" src="{}" crossorigin></script>',
         _static_asset_url(asset_file),

@@ -130,9 +130,8 @@ See [Settings design](settings.md) for the complete behavioral contract.
 
 When frontend build scripts, registry entries, or Tailwind sources change:
 
-1. run
-   - `docker exec -w /app speleodb_local_django bun run build`
-   - `docker exec -w /app speleodb_local_django bun run test:assets-watch`
+1. run `docker exec -w /app speleodb-monorepo-django bun run build` and wait for
+   success before refreshing the browser
 2. ensure no "No utility classes were detected" warnings
 3. validate `.vite/manifest.json`, `style-app`, the bootstrap, and all map
    controller entries are generated under
@@ -169,10 +168,17 @@ behavior. Use the real integration paths for those claims, following the shared
 ### Viewer startup composition
 
 `frontend_common/test/viewer-composition.test.ts` imports the real public and
-private roots and their shared modules. Only external Mapbox and network
-boundaries are simulated. These cases check startup before the Mapbox `load`
+private roots and their shared modules. Only external MapLibre and network
+boundaries are simulated. These cases check startup before the MapLibre `load`
 event: request overlap, source-control mounting, private measurement/control
 registration, and separate public display persistence. Root-specific suites
 exercise asynchronous loading and style-change callbacks. Browser verification
 remains responsible for rendering, gesture timing, and performance budgets; the
-startup fixture does not model Mapbox rendering.
+startup fixture does not model MapLibre rendering.
+
+The composition renderer double implements the shared `GlobeAtmosphereMap`
+contract, including style readiness, sky state, and custom-layer storage. Its
+hydration cases dispatch `style.load` before `load` and after style replacement
+to exercise real atmosphere installation and recreation for both viewer roots,
+alongside survey-source restoration. GPU resource creation and visual appearance
+remain browser responsibilities.

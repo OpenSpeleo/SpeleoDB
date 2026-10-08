@@ -1,9 +1,10 @@
+import { createStationLayers, createSurfaceStationLayers } from '@speleodb/map-viewer';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
-import type { MapPointCollection, PointProperties } from '../../../../../../../ts-types/domain/mapbox.ts';
-import { removeLayersAndSource } from './source_lifecycle.ts';
+import type { MapPointCollection, PointProperties, RendererLayer } from '../../../../../../../ts-types/domain/renderer.ts';
+import { removeLayersAndSource, addOwnedSource, getSourceData } from './source_lifecycle.ts';
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 interface StationLayerOwner {
     applyProjectLayerVisibility(id: EntityId): void;
@@ -37,7 +38,7 @@ export function addSubSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyPr
     }
 
     // Ensure id and color properties are set on each feature
-    // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
+    // MapLibre requires promoteId for string IDs - copy feature.id to properties.id
     data.features.forEach(feature => {
         if (feature.id && !feature.properties.id) {
             feature.properties.id = feature.id;
@@ -49,7 +50,7 @@ export function addSubSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyPr
         }
     });
 
-    map.addSource(sourceId, {
+    addOwnedSource(map, sourceId, {
         type: 'geojson',
         data: data,
         promoteId: 'id'
@@ -57,126 +58,28 @@ export function addSubSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyPr
 
     // Add Circle Layer for Sensor stations (type is null, undefined, or 'sensor')
     // Use data-driven color from feature properties
-    map.addLayer({
-        id: circleLayerId,
-        type: 'circle',
-        source: sourceId,
-        filter: ['any',
-            ['!', ['has', 'type']],
-            ['==', ['get', 'type'], null],
-            ['==', ['get', 'type'], 'sensor']
-        ],
-        minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-        paint: {
-            'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
-            'circle-color': ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff',
-            'circle-opacity': 1
-        }
-    });
-
     // Add Biology Station Icon Layer (for type === 'biology')
-    if (map.hasImage('biology-station-icon')) {
-        map.addLayer({
-            id: biologyLayerId,
-            type: 'symbol',
-            source: sourceId,
-            filter: ['==', ['get', 'type'], 'biology'],
-            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-            layout: {
-                'icon-image': 'biology-station-icon',
-                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true
-            },
-            paint: {
-                'icon-opacity': 1
-            }
-        });
-    }
-
     // Add Bone Station Icon Layer (for type === 'bone')
-    if (map.hasImage('bone-station-icon')) {
-        map.addLayer({
-            id: boneLayerId,
-            type: 'symbol',
-            source: sourceId,
-            filter: ['==', ['get', 'type'], 'bone'],
-            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-            layout: {
-                'icon-image': 'bone-station-icon',
-                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true
-            },
-            paint: {
-                'icon-opacity': 1
-            }
-        });
-    }
-
     // Add Artifact Station Icon Layer (for type === 'artifact')
-    if (map.hasImage('artifact-station-icon')) {
-        map.addLayer({
-            id: artifactLayerId,
-            type: 'symbol',
-            source: sourceId,
-            filter: ['==', ['get', 'type'], 'artifact'],
-            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-            layout: {
-                'icon-image': 'artifact-station-icon',
-                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true
-            },
-            paint: {
-                'icon-opacity': 1
-            }
-        });
-    }
-
     // Add Geology Station Icon Layer (for type === 'geology')
-    if (map.hasImage('geology-station-icon')) {
-        map.addLayer({
-            id: geologyLayerId,
-            type: 'symbol',
-            source: sourceId,
-            filter: ['==', ['get', 'type'], 'geology'],
-            minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-            layout: {
-                'icon-image': 'geology-station-icon',
-                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true
-            },
-            paint: {
-                'icon-opacity': 1
-            }
-        });
-    }
-
     // Add Label Layer for all station types
-    map.addLayer({
-        id: labelLayerId,
-        type: 'symbol',
-        source: sourceId,
-        minzoom: ZOOM_LEVELS.SUBSURFACE_STATION_LABEL,
-        layout: {
-            'text-field': ['get', 'name'],
-            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 1.2],
-            'text-size': 12,
-            'text-anchor': 'top',
-            'text-allow-overlap': false,
-            'text-ignore-placement': false
-        },
-        paint: {
-            'text-color': '#222',
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 2
-        }
+    const layers = createStationLayers({
+        sourceId, circleId: circleLayerId, labelId: labelLayerId,
+        markerMinZoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
+        labelMinZoom: ZOOM_LEVELS.SUBSURFACE_STATION_LABEL,
+        markerSize: ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
+        iconSize: ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
+        labelSize: 12,
+        color: ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
+        stationTypes: State.displayPreferences.stationTypes,
+        icons: [
+            { layerId: biologyLayerId, stationType: 'biology', iconId: 'biology-station-icon', available: map.hasImage('biology-station-icon') },
+            { layerId: boneLayerId, stationType: 'bone', iconId: 'bone-station-icon', available: map.hasImage('bone-station-icon') },
+            { layerId: artifactLayerId, stationType: 'artifact', iconId: 'artifact-station-icon', available: map.hasImage('artifact-station-icon') },
+            { layerId: geologyLayerId, stationType: 'geology', iconId: 'geology-station-icon', available: map.hasImage('geology-station-icon') },
+        ],
     });
+    layers.forEach(layer => map.addLayer(layer as RendererLayer));
 
     // Track layers
     if (!State.allProjectLayers.has(String(projectId))) {
@@ -214,7 +117,7 @@ export function addSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyNetwo
     }
 
     // Ensure id and color properties are set on each feature
-    // Mapbox requires promoteId for string IDs - copy feature.id to properties.id
+    // MapLibre requires promoteId for string IDs - copy feature.id to properties.id
     data.features.forEach(feature => {
         if (feature.id && !feature.properties.id) {
             feature.properties.id = feature.id;
@@ -226,7 +129,7 @@ export function addSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyNetwo
         }
     });
 
-    map.addSource(sourceId, {
+    addOwnedSource(map, sourceId, {
         type: 'geojson',
         data: data,
         promoteId: 'id'
@@ -234,47 +137,17 @@ export function addSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyNetwo
 
     // Add Diamond Symbol Layer (◆)
     // Use text-field with unicode diamond instead of circle
-    map.addLayer({
-        id: symbolLayerId,
-        type: 'symbol',
-        source: sourceId,
-        minzoom: ZOOM_LEVELS.SURFACE_STATION_SYMBOL,
-        layout: {
-            'text-field': '◆',  // Diamond shape
-            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-size': ['interpolate', ['linear'], ['zoom'], 14, 16, 18, 24],
-            'text-allow-overlap': true,
-            'text-ignore-placement': true
-        },
-        paint: {
-            'text-color': ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 2,
-            'text-halo-blur': 0.5
-        }
-    });
-
+    // Diamond shape
     // Add Label Layer
-    map.addLayer({
-        id: labelLayerId,
-        type: 'symbol',
-        source: sourceId,
-        minzoom: ZOOM_LEVELS.SURFACE_STATION_LABEL,
-        layout: {
-            'text-field': ['get', 'name'],
-            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 1.2],
-            'text-size': 12,
-            'text-anchor': 'top',
-            'text-allow-overlap': false,
-            'text-ignore-placement': false
-        },
-        paint: {
-            'text-color': '#222',
-            'text-halo-color': '#ffffff',
-            'text-halo-width': 2
-        }
+    const layers = createSurfaceStationLayers({
+        sourceId, markerId: symbolLayerId, labelId: labelLayerId,
+        markerMinZoom: ZOOM_LEVELS.SURFACE_STATION_SYMBOL,
+        labelMinZoom: ZOOM_LEVELS.SURFACE_STATION_LABEL,
+        markerSize: ['interpolate', ['linear'], ['zoom'], 14, 16, 18, 24],
+        labelSize: 12,
+        color: ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],
     });
+    layers.forEach(layer => map.addLayer(layer as RendererLayer));
 
     // Track layers
     if (!State.allNetworkLayers.has(String(networkId))) {
@@ -294,8 +167,8 @@ export function updateSurfaceStationPosition(networkId: EntityId, stationId: Ent
 
     const sourceId = `surface-stations-source-${networkId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             feature.geometry.coordinates = newCoords;
@@ -317,8 +190,8 @@ export function updateSurfaceStationColor(networkId: EntityId, stationId: Entity
 
     const sourceId = `surface-stations-source-${networkId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             feature.properties.color = color;
@@ -333,8 +206,8 @@ export function updateSurfaceStationProperties(networkId: EntityId, stationId: E
 
     const sourceId = `surface-stations-source-${networkId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             // Update all provided properties
@@ -354,8 +227,8 @@ export function updateStationPosition(projectId: EntityId, stationId: EntityId, 
 
     const sourceId = `stations-source-${projectId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             feature.geometry.coordinates = newCoords;
@@ -377,8 +250,8 @@ export function updateStationColor(projectId: EntityId, stationId: EntityId, col
 
     const sourceId = `stations-source-${projectId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             feature.properties.color = color;
@@ -394,8 +267,8 @@ export function updateStationProperties(projectId: EntityId, stationId: EntityId
 
     const sourceId = `stations-source-${projectId}`;
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === stationId);
         if (feature) {
             // Update all provided properties

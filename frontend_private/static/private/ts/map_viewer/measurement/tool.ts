@@ -70,10 +70,10 @@ export class MeasurementTool {
         this.host = map.getContainer();
         this.renderer = new MeasurementRenderer(map);
         this.control = document.createElement('div');
-        this.control.className = 'mapboxgl-ctrl mapboxgl-ctrl-group measurement-control';
+        this.control.className = 'maplibregl-ctrl maplibregl-ctrl-group measurement-control';
         this.button = document.createElement('button');
         this.button.type = 'button';
-        this.button.className = 'mapboxgl-ctrl-icon measurement-button';
+        this.button.className = 'maplibregl-ctrl-icon measurement-button';
         this.button.setAttribute('aria-label', 'Measure distance');
         this.button.setAttribute('aria-pressed', 'false');
         // Trusted static icon, with no user/API interpolation.

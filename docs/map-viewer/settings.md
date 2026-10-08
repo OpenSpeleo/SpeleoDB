@@ -148,8 +148,8 @@ renderer and lifecycle paths, and add regression coverage. Reuse Settings rows;
 do not duplicate state or permission matrices. Document stable DOM hooks and
 escape user/API values.
 
-Category switches update tracked Mapbox layout/filter properties without record
-fetches, bulk selection, GeoJSON reconstruction, style resets, or camera
+Category switches update tracked MapLibre layout/filter properties without
+record fetches, bulk selection, GeoJSON reconstruction, style resets, or camera
 movement. Individual selections retain lazy loading. Depth mode uses cached
 project domains; marker visibility does not discard or rescan those domains.
 
@@ -168,10 +168,10 @@ manager focus, and editor keyboard isolation. Entrance regressions additionally
 cover legacy preference restoration, data refresh/reconstruction, basemap
 switching, project/country gate preservation, and unchanged linework/depth data.
 Inspect the authenticated browser at 320/390px, tablet, desktop, short
-landscape, fullscreen, 200% zoom, and reduced motion. Stop any watcher, build
-cleanly, and verify manifest-matching served assets before final screenshots.
-Check bounds/focus/network behavior as well as visuals, and record actual
-results in external temporary verification notes.
+landscape, fullscreen, 200% zoom, and reduced motion. Run the manual clean
+build, refresh the browser, and verify manifest-matching served assets before
+final screenshots. Check bounds/focus/network behavior as well as visuals, and
+record actual results in external temporary verification notes.
 
 Concurrency coverage must exercise the actual control handlers: reverse a switch
 while its load is unresolved, change destination across panel types, hide a

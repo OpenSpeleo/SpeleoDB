@@ -1,5 +1,7 @@
+import { FEET_TO_METERS } from '@speleodb/map-core/depth';
+import { GEOJSON_LINE_RENDER_DEFAULTS } from '@speleodb/map-viewer/expressions';
 import type { DisplayCategory, DisplayStationType } from '../../../../../ts-types/domain/map-display.ts';
-import geometryContract from '../../../../../speleodb/gis/geometry_contract.json' with { type: 'json' };
+import geometryContract from '@speleodb/map-core/geometry-contract.json' with { type: 'json' };
 
 // ============================================================
 // DEFAULTS — single source of truth for every tuneable constant
@@ -15,7 +17,7 @@ export const DEFAULTS = Object.freeze({
         STYLE: 'mapbox://styles/mapbox/satellite-streets-v12',
         DEFAULT_SOURCE_ID: 'mapbox-satellite',
         RASTER_GLYPHS: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
-        CENTER: [0, 0],
+        CENTER: [2.35, 46.6],
         INITIAL_ZOOM: 0,
         LIMITED_MAX_ZOOM: 13,
         PRECISE_MAX_ZOOM: 22,
@@ -60,7 +62,7 @@ export const DEFAULTS = Object.freeze({
         MIN_CURVE_SEGMENTS: 32,
         MAX_CURVE_SEGMENTS: 256,
         METERS_PER_KILOMETER: 1000,
-        METERS_PER_FOOT: 0.3048,
+        METERS_PER_FOOT: FEET_TO_METERS,
         FEET_PER_MILE: 5280,
         METER_DECIMALS: 1,
         LARGE_UNIT_DECIMALS: 2,
@@ -86,13 +88,8 @@ export const DEFAULTS = Object.freeze({
         LABEL_FONTS: ['Open Sans Semibold', 'Arial Unicode MS Regular'],
     },
 
-    GEOJSON_RENDER: {
-        // Keep short lines; simplification can discard whole features.
-        TOLERANCE: 0,
-        OVERVIEW_WIDTH_STOPS: [[0, 1], [8, 1], [12, 1.5], [14, 2]],
-        DETAIL_ZOOM: 16,
-        CLOSE_ZOOM: 18,
-    },
+    // Keep short lines; simplification can discard whole features.
+    GEOJSON_RENDER: GEOJSON_LINE_RENDER_DEFAULTS,
 
     PROJECT_RENDER: {
         DETAIL_WIDTH: 5,
@@ -131,6 +128,7 @@ export const DEFAULTS = Object.freeze({
     },
 
     UI: {
+        MODAL_SETUP_DELAY_MS: 50,
         MOBILE_BREAKPOINT: 640,
         MIN_MAP_HEIGHT: 600,
         MAP_PADDING_OFFSET: 20,

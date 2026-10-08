@@ -1,10 +1,10 @@
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry, Point } from 'geojson';
 import type { Mock } from 'vitest';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
-import type { MapboxLayer, MapboxLayout, MapboxPaint, MapboxValue } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer, RendererLayout, RendererPaint, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
 type Collection = FeatureCollection<GeoJSONGeometry, JSONObject>;
 interface TestSource { data: Collection; _data: Collection; tolerance?: number; setData: Mock<(data: Collection) => void> }
-type TestLayer = MapboxLayer & { paint: MapboxPaint };
+type TestLayer = RendererLayer & { paint: RendererPaint };
 function currentMap() { return State.map as unknown as ReturnType<typeof createMap>; }
 function fetchDouble() { return fetch as unknown as Mock<() => Promise<{ ok: boolean; json(): Promise<Collection> }>>; }
 import { Config, DEFAULTS } from '../config.ts';
@@ -35,22 +35,22 @@ function surveyCollection() {
 }
 
 function createMap() {
-    const layers = new Map<string, MapboxLayer>();
+    const layers = new Map<string, RendererLayer>();
     const sources = new Map<string, TestSource>();
     return {
         getStyle: () => ({ layers: [...layers.values()] }),
         getLayer: (id: string) => layers.get(id) as TestLayer,
         getSource: (id: string) => sources.get(id)!,
-        addLayer: vi.fn((layer: MapboxLayer) => layers.set(layer.id, layer)),
+        addLayer: vi.fn((layer: RendererLayer) => layers.set(layer.id, layer)),
         removeLayer: (id: string) => layers.delete(id),
         addSource: vi.fn((id: string, source: { data: Collection; tolerance?: number }) => sources.set(id, { ...source, _data: source.data, setData: vi.fn() })),
         removeSource: (id: string) => sources.delete(id),
         hasImage: () => true,
-        setLayoutProperty: vi.fn((id: string, key: keyof MapboxLayout, value: MapboxValue) => {
+        setLayoutProperty: vi.fn((id: string, key: keyof RendererLayout, value: RendererValue) => {
             const layer = layers.get(id)!;
             layer.layout = { ...layer.layout, [key]: value };
         }),
-        setFilter: vi.fn((id: string, filter: MapboxValue) => { layers.get(id)!.filter = filter; }),
+        setFilter: vi.fn((id: string, filter: RendererValue) => { layers.get(id)!.filter = filter; }),
         setPaintProperty: vi.fn(),
         moveLayer: vi.fn(), fitBounds: vi.fn(), flyTo: vi.fn(), setStyle: vi.fn(),
     };
@@ -58,8 +58,8 @@ function createMap() {
 
 function visibility(id: string) { return currentMap().getLayer(id)?.layout?.visibility; }
 
-function widthAtZoom(expression: MapboxValue | undefined, zoom: number) {
-    const interpolation = expression as MapboxValue[];
+function widthAtZoom(expression: RendererValue | undefined, zoom: number) {
+    const interpolation = expression as RendererValue[];
     expect(interpolation.slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
     const stops = interpolation.slice(3) as number[];
     if (zoom <= stops[0]!) return stops[1]!;
@@ -73,7 +73,7 @@ function widthAtZoom(expression: MapboxValue | undefined, zoom: number) {
 }
 
 beforeEach(() => {
-    vi.stubGlobal('mapboxgl', { LngLatBounds: class {
+    vi.stubGlobal('__mapRenderer', { LngLatBounds: class {
         declare coordinates: unknown[];
         constructor(west: unknown, east: unknown) { this.coordinates = [west, east]; }
         isEmpty() { return false; }

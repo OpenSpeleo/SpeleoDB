@@ -1,6 +1,6 @@
 import { DEFAULTS } from './defaults.ts';
 import { DEFAULTS as publicDefaults } from './config.ts';
-import geometryContract from '../../../../../speleodb/gis/geometry_contract.json' with { type: 'json' };
+import geometryContract from '@speleodb/map-core/geometry-contract.json' with { type: 'json' };
 
 it('re-exports the same shallow-frozen defaults and geometry contract references', () => {
     expect(publicDefaults).toBe(DEFAULTS);

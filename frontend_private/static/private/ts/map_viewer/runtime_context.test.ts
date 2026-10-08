@@ -1,3 +1,4 @@
+import { MAP_ICON_URLS } from '@speleodb/map-viewer/icons';
 import { configureRuntimeContext, getRuntimeContext } from './runtime_context.ts';
 
 afterEach(() => { configureRuntimeContext({}); });
@@ -19,9 +20,32 @@ describe('map runtime context', () => {
 it.each([null, undefined, false, 1, 'context'])('normalizes non-object context %s and replaces the stored identity', value => {
     const previous = getRuntimeContext();
     const current = configureRuntimeContext(value);
-    expect(current).toEqual({ icons: {} });
+    expect(Object.values(current.icons)).toHaveLength(7);
+    expect(Object.values(current.icons)).toEqual(expect.arrayContaining(Object.values(MAP_ICON_URLS)));
     expect(current).not.toBe(previous);
     expect(current).toBe(getRuntimeContext());
+});
+
+it('supplies shared icons to menus and dialogs when Django omits the former asset context', () => {
+    const { icons } = configureRuntimeContext({ csrfToken: 'token' });
+    expect(icons).toEqual({
+        sensor: MAP_ICON_URLS.sensor, biology: MAP_ICON_URLS.biology,
+        bone: MAP_ICON_URLS.bones, artifact: MAP_ICON_URLS.artifact,
+        geology: MAP_ICON_URLS.geology, explorationLead: MAP_ICON_URLS.explorationLead,
+        cylinderOrange: MAP_ICON_URLS.cylinder,
+    });
+});
+
+it('retains valid icon overrides and fills omitted or unusable values without mutating the input', () => {
+    const source = { icons: { sensor: '/custom.svg', biology: undefined, bone: null, artifact: '', geology: ' ' } };
+    const { icons } = configureRuntimeContext(source);
+    expect(icons.sensor).toBe('/custom.svg');
+    expect(icons.biology).toBe(MAP_ICON_URLS.biology);
+    expect(icons.bone).toBe(MAP_ICON_URLS.bones);
+    expect(icons.artifact).toBe(MAP_ICON_URLS.artifact);
+    expect(icons.geology).toBe(MAP_ICON_URLS.geology);
+    expect(source.icons.bone).toBeNull();
+    expect(source.icons.artifact).toBe('');
 });
 
 it('copies only the outer object and icons while retaining other nested identities', () => {

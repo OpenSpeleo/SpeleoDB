@@ -90,9 +90,6 @@ export async function initializeControllers(root: ParentNode = document) {
 }
 
 if (typeof document !== 'undefined') {
-    if (import.meta.env.MODE === 'development') {
-        void import('./development/reload.ts').then(({ startDevelopmentReload }) => startDevelopmentReload());
-    }
     applyCriticalRouteState();
     captureInitialControllerState();
     // Every template places this module after its controller declarations at the

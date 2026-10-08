@@ -1,34 +1,34 @@
 import type { Mock } from 'vitest';
-import type { MapboxLayer, MapboxImage, MapboxMarkerOptions, MapboxValue } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer, RendererImage, RendererMarkerOptions, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
 import type { MeasurementCollection, MeasurementImageOptions, MeasurementRendererMap, MeasurementSourceDefinition } from '../../../../../../ts-types/domain/measurement-renderer.ts';
 
 interface TestSource extends MeasurementSourceDefinition { setData: Mock<(this: TestSource, data: MeasurementCollection) => void> }
-interface TestMarker { options: MapboxMarkerOptions; coordinate?: readonly number[]; setLngLat: Mock<(coordinate: readonly number[]) => TestMarker>; addTo: Mock<(map: { getContainer(): HTMLElement }) => TestMarker>; remove: Mock<() => TestMarker> }
+interface TestMarker { options: RendererMarkerOptions; coordinate?: readonly number[]; setLngLat: Mock<(coordinate: readonly number[]) => TestMarker>; addTo: Mock<(map: { getContainer(): HTMLElement }) => TestMarker>; remove: Mock<() => TestMarker> }
 import { DEFAULTS } from '../config.ts';
 import { createMeasurement } from './geometry.ts';
 import { MeasurementRenderer, MEASUREMENT_LAYER_PREFIX } from './renderer.ts';
 
 function makeMap() {
     const sources = new Map<string, TestSource>();
-    const layers = new Map<string, MapboxLayer>();
-    const images = new Map<string, { image: MapboxImage; options: MeasurementImageOptions }>();
+    const layers = new Map<string, RendererLayer>();
+    const images = new Map<string, { image: RendererImage; options: MeasurementImageOptions }>();
     const listeners = new Map<string, () => void>();
     const container = document.createElement('div');
     return {
         sources, layers, images, listeners,
         getContainer: () => container,
-        getStyle: vi.fn<() => { layers: MapboxLayer[] } | undefined>(() => ({ layers: [...layers.values()] })),
+        getStyle: vi.fn<() => { layers: RendererLayer[] } | undefined>(() => ({ layers: [...layers.values()] })),
         getSource: (id: string) => sources.get(id), getLayer: (id: string) => layers.get(id), hasImage: (id: string) => images.has(id),
         addSource: vi.fn((id: string, definition: MeasurementSourceDefinition) => sources.set(id, { ...definition, setData: vi.fn(function(this: TestSource, data: MeasurementCollection) { this.data = data; }) })),
-        addLayer: vi.fn((layer: MapboxLayer) => layers.set(layer.id, layer)), addImage: vi.fn((id: string, image: MapboxImage, options: MeasurementImageOptions) => images.set(id, { image, options })),
+        addLayer: vi.fn((layer: RendererLayer) => layers.set(layer.id, layer)), addImage: vi.fn((id: string, image: RendererImage, options: MeasurementImageOptions) => images.set(id, { image, options })),
         removeSource: vi.fn((id: string) => sources.delete(id)), removeLayer: vi.fn((id: string) => layers.delete(id)), removeImage: vi.fn((id: string) => images.delete(id)),
         on: vi.fn((event: string, callback: () => void) => listeners.set(event, callback)), off: vi.fn((event: string, callback: () => void) => { if (listeners.get(event) === callback) listeners.delete(event); }),
     };
 }
 
-function widthAtZoom(expression: MapboxValue | undefined, zoom: number): number {
-    expect((expression as MapboxValue[]).slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
-    const stops = (expression as MapboxValue[]).slice(3) as number[];
+function widthAtZoom(expression: RendererValue | undefined, zoom: number): number {
+    expect((expression as RendererValue[]).slice(0, 3)).toEqual(['interpolate', ['linear'], ['zoom']]);
+    const stops = (expression as RendererValue[]).slice(3) as number[];
     if (zoom <= stops[0]!) return stops[1]!;
     for (let index = 2; index < stops.length; index += 2) {
         if (zoom <= stops[index]!) {
@@ -51,13 +51,13 @@ describe('measurement native renderer', () => {
         let sequence = 0;
         vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++sequence, callback); return sequence; });
         vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
-        vi.stubGlobal('mapboxgl', { Marker: class implements TestMarker {
-            declare options: MapboxMarkerOptions;
+        vi.stubGlobal('__mapRenderer', { Marker: class implements TestMarker {
+            declare options: RendererMarkerOptions;
             declare coordinate?: readonly number[];
             declare setLngLat: TestMarker['setLngLat'];
             declare addTo: TestMarker['addTo'];
             declare remove: TestMarker['remove'];
-            constructor(options: MapboxMarkerOptions) {
+            constructor(options: RendererMarkerOptions) {
                 this.options = options;
                 this.setLngLat = vi.fn((coordinate: readonly number[]) => { this.coordinate = coordinate; return this; });
                 this.addTo = vi.fn((map: { getContainer(): HTMLElement }) => { map.getContainer().append(options.element); return this; });
@@ -139,7 +139,7 @@ describe('measurement native renderer', () => {
         expect(markers).toHaveLength(1);
         const marker = markers[0]!;
         const element = marker.options.element;
-        expect(marker.options).toMatchObject({ anchor: 'center', occludedOpacity: 0 });
+        expect(marker.options).toMatchObject({ anchor: 'center', opacityWhenCovered: 0 });
         expect(element.className).toBe('measurement-live-label');
         expect(element.getAttribute('aria-hidden')).toBe('true');
         expect(element.style.getPropertyValue('--measurement-label-padding'))

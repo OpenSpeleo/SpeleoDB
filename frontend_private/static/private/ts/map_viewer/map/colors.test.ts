@@ -191,8 +191,8 @@ describe('Colors', () => {
         it('uses correct midpoint for interpolation', () => {
             const result = Colors.getDepthPaint({ max: 200 });
             const interpolation = (result as DepthPaint)[2]; // the interpolation sub-expression
-            expect(interpolation).toContain(100); // midDepth = 200/2
-            expect(interpolation).toContain(200); // maxDepth
+            expect(interpolation).toContain(0.5); // Midpoint of the normalized domain.
+            expect(interpolation).toContain(1); // Maximum of the normalized domain.
         });
 
         it('returns valid expression for negative max via floor', () => {
@@ -206,8 +206,8 @@ describe('Colors', () => {
             const interpolation = (Colors.getDepthPaint({ min: 0, max: maximum }) as DepthPaint)[2];
             expect(interpolation.slice(3)).toEqual([
                 0, DEFAULTS.COLORS.DEPTH_SHALLOW,
-                maximum / 2, DEFAULTS.COLORS.DEPTH_MID,
-                maximum, DEFAULTS.COLORS.DEPTH_DEEP,
+                0.5, DEFAULTS.COLORS.DEPTH_MID,
+                1, DEFAULTS.COLORS.DEPTH_DEEP,
             ]);
         });
 
@@ -215,7 +215,8 @@ describe('Colors', () => {
             const interpolation = (Colors.getDepthPaint({ min: 0, max: Number.MIN_VALUE }) as DepthPaint)[2];
             expect(interpolation.slice(3)).toEqual([
                 0, DEFAULTS.COLORS.DEPTH_SHALLOW,
-                Number.MIN_VALUE, DEFAULTS.COLORS.DEPTH_DEEP,
+                0.5, DEFAULTS.COLORS.DEPTH_MID,
+                1, DEFAULTS.COLORS.DEPTH_DEEP,
             ]);
         });
     });

@@ -169,7 +169,7 @@ Linux optional dependencies therefore remain separate from host-native Bun
 installs even though the rest of the source tree is bind-mounted at `/app`. The
 root setup job initializes or migrates that volume to `dev-user` ownership,
 while both Django application services run as `dev-user`. Consequently Bun
-installs, the Vite watcher, pre-commit builds, and interactive devcontainer
+installs, manual Vite builds, pre-commit builds, and interactive devcontainer
 commands all share one writer identity. The setup job checks the volume-root
 ownership before any recursive migration, so established volumes do not pay for
 a full `node_modules` traversal on every startup. Host `node_modules` is

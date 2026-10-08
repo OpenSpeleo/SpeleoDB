@@ -1,5 +1,6 @@
+import { rememberSourceData } from './layers/source_lifecycle.ts';
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
-import type { MapboxImage, MapPointCollection } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererImage, MapPointCollection } from '../../../../../../ts-types/domain/renderer.ts';
 import { Layers } from './layers.ts';
 import { State } from '../state.ts';
 import { configureRuntimeContext } from '../runtime_context.ts';
@@ -12,7 +13,8 @@ function stationSource() {
         type: 'Feature', id: 'station', properties: { name: 'Before', color: '#ffffff' },
         geometry: { type: 'Point', coordinates: [1, 2] },
     }] };
-    const source = { _data: data, setData: vi.fn((_data: MapPointCollection) => {}) };
+    const source = { setData: vi.fn((_data: MapPointCollection) => {}) };
+    rememberSourceData(source, data);
     State.map = { getSource: () => source } as unknown as ViewerMap;
     return { data, source, feature: data.features[0]! };
 }
@@ -75,8 +77,8 @@ it('publishes station refresh synchronously on Window and returns a promise', as
 it('loads images sequentially, skips existing images and retries a missing image on a later map', async () => {
     configureRuntimeContext({ icons: { cylinderOrange: '/cylinder', explorationLead: '/lead', biology: '/biology', bone: '/bone', artifact: '/artifact', geology: '/geology' } });
     const images = new Set<string>();
-    const image = {} as MapboxImage;
-    const loadImage = vi.fn((_url: string, callback: (error: Error | null, image?: MapboxImage) => void) => callback(null, image));
+    const image = {} as RendererImage;
+    const loadImage = vi.fn(async (_url: string) => ({ data: image }));
     const addImage = vi.fn((id: string) => { images.add(id); });
     State.map = { hasImage: (id: string) => images.has(id), loadImage, addImage } as unknown as ViewerMap;
     await Layers.loadMarkerImages();
@@ -91,11 +93,12 @@ it('loads images sequentially, skips existing images and retries a missing image
 
 it('catches image failures and resumes with only missing icons on retry', async () => {
     const images = new Set<string>();
-    const image = {} as MapboxImage;
+    const image = {} as RendererImage;
     let fail = true;
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const loadImage = vi.fn((_url: string, callback: (error: Error | null, image?: MapboxImage) => void) => {
-        if (fail) callback(new Error('image failed')); else callback(null, image);
+    const loadImage = vi.fn(async (_url: string) => {
+        if (fail) throw new Error('image failed');
+        return { data: image };
     });
     State.map = { hasImage: (id: string) => images.has(id), loadImage, addImage: (id: string) => images.add(id) } as unknown as ViewerMap;
     await expect(Layers.loadMarkerImages()).resolves.toBeUndefined();

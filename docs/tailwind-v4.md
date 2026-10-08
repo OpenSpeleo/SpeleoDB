@@ -34,8 +34,8 @@ sentinels are present while unsupported nested trees remain absent.
 Runtime source directives select `.ts` at the original directory depth. The
 private theme and component reference stays intact, and previously scanned tests
 remain scanned. Type declarations live outside these source roots. Compare clean
-production CSS with the baseline; a running watcher retains removed candidates
-and cannot establish equivalence.
+production CSS with the baseline. Historical watch sessions retained removed
+candidates and could not establish equivalence.
 
 The shared design system registers forms and typography once. The forms plugin
 uses its base strategy because SpeleoDB owns `.form-*` components. JavaScript
@@ -186,16 +186,16 @@ script did concatenate custom CSS, so the failure has not been shown to come
 from omitting `custom.css`. The proven causes are synthetic template rendering,
 hard-coded markup, and stale generated CSS.
 
-Before final browser verification, stop the watcher, run a clean `bun run build`
-in the existing application container, and prove Django serves the expected
-fresh assets. Preserve baseline evidence separately without replacing the
-running application's data or starting another stack. A browser manifest must
-fail rather than skip a route, role, state, viewport, or engine that it claims
-to cover.
+Before final browser verification, run a clean `bun run build` in the existing
+application container, and prove Django serves the expected fresh assets.
+Preserve baseline evidence separately without replacing the running
+application's data or starting another stack. A browser manifest must fail
+rather than skip a route, role, state, viewport, or engine that it claims to
+cover.
 
 Required repository gates remain the root builds, JavaScript lint/tests, Django
 template validation, pytest, pre-commit, a clean install on the `.bun-version`
-runtime, watcher isolation, and deployment build contracts.
+runtime and deployment build contracts.
 
 Historical live comparisons established focused Git-control parity and a
 representative public/private route subset. They did not certify every route,
@@ -223,13 +223,10 @@ migration. That historical probe did not establish representative map-page
 performance and is not a benchmark of the current dependency versions.
 
 Migration-era Tailwind watch mode retained a candidate after its sole template
-occurrence was deleted; a clean one-shot build removed it. Therefore watcher
-output is useful during development but is never parity evidence; browser
-certification begins from `bun run build` and a verified served manifest hash.
-The Vite watcher does correctly rebuild imported CSS changes and deletions,
-Tailwind source additions, shared modules, and route controllers. The isolated
-watcher contract reproduces those boundaries without disturbing Django or a
-developer's running watcher.
+occurrence was deleted; a clean one-shot build removed it. The current workflow
+uses explicit finite builds. Browser certification begins from `bun run build`
+and a verified served manifest hash; refresh the browser after the build
+succeeds.
 
 Custom design-system rules may be removed only after all consumers of the
 affected product behavior have been intentionally redesigned and the same

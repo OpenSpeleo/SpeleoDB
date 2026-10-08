@@ -84,7 +84,7 @@ import {
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode } from '../../../../../../ts-types/domain/map-display.ts';
 
-import type { MapboxLngLat, MapboxValue } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLngLat, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
 import type { GISPopupFeature } from '../../../../../../ts-types/domain/map-layers.ts';
 
 import type { ViewerUpdateContext } from '../../../../../../ts-types/domain/viewer-updates.ts';
@@ -185,7 +185,7 @@ export const Layers = {
      * Filter expression for markers tied to project visibility.
      * Markers without project scoping remain visible.
      */
-    getProjectScopedMarkerFilter: function (): MapboxValue {
+    getProjectScopedMarkerFilter: function (): RendererValue {
         const visibleProjectIds = this.getVisibleProjectIds();
         return [
             'any',
@@ -307,7 +307,7 @@ export const Layers = {
         closeGISFeaturePopups(State.map);
     },
 
-    openGISFeaturePopup: function (feature: GISPopupFeature, lngLat: MapboxLngLat) {
+    openGISFeaturePopup: function (feature: GISPopupFeature, lngLat: RendererLngLat) {
         const map = State.map;
         if (!map) return;
         openGISFeaturePopup(map, feature, lngLat);

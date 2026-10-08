@@ -25,11 +25,8 @@
     "playwright.config.ts",
     "scripts/audit-javascript.ts",
     "scripts/audit-templates.ts",
-    "scripts/dev.ts",
     "scripts/jsdom-runtime.ts",
     "scripts/test-frontend-uploads.ts",
-    "scripts/verify-vite-watch.ts",
-    "scripts/vite-development.ts",
     "speleodb/gis/geometry_contract.json",
     "tests/browser/**/*.ts",
     "ts-types/browser/**/*.d.ts",
@@ -40,7 +37,10 @@
     "ts-types/tooling/**/*.ts",
     "ts-types/worker/geojson.ts",
     "vite.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "scripts/shared-map-packages.ts",
+    "scripts/typecheck.ts",
+    "scripts/check-shared-package-pins.ts"
   ],
   "exclude": [
     "**/dist/**",

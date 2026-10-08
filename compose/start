@@ -7,9 +7,15 @@ set -o nounset
 python manage.py migrate
 
 # Install the root asset workspace.
-test -s bun.lock && bun install --frozen-lockfile || exit "$?"
+if [[ "${SPELEODB_LOCAL_PACKAGES:-0}" == "1" ]]; then
+    : "${SPELEODB_PACKAGE_INSTALLER:?Local package mode requires the monorepo installer}"
+    bun "$SPELEODB_PACKAGE_INSTALLER"
+else
+    test -s bun.lock || exit "$?"
+    bun scripts/check-shared-package-pins.ts
+    bun install --frozen-lockfile
+fi
 
-# Vite rebuilds assets to disk while TypeScript checks semantics. The supervisor
-# keeps all streams attached, forwards signals and awaits child process groups;
-# Django remains the only HTTP server.
-exec bun scripts/dev.ts --django
+# Frontend assets are rebuilt explicitly with `bun run build`, followed by a
+# manual browser refresh. Django remains the only HTTP server.
+exec python manage.py runserver_plus 0000:8000

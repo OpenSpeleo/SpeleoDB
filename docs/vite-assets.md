@@ -2,22 +2,21 @@
 
 ## Feature intent
 
-Vite is SpeleoDB's one compiler, dependency graph, manifest, and disk watcher
-for application CSS and TypeScript, emitting browser JavaScript. Django still
-owns routing, templates, authentication, static URL generation, and every HTTP
-response. This boundary removes duplicated Tailwind/esbuild orchestration
-without turning the Django application into a Vite-served SPA.
+Vite is SpeleoDB's one compiler, dependency graph, and manifest for application
+CSS and TypeScript, emitting browser JavaScript. Django still owns routing,
+templates, authentication, static URL generation, and every HTTP response. This
+boundary removes duplicated Tailwind/esbuild orchestration without turning the
+Django application into a Vite-served SPA.
 
 ## Registry and output
 
 `frontend_common/entries.json` names every route-owned entry. Both
 `vite.config.ts` and Django resolve that registry; a name cannot silently mean
 different source files on each side. Production output is content-hashed and
-minified under `speleodb/common/static/speleodb/vite/`, with source maps off.
-Development output includes source maps and publishes complete immutable
-generations under `assets/dev/<session>/<generation>/`. Django serves a
-completed generation, and the development client reloads after a newer one is
-published.
+minified under `speleodb/common/static/speleodb/vite/`, with source maps off. An
+explicitly requested development-mode build also writes hashed files directly to
+that output directory, with source maps. Asset compilation and browser refresh
+are manual; neither startup nor file edits trigger a build.
 
 One graph does not mean one payload. Tailwind is shared, shell/route styles stay
 isolated where cascade ownership matters, route controllers are lazy, and common
@@ -34,7 +33,7 @@ controller branches, applicable styles, and established vendors for the route.
 - `vite_script` renders the module bootstrap.
 
 Every URL passes through Django static storage. DEBUG reloads the manifest by
-mtime and may use registry-derived stable paths before the first watcher build.
+mtime and may use registry-derived stable paths before the first explicit build.
 Production caches the manifest and raises `ImproperlyConfigured` for missing,
 malformed, unsafe, duplicate, unknown, or wrong-type entries.
 
@@ -54,10 +53,11 @@ dimensions.
 
 ## Ownership boundaries
 
-Vite owns all SpeleoDB-authored CSS/JS source. CDN and vendored libraries,
-Mapbox, jQuery-family plugins, and Django-generated `url_reverse.js` remain
-external globals in their existing relative order. Runtime-derived CSS custom
-properties may remain in markup; static style blocks do not.
+Vite owns all SpeleoDB-authored CSS/JS source and bundles the imported MapLibre
+renderer. CDN and vendored libraries, jQuery-family plugins, and
+Django-generated `url_reverse.js` remain external globals in their existing
+relative order. Runtime-derived CSS custom properties may remain in markup;
+static style blocks do not.
 
 Dark metadata, the Dark Reader lock, private `.dark`, public roots without
 `.dark`, and stylesheet cascade order are rendering contracts. Moving a style
@@ -116,15 +116,9 @@ compiler commands, and Vite client/server integration. Unit tests cover manifest
 parsing/failures, recursive preloads, DEBUG fallback, bootstrap context parsing,
 duplicate initialization, runtime map context, and delegated map actions.
 
-Page stylesheet-count and cascade-order assertions identify stable entry
-filenames, not their parent directories. Run these contracts with both
-production and development manifests: development URLs include a session and
-generation between `assets/` and the filename.
-
-The isolated watcher test proves graph invalidation without touching a running
-Django or developer process. Final browser evidence always starts from a clean
-production build because Tailwind's in-process scanner can retain a deleted
-template candidate. Release verification compares manifest-served hashes, route
+Page stylesheet-count and cascade-order assertions identify logical entry
+filenames in the compiled manifest. Final browser evidence starts from a clean
+production build. Release verification compares manifest-served hashes, route
 request graphs, computed styles, behavior, accessibility, pixels, and
 transfer/parse/init/style-recalculation performance against the preserved
 baseline.
@@ -133,10 +127,10 @@ baseline.
 
 Register and build a new logical entry before a live shared template references
 it. The registry is cached for the Django process lifetime even in DEBUG;
-manifest mtime reload does not reload `entries.json`. Trigger development Python
-autoreload after registry edits and verify the running process resolves the new
-entry. JSON edits alone need not trigger that reload. Confirm the manifest entry
-and asset hash actually served by Django before reporting the new route ready.
+manifest mtime reload does not reload `entries.json`. Restart the Django process
+after registry edits and verify it resolves the new entry. Confirm the manifest
+entry and asset hash actually served by Django before reporting the new route
+ready.
 
 When extracting a static inline style, preserve every declaration and add the
 replacement class even to a tag that previously had no other attributes.
@@ -144,54 +138,42 @@ Unlayered application CSS can override layered utilities, so verify computed
 styles on the real route. Keep runtime inline sizing/visibility effective; avoid
 `!important` on properties changed by map resizing or modal state.
 
-When editing live templates and their CSS/controllers together, verify the root
-disk watcher is running or build the companion assets before exposing the
-markup. Otherwise Django can serve new controls with old handlers/styles.
-Smoke-test an integrated slice on the authenticated route early, including
-primary actions and served hashes. Stop the watcher and clean-build for final
-browser evidence.
+When editing live templates and their CSS/controllers together, explicitly build
+the companion assets before refreshing the page. Otherwise Django can serve new
+controls with old handlers/styles. Smoke-test an integrated slice on the
+authenticated route early, including primary actions and served hashes.
+Clean-build for final browser evidence.
 
-The disk watcher shares the Django container console. Keep stdout/stderr
-attached and `clearScreen: false` so rebuilds cannot erase application logs.
 Controller discovery must retain the negative `!./controllers/*.test.ts` glob
 alongside its positive TypeScript glob. Check a clean production graph excludes
 test modules; Vitest globals must never reach a browser controller chunk.
 
-## Development publication and reload
+## Manual development builds
 
-`scripts/dev.ts` supervises Vite's disk watcher and the three-project semantic
-watcher. Compose adds Django to that same supervisor through `--django`.
-Required-child failure stops the other processes and returns failure; SIGINT and
-SIGTERM reach child process groups, with a bounded shutdown grace period. Logs
-remain attached and semantic errors stay visible. Production builds still
-require successful type checking and both ownership audits before emission.
+Run the finite build in the already-running application container:
 
-The Vite development plugin compiles into a stable staging tree under
-`.vite/pending/`. Vite caches unchanged worker bundles between watch builds;
-copying the complete relative output graph into
-`assets/dev/<session>/<generation>/` keeps those workers in the same published
-generation as the entries, shared chunks and CSS. Relative imports and worker
-URLs remain unchanged. The plugin validates registered entries, import edges and
-every referenced file before atomically renaming the pending manifest to the
-canonical manifest. A failed build never replaces that completion marker. Prior
-generations remain available for old pages and their later lazy imports; stop
-watchers and run the normal clean build to reclaim them.
+```bash
+docker exec -w /app speleodb-monorepo-django bun run build
+```
 
-Django's asset tags share a manifest snapshot for the whole template render,
-including inherited and included templates. The app script carries its
-generation and the DEBUG-only `__assets__/generation/` endpoint URL. The
-endpoint is GET-only and sends no-store cache headers. A development-only module
-polls the completed generation, comparing the first response with the generation
-rendered into the page. It records an attempted target in session storage before
-reloading once. Stale HTML cannot repeatedly reload for that same target;
-unavailable storage, malformed responses and network failures do not navigate.
-Template changes trigger a Vite rebuild even when no Tailwind class changes.
+Wait for a successful result, then refresh the browser. The build checks types
+and source/template ownership before cleaning and emitting assets. `dev` and
+`start` are aliases for the same finite build. `compose/start` installs the
+locked dependencies and launches Django; it does not build assets or start an
+asset watcher. A fresh checkout needs an explicit build before frontend pages
+can use compiled assets.
 
-Production registers no reload endpoint, emits no development client, and adds
-no reload attributes to its app script. Tests cover publication failure and
-recovery, retained worker/assets, render-time races, stale-page loops, failed
-storage/network responses, and real subprocess signal/failure cleanup. The
-watcher verifier exercises actual Vite builds in an isolated temporary tree.
+There is no development reload client, generation endpoint, polling loop, or
+automatic asset rebuild. Builds write hashed files and the manifest directly,
+without a staging or immutable-generation publication layer. Django's asset tags
+share one manifest snapshot for a template render, including inherited and
+included templates. In DEBUG, a subsequent request observes a changed manifest
+mtime; the user chooses when to refresh the page.
+
+Source edits remain invisible in compiled frontend assets until the next manual
+build. A clean build also avoids the utility candidates retained by historical
+long-running Tailwind compiler processes. The optional `test:frontend:watch`
+command runs tests only; it does not rebuild assets or refresh pages.
 
 ## Verification boundaries
 

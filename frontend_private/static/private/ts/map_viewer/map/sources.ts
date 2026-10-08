@@ -1,4 +1,6 @@
-import type { MapSourceDefinition, MapSourceMap, MapSourceControl, MapSourceChangeEvent, RasterStyle, RasterSourceOptions, BackgroundLayer, CheckedTileProtocol, CheckedFetch } from '../../../../../../ts-types/domain/map-sources.ts';
+import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
+import { Renderer } from './renderer.ts';
+import type { MapSourceDefinition, MapSourceMap, MapSourceControl, MapSourceChangeEvent, RasterStyle, RasterSourceOptions, BackgroundLayer, CheckedTileProtocol } from '../../../../../../ts-types/domain/map-sources.ts';
 import type { ViewerUpdateContext } from '../../../../../../ts-types/domain/viewer-updates.ts';
 import { DEFAULTS, MAP_SOURCES } from '../config.ts';
 import { Utils } from '../utils.ts';
@@ -9,6 +11,7 @@ const RASTER_LAYER_ID = 'speleo-base-raster-layer';
 const BASE_ANCHOR_ID = 'speleo-base-anchor';
 const baseStyles = new WeakMap<MapSourceMap, { id: string; visibility: 'visible' | 'none' }[]>();
 const CHECKED_TILE_PROTOCOL = 'speleo-checked-tile';
+const protocolRenderers = new WeakSet<object>();
 const OVERLAY_LAYER_PREFIXES = Object.freeze([
     'project-layer-',
     'project-labels-',
@@ -78,7 +81,7 @@ function resolveTileUrls(source: MapSourceDefinition, accessToken = '') {
         const resolvedUrl = tileUrl.replaceAll('{accessToken}', encodeURIComponent(accessToken));
         return isRasterTileSource(source)
             && hasGlobalMissingTileHashChecks()
-            && globalThis.__speleoCheckedTileProtocolInstalled === true
+            && Boolean(Renderer && protocolRenderers.has(Renderer))
             ? encodeCheckedTileUrl(resolvedUrl)
             : resolvedUrl;
     });
@@ -112,7 +115,7 @@ function buildRasterStyle(source: MapSourceDefinition, accessToken = ''): Raster
 }
 
 function isSpeleoOverlayLayer(layerId: string) {
-    return OVERLAY_LAYER_PREFIXES.some(prefix => layerId.startsWith(prefix));
+    return layerId === GLOBE_ATMOSPHERE_LAYER_ID || OVERLAY_LAYER_PREFIXES.some(prefix => layerId.startsWith(prefix));
 }
 
 /** Capture before survey sources are installed: getStyle serializes their data. */
@@ -178,68 +181,24 @@ function getHashCheckedSourceForTileUrl(tileUrl: string) {
     )) || null;
 }
 
-async function fetchWithTileHashCheck(originalFetch: typeof fetch, thisArg: unknown, input: RequestInfo | URL, init: RequestInit | undefined) {
-    const response = await originalFetch.call(thisArg, input, init);
-    let tileUrl = null;
-    if (typeof input === 'string') {
-        tileUrl = input;
-    } else if (input instanceof URL) {
-        tileUrl = input.toString();
-    } else {
-        tileUrl = input?.url;
-    }
-    const source = tileUrl ? getHashCheckedSourceForTileUrl(tileUrl) : null;
-
-    if (!source || !response?.ok) {
-        return response;
-    }
-
-    const tileBuffer = await response.clone().arrayBuffer();
-    const tileHash = await sha256Hex(tileBuffer);
-    if (tileHash && DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES.includes(tileHash)) {
-        return new Response('', {
-            status: 404,
-            statusText: 'Tile matched known missing-data hash',
-            headers: { 'Content-Type': 'text/plain' },
-        });
-    }
-
-    return response;
+function tileRequestError(status: number, message: string) {
+    // MapLibre retries parent/child tiles only when a failed tile has status 404.
+    return Object.assign(new Error(message), { status });
 }
 
-function createCheckedTileProtocolHandler(): CheckedTileProtocol {
-    return (params, callback) => {
-        const controller = new AbortController();
+/** Only ESRI raster requests use this protocol; application fetch is untouched. */
+export function createCheckedTileProtocolHandler(): CheckedTileProtocol {
+    return async (params, controller) => {
         const tileUrl = decodeCheckedTileUrl(params.url);
-        const source = getHashCheckedSourceForTileUrl(tileUrl);
-
-        if (!source) {
-            callback(new Error('Unknown checked tile source'));
-            return { cancel: () => controller.abort() };
+        if (!getHashCheckedSourceForTileUrl(tileUrl)) throw new Error('Unknown checked tile source');
+        const response = await fetch(tileUrl, { signal: controller.signal });
+        if (!response.ok) throw tileRequestError(response.status, `Tile request failed with HTTP ${response.status}`);
+        const data = await response.arrayBuffer();
+        const tileHash = await sha256Hex(data);
+        if (tileHash && DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES.includes(tileHash)) {
+            throw tileRequestError(404, 'Tile matched known missing-data hash');
         }
-
-        fetch(tileUrl, { signal: controller.signal })
-            .then(async response => {
-                if (!response.ok) {
-                    callback(new Error(`Tile request failed with HTTP ${response.status}`));
-                    return;
-                }
-
-                const tileBuffer = await response.arrayBuffer();
-                const tileHash = await sha256Hex(tileBuffer);
-                if (tileHash && DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES.includes(tileHash)) {
-                    callback(new Error('Tile matched known missing-data hash'));
-                    return;
-                }
-
-                callback(null, tileBuffer, response.headers.get('cache-control'), response.headers.get('expires'));
-            })
-            .catch((error: unknown) => {
-                if ((error as { name?: string } | null | undefined)?.name === 'AbortError') return;
-                callback(error);
-            });
-
-        return { cancel: () => controller.abort() };
+        return { data, cacheControl: response.headers.get('cache-control'), expires: response.headers.get('expires') };
     };
 }
 
@@ -253,25 +212,11 @@ export const MapSources = {
     installCheckedTileProtocol: function () {
         if (!hasGlobalMissingTileHashChecks()) return;
         if (!MAP_SOURCES.some(isRasterTileSource)) return;
-        if (globalThis.__speleoCheckedTileProtocolInstalled === true) return;
-        if (typeof globalThis.mapboxgl?.addProtocol !== 'function') return;
+        if (Boolean(Renderer && protocolRenderers.has(Renderer))) return;
+        if (typeof Renderer?.addProtocol !== 'function') return;
 
-        mapboxgl.addProtocol!(CHECKED_TILE_PROTOCOL, createCheckedTileProtocolHandler());
-        globalThis.__speleoCheckedTileProtocolInstalled = true;
-    },
-
-    installCheckedTileFetch: function () {
-        if (typeof globalThis.fetch !== 'function') return;
-        if ((globalThis.fetch as CheckedFetch).__speleoCheckedTileFetch === true) return;
-
-        const originalFetch = globalThis.fetch;
-        const checkedFetch = function (this: unknown, input: RequestInfo | URL, init?: RequestInit) {
-            return fetchWithTileHashCheck(originalFetch, this, input, init);
-        };
-        checkedFetch.__speleoCheckedTileFetch = true;
-        checkedFetch.__speleoOriginalFetch = originalFetch;
-        // This browser adapter forwards fetch; Bun-only static helpers are not copied.
-        (globalThis as { fetch: CheckedFetch }).fetch = checkedFetch;
+        Renderer.addProtocol(CHECKED_TILE_PROTOCOL, createCheckedTileProtocolHandler());
+        protocolRenderers.add(Renderer);
     },
 
     getCurrentMapSourceId: function (accessToken = '') {
@@ -383,11 +328,11 @@ export const MapSources = {
             onAdd: function (map) {
                 const control = document.createElement('div');
                 control.id = 'map-source-control';
-                control.className = 'mapboxgl-ctrl mapboxgl-ctrl-group map-source-control';
+                control.className = 'maplibregl-ctrl maplibregl-ctrl-group map-source-control';
 
                 const button = document.createElement('button');
                 button.id = 'map-source-button';
-                button.className = 'mapboxgl-ctrl-icon map-source-button';
+                button.className = 'maplibregl-ctrl-icon map-source-button';
                 button.type = 'button';
                 button.title = 'Map Source';
                 button.setAttribute('aria-label', 'Map Source');

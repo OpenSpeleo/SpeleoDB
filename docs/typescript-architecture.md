@@ -22,7 +22,7 @@ projects:
 Worker and development configurations extend the root browser configuration,
 then explicitly replace its libraries, ambient packages, source includes,
 exclusions and build-info path. There is no separate base or solution file and
-no project references. The aggregate and watch commands pass all three paths to
+no project references. The aggregate typecheck command passes all three paths to
 the native compiler's build mode. Production and worker checks remain
 independent of development globals; tests and tools deliberately share one
 broader development environment. This reduces configuration overhead while
@@ -138,25 +138,25 @@ registration. Those bridge declarations are not browser globals.
 
 - `bun run typecheck` checks all three projects without emitting browser code.
 - `bun run typecheck:<project>` checks an individual environment.
-- `bun run typecheck:watch` performs incremental semantic checking.
 - `bun run lint:frontend` checks first-party TypeScript.
 - `bun run test:frontend` runs the TypeScript Vitest suite.
-- `bun run test:frontend:watch` keeps that suite running.
+- `bun run test:frontend:watch` explicitly keeps the test runner active; it
+  neither builds frontend assets nor refreshes pages.
 
 Both production build commands check types and both ownership audits before Vite
 emits assets. `build` performs those checks before deleting existing output;
 `build:assets` applies the same checks without cleanup. The obsolete JavaScript
-command aliases are removed. The development command supervises a Vite disk
-watcher and semantic TypeScript watcher. Django remains the only HTTP server;
-completed immutable generations trigger one full-page reload. See
-[development publication](vite-assets.md#development-publication-and-reload).
+command aliases are removed. `dev` and `start` are finite aliases for
+`bun run build`. Django remains the only HTTP server; frontend rebuilds and
+browser refreshes are manual. See
+[manual development builds](vite-assets.md#manual-development-builds).
 
 Run installs and verification in the existing application container at `/app`.
 Verify frozen reinstall, compiler identities, typed-lint rejection, full unit
-discovery, the watcher and an isolated production build. Compare registry and
-manifest entries, output graphs and clean CSS with the JavaScript baseline.
-Annotations and declarations add no browser runtime work; output comparisons
-protect that property.
+discovery and an isolated production build. Compare registry and manifest
+entries, output graphs and clean CSS with the JavaScript baseline. Annotations
+and declarations add no browser runtime work; output comparisons protect that
+property.
 
 ## Source ownership and executable-template audits
 
@@ -240,13 +240,13 @@ inheritance provider contract, so computed template names cannot silently make
 those fragments reachable again. The permanent template audit now passes with no
 executable first-party template expressions.
 
-The watcher check and authenticated upload subprocess run directly with Bun as
-TypeScript. The subprocess still reads its live-server URL and session cookie
-from stdin, writes the same JSON result to stdout and inherits the GitLab audit
-environment. JSDOM's native XHR performs the existing HTTP/multipart requests.
-The development project owns Playwright and its instrumented Window alongside
-unit tests, tools and the upload subprocess. Those evidence types never enter
-production or worker ambient environments.
+The authenticated upload subprocess runs directly with Bun as TypeScript. It
+still reads its live-server URL and session cookie from stdin, writes the same
+JSON result to stdout and inherits the GitLab audit environment. JSDOM's native
+XHR performs the existing HTTP/multipart requests. The development project owns
+Playwright and its instrumented Window alongside unit tests, tools and the
+upload subprocess. Those evidence types never enter production or worker ambient
+environments.
 
 Literal numeric contracts retain JavaScript's native operand coercion. Date
 subtraction uses erased operand assertions instead of introducing calls to a
@@ -345,15 +345,15 @@ changes require their own behavior specification and tests.
 ## CI, publication and rollback
 
 CI verifies frozen root installation, compiler identity and ambient isolation,
-source/template audits, strict checking, lint, unit tests, watcher invalidation
-and the guarded production build. The serial Django suite covers asset tags,
-source exclusion and the real upload subprocess. Its separate browser wrapper
-starts pytest's live server with a verified temporary login user and runs
-controller/viewer parity plus the unchanged Chromium/WebKit workloads after
-other CPU-heavy checks finish. Explicit database-only project and form fixtures
-provide writable/read-only contexts; the inherited GitLab audit remains active.
-Two test-only HTTP routes supply revision/tree presentation JSON because WebKit
-does not intercept native synchronous XHR through Playwright routing. Production
+source/template audits, strict checking, lint, unit tests and the guarded
+production build. The serial Django suite covers asset tags, source exclusion
+and the real upload subprocess. Its separate browser wrapper starts pytest's
+live server with a verified temporary login user and runs controller/viewer
+parity plus the unchanged Chromium/WebKit workloads after other CPU-heavy checks
+finish. Explicit database-only project and form fixtures provide
+writable/read-only contexts; the inherited GitLab audit remains active. Two
+test-only HTTP routes supply revision/tree presentation JSON because WebKit does
+not intercept native synchronous XHR through Playwright routing. Production
 controller URLs and synchronous behavior remain unchanged. The wrapper verifies
 those routes before launching browsers and never prepares a Git repository. CI
 retains the JSON browser report, attachments and failure screenshots.

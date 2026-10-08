@@ -1,4 +1,4 @@
-// Mapbox tiles collapse Multi* geometries into Point/LineString/Polygon. Keep
+// MapLibre tiles collapse Multi* geometries into Point/LineString/Polygon. Keep
 // the original type on display features so those types remain independently
 // selectable. The downloaded GeoJSON and its properties are never mutated.
 export const GIS_GEOMETRY_TYPE_PROPERTY = '__speleodb_geometry_type';

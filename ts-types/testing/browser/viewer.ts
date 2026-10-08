@@ -1,4 +1,4 @@
-/** Only the real Mapbox methods observed by the browser instrumentation. */
+/** Only the real MapLibre methods observed by the browser instrumentation. */
 export interface EvidenceMap {
     setLayoutProperty: (...args: unknown[]) => unknown;
     setPaintProperty: (...args: unknown[]) => unknown;
@@ -14,7 +14,6 @@ export interface EvidenceMap {
     getMaxZoom(): number;
     project(coordinates: [number, number]): { x: number; y: number };
 }
-export interface EvidenceMapbox { workerCount: number; Map: new(options: object) => EvidenceMap }
 export interface ViewerTrace {
     key: string | null;
     checked: boolean;

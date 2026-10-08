@@ -48,10 +48,19 @@ report:
 
     $ pytest
 
-### Live reloading and Sass CSS compilation
+### Building frontend assets
 
-Moved to
-[Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/developing-locally.html#sass-compilation-live-reloading).
+Vite compiles frontend assets only when explicitly requested. In the running
+application container:
+
+```bash
+docker exec -w /app speleodb-monorepo-django bun run build
+```
+
+Wait for the build to finish, then refresh the browser. `bun run dev` and
+`bun run start` are finite build aliases. Container startup launches Django
+without building or watching frontend assets. See
+[Vite assets](docs/vite-assets.md) for the build and serving contract.
 
 ### Celery
 

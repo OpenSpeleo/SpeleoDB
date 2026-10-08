@@ -1,10 +1,9 @@
+import { firstPropertyDepth, depthDomainFromValues } from '@speleodb/map-core/depth';
 import type { DepthDomain } from '../../../../../../ts-types/domain/map-display.ts';
 import type { DepthFeature, DepthProperties, SectionDepthMap } from '../../../../../../ts-types/domain/map-depth.ts';
 import { DEFAULTS } from '../config.ts';
 
-export function isValidDepthLimit(value: unknown): value is number | null {
-    return value === null || (typeof value === 'number' && Number.isFinite(value) && value > 0);
-}
+export { isValidDepthLimit, applyDepthLimit, mergeDepthDomains } from '@speleodb/map-core/depth';
 
 export function depthToFeet(value: unknown, unit: string) {
     if (unit !== 'ft' && unit !== 'm') return NaN;
@@ -18,14 +17,6 @@ export function depthFromFeet(value: unknown, unit: string) {
     if (value === null) return null;
     if (typeof value !== 'number' || !Number.isFinite(value)) return NaN;
     return unit === 'm' ? value * DEFAULTS.MEASUREMENT.METERS_PER_FOOT : value;
-}
-
-/** Apply a fixed scale without changing the measured project domain. */
-export function applyDepthLimit(domain: DepthDomain | null, limitFeet: unknown) {
-    if (!domain) return null;
-    return limitFeet !== null && isValidDepthLimit(limitFeet)
-        ? { min: 0, max: limitFeet }
-        : domain;
 }
 
 export const DepthUtils = {
@@ -58,11 +49,7 @@ export const DepthUtils = {
     getFeatureDepthValue(props: DepthProperties | null | undefined) {
         if (!props) return undefined;
         const candidates = ['depth', 'Depth', 'depth_m', 'depth_ft', 'DEPTH'] as const;
-        for (const key of candidates) {
-            const v = this.parseDepthValue(props[key]);
-            if (v != null) return v;
-        }
-        return undefined;
+        return firstPropertyDepth(props, candidates, value => this.parseDepthValue(value)) ?? undefined;
     }
 };
 
@@ -135,42 +122,15 @@ export function computeProjectDepthDomain(featureCollection: { type?: 'FeatureCo
         ? precomputedSectionDepthAvgMap
         : buildSectionDepthAverageMap(features);
 
-    let maxDepth = -Infinity;
-
-    sectionDepthAvgMap.forEach((avgDepth) => {
-        if (isFiniteNumber(avgDepth)) {
-            maxDepth = Math.max(maxDepth, avgDepth);
+    function* values() {
+        for (const depth of sectionDepthAvgMap.values()) {
+            if (isFiniteNumber(depth)) yield depth;
         }
-    });
-
-    features.forEach((feature) => {
-        if (feature?.geometry?.type !== 'LineString') return;
-        const depthValue = resolveLineDepthValue(feature?.properties, sectionDepthAvgMap);
-        if (isFiniteNumber(depthValue)) {
-            maxDepth = Math.max(maxDepth, depthValue);
+        for (const feature of features) {
+            if (feature?.geometry?.type !== 'LineString') continue;
+            const depth = resolveLineDepthValue(feature.properties, sectionDepthAvgMap);
+            if (isFiniteNumber(depth)) yield depth;
         }
-    });
-
-    if (!isFiniteNumber(maxDepth)) {
-        return null;
     }
-
-    return { min: 0, max: Math.max(0, maxDepth) };
-}
-
-/**
- * Merge multiple depth domains into one (O(projects)).
- */
-export function mergeDepthDomains(domains: readonly (DepthDomain | null | undefined)[] | null | undefined): DepthDomain | null {
-    let max = 0;
-    let hasDepth = false;
-
-    (domains || []).forEach((domain) => {
-        if (!domain || !isFiniteNumber(domain.max)) return;
-        hasDepth = true;
-        if (domain.max > max) max = domain.max;
-    });
-
-    if (!hasDepth) return null;
-    return { min: 0, max: Math.max(0, max) };
+    return depthDomainFromValues(values());
 }

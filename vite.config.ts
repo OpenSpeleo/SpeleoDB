@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
-import { developmentPublication } from './scripts/vite-development.ts';
+import { sharedMapResolution } from './scripts/shared-map-packages.ts';
 type EntryRegistry = typeof import('./frontend_common/entries.json');
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -23,21 +23,21 @@ function resolvedEntries() {
 
 export default defineConfig(({ mode }) => {
     const production = mode === 'production';
-    const development = production ? null : developmentPublication(rootDirectory, Object.values(sourceEntries));
 
     return {
         base: './',
+        resolve: sharedMapResolution,
+        optimizeDeps: { exclude: ['@speleodb/map-core', '@speleodb/map-viewer'] },
         clearScreen: false,
-        plugins: [tailwindcss(), ...(development ? [development.plugin] : [])],
-        worker: development ? { plugins: () => [development.workerPlugin()] } : {},
+        plugins: [tailwindcss()],
         build: {
             target: 'baseline-widely-available',
             outDir: path.resolve(
                 rootDirectory,
                 'speleodb/common/static/speleodb/vite',
             ),
-            emptyOutDir: production,
-            manifest: development?.manifest ?? true,
+            emptyOutDir: true,
+            manifest: true,
             minify: production,
             cssMinify: production ? 'lightningcss' : false,
             sourcemap: !production,
@@ -46,13 +46,9 @@ export default defineConfig(({ mode }) => {
             rolldownOptions: {
                 input: resolvedEntries(),
                 output: {
-                    entryFileNames: production
-                        ? 'assets/[name]-[hash].js'
-                        : 'assets/[name].js',
+                    entryFileNames: 'assets/[name]-[hash].js',
                     chunkFileNames: 'assets/chunks/[name]-[hash].js',
-                    assetFileNames: production
-                        ? 'assets/[name]-[hash][extname]'
-                        : 'assets/[name][extname]',
+                    assetFileNames: 'assets/[name]-[hash][extname]',
                 },
             },
         },

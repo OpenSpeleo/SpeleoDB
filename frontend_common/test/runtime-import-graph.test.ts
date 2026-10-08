@@ -9,7 +9,10 @@ let root: string;
 beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-runtime-graph-')); });
 afterEach(() => { fs.rmSync(root, { recursive: true, force: true }); });
 function fixture(files: Record<string, string>) {
-    for (const [file, source] of Object.entries(files)) fs.writeFileSync(path.join(root, file), source);
+    for (const [file, source] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+        fs.writeFileSync(path.join(root, file), source);
+    }
 }
 
 it('follows static, re-export, nested dynamic and worker edges through cycles', () => {
@@ -52,4 +55,28 @@ it.each([
 ])('fails closed on %s', (source, message) => {
     fixture({ 'entry.ts': source });
     expect(() => runtimeClosure('entry.ts', root)).toThrow(message);
+});
+
+it('traverses default source exports, legacy source conditions and package-internal JS specifiers', () => {
+    fixture({
+        'entry.ts': 'import "@speleodb/map-core"; import "@speleodb/map-viewer";',
+        'node_modules/@speleodb/map-core/package.json': JSON.stringify({ exports: { '.': { 'speleodb-source': './src/index.ts', types: './dist/index.d.ts', import: './dist/index.js' } } }),
+        'node_modules/@speleodb/map-core/src/index.ts': 'export * from "./leaf.js";',
+        'node_modules/@speleodb/map-core/src/leaf.ts': 'export const value = 1;',
+        'node_modules/@speleodb/map-viewer/package.json': JSON.stringify({ exports: { '.': { types: './src/index.ts', default: './src/index.ts' } } }),
+        'node_modules/@speleodb/map-viewer/src/index.ts': 'export const value = 2;',
+    });
+    expect([...runtimeClosure('entry.ts', root)].map(file => path.relative(root, file))).toEqual([
+        'entry.ts', 'node_modules/@speleodb/map-core/src/index.ts',
+        'node_modules/@speleodb/map-core/src/leaf.ts', 'node_modules/@speleodb/map-viewer/src/index.ts',
+    ]);
+});
+
+it('rejects shared declaration-only exports instead of auditing generated artifacts', () => {
+    fixture({
+        'entry.ts': 'import "@speleodb/map-core";',
+        'node_modules/@speleodb/map-core/package.json': JSON.stringify({ exports: { '.': { types: './dist/index.d.ts', import: './dist/index.js' } } }),
+        'node_modules/@speleodb/map-core/dist/index.d.ts': 'export declare const value: number;',
+    });
+    expect(() => runtimeClosure('entry.ts', root)).toThrow('First-party runtime import must resolve to source');
 });

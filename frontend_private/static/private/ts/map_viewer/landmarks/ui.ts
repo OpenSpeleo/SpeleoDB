@@ -1,3 +1,4 @@
+import { groupLandmarks } from '@speleodb/map-core/landmarks';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerLandmark, ViewerLandmarkCollection } from '../../../../../../ts-types/domain/map-entities.ts';
 import type { LandmarkCollectionGroup } from '../../../../../../ts-types/domain/landmark-presentation.ts';
@@ -40,38 +41,28 @@ export const LandmarkUI = {
     },
 
     getLandmarkCollectionGroups(landmarks: ViewerLandmark[]) {
-        const groups = new Map<string, LandmarkCollectionGroup>();
-        landmarks.forEach(landmark => {
-            const collectionId = landmark.collection ? String(landmark.collection) : '__personal__';
-            const collection = collectionId !== '__personal__' && State.landmarkCollections instanceof Map
-                ? State.landmarkCollections.get(collectionId)
-                : null;
-            const label = collection
-                ? this.getCollectionLabel(collection)
-                : this.getLandmarkCollectionLabel(landmark);
-            const isPersonal = collection?.is_personal === true || landmark.is_personal_collection === true;
-            const group = groups.get(collectionId) || {
-                id: collectionId,
-                label,
-                color: collection?.color || landmark.collection_color || null,
-                isPersonal,
-                canWrite: collection ? collection.can_write === true : landmark.can_write === true,
-                landmarks: [],
-            };
-            if (!group.color && landmark.collection_color) group.color = landmark.collection_color;
-            group.landmarks.push(landmark);
-            groups.set(collectionId, group);
+        return groupLandmarks<ViewerLandmark, LandmarkCollectionGroup>(landmarks, {
+            key: landmark => landmark.collection ? String(landmark.collection) : '__personal__',
+            create: (landmark, collectionId) => {
+                const collection = collectionId !== '__personal__' && State.landmarkCollections instanceof Map
+                    ? State.landmarkCollections.get(collectionId)
+                    : null;
+                return {
+                    id: collectionId,
+                    label: collection ? this.getCollectionLabel(collection) : this.getLandmarkCollectionLabel(landmark),
+                    color: collection?.color || landmark.collection_color || null,
+                    isPersonal: collection?.is_personal === true || landmark.is_personal_collection === true,
+                    canWrite: collection ? collection.can_write === true : landmark.can_write === true,
+                    landmarks: [],
+                };
+            },
+            update: (group, landmark) => {
+                if (!group.color && landmark.collection_color) group.color = landmark.collection_color;
+            },
+            compareItems: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            compareGroups: (a, b) => a.isPersonal !== b.isPersonal ? (a.isPersonal ? -1 : 1)
+                : (a.label || '').localeCompare(b.label || ''),
         });
-
-        return Array.from(groups.values())
-            .map(group => ({
-                ...group,
-                landmarks: group.landmarks.sort((a, b) => (a.name || '').localeCompare(b.name || '')),
-            }))
-            .sort((a, b) => {
-                if (a.isPersonal !== b.isPersonal) return a.isPersonal ? -1 : 1;
-                return (a.label || '').localeCompare(b.label || '');
-            });
     },
 
     getWritableCollectionOptions(selectedCollectionId: EntityId | null = null) {

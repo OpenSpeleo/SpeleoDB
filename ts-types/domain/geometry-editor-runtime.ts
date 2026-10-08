@@ -3,7 +3,7 @@ import type { EditableGeometry, GeometryDraft, Position2D } from './geometry-edi
 import type { EntityId } from './identifiers.ts';
 import type { GISGeometryResponse } from './map-config.ts';
 import type { MapGestureToggle } from './map-interactions.ts';
-import type { MapboxLayer } from './mapbox.ts';
+import type { RendererLayer } from './renderer.ts';
 import type { LongitudeLatitude, ScreenPoint } from './measurement.ts';
 
 export interface EditorInput {
@@ -26,8 +26,8 @@ export interface EditorMap {
     getContainer(): HTMLElement;
     getCanvas(): HTMLElement;
     getStyle?(): unknown;
-    getLayer(id: string): MapboxLayer | undefined;
-    addLayer(layer: MapboxLayer): unknown;
+    getLayer(id: string): RendererLayer | undefined;
+    addLayer(layer: RendererLayer): unknown;
     removeLayer(id: string): unknown;
     getSource(id: string): { setData(data: EditorCollection): unknown } | undefined;
     addSource(id: string, definition: { type: 'geojson'; data: EditorCollection; tolerance: number }): unknown;

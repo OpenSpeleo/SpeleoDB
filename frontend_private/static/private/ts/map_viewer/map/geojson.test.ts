@@ -1,5 +1,5 @@
 import { computeGeoJSONBounds } from './geojson.ts';
-import type { Coordinate2D, MapboxGlobal, ViewerGeoJSON } from '../../../../../../ts-types/domain/map-geometry.ts';
+import type { Coordinate2D, RendererGlobal, ViewerGeoJSON } from '../../../../../../ts-types/domain/map-geometry.ts';
 
 class LngLatBoundsMock {
     declare coordinates: Coordinate2D[];
@@ -9,11 +9,11 @@ class LngLatBoundsMock {
 }
 
 beforeEach(() => {
-    globalThis.mapboxgl = { LngLatBounds: LngLatBoundsMock } as unknown as MapboxGlobal;
+    globalThis.__mapRenderer = { LngLatBounds: LngLatBoundsMock } as unknown as RendererGlobal;
 });
 
 afterEach(() => {
-    delete (globalThis as { mapboxgl?: MapboxGlobal }).mapboxgl;
+    delete (globalThis as { __mapRenderer?: RendererGlobal }).__mapRenderer;
 });
 
 it('uses an existing GeoJSON bbox', () => {

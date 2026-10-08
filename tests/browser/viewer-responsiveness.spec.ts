@@ -48,7 +48,7 @@ async function verifySettings(page: Page, testInfo: TestInfo, stress: boolean) {
     const p95 = durations[Math.ceil(durations.length * .95) - 1];
     await attachJSON(testInfo, 'viewer-latency.json', { budgets: BROWSER_TEST_BUDGETS, p95FeedbackFrameMs: p95, ...evidence });
     expect(p95).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
-    await expect(page.locator('canvas.mapboxgl-canvas')).toBeVisible();
+    await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible();
 }
 
 test('settings acknowledge intent before rendering and display changes reuse 120,000 survey segments', async ({ page }, testInfo) => {

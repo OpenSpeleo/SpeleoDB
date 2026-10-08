@@ -17,8 +17,5 @@ export interface DepthProperties {
 
 export type DepthFeature = Feature<Geometry | null, DepthProperties | null>;
 export type SectionDepthMap = Map<unknown, number>;
-export type DepthPaint = ['case', ['has', 'depth_val'], [
-    'interpolate', ['linear'], ['max', 0, ['coalesce', ['to-number', ['get', 'depth_val']], 0]],
-    ...(number | string)[],
-], string];
-export type SurveyPaint = string | ['to-color', ['get', 'color'], string] | DepthPaint;
+export type DepthPaint = ['case', ['has', string], import('maplibre-gl').ExpressionSpecification, string];
+export type SurveyPaint = string | import('maplibre-gl').ExpressionSpecification;

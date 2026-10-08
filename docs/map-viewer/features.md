@@ -49,16 +49,16 @@ it. If the root value is blank or absent, the existing tokenless ESRI Satellite
 fallback is used and the browser does not request the Mapbox Styles API.
 
 The ESRI hillshade sources use raster provider `maxzoom: 16`; the viewer may
-zoom beyond 16, but Mapbox GL overzooms the zoom-16 ESRI tiles instead of
+zoom beyond 16, but MapLibre GL overzooms the zoom-16 ESRI tiles instead of
 requesting ESRI zoom 17+ tiles. ESRI Satellite uses provider `maxzoom: 18`.
 `DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing tile image hash
-list applied systematically to every configured raster source. The Mapbox CDN
-builds currently loaded by SpeleoDB do not expose a documented custom tile
-protocol API, so ESRI raster sources keep their normal provider URLs to avoid
-breaking rendering. `MapCore` installs a JavaScript `fetch` wrapper fallback
-before Mapbox GL is initialized; matching configured raster tile responses are
-hashed and converted to 404 responses when those requests pass through page
-`fetch`.
+list applied systematically to every configured raster source. MapLibre's scoped
+asynchronous raster protocol checks configured tile responses against this list
+before decoding. It forwards cancellation and cache metadata without modifying
+global `fetch`. The MapLibre engine and worker are bundled by Vite; Mapbox
+continues to supply the classic satellite/vector-label provider through
+documented HTTPS APIs. Its logo and native text attribution remain visible. See
+[Shared map packages](shared-packages.md).
 
 Provider behavior lives in `map/sources.ts`. It validates persisted source ids,
 filters token-required providers when a token is unavailable, builds the initial
@@ -345,16 +345,16 @@ camera. There is no separate GIS runtime or server job lifecycle. The shared
 concurrency guards prevent stale loads from undoing a later toggle or metadata
 refresh. The feature is not loaded by the public viewer.
 
-Polygon-zone and point clicks open the established GIS-scoped Mapbox popup. It
+Polygon-zone and point clicks open the established GIS-scoped MapLibre popup. It
 uses DOM creation and `textContent` only, shows the feature title and optional
 plain-text description, and bounds the existing geometry/folder/ExtendedData
 rows and text length. The header and metadata footer remain fixed while the
 description uses the accepted custom scroll viewport, persistent overflow rail,
-wheel/touch isolation, keyboard access, and responsive sizing. Every Mapbox
+wheel/touch isolation, keyboard access, and responsive sizing. Every MapLibre
 override remains scoped beneath `.gis-layer-feature-popup`.
 
 The existing global Map Viewer click dispatcher queries all active polygon fill
-and point layer IDs together and opens one popup for Mapbox's topmost rendered
+and point layer IDs together and opens one popup for MapLibre's topmost rendered
 feature. Source replacement updates that ID set and a destructive style rebuild
 clears it; neither operation registers another click handler. Lines do not open
 the popup.
@@ -653,7 +653,7 @@ call retries (resolves timing issues during init).
 `Config.getGPSTrackById(trackId).color`, falling back to `FALLBACK_COLOR`.
 
 GIS Layers read their model-stored color from `Config.getGISLayerById(layerId)`
-when their Mapbox roles are created, with the same fallback.
+when their MapLibre roles are created, with the same fallback.
 
 Landmark marker and label colors come directly from each GeoJSON feature's
 `collection_color` property, falling back to `FALLBACK_COLOR` if the property is

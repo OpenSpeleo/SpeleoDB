@@ -1,4 +1,4 @@
-import type { MapboxLayer, MapboxLayout } from './mapbox.ts';
+import type { RendererLayer, RendererLayout } from './renderer.ts';
 import type { ViewerUpdateContext } from './viewer-updates.ts';
 
 export interface MapSourceDefinition {
@@ -23,15 +23,15 @@ export interface RasterLayer {
     id: string;
     type: 'raster';
     source: string;
-    layout?: MapboxLayout;
+    layout?: RendererLayout;
 }
 export interface BackgroundLayer {
     id: string;
     type: 'background';
     paint: { 'background-opacity': number };
-    layout?: MapboxLayout;
+    layout?: RendererLayout;
 }
-export type SourceStyleLayer = MapboxLayer | RasterLayer | BackgroundLayer;
+export type SourceStyleLayer = RendererLayer | RasterLayer | BackgroundLayer;
 export interface RasterStyle {
     version: number;
     glyphs: string;
@@ -60,13 +60,11 @@ export interface MapSourceControl {
     onRemove(): void;
 }
 export interface CheckedTileParameters { url: string }
-export type CheckedTileCallback = (error: unknown, buffer?: ArrayBuffer, cacheControl?: string | null, expires?: string | null) => void;
-export type CheckedTileProtocol = (parameters: CheckedTileParameters, callback: CheckedTileCallback) => { cancel(): void };
-export interface CheckedFetch {
-    (this: unknown, input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-    __speleoCheckedTileFetch?: boolean;
-    __speleoOriginalFetch?: typeof fetch;
-}
+export type CheckedTileProtocol = (parameters: CheckedTileParameters, controller: AbortController) => Promise<{
+    data: ArrayBuffer;
+    cacheControl: string | null;
+    expires: string | null;
+}>;
 export interface MapSourceChangeEvent { detail?: { reloadRequired?: boolean; sourceId?: string } }
 export interface MapSourceAPI {
     applyMapSource(map: MapSourceMap, sourceId: string | null, accessToken?: string, context?: ViewerUpdateContext | null): Promise<string | null>;

@@ -1,8 +1,9 @@
-import type { CheckedFetch, CheckedTileProtocol, MapSourceControl, MapSourceMap, RasterStyle, SourceStyleLayer } from '../../../../../../ts-types/domain/map-sources.ts';
+import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
+import type { CheckedTileProtocol, MapSourceControl, MapSourceMap, RasterStyle, SourceStyleLayer } from '../../../../../../ts-types/domain/map-sources.ts';
 interface FixtureLayer { id: string; layout?: { visibility?: 'visible' | 'none' }; beforeId?: string | undefined }
 import { ViewerUpdates } from '../viewer_updates.ts';
 import { DEFAULTS } from '../config.ts';
-import { MapSources } from './sources.ts';
+import { MapSources, createCheckedTileProtocolHandler } from './sources.ts';
 
 function arrayBufferFromHex(hex: string) {
     const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
@@ -15,6 +16,7 @@ function createMapMock() {
         { id: 'background', layout: {} },
         { id: 'satellite', layout: { visibility: 'visible' } },
         { id: 'hillshade-shadow', layout: { visibility: 'none' } },
+        { id: GLOBE_ATMOSPHERE_LAYER_ID },
         { id: 'project-layer-p1' },
         { id: 'project-labels-p1' },
         { id: 'project-points-p1' },
@@ -134,138 +136,72 @@ describe('MapSources', () => {
         });
     });
 
-    it('builds ESRI Satellite with the ESRI tile URL when checked protocol support is unavailable', () => {
-        const originalInstalled = globalThis.__speleoCheckedTileProtocolInstalled;
-        Object.defineProperty(globalThis, '__speleoCheckedTileProtocolInstalled', {
-            configurable: true,
-            writable: true,
-            value: false,
-        });
-
-        const style = MapSources.buildMapStyle('esri-satellite', '') as RasterStyle;
-
-        expect(style.sources['speleo-base-raster-source']).toMatchObject({
-            type: 'raster',
-            tileSize: 256,
-            maxzoom: 18,
-        });
-        expect(style.sources['speleo-base-raster-source'].tiles[0]).toBe(
-            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        );
-        expect(style.sources['speleo-base-raster-source'].tiles[0]).toContain('{z}/{y}/{x}');
-
-        Object.defineProperty(globalThis, '__speleoCheckedTileProtocolInstalled', {
-            configurable: true,
-            value: originalInstalled,
-        });
-    });
-
-    it('installs a JS fetch hash check that rejects known missing-data images for every raster source', async () => {
+    it('registers the scoped asynchronous tile protocol once without replacing fetch', async () => {
         const originalFetch = globalThis.fetch;
-        const originalCrypto = globalThis.crypto;
-        const tileResponse = new Response(new Uint8Array([1, 2, 3]), {
-            status: 200,
-            headers: { 'Content-Type': 'image/jpeg' },
-        });
-
-        vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(tileResponse)));
-        Object.defineProperty(globalThis, 'crypto', {
-            configurable: true,
-            value: {
-                subtle: {
-                    digest: vi.fn(() => Promise.resolve(arrayBufferFromHex(DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES[0]!))),
-                },
-            },
-        });
-
-        MapSources.installCheckedTileFetch();
-        const satelliteResponse = await fetch(
-            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/27064/17738'
-        );
-        const hillshadeResponse = await fetch(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/17/27064/17738'
-        );
-
-        expect(satelliteResponse.status).toBe(404);
-        expect(satelliteResponse.statusText).toBe('Tile matched known missing-data hash');
-        expect(hillshadeResponse.status).toBe(404);
-        expect(hillshadeResponse.statusText).toBe('Tile matched known missing-data hash');
-        expect((globalThis.fetch as CheckedFetch).__speleoCheckedTileFetch).toBe(true);
-
-        globalThis.fetch = originalFetch;
-        Object.defineProperty(globalThis, 'crypto', {
-            configurable: true,
-            value: originalCrypto,
-        });
-    });
-
-    it('installs a Mapbox checked tile protocol that fetches the real ESRI URL and rejects missing-data hashes', async () => {
-        const originalMapboxgl = globalThis.mapboxgl;
-        const originalFetch = globalThis.fetch;
-        const originalCrypto = globalThis.crypto;
-        const originalInstalled = globalThis.__speleoCheckedTileProtocolInstalled;
         const addProtocol = vi.fn<(name: string, handler: CheckedTileProtocol) => void>();
-
-        Object.defineProperty(globalThis, 'mapboxgl', {
-            configurable: true,
-            value: { addProtocol },
-        });
-        Object.defineProperty(globalThis, '__speleoCheckedTileProtocolInstalled', {
-            configurable: true,
-            writable: true,
-            value: false,
-        });
-        vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(new Uint8Array([1, 2, 3]), {
-            status: 200,
-            headers: { 'Content-Type': 'image/jpeg' },
-        }))));
-        Object.defineProperty(globalThis, 'crypto', {
-            configurable: true,
-            value: {
-                subtle: {
-                    digest: vi.fn(() => Promise.resolve(arrayBufferFromHex(DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES[0]!))),
-                },
-            },
-        });
-
+        vi.stubGlobal('__mapRenderer', { addProtocol });
         MapSources.installCheckedTileProtocol();
-
-        expect(addProtocol).toHaveBeenCalledWith('speleo-checked-tile', expect.any(Function));
-        const protocolHandler = addProtocol.mock.calls[0]![1];
-        const callback = vi.fn<(error: unknown) => void>();
-        protocolHandler({
-            url: 'speleo-checked-tile://https/server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/17/27064/17738',
-        }, callback);
-
-        await vi.waitFor(() => {
-            expect(callback).toHaveBeenCalled();
-        });
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/17/27064/17738',
-            expect.objectContaining({ signal: expect.any(AbortSignal) as unknown })
+        MapSources.installCheckedTileProtocol();
+        expect(addProtocol).toHaveBeenCalledOnce();
+        expect(globalThis.fetch).toBe(originalFetch);
+        const style = MapSources.buildMapStyle('esri-satellite', '') as RasterStyle;
+        expect(style.sources['speleo-base-raster-source'].tiles[0]).toBe(
+            'speleo-checked-tile://https/services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         );
-        expect(callback.mock.calls[0]![0]).toBeInstanceOf(Error);
-        expect((callback.mock.calls[0]![0] as Error).message).toBe('Tile matched known missing-data hash');
+        vi.unstubAllGlobals();
+    });
 
-        const checkedStyle = MapSources.buildMapStyle('esri-world-hillshade-dark', '') as RasterStyle;
-        expect(checkedStyle.sources['speleo-base-raster-source'].tiles[0]).toBe(
-            'speleo-checked-tile://https/server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/{z}/{y}/{x}'
-        );
+    it('rejects known missing-data raster images and forwards cancellation', async () => {
+        const fetchTile = vi.fn(async () => new Response(new Uint8Array([1, 2, 3])));
+        vi.stubGlobal('fetch', fetchTile);
+        vi.stubGlobal('crypto', { subtle: { digest: vi.fn(async () => arrayBufferFromHex(DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES[0]!)) } });
+        const controller = new AbortController();
+        try {
+            await expect(createCheckedTileProtocolHandler()({
+                url: 'speleo-checked-tile://https/server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/17/27064/17738',
+            }, controller)).rejects.toMatchObject({ status: 404, message: 'Tile matched known missing-data hash' });
+            expect(fetchTile).toHaveBeenCalledWith(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/17/27064/17738',
+                { signal: controller.signal }
+            );
+        } finally { vi.unstubAllGlobals(); }
+    });
 
-        Object.defineProperty(globalThis, 'mapboxgl', {
-            configurable: true,
-            value: originalMapboxgl,
-        });
-        Object.defineProperty(globalThis, '__speleoCheckedTileProtocolInstalled', {
-            configurable: true,
-            value: originalInstalled,
-        });
-        globalThis.fetch = originalFetch;
-        Object.defineProperty(globalThis, 'crypto', {
-            configurable: true,
-            value: originalCrypto,
-        });
+    it.each([404, 500])('preserves HTTP %s so only missing tiles use parent/child fallback', async status => {
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status })));
+        try {
+            await expect(createCheckedTileProtocolHandler()({
+                url: 'speleo-checked-tile://https/services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/1/2/3',
+            }, new AbortController())).rejects.toMatchObject({ status, message: `Tile request failed with HTTP ${status}` });
+        } finally { vi.unstubAllGlobals(); }
+    });
+
+    it('preserves abort rejection without turning cancellation into a missing tile', async () => {
+        const aborted = new DOMException('Request aborted', 'AbortError');
+        vi.stubGlobal('fetch', vi.fn(async () => { throw aborted; }));
+        const controller = new AbortController();
+        controller.abort();
+        try {
+            await expect(createCheckedTileProtocolHandler()({
+                url: 'speleo-checked-tile://https/services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/1/2/3',
+            }, controller)).rejects.toBe(aborted);
+        } finally { vi.unstubAllGlobals(); }
+    });
+
+    it('returns tile bytes and cache metadata and rejects foreign URLs before fetching', async () => {
+        const bytes = new Uint8Array([4, 5, 6]);
+        const expires = 'Fri, 09 Oct 2026 00:00:00 GMT';
+        const fetchTile = vi.fn(async () => new Response(bytes, { headers: { 'cache-control': 'max-age=60', expires } }));
+        vi.stubGlobal('fetch', fetchTile);
+        const handler = createCheckedTileProtocolHandler();
+        try {
+            const result = await handler({ url: 'speleo-checked-tile://https/services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/1/2/3' }, new AbortController());
+            expect(new Uint8Array(result.data)).toEqual(bytes);
+            expect(result.cacheControl).toBe('max-age=60');
+            expect(result.expires).toBe(expires);
+            await expect(handler({ url: 'https://example.com/private' }, new AbortController())).rejects.toThrow('Unknown checked tile source');
+            expect(fetchTile).toHaveBeenCalledOnce();
+        } finally { vi.unstubAllGlobals(); }
     });
 
     it('uses the Mapbox style as the initial style when a token exists', () => {
@@ -441,7 +377,7 @@ describe('MapSources', () => {
         expect(map.setLayoutProperty).toHaveBeenCalledWith('background', 'visibility', 'visible');
     });
 
-    it('adds the map source selector through the Mapbox control API without duplicates', () => {
+    it('adds the map source selector through the Renderer control API without duplicates', () => {
         const { map } = createMapMock();
 
         MapSources.renderControl(map, 'token');
@@ -480,7 +416,7 @@ describe('MapSources', () => {
         canvas.remove();
     });
 
-    it('renders a Mapbox icon button under controls with a menu that switches sources', async () => {
+    it('renders a Renderer icon button under controls with a menu that switches sources', async () => {
         const { map } = createMapMock();
         const eventSpy = vi.fn();
         window.addEventListener('speleo:map-source-changed', eventSpy);
@@ -491,12 +427,12 @@ describe('MapSources', () => {
 
         expect(element).toBeInstanceOf(HTMLElement);
         expect(element.id).toBe('map-source-control');
-        expect(element.classList.contains('mapboxgl-ctrl')).toBe(true);
-        expect(element.classList.contains('mapboxgl-ctrl-group')).toBe(true);
+        expect(element.classList.contains('maplibregl-ctrl')).toBe(true);
+        expect(element.classList.contains('maplibregl-ctrl-group')).toBe(true);
 
         const button = element.querySelector<HTMLElement>('#map-source-button')!;
         expect(button).not.toBeNull();
-        expect(button.classList.contains('mapboxgl-ctrl-icon')).toBe(true);
+        expect(button.classList.contains('maplibregl-ctrl-icon')).toBe(true);
         expect(button.getAttribute('aria-label')).toBe('Map Source');
         expect(button.getAttribute('aria-controls')).toBe('map-source-menu');
 
@@ -577,4 +513,16 @@ describe('MapSources', () => {
         await vi.runAllTimersAsync();
         expect(map.addSource).not.toHaveBeenCalled();
     });
+});
+
+
+it('keeps the globe appearance above raster replacements and out of provider visibility changes', async () => {
+    const { map, layers } = createMapMock();
+    layers.splice(0, layers.length, { id: 'speleo-base-raster-layer' }, { id: GLOBE_ATMOSPHERE_LAYER_ID });
+    MapSources.applyInitialMapSource(map, 'esri-satellite', '');
+    await MapSources.applyMapSource(map, 'esri-world-hillshade', '');
+    expect(map.setLayoutProperty.mock.calls.some(([id]) => id === GLOBE_ATMOSPHERE_LAYER_ID)).toBe(false);
+    expect(layers.map(layer => layer.id)).toEqual([
+        'speleo-base-raster-layer', 'speleo-base-anchor', GLOBE_ATMOSPHERE_LAYER_ID,
+    ]);
 });

@@ -123,11 +123,11 @@ class DarkDocumentThemeContractTests(TestCase):
             "style-private-shell",
             "style-shared-modal",
             "style-map-viewer",
-            "api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css",
         )
         positions: list[int] = [html.index(marker) for marker in stylesheet_markers]
         assert positions == sorted(positions)
         assert "private/css/style.css" not in html
+        assert "mapbox-gl-js" not in html
 
     def test_error_document_declares_dark_without_a_variant_class(self) -> None:
         html: str = render_to_string("base_error.html")

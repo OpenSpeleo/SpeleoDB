@@ -32,6 +32,8 @@ describe('TypeScript toolchain boundaries', () => {
             'isolatedModules', 'erasableSyntaxOnly', 'resolveJsonModule',
             'allowImportingTsExtensions', 'forceConsistentCasingInFileNames', 'noEmit', 'composite',
         ] as const) expect(base[flag], flag).toBe(true);
+        expect(base.customConditions).toEqual(['speleodb-source']);
+        expect(base.preserveSymlinks).toBe(true);
         expect(base.allowJs).toBe(false);
         expect(base.skipLibCheck).toBe(false);
         const projects = CONFIG_FILES.map(readConfig);
@@ -53,12 +55,12 @@ describe('TypeScript toolchain boundaries', () => {
         ]));
         for (const project of projects.slice(1)) expect(project.extends).toBe('./tsconfig.json');
         const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as PackageManifest;
-        const leafScripts = Object.keys(manifest.scripts!).filter(name => name.startsWith('typecheck:') && name !== 'typecheck:watch');
+        const leafScripts = Object.keys(manifest.scripts!).filter(name => name.startsWith('typecheck:'));
         expect(leafScripts.sort()).toEqual(PROJECTS.map(project => `typecheck:${project}`).sort());
-        const buildCommand = `bun ./node_modules/@typescript/native/bin/tsc --build ${CONFIG_FILES.join(' ')}`;
+        const buildCommand = 'bun scripts/typecheck.ts';
         expect(manifest.scripts!.typecheck).toBe(buildCommand);
-        expect(manifest.scripts!['typecheck:watch']).toBe(`${buildCommand} --watch --preserveWatchOutput`);
-        expect(manifest.scripts!['typecheck:runtime']).toBe('bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.json');
+        expect(manifest.scripts!['typecheck:watch']).toBeUndefined();
+        expect(manifest.scripts!['typecheck:runtime']).toBe('bun scripts/typecheck.ts --scope=runtime');
     });
 
     it.each([

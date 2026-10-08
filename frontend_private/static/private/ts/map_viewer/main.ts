@@ -1,3 +1,4 @@
+import { Renderer } from './map/renderer.ts';
 import type { Point } from 'geojson';
 import type { EntityId } from '../../../../../ts-types/domain/identifiers.ts';
 import type { ProjectResponse } from '../../../../../ts-types/domain/map-config.ts';
@@ -588,7 +589,7 @@ export async function initPrivateMapViewer() {
                 essential: true
             });
         } else if (State.projectBounds.size > 0) {
-            const allBounds = new mapboxgl.LngLatBounds();
+            const allBounds = new Renderer.LngLatBounds();
             State.projectBounds.forEach(bounds => {
                 allBounds.extend(bounds);
             });

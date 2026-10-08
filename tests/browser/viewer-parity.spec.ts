@@ -53,7 +53,7 @@ test('public GIS loads real shared layers, limits zoom and changes display witho
     expect(requests).toEqual(downloads);
     // Uncover the canvas point normally occupied by the project panel.
     await page.locator('#panel-toggle').click();
-    await page.locator('canvas.mapboxgl-canvas').click({ button: 'right', position: { x: 100, y: 100 } });
+    await page.locator('canvas.maplibregl-canvas').click({ button: 'right', position: { x: 100, y: 100 } });
     await expect(page.locator('#context-menu')).toHaveCount(0);
     expect(mutations).toEqual([]);
     const authoredSource = await page.request.get('/static/private/ts/map_viewer/main.ts');
@@ -82,7 +82,7 @@ test('read-only projects retain separate country and project visibility and disa
     await page.locator('#panel-toggle').click();
     await expect.poll(() => page.evaluate(() => window.__viewerEvidence.map.isMoving())).toBe(false);
     const point = await page.evaluate(() => window.__viewerEvidence.map.project([-87, 20]));
-    await page.locator('canvas.mapboxgl-canvas').click({ button: 'right', position: point });
+    await page.locator('canvas.maplibregl-canvas').click({ button: 'right', position: point });
     const menu = page.locator('#context-menu');
     await expect(menu).toBeVisible();
     const create = menu.locator('.context-menu-item').filter({ hasText: 'Create Sensor Station' });
@@ -112,8 +112,8 @@ test('map settings contain keyboard focus, restore the trigger and remain usable
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
-    // Mapbox hides its control where the browser does not expose fullscreen.
-    const fullscreen = page.locator('.mapboxgl-ctrl-fullscreen');
+    // Renderer hides its control where the browser does not expose fullscreen.
+    const fullscreen = page.locator('.maplibregl-ctrl-fullscreen');
     if (await page.evaluate(() => document.fullscreenEnabled)) {
         await fullscreen.click();
         await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id)).toBe('map-viewer-shell');
@@ -145,7 +145,7 @@ test('distance measurement supports keyboard placement, draft cancellation and c
     await login(page);
     await installFixture(page);
     const ruler = page.getByRole('button', { name: 'Measure distance', exact: true });
-    const canvas = page.locator('canvas.mapboxgl-canvas');
+    const canvas = page.locator('canvas.maplibregl-canvas');
     const distances = page.getByRole('list', { name: 'Completed distances' });
     const announcement = page.locator('.measurement-sr-only[role="status"]');
     await ruler.focus();
@@ -188,7 +188,7 @@ test('geometry drawing preserves keyboard history and draft state until explicit
     await expect(editor).toBeVisible();
     await expect(page.getByRole('button', { name: 'Finish geometry editing to measure' })).toBeDisabled();
     await editor.getByRole('textbox', { name: 'Name', exact: true }).fill('Browser draft');
-    const canvas = page.locator('canvas.mapboxgl-canvas');
+    const canvas = page.locator('canvas.maplibregl-canvas');
     const bounds = await canvas.boundingBox();
     expect(bounds).not.toBeNull();
     // The inspector occupies the right edge; project panels occupy the left.

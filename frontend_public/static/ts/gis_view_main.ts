@@ -1,3 +1,4 @@
+import { Renderer } from '../../../frontend_private/static/private/ts/map_viewer/map/renderer.ts';
 import type { MapSourceChangeEvent } from '../../../ts-types/domain/map-sources.ts';
 import type { PublicViewerData, PublicViewerLoadOptions, PublicViewerMap } from '../../../ts-types/domain/viewer-composition.ts';
 import type { ProjectResponse, ViewerProject } from '../../../ts-types/domain/map-config.ts';
@@ -55,7 +56,7 @@ export async function initPublicGISViewer() {
     map.setMaxZoom(maxZoom);
     DepthLegend.init(map);
 
-    // Prefetch the GIS View GeoJSON concurrently with the Mapbox style/tile
+    // Prefetch the GIS View GeoJSON concurrently with the Renderer style/tile
     // load so the (single) network request overlaps map init instead of only
     // starting once the map 'load' event fires. The result is consumed once in
     // loadPublicMapData; later reloads reuse Config.projects unless the list is
@@ -153,7 +154,7 @@ export async function initPublicGISViewer() {
 
             // Auto-zoom to fit all project bounds
             if (fitCamera && State.projectBounds.size > 0) {
-                const allBounds = new mapboxgl.LngLatBounds();
+                const allBounds = new Renderer.LngLatBounds();
                 State.projectBounds.forEach(bounds => {
                     allBounds.extend(bounds);
                 });

@@ -3,11 +3,8 @@ import type { JSONValue } from './json.ts';
 import type { DepthDomain } from './map-display.ts';
 import type { Coordinate2D } from './map-geometry.ts';
 
-export interface PreparationOptions {
-    isCurrent?: () => boolean;
-    yieldWork?: () => Promise<unknown>;
-    budgetMs?: number;
-}
+import type { PreparationOptions } from '@speleodb/map-core/preparation';
+export type { PreparationOptions } from '@speleodb/map-core/preparation';
 export interface BoundsPreparationOptions extends PreparationOptions { wrapLongitude?: boolean }
 export type PreparedBounds = [Coordinate2D, Coordinate2D];
 export interface PreparationBounds {

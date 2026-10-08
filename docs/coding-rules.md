@@ -14,8 +14,12 @@ object defined in `map_viewer/defaults.ts` and re-exported unchanged from
 `config.ts`. The leaf owns constants only, avoiding a dependency cycle through
 Config, API, utilities and notifications. Existing feature imports may continue
 using the `config.ts` facade; foundational helpers import the leaf directly. Do
-not copy or deep-freeze its nested objects. No magic numbers, thresholds,
-durations, zoom levels, colors, sizes, or configuration values anywhere else.
+not copy or deep-freeze its nested objects. Shared standards and common renderer
+policy belong in `@speleodb/map-core` or `@speleodb/map-viewer`; the app's
+`DEFAULTS` facade imports and re-exports those values rather than duplicating
+them. App-specific tunables and overrides remain in `defaults.ts`. No magic
+numbers, thresholds, durations, zoom levels, colors, sizes, or configuration
+values anywhere else.
 
 ```javascript
 // BAD — hardcoded constant in a random module

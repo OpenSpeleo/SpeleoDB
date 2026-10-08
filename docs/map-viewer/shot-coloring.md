@@ -35,7 +35,7 @@ mode changes and newly loaded or rebuilt survey line layers. Shot mode uses:
 ["to-color", ["get", "color"], Colors.getProjectColor(projectId)];
 ```
 
-Mapbox resolves each feature's color during rendering, using that project's
+MapLibre resolves each feature's color during rendering, using that project's
 stored color if conversion fails or the property is absent. Alpha is preserved.
 The fallback continues to use the existing model-driven color cache; no frontend
 palette or source-format-specific parser is introduced. Project identity chips,

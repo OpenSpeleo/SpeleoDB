@@ -10,9 +10,11 @@ export interface PackageManifest extends DependencyGroups {
     engines: { bun: string };
     trustedDependencies: string[];
     scripts?: Record<string, string>;
+    overrides?: Record<string, string>;
 }
 export interface BunLock {
     workspaces: { '': DependencyGroups };
+    overrides?: Record<string, string>;
     packages: Record<string, [string, string, { bundled?: boolean }, string?]>;
     trustedDependencies: string[];
 }

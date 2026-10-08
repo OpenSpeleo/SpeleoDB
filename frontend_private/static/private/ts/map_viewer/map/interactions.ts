@@ -164,7 +164,7 @@ export const Interactions: MapInteractions = {
                 return;
             }
 
-            // Mapbox returns rendered features in visual stacking order. Query
+            // MapLibre returns rendered features in visual stacking order. Query
             // all clickable GIS roles together so an overlap produces exactly
             // one popup for the topmost feature, regardless of source ownership.
             const gisLayerIds = [...State.gisLayerClickableLayerIds];

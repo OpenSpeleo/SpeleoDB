@@ -3,7 +3,7 @@ import type { Feature, Point, LineString } from 'geojson';
 import type { EditorActivity, EditorCollection, EditorFeatureProperties, EditorMap } from '../../../../../../ts-types/domain/geometry-editor-runtime.ts';
 import type { EditableGeometry } from '../../../../../../ts-types/domain/geometry-editor.ts';
 import type { GISGeometryResponse } from '../../../../../../ts-types/domain/map-config.ts';
-import type { MapboxLayer } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 
 interface TestSource { type: 'geojson'; data: EditorCollection; tolerance: number; setData: Mock<(data: EditorCollection) => void> }
 type MockFunctions<Owner> = { [Key in keyof Owner]: Owner[Key] extends (...args: infer Args) => infer Result ? Mock<(...args: Args) => Result> : Owner[Key] };
@@ -22,7 +22,7 @@ vi.mock('../utils.ts', async () => {
 
 function mapMock() {
     const sources = new Map<string, TestSource>();
-    const layers = new Map<string, MapboxLayer>();
+    const layers = new Map<string, RendererLayer>();
     return {
         sources, layers,
         getContainer: () => document.getElementById('map')!,
@@ -31,7 +31,7 @@ function mapMock() {
         getSource: (id: string) => sources.get(id),
         getLayer: (id: string) => layers.get(id),
         addSource: (id: string, data: Omit<TestSource, 'setData'>) => sources.set(id, { ...data, setData: vi.fn((value: EditorCollection) => { sources.get(id)!.data = value; }) }),
-        addLayer: (layer: MapboxLayer) => layers.set(layer.id, layer),
+        addLayer: (layer: RendererLayer) => layers.set(layer.id, layer),
         removeSource: (id: string) => sources.delete(id),
         removeLayer: (id: string) => layers.delete(id),
         queryRenderedFeatures: vi.fn<() => Omit<Feature<Point, EditorFeatureProperties>, 'type'>[]>(() => []),

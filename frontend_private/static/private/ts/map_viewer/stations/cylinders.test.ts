@@ -291,11 +291,46 @@ describe('CylinderInstalls literal contracts', () => {
         vi.unstubAllGlobals();
     });
 
-    it('keeps the close alias identical to the registered DOM listener', () => {
+    it('keeps the close alias identical to the listener registered when opening the modal', async () => {
         const button = (document.getElementById('cylinder-modal-close') as HTMLElement);
         const spy = vi.spyOn(button, 'addEventListener');
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await CylinderInstalls.showInstallModal([1, 2], 'Location', 'p');
         expect(spy).toHaveBeenCalledWith('click', CylinderInstalls.closeModal);
         expect(CylinderInstalls.closeModal()).toBeUndefined();
+    });
+
+    it('closes an empty-fleet modal on its first lazy opening and after reopening', async () => {
+        API.getCylinderFleets.mockResolvedValue([]);
+        const modal = document.getElementById('cylinder-modal')!;
+        for (let opening = 0; opening < 2; opening++) {
+            await CylinderInstalls.showInstallModal([1, 2], 'Location', 'p');
+            expect(modal.classList.contains('hidden')).toBe(false);
+            expect(document.getElementById('cylinder-no-fleets')!.classList.contains('hidden')).toBe(false);
+            document.getElementById('cylinder-modal-close')!.click();
+            expect(modal.classList.contains('hidden')).toBe(true);
+        }
+    });
+
+    it('allows closing while fleets are loading and does not reopen on their response', async () => {
+        let finish!: (fleets: unknown[]) => void;
+        API.getCylinderFleets.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+        const opening = CylinderInstalls.showInstallModal([1, 2], 'Location', 'p');
+        const modal = document.getElementById('cylinder-modal')!;
+        expect(modal.classList.contains('hidden')).toBe(false);
+        document.getElementById('cylinder-modal-close')!.click();
+        expect(modal.classList.contains('hidden')).toBe(true);
+        finish([]);
+        await opening;
+        expect(modal.classList.contains('hidden')).toBe(true);
+    });
+
+    it('closes on the backdrop while preserving clicks within empty-fleet contents', async () => {
+        API.getCylinderFleets.mockResolvedValue([]);
+        await CylinderInstalls.showInstallModal([1, 2], 'Location', 'p');
+        const modal = document.getElementById('cylinder-modal')!;
+        document.getElementById('cylinder-no-fleets')!.click();
+        expect(modal.classList.contains('hidden')).toBe(false);
+        modal.click();
+        expect(modal.classList.contains('hidden')).toBe(true);
     });
 });

@@ -1,8 +1,9 @@
+import { rememberSourceData } from '../map/layers/source_lifecycle.ts';
 import type { Mock } from 'vitest';
 import type { Geometry as GeoJSONGeometry } from 'geojson';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { Coordinate2D } from '../../../../../../ts-types/domain/map-geometry.ts';
-import type { MapboxImage, MapboxLayer } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererGeoJSON, RendererImage, RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 import type { ScreenPoint, LongitudeLatitude } from '../../../../../../ts-types/domain/measurement.ts';
 import type { MeasurementInput, MeasurementToolMap } from '../../../../../../ts-types/domain/measurement-tool.ts';
 import type { InteractionMap, MapPointerEvent } from '../../../../../../ts-types/domain/map-interactions.ts';
@@ -31,8 +32,8 @@ function createMap() {
     canvas.getBoundingClientRect = () => host.getBoundingClientRect();
     const events = new Map<string, Set<(event: TestEvent) => void>>();
     const sources = new Map<string, TestSource>();
-    const layers = new Map<string, Partial<MapboxLayer>>();
-    const images = new Map<string, MapboxImage>();
+    const layers = new Map<string, Partial<RendererLayer>>();
+    const images = new Map<string, RendererImage>();
     let doubleClick = true;
     let pan = true;
     const map = {
@@ -47,15 +48,15 @@ function createMap() {
         project: (coordinate: LongitudeLatitude | Coordinate2D) => ({ x: ((coordinate as LongitudeLatitude).lng ?? (coordinate as Coordinate2D)[0]) * 10, y: ((coordinate as LongitudeLatitude).lat ?? (coordinate as Coordinate2D)[1]) * 10 }),
         isPointOnSurface: (point: ScreenPoint) => point.y >= 0,
         getSource: (id: string) => sources.get(id),
-        addSource(id: string, source: TestSourceDefinition) { sources.set(id, { ...source, _data: source.data, setData: vi.fn(function (this: TestSource, data: TestData) { this.data = data; this._data = data; }) }); },
+        addSource(id: string, source: TestSourceDefinition) { sources.set(id, { ...source, _data: source.data, setData: vi.fn(function (this: TestSource, data: TestData) { this.data = data; this._data = data; }) }); rememberSourceData(sources.get(id)!, source.data as RendererGeoJSON); },
         removeSource: (id: string) => sources.delete(id),
         getLayer: (id: string) => layers.get(id),
-        addLayer: (layer: Partial<MapboxLayer>) => layers.set(layer.id!, layer),
+        addLayer: (layer: Partial<RendererLayer>) => layers.set(layer.id!, layer),
         setLayoutProperty: vi.fn(),
         setFilter: vi.fn(),
         removeLayer: (id: string) => layers.delete(id),
         hasImage: (id: string) => images.has(id),
-        addImage: (id: string, image: MapboxImage) => images.set(id, image),
+        addImage: (id: string, image: RendererImage) => images.set(id, image),
         removeImage: (id: string) => images.delete(id),
         queryRenderedFeatures: vi.fn<() => TestFeature[]>(() => []),
         dragPan: { disable: vi.fn(() => { pan = false; }), enable: vi.fn(() => { pan = true; }), isEnabled: () => pan },
@@ -90,8 +91,8 @@ beforeEach(() => {
     let frame = 0;
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++frame, callback); return frame; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
-    // Mapbox's DOM Marker boundary: the actual renderer owns the live capsule.
-    vi.stubGlobal('mapboxgl', { Marker: class {
+    // Renderer's DOM Marker boundary: the actual renderer owns the live capsule.
+    vi.stubGlobal('__mapRenderer', { Marker: class {
         declare element: HTMLElement;
         declare coordinate: readonly number[];
         constructor({ element }: { element: HTMLElement }) { this.element = element; }

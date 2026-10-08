@@ -75,7 +75,7 @@ as zoom separates them. Their measurement geometry remains on the map.
 
 ## Ownership and extension boundaries
 
-The private entrypoint creates `MeasurementTool` and adds its Mapbox control
+The private entrypoint creates `MeasurementTool` and adds its MapLibre control
 after Map Source. The tool owns off/ready/drawing state, temporary records,
 input gestures, instructions, accessible results, and cleanup. Its public
 lifecycle includes `activate`, `deactivate`, `cancelDraft`, `isActive`,
@@ -116,11 +116,11 @@ from its derived display geometry.
 `MeasurementRenderer` owns two native GeoJSON sources, completed and draft, plus
 line casing, line, endpoint, and completed capsule-label layers. It uses one
 raw-pixel stretchable image for completed label backgrounds. The changing live
-readout uses one pointer-transparent Mapbox Marker with a DOM capsule: native
+readout uses one pointer-transparent MapLibre Marker with a DOM capsule: native
 symbol placement keys include text, so constantly changing distances otherwise
 fade away during pointer movement. Completed labels retain native collision
-management. Mapbox owns camera projection and globe clipping for both layers and
-the single live marker; there is no custom SVG/DOM projection engine to
+management. MapLibre owns camera projection and globe clipping for both layers
+and the single live marker; there is no custom SVG/DOM projection engine to
 synchronize with it.
 
 All measurement layer/image/source identities use the private
@@ -145,7 +145,7 @@ moving a point. Curve sections outside that band are clipped instead of being
 flattened along the boundary. Distances retain their geographic meaning.
 
 Picking uses the public surface API and a projection/unprojection round trip.
-This extra check is necessary because the pinned Mapbox version can clamp sky
+This extra check is necessary because the pinned MapLibre version can clamp sky
 coordinates to the globe horizon. Invalid preview positions hide the preview and
 preserve the start location.
 
@@ -198,8 +198,8 @@ controls.
 Run all tests in the already-running application container. Colocated tests
 cover pure geodesy, curve/formatting limits, real tool DOM/state, renderer
 lifecycle, dispatcher exclusivity, editor activity ordering, source
-preservation, and both viewer entrypoints. Use a minimal Mapbox boundary harness
-rather than mocking the measurement modules.
+preservation, and both viewer entrypoints. Use a minimal MapLibre boundary
+harness rather than mocking the measurement modules.
 
 Real authenticated Chromium verification uses the existing Playwright setup
 inside that container and the actual clean Vite build served by Django. Check

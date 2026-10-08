@@ -68,6 +68,15 @@ describe('read-only viewer lifecycle', () => {
         expect(relative.filter(file => /\/(?:stations|surface_stations|landmarks|exploration_leads)\//.test(file)
             || /\/(?:geometry_editor\/editor|measurement\/tool|action_dispatcher|components\/(?:context_menu|settings))\.ts$/.test(file))).toEqual([]);
         const shared = runtimeClosure('frontend_private/static/private/ts/map_viewer/viewer_lifecycle.ts');
-        expect([...shared].map(file => path.basename(file)).sort()).toEqual(['defaults.ts', 'viewer_lifecycle.ts']);
+        const appRoot = path.resolve('frontend_private/static/private/ts/map_viewer') + path.sep;
+        expect([...shared].filter(file => file.startsWith(appRoot)).map(file => path.basename(file)).sort())
+            .toEqual(['defaults.ts', 'viewer_lifecycle.ts']);
+        // The package closure contains pure definitions, never an application
+        // controller or initialization side effect. Audit compiled installs too.
+        const portable = [...shared].filter(file => !file.startsWith(appRoot));
+        expect(portable).toHaveLength(3);
+        for (const file of portable) {
+            expect(file.replaceAll(path.sep, '/')).toMatch(/map-(?:core|viewer)\/(?:src|dist)\/(?:depth|preparation|expressions)\.[jt]s$/);
+        }
     });
 });

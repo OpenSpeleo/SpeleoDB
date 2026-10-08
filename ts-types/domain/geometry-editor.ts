@@ -1,18 +1,10 @@
 import type { LineString, Polygon } from 'geojson';
 
-export type Position2D = [number, number];
+import type { Position2D } from '@speleodb/map-core/geometry';
+export type { Position2D, GeometryMeasurement, GeometryValidation } from '@speleodb/map-core/geometry';
+
 export type EditableGeometryType = 'LineString' | 'Polygon';
 export type EditableGeometry = LineString | Polygon;
-export interface GeometryMeasurement {
-    areaM2: number;
-    areaKm2: number;
-    vertexCount: number;
-    bounds: [Position2D, Position2D] | null;
-}
-export interface GeometryValidation extends GeometryMeasurement {
-    valid: boolean;
-    error: string;
-}
 export interface GeometryDraftSnapshot {
     type: EditableGeometryType;
     vertices: Position2D[];

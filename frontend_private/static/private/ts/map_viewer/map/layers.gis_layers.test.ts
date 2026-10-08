@@ -1,6 +1,6 @@
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
-import type { MapboxLayer, MapboxSourceOptions, MapboxValue, MapboxPopupOptions } from '../../../../../../ts-types/domain/mapbox.ts';
-import type { MapboxGlobal, ViewerGeoJSON, DisplayGeometryType, RenderGeometryType } from '../../../../../../ts-types/domain/map-geometry.ts';
+import type { RendererLayer, RendererSourceOptions, RendererValue, RendererPopupOptions } from '../../../../../../ts-types/domain/renderer.ts';
+import type { RendererGlobal, ViewerGeoJSON, DisplayGeometryType, RenderGeometryType } from '../../../../../../ts-types/domain/map-geometry.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -34,15 +34,15 @@ import {
 
 function createMap() {
         return {
-            addSource: vi.fn<(id: string, source: MapboxSourceOptions) => void>(),
-            addLayer: vi.fn<(layer: MapboxLayer) => void>(),
-            getLayer: vi.fn<(id: string) => Partial<MapboxLayer> | undefined>(),
+            addSource: vi.fn<(id: string, source: RendererSourceOptions) => void>(),
+            addLayer: vi.fn<(layer: RendererLayer) => void>(),
+            getLayer: vi.fn<(id: string) => Partial<RendererLayer> | undefined>(),
             getSource: vi.fn(),
             getStyle: vi.fn(() => ({ layers: [] })),
             removeLayer: vi.fn(),
             removeSource: vi.fn(),
             setLayoutProperty: vi.fn(),
-            setFilter: vi.fn<(id: string, filter: MapboxValue) => void>(),
+            setFilter: vi.fn<(id: string, filter: RendererValue) => void>(),
             moveLayer: vi.fn(),
         };
 }
@@ -62,12 +62,12 @@ describe('GIS Layer display', () => {
         State.map = map as unknown as ViewerMap;
         mocks.getGISLayerDetails.mockReset();
         globalThis.fetch = vi.fn() as unknown as typeof fetch;
-        globalThis.mapboxgl = { LngLatBounds: class { constructor() { return mocks.bounds; } } } as unknown as MapboxGlobal;
+        globalThis.__mapRenderer = { LngLatBounds: class { constructor() { return mocks.bounds; } } } as unknown as RendererGlobal;
     });
 
     afterEach(() => {
         State.map = null;
-        delete (globalThis as { mapboxgl?: MapboxGlobal }).mapboxgl;
+        delete (globalThis as { __mapRenderer?: RendererGlobal }).__mapRenderer;
         vi.restoreAllMocks();
     });
 
@@ -130,15 +130,15 @@ describe('GIS Layer display', () => {
 
     it('opens the exact safe feature card from polygon and point clicks', async () => {
         const popupContents: HTMLElement[] = [];
-        const popupOptions: MapboxPopupOptions[] = [];
+        const popupOptions: RendererPopupOptions[] = [];
         class PopupMock {
-            constructor(options: MapboxPopupOptions) { popupOptions.push(options); }
+            constructor(options: RendererPopupOptions) { popupOptions.push(options); }
             once() { return this; }
             setLngLat() { return this; }
             setDOMContent(content: HTMLElement) { popupContents.push(content); return this; }
             addTo() { return this; }
         }
-        globalThis.mapboxgl.Popup = PopupMock as unknown as NonNullable<MapboxGlobal['Popup']>;
+        globalThis.__mapRenderer.Popup = PopupMock as unknown as NonNullable<RendererGlobal['Popup']>;
         for (const geometryType of ['Polygon', 'Point']) {
             Layers.openGISFeaturePopup({
                 geometry: { type: geometryType },
@@ -186,7 +186,7 @@ describe('GIS Layer display', () => {
             addTo() { return this; }
             remove() { closed.push(this); this.onClose(); }
         }
-        globalThis.mapboxgl.Popup = Popup;
+        globalThis.__mapRenderer.Popup = Popup;
         Layers.openGISFeaturePopup({ properties: { name: 'First' } }, { lng: 0, lat: 0 });
         Layers.openGISFeaturePopup({ properties: { name: 'Second' } }, { lng: 1, lat: 1 });
         Layers.closeGISFeaturePopups();
@@ -203,7 +203,7 @@ describe('GIS Layer display', () => {
             setDOMContent(content: HTMLElement) { setDOMContent(content); return this; }
             addTo() { return this; }
         }
-        globalThis.mapboxgl.Popup = PopupMock as unknown as NonNullable<MapboxGlobal['Popup']>;
+        globalThis.__mapRenderer.Popup = PopupMock as unknown as NonNullable<RendererGlobal['Popup']>;
         expect(() => Layers.openGISFeaturePopup({ geometry: { type: 'Point' } }, {} as { lng: number; lat: number })).not.toThrow();
         const card = setDOMContent.mock.calls[0]![0];
         expect(card.querySelector<HTMLElement>('.gis-layer-feature-card__title')!.textContent).toBe('Untitled feature');
@@ -238,8 +238,8 @@ describe('GIS Layer display', () => {
         expect(popup.querySelectorAll('.gis-layer-feature-card__metadata dt')).toHaveLength(4);
 
         const css = readFileSync(resolve('frontend_private/static/private/css/map_viewer.css'), 'utf8');
-        expect(css).toContain('.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-content');
-        expect(css).toContain('.mapboxgl-popup.gis-layer-feature-popup .mapboxgl-popup-close-button');
+        expect(css).toContain('.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-content');
+        expect(css).toContain('.maplibregl-popup.gis-layer-feature-popup .maplibregl-popup-close-button');
         expect(css).toMatch(/\.gis-layer-feature-card__scroll\s*\{[^}]*overscroll-behavior:\s*contain;/s);
         expect(css).toContain('.gis-layer-feature-card.is-scrollable .gis-layer-feature-card__scroll-rail');
         expect(css).toContain('.gis-layer-feature-card__scroll-thumb');

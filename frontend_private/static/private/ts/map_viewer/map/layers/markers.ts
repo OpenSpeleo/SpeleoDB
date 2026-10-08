@@ -3,11 +3,11 @@ import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/vi
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
 import type { Feature, FeatureCollection, Point } from 'geojson';
-import type { MapboxImage, MapboxValue, MapPointCollection } from '../../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererValue, MapPointCollection } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { CylinderInstallRecord } from '../../../../../../../ts-types/domain/fleet-records.ts';
 import { API } from '../../api.ts';
 import { getRuntimeContext } from '../../runtime_context.ts';
-import { removeLayersAndSource } from './source_lifecycle.ts';
+import { removeLayersAndSource, addOwnedSource, getSourceData, setOwnedSourceData } from './source_lifecycle.ts';
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
 export const PROJECT_SCOPED_MARKER_PROPERTY = 'project_id';
@@ -24,7 +24,7 @@ interface MarkerLayerOwner {
 /**
  * Build gas mix label text from cylinder percentages.
  */
-function getCylinderGasMixTextExpression(): MapboxValue {
+function getCylinderGasMixTextExpression(): RendererValue {
     return [
         'case',
         ['==', ['get', 'o2_percentage'], 100], 'Oxygen',
@@ -43,7 +43,7 @@ function getCylinderGasMixTextExpression(): MapboxValue {
 /**
  * Build label for cylinder installs: install-date\ngas-mix@pressure.
  */
-function getCylinderInstallLabelExpression(): MapboxValue {
+function getCylinderInstallLabelExpression(): RendererValue {
     return [
         'concat',
         ['coalesce', ['get', 'install_date'], 'Unknown date'],
@@ -87,50 +87,43 @@ export async function loadMarkerImages() {
     ];
     if (markerImagesLoaded && requiredImageIds.every(imageId => map.hasImage(imageId))) return;
 
-    // Helper to load image using Mapbox's loadImage (handles CORS properly)
-    const loadImage = (url: string) => {
-        return new Promise<MapboxImage>((resolve, reject) => {
-            map.loadImage(url, (error, image) => {
-                if (error) reject(error);
-                else resolve(image!);
-            });
-        });
-    };
+    // MapLibre loadImage resolves the image response and handles CORS.
+    const loadImage = async (url: string) => (await map.loadImage(url)).data;
 
     try {
         // Load pre-colored orange cylinder SVG for cylinder installs
         if (!map.hasImage('cylinder-icon')) {
-            const cylinderImage = await loadImage(getRuntimeContext().icons.cylinderOrange!);
+            const cylinderImage = await loadImage(getRuntimeContext().icons.cylinderOrange);
             map.addImage('cylinder-icon', cylinderImage);
         }
 
         // Load exploration lead SVG
         if (!map.hasImage('exploration-lead-icon')) {
-            const leadImage = await loadImage(getRuntimeContext().icons.explorationLead!);
+            const leadImage = await loadImage(getRuntimeContext().icons.explorationLead);
             map.addImage('exploration-lead-icon', leadImage);
         }
 
         // Load biology icon for biology stations
         if (!map.hasImage('biology-station-icon')) {
-            const biologyImage = await loadImage(getRuntimeContext().icons.biology!);
+            const biologyImage = await loadImage(getRuntimeContext().icons.biology);
             map.addImage('biology-station-icon', biologyImage);
         }
 
         // Load bone icon for bone stations
         if (!map.hasImage('bone-station-icon')) {
-            const boneImage = await loadImage(getRuntimeContext().icons.bone!);
+            const boneImage = await loadImage(getRuntimeContext().icons.bone);
             map.addImage('bone-station-icon', boneImage);
         }
 
         // Load artifact icon for artifact stations
         if (!map.hasImage('artifact-station-icon')) {
-            const artifactImage = await loadImage(getRuntimeContext().icons.artifact!);
+            const artifactImage = await loadImage(getRuntimeContext().icons.artifact);
             map.addImage('artifact-station-icon', artifactImage);
         }
 
         // Load geology icon for geology stations
         if (!map.hasImage('geology-station-icon')) {
-            const geologyImage = await loadImage(getRuntimeContext().icons.geology!);
+            const geologyImage = await loadImage(getRuntimeContext().icons.geology);
             map.addImage('geology-station-icon', geologyImage);
         }
 
@@ -176,7 +169,7 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
     const layerId = 'exploration-leads-layer';
 
     // Build GeoJSON from state
-    // Mapbox requires promoteId for string IDs - include id in properties
+    // MapLibre requires promoteId for string IDs - include id in properties
     const features = Array.from(State.explorationLeads.values()).map((marker): Feature<Point, { id: EntityId; lineName: string; project_id: string | null }> => ({
         type: 'Feature',
         id: marker.id,
@@ -197,9 +190,9 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
 
     // Update or create source
     if (map.getSource(sourceId)) {
-        map.getSource(sourceId)!.setData(geojson);
+        setOwnedSourceData(map.getSource(sourceId)!, geojson);
     } else {
-        map.addSource(sourceId, {
+        addOwnedSource(map, sourceId, {
             type: 'geojson',
             data: geojson,
             promoteId: 'id'
@@ -261,8 +254,8 @@ export function updateCylinderInstallPosition(markerId: EntityId, newCoords: [nu
 
     const sourceId = 'cylinder-installs-source';
     const source = map.getSource(sourceId);
-    if (source && source._data) {
-        const data = source._data as MapPointCollection;
+    const data = getSourceData<MapPointCollection>(source);
+    if (source && data) {
         const feature = data.features.find(f => f.id === markerId || f.properties?.id === markerId);
         if (feature) {
             feature.geometry.coordinates = newCoords;
@@ -297,7 +290,7 @@ export function showMarkerDragHighlight(markerType: string, coordinates: [number
     const color = isSnapped ? '#10b981' : '#f59e0b'; // Same colors as stations
 
     const geojson = {
-        // Mapbox accepts this existing property-less temporary highlight feature.
+        // MapLibre accepts this existing property-less temporary highlight feature.
         type: 'FeatureCollection' as const,
         features: [{
             type: 'Feature' as const,
@@ -306,12 +299,12 @@ export function showMarkerDragHighlight(markerType: string, coordinates: [number
     };
 
     if (map.getSource(highlightSourceId)) {
-        map.getSource(highlightSourceId)!.setData(geojson);
+        setOwnedSourceData(map.getSource(highlightSourceId)!, geojson);
         if (map.getLayer(highlightId)) {
             map.setPaintProperty(highlightId, 'circle-color', color);
         }
     } else {
-        map.addSource(highlightSourceId, { type: 'geojson', data: geojson });
+        addOwnedSource(map, highlightSourceId, { type: 'geojson', data: geojson });
         map.addLayer({
             id: highlightId,
             type: 'circle',
@@ -415,7 +408,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
     // Clear and populate the cylinder installs cache
     State.cylinderInstalls.clear();
     geojsonData.features.forEach(feature => {
-        // Ensure id property is set on each feature for Mapbox promoteId
+        // Ensure id property is set on each feature for Renderer promoteId
         if (feature.id && !feature.properties.id) {
             feature.properties.id = feature.id;
         }
@@ -430,7 +423,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
         }
     });
 
-    map.addSource(sourceId, {
+    addOwnedSource(map, sourceId, {
         type: 'geojson',
         data: geojsonData,
         promoteId: 'id'
@@ -455,7 +448,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
         });
     } else {
         // Fallback to text symbol
-        // Note: Using ● (U+25CF) instead of emoji - Mapbox doesn't support glyphs > 65535
+        // Note: Using ● (U+25CF) instead of emoji - Renderer doesn't support glyphs > 65535
         map.addLayer({
             id: layerId,
             type: 'symbol',

@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     curl \
     unzip \
+    util-linux \
     wget \
     vim \
     ssh \

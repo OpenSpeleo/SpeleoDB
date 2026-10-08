@@ -1,3 +1,4 @@
+import { MAP_ICON_URLS } from '@speleodb/map-viewer/icons';
 import type { Mock } from 'vitest';
 import type { PrivateMapContext } from '../../ts-types/controllers/private-map.ts';
 import { init as initialize } from './private-map.ts';
@@ -6,7 +7,10 @@ import { configureRuntimeContext as importedconfigureRuntimeContext } from '../.
 import { initPrivateMapViewer as importedinitPrivateMapViewer } from '../../frontend_private/static/private/ts/map_viewer/main.ts';
 
 vi.mock('../../frontend_private/static/private/ts/data_import.ts', () => ({ DataImport: { init: vi.fn() } }));
-vi.mock('../../frontend_private/static/private/ts/map_viewer/runtime_context.ts', () => ({ configureRuntimeContext: vi.fn() }));
+vi.mock('../../frontend_private/static/private/ts/map_viewer/runtime_context.ts', async importOriginal => {
+    const actual = await importOriginal<typeof import('../../frontend_private/static/private/ts/map_viewer/runtime_context.ts')>();
+    return { ...actual, configureRuntimeContext: vi.fn(actual.configureRuntimeContext) };
+});
 vi.mock('../../frontend_private/static/private/ts/map_viewer/main.ts', () => ({ initPrivateMapViewer: vi.fn() }));
 
 beforeEach(() => {
@@ -42,9 +46,9 @@ it('configures context immediately, updates the icon before viewer initializatio
     expect(DataImport.init.mock.contexts[0]).toBe(DataImport);
 });
 
-it('keeps the existing icon when context has no icon and allows missing DOM', async () => {
+it('uses the shared icon when context has no override and allows missing DOM', async () => {
     await init({ csrfToken: 'first' });
-    expect(document.getElementById('cylinder-modal-icon')!.getAttribute('src')).toBe('/original.svg');
+    expect(document.getElementById('cylinder-modal-icon')!.getAttribute('src')).toBe(MAP_ICON_URLS.cylinder);
     document.body.innerHTML = '';
     await init({ csrfToken: 'second', icons: { cylinderOrange: '/orange.svg' } });
     expect(initPrivateMapViewer).toHaveBeenCalledTimes(2);

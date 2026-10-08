@@ -60,7 +60,9 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      - run: test -s bun.lock && bun install --frozen-lockfile
+      - run: >-
+          bun scripts/check-shared-package-pins.ts &&
+          test -s bun.lock && bun install --frozen-lockfile
 
       - run: |
           prek run \
@@ -82,7 +84,9 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Install frontend dependencies
-        run: test -s bun.lock && bun install --frozen-lockfile
+        run: >-
+          bun scripts/check-shared-package-pins.ts &&
+          test -s bun.lock && bun install --frozen-lockfile
 
       - name: Audit source ownership and executable templates
         run: |
@@ -100,9 +104,6 @@ jobs:
       - name: Verify toolchain compatibility, ambient isolation and frontend
           behavior
         run: bun run test:frontend
-
-      - name: Verify Vite watcher invalidation
-        run: bun run test:assets-watch
 
       - name: Build checked Django-served assets
         run: bun run build
@@ -179,7 +180,9 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Install frontend dependencies for upload and asset contracts
-        run: test -s bun.lock && bun install --frozen-lockfile
+        run: >-
+          bun scripts/check-shared-package-pins.ts &&
+          test -s bun.lock && bun install --frozen-lockfile
 
       - name: Build checked assets for Django contracts
         run: bun run build
@@ -264,7 +267,9 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Install frontend dependencies
-        run: test -s bun.lock && bun install --frozen-lockfile
+        run: >-
+          bun scripts/check-shared-package-pins.ts &&
+          test -s bun.lock && bun install --frozen-lockfile
 
       - name: Build checked assets for browser workloads
         run: bun run build

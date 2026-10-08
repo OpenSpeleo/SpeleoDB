@@ -1,9 +1,10 @@
+import { Renderer } from '../renderer.ts';
 import type { GISPopupFeature } from '../../../../../../../ts-types/domain/map-layers.ts';
 import type { ViewerMap } from '../../../../../../../ts-types/domain/map-state.ts';
-import type { MapboxPopup, MapboxLngLat } from '../../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererPopup, RendererLngLat } from '../../../../../../../ts-types/domain/renderer.ts';
 import { DEFAULTS } from '../../config.ts';
 
-const gisFeaturePopups = new WeakMap<ViewerMap, Set<MapboxPopup>>();
+const gisFeaturePopups = new WeakMap<ViewerMap, Set<RendererPopup>>();
 
 function boundedGISPopupText(value: unknown, maxLength: number) {
     // Keep legacy coercion of arbitrary imported property values, including objects.
@@ -180,11 +181,11 @@ export function buildGISFeaturePopup(feature: GISPopupFeature | null | undefined
     return card;
 }
 
-export function openGISFeaturePopup(map: ViewerMap, feature: GISPopupFeature, lngLat: MapboxLngLat) {
-    if (!globalThis.mapboxgl?.Popup) return;
+export function openGISFeaturePopup(map: ViewerMap, feature: GISPopupFeature, lngLat: RendererLngLat) {
+    if (!Renderer?.Popup) return;
     const content = buildGISFeaturePopup(feature);
     const cleanup = bindGISPopupScrollBehavior(content);
-    const popup = new mapboxgl.Popup!({
+    const popup = new Renderer.Popup({
         className: 'gis-layer-feature-popup',
         closeButton: true,
         closeOnClick: true,

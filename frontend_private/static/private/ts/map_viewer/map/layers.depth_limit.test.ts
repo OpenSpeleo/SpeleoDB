@@ -1,7 +1,7 @@
 import type { FeatureCollection, Geometry as GeoJSONGeometry } from 'geojson';
 import type { Mock, MockInstance } from 'vitest';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
-import type { MapboxLayer } from '../../../../../../ts-types/domain/mapbox.ts';
+import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 import type { DepthDomain } from '../../../../../../ts-types/domain/map-display.ts';
 type Collection = FeatureCollection<GeoJSONGeometry, JSONObject>;
 interface Source { data: Collection; setData: Mock }
@@ -17,13 +17,13 @@ let snapCache: MockInstance<typeof Geometry.cachePreparedSnapPoints>;
 
 function createMapMock() {
     const sources = new Map<string, Source>();
-    const layerDefinitions = new Map<string, Pick<MapboxLayer, 'type'> & Partial<MapboxLayer>>();
+    const layerDefinitions = new Map<string, Pick<RendererLayer, 'type'> & Partial<RendererLayer>>();
     const map = {
         getStyle: vi.fn(() => ({})),
         getSource: vi.fn((id: string) => sources.get(id)),
         addSource: vi.fn((id: string, source: { data: Collection }) => sources.set(id, { ...source, setData: vi.fn() })),
         getLayer: vi.fn((id: string) => layerDefinitions.get(id)),
-        addLayer: vi.fn((layer: MapboxLayer) => layerDefinitions.set(layer.id, layer)),
+        addLayer: vi.fn((layer: RendererLayer) => layerDefinitions.set(layer.id, layer)),
         setPaintProperty: vi.fn(),
         setLayoutProperty: vi.fn(),
         setFilter: vi.fn(),
@@ -257,7 +257,7 @@ describe('Layers custom depth maximum', () => {
         const { map, sources } = createMapMock();
         State.map = (map) as unknown as NonNullable<typeof State.map>;
         State.projectDepthDomains.clear();
-        vi.stubGlobal('mapboxgl', {
+        vi.stubGlobal('__mapRenderer', {
             LngLatBounds: class { extend() { return this; } isEmpty() { return true; } },
         });
         let deliver!: (value: unknown) => void;

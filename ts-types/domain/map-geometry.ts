@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import type { JSONObject } from './json.ts';
-import type { MapboxConstructors } from './mapbox.ts';
+import type { RendererConstructors } from './renderer.ts';
 
 export type ViewerFeature = Feature<Geometry | null, JSONObject | null>;
 export type ViewerGeoJSON = FeatureCollection<Geometry | null, JSONObject | null> | ViewerFeature | Geometry;
@@ -9,12 +9,12 @@ export type DisplayGeometryType = DisplayGeometry['type'];
 export type RenderGeometryType = 'Point' | 'LineString' | 'Polygon';
 export type Coordinate2D = readonly [number, number];
 
-export interface MapboxBounds {
+export interface RendererBounds {
     extend(coordinates: Coordinate2D | CameraBounds): this;
     isEmpty(): boolean;
 }
 
-export type MapboxGlobal = MapboxConstructors;
+export type RendererGlobal = RendererConstructors;
 
 export interface Rectangle {
     left: number;
@@ -31,7 +31,7 @@ export interface CameraPadding {
 }
 
 export type FlatBounds = readonly [number, number, number, number];
-export type CameraBounds = MapboxBounds | FlatBounds | readonly [Coordinate2D, Coordinate2D];
+export type CameraBounds = RendererBounds | FlatBounds | readonly [Coordinate2D, Coordinate2D];
 
 export interface GeometryCameraMap {
     getContainer?(): HTMLElement | null;
