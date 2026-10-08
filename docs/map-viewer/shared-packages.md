@@ -3,9 +3,9 @@
 The web and mobile viewers consume two SpeleoDB packages. `@speleodb/map-core`
 owns portable geometry, depth, bounds, visibility and unit algorithms.
 `@speleodb/map-viewer` owns MapLibre style expressions, layer specifications and
-identical marker artwork and the globe atmosphere renderer. App code owns backend transport, permissions,
-persistence, scheduling, user interaction and provider selection. These are
-SpeleoDB libraries, not a generic map framework.
+identical marker artwork and the globe atmosphere renderer. App code owns
+backend transport, permissions, persistence, scheduling, user interaction and
+provider selection. These are SpeleoDB libraries, not a generic map framework.
 
 The web startup camera is application-owned: a wide globe centred on France
 (`DEFAULTS.MAP.CENTER`, zoom `0`). Provider camera metadata is discarded. The
@@ -69,9 +69,8 @@ glyphs. Native source attribution retains the TileJSON credits. Its public
 control lifecycle is wrapped to remove only Mapbox's “Improve this map” feedback
 link, including when source credits refresh. A DOM observer is scoped to that
 control and disconnected on removal; copyright credits and the native compact
-toggle are preserved without extra requests or changes to provider metadata.
-The logo artwork
-comes from the
+toggle are preserved without extra requests or changes to provider metadata. The
+logo artwork comes from the
 [Mapbox GL JS 3.12.0 stylesheet](https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css)
 and follows Mapbox's
 [attribution guidance](https://docs.mapbox.com/help/dive-deeper/attribution/).
@@ -112,10 +111,9 @@ overrides remain possible; omitted or empty values use the bundled assets, so
 consumers never emit an `undefined` image URL. Django no longer needs to inject
 seven copies of asset paths. This normalization adds no network requests or
 per-feature processing. Unit tests cover defaults and overrides; browser tests
-exercise the actual menu and dialog image requests.
-The public viewer does not initialize private marker,
-measurement or editing workflows. Public zoom restrictions and preference
-isolation remain enforced by the public root.
+exercise the actual menu and dialog image requests. The public viewer does not
+initialize private marker, measurement or editing workflows. Public zoom
+restrictions and preference isolation remain enforced by the public root.
 
 Dialog initialization belongs to the dialog instance: deferred `Modal.open`
 callbacks run only while that same element remains mounted. Closing or replacing
@@ -132,6 +130,40 @@ collection before calling `setData`. No code reads the undocumented engine
 `source._data`. Source replacement naturally invalidates ownership; removed
 sources and their data can be garbage collected. Survey sources keep their
 existing preparation caches and are not rebuilt by display toggles.
+
+## Shared package CI gate
+
+Before any app checks or dependency installation, `Shared Package CI` runs
+`bun scripts/check-shared-package-ci.ts`. It verifies the full SHA pins for
+`@speleodb/map-core` and `@speleodb/map-viewer` against their public OpenSpeleo
+repositories and checks each repository's `.github/workflows/ci.yml` (`Verify`)
+using the GitHub Actions API. Only a `push` run on that exact SHA counts; PR
+merge runs and unrelated workflows cannot satisfy the gate.
+
+Both commits must exist. A missing commit, API error, or completed run with any
+conclusion other than `success` fails immediately. The newest workflow run is
+selected by run ID, including its current rerun attempt. Queued/in-progress runs
+and an absent run are polled every 30 seconds, with one shared 30-minute
+deadline for both packages, including API time. Each request has at most 30
+seconds to finish. Both packages are rechecked every round, so a rerun of a
+previously green package is observed while the other is pending. No verification
+result is cached between app runs. The job timeout is 32 minutes to allow
+checkout/Bun setup; the verification script itself stops at 30 minutes.
+
+All downstream CI jobs depend directly or transitively on this gate and are
+skipped when it fails. The job uses the read-only `GITHUB_TOKEN` supplied by
+Actions, including fork/Dependabot runs; no extra secret is required for these
+public repositories. API/authentication/rate-limit errors fail closed. For local
+verification, provide `GITHUB_TOKEN` with public-repository Actions read access;
+unauthenticated polling can exhaust GitHub's lower rate limit before 30 minutes.
+
+The small script uses only Bun built-ins and is kept in each standalone app:
+loading a shared dependency to decide whether that dependency is safe to install
+would make this bootstrap check circular. Keep both copies and their policy
+aligned. Vitest exercises the actual checker with simulated GitHub responses and
+a virtual clock, covering failure propagation, exact-SHA selection, reruns,
+pagination and the shared deadline. Workflow contract tests verify downstream
+dependencies. There is no application runtime or browser impact.
 
 ## Verification
 
@@ -169,7 +201,8 @@ inconsistent core overrides before standalone CI or Railway installs. Both Git
 installs and monorepo development consume package TypeScript sources. Vite
 compiles that code as part of the application build; no package installation
 script or checked-in `dist/` is required. Type checking and ESLint use the same
-source exports, and the runtime import audit follows their actual implementation.
+source exports, and the runtime import audit follows their actual
+implementation.
 
 The `speleodb-source` condition remains enabled in every environment for
 compatibility with the existing immutable Git pins, which already include
@@ -180,11 +213,11 @@ sequence from blocking source builds now.
 
 The monorepo overlay links the same source and asset directories without
 rewriting exports. `SPELEODB_LOCAL_PACKAGES=1` verifies that both packages came
-from this overlay and rejects missing local packages. Canonical TypeScript,
-Vite and Vitest resolution preserve installed symlink paths so shared sources
-resolve dependencies from the application's installation. Package code stays
-independent of Django and browser globals. See the monorepo TypeScript package
-documentation for packaging, local overlays and publication sequencing.
+from this overlay and rejects missing local packages. Canonical TypeScript, Vite
+and Vitest resolution preserve installed symlink paths so shared sources resolve
+dependencies from the application's installation. Package code stays independent
+of Django and browser globals. See the monorepo TypeScript package documentation
+for packaging, local overlays and publication sequencing.
 
 The live renderer/provider smoke is opt-in. With a valid configured provider
 token, run it through the Django browser wrapper so the ordinary isolated user
