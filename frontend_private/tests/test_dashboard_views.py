@@ -60,7 +60,7 @@ class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
         assert response.status_code == status.HTTP_200_OK
         self.html = response.content.decode()
         self.controller_js = (
-            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.ts"
         ).read_text()
 
     def test_page_header_present(self) -> None:
@@ -172,7 +172,7 @@ class TestDashboardTemplateStructure(BaseUserTestCaseMixin, TestCase):
 
     def test_dashboard_helpers_loaded(self) -> None:
         assert 'data-speleodb-controller="dashboard"' in self.html
-        assert "dashboard-helpers.js" in self.controller_js
+        assert "dashboard-helpers.ts" in self.controller_js
 
 
 # ------------------------------------------------------------------ #
@@ -361,7 +361,7 @@ class TestDashboardCharts(BaseUserTestCaseMixin, TestCase):
         response = self.client.get(url)
         self.html = response.content.decode()
         self.controller_js = (
-            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.ts"
         ).read_text()
         self.style_css = (
             Path(settings.BASE_DIR)
@@ -451,7 +451,7 @@ class TestDashboardResponsiveCSS(BaseUserTestCaseMixin, TestCase):
         response = self.client.get(url)
         self.html = response.content.decode()
         self.controller_js = (
-            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.js"
+            Path(settings.BASE_DIR) / "frontend_common/controllers/dashboard.ts"
         ).read_text()
         self.style_css = (
             Path(settings.BASE_DIR)

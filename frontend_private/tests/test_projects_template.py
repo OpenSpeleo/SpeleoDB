@@ -50,7 +50,7 @@ class TestProjectsTableLayout(TestCase):
             / "templates"
             / "frontend-private-templates-pages-projects.css"
         ).read_text()
-        self.app_js = (Path(settings.BASE_DIR) / "frontend_common/app.js").read_text()
+        self.app_js = (Path(settings.BASE_DIR) / "frontend_common/app.ts").read_text()
 
     def test_table_wrapper_has_no_overflow_constraint(self) -> None:
         """The table wrapper must not constrain height or add its own scrollbar."""

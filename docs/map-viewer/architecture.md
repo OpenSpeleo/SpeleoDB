@@ -8,11 +8,16 @@ cylinders. It has two entry points:
 
 | Entry point | File                                                    | Purpose                                                                                                                                                                                           |
 | ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Private** | `frontend_private/static/private/js/map_viewer/main.js` | Full-featured viewer for authenticated users. Supports CRUD on stations, landmarks, exploration leads, cylinder installs, GPS tracks, drag-and-drop, context menus, and permission-gated actions. |
-| **Public**  | `frontend_public/static/js/gis_view_main.js`            | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`.                                      |
+| **Private** | `frontend_private/static/private/ts/map_viewer/main.ts` | Full-featured viewer for authenticated users. Supports CRUD on stations, landmarks, exploration leads, cylinder installs, GPS tracks, drag-and-drop, context menus, and permission-gated actions. |
+| **Public**  | `frontend_public/static/ts/gis_view_main.ts`            | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`.                                      |
+
+The root contracts in `ts-types/domain/viewer-composition.ts` compose the narrow
+map capabilities consumed by their real modules. They add no runtime adapters or
+validation: independent requests still start before map readiness, and
+registered async callbacks retain their existing settlement behavior.
 
 Both entry points share core modules located in
-`frontend_private/static/private/js/map_viewer/`. The public viewer imports them
+`frontend_private/static/private/ts/map_viewer/`. The public viewer imports them
 via relative paths (e.g. `../../../frontend_private/...`).
 
 The private toolbar delegates display controls to `MapSettings`, with one
@@ -32,6 +37,26 @@ until an atomic, revision-checked save. The public entrypoint neither
 initializes the editor nor requests its data. See
 [GIS Geometry](../gis-geometries.md) for the complete contract and limits.
 
+`viewer_lifecycle.ts` owns shared viewport sizing, rendered-survey reset, and
+map-load/Window source-change registration. It accepts only the survey State
+fields it resets and a fullscreen predicate; it imports defaults, not tools,
+managers, transport, or action registration. The private root supplies its
+fullscreen policy and clears its additional rendered entities and supplies its
+load/source-change callbacks. Registration retains the original callback
+identities and order without wrapping promises. Callback lifetime, public
+prefetch consumption, private startup overlap, and their different source-change
+error handling remain in the roots. This keeps shared display behavior usable
+without exposing private mutation tools or changing request timing. The shared
+Config/API and Layers facades still include mutation endpoint methods; the
+public boundary prohibits private tool imports and editing registration, not all
+mutation-related strings in the shared asset graph.
+
+`viewer_lifecycle.test.ts` checks the entire transitive public import graph,
+including lazy imports and workers, for private tools and action registration.
+Runtime tests cover retained State identities and the roots' distinct desktop,
+mobile, and fullscreen sizing. Reset replaces rendered containers without
+rescanning features or discarding preferences and cached source data.
+
 ---
 
 ## Temporary map tools
@@ -47,62 +72,66 @@ native overlays remain separate from entity data and saved geometry. See
 ```mermaid
 flowchart TD
     subgraph Entrypoints
-        MAIN["main.js<br/>(private)"]
-        GIS["gis_view_main.js<br/>(public)"]
+        MAIN["main.ts<br/>(private)"]
+        GIS["gis_view_main.ts<br/>(public)"]
     end
 
     subgraph Core
-        CONFIG["config.js"]
-        STATE["state.js"]
-        API["api.js"]
-        UTILS["utils.js"]
+        CONFIG["config.ts"]
+        STATE["state.ts"]
+        API["api.ts"]
+        UTILS["utils.ts"]
     end
 
     subgraph map/
-        CORE["core.js"]
-        LAYERS["layers.js"]
-        INTERACTIONS["interactions.js"]
-        GEOMETRY["geometry.js"]
-        DEPTH["depth.js"]
-        COLORS["colors.js<br/>(model-driven)"]
+        CORE["core.ts"]
+        LAYERS["layers.ts"]
+        INTERACTIONS["interactions.ts"]
+        GEOMETRY["geometry.ts"]
+        VISIBILITY["project_visibility.ts"]
+        OVERLAYS["layers/lazy_overlay.ts"]
+        GIS_POPUP["layers/gis_popup.ts"]
+        VIEWER_LIFECYCLE["viewer_lifecycle.ts"]
+        DEPTH["depth.ts"]
+        COLORS["colors.ts<br/>(model-driven)"]
     end
 
     subgraph components/
-        MODAL["modal.js"]
-        NOTIFICATION["notification.js"]
-        CONTEXT_MENU["context_menu.js"]
-        DEPTH_LEGEND["depth_legend.js"]
-        PROJECT_PANEL["project_panel.js<br/>(country grouping)"]
-        GPS_PANEL["gps_tracks_panel.js"]
-        GIS_PANEL["gis_layers_panel.js<br/>(private only)"]
-        UPLOAD["upload.js"]
+        MODAL["modal.ts"]
+        NOTIFICATION["notification.ts"]
+        CONTEXT_MENU["context_menu.ts"]
+        DEPTH_LEGEND["depth_legend.ts"]
+        PROJECT_PANEL["project_panel.ts<br/>(country grouping)"]
+        GPS_PANEL["gps_tracks_panel.ts"]
+        GIS_PANEL["gis_layers_panel.ts<br/>(private only)"]
+        UPLOAD["upload.ts"]
     end
 
     subgraph stations/
-        ST_MANAGER["manager.js"]
-        ST_UI["ui.js"]
-        ST_DETAILS["details.js"]
-        ST_TAGS["tags.js"]
-        ST_LOGS["logs.js"]
-        ST_RESOURCES["resources.js"]
-        ST_SENSORS["sensors.js"]
-        ST_EXPERIMENTS["experiments.js"]
-        ST_CYLINDERS["cylinders.js"]
+        ST_MANAGER["manager.ts"]
+        ST_UI["ui.ts"]
+        ST_DETAILS["details.ts"]
+        ST_TAGS["tags.ts"]
+        ST_LOGS["logs.ts"]
+        ST_RESOURCES["resources.ts"]
+        ST_SENSORS["sensors.ts"]
+        ST_EXPERIMENTS["experiments.ts"]
+        ST_CYLINDERS["cylinders.ts"]
     end
 
     subgraph surface_stations/
-        SS_MANAGER["manager.js"]
-        SS_UI["ui.js"]
+        SS_MANAGER["manager.ts"]
+        SS_UI["ui.ts"]
     end
 
     subgraph landmarks/
-        LM_MANAGER["manager.js"]
-        LM_UI["ui.js"]
+        LM_MANAGER["manager.ts"]
+        LM_UI["ui.ts"]
     end
 
     subgraph exploration_leads/
-        EL_MANAGER["manager.js"]
-        EL_UI["ui.js"]
+        EL_MANAGER["manager.ts"]
+        EL_UI["ui.ts"]
     end
 
     %% Private entrypoint imports
@@ -118,12 +147,15 @@ flowchart TD
     GIS --> STATE & CONFIG & UTILS
     GIS --> CORE & LAYERS
     GIS --> PROJECT_PANEL & DEPTH_LEGEND
+    MAIN & GIS --> VIEWER_LIFECYCLE
 
     %% Internal dependencies
     LAYERS --> CONFIG & STATE & COLORS & DEPTH & GEOMETRY & API
+    LAYERS --> VISIBILITY & OVERLAYS & GIS_POPUP
     CORE --> CONFIG & STATE & LAYERS
     INTERACTIONS --> STATE & GEOMETRY & CONFIG & LAYERS
-    GEOMETRY --> STATE & LAYERS
+    GEOMETRY --> CONFIG & VISIBILITY
+    VISIBILITY --> STATE
     UTILS --> NOTIFICATION
     API --> UTILS
     CONFIG --> API
@@ -172,7 +204,7 @@ set of functions called and the final rendered state are unchanged. See
 `data-flow.md` → "Startup Load Scheduling (Parallelism)" for the rationale and
 invariants.
 
-### Private Viewer (`main.js`)
+### Private Viewer (`main.ts`)
 
 ```
 DOMContentLoaded
@@ -225,7 +257,7 @@ DOMContentLoaded
     └─ Hide loading overlay                 All data loaded
 ```
 
-### Public Viewer (`gis_view_main.js`)
+### Public Viewer (`gis_view_main.ts`)
 
 ```
 DOMContentLoaded
@@ -259,11 +291,22 @@ DOMContentLoaded
 
 State is split into two singletons with distinct lifecycles:
 
-### `Config` — Loaded Once, Immutable After Init
+### `Config` — Mutable Metadata and Permission Cache
 
-Holds project/network metadata and permissions. Loaded from API during
-initialization and not mutated during the session (except
-`filterProjectsByGeoJSON` which prunes the list once).
+Holds project/network and overlay metadata and permissions. Its singleton and
+getters stay live throughout a session: public setup replaces projects,
+filtering prunes projects, GPS/GIS refreshes replace cached lists, and GIS
+Geometry saves merge metadata into existing records with `Object.assign`.
+Geometry coordinates belong to State rather than this metadata cache. Revision
+checks prevent stale responses from overwriting more recent local saves.
+
+The TypeScript configuration/API/utilities/notification cycle retains this
+initialization order and mutable identity. Domain records live under
+`ts-types/domain/`; annotations do not add validation or clone successful
+responses. Strict checking and direct Config/API/Utils/Notification suites cover
+cache and record identity, permission normalization, transport settlement, and
+CSRF source precedence. The translation adds no feature scans or network
+requests.
 
 | Property     | Type    | Purpose                                                                          |
 | ------------ | ------- | -------------------------------------------------------------------------------- |
@@ -350,9 +393,10 @@ All Mapbox sources and layers follow consistent naming:
 
 ### Layer Lifecycle
 
-- **Create**: `Layers.addProjectGeoJSON()`, `addSubSurfaceStationLayer()`, etc.
-  Each removes any existing source/layers first via `removeLayersAndSource()`,
-  then creates new ones.
+- **Create**: `Layers.addProjectGeoJSON()` reuses an existing survey source via
+  `setData()` and adds missing layers. Marker owners such as
+  `addSubSurfaceStationLayer()` retain their own replacement lifecycle through
+  `removeLayersAndSource()`.
 - **Update**: Source data is updated in-place via `source.setData(data)` for
   position/property changes without recreating layers.
 - **Visibility**: Toggled via
@@ -369,7 +413,7 @@ All Mapbox sources and layers follow consistent naming:
 
 ### Map Sources
 
-Base map providers are defined once in `MAP_SOURCES` in `config.js`. Each entry
+Base map providers are defined once in `MAP_SOURCES` in `config.ts`. Each entry
 declares its id, label, style/tile URL, source type, attribution, and whether it
 needs a token. `MapSources` resolves the selected source from
 `DEFAULTS.STORAGE_KEYS.MAP_SOURCE`, filters token-required providers when no
@@ -405,7 +449,7 @@ container's token classification without printing the token, then verify the
 rendered map uses the configured source. Recreate affected services through
 Compose when necessary; preserve their existing volumes.
 
-The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.js`. That SVG is
+The control icon uses `MAP_SOURCE_ICON_SVG` in `map/sources.ts`. That SVG is
 inserted with `innerHTML` only as trusted static markup so the user can replace
 the icon manually. Do not interpolate user or API data into that constant.
 
@@ -432,7 +476,7 @@ Each layer type has a `minzoom` threshold defined in `ZOOM_LEVELS`:
 Custom events prefixed with `speleo:` enable decoupled communication between
 modules. All are dispatched on `window` unless noted.
 
-### Refresh Events (listened in `main.js`)
+### Refresh Events (listened in `main.ts`)
 
 | Event                              | Payload              | Purpose                                                                |
 | ---------------------------------- | -------------------- | ---------------------------------------------------------------------- |
@@ -456,28 +500,28 @@ modules. All are dispatched on `window` unless noted.
 
 | Event                       | Dispatched By                                | Listened By           |
 | --------------------------- | -------------------------------------------- | --------------------- |
-| `refresh-stations`          | `Layers.refreshStationsAfterChange()`        | `main.js`             |
-| `refresh-surface-stations`  | `Layers.refreshSurfaceStationsAfterChange()` | `main.js`             |
-| `refresh-landmarks`         | Landmark CRUD modules                        | `main.js`             |
-| `refresh-gps-tracks`        | Upload/GPX import modules                    | `main.js`             |
-| `refresh-cylinder-installs` | `cylinders.js`                               | `main.js`             |
-| `color-mode-changed`        | `map/core.js`                                | `depth_legend.js`     |
-| `depth-domain-updated`      | `map/layers.js`                              | `depth_legend.js`     |
-| `gps-track-loading-changed` | `map/layers.js`                              | `gps_tracks_panel.js` |
-| `gis-layer-loading-changed` | `map/layers.js`                              | `gis_layers_panel.js` |
+| `refresh-stations`          | `Layers.refreshStationsAfterChange()`        | `main.ts`             |
+| `refresh-surface-stations`  | `Layers.refreshSurfaceStationsAfterChange()` | `main.ts`             |
+| `refresh-landmarks`         | Landmark CRUD modules                        | `main.ts`             |
+| `refresh-gps-tracks`        | Upload/GPX import modules                    | `main.ts`             |
+| `refresh-cylinder-installs` | `cylinders.ts`                               | `main.ts`             |
+| `color-mode-changed`        | `map/core.ts`                                | `depth_legend.ts`     |
+| `depth-domain-updated`      | `map/layers.ts`                              | `depth_legend.ts`     |
+| `gps-track-loading-changed` | `map/layers.ts`                              | `gps_tracks_panel.ts` |
+| `gis-layer-loading-changed` | `map/layers.ts`                              | `gis_layers_panel.ts` |
 
 ### Private GIS Layer overlays
 
-GIS Layers are a private-entrypoint feature. `main.js` loads accessible layer
+GIS Layers are a private-entrypoint feature. `main.ts` loads accessible layer
 metadata alongside projects, networks, and GPS Tracks; the public GIS entrypoint
 neither loads GIS Layer metadata nor calls its API.
 
 GIS Layers deliberately use the established GPS Track architecture: API calls
-live in `api.js`, metadata in `Config`, session state in `State`, and rendering
-in `map/layers.js`. First activation refreshes the authenticated detail response
+live in `api.ts`, metadata in `Config`, session state in `State`, and rendering
+in `map/layers.ts`. First activation refreshes the authenticated detail response
 and downloads the current signed GeoJSON. The original object stays unchanged in
 the session cache and supplies the full-layer `fitBounds` bounds.
-`map/gis_layer_geometry.js` creates display features tagged with their original
+`map/gis_layer_geometry.ts` creates display features tagged with their original
 geometry type because Mapbox's tile geometry families collapse `Multi*` types.
 GeometryCollections expand recursively into their constituent types, preserving
 feature metadata and coordinates. Polygon fill/outline, line, and point remain
@@ -519,6 +563,23 @@ controls.
 
 ---
 
+## Domain manager contracts
+
+The station, surface-station, exploration-lead, and landmark managers retain
+separate mutable caches and error policies. Station and lead ensure methods
+share one pending fetch among concurrent callers; their declared `async`
+wrappers still return distinct promises that settle without a value. Loaded
+features retain their source identity. Cache invalidation and scoped permission
+checks remain in their owning manager, so loading a project or network does not
+add per-feature copies or duplicate permission policy.
+
+`ts-types/domain/map-entities.ts` distinguishes Point GeoJSON serializer
+properties from normalized records stored in `State`. Landmark collection
+normalization retains nullable colors and permission metadata without changing
+backend record shapes. Manager tests cover shared requests, identity,
+invalidation, permission failures, and the landmark manager's optional error
+propagation.
+
 ## Build System
 
 ### Vite route graph
@@ -531,9 +592,9 @@ imports its existing module root:
 
 | Controller         | Lazy module root                                                         |
 | ------------------ | ------------------------------------------------------------------------ |
-| `private-map`      | `frontend_private/static/private/js/map_viewer/main.js`                  |
-| `public-gis`       | `frontend_public/static/js/gis_view_main.js`                             |
-| `landmark-details` | `frontend_private/static/private/js/landmark_collection/details_main.js` |
+| `private-map`      | `frontend_private/static/private/ts/map_viewer/main.ts`                  |
+| `public-gis`       | `frontend_public/static/ts/gis_view_main.ts`                             |
+| `landmark-details` | `frontend_private/static/private/ts/landmark_collection/details_main.ts` |
 
 Common map modules become shared chunks. Public pages do not preload or fetch
 the private map controller. Vite owns compilation and disk watching while Django
@@ -561,8 +622,8 @@ the public custom stylesheet. Production builds use `--minify`.
 | `bun run dev`               | One Vite disk-build watcher; Django remains the server                  |
 | `bun run build`             | Full clean + production build                                           |
 | `bun run test:assets-watch` | Isolated CSS/Tailwind/module invalidation proof                         |
-| `bun run lint:js`           | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
-| `bun run test:js`           | Vitest test runner for frontend tests                                   |
+| `bun run lint:frontend`     | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
+| `bun run test:frontend`     | Vitest test runner for frontend tests                                   |
 
 ### Integration Points
 
@@ -573,3 +634,21 @@ the public custom stylesheet. Production builds use `--minify`.
   `railpack.json` owns the production asset build via root Bun commands.
 - **Django**: Templates reference the bundled output files in `dist/`
   directories.
+
+The source, bootstrap, and pointer adapters have separate structural contracts
+in `ts-types/domain/map-sources.ts`, `map-core.ts`, and `map-interactions.ts`.
+Their interfaces describe the calls consumed by each owner while the Mapbox CDN
+runtime remains external. The source control uses an object scheduler key to
+keep work local to that control instance. Checked fetch keeps the original
+receiver and input objects, marks its wrapper to avoid double installation, and
+returns the original response unless a configured missing-tile hash matches.
+Bun-only fetch helpers are outside this browser wrapper's contract.
+
+`MapSources.createControl` and `Interactions.setupDragHandlers` retain their
+existing `this` aliases so nested callbacks keep the original facade receiver.
+The two local `no-this-alias` annotations document those literal-translation
+exceptions. Drag state still lives in each attachment closure; tool handoff
+restores transient position and original gesture settings before clearing it.
+Source/control, bootstrap lifecycle, and interaction suites exercise real owner
+methods with finite map fakes; no additional source reload or geometry scan is
+introduced by these type boundaries.

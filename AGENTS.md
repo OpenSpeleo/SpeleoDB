@@ -120,18 +120,26 @@ files.
 - `speleodb/`: Django backend code (APIs, models, permissions, tests).
 - `frontend_private/`: authenticated/private UI assets and templates.
 - `frontend_public/`: public UI assets and templates.
+- `ts-types/`: shared domain/controller contracts and browser, worker, tooling
+  and test declarations.
 - `frontend_common/`: Vite registry, bootstrap, route controllers, and extracted
   template-owned styles.
-- `frontend_private/static/private/js/map_viewer/`: core map viewer modules.
-- `frontend_public/static/js/gis_view_main.js`: public viewer entrypoint.
+- `frontend_private/static/private/ts/map_viewer/`: core map viewer modules.
+- `frontend_public/static/ts/gis_view_main.ts`: public viewer entrypoint.
 - `tailwind_css/`: Tailwind source styles and Tailwind configs.
 - `docs/`: agent-focused design and implementation docs.
 - `tasks/lessons/` and `tasks/todos/`: historical references only; all new agent
   working files belong in the external temporary task directory.
 
-## JavaScript Workspace Contract
+## Frontend TypeScript Workspace Contract
 
-The web application uses a single Bun-managed JavaScript workspace at its root.
+The web application uses one Bun-managed workspace at its root. Authored
+browser, test and tooling sources are TypeScript, checked in three no-emit
+projects with `allowJs: false`. Exact vendor files and generated JavaScript are
+excluded by the ownership audit; new application code cannot hide in vendors.
+Both production build commands run type checks and source/template audits before
+emission, and `build` checks before cleaning previous output. Alpine behavior
+lives in typed function-valued bindings with inert template identifiers.
 
 - Canonical JavaScript manifests are:
   - `package.json`
@@ -152,7 +160,7 @@ The web application uses a single Bun-managed JavaScript workspace at its root.
   workspace and changing its dependency graph or lockfile.
 - Do not re-introduce nested `package.json` files for frontend tooling.
 - Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
-  is the logical-entry registry consumed by `vite.config.mjs` and the Django
+  is the logical-entry registry consumed by `vite.config.ts` and the Django
   manifest tags. Production emits hashed ESM, CSS, shared chunks, and
   `.vite/manifest.json` under `speleodb/common/static/speleodb/vite/`. Generated
   output is ignored.
@@ -182,16 +190,21 @@ The web application uses a single Bun-managed JavaScript workspace at its root.
   application event attributes, compatibility globals, or direct first-party
   `{% static %}` references. CDN/vendored libraries and Django's generated
   `url_reverse.js` remain external globals in their established order.
-- `bun run dev` is a Vite disk-build watcher; Django remains the only server.
-  There is no Vite dev server, proxy, HMR client, or HTML transformation.
-  Tailwind's in-process candidate set can retain a removed template class, so
-  stop the watcher and run `bun run build` before final browser evidence.
-  Confirm the manifest hash actually served by Django.
+- `bun run dev` supervises Vite disk builds and TypeScript semantic checking;
+  Django remains the only server. Development assets publish as immutable
+  generations before a DEBUG-only client requests a full-page reload. There is
+  no Vite dev server, proxy, HMR client, or HTML transformation. Tailwind's
+  in-process candidate set can retain a removed template class, so stop the
+  watcher and run `bun run build` before final browser evidence. Confirm the
+  manifest hash actually served by Django.
 
-### Root JS commands
+### Root frontend commands
 
-- `bun run lint:js`
-- `bun run test:js`
+- `bun run typecheck` (all three TypeScript environments)
+- `bun run lint:frontend`
+- `bun run test:frontend`
+- `bun run audit:javascript`
+- `bun run audit:templates`
 - `bun run build`
 - `bun run build:assets`
 - `bun run dev`
@@ -269,8 +282,8 @@ Most map viewer behavior is implemented in shared private modules and loaded by
 the `private-map` and `public-gis` Vite route controllers. Their lazy module
 roots remain:
 
-- private: `frontend_private/static/private/js/map_viewer/main.js`
-- public: `frontend_public/static/js/gis_view_main.js`
+- private: `frontend_private/static/private/ts/map_viewer/main.ts`
+- public: `frontend_public/static/ts/gis_view_main.ts`
 
 When touching shared behavior, explicitly verify both entrypoints are still
 valid.
@@ -279,16 +292,16 @@ valid.
 
 Run **every test inside the already-running application container**. Do not run
 tests on the host or start another stack for verification. The current local
-container is `speleodb_local_django`, with the repository mounted at `/app`.
+container is `speleodb-monorepo-django`, with the repository mounted at `/app`.
 
 For frontend (public or private) changes, validate tests:
 
-- `docker exec -w /app speleodb_local_django bun run test:js`
+- `docker exec -w /app speleodb-monorepo-django bun run test:frontend`
 
 Backend/API changes should also run relevant `pytest` targets:
 
-- Full suite: `docker exec -w /app speleodb_local_django make test-py`
-- Focused suite: `docker exec -w /app speleodb_local_django pytest <targets>`
+- Full suite: `docker exec -w /app speleodb-monorepo-django make test-py`
+- Focused suite: `docker exec -w /app speleodb-monorepo-django pytest <targets>`
 
 New tests should respects coding existing structures
 
@@ -338,7 +351,7 @@ New tests should respects coding existing structures
 
 Both frontend and backend include linting:
 
-- Javascript: `bun run lint:js`
+- Javascript: `bun run lint:frontend`
 - Python: `ruff` & `mypy`
 
 All python code must include type checking for every variable or function.

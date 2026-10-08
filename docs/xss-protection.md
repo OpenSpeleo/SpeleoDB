@@ -13,16 +13,22 @@ and need an explicit trust boundary.
 
 ## Shared ES module APIs
 
-`frontend_private/static/private/js/xss-helpers.js` exports `escapeHtml`,
+`frontend_private/static/private/ts/xss-helpers.ts` exports `escapeHtml`,
 `isValidCssColor`, `safeCssColor`, and `sanitizeUrl` for form/route modules. Map
-viewer modules use the equivalent `Utils` API in `map_viewer/utils.js`, which
-also provides `safeHtml` and `raw`. Both currently implement escaping; keep
-their behavior aligned when changing either and run their regression tests.
-Neither helper is a template global. Vite controllers import dependencies, and
-Django templates provide inert context rather than executable inline scripts.
+viewer modules use the equivalent `Utils` API in `map_viewer/utils.ts`, which
+also provides `safeHtml` and `raw`. Both facades delegate escaping, URL
+sanitization and color validation to the small modules under
+`frontend_common/security/`. Keep policy in the facade: form `safeCssColor`
+replaces a falsey fallback with its default, while the map method preserves an
+explicit empty fallback and calls its receiver's current validator.
+`Utils.safeHtml` likewise calls the current `Utils.escapeHtml`; raw tokens
+retain their module-owned identity. This preserves mutable facade behavior while
+keeping security primitives independent of map state and transport. Neither
+helper is a template global. Vite controllers import dependencies, and Django
+templates provide inert context rather than executable inline scripts.
 
 ```js
-import { escapeHtml } from "../xss-helpers.js";
+import { escapeHtml } from "../xss-helpers.ts";
 
 tableBody.html(`<td>${escapeHtml(tag.name)}</td>`);
 $("#error").text(errorMessage);
@@ -34,7 +40,7 @@ escaping is required for quoted attribute values; using a DOM element solely to
 escape text does not escape attribute quotes automatically.
 
 ```js
-import { Utils } from "../utils.js";
+import { Utils } from "../utils.ts";
 
 container.innerHTML = Utils.safeHtml`
     <h3>${station.name}</h3>
@@ -86,9 +92,17 @@ booleans must be validated as such before treating them as non-string data.
 Names, notes, descriptions, tags, field names, filenames, author/status labels,
 errors, and resource text are all user/API-controlled. The function assembling
 the final markup owns their escaping, including helper return values accepted by
-modal builders. `forms/ajax_errors.js` imports the shared escape helper and uses
+modal builders. `forms/ajax_errors.ts` imports the shared escape helper and uses
 `.text()` where markup is unnecessary; templates no longer include the old
 executable error snippet.
+
+The feedback controller joins API error messages in response order, then passes
+the result through `escapeHtml` before calling `FormModals.showError`. The modal
+facade deliberately accepts trusted application HTML; escaping belongs to the
+controller that knows these messages came from an API. Valid text, quotes and
+entity-like strings remain literal, and tags or event attributes cannot create
+elements. Tests exercise the real modal renderer, preserve submission/reset and
+fallback behavior, and check that malicious responses remain inert.
 
 Use real escaping helpers in rendering tests. A stub that escapes fewer
 characters can conceal a regression. Exercise text and attribute breakouts,

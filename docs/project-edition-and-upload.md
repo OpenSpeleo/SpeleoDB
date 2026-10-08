@@ -22,8 +22,8 @@ dropping the behavior. Child project pages must not include another error modal
 with the same IDs. The Lock Management page supplies its own controller context
 so each page initializes the mutex controller exactly once.
 
-`frontend_common/controllers/mutex-lock.js` attaches the existing
-`forms/mutex_lock.js` helper. Acquisition uses the established POST and CSRF
+`frontend_common/controllers/mutex-lock.ts` attaches the existing
+`forms/mutex_lock.ts` helper. Acquisition uses the established POST and CSRF
 transport and immediately reloads after success. Its button stays disabled while
 the request is pending, preventing repeated clicks. Unlock actions retain their
 existing success feedback and reload delay. Error rendering continues to use the
@@ -55,3 +55,18 @@ additional upload requests.
 - Run JavaScript tests, focused Django tests, lint, and a clean Vite production
   build inside `speleodb_local_django`. The Django tests are database-only and
   require no GitLab repositories.
+
+Map-generation status is owned by
+`frontend_common/controllers/project-geojson-status.ts`, with endpoint context
+and finite response-state types separated under `ts-types/controllers/` and
+`ts-types/domain/`. Its existing state validation, cancellation, retry
+intervals, and returned cleanup function remain part of the controller contract.
+Tests cover request timeout, page visibility/back navigation, absent
+DOM/context, repeated initialization, and retained artifacts without adding
+network work.
+
+The typed project-upload controller retains its load barrier and multipart
+submission flow. Its direct initialization tests cover file count, individual
+and aggregate size limits, removal/reset, escaped filenames, repeated submit
+wiring, delayed missing-context failure and map-status feedback. The wire
+integration cases retain real local HTTP requests through jQuery.

@@ -1,0 +1,444 @@
+import type { StationRecord } from '../../../../../../ts-types/domain/station-records.ts';
+type HtmlPrimitive = string | number | boolean | null | undefined;
+import { StationLogs } from './logs.ts';
+
+const API = vi.hoisted(() => ({
+        getStationLogs: vi.fn<(id: string, data?: FormData) => Promise<unknown>>(),
+        createStationLog: vi.fn<(id: string, data?: FormData) => Promise<unknown>>(),
+        updateStationLog: vi.fn<(id: string, data?: FormData) => Promise<unknown>>(),
+        deleteStationLog: vi.fn<(id: string, data?: FormData) => Promise<unknown>>(),
+    }));
+vi.mock('../api.ts', () => ({ API }));
+
+const Utils = vi.hoisted(() => {
+    const escapeHtml = (text: HtmlPrimitive) => {
+        if (text === null || text === undefined) return '';
+        const str = String(text);
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+    const RAW = Symbol('RAW_HTML');
+    type RawHTML = { [RAW]: true; value: string };
+    return {
+            showNotification: vi.fn(),
+            showLoadingOverlay: vi.fn(() => document.createElement('div')),
+            hideLoadingOverlay: vi.fn(),
+            formatJournalDate: vi.fn((d: string | undefined) => d || ''),
+            filenameFromUrl: vi.fn((url: string | null | undefined) => url?.split('/').pop() || ''),
+            escapeHtml: vi.fn(escapeHtml),
+            sanitizeUrl: vi.fn((url: string | null | undefined) => {
+                if (!url || typeof url !== 'string') return '';
+                const trimmed = url.trim();
+                if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(trimmed)) {
+                    try {
+                        const parsed = new URL(trimmed);
+                        return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? trimmed : '';
+                    } catch (_) { return ''; }
+                }
+                return trimmed;
+            }),
+            raw: (html: string): RawHTML => ({ [RAW]: true, value: String(html) }),
+            safeHtml: (strings: TemplateStringsArray, ...values: (HtmlPrimitive | RawHTML)[]) => strings.reduce((r, s, i) => {
+                if (i < values.length) {
+                    const v = values[i];
+                    if (v && typeof v === 'object' && v[RAW]) return r + s + v.value;
+                    return r + s + escapeHtml(v as HtmlPrimitive);
+                }
+                return r + s;
+            }, ''),
+    };
+});
+vi.mock('../utils.ts', () => ({ Utils }));
+
+const Config = vi.hoisted(() => ({
+        getStationAccess: vi.fn<() => { write: boolean; delete: boolean; scopeType?: string; scopeId?: string; read?: boolean }>(() => ({
+            write: true,
+            delete: true,
+            scopeType: 'project',
+            scopeId: 'proj-1',
+            read: true,
+        })),
+    }));
+vi.mock('../config.ts', () => ({ Config }));
+
+const State = vi.hoisted(() => ({
+        allStations: new Map<string, Partial<StationRecord>>(),
+        allSurfaceStations: new Map<string, Partial<StationRecord>>(),
+    }));
+vi.mock('../state.ts', () => ({ State }));
+
+describe('StationLogs', () => {
+    let container: HTMLDivElement;
+
+    beforeEach(() => {
+        container = document.createElement('div');
+        container.id = 'station-modal-content';
+        document.body.appendChild(container);
+        State.allStations = new Map<string, Partial<StationRecord>>();
+        State.allSurfaceStations = new Map<string, Partial<StationRecord>>();
+        vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    // ------------------------------------------------------------------ //
+    // render
+    // ------------------------------------------------------------------ //
+
+    describe('render', () => {
+        const stationId = 'st-1';
+
+        beforeEach(() => {
+            State.allStations.set(stationId, { id: stationId, project: 'proj-1' });
+        });
+
+        it('renders journal entries when logs exist (v2 array format)', async () => {
+            const logs = [
+                { id: 'log-1', title: 'First Entry', notes: 'Some notes', creation_date: '2024-01-01', created_by: 'Alice' },
+            ];
+            API.getStationLogs.mockResolvedValue(logs);
+
+            await StationLogs.render(stationId, container);
+
+            expect(container.innerHTML).toContain('First Entry');
+            expect(container.innerHTML).toContain('Some notes');
+            expect(Utils.showLoadingOverlay).toHaveBeenCalled();
+            expect(Utils.hideLoadingOverlay).toHaveBeenCalled();
+        });
+
+        it('falls back to empty state when response is not an array', async () => {
+            API.getStationLogs.mockResolvedValue({});
+
+            await StationLogs.render(stationId, container);
+
+            expect(container.innerHTML).toContain('No Journal Entries Yet');
+        });
+
+        it('renders empty state when response is an empty array', async () => {
+            API.getStationLogs.mockResolvedValue([]);
+
+            await StationLogs.render(stationId, container);
+
+            expect(container.innerHTML).toContain('No Journal Entries Yet');
+        });
+
+        it('renders enabled new-entry button when user has write access', async () => {
+            Config.getStationAccess.mockReturnValue({ write: true, delete: false });
+            API.getStationLogs.mockResolvedValue([]);
+
+            await StationLogs.render(stationId, container);
+
+            const btn = (document.getElementById('new-log-entry-btn') as HTMLElement);
+            expect(btn).not.toBeNull();
+        });
+
+        it('does not render enabled new-entry button without write access', async () => {
+            Config.getStationAccess.mockReturnValue({ write: false, delete: false });
+            API.getStationLogs.mockResolvedValue([]);
+
+            await StationLogs.render(stationId, container);
+
+            expect((document.getElementById('new-log-entry-btn') as HTMLElement)).toBeNull();
+            expect(container.innerHTML).toContain('cursor-not-allowed');
+        });
+
+        it('renders error state on API failure', async () => {
+            API.getStationLogs.mockRejectedValue(new Error('Network error'));
+
+            await StationLogs.render(stationId, container);
+
+            expect(container.innerHTML).toContain('Failed to load journal entries');
+            expect(Utils.hideLoadingOverlay).toHaveBeenCalled();
+        });
+
+        it('looks up surface stations when subsurface lookup misses', async () => {
+            State.allStations = new Map<string, Partial<StationRecord>>();
+            State.allSurfaceStations.set(stationId, {
+                id: stationId, network: 'net-1', station_type: 'surface',
+            });
+            API.getStationLogs.mockResolvedValue([]);
+
+            await StationLogs.render(stationId, container);
+
+            expect(Config.getStationAccess).toHaveBeenCalledWith(
+                expect.objectContaining({ network: 'net-1' })
+            );
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // renderEntry
+    // ------------------------------------------------------------------ //
+
+    describe('renderEntry', () => {
+        it('renders entry with title and notes', () => {
+            const log = { id: 'log-1', title: 'Test Entry', notes: 'Test notes', creation_date: '2024-01-01', created_by: 'Alice' };
+
+            const html = StationLogs.renderEntry(log, true, true);
+
+            expect(html).toContain('Test Entry');
+            expect(html).toContain('Test notes');
+            expect(html).toContain('data-log-id="log-1"');
+        });
+
+        it('uses "Untitled Entry" when title is missing', () => {
+            const log = { id: 'log-1', notes: 'notes' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).toContain('Untitled Entry');
+        });
+
+        it('renders attachment link when present', () => {
+            const log = { id: 'log-1', title: 'T', notes: '', attachment: 'https://example.com/report.pdf' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).toContain('ATTACHMENT');
+            expect(html).toContain('https://example.com/report.pdf');
+        });
+
+        it('does not render attachment section when absent', () => {
+            const log = { id: 'log-1', title: 'T', notes: '' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('ATTACHMENT');
+        });
+
+        it('escapes HTML entities in notes to prevent XSS', () => {
+            const log = { id: 'log-1', title: 'T', notes: '<script>alert("xss")</script>' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('<script>');
+            expect(html).toContain('&lt;script&gt;');
+        });
+
+        it('renders clickable edit button with write access', () => {
+            const log = { id: 'log-1', title: 'T', notes: '' };
+
+            const html = StationLogs.renderEntry(log, true, false);
+
+            expect(html).toContain('edit-log-btn');
+        });
+
+        it('renders disabled edit button without write access', () => {
+            const log = { id: 'log-1', title: 'T', notes: '' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).toContain('cursor-not-allowed');
+            expect(html).not.toContain('edit-log-btn');
+        });
+
+        it('renders clickable delete button for admins', () => {
+            const log = { id: 'log-1', title: 'T', notes: '' };
+
+            const html = StationLogs.renderEntry(log, false, true);
+
+            expect(html).toContain('delete-log-btn');
+        });
+
+        it('renders disabled delete button for non-admins', () => {
+            const log = { id: 'log-1', title: 'T', notes: '' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).toContain('Only admins can delete');
+        });
+
+        it('escapes quotes in title for attribute-context safety', () => {
+            const log = { id: 'log-1', title: 'test" onclick="alert(1)', notes: '' };
+
+            const html = StationLogs.renderEntry(log, true, false);
+
+            expect(html).not.toContain('onclick="alert');
+            expect(html).toContain('&quot;');
+        });
+
+        it('escapes HTML in title to prevent XSS', () => {
+            const log = { id: 'log-1', title: '<img onerror=alert(1)>', notes: 'safe' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('<img onerror');
+            expect(html).toContain('&lt;img');
+        });
+
+        it('escapes created_by field', () => {
+            const log = { id: 'log-1', title: 'T', notes: '', created_by: '<b>hacker</b>' };
+
+            const html = StationLogs.renderEntry(log, false, false);
+
+            expect(html).not.toContain('<b>hacker</b>');
+            expect(html).toContain('&lt;b&gt;');
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // openCreateModal
+    // ------------------------------------------------------------------ //
+
+    describe('openCreateModal', () => {
+        it('inserts create modal into DOM with form elements', () => {
+            StationLogs.openCreateModal('st-1');
+
+            expect((document.getElementById('log-entry-modal') as HTMLElement)).not.toBeNull();
+            expect((document.getElementById('log-entry-form') as HTMLFormElement)).not.toBeNull();
+            expect((document.getElementById('log-title') as HTMLInputElement)).not.toBeNull();
+            expect((document.getElementById('log-notes') as HTMLTextAreaElement)).not.toBeNull();
+            expect((document.getElementById('log-attachment') as HTMLElement)).not.toBeNull();
+        });
+
+        it('closes modal when close button is clicked', () => {
+            StationLogs.openCreateModal('st-1');
+
+            (document.getElementById('close-log-modal') as HTMLElement).click();
+
+            expect((document.getElementById('log-entry-modal') as HTMLElement)).toBeNull();
+        });
+
+        it('closes modal when cancel button is clicked', () => {
+            StationLogs.openCreateModal('st-1');
+
+            (document.getElementById('cancel-log-btn') as HTMLElement).click();
+
+            expect((document.getElementById('log-entry-modal') as HTMLElement)).toBeNull();
+        });
+
+        it('closes modal when clicking the backdrop', () => {
+            StationLogs.openCreateModal('st-1');
+
+            const modal = (document.getElementById('log-entry-modal') as HTMLElement);
+            modal.click();
+
+            expect((document.getElementById('log-entry-modal') as HTMLElement)).toBeNull();
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // openDeleteConfirm
+    // ------------------------------------------------------------------ //
+
+    describe('openDeleteConfirm', () => {
+        it('creates delete confirmation modal with entry title', () => {
+            StationLogs.openDeleteConfirm('log-1', 'Important Finding');
+
+            expect((document.getElementById('log-delete-modal') as HTMLElement)).not.toBeNull();
+            expect(document.body.innerHTML).toContain('Delete Journal Entry');
+            expect(document.body.innerHTML).toContain('Important Finding');
+        });
+
+        it('closes when cancel is clicked', () => {
+            StationLogs.openDeleteConfirm('log-1', 'Entry');
+
+            (document.getElementById('cancel-delete-btn') as HTMLElement).click();
+
+            expect((document.getElementById('log-delete-modal') as HTMLElement)).toBeNull();
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // updateFileDisplay
+    // ------------------------------------------------------------------ //
+
+    describe('updateFileDisplay', () => {
+        it('shows file name and size after selection', () => {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = '<div id="log-file-placeholder">Drop file here</div>';
+
+            StationLogs.updateFileDisplay(fileContainer, { name: 'report.pdf', size: 2048 });
+
+            expect(fileContainer.innerHTML).toContain('report.pdf');
+            expect(fileContainer.innerHTML).toContain('2.0 KB');
+        });
+
+        it('does nothing when placeholder is missing', () => {
+            const fileContainer = document.createElement('div');
+
+            expect(() => {
+                StationLogs.updateFileDisplay(fileContainer, { name: 'a.txt', size: 100 });
+            }).not.toThrow();
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // wireUpEntryButtons
+    // ------------------------------------------------------------------ //
+
+    describe('wireUpEntryButtons', () => {
+        it('wires onclick handlers for edit buttons', () => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <button class="edit-log-btn" data-log-id="log-1" data-title="Title" data-notes="Notes"></button>
+            `;
+            const spy = vi.spyOn(StationLogs, 'openEditModal').mockImplementation(() => {});
+
+            StationLogs.wireUpEntryButtons(wrapper);
+            wrapper.querySelector<HTMLButtonElement>('.edit-log-btn')!.click();
+
+            expect(spy).toHaveBeenCalledWith('log-1', { title: 'Title', notes: 'Notes' });
+            spy.mockRestore();
+        });
+
+        it('wires onclick handlers for delete buttons', () => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <button class="delete-log-btn" data-log-id="log-2" data-title="Entry"></button>
+            `;
+            const spy = vi.spyOn(StationLogs, 'openDeleteConfirm').mockImplementation(() => {});
+
+            StationLogs.wireUpEntryButtons(wrapper);
+            wrapper.querySelector<HTMLButtonElement>('.delete-log-btn')!.click();
+
+            expect(spy).toHaveBeenCalledWith('log-2', 'Entry');
+            spy.mockRestore();
+        });
+    });
+});
+
+describe('StationLogs submission contracts', () => {
+    beforeEach(() => { document.body.innerHTML = '<div id="station-modal-content"></div>'; vi.clearAllMocks(); });
+    afterEach(() => { document.body.innerHTML = ''; });
+
+    it('submits trimmed text using FormData and starts receiver refresh without awaiting it', async () => {
+        let release!: () => void;
+        const pending = new Promise<void>(resolve => { release = resolve; });
+        const receiver = { ...StationLogs, render: vi.fn(() => pending) };
+        API.createStationLog.mockResolvedValue({ id: 'created' });
+        receiver.openCreateModal('station');
+        (document.getElementById('log-title') as HTMLInputElement).value = '  Title  ';
+        (document.getElementById('log-notes') as HTMLTextAreaElement).value = '  Notes  ';
+        const form = (document.getElementById('log-entry-form') as HTMLFormElement);
+        const event = new Event('submit', { cancelable: true });
+        await (form.onsubmit as (event: Event) => Promise<void>)(event);
+        expect(event.defaultPrevented).toBe(true);
+        const [id, data] = API.createStationLog.mock.calls[0]!;
+        expect(id).toBe('station');
+        expect([...data!.entries()]).toEqual([['title', 'Title'], ['notes', 'Notes']]);
+        expect((document.getElementById('log-entry-modal') as HTMLElement)).toBeNull();
+        expect(receiver.render).toHaveBeenCalledWith('station', (document.getElementById('station-modal-content') as HTMLElement));
+        release();
+    });
+
+    it('restores submit controls after request rejection while keeping the modal', async () => {
+        API.createStationLog.mockRejectedValue(new Error('Rejected'));
+        StationLogs.openCreateModal('station');
+        const button = (document.getElementById('log-submit-btn') as HTMLButtonElement);
+        const original = button.innerHTML;
+        await ((document.getElementById('log-entry-form') as HTMLFormElement).onsubmit as (event: Event) => Promise<void>)(new Event('submit'));
+        expect(button.disabled).toBe(false);
+        expect(button.innerHTML).toBe(original);
+        expect((document.getElementById('log-entry-modal') as HTMLElement)).not.toBeNull();
+        expect(Utils.showNotification).toHaveBeenCalledWith('error', 'Rejected');
+    });
+
+    it('preserves the ordinary modal callable and duplicate modal insertion', () => {
+        expect(StationLogs.openCreateModal('station')).toBeUndefined();
+        expect(StationLogs.openCreateModal('station')).toBeUndefined();
+        expect(document.querySelectorAll('#log-entry-modal')).toHaveLength(2);
+    });
+});

@@ -9,12 +9,7 @@ python manage.py migrate
 # Install the root asset workspace.
 test -s bun.lock && bun install --frozen-lockfile || exit "$?"
 
-# Vite only rebuilds CSS/JS/TS to disk. Keep both watcher streams attached to
-# the container console while Django remains the HTTP server.
-bun run dev > /dev/stdout 2> /dev/stderr &
-
-# Forward SIGTERM/SIGINT to children
-trap "kill 0" SIGINT SIGTERM
-
-# Run Django dev server (foreground, PID 1)
-exec python manage.py runserver_plus 0000:8000
+# Vite rebuilds assets to disk while TypeScript checks semantics. The supervisor
+# keeps all streams attached, forwards signals and awaits child process groups;
+# Django remains the only HTTP server.
+exec bun scripts/dev.ts --django

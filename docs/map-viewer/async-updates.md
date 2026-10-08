@@ -16,7 +16,7 @@ preference persistence.
 
 ## State and application
 
-`viewer_updates.js` owns keyed, serial map application. Two animation frames
+`viewer_updates.ts` owns keyed, serial map application. Two animation frames
 precede a future task, leaving an intervening rendering opportunity before map
 work. Every job has a cancellable paint gate, including intent received while
 the queue is already running or another job's frame has already elapsed. Map
@@ -25,6 +25,21 @@ old operation. Running work checks its context after yielding and before further
 map mutations. Jobs return `applied`, `superseded`, `cancelled`, or `failed`;
 failure of one job does not prevent unrelated work. Network requests and large
 data preparation belong outside this serial queue.
+
+The TypeScript contracts in `ts-types/domain/viewer-updates.ts` describe job
+contexts and settlement without changing the queue's callable forms. Scheduled
+work resolves with its status; a truthy thrown value is included as `error`,
+while the error callback receives the original thrown value even when falsey. An
+error callback failure does not stop unrelated work.
+
+`state.ts` owns the mutable viewer singleton, with finite container and display
+contracts in `ts-types/domain/map-state.ts` and `map-display.ts`. A map-data
+reset cancels scheduled work before incrementing its generation and replacing
+its maps and sets. It retains the map instance, tags, current station/project
+IDs, and display-preference object. The `landmarksVisible` accessor always reads
+and writes the current preference object. This ownership keeps reset
+invalidation predictable without scanning cached features or changing route
+initialization.
 
 Layers setters publish validated preferences immediately. `setDepthLimit`
 retains its synchronous boolean validation result. Rendering callers use
@@ -78,8 +93,64 @@ arrays, including a single large line. GIS presentation preparation and
 geographic bounds also yield. Large JSON downloads are parsed in a module worker
 with bounded node delivery (including coordinates within a single feature) and
 main-thread acknowledgment; the source payload and properties remain unchanged.
-See [data flow](data-flow.md) for algorithms and measurement details. Renderer
-ingestion remains a distinct measured cost.
+
+`map/preparation.ts` keeps generator work separate from its asynchronous runner.
+Its contracts in `ts-types/domain/map-preparation.ts` describe cancellation
+options, portable bounds, and prepared snap endpoints. Project preparation
+preserves unchanged coordinate/property identities while flattening altitude and
+adding line depth annotations. Its tests retain the 100,000-coordinate workload
+and the shared CPU allowance across simultaneous loads.
+
+`map/project_visibility.ts` owns the individual and effective project visibility
+selectors beneath Layers and Geometry. Geometry no longer imports Layers, while
+Layers retains its singleton facade and receiver-based selector overrides.
+Selectors read current State containers, including replacements after reset,
+without storing another visibility cache. Layer request revision, generation,
+and intent checks remain distinct from scheduling. Mapbox declarations cover the
+actual source, layer, image, popup, and camera calls; domain records remain
+separate from imported GeoJSON properties. Layer tests verify source reuse and
+depth cache merging without scans. Both snapping queries use effective
+visibility, so country gates invalidate snap eligibility immediately without
+rebuilding or discarding cached endpoints. See [data flow](data-flow.md) for
+algorithms and measurement details. Renderer ingestion remains a distinct
+measured cost.
+
+`map/layers/lazy_overlay.ts` owns shared GPS/GIS downloads, metadata revisions,
+latest-intent identities, and applied-source versions. Layers keeps its public
+methods and cancels that owner before cancelling scheduled work or incrementing
+the generation. GIS Geometry shares the same intent owner, so reset and stale
+completion behavior remain consistent across overlays. The existing async, GPS,
+GIS Layer, and GIS Geometry suites exercise this boundary through Layers.
+
+`map/layers/gis_popup.ts` owns GIS feature cards, scroll isolation, resize
+observers, and per-map popup cleanup. Layers retains its named rendering exports
+and popup methods for existing callers. Separating presentation from overlay
+requests does not change source reuse, popup lifetime, or rendering budgets.
+
+The Layers facade retains its mutable method surface and receiver dispatch. Its
+implementations are grouped under `map/layers/`: `display.ts` owns scheduled
+preference/depth application, `survey.ts` owns prepared survey ingestion,
+`gps.ts` and `gis.ts` own their overlay rendering, and `gis_geometry.ts` owns
+saved geometry rendering and applied-record identity. `stations.ts`,
+`landmarks.ts`, and `markers.ts` own marker source construction, in-place
+updates, custom images, and drag feedback. Narrow receiver contracts let these
+functions call facade overrides without importing Layers back into their
+implementation modules. Visibility preferences, cancellation sequencing, and
+layer ordering remain on the facade. Moving these owners adds no feature scans,
+requests, or asynchronous boundaries.
+
+`display_events.ts` publishes the finite display-event contract from
+`ts-types/domain/map-display-events.ts`. Pending/applied events have no detail;
+failure, color, preference, and depth events retain their original detail object
+identities and Window target. Both depth events share one detail object and keep
+their dispatch order. Runtime tests verify those contracts, and an isolated
+native-compiler fixture proves invalid event/detail combinations fail without
+adding test ambient declarations to production.
+
+Marker characterization checks source and backend-record identity, in-place
+coordinate/property mutation, synchronous refresh dispatch with async return,
+and custom-image cache/retry behavior. Existing layer suites run against the
+facade so extraction cannot bypass the normal scheduling and visibility paths.
 
 Display preference writes are coalesced after paint and flushed on page exit and
 owner teardown. They serialize current in-memory values, not stale event

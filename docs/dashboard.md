@@ -93,18 +93,45 @@ sit directly inside a relatively positioned, fixed-height container. Assert the
 current classes rather than historical inline styles; this preserves coverage
 when formatting changes without adding runtime work.
 
-Three test files cover the dashboard exhaustively:
+The backend, template, helper and controller suites cover the dashboard:
 
 | File                                                         | Scope                    | Tests                                                                                                                                  |
 | ------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `speleodb/api/v2/tests/test_user_dashboard_stats.py`         | Backend API              | ~50 tests: auth, empty state, summary counts, projects-by-level, commits-over-time, contribution calendar, recent activity, edge cases |
 | `frontend_private/tests/test_dashboard_views.py`             | Django views + templates | ~35 tests: page access, template structure, profile page, URL routing, sidebar navigation, responsive CSS                              |
-| `frontend_private/static/private/js/tests/dashboard.test.js` | JS unit tests            | ~25 tests: heatmap rendering, stat cards, activity feed XSS, time formatting, level thresholds                                         |
+| `frontend_private/static/private/ts/tests/dashboard.test.ts` | JS unit tests            | ~25 tests: heatmap rendering, stat cards, activity feed XSS, time formatting, level thresholds                                         |
 
 ## Adding New Metrics
 
 1. Add the query to `UserDashboardStatsView._build_summary()` in the API view.
 2. Add a stat card in `pages/dashboard.html` with a unique `id`.
 3. Add the ID to `populateStatCards()` in the registered Vite controller
-   `frontend_common/controllers/dashboard.js`.
+   `frontend_common/controllers/dashboard.ts`.
 4. Add corresponding tests in both the API and frontend test files.
+
+## Typed helper ownership
+
+`frontend_private/static/private/ts/dashboard-helpers.ts` owns the pure display,
+calendar, palette, and chart-configuration helpers. Dashboard records and chart
+tuples live in `ts-types/domain/dashboard.ts`; they do not add runtime
+dependencies or change the controller's request flow. Local date grouping and
+locale number formatting remain browser-owned. The exported avatar palette
+remains mutable, including the existing undefined color result if a caller
+empties it.
+
+`tests/dashboard.test.ts` exercises the real helpers and drives the dashboard
+controller through its AJAX success callback for every stat-card and activity
+case. The fixture supplies jQuery and finite URL stubs; it contains no duplicate
+rendering implementation. This catches changes in real date grouping, links,
+escaping and empty states. Chart and heatmap composition remain covered by the
+controller initialization suite. Literal edge characterization covers palette
+identity, untrimmed single-name initials, and invalid timestamp grouping. Strict
+checking uses erased assertions at the existing indexed/backend boundaries
+rather than adding validation or fallback behavior. This translation adds no
+per-item work.
+
+The typed controller keeps the immediate AJAX request, optional Chart global,
+calendar layout and partial rendering after missing-DOM failures. Its direct
+initialization suite exercises those boundaries and repeated initialization with
+the real jQuery runtime. Chart declarations describe only the existing
+constructor and configuration use; no Chart runtime package is bundled.

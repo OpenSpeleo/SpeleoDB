@@ -54,9 +54,10 @@ separate public/private shell styles, route/modal/map styles, one small
 bootstrap, and lazy route controllers. Shared imports become shared chunks.
 
 Production writes hashed files and `.vite/manifest.json` under
-`speleodb/common/static/speleodb/vite/`. Development writes stable entry names,
-source maps, and a refreshed manifest to the same ignored directory. Django
-serves those files; a browser refresh picks up a completed disk rebuild.
+`speleodb/common/static/speleodb/vite/`. Development publishes immutable
+`assets/dev/<session>/<generation>/` trees with source maps. The complete
+manifest is atomically replaced after all referenced output exists. Django
+serves those files and a development-only client reloads after publication.
 
 All SpeleoDB-authored CSS/JS belongs in the graph as an entry, transitive
 module, test, or intentionally removed source. Templates load it with
@@ -69,14 +70,19 @@ Django-generated `url_reverse.js` remain outside Vite.
   graph, rejecting a missing or empty lockfile before the installer can resolve
   a replacement. A successful install must leave the lockfile unchanged.
 - `bun run build:clean`: remove Vite and obsolete Tailwind/esbuild output.
-- `bun run build:assets`: one production Vite build.
-- `bun run build`: clean, then build all assets.
-- `bun run dev`: one `vite build --watch --mode development` process.
+- `bun run build:assets`: strict checking and both source audits, then Vite
+  production output.
+- `bun run build`: check types and both audits before cleaning and building
+  assets.
+- `bun run dev`: supervises the Vite disk watcher and TypeScript semantic
+  watcher.
 - `bun run start`: alias for `bun run dev`.
 - `bun run pre-commit`: the same clean production build contract.
 - `bun run test:assets-watch`: isolated watcher invalidation matrix.
-- `bun run lint:js` and `bun run test:js`: source quality gates.
-- `bun run typecheck:railway`: TypeScript validation of Railway configuration.
+- `bun run lint:frontend` and `bun run test:frontend`: source quality gates.
+- `bun run typecheck`: strict checking across three environments.
+- `bun run typecheck:development`: unit/browser tests, upload subprocesses,
+  tools and Railway authoring.
 - `bun run test:browser`: the existing Playwright browser suite.
 
 `bun run` executes the existing Vite, Vitest/jsdom, Playwright, lint, and
@@ -96,7 +102,8 @@ selection as well as package-script execution.
 The watcher test mirrors sources under the operating-system temporary directory
 and reuses the installed dependency tree. It proves imported CSS
 change/deletion, Tailwind source additions, shared-module invalidation,
-route-controller invalidation, and unrelated-route output stability.
+route-controller invalidation, unrelated-route output stability, failed-build
+publication, retained old assets and worker generation ownership.
 
 The migration-era Tailwind Vite plugin accumulated discovered utility candidates
 during one watch process. Treat a deleted template class as potentially retained
@@ -108,10 +115,12 @@ release evidence.
 ## Django and deployment
 
 The Django manifest reader reloads by manifest mtime in DEBUG and caches in
-production. Missing, malformed, unsafe, duplicate, or wrong-type entries fail
-loudly. DEBUG/test may fall back to registry-derived stable names before the
-first watcher build. URLs pass through Django static storage, preserving local
-serving and S3/CloudFront behavior.
+production. Every template render shares one snapshot across asset tags and
+includes, so a rebuild cannot mix generations within a page. Missing, malformed,
+unsafe, duplicate, or wrong-type entries fail loudly. DEBUG/test may fall back
+to registry-derived stable names before the first watcher build. URLs pass
+through Django static storage, preserving local serving and S3/CloudFront
+behavior.
 
 Railpack retains the Python provider and uses Mise to activate Bun from
 `.bun-version`. It checks the runtime version, performs the guarded frozen
@@ -121,6 +130,11 @@ assets and manifest but not `node_modules`. Railway pre-deploy runs migrations,
 `install_background_schedules`, and `collectstatic`. Asset compilation belongs
 to the image build because pre-deploy filesystem changes are not persisted. SPA
 serving is disabled and Gunicorn/Django remains the start command.
+
+The alternative `bin/post_compile` entrypoint also propagates installation and
+asset-build failures before static collection or compression. Its subprocess
+tests replace Bun and Python with local command recorders, so checking failure
+propagation never publishes assets or invokes deployment services.
 
 For an intentional dependency refresh, resolve from the manifest and existing
 text lockfile in an empty external directory, independently of `node_modules`.
@@ -169,3 +183,10 @@ migration targets. Parent-monorepo helper paths retain their actual names
 because the web application does not own those files. Report the remaining
 categories with the search result rather than claiming zero literal matches or
 modifying unrelated interfaces and artifacts.
+
+Native TypeScript 7 checks the full source graph with `allowJs: false`. A
+TypeScript 6 compiler API alias supports typed ESLint. Source and template
+audits enforce zero authored JavaScript and executable template expressions,
+with exact vendor/generated exceptions. See
+[TypeScript architecture](typescript-architecture.md) for environment
+boundaries, compiler compatibility and build enforcement.

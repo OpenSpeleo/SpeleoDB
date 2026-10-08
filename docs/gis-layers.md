@@ -90,6 +90,15 @@ GIS Layers and GPS Tracks share the settings shell, Details, User Access, and
 Danger Zone templates. The pages reuse the common entity CRUD, permission modal,
 danger-zone, and list-loader controllers.
 
+`frontend_common/presentation/gis-overlays.ts` owns the shared table/card markup
+for layers and geometries, including ordering, permission labels, escaped text,
+colors and action URLs. The layer controller retains its renderer exports and
+composes `features/gis-layers.ts`, which owns upload state, XHR progress, locked
+dismissal and list refresh. Geometry pages import presentation directly, so
+sharing display code does not pull in layer upload wiring. Existing controller
+tests exercise real initialization and uploads; presentation tests preserve
+export identity and enforce the independent geometry import boundary.
+
 ## API
 
 - `GET/POST /api/v2/gis-layers/` lists accessible layers or uploads one.

@@ -81,6 +81,15 @@ input gestures, instructions, accessible results, and cleanup. Its public
 lifecycle includes `activate`, `deactivate`, `cancelDraft`, `isActive`,
 `setAvailable`, and `destroy`.
 
+The typed implementation stays in `measurement/tool.ts` and
+`measurement/renderer.ts`, with geometry in `measurement/geometry.ts`.
+`ts-types/domain/measurement-tool.ts` and `measurement-renderer.ts` describe the
+specific map capabilities and overlay data they consume. Class declarations use
+`declare` so fields remain absent until the original constructor or `onAdd`
+initializes them. Renderer tests verify completed-feature identity, coalesced
+draft frames, late-frame cancellation, style restoration, and exact constructor
+property ownership; tool tests exercise the real interaction dispatcher.
+
 `Interactions.getActiveTool()` is the single dispatch boundary for geometry
 editing and measurement. While a tool is active, the normal entity hover, popup,
 drag, and context-menu paths are not entered. This avoids a competing set of map
@@ -98,8 +107,8 @@ editor entry paths. Failed loading releases availability without resurrecting
 old measurements. Existing geometry preview callbacks retain their separate
 responsibility for saved/draft layer visibility.
 
-`measurement/geometry.js` owns curve construction, unit formatting, and valid
-map picking. `map/geodesy.js` is the shared pure distance implementation;
+`measurement/geometry.ts` owns curve construction, unit formatting, and valid
+map picking. `map/geodesy.ts` is the shared pure distance implementation;
 `Geometry.calculateDistanceInMeters` preserves its existing caller interface.
 The measurement record keeps authoritative endpoints and raw meters separate
 from its derived display geometry.
@@ -205,3 +214,11 @@ gesture evidence.
 Future route length, snapping, editing, area measurement, persistence, or export
 must be designed as explicit product extensions. Keep their data contracts
 separate from this temporary point-to-point session.
+
+`ts-types/domain/measurement.ts` separates completed measurements from an
+unfinished single endpoint and describes the small projection interface used by
+picking. Generated features carry explicit GeoJSON Point/MultiLineString
+geometry and measurement properties. Coordinates and sampled curves keep their
+existing copy and mutation behavior. The pure geometry suite covers antipodes,
+polar clipping, date-line splitting, exact endpoints, and formatting boundaries
+without adding map-feature scans or transport dependencies.

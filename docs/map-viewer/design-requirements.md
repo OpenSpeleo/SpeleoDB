@@ -8,8 +8,8 @@ as feature contracts, not implementation suggestions.
 Most map viewer behavior is implemented in shared private modules and consumed
 by both entrypoints:
 
-- private entrypoint: `frontend_private/static/private/js/map_viewer/main.js`
-- public entrypoint: `frontend_public/static/js/gis_view_main.js`
+- private entrypoint: `frontend_private/static/private/ts/map_viewer/main.ts`
+- public entrypoint: `frontend_public/static/ts/gis_view_main.ts`
 
 When touching shared behavior, keep private/public behavior aligned where
 intended and verify both entrypoints still initialize correctly.
@@ -21,7 +21,7 @@ GPS line layers start at zoom zero. Other line layers retain their default zero
 minimum. Keep geometry as lines when zooming out; do not replace it with
 overview markers or clusters.
 
-`map/line_rendering.js` builds the shared width expression from
+`map/line_rendering.ts` builds the shared width expression from
 `DEFAULTS.GEOJSON_RENDER`: 1 px through zoom 8, 1.5 px at zoom 12, and 2 px at
 zoom 14, with continuous interpolation between stops. Overview widths are capped
 at each renderer's detail width so a thin outline never grows thicker when
@@ -39,7 +39,7 @@ zooming out. Existing detail widths resume at zoom 16 and 18:
 | Geometry editor bounding boxes                   | 1 / 1 px              |
 
 Both public and private survey entrypoints use `Layers.addProjectGeoJSON`.
-Imported GIS layers and saved geometries share `map/vector_overlay.js`;
+Imported GIS layers and saved geometries share `map/vector_overlay.ts`;
 measurements and editor previews use the same width helper in their own
 renderers. Labels, points, fills, colors, dash patterns, geometry filters, and
 visibility gates keep their existing behavior.
@@ -69,7 +69,7 @@ geometry rebuild, additional source, or feature scan is required. Tolerance zero
 already incurs the cost of retaining survey vertices; the shared policy extends
 that behavior to all line renderers.
 
-`map/layers.display_preferences.test.js` covers the zero-zoom cutoff, fractional
+`map/layers.display_preferences.test.ts` covers the zero-zoom cutoff, fractional
 zoom widths, close-view widths, unsimplified source, refresh/rebuild behavior,
 visibility gates, and project/depth/shot colors. GIS layer/geometry tests and
 measurement/editor renderer tests cover the same policy for their respective
@@ -81,7 +81,7 @@ actual GPU rendering or visual quality.
 
 ## Permission logic is centralized
 
-Use `frontend_private/static/private/js/map_viewer/config.js` as the source of
+Use `frontend_private/static/private/ts/map_viewer/config.ts` as the source of
 truth.
 
 Preferred APIs:
@@ -106,9 +106,9 @@ Depth mode uses per-project domain cache + merged active domain:
 
 - per-project domains are stored in `State.projectDepthDomains`
 - active merged domain is stored in `State.activeDepthDomain`
-- domains are merged via `mergeDepthDomains(...)` in `map/depth.js`
+- domains are merged via `mergeDepthDomains(...)` in `map/depth.ts`
 - depth line repaint uses active merged domain
-- legend behavior is centralized in `components/depth_legend.js`
+- legend behavior is centralized in `components/depth_legend.ts`
 
 Critical performance invariant:
 
@@ -150,8 +150,8 @@ on every menu open.
 
 When changing these feature areas:
 
-- run `bun run lint:js`
-- run `bun run test:js`
+- run `bun run lint:frontend`
+- run `bun run test:frontend`
 - verify private/public parity for shared map behavior
 
 For the broader validation playbook, see:

@@ -14,7 +14,8 @@ from speleodb.users.tests.factories import UserFactory
 
 
 class DarkDocumentThemeContractTests(TestCase):
-    app_stylesheet: str = "speleodb/vite/assets/style-app"
+    # Match the entry filename, independent of development generation directories.
+    app_stylesheet: str = "/style-app"
 
     def assert_dark_document(
         self,

@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "target": "ES2023",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": false,
+    "noEmit": true,
+    "allowJs": false,
+    "composite": true,
+    "moduleDetection": "force",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2023"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "tsBuildInfoFile": "./.cache/typescript/runtime.tsbuildinfo"
+  },
+  "include": [
+    "frontend_common/**/*.ts",
+    "frontend_common/entries.json",
+    "frontend_errors/static/ts/**/*.ts",
+    "frontend_private/static/private/ts/**/*.ts",
+    "frontend_public/static/ts/**/*.ts",
+    "speleodb/gis/geometry_contract.json",
+    "ts-types/browser/**/*.d.ts",
+    "ts-types/controllers/**/*.ts",
+    "ts-types/domain/**/*.ts",
+    "ts-types/worker/geojson.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/dist/**",
+    "**/geojson_worker.ts",
+    "**/node_modules/**",
+    "**/vendors/**",
+    "frontend_common/test/**"
+  ]
+}

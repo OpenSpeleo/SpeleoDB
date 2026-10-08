@@ -1,0 +1,266 @@
+import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
+import type { ViewerGISLayer } from '../../../../../../ts-types/domain/map-config.ts';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const mocks = vi.hoisted(() => ({
+    visible: false,
+    loading: false,
+    layers: [] as ViewerGISLayer[],
+    bounds: new Map<string, object>(),
+    geometryTypes: [] as string[],
+    geometryVisibility: new Map<string, boolean>(),
+    fitBounds: vi.fn(),
+    setGeometryVisibility: vi.fn((id: EntityId, type: string, visible: boolean) => {
+        mocks.geometryVisibility.set(`${id}/${type}`, visible);
+    }),
+    toggle: vi.fn(async (_id: EntityId, visible: boolean) => {
+        mocks.visible = visible;
+        return true;
+    }),
+}));
+
+vi.mock('../config.ts', async () => {
+    const actual = await vi.importActual<typeof import('../config.ts')>('../config.ts');
+    return {
+        DEFAULTS: actual.DEFAULTS,
+        Config: {
+            get gisLayers() { return mocks.layers; },
+            getGISLayerById: (id: EntityId) => mocks.layers.find(layer => layer.id === String(id)) || null,
+        },
+    };
+});
+vi.mock('../map/layers.ts', () => ({
+    Layers: {
+        isGISLayerVisible: vi.fn(() => mocks.visible),
+        isGISLayerLoading: vi.fn(() => mocks.loading),
+        toggleGISLayerVisibility: mocks.toggle,
+        getGISLayerGeometryTypes: vi.fn(() => mocks.geometryTypes),
+        isGISLayerGeometryTypeVisible: vi.fn((id: EntityId, type: string) => mocks.geometryVisibility.get(`${id}/${type}`) !== false),
+        setGISLayerGeometryTypeVisibility: mocks.setGeometryVisibility,
+    },
+}));
+vi.mock('../state.ts', () => ({
+    State: {
+        gisLayerBounds: mocks.bounds,
+        map: { fitBounds: mocks.fitBounds },
+    },
+}));
+
+import { GISLayersPanel } from './gis_layers_panel.ts';
+
+class ResizeObserverMock {
+    observe() {}
+    disconnect() {}
+}
+
+describe('GIS Layers panel', () => {
+    beforeEach(() => {
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        mocks.visible = false;
+        mocks.loading = false;
+        mocks.layers = [];
+        mocks.geometryTypes = [];
+        mocks.geometryVisibility.clear();
+        mocks.bounds.clear();
+        document.body.innerHTML = '<div id="map-container"><div id="map"></div></div>';
+    });
+
+    afterEach(() => {
+        GISLayersPanel.destroy();
+        vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    });
+
+    it('disconnects previous observers on repeated initialization and keeps one panel', () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Layer', color: '#123456' }];
+        GISLayersPanel.init();
+        const observer = GISLayersPanel._resizeObserver;
+        const disconnect = vi.spyOn(observer!, 'disconnect');
+        const rows = GISLayersPanel._rows;
+        GISLayersPanel.init();
+        expect(disconnect).toHaveBeenCalledOnce();
+        expect(GISLayersPanel._resizeObserver).not.toBe(observer);
+        expect(GISLayersPanel._rows).toBe(rows);
+        expect(document.querySelectorAll<HTMLElement>('#gis-layers-panel')).toHaveLength(1);
+    });
+
+    it('uses the shared folded-card dimensions in the private left stack', () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas', color: '#6366f1' }];
+        GISLayersPanel.init();
+
+        const minimized = document.getElementById('gis-layers-panel-minimized')!;
+        expect(document.getElementById('gis-layers-panel')!.style.left).toBe('16px');
+        expect(minimized.style.display).toBe('block');
+        const css = readFileSync(resolve('frontend_private/static/private/css/map_viewer.css'), 'utf8');
+        expect(css).toMatch(/#gis-layers-panel-minimized,\s*#gis-geometries-panel-minimized\s*\{[^}]*width:\s*160px;[^}]*height:\s*48px/s);
+        expect(document.getElementById('map-layers-mobile-drawer')!).toBeNull();
+    });
+
+    it('activates a hidden layer and zooms only with its bounds', async () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas', color: '#6366f1' }];
+        const bounds = { bbox: true };
+        mocks.bounds.set('layer-1', bounds);
+        GISLayersPanel.init();
+
+        document.querySelector<HTMLElement>('.gis-layer-button')!.click();
+
+        await vi.waitFor(() => expect(mocks.toggle).toHaveBeenCalledWith('layer-1', true));
+        await vi.waitFor(() => expect(mocks.fitBounds).toHaveBeenCalledWith(bounds, { padding: 50, maxZoom: 16 }));
+    });
+
+    it('keeps toggle clicks isolated from card zoom', async () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas', color: '#6366f1' }];
+        mocks.bounds.set('layer-1', { bbox: true });
+        GISLayersPanel.init();
+        const checkbox = document.querySelector<HTMLInputElement>('.gis-layer-button input')!;
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+
+        await vi.waitFor(() => expect(mocks.toggle).toHaveBeenCalledWith('layer-1', true));
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+
+    it('escapes API names in text and attributes', () => {
+        mocks.layers = [{
+            id: 'layer-1',
+            name: '<img src=x onerror=alert(1)>',
+            color: 'not-a-color',
+        }];
+        mocks.geometryTypes = ['Point', 'Polygon'];
+        GISLayersPanel.init();
+
+        const item = document.querySelector<HTMLElement>('.gis-layer-button')!;
+        expect(item.querySelector<HTMLElement>('img')!).toBeNull();
+        expect(item.textContent).toContain('<img src=x');
+        expect(item.querySelector<HTMLElement>('span[title]')!.getAttribute('title')).toBe('<img src=x onerror=alert(1)>');
+        expect(item.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!.getAttribute('aria-label'))
+            .toBe('Show Point in <img src=x onerror=alert(1)>');
+    });
+
+    it.each([{ types: [] }, { types: ['LineString'] }, { types: ['MultiPolygon'] }])('omits geometry subcontrols for unknown or single-type layers: %j', ({ types }) => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = types;
+        GISLayersPanel.init();
+
+        expect(document.querySelector<HTMLElement>('[data-geometry-type-controls]')!).toBeNull();
+        expect(document.querySelectorAll<HTMLElement>('.gis-layer-button input')).toHaveLength(1);
+    });
+
+    it('discovers actual mixed types after loading and labels each control with its type and layer', () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        GISLayersPanel.init();
+        expect(document.querySelector<HTMLElement>('[data-geometry-type-controls]')!).toBeNull();
+
+        mocks.visible = true;
+        mocks.geometryTypes = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'];
+        window.dispatchEvent(new CustomEvent('speleo:gis-layer-loading-changed', { detail: { layerId: 'layer-1' } }));
+
+        const rows = [...document.querySelectorAll<HTMLElement>('[data-geometry-type]')];
+        expect(rows.map(row => row.dataset.geometryType)).toEqual(mocks.geometryTypes);
+        for (const row of rows) {
+            expect(row.closest<HTMLElement>('.gis-layer-button')!.dataset.layerId).toBe('layer-1');
+            const checkbox = row.querySelector<HTMLInputElement>('input')!;
+            expect(checkbox.labels![0]).toBe(row);
+            expect(checkbox.getAttribute('aria-label')).toBe(`Show ${row.dataset.geometryType} in Protected areas`);
+            expect(checkbox.checked).toBe(true);
+            expect(checkbox.disabled).toBe(false);
+        }
+    });
+
+    it('changes only the selected subtype without zooming, toggling the master or replacing focused controls', () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = ['Point', 'MultiLineString'];
+        mocks.visible = true;
+        mocks.bounds.set('layer-1', { bbox: true });
+        GISLayersPanel.init();
+        document.getElementById('gis-panel-expand')!.click();
+        const master = document.querySelector<HTMLInputElement>('.gis-layer-button input')!;
+        const row = document.querySelector<HTMLElement>('[data-geometry-type="MultiLineString"]')!;
+        const checkbox = row.querySelector<HTMLInputElement>('input')!;
+        checkbox.focus();
+        expect(document.activeElement).toBe(checkbox);
+        checkbox.click();
+
+        expect(mocks.setGeometryVisibility).toHaveBeenLastCalledWith('layer-1', 'MultiLineString', false);
+        expect(document.activeElement).toBe(checkbox);
+        expect(document.querySelector<HTMLInputElement>('[data-geometry-type="MultiLineString"] input')!).toBe(checkbox);
+        row.querySelector<HTMLElement>('span')!.click();
+        expect(mocks.setGeometryVisibility).toHaveBeenLastCalledWith('layer-1', 'MultiLineString', true);
+        expect(mocks.setGeometryVisibility).toHaveBeenCalledTimes(2);
+        document.querySelector<HTMLElement>('[data-geometry-type-controls]')!.click();
+        expect(master.checked).toBe(true);
+        expect(mocks.toggle).not.toHaveBeenCalled();
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        { visible: false, loading: false },
+        { visible: false, loading: true },
+    ])('disables subcontrols only while the parent is hidden: %j', state => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = ['Point', 'Polygon'];
+        mocks.visible = state.visible;
+        mocks.loading = state.loading;
+        mocks.geometryVisibility.set('layer-1/Polygon', false);
+        GISLayersPanel.init();
+
+        const checkboxes = [...document.querySelectorAll<HTMLInputElement>('[data-geometry-type] input')];
+        expect(checkboxes.every(checkbox => checkbox.disabled)).toBe(true);
+        expect(checkboxes.map(checkbox => checkbox.checked)).toEqual([true, false]);
+        for (const checkbox of checkboxes) {
+            checkbox.click();
+            checkbox.closest('label')!.click();
+        }
+        expect(mocks.setGeometryVisibility).not.toHaveBeenCalled();
+        expect(mocks.toggle).not.toHaveBeenCalled();
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+
+    it('retains subtype preferences when the master is switched off and on', async () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = ['Point', 'Polygon'];
+        mocks.visible = true;
+        mocks.geometryVisibility.set('layer-1/Polygon', false);
+        GISLayersPanel.init();
+
+        document.querySelector<HTMLInputElement>('.gis-layer-button input')!.click();
+        await vi.waitFor(() => expect(document.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!.disabled).toBe(true));
+        document.querySelector<HTMLInputElement>('.gis-layer-button input')!.click();
+        await vi.waitFor(() => expect(document.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!.disabled).toBe(false));
+        expect(document.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!.checked).toBe(true);
+        expect(document.querySelector<HTMLInputElement>('[data-geometry-type="Polygon"] input')!.checked).toBe(false);
+        expect(mocks.setGeometryVisibility).not.toHaveBeenCalled();
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+    it('keeps master and subtype controls usable during load and rapid reversal', async () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Protected areas' }];
+        mocks.geometryTypes = ['Point', 'Polygon'];
+        let finish!: (result: boolean) => void;
+        mocks.toggle.mockImplementationOnce((_id: EntityId, visible: boolean) => {
+            mocks.visible = visible;
+            mocks.loading = true;
+            return new Promise(resolve => { finish = resolve; });
+        });
+        GISLayersPanel.init();
+        const master = document.querySelector<HTMLInputElement>('.gis-layer-button input')!;
+        const point = document.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!;
+        master.focus();
+        master.click();
+        expect(master.checked).toBe(true);
+        expect(master.disabled).toBe(false);
+        expect(point.disabled).toBe(false);
+        point.click();
+        expect(mocks.setGeometryVisibility).toHaveBeenLastCalledWith('layer-1', 'Point', false);
+        master.click();
+        expect(master.checked).toBe(false);
+        expect(point.disabled).toBe(true);
+        finish(false);
+        await vi.waitFor(() => expect(GISLayersPanel._requests.size).toBe(0));
+        expect(document.querySelector<HTMLInputElement>('.gis-layer-button input')!).toBe(master);
+        expect(document.querySelector<HTMLInputElement>('[data-geometry-type="Point"] input')!).toBe(point);
+        expect(master.checked).toBe(false);
+        expect(mocks.fitBounds).not.toHaveBeenCalled();
+    });
+
+});

@@ -7,18 +7,24 @@
 
 ## 1. Frontend API Client
 
-**Module:** `frontend_private/static/private/js/map_viewer/api.js`
+**Module:** `frontend_private/static/private/ts/map_viewer/api.ts`
 
 ### Overview
 
-The `API` object is a thin wrapper around `fetch`, providing a uniform interface
-for all backend calls. Every method delegates to a private
-`apiRequest(url, method, body, isFormData)` function.
+The `API` object exposes endpoint-specific methods over the map transport in
+`transport.ts`. Its private `apiRequest(url, method, body, isFormData, options)`
+function obtains CSRF through a callback that reads the current
+`Utils.getCSRFToken` method on each request. The sensor-install Excel export
+retains its separate raw-response path; landmark forms retain their distinct
+transport and HTTP 204 policy.
 
 ### Authentication
 
 - **CSRF tokens** — every request includes an `X-CSRFToken` header obtained via
-  `Utils.getCSRFToken()` (reads the `csrftoken` cookie).
+  `Utils.getCSRFToken()`: first a valid hidden form token, then a valid
+  `csrftoken` cookie, then the configured runtime token. Tokens are trimmed and
+  validated against Django's accepted lengths; malformed cookies retain the
+  existing fallback behavior.
 - **Session auth** — `credentials: 'same-origin'` is set on every request,
   relying on Django's session middleware.
 - No Bearer/JWT tokens are used in the private viewer.
@@ -28,7 +34,12 @@ for all backend calls. Every method delegates to a private
 - `Content-Type` defaults to `application/json`; when `isFormData` is `true` the
   header is omitted so the browser sets the multipart boundary automatically.
 - Bodies are `JSON.stringify`'d unless `isFormData` is `true`, in which case the
-  raw `FormData` object is passed.
+  raw `FormData` object is passed. Falsey bodies are omitted, as in the original
+  JavaScript client. Supplied abort signals retain their identity.
+- Endpoint-specific request and response declarations live in `ts-types/domain/`
+  beside their record families. The transport reads untrusted JSON as `unknown`
+  and asserts each existing serializer contract at the return boundary, without
+  adding runtime guards or modifying unexpected successful payloads.
 
 ### Response handling
 
@@ -41,7 +52,15 @@ for all backend calls. Every method delegates to a private
   off the returned value.
 - **Error (4xx/5xx)** — throws an `Error` with the server's `message`, `error`,
   or `detail` field. The error object is augmented with `.data` (full response
-  body) and `.status` (HTTP status code).
+  body) and `.status` (HTTP status code). It remains an ordinary `Error`, and
+  `.data` retains the parsed response identity.
+- Invalid JSON under a JSON content type returns `null`; text bodies are parsed
+  as JSON when possible and otherwise retained verbatim. Empty bodies return
+  `null`. Error messages prefer `message`, `error`, then `detail`, followed by
+  HTTP status text and the existing generic message.
+- Sensor-install Excel export returns the raw `Response` instead of using JSON
+  transport. Other form transports retain their independent 204 and header
+  policies; these types do not unify them.
 
 ### URL resolution
 
@@ -594,7 +613,7 @@ Pro 3.6.1 regression dimensions.
 
 ### Private viewer (session-based)
 
-The private map viewer (`main.js`) relies on Django session authentication:
+The private map viewer (`main.ts`) relies on Django session authentication:
 
 1. User logs in via the Django auth system (session cookie set).
 2. Every API request includes `credentials: 'same-origin'` to send the session
@@ -608,7 +627,7 @@ The private map viewer (`main.js`) relies on Django session authentication:
 
 ### Public viewer (token-based)
 
-The public map viewer (`gis_view_main.js`) uses token-based authentication:
+The public map viewer (`gis_view_main.ts`) uses token-based authentication:
 
 1. A **GIS view token** (`gis_token`) is embedded in the URL.
 2. The token grants read-only access to the specific GIS view's data.
@@ -636,3 +655,16 @@ auto-discovers. Landmark Collection tokens work for active personal and shared
 collections; treat both as public read secrets. Refreshing the application token
 from a user-scoped OGC card invalidates every app currently authenticating with
 that token, not only the GIS URL.
+
+### Station sensor presentation boundary
+
+`stations/sensor_presentation.ts` owns sensor history markup, status/date
+formatting, and install-date field validation. `stations/sensors.ts` retains
+sensor requests, fleet caches, sorting/filter state, and the asynchronous
+station lookup. It obtains write access from `Config.getScopedAccess` for the
+actual project or surface network before passing that result to the renderer.
+The presentation module does not duplicate permission policy or fetch data.
+Existing HTML escaping, date arithmetic, action hooks, and modal validation
+timing remain unchanged. Sensor tests cover escaped history data and both scope
+kinds with read-only and write access; the latter controls the install action
+while leaving history navigation available.

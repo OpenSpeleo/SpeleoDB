@@ -147,7 +147,7 @@ was pure preamble).
 
 ### The scheduling rules
 
-The entrypoints (`map_viewer/main.js` and `gis_view_main.js`) now schedule
+The entrypoints (`map_viewer/main.ts` and `gis_view_main.ts`) now schedule
 independent work concurrently. **No application logic changed** — same
 functions, same end state, same final layer z-order. Only _when_ requests are
 issued changed.
@@ -177,7 +177,7 @@ flowchart TD
     end
 ```
 
-Private viewer (`main.js`):
+Private viewer (`main.ts`):
 
 - **Map init is decoupled from data.** `MapCore.init()` runs immediately, so the
   Mapbox style/tiles download concurrently with the API calls instead of after
@@ -196,7 +196,7 @@ Private viewer (`main.js`):
   landmarks, exploration leads, cylinder installs, GPS tracks) as one
   `Promise.all`.
 
-Public viewer (`gis_view_main.js`):
+Public viewer (`gis_view_main.ts`):
 
 - The map already initialized before data. Additionally, the single GIS-View
   GeoJSON request is now prefetched during init (`pendingViewData`) and consumed
@@ -239,7 +239,7 @@ User Action (UI)
   │
   ├─ 2. User fills form → submit
   │
-  ├─ 3. API call via api.js
+  ├─ 3. API call via api.ts
   │     └─ apiRequest(url, method, body)
   │         ├─ Attaches CSRF token from cookie
   │         ├─ Sets Content-Type: application/json (or FormData)
@@ -250,7 +250,7 @@ User Action (UI)
   │     ├─ Dispatch refresh event (e.g., speleo:refresh-stations)
   │     └─ Show success notification via Utils.showNotification()
   │
-  └─ 5. Refresh event handler in main.js:
+  └─ 5. Refresh event handler in main.ts:
         ├─ Re-fetch data from API (full reload for entity type)
         ├─ Rebuild map layer with new data
         └─ Layers.reorderLayers()
@@ -309,7 +309,7 @@ snapped, coordinates are adjusted to the nearest survey line vertex.
 ## Refresh Event System
 
 Five custom refresh events drive data reload. Each follows the same pattern:
-event dispatched → listener in `main.js` re-fetches from API → layer rebuilt.
+event dispatched → listener in `main.ts` re-fetches from API → layer rebuilt.
 
 ### `speleo:refresh-stations`
 
@@ -340,7 +340,7 @@ event dispatched → listener in `main.js` re-fetches from API → layer rebuilt
 ### `speleo:refresh-gps-tracks`
 
 - **Payload**: `{ deactivateAll? }`
-- **Dispatched by**: GPX import (`upload.js`)
+- **Dispatched by**: GPX import (`upload.ts`)
 - **Handler**:
   1. `State.gpsTrackCache.clear()` — invalidate all cached GeoJSON
   2. If `deactivateAll`, hide all visible GPS track layers
@@ -352,7 +352,7 @@ event dispatched → listener in `main.js` re-fetches from API → layer rebuilt
 ### `speleo:refresh-cylinder-installs`
 
 - **Payload**: (none)
-- **Dispatched by**: `cylinders.js` after install/uninstall/pressure-check
+- **Dispatched by**: `cylinders.ts` after install/uninstall/pressure-check
   operations
 - **Listener target**: `document` (not `window`, unlike other refresh events)
 - **Handler**: `Layers.refreshCylinderInstallsLayer()` which calls

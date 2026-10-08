@@ -53,7 +53,7 @@ def test_browser_uploads_use_real_django_and_storage(
                 f"http://127.0.0.1:{unavailable.getsockname()[1]}/upload"
             )
             result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603 - fixed script, private stdin
-                [bun, "scripts/test-frontend-uploads.mjs"],
+                [bun, "scripts/test-frontend-uploads.ts"],
                 cwd=BASE_DIR,
                 input=json.dumps(browser_configuration),
                 capture_output=True,

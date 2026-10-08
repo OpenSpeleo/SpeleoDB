@@ -17,7 +17,7 @@ in `.railway/railway.ts`.
 Validate edits in the running application container:
 
 ```bash
-docker exec -w /app speleodb_local_django bun run typecheck:railway
+docker exec -w /app speleodb-monorepo-django bun run typecheck:development
 ```
 
 For the intended Railway project/environment, preview with `railway config plan`

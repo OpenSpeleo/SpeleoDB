@@ -7,11 +7,15 @@ merging.
 
 ## JavaScript / Frontend
 
-### All constants belong in `config.js`
+### Map constants have one leaf owner and a stable `config.ts` facade
 
 **Every tuneable constant** in the map viewer must be defined in the `DEFAULTS`
-object exported from `config.js`. No magic numbers, thresholds, durations, zoom
-levels, colors, sizes, or configuration values anywhere else.
+object defined in `map_viewer/defaults.ts` and re-exported unchanged from
+`config.ts`. The leaf owns constants only, avoiding a dependency cycle through
+Config, API, utilities and notifications. Existing feature imports may continue
+using the `config.ts` facade; foundational helpers import the leaf directly. Do
+not copy or deep-freeze its nested objects. No magic numbers, thresholds,
+durations, zoom levels, colors, sizes, or configuration values anywhere else.
 
 ```javascript
 // BAD — hardcoded constant in a random module
@@ -20,8 +24,8 @@ const LIMITED_MAX_ZOOM = 13;
 map.fitBounds(allBounds, { padding: 50, maxZoom: 16 });
 setTimeout(() => overlay.remove(), 500);
 
-// GOOD — import from config.js
-import { DEFAULTS } from "../config.js";
+// GOOD — import from config.ts
+import { DEFAULTS } from "../config.ts";
 // ...then use DEFAULTS.DRAG.THRESHOLD_PX, DEFAULTS.MAP.LIMITED_MAX_ZOOM, etc.
 ```
 
@@ -84,7 +88,7 @@ modules.
 
 **Do not** define local `escapeHtml` / `safeCssColor` copies in templates or
 standalone scripts. Form/route modules import the ES exports from
-`xss-helpers.js`; map modules use `Utils` from `utils.js`. URL scheme validation
+`xss-helpers.ts`; map modules use `Utils` from `utils.ts`. URL scheme validation
 is not quote escaping: insert `sanitizeUrl()` results through `safeHtml`,
 `escapeHtml`, or a DOM property rather than raw quoted HTML interpolation.
 
@@ -105,7 +109,7 @@ Some `data-*` attributes are queried by runtime JS, tests, or both (e.g.
 
 When introducing a new test-stable attribute, add a JSDoc-style comment above
 the rendering function that documents the contract. See
-`renderReadOnlyExperimentNotice` in `experiments.js` for the pattern.
+`renderReadOnlyExperimentNotice` in `experiments.ts` for the pattern.
 
 ---
 

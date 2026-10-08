@@ -64,7 +64,7 @@ and performance contracts.
 
 Depth legend and cursor behavior is centralized in:
 
-- `frontend_private/static/private/js/map_viewer/components/depth_legend.js`
+- `frontend_private/static/private/ts/map_viewer/components/depth_legend.ts`
 
 ## Complexity
 

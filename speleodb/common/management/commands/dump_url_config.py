@@ -19,6 +19,7 @@ def collect_and_filter_urls() -> list[dict[str, str]]:
             (
                 "/silk/",
                 "/__debug__/",
+                "/__assets__/",
                 "/debug_mode/",
                 "/admin/",
             )

@@ -179,14 +179,31 @@ the page on success. An inline hint below the section header reads "Select
 landmarks to batch transfer or delete" to guide discovery. The table hides until
 DataTables finishes initialization to prevent layout shift. The page uses the
 registered `landmark-details` Vite controller, which lazily imports
-`details_main.js`. Django serves the manifest-backed assets in both development
+`details_main.ts`. Django serves the manifest-backed assets in both development
 and production.
 
-The shared `forms.js` module is the single source of truth for all landmark
-create/edit/delete/bulk-transfer/bulk-delete modal markup and validation. It is
-consumed by both the map viewer (`landmarks/ui.js`) and the collection details
-page bundle (`details_main.js`). The module uses direct `fetch` calls with CSRF
-headers and surfaces backend errors inline in the modal.
+The shared `landmarks/forms.ts` module is the single source of truth for all
+landmark create/edit/delete/bulk-transfer/bulk-delete modal markup and
+validation. It is consumed by both the map viewer (`landmarks/ui.ts`) and the
+collection details page bundle (`details_main.ts`). The module uses direct
+`fetch` calls with CSRF headers and surfaces backend errors inline in the modal.
+Its transport intentionally returns `null` for HTTP 204, while the map API
+transport returns an `{ ok, status }` marker. Successful non-JSON bodies remain
+strings. Success callbacks are awaited inside the same modal error path,
+including a rejection after the modal closes. `LandmarkForms` remains a mutable
+facade containing the original function references. Domain declarations in
+`ts-types/domain/landmark-forms.ts` describe form options and payloads;
+untrusted transport results enter as `unknown`.
+
+Collection lookup, selection, payload reading, and coordinate/name validation
+live in `landmarks/form_model.ts`; escaped collection options and form/bulk
+markup live in `landmarks/form_presentation.ts`. `forms.ts` composes those
+functions with its modal and transport lifecycle and re-exports the original
+render/read/validate functions without wrapping them. Map and table callers
+therefore share the same function objects and writable-collection filtering. The
+separation adds no requests or feature rescans. Shared-form tests cover facade
+identity, locked collection selection, writable-only options, malformed
+coordinates, escaping, and the existing transport policies.
 
 The map Landmark manager loads collections, groups landmarks by collection in
 collapsed groups, exposes collection selectors when creating or importing
@@ -214,7 +231,8 @@ Coverage is split by ownership boundary:
   collection hydration, the details-page Landmark table, export links, read-only
   movement guard, details-page multi-select/bulk-bar behavior, and shared forms
   module (create/edit/delete/bulk-transfer/bulk-delete modals, inline
-  validation, CSRF headers, XSS escaping).
+  validation, CSRF headers, XSS escaping, facade identity, 204 and text
+  responses,\n callback rejection, and DELETE body/header omission).
 - Color tests cover default generation, API validation/normalization, shared
   WRITE updates, shared view picker rendering, personal detail form hiding,
   Landmark GeoJSON `collection_color`, grouped Landmark manager rows, and map

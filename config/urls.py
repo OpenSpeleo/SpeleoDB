@@ -13,6 +13,8 @@ from django.urls import path
 from django.views.decorators.cache import cache_page
 from django_js_reverse.views import urls_js
 
+from speleodb.common.development import vite_generation
+
 urlpatterns = [
     path("", include("frontend_public.urls")),
     path("", include("frontend_errors.urls", namespace="errors")),
@@ -41,6 +43,13 @@ if "hijack" in settings.INSTALLED_APPS and settings.HIJACK_URL:
     ]
 
 if settings.DEBUG:
+    urlpatterns += [
+        path(
+            "__assets__/generation/",
+            vite_generation,
+            name="vite-development-generation",
+        ),
+    ]
     # Static file serving when using Gunicorn + Uvicorn for local web socket development
     urlpatterns += staticfiles_urlpatterns()
 

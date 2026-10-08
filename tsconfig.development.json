@@ -1,0 +1,51 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2023"
+    ],
+    "types": [
+      "bun",
+      "node",
+      "vitest/globals"
+    ],
+    "tsBuildInfoFile": "./.cache/typescript/development.tsbuildinfo"
+  },
+  "include": [
+    ".railway/railway.ts",
+    "eslint.config.ts",
+    "frontend_common/**/*.ts",
+    "frontend_common/entries.json",
+    "frontend_errors/static/ts/**/*.ts",
+    "frontend_private/static/private/ts/**/*.ts",
+    "frontend_private/static/private/ts/forms/fixtures/tailwind-v3.4.19-contract.json",
+    "frontend_public/static/ts/**/*.ts",
+    "playwright.config.ts",
+    "scripts/audit-javascript.ts",
+    "scripts/audit-templates.ts",
+    "scripts/dev.ts",
+    "scripts/jsdom-runtime.ts",
+    "scripts/test-frontend-uploads.ts",
+    "scripts/verify-vite-watch.ts",
+    "scripts/vite-development.ts",
+    "speleodb/gis/geometry_contract.json",
+    "tests/browser/**/*.ts",
+    "ts-types/browser/**/*.d.ts",
+    "ts-types/controllers/**/*.ts",
+    "ts-types/domain/**/*.ts",
+    "ts-types/testing/browser/**/*.ts",
+    "ts-types/testing/vitest/**/*.ts",
+    "ts-types/tooling/**/*.ts",
+    "ts-types/worker/geojson.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "**/dist/**",
+    "**/geojson_worker.ts",
+    "**/node_modules/**",
+    "**/vendors/**"
+  ]
+}

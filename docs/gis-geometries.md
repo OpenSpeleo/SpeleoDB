@@ -68,6 +68,14 @@ shape visible for that session. Revert restores the previous saved state and
 visibility. Discarding a new geometry makes no API request. Unsaved dismissal
 requires confirmation, and failed saves retain the draft.
 
+The editor remains a mutable singleton in `geometry_editor/editor.ts`. Its
+`ts-types/domain/geometry-editor-runtime.ts` contracts describe session fields,
+DOM nodes, callbacks, and the narrow map API without eagerly creating optional
+properties. Session history and geometry validation remain owned by
+`geometry_editor/geometry.ts`. Tests cover pending loads/saves, draft retention,
+clipboard races, callback order, gesture rollback, and viewport/focus cleanup;
+these boundaries keep temporary authoring state separate from saved metadata.
+
 ## Interaction design
 
 The map remains the primary workspace. A compact inspector sits beside it on
@@ -214,6 +222,13 @@ server-owned.
 
 ## Frontend architecture and performance
 
+The geometry listing controller composes the shared tagged-list loader with
+`frontend_common/presentation/gis-overlays.ts`. Its table/card layout shares
+formatting and escaping with GIS Layers while retaining geometry-specific empty
+text, routes and absence of source-download controls. It does not import the
+layer controller or its upload feature; a dependency-boundary test protects that
+separation, alongside the real initialization and rendering tests.
+
 The feature follows the existing API → Config/State → Layers lifecycle. Config
 contains metadata and centralized capability helpers. State owns session
 visibility, coordinate cache, in-flight detail requests, and which saved overlay
@@ -262,3 +277,12 @@ Django before recording browser evidence.
 Collection headings, map cards, loading/empty/error states, tooltips, and
 accessible labels use **GIS Geometries**. Individual record settings and actions
 use **GIS Geometry**. Keep all related states aligned when changing copy.
+
+The pure geometry contract lives in `geometry_editor/geometry.ts`, shared by the
+map editor and Advanced GeoJSON form. Its TypeScript input remains `unknown`
+until the existing coordinate and geometry checks run. Fixed coordinate pairs,
+measurement results, and mutable draft/history records belong to
+`ts-types/domain/geometry-editor.ts`. Measurement still runs before validation,
+so invalid input retains the same measurement and error precedence. The shared
+backend fixture suite checks geometry validity, vertex counts, and spherical
+bounding-box area; draft tests check copied coordinates and undo/redo behavior.

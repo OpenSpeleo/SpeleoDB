@@ -136,7 +136,7 @@ complement: `transparency = 1 - opacity`.
 | `DEFAULTS.GIS_LAYER_RENDER.LINE_OPACITY`   | `0.95`  | Saved line and polygon outline: 95% opaque, 5% transparent |
 
 Canonical rendering constants live in
-[`config.js`](../frontend_private/static/private/js/map_viewer/config.js). The
+[`config.ts`](../frontend_private/static/private/ts/map_viewer/config.ts). The
 read-only integration uses **`FILL_OPACITY`**, not `DRAFT_FILL_OPACITY`. The
 draft value is documented to distinguish existing editor presentation; this
 specification does not require implementing an editor.
@@ -484,13 +484,13 @@ The repository implementation is authoritative if this document drifts:
 - Shape policy: `speleodb/gis/geometry_contract.json` and
   `geometry_validation.py`.
 - Rendering constants:
-  `frontend_private/static/private/js/map_viewer/config.js`.
-- Read integration: `map_viewer/config.js`, `state.js`, `map/layers.js`, and
-  `map/vector_overlay.js` beneath the same private JavaScript directory.
+  `frontend_private/static/private/ts/map_viewer/config.ts`.
+- Read integration: `map_viewer/config.ts`, `state.ts`, `map/layers.ts`, and
+  `map/vector_overlay.ts` beneath the same private JavaScript directory.
 - Contract tests: `speleodb/api/v2/tests/test_gis_geometry_api.py`,
   `speleodb/gis/tests/test_gis_geometry.py`,
-  `map_viewer/config.geometry_contract.test.js`, and
-  `map_viewer/map/layers.gis_geometries.test.js`.
+  `map_viewer/config.geometry_contract.test.ts`, and
+  `map_viewer/map/layers.gis_geometries.test.ts`.
 
 Run tests inside the existing `speleodb_local_django` container at `/app`, as
 required by `AGENTS.md`. The broader feature design is in

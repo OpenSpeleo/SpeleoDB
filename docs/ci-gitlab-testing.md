@@ -307,7 +307,7 @@ repositories are allocated for this coverage.
 
 `test_frontend_upload_integration.py` starts Django's real live server with a
 database-backed authenticated session, then invokes
-`scripts/test-frontend-uploads.mjs`. The script loads the rendered GIS-layer
+`scripts/test-frontend-uploads.ts`. The script loads the rendered GIS-layer
 page, uses its actual CSRF token and the vendored jQuery library, and imports
 the production upload modules. JSDOM supplies its unmodified XMLHttpRequest and
 FormData implementations; requests reach Django and persist files in the

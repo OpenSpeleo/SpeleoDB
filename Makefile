@@ -16,13 +16,13 @@ load_data:
 	python manage.py loaddata fixtures/surveys.json
 	python manage.py loaddata fixtures/emailaddresses.json
 
-test: test-py test-js
+test: test-py test-frontend
 
 test-py:
 	pytest
 
-test-js:
-	bun run test:js
+test-frontend:
+	bun run test:frontend
 
 # OGC API - Features focused targets. The OGC compliance suite has its
 # own coverage / mutation / Team-Engine entry points so changes to the

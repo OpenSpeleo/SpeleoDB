@@ -73,7 +73,7 @@ el.innerHTML = Utils.safeHtml`${Utils.raw(`<span>${parentName}</span>`)}`;
 - Interpolations of numeric computed values like `count`, `index + 1`,
   `latitude.toFixed(7)` -- these cannot contain HTML
 - `Utils.raw()` wrapping trusted HTML (SVG icons, conditional blocks)
-- Templates inside test files (`*.test.js`)
+- Templates inside test files (`*.test.ts`)
 - CSS color values validated with `Utils.isValidCssColor()` or
   `Utils.safeCssColor()`
 - URL values validated with `Utils.sanitizeUrl()`

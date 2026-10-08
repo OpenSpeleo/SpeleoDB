@@ -1,0 +1,1163 @@
+import type { Point } from 'geojson';
+import type { EntityId } from '../../../../../ts-types/domain/identifiers.ts';
+import type { ProjectResponse } from '../../../../../ts-types/domain/map-config.ts';
+import type { ContextMenuEntry } from '../../../../../ts-types/domain/map-dialog.ts';
+import type { DisplayStationType } from '../../../../../ts-types/domain/map-display.ts';
+import type { Coordinate2D } from '../../../../../ts-types/domain/map-geometry.ts';
+import type { RenderedMapFeature } from '../../../../../ts-types/domain/map-interactions.ts';
+import type { GISPopupFeature } from '../../../../../ts-types/domain/map-layers.ts';
+import type { SnapResult } from '../../../../../ts-types/domain/map-snapping.ts';
+import type { MapSourceChangeEvent } from '../../../../../ts-types/domain/map-sources.ts';
+import type { PrivateViewerMap, PrivateViewerLoadOptions } from '../../../../../ts-types/domain/viewer-composition.ts';
+import { Config, DEFAULTS } from './config.ts';
+import { State } from './state.ts';
+import { MapCore } from './map/core.ts';
+import { MapSources } from './map/sources.ts';
+import { Layers } from './map/layers.ts';
+import { Interactions } from './map/interactions.ts';
+import { Geometry } from './map/geometry.ts';
+import { fitGISGeometry } from './map/geometry_camera.ts';
+import { StationManager } from './stations/manager.ts';
+import { StationUI } from './stations/ui.ts';
+import { StationDetails } from './stations/details.ts';
+import { StationTags } from './stations/tags.ts';
+import { SurfaceStationManager } from './surface_stations/manager.ts';
+import { SurfaceStationUI } from './surface_stations/ui.ts';
+import { LandmarkManager } from './landmarks/manager.ts';
+import { LandmarkUI } from './landmarks/ui.ts';
+import { ExplorationLeadManager } from './exploration_leads/manager.ts';
+import { ExplorationLeadUI } from './exploration_leads/ui.ts';
+import { CylinderInstalls } from './stations/cylinders.ts';
+import { Utils } from './utils.ts';
+import { ContextMenu } from './components/context_menu.ts';
+import { ProjectPanel } from './components/project_panel.ts';
+import { GPSTracksPanel } from './components/gps_tracks_panel.ts';
+import { GISLayersPanel } from './components/gis_layers_panel.ts';
+import { GISGeometriesPanel } from './components/gis_geometries_panel.ts';
+import { GeometryEditor } from './geometry_editor/editor.ts';
+import { MeasurementTool } from './measurement/tool.ts';
+import { DepthLegend } from './components/depth_legend.ts';
+import { MapSettings } from './components/settings.ts';
+import { DisplayPreferences } from './display_preferences.ts';
+import { getMapOverlayHost } from './components/overlay_host.ts';
+import { API } from './api.ts';
+import { getRuntimeContext } from './runtime_context.ts';
+import { initMapActionDispatcher } from './action_dispatcher.ts';
+import { configureMapNavigation } from './map/navigation.ts';
+import { StationSensors } from './stations/sensors.ts';
+import { configureStationManagerNavigation, returnToStationManager } from './stations/details.ts';
+import { clearRenderedSurveyState, createMapHeightUpdater, registerViewerDataLifecycle } from './viewer_lifecycle.ts';
+
+// Parse URL parameters for initial map position
+// Usage: ?goto=LAT,LONG (e.g., ?goto=38.1234,-85.5678)
+// Silently returns null values if format is invalid
+function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const gotoParam = params.get('goto');
+
+    // No goto param specified
+    if (!gotoParam) {
+        return { lat: null, long: null };
+    }
+
+    const parts = gotoParam.split(',');
+
+    // Must have exactly 2 parts (LAT,LONG)
+    if (parts.length !== 2) {
+        return { lat: null, long: null };
+    }
+
+    const lat = parseFloat(parts[0]!.trim());
+    const long = parseFloat(parts[1]!.trim());
+
+    // Both must be valid floats
+    if (isNaN(lat) || isNaN(long)) {
+        return { lat: null, long: null };
+    }
+
+    // Validate lat/long ranges
+    if (lat < -90 || lat > 90 || long < -180 || long > 180) {
+        return { lat: null, long: null };
+    }
+
+    return { lat, long };
+}
+
+// Global entry point
+export async function initPrivateMapViewer() {
+    console.log('🚀 SpeleoDB Map Viewer Initializing...');
+
+    // 1. Initialize State
+    ProjectPanel.destroy?.();
+    Layers.cancelPendingWork?.();
+    State.resetLayerState();
+    DisplayPreferences.init({ persist: true });
+
+    // 2. Initialize Map immediately so the Mapbox style and tiles download
+    //    concurrently with the startup API calls below (the map does not need
+    //    project/network/GPS data to begin loading its style).
+    const token = getRuntimeContext().mapboxToken || '';
+
+    const map = MapCore.init(token, 'map', {
+        fullscreenContainer: document.getElementById('map-viewer-shell')!,
+    }) as PrivateViewerMap;
+    const measurementTool = new MeasurementTool({
+        canActivate: () => !GeometryEditor.isActive() && !GeometryEditor.isOpening(),
+        onActivate: () => {
+            Interactions.cancelPendingDrag!();
+            ContextMenu.hide();
+            Layers.closeGISFeaturePopups();
+        },
+    });
+    configureMapNavigation(map);
+    configureStationManagerNavigation({
+        subsurface: () => StationUI.openManagerModal(),
+        surface: () => SurfaceStationUI.openManagerModal(),
+    });
+
+    // 3. Kick off the independent startup API loads in parallel instead of
+    //    awaiting them one after another. They are consumed later (in
+    //    loadMapData) via `configReady`, so nothing here blocks on them.
+    const configReady = Promise.all([
+        Config.loadProjects(),
+        Config.loadNetworks(),
+        Config.loadGPSTracks(),
+        Config.loadGISLayers(),
+        Config.loadGISGeometries(),
+    ]);
+
+    // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
+    // independent of map readiness, so kicking it off now overlaps its latency
+    // with map init and the config loads above. Consumed via `metadataReady`.
+    let geojsonMetadataCache: ProjectResponse[] | null = null;
+    const metadataReady = loadGeoJSONMetadata();
+
+    // Simple function to set map height
+    const setMapHeight = createMapHeightUpdater(() => document.fullscreenElement === document.getElementById('map-viewer-shell'));
+
+    // Set initial map height
+    setMapHeight();
+
+    // Update map height on window resize
+    window.addEventListener('resize', setMapHeight);
+    document.addEventListener('fullscreenchange', () => {
+        setMapHeight();
+        map.resize();
+    });
+
+    // 4. Setup Interactions
+    Interactions.init(map, {
+        geometryEditor: GeometryEditor,
+        measurementTool,
+        onStationClick: (stationId, stationType) => {
+            if (stationType === 'surface') {
+                const station = State.allSurfaceStations.get(stationId!);
+                void StationDetails.openModal(stationId!, station?.network, false, 'surface');
+            } else {
+                const station = State.allStations.get(stationId!);
+                void StationDetails.openModal(stationId!, station?.project, false, 'subsurface');
+            }
+        },
+        onLandmarkClick: (landmarkId) => LandmarkUI.openDetailsModal(landmarkId!),
+        onExplorationLeadClick: (leadId) => ExplorationLeadUI.showDetailsModal(leadId!),
+        onCylinderInstallClick: (cylinderId) => {
+            // Open cylinder details modal for installed cylinders
+            void CylinderInstalls.showCylinderDetails(cylinderId!);
+        },
+        onGISFeatureClick: (feature, lngLat) => Layers.openGISFeaturePopup(feature as unknown as GISPopupFeature, lngLat),
+        onStationDrag: (stationId, projectId, newCoords) => {
+            Layers.updateStationPosition(projectId, stationId, newCoords as [number, number]);
+        },
+        onLandmarkDrag: (landmarkId, newCoords) => {
+            Layers.revertLandmarkPosition(landmarkId, newCoords as [number, number]);
+        },
+        onStationDragEnd: (stationId, projectId, snapResult, originalCoords) => {
+            // Show drag confirm modal with snap information
+            showStationDragConfirmModal(stationId, projectId, snapResult, originalCoords);
+        },
+        onLandmarkDragEnd: (landmarkId, newCoords, originalCoords) => {
+            const landmark = State.allLandmarks.get(landmarkId);
+            if (!landmark || landmark.can_write !== true) {
+                Layers.revertLandmarkPosition(landmarkId, originalCoords as [number, number]);
+                Utils.showNotification('error', 'This collection Landmark is read-only for you.');
+                return;
+            }
+            // Show Landmark drag confirm modal
+            showLandmarkDragConfirmModal(landmarkId, newCoords, originalCoords);
+        },
+        onMarkerDragEnd: (markerType, markerId, snapResult, originalCoords) => {
+            // Show marker drag confirm modal (same pattern as stations)
+            showMarkerDragConfirmModal(markerType, markerId, snapResult, originalCoords);
+        },
+        onContextMenu: (event, type, data: { id?: EntityId | undefined; feature?: RenderedMapFeature; coordinates?: Coordinate2D }) => {
+            const items: ContextMenuEntry[] = [];
+
+            // Use feature coordinates when right-clicking on a feature, otherwise use mouse position
+            let latitude, longitude;
+            if (data.feature && data.feature.geometry && (data.feature.geometry as Point).coordinates) {
+                // Feature coordinates are [longitude, latitude]
+                const featureCoords = (data.feature.geometry as Point).coordinates;
+                longitude = parseFloat(featureCoords[0] as unknown as string);
+                latitude = parseFloat(featureCoords[1] as unknown as string);
+            } else {
+                // Fallback to mouse position for map background clicks
+                latitude = event.lngLat.lat;
+                longitude = event.lngLat.lng;
+            }
+            const coords: [number, number] = [longitude, latitude];
+            const latDisplay = Number(latitude).toFixed(7);
+            const lngDisplay = Number(longitude).toFixed(7);
+
+            // Get appropriate label and icon based on station type
+            const typeLabels = {
+                'artifact': { label: 'Artifact Station', icon: getRuntimeContext().icons.artifact },
+                'biology': { label: 'Biology Station', icon: getRuntimeContext().icons.biology },
+                'bone': { label: 'Bones Station', icon: getRuntimeContext().icons.bone },
+                'geology': { label: 'Geology Station', icon: getRuntimeContext().icons.geology },
+                'sensor': { label: 'Sensor Station', icon: getRuntimeContext().icons.sensor },
+            };
+
+            switch (type) {
+                case "station":
+                    // Get subsurface station data for coordinates
+                    const station = State.allStations.get(data.id!);
+                    if (!station) break;
+
+                    const typeInfo = typeLabels[station.type as DisplayStationType];
+                    const canDeleteStation = Config.hasScopedAccess('project', station.project, 'delete');
+
+                    // Delete Station
+                    if (canDeleteStation) {
+                        items.push({
+                            label: `Delete ${typeInfo.label}`,
+                            subtitle: station.name,
+                            icon: `<img src="${typeInfo.icon}" class="w-5 h-5 grayscale opacity-70">`,
+                            onClick: () => StationDetails.confirmDelete(station, 'subsurface')
+                        });
+                    } else {
+                        items.push({
+                            label: `Can not delete ${typeInfo.label} - Need ADMIN access`,
+                            subtitle: station.name,
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+                    break;
+
+                case "surface-station":
+                    // Get surface station data for coordinates
+                    const surface_station = State.allSurfaceStations.get(data.id!);
+                    const canDeleteSurfaceStation = surface_station
+                        ? Config.hasScopedAccess('network', surface_station.network, 'delete')
+                        : false;
+
+                    // Delete Surface Station
+                    if (surface_station && canDeleteSurfaceStation) {
+                        items.push({
+                            label: 'Delete Surface Station',
+                            subtitle: surface_station.name,
+                            icon: '🗑️',
+                            onClick: () => StationDetails.confirmDelete(surface_station, 'surface')
+                        });
+                    } else if (surface_station) {
+                        items.push({
+                            label: 'Can not delete Surface Station - Need DELETE access',
+                            subtitle: surface_station.name,
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+
+                    break;
+
+                case "landmark":
+                    // Get Landmark data
+                    const landmark = State.allLandmarks.get(data.id!);
+                    const landmarkName = landmark?.name || data.feature?.properties?.name || 'Landmark';
+
+                    if (landmark?.can_delete === true) {
+                        items.push({
+                            label: 'Delete Landmark',
+                            subtitle: landmarkName,
+                            icon: '🗑️',
+                            onClick: () => LandmarkUI.showDeleteConfirmModal(landmark)
+                        });
+                    }
+                    break;
+
+                case "cylinder-install":
+                    // No action to perform
+                    break;
+
+                case "exploration-lead":
+                    // Get Exploration Lead data
+                    const explo_lead = State.explorationLeads.get(data.id!);
+                    const lineName = explo_lead?.lineName || 'Survey Line';
+                    const canDeleteLead = explo_lead?.projectId
+                        ? Config.hasScopedAccess('project', explo_lead.projectId, 'delete')
+                        : false;
+
+                    // Delete Exploration Lead
+                    if (canDeleteLead) {
+                        items.push({
+                            label: 'Delete Exploration Lead',
+                            subtitle: `On ${lineName}`,
+                            icon: '🗑️',
+                            onClick: () => ExplorationLeadUI.showDeleteConfirmModal(data.id!, lineName)
+                        });
+                    } else {
+                        items.push({
+                            label: 'Can not delete Exploration Lead - Need DELETE access',
+                            subtitle: `On ${lineName}`,
+                            icon: '🔒',
+                            disabled: true
+                        });
+                    }
+                    break;
+
+                default:
+                    // Right-click on empty map area
+
+                    // Check if we can create a station here (need snap point within radius)
+                    const snapCheck = Geometry.findNearestSnapPointWithinRadius(coords, Geometry.getSnapRadius());
+
+                    // Need to be snapped to a survey line with a valid project ID
+                    const hasValidSnap = snapCheck.snapped && snapCheck.projectId && Layers.isProjectVisible(snapCheck.projectId);
+
+                    if (hasValidSnap) {
+                        // Near a survey line - show all line-related options
+                        const nearestProjectId = snapCheck.projectId;
+                        const lineName = (snapCheck.lineName || 'Survey Line') as string;
+                        const canWriteProject = nearestProjectId && Config.hasScopedAccess('project', nearestProjectId, 'write');
+
+                        if (canWriteProject) {
+                            Object.entries(typeLabels).forEach(([key, val]) => {
+                                items.push({
+                                    label: `Create ${val.label}`,
+                                    subtitle: `At ${latDisplay}, ${lngDisplay}`,
+                                    icon: `<img src="${val.icon}" class="w-5 h-5">`,
+                                    onClick: () => StationUI.showCreateStationModal(coords, nearestProjectId, key)
+                                });
+                            });
+
+                            items.push({
+                                label: 'Mark Exploration Lead',
+                                subtitle: `On ${lineName} (${snapCheck.pointType} point)`,
+                                icon: `<img src="${getRuntimeContext().icons.explorationLead}" class="w-5 h-5">`,
+                                onClick: () => {
+                                    ExplorationLeadUI.showCreateModal(snapCheck.coordinates!, lineName, nearestProjectId);
+                                }
+                            });
+
+                        } else {
+                            Object.entries(typeLabels).forEach(([key, val]) => {
+                                items.push({
+                                    label: `Create ${val.label}`,
+                                    subtitle: "No write access for this project",
+                                    icon: '🔒',
+                                    disabled: true
+                                });
+                            });
+
+                            items.push({
+                                label: 'Mark Exploration Lead',
+                                subtitle: "No write access for this project",
+                                icon: '🔒',
+                                disabled: true
+                            });
+                        }
+
+                        // Install Safety Cylinder - uses new persistent cylinder system
+                        if (canWriteProject) {
+                            items.push({
+                                label: 'Install Safety Cylinder',
+                                subtitle: `At ${latDisplay}, ${lngDisplay}`,
+                                icon: `<img src="${getRuntimeContext().icons.cylinderOrange}" class="w-5 h-5">`,
+                                onClick: () => {
+                                    void CylinderInstalls.showInstallModal(snapCheck.coordinates!, lineName, nearestProjectId);
+                                }
+                            });
+                        } else {
+                            items.push({
+                                label: 'Install Safety Cylinder',
+                                subtitle: "No write access for this project",
+                                icon: '🔒',
+                                disabled: true
+                            });
+                        }
+                    }
+                    else {
+                        // Landmark creation is always available for authenticated users
+                        items.push({
+                            label: 'Create Landmark',
+                            subtitle: 'Landmark',
+                            icon: '📍',
+                            onClick: () => LandmarkUI.openCreateModal(coords)
+                        });
+                    }
+                    break;
+
+            }
+
+            if (items.length > 0) {
+                items.push('-');
+            }
+
+            // Copy Coordinates
+            items.push({
+                label: 'Copy Coordinates',
+                subtitle: `${latDisplay}, ${lngDisplay}`,
+                icon: '📋',
+                onClick: () => Utils.copyToClipboard(`${latDisplay}, ${lngDisplay}`)
+            });
+
+            ContextMenu.show(event.point.x, event.point.y, items);
+
+        }
+    });
+
+    DepthLegend.init(map);
+
+    async function loadGeoJSONMetadata() {
+        if (geojsonMetadataCache) {
+            return geojsonMetadataCache;
+        }
+
+        try {
+            console.log('🔄 Fetching all projects\' GeoJSON metadata via single API call...');
+            const response = await API.getAllProjectsGeoJSON();
+            if (Array.isArray(response)) {
+                geojsonMetadataCache = response;
+                console.log(`✅ Cached GeoJSON metadata for ${geojsonMetadataCache.length} projects`);
+                return geojsonMetadataCache;
+            }
+        } catch (e) {
+            console.error('❌ Failed to load all-projects GeoJSON metadata:', e);
+        }
+
+        geojsonMetadataCache = [];
+        return geojsonMetadataCache;
+    }
+
+    async function clearRenderedMapState() {
+        clearRenderedSurveyState(State);
+        State.allNetworkLayers = new Map();
+        State.allStations = new Map();
+        State.allSurfaceStations = new Map();
+        State.allLandmarks = new Map();
+        State.landmarkCollections = new Map();
+        State.networkBounds = new Map();
+        State.explorationLeads = new Map();
+        State.cylinderInstalls = new Map();
+        State.allGPSTrackLayers = new Map();
+        State.gpsTrackBounds = new Map();
+        State.allGISLayerLayers = new Map();
+        State.gisLayerBounds = new Map();
+        State.gisLayerClickableLayerIds = new Set();
+        State.allGISGeometryLayers = new Map();
+        State.gisGeometryBounds = new Map();
+    }
+
+    async function loadProjectAndStationLayers(geojsonMetadata: ProjectResponse[], showProgress: boolean) {
+        const totalProjects = Config.projects.length;
+        let loadedProjects = 0;
+        const progressEl = document.getElementById('loading-progress');
+
+        const updateProgress = () => {
+            if (showProgress && progressEl) {
+                progressEl.textContent = `Downloading ${loadedProjects}/${totalProjects} Projects`;
+            }
+        };
+
+        // Initial progress display
+        updateProgress();
+
+        const loadPromises = Config.projects.map(async (project) => {
+            const projectPromises = [];
+
+            // Load Stations
+            projectPromises.push(
+                StationManager.loadStationsForProject(project.id)
+                    .then(stations => {
+                        Layers.addSubSurfaceStationLayer(project.id, { type: 'FeatureCollection', features: stations });
+                    })
+                    .catch(e => {
+                        console.error(`Error loading stations for ${project.name}`, e);
+                    })
+            );
+
+            // Find GeoJSON URL for this project from metadata
+            const projectMeta = geojsonMetadata.find(p => String(p.id) === String(project.id));
+            const geojsonUrl = projectMeta?.geojson_file || project.geojson_url;
+
+            // Load GeoJSON if available
+            if (geojsonUrl) {
+                projectPromises.push(
+                    Layers.addProjectGeoJSON(project.id, geojsonUrl)
+                        .then(() => {
+                            loadedProjects++;
+                            updateProgress();
+                        })
+                        .catch(e => {
+                            console.error(`Error loading GeoJSON for ${project.name}`, e);
+                            // Still count as loaded (even on error) to keep progress moving
+                            loadedProjects++;
+                            updateProgress();
+                        })
+                );
+            } else {
+                // No GeoJSON URL - count immediately
+                loadedProjects++;
+                updateProgress();
+            }
+
+            return Promise.all(projectPromises);
+        });
+
+        await Promise.all(loadPromises);
+    }
+
+    async function loadSurfaceStationLayers() {
+        Layers.loadNetworkVisibilityPrefs();
+        const surfaceStationPromises = Config.networks.map(async (network) => {
+            try {
+                const stations = await SurfaceStationManager.loadStationsForNetwork(network.id);
+                Layers.addSurfaceStationLayer(network.id, { type: 'FeatureCollection', features: stations });
+            } catch (e) {
+                console.error(`Error loading surface stations for ${network.name}`, e);
+            }
+        });
+        await Promise.all(surfaceStationPromises);
+    }
+
+    async function loadLandmarkLayers() {
+        try {
+            await LandmarkManager.loadCollections();
+            const landmarksData = await LandmarkManager.loadAllLandmarks();
+            Layers.addLandmarkLayer(landmarksData);
+            void Layers.reorderLayers();
+        } catch (e) {
+            console.error('Error loading Landmarks', e);
+        }
+    }
+
+    async function loadExplorationLeadLayers() {
+        try {
+            await ExplorationLeadManager.loadAllLeads();
+            Layers.refreshExplorationLeadsLayer();
+            void Layers.reorderLayers();
+            console.log('✅ Exploration leads loaded');
+        } catch (e) {
+            console.error('Error loading Exploration Leads', e);
+        }
+    }
+
+    async function loadCylinderInstallLayers() {
+        try {
+            await Layers.loadCylinderInstalls();
+            console.log('✅ Cylinder installs loaded');
+        } catch (e) {
+            console.error('Error loading Cylinder Installs', e);
+        }
+    }
+
+    async function loadVisibleGPSTrackLayers() {
+        const visibleTracks = Config.gpsTracks.filter(track => Layers.isGPSTrackVisible(track.id));
+        await Promise.all(visibleTracks.map(track => (
+            Layers.toggleGPSTrackVisibility(track.id, true)
+        )));
+        GPSTracksPanel.refreshList();
+    }
+
+    async function loadVisibleGISLayers() {
+        const visibleLayers = Config.gisLayers.filter(layer => Layers.isGISLayerVisible(layer.id));
+        await Promise.all(visibleLayers.map(layer => (
+            Layers.toggleGISLayerVisibility(layer.id, true)
+        )));
+        GISLayersPanel.refreshList();
+    }
+
+    function fitInitialCamera() {
+        const urlParams = getUrlParams();
+
+        if (urlParams.lat !== null && urlParams.long !== null) {
+            console.log(`🎯 Flying to URL coordinates: ${urlParams.lat}, ${urlParams.long}`);
+            map.flyTo({
+                center: [urlParams.long, urlParams.lat],
+                zoom: DEFAULTS.MAP.FLY_TO_ZOOM,
+                essential: true
+            });
+        } else if (State.projectBounds.size > 0) {
+            const allBounds = new mapboxgl.LngLatBounds();
+            State.projectBounds.forEach(bounds => {
+                allBounds.extend(bounds);
+            });
+
+            if (!allBounds.isEmpty()) {
+                map.fitBounds(allBounds, { padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING, maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM });
+            }
+        }
+    }
+
+    function hideLoadingOverlay() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => overlay.remove(), DEFAULTS.UI.OVERLAY_FADE_DELAY_MS);
+        }
+    }
+
+    async function loadMapData(options: PrivateViewerLoadOptions = {}) {
+        const {
+            initializePanels = false,
+            initializeTags = false,
+            showProgress = false,
+            fitCamera = false,
+            hideOverlay = false,
+        } = options;
+
+        // Startup config (projects/networks/GPS tracks) was kicked off in
+        // parallel during init; make sure it has resolved before any consumer
+        // below reads Config.projects/networks/gpsTracks.
+        await configReady;
+
+        // Marker images and the GeoJSON metadata are independent of each other,
+        // so download them concurrently. `metadataReady` is the prefetch started
+        // during init; awaiting it here just yields the already-inflight result.
+        const [, geojsonMetadata] = await Promise.all([
+            Layers.loadMarkerImages(),
+            metadataReady,
+        ]);
+        Layers.loadProjectVisibilityPrefs();
+        Config.filterProjectsByGeoJSON(geojsonMetadata);
+
+        if (initializePanels) {
+            ProjectPanel.init();
+            GPSTracksPanel.init();
+            GISLayersPanel.init();
+            GeometryEditor.init({
+                map,
+                onActivityChange({ opening, active }) {
+                    const available = !opening && !active;
+                    if (!available) {
+                        Interactions.cancelPendingDrag!();
+                        measurementTool.deactivate();
+                    }
+                    measurementTool.setAvailable(available);
+                },
+                palette: getRuntimeContext().geometryColors || [],
+                async onLoaded(record) {
+                    await Layers.refreshGISGeometry(record);
+                    GISGeometriesPanel.refreshList();
+                },
+                onPreview(id, active) {
+                    State.gisGeometryEditingId = active && id ? String(id) : null;
+                    if (id) Layers.showGISGeometryLayers(id, Layers.isGISGeometryVisible(id));
+                    GISGeometriesPanel.refreshList();
+                    if (active && id) {
+                        GISGeometriesPanel.setExpanded(false);
+                        fitGISGeometry(map, State.gisGeometryBounds.get(String(id)));
+                    }
+                },
+                async onSaved(record) {
+                    await Layers.acceptGISGeometry(record);
+                    GISGeometriesPanel.refreshList();
+                },
+            });
+            GISGeometriesPanel.init(GeometryEditor);
+            document.getElementById('create-geometry-btn')?.addEventListener('click', (async () => {
+                if (await GeometryEditor.create()) GISGeometriesPanel.setExpanded(false);
+            }) as unknown as EventListener);
+        } else {
+            ProjectPanel.refreshVisibilityState();
+        }
+
+        if (initializeTags) {
+            void StationTags.init();
+        }
+
+        // These layer-loading phases are independent of one another and each
+        // adds its own distinct layers, so run them concurrently instead of
+        // serially. A single authoritative reorderLayers() afterwards preserves
+        // the final z-order (the internal reorder calls remain harmless).
+        await Promise.all([
+            loadProjectAndStationLayers(geojsonMetadata, showProgress),
+            loadSurfaceStationLayers(),
+            loadLandmarkLayers(),
+            loadExplorationLeadLayers(),
+            loadCylinderInstallLayers(),
+            loadVisibleGPSTrackLayers(),
+            loadVisibleGISLayers(),
+            ...Config.gisGeometries.filter(record => Layers.isGISGeometryVisible(record.id))
+                .map(record => Layers.toggleGISGeometryVisibility(record.id, true)),
+        ]);
+        GeometryEditor.restoreLayers();
+        void Layers.reorderLayers();
+
+        if (fitCamera) fitInitialCamera();
+        if (hideOverlay) hideLoadingOverlay();
+
+        console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');
+    }
+
+    // 5. Load Data
+    registerViewerDataLifecycle(map, {
+        load: async () => {
+            await loadMapData({
+                initializePanels: true,
+                initializeTags: true,
+                showProgress: true,
+                fitCamera: true,
+                hideOverlay: true,
+            });
+            const params = new URLSearchParams(window.location.search);
+            const geometryId = params.get('geometry');
+            if (geometryId === 'new') {
+                void GeometryEditor.create();
+            } else if (geometryId) {
+                const record = Config.getGISGeometryById(geometryId);
+                if (!record) {
+                    Utils.showNotification('error', 'This geometry is unavailable or you no longer have access.');
+                } else if (params.get('edit') === '1') {
+                    await GeometryEditor.edit(record);
+                } else {
+                    await GISGeometriesPanel.activateAndZoom(geometryId);
+                }
+            }
+        },
+        sourceChange: async (event: Event) => {
+            if (!MapSources.requiresDataReload(event as Event & MapSourceChangeEvent)) return;
+            try {
+                await clearRenderedMapState();
+                await loadMapData();
+                Utils.showNotification('success', 'Map source updated');
+            } catch (e) {
+                console.error('Error reloading map data after source change', e);
+                Utils.showNotification('error', 'Failed to reload map data');
+            }
+        },
+    });
+
+    MapCore.setupMapSourceControl(map, token);
+    map.addControl(measurementTool, 'top-right');
+    MapSettings.init({
+        managers: {
+            surveyStations: () => StationUI.openManagerModal(),
+            surfaceStations: () => SurfaceStationUI.openManagerModal(),
+            landmarks: () => LandmarkUI.openManagerModal(),
+        },
+    });
+
+    // Listen for Refresh Events
+    window.addEventListener('speleo:refresh-stations', (async (e: Event) => {
+        const { projectId } = (e as CustomEvent<{ projectId?: EntityId }>).detail;
+        if (projectId) {
+            const stations = await StationManager.loadStationsForProject(projectId);
+            Layers.addSubSurfaceStationLayer(projectId, { type: 'FeatureCollection', features: stations });
+            // Ensure stations remain on top of survey lines
+            void Layers.reorderLayers();
+        }
+    }) as unknown as EventListener);
+
+    // Listen for Surface Station Refresh Events
+    window.addEventListener('speleo:refresh-surface-stations', (async (e: Event) => {
+        const { networkId } = (e as CustomEvent<{ networkId?: EntityId }>).detail;
+        if (networkId) {
+            const stations = await SurfaceStationManager.loadStationsForNetwork(networkId);
+            Layers.addSurfaceStationLayer(networkId, { type: 'FeatureCollection', features: stations });
+            // Ensure stations remain on top of survey lines
+            void Layers.reorderLayers();
+        }
+    }) as unknown as EventListener);
+
+    // Listen for Landmark Refresh Events (e.g., after GPX import)
+    window.addEventListener('speleo:refresh-landmarks', (async () => {
+        console.log('📍 Refreshing landmarks...');
+        try {
+            await LandmarkManager.loadCollections();
+            const landmarksData = await LandmarkManager.loadAllLandmarks();
+            Layers.addLandmarkLayer(landmarksData);
+            void Layers.reorderLayers();
+            Utils.showNotification('success', 'Landmarks refreshed');
+        } catch (e) {
+            console.error('Error refreshing Landmarks', e);
+        }
+    }) as unknown as EventListener);
+
+    // Listen for GPS Tracks Refresh Events (e.g., after GPX import)
+    window.addEventListener('speleo:refresh-gps-tracks', (async (e: Event) => {
+        const { deactivateAll } = (e as CustomEvent<{ deactivateAll?: boolean }>).detail || {};
+        console.log('🛤️ Refreshing GPS tracks...');
+        try {
+            // Clear the existing GPS track cache
+            State.gpsTrackCache.clear();
+
+            // Deactivate all visible GPS tracks
+            if (deactivateAll) {
+                State.gpsTrackLayerStates.forEach((isVisible, trackId) => {
+                    if (isVisible) {
+                        Layers.showGPSTrackLayers(trackId, false);
+                        State.gpsTrackLayerStates.set(trackId, false);
+                    }
+                });
+            }
+
+            // Reset Config's internal GPS tracks cache to force reload
+            Config._gpsTracks = null;
+
+            // Reload GPS tracks from API
+            await Config.loadGPSTracks();
+
+            // Refresh the GPS tracks panel - check if panel exists
+            const panelExists = document.getElementById('gps-tracks-panel');
+            if (panelExists) {
+                GPSTracksPanel.refreshList();
+            } else if (Config.gpsTracks.length > 0) {
+                // Panel doesn't exist but we now have tracks - initialize it
+                GPSTracksPanel.init();
+            }
+            GISLayersPanel.setupStackListener();
+            GISGeometriesPanel.setupStackListener();
+
+            Utils.showNotification('success', 'GPS tracks refreshed');
+        } catch (e) {
+            console.error('Error refreshing GPS tracks', e);
+        }
+    }) as unknown as EventListener);
+
+    initMapActionDispatcher({
+        cylinder: CylinderInstalls,
+        sensors: StationSensors,
+        tags: StationTags,
+        navigation: {
+            reload: () => window.location.reload(),
+            returnToStationManager,
+        },
+    });
+
+    // Listen for cylinder refresh events from the cylinder module
+    document.addEventListener('speleo:refresh-cylinder-installs', () => {
+        void Layers.refreshCylinderInstallsLayer();
+    });
+
+
+    // Landmark drag confirmation modal
+    function showLandmarkDragConfirmModal(landmarkId: EntityId, newCoords: Coordinate2D, originalCoords: readonly number[]) {
+        const landmark = State.allLandmarks.get(landmarkId);
+        const landmarkName = landmark?.name || 'Landmark';
+
+        const modalHtml = `
+            <div id="landmark-drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                                 style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                                📍
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move Landmark</h3>
+                        <p class="text-slate-300 text-center mb-6">
+                            Move "${Utils.escapeHtml(landmarkName)}" to this location?
+                        </p>
+
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Landmark Name:</span>
+                                <span class="text-white">${Utils.escapeHtml(landmarkName)}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">New Location:</span>
+                                <span class="text-white font-mono">${Number(newCoords[1]).toFixed(7)}, ${Number(newCoords[0]).toFixed(7)}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button id="landmark-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button id="landmark-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors">
+                                Move Landmark
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing modal
+        const existingModal = document.getElementById('landmark-drag-confirm-modal');
+        if (existingModal) existingModal.remove();
+
+        // Add modal to DOM
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup handlers
+        const removeLandmarkModal = () => {
+            document.getElementById('landmark-drag-confirm-modal')?.remove();
+        };
+
+        document.getElementById('landmark-drag-cancel-btn')!.onclick = () => {
+            Layers.revertLandmarkPosition(landmarkId, originalCoords as [number, number]);
+            removeLandmarkModal();
+        };
+
+        document.getElementById('landmark-drag-confirm-btn')!.onclick = async () => {
+            try {
+                await LandmarkManager.moveLandmark(landmarkId, newCoords);
+                Utils.showNotification('success', 'Landmark moved successfully!');
+            } catch (error) {
+                console.error('Error moving Landmark:', error);
+                Utils.showNotification('error', 'Failed to move Landmark');
+                Layers.revertLandmarkPosition(landmarkId, originalCoords as [number, number]);
+            }
+
+            removeLandmarkModal();
+        };
+
+        document.getElementById('landmark-drag-confirm-modal')!.onclick = (e) => {
+            if ((e.target as HTMLElement).id === 'landmark-drag-confirm-modal') {
+                Layers.revertLandmarkPosition(landmarkId, originalCoords as [number, number]);
+                (e.target as HTMLElement).remove();
+            }
+        };
+    }
+
+    // Station drag confirmation modal
+    function showStationDragConfirmModal(stationId: EntityId, projectId: EntityId | null, snapResult: SnapResult, originalCoords: readonly number[]) {
+        const station = State.allStations.get(stationId);
+        const stationName = station?.name || 'Station';
+        const finalCoords = snapResult.coordinates;
+
+        // Create modal HTML
+        const escapedLineName = Utils.escapeHtml(snapResult.lineName);
+        const actionText = snapResult.snapped
+            ? `snap to survey line &quot;${escapedLineName}&quot;`
+            : 'place at the exact GPS coordinates';
+
+        const modalHtml = `
+            <div id="drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                                 style="background: linear-gradient(135deg, ${snapResult.snapped ? '#10b981, #059669' : '#f59e0b, #d97706'});">
+                                ${snapResult.snapped ? '🧲' : '📍'}
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move Station</h3>
+                        <p class="text-slate-300 text-center mb-6">
+                            Move "${Utils.escapeHtml(stationName)}" to this location and ${actionText}?
+                        </p>
+
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Station Name:</span>
+                                <span class="text-white">${Utils.escapeHtml(stationName)}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">New Location:</span>
+                                <span class="text-white font-mono">${Number(finalCoords[1]).toFixed(7)}, ${Number(finalCoords[0]).toFixed(7)}</span>
+                            </div>
+                            ${snapResult.snapped ? `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Magnetic Snap:</span>
+                                    <span class="text-emerald-400">🧲 ${escapedLineName}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Snap Point:</span>
+                                    <span class="text-white capitalize">${Utils.escapeHtml(snapResult.pointType || 'vertex')} point</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Distance:</span>
+                                    <span class="text-white">${Number(snapResult.distance).toFixed(1)}m</span>
+                                </div>
+                            ` : `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Warning:</span>
+                                    <span class="text-amber-400">⚠️ Not snapped to survey line</span>
+                                </div>
+                            `}
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button id="drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button id="drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors">
+                                Move Station
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing modal
+        const existingModal = document.getElementById('drag-confirm-modal');
+        if (existingModal) existingModal.remove();
+
+        // Add modal to DOM
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup handlers
+        const removeDragModal = () => {
+            document.getElementById('drag-confirm-modal')?.remove();
+        };
+
+        document.getElementById('drag-cancel-btn')!.onclick = () => {
+            Layers.updateStationPosition(projectId!, stationId, originalCoords as [number, number]);
+            removeDragModal();
+        };
+
+        document.getElementById('drag-confirm-btn')!.onclick = async () => {
+            try {
+                await StationManager.moveStation(stationId, finalCoords);
+
+                const snapMessage = snapResult.snapped
+                    ? ` and snapped to ${(snapResult.lineName || 'survey line') as string}`
+                    : '';
+                Utils.showNotification('success', `Station moved successfully${snapMessage}!`);
+
+                void Layers.refreshStationsAfterChange(projectId!);
+
+            } catch (error) {
+                console.error('Error moving station:', error);
+                Utils.showNotification('error', 'Failed to move station');
+                Layers.updateStationPosition(projectId!, stationId, originalCoords as [number, number]);
+            }
+
+            removeDragModal();
+        };
+
+        document.getElementById('drag-confirm-modal')!.onclick = (e) => {
+            if ((e.target as HTMLElement).id === 'drag-confirm-modal') {
+                Layers.updateStationPosition(projectId!, stationId, originalCoords as [number, number]);
+                (e.target as HTMLElement).remove();
+            }
+        };
+    }
+
+    // Marker drag confirmation modal (shared for cylinder-install and exploration-lead)
+    function showMarkerDragConfirmModal(markerType: 'cylinder-install' | 'exploration-lead', markerId: EntityId, snapResult: SnapResult, originalCoords: readonly number[]) {
+        // Get type label and icon based on marker type
+        let typeLabel, typeIcon;
+        if (markerType === 'cylinder-install') {
+            typeLabel = 'Cylinder';
+            typeIcon = `<img src="${getRuntimeContext().icons.cylinderOrange}" class="w-5 h-5 inline">`;
+        } else {
+            typeLabel = 'Exploration Lead';
+            typeIcon = `<img src="${getRuntimeContext().icons.explorationLead}" class="w-5 h-5 inline">`;
+        }
+        const finalCoords = snapResult.coordinates;
+
+        const modalHtml = `
+            <div id="marker-drag-confirm-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                                 style="background: linear-gradient(135deg, ${snapResult.snapped ? '#10b981, #059669' : '#f59e0b, #d97706'});">
+                                ${snapResult.snapped ? '🧲' : '📍'}
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Move ${typeLabel}</h3>
+                        <p class="text-slate-300 text-center mb-6">
+                            Move this ${typeLabel.toLowerCase()} to the new location?
+                        </p>
+
+                        <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Type:</span>
+                                <span class="text-white">${typeIcon} ${typeLabel}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">New Location:</span>
+                                <span class="text-white font-mono">${Number(finalCoords[1]).toFixed(7)}, ${Number(finalCoords[0]).toFixed(7)}</span>
+                            </div>
+                            ${snapResult.snapped ? `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Snapped to:</span>
+                                    <span class="text-emerald-400">🧲 ${Utils.escapeHtml(snapResult.lineName)} (${Utils.escapeHtml(snapResult.pointType)})</span>
+                                </div>
+                            ` : `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-400">Warning:</span>
+                                    <span class="text-amber-400">⚠️ Not snapped - will revert</span>
+                                </div>
+                            `}
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button id="marker-drag-cancel-btn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                            <button id="marker-drag-confirm-btn" class="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-lg transition-colors" ${!snapResult.snapped ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                Move ${typeLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove any existing modal
+        const existingModal = document.getElementById('marker-drag-confirm-modal');
+        if (existingModal) existingModal.remove();
+
+        // Add modal to DOM
+        getMapOverlayHost().insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup handlers
+        const revertPosition = () => {
+            if (markerType === 'cylinder-install') {
+                Layers.updateCylinderInstallPosition(markerId, originalCoords as [number, number]);
+            } else {
+                Layers.updateExplorationLeadPosition(markerId, originalCoords as [number, number]);
+            }
+        };
+
+        const removeModal = () => {
+            document.getElementById('marker-drag-confirm-modal')?.remove();
+        };
+
+        document.getElementById('marker-drag-cancel-btn')!.onclick = () => {
+            revertPosition();
+            removeModal();
+        };
+
+        document.getElementById('marker-drag-confirm-btn')!.onclick = async () => {
+            if (snapResult.snapped) {
+                try {
+                    if (markerType === 'cylinder-install') {
+                        await API.updateCylinderInstall(markerId, {
+                            latitude: finalCoords[1],
+                            longitude: finalCoords[0]
+                        });
+                        Layers.updateCylinderInstallPosition(markerId, finalCoords);
+                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName as string}`);
+                    } else {
+                        await ExplorationLeadManager.moveLead(markerId, finalCoords);
+                        Layers.updateExplorationLeadPosition(markerId, finalCoords);
+                        Utils.showNotification('success', `${typeLabel} moved to ${snapResult.lineName as string}`);
+                    }
+                } catch (error) {
+                    console.error(`Error moving ${typeLabel}:`, error);
+                    Utils.showNotification('error', `Failed to move ${typeLabel}`);
+                    revertPosition();
+                }
+            } else {
+                revertPosition();
+            }
+            removeModal();
+        };
+
+        document.getElementById('marker-drag-confirm-modal')!.onclick = (e) => {
+            if ((e.target as HTMLElement).id === 'marker-drag-confirm-modal') {
+                revertPosition();
+                (e.target as HTMLElement).remove();
+            }
+        };
+    }
+
+}

@@ -3,11 +3,10 @@
 
 {% if not request.user.is_authenticated %}
   <!-- Welcome Modal for Non-Authenticated Users -->
-  <div x-data="{ showModal: true }"
-       x-show="showModal"
-       x-cloak
+  <div x-cloak
        class="fixed inset-0 z-10 flex items-center justify-center p-4 welcome-modal-backdrop"
-       @keydown.escape.window="showModal = false">
+       data-speleodb-bind="public-snippets-welcome_modal-1"
+       data-speleodb-scope>
     <!-- Modal Container -->
     <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto welcome-modal">
       <!-- Background glow effects -->
@@ -19,9 +18,9 @@
       <div class="relative bg-slate-900 rounded-3xl border border-slate-200 modal-gradient-border shadow-2xl">
         <!-- Close Button -->
         <button type="button"
-                @click="showModal = false"
                 class="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 text-slate-400 hover:text-white transition-colors duration-200 p-2 rounded-full hover:bg-srgb-slate-800-50"
-                aria-label="Close modal">
+                aria-label="Close modal"
+                data-speleodb-bind="public-snippets-welcome_modal-2">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -152,8 +151,8 @@
               </span>
             </a>
             <button type="button"
-                    @click="showModal = false"
-                    class="btn bg-slate-800 hover:bg-slate-700 text-slate-200 w-full px-8 py-3 border border-slate-700 transition duration-150 ease-in-out">Continue Exploring</button>
+                    class="btn bg-slate-800 hover:bg-slate-700 text-slate-200 w-full px-8 py-3 border border-slate-700 transition duration-150 ease-in-out"
+                    data-speleodb-bind="public-snippets-welcome_modal-3">Continue Exploring</button>
           </div>
           <!-- Additional Info -->
           <div class="mt-6 text-center">

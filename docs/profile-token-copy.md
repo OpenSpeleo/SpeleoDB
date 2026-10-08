@@ -30,7 +30,7 @@ prevents unlayered route CSS from overriding the central component. Context-menu
 coordinate items and clickable coordinate table cells retain their respective
 menu/table presentation. Styling adds no API calls or runtime scans.
 
-`frontend_common/controllers/copy-token.test.js` exercises the actual page's
+`frontend_common/controllers/copy-token.test.ts` exercises the actual page's
 controller configuration, input copying, fallback cleanup, failure/retry, empty
 values, and existing text-content sources. Run the JavaScript suite, lint, and
 clean production asset build in the running application container.

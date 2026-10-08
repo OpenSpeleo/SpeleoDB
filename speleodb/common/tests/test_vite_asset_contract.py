@@ -88,8 +88,11 @@ def test_every_controller_and_extracted_style_is_registered() -> None:
 def test_root_commands_define_one_vite_pipeline() -> None:
     package: Any = json.loads((REPOSITORY_ROOT / "package.json").read_text())
     scripts: dict[str, str] = package["scripts"]
-    assert scripts["build:assets"] == "vite build --mode production"
-    assert scripts["dev"] == "vite build --watch --mode development"
+    assert scripts["build:assets"] == (
+        "bun run typecheck && bun run audit:javascript && bun run audit:templates"
+        " && vite build --mode production"
+    )
+    assert scripts["dev"] == "bun scripts/dev.ts"
     assert scripts["start"] == "bun run dev"
     assert not any("tailwind" in name or "esbuild" in name for name in scripts)
     templates = "\n".join(path.read_text() for path in template_files())

@@ -17,18 +17,18 @@ This feature spans shared map viewer modules and both entrypoints.
 
 ### Shared modules
 
-- `frontend_private/static/private/js/map_viewer/map/depth.js`
-- `frontend_private/static/private/js/map_viewer/map/layers.js`
-- `frontend_private/static/private/js/map_viewer/map/colors.js`
-- `frontend_private/static/private/js/map_viewer/state.js`
-- `frontend_private/static/private/js/map_viewer/components/depth_legend.js`
+- `frontend_private/static/private/ts/map_viewer/map/depth.ts`
+- `frontend_private/static/private/ts/map_viewer/map/layers.ts`
+- `frontend_private/static/private/ts/map_viewer/map/colors.ts`
+- `frontend_private/static/private/ts/map_viewer/state.ts`
+- `frontend_private/static/private/ts/map_viewer/components/depth_legend.ts`
 
 ### Entrypoints
 
 - Private viewer:
-  - `frontend_private/static/private/js/map_viewer/main.js`
+  - `frontend_private/static/private/ts/map_viewer/main.ts`
 - Public viewer:
-  - `frontend_public/static/js/gis_view_main.js`
+  - `frontend_public/static/ts/gis_view_main.ts`
 
 Any depth behavior changes should be validated in both flows.
 
@@ -140,7 +140,7 @@ maximum.
 
 Ownership is deliberately small:
 
-- `map/depth.js`: pure validation, conversion, and domain-limit helpers.
+- `map/depth.ts`: pure validation, conversion, and domain-limit helpers.
 - `Layers.setDepthLimit(limitFeet, unit)`: validated preference mutation, cached
   domain recomputation, paint updates, and existing preference/domain events.
 - `DepthLegend`: unit labels and capped hover readings, including a
@@ -192,8 +192,8 @@ Watch for these common mistakes:
 
 After depth-domain changes, run inside the existing application container:
 
-- `docker exec -w /app speleodb_local_django bun run lint:js`
-- `docker exec -w /app speleodb_local_django bun run test:js`
+- `docker exec -w /app speleodb_local_django bun run lint:frontend`
+- `docker exec -w /app speleodb_local_django bun run test:frontend`
 - `docker exec -w /app speleodb_local_django bun run build`
 
 And manually verify:
@@ -210,29 +210,29 @@ And manually verify:
 
 ### Unit and integration-style frontend tests
 
-- `frontend_private/static/private/js/map_viewer/map/depth.test.js`
+- `frontend_private/static/private/ts/map_viewer/map/depth.test.ts`
   - domain merging, limit validation, conversion, fixed maxima and null domains
-- `frontend_private/static/private/js/map_viewer/map/layers.depth_domain.test.js`
+- `frontend_private/static/private/ts/map_viewer/map/layers.depth_domain.test.ts`
   - reactive domain recomputation from project visibility toggles
-- `frontend_private/static/private/js/map_viewer/map/layers.depth_limit.test.js`
+- `frontend_private/static/private/ts/map_viewer/map/layers.depth_limit.test.ts`
   - fixed limits, country gates, late loads, clearing, reset and repaint
     boundaries
-- `frontend_private/static/private/js/map_viewer/map/layers.depth_limit_performance.test.js`
+- `frontend_private/static/private/ts/map_viewer/map/layers.depth_limit_performance.test.ts`
   - ingest 20,000 lines once, then enforce no feature reads, downloads or source
     rebuilds across 100 limit/unit/visibility cycles; no timing thresholds
-- `frontend_private/static/private/js/map_viewer/components/depth_legend.test.js`
+- `frontend_private/static/private/ts/map_viewer/components/depth_legend.test.ts`
   - gauge labels, fractional limits, units, saturation and legacy hover behavior
-- `frontend_private/static/private/js/map_viewer/components/settings.test.js`
+- `frontend_private/static/private/ts/map_viewer/components/settings.test.ts`
   - disclosure, commit/validation, no typing repaint, conversion without drift
-- `frontend_private/static/private/js/map_viewer/display_preferences.test.js`
+- `frontend_private/static/private/ts/map_viewer/display_preferences.test.ts`
   - optional field migration, validation, reset, storage failure, public
     isolation
-- `frontend_public/static/js/gis_view_main.test.js`
+- `frontend_public/static/ts/gis_view_main.test.ts`
   - public entrypoint initialization and depth-legend wiring
 
 ## Implementation Notes for Agents
 
-- Keep domain APIs pure where possible (`map/depth.js`).
+- Keep domain APIs pure where possible (`map/depth.ts`).
 - Keep map mutation concentrated in layer/legend modules.
 - Prefer extending existing helpers over introducing parallel utilities.
 - If event payload shape changes, update all listeners and tests together.
@@ -249,3 +249,11 @@ country gate before invoking the layer operation that publishes a depth-domain
 change. Persist the individual choice separately from effective map visibility.
 Regression coverage must use the real panel entry point: directly assigning
 `effectiveProjectVisibility` cannot expose a gate/event ordering defect.
+
+The TypeScript boundary keeps finite survey field aliases in
+`ts-types/domain/map-depth.ts` and the shared `{min, max}` domain in
+`ts-types/domain/map-display.ts`. Section keys preserve their original identity;
+parsing retains the existing numeric coercion and unit-labelled fallback. A
+supplied section-average map is reused without rescanning point features. The
+colocated depth suite checks these contracts as well as unit conversion and
+domain merging; typing does not add validation or alter cache ownership.

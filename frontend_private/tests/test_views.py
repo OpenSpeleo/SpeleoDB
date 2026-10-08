@@ -275,8 +275,9 @@ class ProjectViewsTest(BaseProjectTestCaseMixin, BaseTestCase):
             is None
         )
 
-        generated_css_position = content.index("speleodb/vite/assets/style-app")
-        custom_css_position = content.index("speleodb/vite/assets/style-private-shell")
+        # Entry filenames are stable across production and development generations.
+        generated_css_position = content.index("/style-app")
+        custom_css_position = content.index("/style-private-shell")
         inline_git_css_position = content.index(
             "style-template-frontend-private-templates-pages-project-git-view"
         )

@@ -3,17 +3,23 @@
 
 from __future__ import annotations
 
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 import pytest
+from django.conf import settings
 from django.core.cache import cache
+from django.core.management import call_command
+from django.test import override_settings
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from collections.abc import Mapping
 
     from _pytest.config import Config
     from _pytest.config.argparsing import Parser
     from _pytest.nodes import Item
+    from pytest_django.live_server_helper import LiveServer
 
     from speleodb.users.models import User
 
@@ -22,6 +28,41 @@ pytest_plugins: tuple[str, ...] = (
     "speleodb.testing.pytest_gitlab",
     "speleodb.testing.gitlab_fixtures",
 )
+
+
+def _local_static_storage_backends() -> dict[str, Mapping[str, object]]:
+    """Change only static storage, preserving media backend options."""
+    return {
+        **settings.STORAGES,
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+
+@pytest.fixture(scope="session")
+def collected_static_root() -> Generator[str]:
+    """Collect the build once without changing session-wide Django settings."""
+    static_root: str
+    with TemporaryDirectory(prefix="speleodb-live-static-") as static_root:
+        with override_settings(
+            STATIC_ROOT=static_root, STORAGES=_local_static_storage_backends()
+        ):
+            call_command("collectstatic", interactive=False, verbosity=0)
+        yield static_root
+
+
+@pytest.fixture
+def live_server(
+    live_server: LiveServer, collected_static_root: str
+) -> Generator[LiveServer]:
+    """Let pytest-django serve a locally collected production asset tree."""
+    # With an explicit staticfiles AppConfig, pytest-django serves STATIC_ROOT.
+    # Use standard collection and preserve its server lifecycle and DB helpers.
+    with override_settings(
+        STATIC_ROOT=collected_static_root, STORAGES=_local_static_storage_backends()
+    ):
+        yield live_server
 
 
 @pytest.fixture

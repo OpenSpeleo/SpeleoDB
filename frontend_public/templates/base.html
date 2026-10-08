@@ -133,14 +133,14 @@
               {% endif %}
             </ul>
             <!-- Mobile menu -->
-            <div class="md:hidden flex items-center ml-4" x-data="{ expanded: false }">
+            <div class="md:hidden flex items-center ml-4"
+                 data-speleodb-bind="public-templates-base-1"
+                 data-speleodb-scope>
               <!-- Hamburger button -->
               <button type="button"
                       class="hamburger"
-                      :class="{ 'active': expanded }"
-                      @click.stop="expanded = !expanded"
                       aria-controls="mobile-nav"
-                      :aria-expanded="expanded">
+                      data-speleodb-bind="public-templates-base-2">
                 <span class="sr-only">Menu</span>
                 <svg class="w-5 h-5 fill-current text-slate-300 hover:text-white transition duration-150 ease-in-out"
                      viewBox="0 0 20 20"
@@ -154,10 +154,8 @@
               <nav id="mobile-nav"
                    class="absolute top-full z-20 left-0 w-full px-4 sm:px-6 overflow-hidden transition-all duration-300 ease-in-out"
                    x-ref="mobileNav"
-                   :style="expanded ? 'max-height: ' + $refs.mobileNav.scrollHeight + 'px; opacity: 1' : 'max-height: 0; opacity: .8'"
-                   @click.outside="expanded = false"
-                   @keydown.escape.window="expanded = false"
-                   x-cloak>
+                   x-cloak
+                   data-speleodb-bind="public-templates-base-3">
                 <ul class="border border-transparent [background:linear-gradient(var(--color-slate-900),_var(--color-slate-900))_padding-box,_conic-gradient(var(--color-slate-400),_var(--color-slate-700)_25%,_var(--color-slate-700)_75%,_var(--color-slate-400)_100%)_border-box] rounded-lg px-4 py-1.5">
                   <li>
                     <a class="flex font-medium text-sm text-slate-300 hover:text-white py-1.5"
@@ -230,9 +228,9 @@
       {% include "footer.html" %}
     </div>
     {% if debug %}
-      <script src="{% static 'js/vendors/jquery-3.7.1.js' %}"></script>
-      <script src="{% static 'js/vendors/alpinejs.min.js' %}" defer></script>
-      <script src="{% static 'js/vendors/aos.js' %}"></script>
+      <script src="{% static 'ts/vendors/jquery-3.7.1.js' %}"></script>
+      <script src="{% static 'ts/vendors/alpinejs.min.js' %}" defer></script>
+      <script src="{% static 'ts/vendors/aos.js' %}"></script>
     {% else %}
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer">
       </script>

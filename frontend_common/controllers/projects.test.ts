@@ -1,0 +1,80 @@
+import type { ProjectsContext } from '../../ts-types/controllers/projects.ts';
+import type { Mock, MockInstance } from 'vitest';
+import type { ControllerAjaxCall } from '../../ts-types/testing/vitest/controller-ajax.ts';
+let timer: MockInstance<typeof window.setTimeout>;
+let ajax: Mock<(options: ControllerAjaxCall) => {responseJSON?: unknown}>;
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { init as initialize } from './projects.ts';
+import { showAjaxErrorModal } from '../../frontend_private/static/private/ts/forms/ajax_errors.ts';
+vi.mock('../../frontend_private/static/private/ts/forms/ajax_errors.ts', () => ({ showAjaxErrorModal: vi.fn() }));
+function init(context?: unknown) { return initialize(context as ProjectsContext); }
+const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
+beforeAll(() => { (0, eval)(jquery); });
+const context = { releaseAllUrl: '/release-all/', projectsUrl: '#projects' };
+beforeEach(() => {
+    vi.clearAllMocks();
+    ajax = vi.fn(() => ({}));
+    vi.spyOn($, 'ajax').mockImplementation(ajax as unknown as JQueryStatic['ajax']);
+    timer = vi.spyOn(window, 'setTimeout').mockReturnValue(1 as unknown as ReturnType<typeof window.setTimeout>);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.stubGlobal('Urls', { 'api:v2:projects': () => '/projects/', 'api:v2:project-release': (id: string | number) => `/release/${id}/` });
+    localStorage.clear();
+    document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn_release_all_locks"></button><button id="btn_confirmed_mass_unlock"></button><button class="btn-unlock" data-project_id="7"></button><button id="btn_confirmed_unlock"></button><div id="modal_confirmation_mass_unlock" style="display:none"></div><div id="modal_confirmation_unlock" style="display:none"></div><div id="modal_success"><span id="modal_success_txt"></span></div><span class="async_revision" data-id="revision-7" data-project_id="7"></span><span id="revision-7"></span><span class="async_revision" data-id="revision-8" data-project_id="8"></span><span id="revision-8"></span><div class="country-group" data-country-code="MX"><button class="country-group-header"></button></div>';
+});
+afterEach(() => { $('body').off('click'); vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = ''; });
+it('fetches revision counts immediately and renders missing records as a dash', () => {
+    expect(init(context)).toBeUndefined();
+    expect(ajax.mock.calls[0]![0]).toMatchObject({ url: '/projects/', type: 'GET', dataType: 'json' });
+    ajax.mock.calls[0]![0].success([{ id: 7, commit_count: 0 }]);
+    expect($('#revision-7').text()).toBe('0');
+    expect($('#revision-8').text()).toBe('-');
+    ajax.mock.calls[0]![0].success({ error: 'failed' });
+    expect($('#revision-7').text()).toBe('-');
+});
+it('opens mass confirmation and sends DELETE with CSRF, shared errors and delayed redirect', () => {
+    init(context);
+    $('#btn_release_all_locks').trigger('click');
+    expect($('#modal_confirmation_mass_unlock')[0]!.style.display).toBe('flex');
+    $('#btn_confirmed_mass_unlock').trigger('click');
+    const request = ajax.mock.calls[1]![0];
+    expect(request).toMatchObject({ url: '/release-all/', method: 'DELETE', cache: false, contentType: 'application/json; charset=utf-8' });
+    const xhr = { setRequestHeader: vi.fn() };
+    expect(request.beforeSend!(xhr)).toBe(true);
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith('X-CSRFToken', 'csrf');
+    request.error(xhr);
+    expect(showAjaxErrorModal).toHaveBeenCalledWith(xhr);
+    request.success({});
+    expect($('#modal_success_txt').text()).toBe('All the projects have been unlocked.');
+    expect(timer).toHaveBeenCalledWith(expect.any(Function), 2000);
+});
+it('uses the clicked project ID in the subsequent single-project POST', () => {
+    init(context);
+    $('.btn-unlock').trigger('click');
+    expect($('#btn_confirmed_unlock').data('project_id')).toBe(7);
+    $('#btn_confirmed_unlock').trigger('click');
+    expect(ajax.mock.calls[1]![0]).toMatchObject({ url: '/release/7/', method: 'POST' });
+});
+it('toggles country collapse using click and keyboard and writes the existing storage key', () => {
+    init(context);
+    $('.country-group-header').trigger('click');
+    expect($('.country-group').hasClass('collapsed')).toBe(true);
+    expect(JSON.parse(localStorage.getItem('speleo_projects_collapsed_countries')!) as unknown).toEqual(['MX']);
+    const event = $.Event('keydown', { key: ' ' });
+    $('.country-group-header').trigger(event);
+    expect(event.isDefaultPrevented()).toBe(true);
+    expect($('.country-group').hasClass('collapsed')).toBe(false);
+    expect(JSON.parse(localStorage.getItem('speleo_projects_collapsed_countries')!) as unknown).toEqual([]);
+});
+it('tolerates invalid stored JSON and denied writes and repeats handlers when reinitialized', () => {
+    localStorage.setItem('speleo_projects_collapsed_countries', '{');
+    init(context);
+    $('.country-group-header').trigger('click');
+    expect($('.country-group').hasClass('collapsed')).toBe(true);
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('Unavailable'); });
+    expect(() => $('.country-group-header').trigger('click')).not.toThrow();
+    init(context);
+    $('.country-group-header').trigger('click');
+    expect($('.country-group').hasClass('collapsed')).toBe(false);
+    expect(ajax).toHaveBeenCalledTimes(2);
+});

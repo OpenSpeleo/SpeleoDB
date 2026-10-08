@@ -29,7 +29,7 @@ END
 }
 
 test -s bun.lock && bun install --frozen-lockfile || exit "$?"
-bun run build
+bun run build || exit "$?"
 python manage.py collectstatic --noinput
 # python manage.py compilemessages -i site-packages
 

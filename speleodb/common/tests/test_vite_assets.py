@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.template import Context
+from django.template import Engine
 from django.template import Template
 from django.test import override_settings
 
+from speleodb.common.templatetags import vite_assets
 from speleodb.common.templatetags.vite_assets import reset_vite_asset_caches
 
 if TYPE_CHECKING:
@@ -34,8 +37,8 @@ def registry(tmp_path: Path) -> Path:
                     "style-copy": "frontend_common/copy.css",
                 },
                 "scripts": {
-                    "app": "frontend_common/app.js",
-                    "controller-map": "frontend_common/controllers/map.js",
+                    "app": "frontend_common/app.ts",
+                    "controller-map": "frontend_common/controllers/map.ts",
                 },
             }
         ),
@@ -52,14 +55,14 @@ def manifest(tmp_path: Path) -> Path:
             "file": "assets/chunks/shared-111.js",
             "name": "shared",
         },
-        "frontend_common/app.js": {
+        "frontend_common/app.ts": {
             "file": "assets/app-222.js",
             "name": "app",
             "isEntry": True,
             "imports": ["_shared.js"],
-            "dynamicImports": ["frontend_common/controllers/map.js"],
+            "dynamicImports": ["frontend_common/controllers/map.ts"],
         },
-        "frontend_common/controllers/map.js": {
+        "frontend_common/controllers/map.ts": {
             "file": "assets/controller-map-333.js",
             "name": "controller-map",
             "isEntry": True,
@@ -95,6 +98,49 @@ def manifest(tmp_path: Path) -> Path:
 
 def render(source: str) -> str:
     return Template(source).render(Context())
+
+
+def test_render_uses_one_snapshot_across_tags_and_includes(
+    registry: Path, manifest: Path
+) -> None:
+    original = json.loads(manifest.read_text(encoding="utf-8"))
+    replacement = json.loads(manifest.read_text(encoding="utf-8"))
+    replacement["frontend_common/app.ts"]["file"] = "assets/app-new.js"
+    (manifest.parent / "assets/app-new.js").touch()
+    engine = Engine(
+        libraries={"vite_assets": "speleodb.common.templatetags.vite_assets"},
+        loaders=[
+            (
+                "django.template.loaders.locmem.Loader",
+                {
+                    "script.html": "{% load vite_assets %}{% vite_script 'app' %}",
+                },
+            )
+        ],
+    )
+    template = engine.from_string(
+        "{% load vite_assets %}{% vite_styles 'style-app' %}"
+        "{% include 'script.html' %}{% vite_preload 'app' %}"
+    )
+    context = Context()
+    with (
+        override_settings(
+            VITE_ENTRY_REGISTRY_PATH=registry,
+            VITE_ASSET_ROOT=manifest.parent,
+            VITE_ALLOW_MISSING_MANIFEST=False,
+        ),
+        patch.object(
+            vite_assets, "_manifest", side_effect=[original, replacement]
+        ) as read,
+    ):
+        first = template.render(context)
+        assert "app-222.js" in first
+        assert "app-new.js" not in first
+        assert read.call_count == 1
+        read.reset_mock()
+        second = template.render(context)
+        assert "app-new.js" in second
+        read.assert_called_once_with()
 
 
 def test_renders_hashed_styles_script_and_recursive_preloads(
@@ -216,7 +262,7 @@ def test_unknown_and_wrong_type_entries_fail(registry: Path, manifest: Path) -> 
 
 def test_manifest_rejects_unsafe_paths(registry: Path, manifest: Path) -> None:
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    payload["frontend_common/app.js"]["file"] = "../secret.js"
+    payload["frontend_common/app.ts"]["file"] = "../secret.js"
     manifest.write_text(json.dumps(payload), encoding="utf-8")
 
     with (

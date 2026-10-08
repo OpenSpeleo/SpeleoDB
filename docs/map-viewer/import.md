@@ -181,3 +181,25 @@ below 3 KiB, enforced by regression tests. These observations describe analysis,
 not a capacity guarantee or database-publication benchmark. Landmark publication
 retains the existing per-coordinate transactional duplicate handling; large
 landmark imports also incur database work.
+
+The browser session is typed in `ts-types/domain/data-import.ts`; imported-map
+navigation has its own `ImportedMapResult` contract. `data_import.ts` retains
+one mutable session and its generation counter. The two upload facade names
+still reference the same function. Type annotations do not turn refresh failure
+into upload failure or move the camera before the explicit Show action.
+Characterization covers stale inspection responses, multipart field/method
+selection, locked dismissal, ambiguous completion, and refresh retry state.
+
+`import_model.ts` owns report eligibility and count normalization.
+`import_presentation.ts` owns the review, writable-collection options, progress,
+result, and dialog controls. The session owner passes its current session and
+DOM lookups to presentation without copying state; eligibility, dismissal locks,
+and progress refresh run at their existing points during rendering. The owner
+retains inspection/upload transport, generation checks, cancellation, listeners,
+and map refresh/navigation. Renderers neither start requests nor mutate the
+session. Original exported helper names remain direct aliases, as do the two
+upload methods. Keeping the new modules beside `data_import.ts` preserves the
+existing explicit Tailwind source ownership. The owner tests cover progress,
+reinitialization, stale inspection responses, upload methods and bodies,
+permission-revoked collection options, and refresh failure after successful
+publication.

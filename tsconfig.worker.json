@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2023",
+      "WebWorker"
+    ],
+    "types": [],
+    "tsBuildInfoFile": "./.cache/typescript/worker.tsbuildinfo"
+  },
+  "include": [
+    "frontend_private/static/private/ts/map_viewer/map/geojson_transport.*",
+    "frontend_private/static/private/ts/map_viewer/map/geojson_worker.*",
+    "ts-types/domain/json.ts",
+    "ts-types/worker/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/vendors/**"
+  ]
+}

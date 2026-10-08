@@ -80,23 +80,31 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      - name: Install JS Dependencies
+      - name: Install frontend dependencies
         run: test -s bun.lock && bun install --frozen-lockfile
 
-      - name: Build Django-served assets
-        run: bun run build
+      - name: Audit source ownership and executable templates
+        run: |
+          bun run audit:javascript
+          bun run audit:javascript --tracked
+          bun run audit:templates
+          bun run audit:templates --tracked
 
-      - name: Lint JavaScript
-        run: bun run lint:js
+      - name: Type-check all three environments, including Railway
+        run: bun run typecheck
 
-      - name: Type-check Railway infrastructure
-        run: bun run typecheck:railway
+      - name: Lint frontend TypeScript
+        run: bun run lint:frontend
 
-      - name: Run JS Unit Tests
-        run: bun run test:js
+      - name: Verify toolchain compatibility, ambient isolation and frontend
+          behavior
+        run: bun run test:frontend
 
       - name: Verify Vite watcher invalidation
         run: bun run test:assets-watch
+
+      - name: Build checked Django-served assets
+        run: bun run build
 
   # With no caching at all the entire ci process takes 3m to complete!
   pytest:
@@ -129,9 +137,7 @@ jobs:
           - 9000:9000
         options: >-
           --health-cmd "curl -f http://localhost:9000/health || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-interval 10s --health-timeout 5s --health-retries 5
 
     env:
       CELERY_BROKER_URL: "redis://localhost:6379/0"
@@ -175,6 +181,9 @@ jobs:
       - name: Install browser test dependencies
         run: test -s bun.lock && bun install --frozen-lockfile
 
+      - name: Build checked assets for Django contracts
+        run: bun run build
+
       - name: Run Tests
         run: |
           # Repository writes belong to pytest's audited nine-repository budget.
@@ -183,7 +192,7 @@ jobs:
           python manage.py validate_templates --settings config.settings.test --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
           pytest -o faulthandler_timeout=60 --durations=20
-        env:
+        env: &django-test-environment
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}
@@ -195,6 +204,16 @@ jobs:
           AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
           AWS_S3_ENDPOINT_URL: "http://localhost:9000"
           AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
+          VIEWER_BROWSER_ARTIFACTS: ${{ runner.temp }}/speleodb-viewer-browser
+
+      - name: Install the unchanged Chromium and WebKit runtimes
+        run: bunx --bun playwright install --with-deps chromium webkit
+
+      - name: Run serial browser workloads against the Django live server
+        run:
+          pytest tests/browser/test_django_browser.py -o faulthandler_timeout=60
+          --durations=20
+        env: *django-test-environment
 
       - name: Upload GitLab creation audit
         if: always()
@@ -203,3 +222,11 @@ jobs:
           name: gitlab-creation-audit
           path: .artifacts/gitlab/
           include-hidden-files: true
+
+      - name: Upload browser report and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-verification
+          path: ${{ runner.temp }}/speleodb-viewer-browser/
+          if-no-files-found: warn

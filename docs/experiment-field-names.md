@@ -71,3 +71,25 @@ Field names are escaped at the display layer regardless of storage sanitization:
 - Django templates use default autoescaping (`{{ field_data.name }}`).
 - JS uses `escapeHtml()` before any HTML insertion.
 - No `|safe` filter or `{% autoescape off %}` is used on field names.
+
+## Browser field editor
+
+`frontend_private/static/private/ts/experiment-fields.ts` owns the dynamic field
+editor and its mutable `ExperimentFields` facade. Its jQuery reference is
+captured during import and its generated field counter survives repeated
+initialization. Validation compares trimmed, case-insensitive names without
+rewriting input values; multiple-choice labels are escaped before rendering.
+Direct tests cover repeated wiring, duplicate-name styling, incomplete fields,
+and delegated tag editing. Erased DOM assertions retain the existing failure
+when required field inputs are absent.
+
+The Django admin widget has its own controller,
+`frontend_common/controllers/admin-experiment-field.ts`. It preserves mandatory
+records, existing slugs/hashes, and immutable field controls when serializing
+custom fields. It uses the shared `escapeHtml` helper at the name and option
+attribute values and the displayed slug before building HTML. Quotes, tags,
+entity-like text and event-handler payloads therefore remain literal field
+values. Escaping applies only to presentation: dataset slugs, stored values and
+hashes retain their original identity, and serialization still reads the input
+values normally. Controller tests cover attribute and element breakouts plus
+display/serialization round trips; encoding adds only local string work.

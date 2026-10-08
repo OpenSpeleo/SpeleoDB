@@ -117,3 +117,6 @@ Unlike product docs, these files prioritize:
 Repository-wide agent guardrails live at:
 
 - `AGENTS.md`
+
+- [TypeScript architecture](typescript-architecture.md): strict environment
+  boundaries, compiler compatibility, and migration verification.

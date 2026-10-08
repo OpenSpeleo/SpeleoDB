@@ -65,9 +65,9 @@
 }
 
 @source "../frontend_public/templates/**/*.html";
-@source "../frontend_public/static/js/*.js";
+@source "../frontend_public/static/ts/*.ts";
 @source "../frontend_public/templatetags/people_tags.py";
-@source "../frontend_common/**/*.js";
+@source "../frontend_common/**/*.ts";
 @source "../frontend_common/**/*.css";
 
 /*

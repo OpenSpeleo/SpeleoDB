@@ -144,7 +144,7 @@ DJANGO_APPS = [
     "django.contrib.sites",
     "django.contrib.messages",
     "django.contrib.sitemaps",
-    "django.contrib.staticfiles",
+    "speleodb.common.staticfiles.CompiledStaticFilesConfig",
     # "django.contrib.humanize", # Handy template tags
     "django.contrib.admin",
     "django.forms",
@@ -396,8 +396,8 @@ VITE_ALLOW_MISSING_MANIFEST = DEBUG
 # STATICFILES_DIRS = [str(APPS_DIR / "static")]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
 STATICFILES_FINDERS = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "speleodb.common.staticfiles.SourceProtectedFileSystemFinder",
+    "speleodb.common.staticfiles.SourceProtectedAppDirectoriesFinder",
 ]
 
 # MEDIA

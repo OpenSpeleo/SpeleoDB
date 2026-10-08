@@ -90,7 +90,7 @@ class TestSensorManagementTabRendering(TestCase):
         assert response.status_code == status.HTTP_200_OK
         content = response.content.decode("utf-8")
 
-        # Filter is rendered dynamically by sensors.js module
+        # Filter is rendered dynamically by sensors.ts module
         # Just verify the module infrastructure is in place
         assert 'data-speleodb-controller="private-map"' in content
         assert "sensor-management" in content
@@ -105,7 +105,7 @@ class TestSensorManagementTabRendering(TestCase):
         assert response.status_code == status.HTTP_200_OK
         content = response.content.decode("utf-8")
 
-        # Export button is rendered dynamically by sensors.js module
+        # Export button is rendered dynamically by sensors.ts module
         # Just verify the module infrastructure is in place
         assert 'data-speleodb-controller="private-map"' in content
         assert "sensor-management" in content
@@ -119,7 +119,7 @@ class TestSensorManagementTabRendering(TestCase):
         assert response.status_code == status.HTTP_200_OK
         content = response.content.decode("utf-8")
 
-        # Sorting logic is in sensors.js module
+        # Sorting logic is in sensors.ts module
         # Just verify the module infrastructure is in place
         assert 'data-speleodb-controller="private-map"' in content
         assert "sensor-management" in content

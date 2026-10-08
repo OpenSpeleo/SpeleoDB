@@ -14,10 +14,12 @@ from django import template
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.templatetags.static import static
+from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.html import format_html_join
 
 if TYPE_CHECKING:
+    from django.template import Context
     from django.utils.safestring import SafeString
 
 register = template.Library()
@@ -146,8 +148,9 @@ def _entry_type(name: str) -> str:
     raise ImproperlyConfigured(f"Unknown Vite logical entry: {name!r}")
 
 
-def _manifest_entry(name: str) -> tuple[str, ManifestEntry] | None:
-    manifest = _manifest()
+def _manifest_entry(
+    name: str, manifest: dict[str, ManifestEntry] | None
+) -> tuple[str, ManifestEntry] | None:
     if manifest is None:
         return None
 
@@ -181,26 +184,27 @@ def _static_asset_url(asset_file: str) -> str:
     return static(f"speleodb/vite/{safe_file}")
 
 
-def _entry_file(name: str, expected_type: str) -> str:
+def _entry_file(
+    name: str, expected_type: str, manifest: dict[str, ManifestEntry] | None
+) -> str:
     entry_type = _entry_type(name)
     if entry_type != expected_type:
         raise ImproperlyConfigured(
             f"Vite entry {name!r} is a {entry_type}, not a {expected_type}"
         )
-    match = _manifest_entry(name)
+    match = _manifest_entry(name, manifest)
     if match is None:
         return _fallback_file(name, entry_type)
     return match[1]["file"]
 
 
-def _preload_files(name: str) -> list[str]:
+def _preload_files(name: str, manifest: dict[str, ManifestEntry] | None) -> list[str]:
     if _entry_type(name) != "script":
         raise ImproperlyConfigured(f"Vite preload entry must be a script: {name!r}")
-    match = _manifest_entry(name)
+    match = _manifest_entry(name, manifest)
     if match is None:
         return [_fallback_file(name, "script")]
 
-    manifest = _manifest()
     if manifest is None:  # pragma: no cover - guarded by the match above
         return [_fallback_file(name, "script")]
 
@@ -226,12 +230,42 @@ def _preload_files(name: str) -> list[str]:
     return files
 
 
-@register.simple_tag
-def vite_styles(*names: str) -> SafeString:
+def _render_manifest(context: Context) -> dict[str, ManifestEntry] | None:
+    # The first render frame belongs to this complete render. Includes push
+    # additional frames; inheritance shares this one. A later render gets a
+    # fresh frame even when the caller reuses the Context object.
+    # django-stubs narrows BaseContext dictionaries to strings, but render
+    # frames store heterogeneous tag state (as Django's own tags do).
+    frame = cast("dict[str, object]", context.render_context.dicts[1])
+    key = "speleodb.vite.manifest"
+    if key not in frame:
+        frame[key] = _manifest()
+    return cast("dict[str, ManifestEntry] | None", frame[key])
+
+
+def development_generation(manifest: dict[str, ManifestEntry] | None) -> str | None:
+    if not settings.DEBUG or manifest is None:
+        return None
+    source = _entry_registry()["scripts"].get("app")
+    entry = manifest.get(source) if source else None
+    parts = entry["file"].split("/") if entry else []
+    match parts:
+        case ["assets", "dev", session, generation, *assets] if assets:
+            return f"{session}/{generation}"
+    return None
+
+
+def current_development_generation() -> str | None:
+    return development_generation(_manifest())
+
+
+@register.simple_tag(takes_context=True)
+def vite_styles(context: Context, *names: str) -> SafeString:
+    manifest = _render_manifest(context)
     rendered: list[SafeString] = []
     seen: set[str] = set()
     for name in names:
-        asset_file = _entry_file(name, "style")
+        asset_file = _entry_file(name, "style", manifest)
         if asset_file in seen:
             continue
         seen.add(asset_file)
@@ -244,12 +278,13 @@ def vite_styles(*names: str) -> SafeString:
     return format_html_join("\n", "{}", ((item,) for item in rendered))
 
 
-@register.simple_tag
-def vite_preload(*names: str) -> SafeString:
+@register.simple_tag(takes_context=True)
+def vite_preload(context: Context, *names: str) -> SafeString:
+    manifest = _render_manifest(context)
     rendered: list[SafeString] = []
     seen: set[str] = set()
     for name in names:
-        for asset_file in _preload_files(name):
+        for asset_file in _preload_files(name, manifest):
             if asset_file in seen:
                 continue
             seen.add(asset_file)
@@ -262,9 +297,19 @@ def vite_preload(*names: str) -> SafeString:
     return format_html_join("\n", "{}", ((item,) for item in rendered))
 
 
-@register.simple_tag
-def vite_script(name: str) -> SafeString:
-    asset_file = _entry_file(name, "script")
+@register.simple_tag(takes_context=True)
+def vite_script(context: Context, name: str) -> SafeString:
+    manifest = _render_manifest(context)
+    asset_file = _entry_file(name, "script", manifest)
+    generation = development_generation(manifest) if name == "app" else None
+    if generation is not None:
+        return format_html(
+            '<script type="module" src="{}" crossorigin '
+            'data-speleodb-generation="{}" data-speleodb-reload="{}"></script>',
+            _static_asset_url(asset_file),
+            generation,
+            reverse("vite-development-generation"),
+        )
     return format_html(
         '<script type="module" src="{}" crossorigin></script>',
         _static_asset_url(asset_file),

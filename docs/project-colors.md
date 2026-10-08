@@ -130,7 +130,7 @@ model color; every reader therefore sees the same rendered color.
 
 ## Map Viewer: Color Resolution
 
-**File:** `frontend_private/static/private/js/map_viewer/map/colors.js`
+**File:** `frontend_private/static/private/ts/map_viewer/map/colors.ts`
 
 There is **no palette array in JS**. All colors are model-driven.
 
@@ -177,8 +177,8 @@ The public viewer does not have GPS tracks.
 | `speleodb/api/v2/serializers/gps_track.py`                    | `GPSTrackSerializer.validate_color()`, custom `update()`                        |
 | `speleodb/api/v2/serializers/gis_view.py`                     | `PublicGISProjectViewSerializer` with `color` field                             |
 | `speleodb/surveys/templatetags/project_colors.py`             | `get_project_color_palette` tag, `country_flag` filter                          |
-| `frontend_private/static/private/js/map_viewer/map/colors.js` | `getProjectColor()`, `getGPSTrackColor()`, `FALLBACK_COLOR`                     |
-| `frontend_private/static/private/js/map_viewer/config.js`     | `loadProjects()`, `loadGPSTracks()`, `setPublicProjects()`, `getGPSTrackById()` |
+| `frontend_private/static/private/ts/map_viewer/map/colors.ts` | `getProjectColor()`, `getGPSTrackColor()`, `FALLBACK_COLOR`                     |
+| `frontend_private/static/private/ts/map_viewer/config.ts`     | `loadProjects()`, `loadGPSTracks()`, `setPublicProjects()`, `getGPSTrackById()` |
 | `frontend_private/templates/pages/project/details.html`       | Color picker UI (projects)                                                      |
 | `frontend_private/templates/pages/project/new.html`           | Color picker UI (new project)                                                   |
 | `frontend_private/templates/pages/gps_tracks.html`            | GPS track color dots and edit modal                                             |

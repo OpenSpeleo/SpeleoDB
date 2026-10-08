@@ -6,9 +6,9 @@ considering a change complete.
 ## Core Commands (Existing Application Container Only)
 
 - Lint JavaScript:
-  - `docker exec -w /app speleodb_local_django bun run lint:js`
+  - `docker exec -w /app speleodb_local_django bun run lint:frontend`
 - Run frontend unit tests:
-  - `docker exec -w /app speleodb_local_django bun run test:js`
+  - `docker exec -w /app speleodb_local_django bun run test:frontend`
 - Run backend tests:
   - `docker exec -w /app speleodb_local_django pytest <targets>`
 - Clean production build:
@@ -33,56 +33,56 @@ Representative map viewer coverage (use the runner's report for current totals):
 
 ### Core modules
 
-- `frontend_private/.../map_viewer/api.test.js` — API client methods, request
+- `frontend_private/.../map_viewer/api.test.ts` — API client methods, request
   config, error handling
-- `frontend_private/.../map_viewer/config.permissions.test.js` — permission
+- `frontend_private/.../map_viewer/config.permissions.test.ts` — permission
   matrix, rank model, scope routing
-- `frontend_private/.../map_viewer/config.loading.test.js` — project/network/GPS
+- `frontend_private/.../map_viewer/config.loading.test.ts` — project/network/GPS
   loading, caching, setPublicProjects
-- `frontend_private/.../map_viewer/state.test.js` — state fields, init() reset
+- `frontend_private/.../map_viewer/state.test.ts` — state fields, init() reset
   behavior
 
 ### Map modules
 
-- `frontend_private/.../map_viewer/map/depth.test.js` — depth domain merging
-- `frontend_private/.../map_viewer/map/layers.depth_domain.test.js` — depth
+- `frontend_private/.../map_viewer/map/depth.test.ts` — depth domain merging
+- `frontend_private/.../map_viewer/map/layers.depth_domain.test.ts` — depth
   domain reactivity
-- `frontend_private/.../map_viewer/map/geometry.test.js` — Haversine, snap
+- `frontend_private/.../map_viewer/map/geometry.test.ts` — Haversine, snap
   points, snap indicator, snap radius
 
 ### Components
 
-- `frontend_private/.../map_viewer/components/depth_legend.test.js` — legend
+- `frontend_private/.../map_viewer/components/depth_legend.test.ts` — legend
   rendering
-- `frontend_private/.../map_viewer/components/context_menu.test.js` — menu
+- `frontend_private/.../map_viewer/components/context_menu.test.ts` — menu
   rendering, icon caching, positioning
-- `frontend_private/.../map_viewer/components/modal.test.js` — base HTML,
+- `frontend_private/.../map_viewer/components/modal.test.ts` — base HTML,
   open/close lifecycle
-- `frontend_private/.../map_viewer/components/notification.test.js` — toast
+- `frontend_private/.../map_viewer/components/notification.test.ts` — toast
   creation, auto-removal
-- `frontend_private/.../map_viewer/components/project_panel.test.js` — panel
+- `frontend_private/.../map_viewer/components/project_panel.test.ts` — panel
   init, toggle, sorting
-- `frontend_private/.../map_viewer/components/upload.test.js` — progress bar,
+- `frontend_private/.../map_viewer/components/upload.test.ts` — progress bar,
   XHR upload lifecycle
 
 ### Entity managers
 
-- `frontend_private/.../map_viewer/stations/manager.test.js` — CRUD, caching,
+- `frontend_private/.../map_viewer/stations/manager.test.ts` — CRUD, caching,
   cache invalidation
-- `frontend_private/.../map_viewer/stations/tags.test.js` — tag loading,
+- `frontend_private/.../map_viewer/stations/tags.test.ts` — tag loading,
   selection, color updates
-- `frontend_private/.../map_viewer/stations/logs.test.js` — log rendering,
+- `frontend_private/.../map_viewer/stations/logs.test.ts` — log rendering,
   access control, XSS safety
-- `frontend_private/.../map_viewer/surface_stations/manager.test.js` — CRUD,
+- `frontend_private/.../map_viewer/surface_stations/manager.test.ts` — CRUD,
   network scoping
-- `frontend_private/.../map_viewer/landmarks/manager.test.js` — CRUD, drag
+- `frontend_private/.../map_viewer/landmarks/manager.test.ts` — CRUD, drag
   revert
-- `frontend_private/.../map_viewer/exploration_leads/manager.test.js` — CRUD,
+- `frontend_private/.../map_viewer/exploration_leads/manager.test.ts` — CRUD,
   project filtering
 
 ### Public viewer
 
-- `frontend_public/static/js/gis_view_main.test.js` — initialization, zoom
+- `frontend_public/static/ts/gis_view_main.test.ts` — initialization, zoom
   limits, error handling
 
 ## Feature-Level Validation Expectations
@@ -165,3 +165,14 @@ under test. A mocked HTTP failure is unit-level control-flow evidence; it does
 not establish real transaction, transport, storage compensation, or browser
 behavior. Use the real integration paths for those claims, following the shared
 [GitLab test contract](../ci-gitlab-testing.md) where applicable.
+
+### Viewer startup composition
+
+`frontend_common/test/viewer-composition.test.ts` imports the real public and
+private roots and their shared modules. Only external Mapbox and network
+boundaries are simulated. These cases check startup before the Mapbox `load`
+event: request overlap, source-control mounting, private measurement/control
+registration, and separate public display persistence. Root-specific suites
+exercise asynchronous loading and style-change callbacks. Browser verification
+remains responsible for rendering, gesture timing, and performance budgets; the
+startup fixture does not model Mapbox rendering.

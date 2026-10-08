@@ -20,16 +20,22 @@ it as `style-app` and emits a hashed stylesheet under
 document that uses Tailwind requests that logical asset exactly once through the
 Django manifest tags.
 
-The neutral entrypoint imports `tailwind_css/private/style.css` unchanged. That
-file remains the canonical theme, font, variant, private component, and private
+The neutral entrypoint imports `tailwind_css/private/style.css`. That file
+remains the canonical theme, font, variant, private component, and private
 source contract, but it is not built or shipped independently. The neutral
-entrypoint adds public templates, top-level public JavaScript, the people
+entrypoint adds public templates, top-level public TypeScript, the people
 template tags, public animations, and `tailwind_css/public/components.css`.
 
 Automatic detection stays disabled by the imported private reference. All
 sources remain explicit, stylesheet-relative `@source` directives. Compiler
 contracts build a mirrored union tree and prove all supported public/private
 sentinels are present while unsupported nested trees remain absent.
+
+Runtime source directives select `.ts` at the original directory depth. The
+private theme and component reference stays intact, and previously scanned tests
+remain scanned. Type declarations live outside these source roots. Compare clean
+production CSS with the baseline; a running watcher retains removed candidates
+and cannot establish equivalence.
 
 The shared design system registers forms and typography once. The forms plugin
 uses its base strategy because SpeleoDB owns `.form-*` components. JavaScript

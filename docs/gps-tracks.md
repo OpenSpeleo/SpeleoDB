@@ -110,3 +110,18 @@ inactive-row leakage, and N+1 regressions.
 Run focused tests while developing, then the full Python and JavaScript suites,
 strict type/lint checks, template and URL validation, and a clean production
 Vite build. Repository tests must run inside the devcontainer.
+
+## Shared GPX import dialog
+
+`frontend_private/static/private/ts/gpx_import.ts` retains a single selected
+file and CSRF token behind the mutable `GPXImport` facade. The upload remains a
+multipart PUT with same-origin credentials. Successful imports dispatch landmark
+refresh before GPS-track refresh; the latter carries `{deactivateAll: true}`.
+Request failures render text and settle the upload promise after resetting its
+button. The finite backend shape lives in `ts-types/domain/gpx-import.ts`; its
+assertion adds no runtime validation.
+
+Direct tests exercise file validation, empty success, request/header/body
+contracts, refresh order, success timeout, and repeated initialization's
+existing duplicate listener registration. The migration adds no file copying or
+processing beyond the existing browser FormData operation.

@@ -17,7 +17,7 @@ In particular:
 
 All access checks should route through:
 
-- `frontend_private/static/private/js/map_viewer/config.js`
+- `frontend_private/static/private/ts/map_viewer/config.ts`
 
 Use these methods preferentially:
 
@@ -110,7 +110,7 @@ including:
 
 Comprehensive permission tests live in:
 
-- `frontend_private/static/private/js/map_viewer/config.permissions.test.js`
+- `frontend_private/static/private/ts/map_viewer/config.permissions.test.ts`
 
 Coverage includes:
 
@@ -128,8 +128,8 @@ When touching permission code:
 1. Ensure all new checks use central Config APIs.
 2. Verify no special-case feature bypasses write/delete rules.
 3. Run:
-   - `bun run lint:js`
-   - `bun run test:js`
+   - `bun run lint:frontend`
+   - `bun run test:frontend`
 4. Confirm UI and action availability is consistent for:
    - `WEB_VIEWER`
    - `READ_ONLY`

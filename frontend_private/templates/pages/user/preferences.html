@@ -27,15 +27,17 @@
               </div>
               <!-- Right -->
               <div class="flex items-center ml-4"
-                   x-data="{ checked: {% if user.email_on_speleodb_updates %}true{% else %}false{% endif %} }">
+                   data-speleodb-bind="private-user-preferences-1"
+                   data-speleodb-scope
+                   data-speleodb-checked="{% if user.email_on_speleodb_updates %}true{% else %}false{% endif %}">
                 <div class="text-sm text-slate-500 italic mr-2"
-                     x-text="checked ? 'On' : 'Off'"></div>
+                     data-speleodb-bind="private-user-preferences-2"></div>
                 <div class="form-switch">
                   <input type="checkbox"
                          name="email_on_speleodb_updates"
                          id="email_on_speleodb_updates"
                          class="sr-only"
-                         x-model="checked" />
+                         data-speleodb-bind="private-user-preferences-3" />
                   <label class="bg-slate-700" for="email_on_speleodb_updates">
                     <span class="bg-white shadow-xs" aria-hidden="true"></span>
                     <span class="sr-only">Enable smart sync</span>
@@ -51,15 +53,17 @@
               </div>
               <!-- Right -->
               <div class="flex items-center ml-4"
-                   x-data="{ checked: {% if user.email_on_projects_updates %}true{% else %}false{% endif %} }">
+                   data-speleodb-bind="private-user-preferences-4"
+                   data-speleodb-scope
+                   data-speleodb-checked="{% if user.email_on_projects_updates %}true{% else %}false{% endif %}">
                 <div class="text-sm text-slate-500 italic mr-2"
-                     x-text="checked ? 'On' : 'Off'"></div>
+                     data-speleodb-bind="private-user-preferences-5"></div>
                 <div class="form-switch">
                   <input type="checkbox"
                          id="email_on_projects_updates"
                          name="email_on_projects_updates"
                          class="sr-only"
-                         x-model="checked" />
+                         data-speleodb-bind="private-user-preferences-6" />
                   <label class="bg-slate-700" for="email_on_projects_updates">
                     <span class="bg-white shadow-xs" aria-hidden="true"></span>
                     <span class="sr-only">Enable smart sync</span>

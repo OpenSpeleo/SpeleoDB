@@ -1,0 +1,482 @@
+import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
+import type { StationLogRecord } from '../../../../../../ts-types/domain/station-records.ts';
+import { getMapOverlayHost } from '../components/overlay_host.ts';
+import { API } from '../api.ts';
+import { Utils } from '../utils.ts';
+import { Config } from '../config.ts';
+import { State } from '../state.ts';
+import { createProgressBarHTML, UploadProgressController } from '../components/upload.ts';
+
+// Track current context for log operations
+let currentStationId: EntityId | null = null;
+let currentProjectId: EntityId | null | undefined = null;
+let currentNetworkId: EntityId | null | undefined = null;
+
+export const StationLogs = {
+    async render(stationId: EntityId, container: HTMLElement) {
+        currentStationId = stationId;
+        // Check both subsurface and surface stations
+        const station = State.allStations.get(stationId) || State.allSurfaceStations.get(stationId);
+        const isSurfaceStation = station?.network || station?.station_type === 'surface';
+
+        console.log('📝 StationLogs.render:', {
+            stationId,
+            station: station ? { id: station.id, network: station.network, project: station.project, station_type: station.station_type } : null,
+            isSurfaceStation,
+            inAllStations: State.allStations.has(stationId),
+            inAllSurfaceStations: State.allSurfaceStations.has(stationId)
+        });
+
+        currentProjectId = station?.project;
+        currentNetworkId = station?.network;
+
+        const stationAccess = Config.getStationAccess(station);
+        const hasWriteAccess = stationAccess.write;
+        const hasAdminAccess = stationAccess.delete;
+
+        console.log('📝 StationLogs permissions:', { hasWriteAccess, hasAdminAccess, currentNetworkId, currentProjectId });
+
+        // Show loading overlay
+        const loadingOverlay = Utils.showLoadingOverlay('Loading journal entries...');
+
+        try {
+            const response = await API.getStationLogs(stationId);
+            const logs = Array.isArray(response) ? response : [];
+
+            console.log(`📝 Loaded ${logs.length} journal entries for station ${stationId}`);
+
+            // Render the entries
+            const entriesHtml = logs.length > 0 ? `
+                <div class="journal-container">
+                    <div class="journal-entries">
+                        ${logs.map(log => this.renderEntry(log, hasWriteAccess, hasAdminAccess)).join('')}
+                    </div>
+                </div>
+            ` : `
+                <div class="text-center py-12">
+                    <svg class="w-16 h-16 text-slate-400 center-x mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <h3 class="text-white text-lg font-medium mb-2">No Journal Entries Yet</h3>
+                    <p class="text-slate-400">Record scientific observations, measurements, archeological finds, biological observations and notes for this station.</p>
+                </div>
+            `;
+
+            container.innerHTML = `
+                <div class="tab-content active">
+                    <div class="flow-y-4 p-6">
+                        <div class="flex items-center justify-end">
+                            ${hasWriteAccess ? `
+                                <button id="new-log-entry-btn" class="btn-primary w-full sm:w-auto">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    New Journal Entry
+                                </button>
+                            ` : `
+                                <button class="btn-primary w-full sm:w-auto opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    New Journal Entry
+                                </button>
+                            `}
+                        </div>
+                        <div>
+                            ${entriesHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Hide loading overlay
+            Utils.hideLoadingOverlay(loadingOverlay);
+
+            // Wire up event handlers
+            if (hasWriteAccess) {
+                const btn = (document.getElementById('new-log-entry-btn') as HTMLElement);
+                if (btn) btn.onclick = () => this.openCreateModal(stationId);
+            }
+
+            // Wire up edit/delete buttons
+            this.wireUpEntryButtons(container);
+
+        } catch (error) {
+            console.error('Error loading logs:', error);
+            Utils.hideLoadingOverlay(loadingOverlay);
+            container.innerHTML = `
+                <div class="tab-content active p-6">
+                    <div class="text-center py-12">
+                        <p class="text-red-400">Failed to load journal entries.</p>
+                        <button id="logs-retry-btn" class="btn-secondary mt-4">Retry</button>
+                    </div>
+                </div>
+            `;
+            const retryBtn = (document.getElementById('logs-retry-btn') as HTMLElement);
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => {
+                    void StationLogs.render(stationId, (document.getElementById('station-modal-content') as HTMLElement));
+                });
+            }
+        }
+    },
+
+    renderEntry(log: Pick<StationLogRecord, 'id'> & Partial<Pick<StationLogRecord, 'title' | 'notes' | 'creation_date' | 'created_by' | 'attachment'>>,  hasWriteAccess: boolean, hasAdminAccess: boolean) {
+        const escapedTitle = Utils.escapeHtml(log.title || 'Untitled Entry');
+        const escapedNotes = Utils.escapeHtml(log.notes || '');
+        const escapedCreatedBy = Utils.escapeHtml(log.created_by || 'Unknown');
+
+        const editButton = hasWriteAccess ? Utils.safeHtml`
+            <button class="text-slate-300 hover:text-white edit-log-btn" title="Edit entry"
+                    data-log-id="${log.id}"
+                    data-title="${log.title || ''}"
+                    data-notes="${log.notes || ''}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+            </button>
+        ` : `
+            <button class="text-slate-500 opacity-50 cursor-not-allowed" title="You need write access" disabled>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+            </button>
+        `;
+
+        const deleteButton = hasAdminAccess ? Utils.safeHtml`
+            <button class="text-red-400 hover:text-red-300 delete-log-btn" title="Delete entry"
+                    data-log-id="${log.id}"
+                    data-title="${log.title || ''}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        ` : `
+            <button class="text-red-400 opacity-50 cursor-not-allowed" title="Only admins can delete" disabled>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </button>
+        `;
+
+        return `
+            <article class="journal-entry" data-log-id="${log.id}">
+                <header class="journal-entry-header">
+                    <h4 class="journal-entry-title">${escapedTitle}</h4>
+                    <div class="journal-entry-meta">
+                        <span>${Utils.formatJournalDate(log.creation_date)}</span>
+                        <span class="journal-dot"></span>
+                        <span>${escapedCreatedBy}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${editButton}
+                        ${deleteButton}
+                    </div>
+                </header>
+                <div class="journal-entry-body">${escapedNotes}</div>
+                ${log.attachment ? `
+                    <div class="journal-attachment">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                        </svg>
+                        <span class="uppercase tracking-wide text-xs font-semibold">ATTACHMENT</span>
+                        <span class="text-sky-200">•</span>
+                        <a href="${Utils.sanitizeUrl(log.attachment)}" target="_blank" class="underline decoration-sky-400 hover:text-white">${Utils.escapeHtml(Utils.filenameFromUrl(log.attachment))}</a>
+                    </div>
+                ` : ''}
+            </article>
+        `;
+    },
+
+    wireUpEntryButtons(container: HTMLElement) {
+        // Wire up edit buttons
+        container.querySelectorAll<HTMLButtonElement>('.edit-log-btn').forEach(btn => {
+            btn.onclick = () => {
+                const logId = btn.dataset.logId as EntityId;
+                const title = btn.dataset.title;
+                const notes = btn.dataset.notes;
+                this.openEditModal(logId, { title, notes });
+            };
+        });
+
+        // Wire up delete buttons
+        container.querySelectorAll<HTMLButtonElement>('.delete-log-btn').forEach(btn => {
+            btn.onclick = () => {
+                const logId = btn.dataset.logId as EntityId;
+                const title = btn.dataset.title;
+                this.openDeleteConfirm(logId, title);
+            };
+        });
+    },
+
+    openCreateModal(stationId: EntityId) {
+        const html = `
+            <div id="log-entry-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h3 class="text-lg font-semibold text-white">New Journal Entry</h3>
+                        <button id="close-log-modal" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <form id="log-entry-form" class="flow-y-4">
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
+                                <input id="log-title" type="text" class="form-input" placeholder="Concise scientific title..." required>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Notes <span class="text-red-400">*</span></label>
+                                <textarea id="log-notes" class="form-input form-textarea" rows="6" placeholder="Observations, measurements, methods, interpretation..." required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Attachment (optional)</label>
+                                <div id="log-file-container" class="file-upload-area cursor-pointer">
+                                    <div class="text-center" id="log-file-placeholder">
+                                        <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
+                                        <p class="text-slate-400 text-xs">Images, videos, documents accepted</p>
+                                    </div>
+                                    <input id="log-attachment" type="file" class="hidden" accept="image/*,video/*,.pdf,.csv,.txt,.doc,.docx">
+                                </div>
+                            </div>
+                            ${createProgressBarHTML('log-upload')}
+                            <div id="log-form-buttons" class="flex items-center justify-end gap-3 pt-2">
+                                <button type="button" id="cancel-log-btn" class="btn-secondary">Cancel</button>
+                                <button id="log-submit-btn" type="submit" class="btn-primary">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Submit Entry
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+
+        const modal = (document.getElementById('log-entry-modal') as HTMLElement);
+        const form = (document.getElementById('log-entry-form') as HTMLFormElement);
+        const fileContainer = (document.getElementById('log-file-container') as HTMLElement);
+        const fileInput = (document.getElementById('log-attachment') as HTMLInputElement);
+
+        // Close handlers
+        (document.getElementById('close-log-modal') as HTMLElement).onclick = () => modal.remove();
+        (document.getElementById('cancel-log-btn') as HTMLElement).onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        // File upload handlers
+        fileContainer.onclick = () => fileInput.click();
+        fileInput.onchange = () => {
+            if (fileInput.files!.length > 0) {
+                this.updateFileDisplay(fileContainer, fileInput.files![0]!);
+            }
+        };
+
+        // Drag and drop
+        fileContainer.ondragover = (e) => { e.preventDefault(); fileContainer.classList.add('dragover'); };
+        fileContainer.ondragleave = () => fileContainer.classList.remove('dragover');
+        fileContainer.ondrop = (e) => {
+            e.preventDefault();
+            fileContainer.classList.remove('dragover');
+            if (e.dataTransfer!.files.length > 0) {
+                fileInput.files = e.dataTransfer!.files;
+                this.updateFileDisplay(fileContainer, e.dataTransfer!.files[0]!);
+            }
+        };
+
+        // Form submission
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = (document.getElementById('log-submit-btn') as HTMLButtonElement);
+            const buttonsContainer = (document.getElementById('log-form-buttons') as HTMLElement);
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Submitting...';
+
+            const formData = new FormData();
+            formData.append('title', (document.getElementById('log-title') as HTMLInputElement).value.trim());
+            formData.append('notes', (document.getElementById('log-notes') as HTMLTextAreaElement).value.trim());
+
+            const hasFile = fileInput.files!.length > 0;
+            if (hasFile) {
+                formData.append('attachment', fileInput.files![0]!);
+            }
+
+            try {
+                // Use progress upload for files, regular API for text-only
+                if (hasFile) {
+                    const uploadController = new UploadProgressController('log-upload');
+                    buttonsContainer.classList.add('hidden');
+
+                    await uploadController.upload(
+                        Urls['api:v2:station-logs'](stationId),
+                        formData,
+                        'POST'
+                    );
+                } else {
+                    await API.createStationLog(stationId, formData);
+                }
+
+                Utils.showNotification('success', 'Journal entry created successfully');
+                modal.remove();
+
+                // Refresh the logs tab
+                void this.render(stationId, (document.getElementById('station-modal-content') as HTMLElement));
+            } catch (error) {
+                console.error('Error creating log:', error);
+                Utils.showNotification('error', (error as Error).message || 'Failed to create journal entry');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                buttonsContainer.classList.remove('hidden');
+            }
+        };
+
+        // Focus title input
+        (document.getElementById('log-title') as HTMLInputElement).focus();
+    },
+
+    openEditModal(logId: EntityId, logData: { title: string | undefined; notes: string | undefined }) {
+        const html = `
+            <div id="log-edit-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-start justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-2xl my-8 flex flex-col">
+                    <div class="flex items-center justify-between p-6 border-b border-slate-600">
+                        <h3 class="text-lg font-semibold text-white">Edit Journal Entry</h3>
+                        <button id="close-edit-modal" class="text-slate-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <form id="log-edit-form" class="flow-y-4">
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
+                                <input id="edit-log-title" type="text" class="form-input" value="${Utils.escapeHtml(logData.title)}" required>
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Notes <span class="text-red-400">*</span></label>
+                                <textarea id="edit-log-notes" class="form-input form-textarea" rows="6" required>${Utils.escapeHtml(logData.notes)}</textarea>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 pt-2">
+                                <button type="button" id="cancel-edit-btn" class="btn-secondary">Cancel</button>
+                                <button id="edit-submit-btn" type="submit" class="btn-primary">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+
+        const modal = (document.getElementById('log-edit-modal') as HTMLElement);
+        const form = (document.getElementById('log-edit-form') as HTMLFormElement);
+
+        // Close handlers
+        (document.getElementById('close-edit-modal') as HTMLElement).onclick = () => modal.remove();
+        (document.getElementById('cancel-edit-btn') as HTMLElement).onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        // Form submission
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = (document.getElementById('edit-submit-btn') as HTMLButtonElement);
+            submitBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('title', (document.getElementById('edit-log-title') as HTMLInputElement).value.trim());
+            formData.append('notes', (document.getElementById('edit-log-notes') as HTMLTextAreaElement).value.trim());
+
+            try {
+                await API.updateStationLog(logId, formData);
+                Utils.showNotification('success', 'Journal entry updated');
+                modal.remove();
+
+                // Refresh the logs tab
+                void this.render(currentStationId as EntityId, (document.getElementById('station-modal-content') as HTMLElement));
+            } catch (error) {
+                console.error('Error updating log:', error);
+                Utils.showNotification('error', (error as Error).message || 'Failed to update journal entry');
+                submitBtn.disabled = false;
+            }
+        };
+
+        // Focus title input
+        (document.getElementById('edit-log-title') as HTMLInputElement).focus();
+    },
+
+    openDeleteConfirm(logId: EntityId, title: string | undefined) {
+        const html = `
+            <div id="log-delete-modal" class="fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-800 rounded-xl shadow-2xl border border-slate-600 w-full max-w-md">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-srgb-red-500-20 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white text-center mb-2">Delete Journal Entry?</h3>
+                        <p class="text-slate-300 text-center mb-2">Are you sure you want to delete this entry?</p>
+                        <p class="text-white font-medium text-center mb-4">"${Utils.escapeHtml(title)}"</p>
+                        <p class="text-red-300 text-sm text-center mb-6">This action cannot be undone.</p>
+                        <div class="flex gap-3">
+                            <button id="cancel-delete-btn" class="flex-1 btn-secondary">Cancel</button>
+                            <button id="confirm-delete-btn" class="flex-1 btn-danger">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        getMapOverlayHost().insertAdjacentHTML('beforeend', html);
+
+        const modal = (document.getElementById('log-delete-modal') as HTMLElement);
+
+        (document.getElementById('cancel-delete-btn') as HTMLElement).onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+        (document.getElementById('confirm-delete-btn') as HTMLElement).onclick = async () => {
+            try {
+                await API.deleteStationLog(logId);
+                Utils.showNotification('success', 'Journal entry deleted');
+                modal.remove();
+
+                // Refresh the logs tab
+                void this.render(currentStationId as EntityId, (document.getElementById('station-modal-content') as HTMLElement));
+            } catch (error) {
+                console.error('Error deleting log:', error);
+                Utils.showNotification('error', (error as Error).message || 'Failed to delete journal entry');
+            }
+        };
+    },
+
+    updateFileDisplay(container: HTMLElement, file: Pick<File, 'name' | 'size'>) {
+        const placeholder = container.querySelector('#log-file-placeholder');
+        if (placeholder) {
+            placeholder.innerHTML = Utils.safeHtml`
+                <svg class="w-8 h-8 text-emerald-400 center-x mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-emerald-300 text-sm font-medium">${file.name}</p>
+                <p class="text-slate-400 text-xs mt-1">${(file.size / 1024).toFixed(1)} KB</p>
+            `;
+        }
+    }
+};
+
+// Expose for global access if needed

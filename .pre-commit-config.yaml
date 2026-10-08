@@ -130,11 +130,11 @@ repos:
         pass_filenames: false
         require_serial: true
         types_or: [python, pyi]
-      - id: typecheck-railway
-        name: Type-check Railway infrastructure
-        entry: bun run typecheck:railway
+      - id: typecheck-frontend
+        name: Type-check all three TypeScript environments
+        entry: bun run typecheck
         language: system
-        files: ^\.railway/.*\.ts$
+        files: (\.ts$|(^|/)tsconfig[^/]*\.json$|(^|/)(package\.json|bun\.lock|bunfig\.toml|entries\.json)$)
         pass_filenames: false
         require_serial: true
 
@@ -162,14 +162,26 @@ repos:
         pass_filenames: false
 
   # ========================================================================= #
-  #                               JAVASCRIPT LINT                             #
+  #                               FRONTEND TYPESCRIPT                             #
   # ========================================================================= #
 
   - repo: local
     hooks:
-      - id: lint-map-viewer-js
-        name: Lint map viewer JavaScript
-        entry: bun run lint:js
+      - id: lint-frontend
+        name: Lint frontend TypeScript
+        entry: bun run lint:frontend
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: audit-javascript
+        name: Audit first-party source ownership
+        entry: bun run audit:javascript
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: audit-templates
+        name: Audit executable template expressions
+        entry: bun run audit:templates
         language: system
         pass_filenames: false
         always_run: true

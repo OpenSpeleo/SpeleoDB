@@ -44,8 +44,8 @@ reviewed file. Run checks in the existing application container:
 - `prek run djlint-reformat-django --all-files`
 - `prek run djlint-django --all-files`
 - `pytest frontend_private/tests/test_template_lint_regressions.py`
-- `bun run test:js`
-- `bun run lint:js`
+- `bun run test:frontend`
+- `bun run lint:frontend`
 - `bun run build`
 
 Rendered Django tests cover permissions, team badges, and private navigation.
@@ -59,3 +59,23 @@ classes, and rendered dimensions rather than exact HTML serialization. Void-tag
 slash spelling is immaterial. Match charts to their actual container/canvas, and
 keep dark-scheme values, Dark Reader lock placement, private-only `.dark`, and
 stylesheet order assertions explicit when extracting styles.
+
+Alpine application expressions belong in `frontend_common/bindings/*.ts`.
+Templates use inert `data-speleodb-bind` and `data-speleodb-scope` markers; keep
+transition classes, `x-cloak`, and named `x-ref` declarations in their original
+locations. Initial preference values use inert data attributes. Do not replace
+an expression with an `x-bind` string: executable attributes remain prohibited.
+See [typed Alpine ownership](typescript-architecture.md#typed-alpine-ownership)
+for controller registration and the real-vendor verification contract.
+
+The ten private entity menus share `bindings/menu.ts` mechanics, with each
+template's inert prefix and number of close links registered explicitly in
+`bindings/private.ts`. Scope creation always returns fresh state. Entity menus
+retain ordinary clicks and outside dismissal without ARIA, Escape or focus
+handlers. Private user and revision menus select their original directive
+modifiers individually; revision focus and cloned-menu policies remain distinct.
+Sidebar, public navigation, welcome and preference bindings keep their own state
+and behavior. Real-vendor tests cover every entity menu, outside dismissal,
+transition settlement, independent clones and the intentional policy
+differences. This consolidation adds no listeners or layout work beyond the
+existing bindings.

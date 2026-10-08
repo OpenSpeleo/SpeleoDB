@@ -50,8 +50,8 @@
 
 @source "../../frontend_private/templates/**/*.html";
 @source "../../frontend_public/templates/footer.html";
-@source "../../frontend_private/static/private/js/*.js";
-@source "../../frontend_private/static/private/js/map_viewer/**/*.js";
+@source "../../frontend_private/static/private/ts/*.ts";
+@source "../../frontend_private/static/private/ts/map_viewer/**/*.ts";
 @source "../../speleodb/surveys/templatetags/project_types.py";
 
 @custom-variant dark (&:is(.dark *));

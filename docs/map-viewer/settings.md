@@ -70,6 +70,16 @@ defaults. Reset restores marker/type visibility and color defaults, preserving
 map source, project, country, network, and item selections, cached data, and
 camera position.
 
+The typed owners are `display_preferences.ts`, `components/settings.ts`, and
+`components/depth_legend.ts`. Finite preference keys and untrusted persisted
+fields are declared in `ts-types/domain/map-display.ts`; rendered hover metadata
+and the legend's narrow map capability live in `map-depth-legend.ts`. Init and
+Reset replace the preference object; teardown flushes persistence and retains
+that object. Panel registries preserve their singleton identity across teardown,
+while each panel retains its existing DOM and observer lifecycle. Tests cover
+repeated initialization, pending requests, focus, and retained callbacks so
+translation does not silently change cleanup behavior.
+
 ## Visibility composition
 
 | Content                              | Required conditions                            |

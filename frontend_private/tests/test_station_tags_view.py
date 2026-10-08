@@ -119,7 +119,7 @@ class TestStationTagsView:
         content = response.content.decode("utf-8")
 
         controller = (
-            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.js"
+            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.ts"
         ).read_text()
         assert 'data-speleodb-controller="station-tags"' in content
         assert "attachTaggedEntityList" in controller
@@ -144,7 +144,7 @@ class TestStationTagsView:
         content = response.content.decode("utf-8")
 
         controller = (
-            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.js"
+            Path(settings.BASE_DIR) / "frontend_common/controllers/station-tags.ts"
         ).read_text()
         assert 'data-speleodb-controller="station-tags"' in content
         assert "predefinedColors" in controller

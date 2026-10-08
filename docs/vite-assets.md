@@ -3,19 +3,21 @@
 ## Feature intent
 
 Vite is SpeleoDB's one compiler, dependency graph, manifest, and disk watcher
-for application CSS, JavaScript, and future intentionally introduced TypeScript.
-Django still owns routing, templates, authentication, static URL generation, and
-every HTTP response. This boundary removes duplicated Tailwind/esbuild
-orchestration without turning the Django application into a Vite-served SPA.
+for application CSS and TypeScript, emitting browser JavaScript. Django still
+owns routing, templates, authentication, static URL generation, and every HTTP
+response. This boundary removes duplicated Tailwind/esbuild orchestration
+without turning the Django application into a Vite-served SPA.
 
 ## Registry and output
 
 `frontend_common/entries.json` names every route-owned entry. Both
-`vite.config.mjs` and Django resolve that registry; a name cannot silently mean
+`vite.config.ts` and Django resolve that registry; a name cannot silently mean
 different source files on each side. Production output is content-hashed and
 minified under `speleodb/common/static/speleodb/vite/`, with source maps off.
-Development output uses stable names and source maps so Django can serve each
-completed rebuild after refresh.
+Development output includes source maps and publishes complete immutable
+generations under `assets/dev/<session>/<generation>/`. Django serves a
+completed generation, and the development client reloads after a newer one is
+published.
 
 One graph does not mean one payload. Tailwind is shared, shell/route styles stay
 isolated where cascade ownership matters, route controllers are lazy, and common
@@ -37,7 +39,7 @@ Production caches the manifest and raises `ImproperlyConfigured` for missing,
 malformed, unsafe, duplicate, unknown, or wrong-type entries.
 
 Templates provide controller context only as inert `application/json` or safe
-`data-*` attributes. `frontend_common/app.js` parses context and initializes
+`data-*` attributes. `frontend_common/app.ts` parses context and initializes
 controllers sequentially in document order. Controllers import application
 modules explicitly; they do not publish globals merely to support old script
 loading. Generated map actions use delegated inert `data-map-action` metadata,
@@ -61,6 +63,43 @@ Dark metadata, the Dark Reader lock, private `.dark`, public roots without
 `.dark`, and stylesheet cascade order are rendering contracts. Moving a style
 into Vite must preserve its former template-block position.
 
+### TypeScript source delivery boundary
+
+TypeScript modules remain beside their original static-directory owners during
+translation, but are compiler inputs rather than downloadable static assets.
+`CompiledStaticFilesConfig` adds `*.ts` to Django's standard
+[`ignore_patterns`](https://docs.djangoproject.com/en/6.0/ref/contrib/staticfiles/#customizing-the-ignored-pattern-list),
+retaining its default exclusions. Django owns collection traversal and matching;
+there is no custom collection filter. This excludes `.ts` and `.d.ts` files
+without changing deployment commands.
+
+The two finder subclasses in `speleodb.common.staticfiles` only reject direct
+`.ts` lookups. This separately protects development static responses: collection
+ignore patterns do not apply to `findstatic` or direct HTTP requests. Their
+listing behavior is inherited unchanged from Django.
+
+Vite-emitted JavaScript, workers, CSS, and existing vendor distributions retain
+Django's normal discovery order, storage handling, prefixes, and ignore
+patterns. Direct lookup adds one suffix check without reading asset contents or
+changing Vite's input graph. Focused static-source tests exercise both finder
+types, both lookup modes, actual static-view 404 responses, and collection with
+both stock Django finders and the lookup guards into an isolated local
+directory. Collection tests do not upload to S3 or certify a deployed CDN.
+Deployment must use the resulting collected artifact; these finders do not
+remove files previously published outside Django's collection workflow.
+
+The root pytest `live_server` fixture collects assets once per session into a
+temporary local `STATIC_ROOT`, preserving the configured media storage. It wraps
+pytest-django's existing server fixture without replacing its lifecycle or HTTP
+handler. Settings are overridden only while collecting and during each
+live-server test, so other tests retain their original storage configuration.
+This is necessary because pytest-django recognizes only the literal
+`django.contrib.staticfiles` entry when choosing finder-backed serving; an
+explicit `AppConfig` uses its normal collected-file handler instead. Browser and
+upload integration tests therefore exercise the standard collected artifact. A
+real HTTP contract compares the served compiled script with its build output,
+checks vendor delivery, and verifies raw TypeScript returns 404.
+
 ## Verification and performance
 
 Contract tests reject direct first-party static references, executable inline
@@ -68,6 +107,11 @@ application scripts, event attributes, unknown registry sources, parallel
 compiler commands, and Vite client/server integration. Unit tests cover manifest
 parsing/failures, recursive preloads, DEBUG fallback, bootstrap context parsing,
 duplicate initialization, runtime map context, and delegated map actions.
+
+Page stylesheet-count and cascade-order assertions identify stable entry
+filenames, not their parent directories. Run these contracts with both
+production and development manifests: development URLs include a session and
+generation between `assets/` and the filename.
 
 The isolated watcher test proves graph invalidation without touching a running
 Django or developer process. Final browser evidence always starts from a clean
@@ -101,9 +145,45 @@ browser evidence.
 
 The disk watcher shares the Django container console. Keep stdout/stderr
 attached and `clearScreen: false` so rebuilds cannot erase application logs.
-Controller discovery must retain the negative `!./controllers/*.test.js` glob
-alongside its positive JavaScript glob. Check a clean production graph excludes
+Controller discovery must retain the negative `!./controllers/*.test.ts` glob
+alongside its positive TypeScript glob. Check a clean production graph excludes
 test modules; Vitest globals must never reach a browser controller chunk.
+
+## Development publication and reload
+
+`scripts/dev.ts` supervises Vite's disk watcher and the three-project semantic
+watcher. Compose adds Django to that same supervisor through `--django`.
+Required-child failure stops the other processes and returns failure; SIGINT and
+SIGTERM reach child process groups, with a bounded shutdown grace period. Logs
+remain attached and semantic errors stay visible. Production builds still
+require successful type checking and both ownership audits before emission.
+
+The Vite development plugin compiles into a stable staging tree under
+`.vite/pending/`. Vite caches unchanged worker bundles between watch builds;
+copying the complete relative output graph into
+`assets/dev/<session>/<generation>/` keeps those workers in the same published
+generation as the entries, shared chunks and CSS. Relative imports and worker
+URLs remain unchanged. The plugin validates registered entries, import edges and
+every referenced file before atomically renaming the pending manifest to the
+canonical manifest. A failed build never replaces that completion marker. Prior
+generations remain available for old pages and their later lazy imports; stop
+watchers and run the normal clean build to reclaim them.
+
+Django's asset tags share a manifest snapshot for the whole template render,
+including inherited and included templates. The app script carries its
+generation and the DEBUG-only `__assets__/generation/` endpoint URL. The
+endpoint is GET-only and sends no-store cache headers. A development-only module
+polls the completed generation, comparing the first response with the generation
+rendered into the page. It records an attempted target in session storage before
+reloading once. Stale HTML cannot repeatedly reload for that same target;
+unavailable storage, malformed responses and network failures do not navigate.
+Template changes trigger a Vite rebuild even when no Tailwind class changes.
+
+Production registers no reload endpoint, emits no development client, and adds
+no reload attributes to its app script. Tests cover publication failure and
+recovery, retained worker/assets, render-time races, stale-page loops, failed
+storage/network responses, and real subprocess signal/failure cleanup. The
+watcher verifier exercises actual Vite builds in an isolated temporary tree.
 
 ## Verification boundaries
 
@@ -117,8 +197,8 @@ deployment.
 
 For current changes, run the repository's focused checks inside the existing
 application container and report the routes, engines, data states, and delivery
-environment actually exercised. The checked-in browser suite focuses on viewer
-responsiveness; it does not replace a full baseline/candidate asset migration
-comparison. Verify runtime performance as well as compressed size before making
-a performance-parity claim. Build hashes and historical test counts apply only
-to the exact revision that produced them.
+environment actually exercised. The checked-in browser suite covers controller
+and template parity alongside viewer responsiveness; it does not replace a full
+baseline/candidate asset migration comparison. Verify runtime performance as
+well as compressed size before making a performance-parity claim. Build hashes
+and historical test counts apply only to the exact revision that produced them.

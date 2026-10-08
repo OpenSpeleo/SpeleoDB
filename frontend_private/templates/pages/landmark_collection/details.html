@@ -293,7 +293,7 @@
       {% include "snippets/modal_error.html" %}
     {% endif %}
   </div>
-  {# Inline JSON data for the details_main.js bundle #}
+  {# Inline JSON data for the details_main.ts bundle #}
   {{ landmarks_data|json_script:"landmark_table_data" }}
   {{ collection_data|json_script:"landmark_collection_context" }}
 {% endblock right_panel %}

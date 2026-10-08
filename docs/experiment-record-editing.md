@@ -53,8 +53,8 @@ measurement values without deleting and recreating rows.
 
 The station experiments UI lives in:
 
-- `frontend_private/static/private/js/map_viewer/stations/experiments.js`
-- `frontend_private/static/private/js/map_viewer/api.js`
+- `frontend_private/static/private/ts/map_viewer/stations/experiments.ts`
+- `frontend_private/static/private/ts/map_viewer/api.ts`
 
 The frontend uses one shared record workflow for add and edit:
 
@@ -86,7 +86,7 @@ the caller has experiment-level permission. When the backend rejects a mutation
 with `403`, the client refreshes those experiment flags before re-rendering so
 stale cached permissions do not linger.
 
-Module public API (`window.StationExperiments`):
+Module public API (`StationExperiments`, exported by `stations/experiments.ts`):
 
 - `render(stationId, container)`
 - `openAddRowModal(stationId, experimentId)`
@@ -218,8 +218,8 @@ layer ever loosens; it is exercised by a direct unit test of the validator.
 
 Coverage lives in:
 
-- `frontend_private/static/private/js/map_viewer/api.test.js`
-- `frontend_private/static/private/js/map_viewer/stations/experiments.test.js`
+- `frontend_private/static/private/ts/map_viewer/api.test.ts`
+- `frontend_private/static/private/ts/map_viewer/stations/experiments.test.ts`
 
 The focused coverage pins:
 
@@ -294,3 +294,38 @@ path refreshes only the experiment metadata flags, not the full record list.
 This keeps the UI responsive and avoids unnecessary duplicate fetches while also
 centralizing field logic so future changes do not require updating multiple
 modal or table code paths.
+
+## Experiment table controller
+
+`frontend_common/controllers/experiment-data.ts` owns the separate tabular data
+viewer and Excel export. It loads experiment definitions before GeoJSON rows,
+retains definition ordering and status-column exclusion, and initializes the
+existing AG Grid vendor. `ts-types/browser/ag-grid.d.ts` describes only the grid
+options and destroy method consumed here; no additional grid runtime is
+installed. Dynamic experiment UUID/name columns remain open-key row data in
+`ts-types/domain/experiment-table.ts`, separate from the finite controller
+context.
+
+Initialization still resolves before its data request finishes, and refresh
+destroys the current grid before starting another load. Tests cover that timing,
+zero coordinates, field formatting, empty/error states, repeated setup and
+export errors. Types add no feature rescans or additional requests.
+
+The TypeScript record UI keeps its field/row cache and modal types in
+`ts-types/domain/station-experiments.ts`. API data still follows the existing
+array/object guards and saved-row validation. Request tokens discard stale row
+loads; typing adds no extra fetches or per-row runtime validation. Tests cover
+permission refresh, stale selection, form values, scroll restoration, and the
+original async submit listener's promise settlement.
+
+### Field model ownership
+
+`stations/experiment_fields.ts` owns field ordering, editable-field selection,
+value parsing, date normalization, and field validation. The station owner keeps
+experiment permissions, request tokens, cache mutation, and modal lifecycle.
+This separates reusable field rules from network state without adding another
+permission implementation or changing when validation runs. Date validation
+retains the measurement-date end-of-day comparison; parsing retains the current
+`parseFloat` and omitted-empty-value behavior. The station experiment suite
+exercises add/edit validation, read-only presentation, and mutation-time
+permission refresh through the real owner.

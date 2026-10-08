@@ -4,8 +4,8 @@
 > engineering intent, module boundaries, and behavioral contracts.
 
 The private map viewer entrypoint is
-`frontend_private/static/private/js/map_viewer/main.js`. The public viewer
-entrypoint is `frontend_public/static/js/gis_view_main.js`. Both share the same
+`frontend_private/static/private/ts/map_viewer/main.ts`. The public viewer
+entrypoint is `frontend_public/static/ts/gis_view_main.ts`. Both share the same
 underlying modules; the public viewer exposes a read-only, token-authenticated
 subset.
 
@@ -29,7 +29,7 @@ viewer and the in-map **Map Source** control in the public viewer; the choice is
 persisted in browser `localStorage` under `DEFAULTS.STORAGE_KEYS.MAP_SOURCE`.
 
 Supported sources are defined in one registry, `MAP_SOURCES` in
-`frontend_private/static/private/js/map_viewer/config.js`:
+`frontend_private/static/private/ts/map_viewer/config.ts`:
 
 - `MapBox - Satellite` uses the existing Mapbox satellite streets style and
   requires the configured Mapbox token.
@@ -60,7 +60,7 @@ before Mapbox GL is initialized; matching configured raster tile responses are
 hashed and converted to 404 responses when those requests pass through page
 `fetch`.
 
-Provider behavior lives in `map/sources.js`. It validates persisted source ids,
+Provider behavior lives in `map/sources.ts`. It validates persisted source ids,
 filters token-required providers when a token is unavailable, builds the initial
 Mapbox style object, and switches ESRI sources by replacing one raster tile
 layer below all SpeleoDB overlays. It does not call `map.setStyle()` for ESRI
@@ -75,7 +75,7 @@ Source changes dispatch `speleo:map-source-changed`. ESRI switches set
 `reloadRequired: false`; private and public entrypoints ignore those events
 because the switch is a base-raster replacement, not a full style reset. The
 control icon is the trusted static `MAP_SOURCE_ICON_SVG` constant in
-`map/sources.js`; keep user/API data out of that `innerHTML` path.
+`map/sources.ts`; keep user/API data out of that `innerHTML` path.
 
 ---
 
@@ -89,7 +89,7 @@ accessibility, and extension contracts.
 
 ### 1.1 Subsurface Stations
 
-**Module:** `stations/manager.js`
+**Module:** `stations/manager.ts`
 
 Subsurface stations are **project-scoped**. Each station belongs to exactly one
 project and carries a UUID, lat/lng coordinates, and an optional
@@ -142,7 +142,7 @@ access checked via `Config.hasScopedAccess('project', projectId, 'write')`.
 
 ### 1.2 Surface Stations
 
-**Module:** `surface_stations/manager.js`
+**Module:** `surface_stations/manager.ts`
 
 Surface stations are **network-scoped** (belong to a `SurfaceMonitoringNetwork`,
 not a project). They render as diamond symbols on layers prefixed
@@ -160,7 +160,7 @@ Surface stations are managed via:
 
 ### 1.3 Station Details Modal
 
-**Module:** `stations/details.js`
+**Module:** `stations/details.ts`
 
 The details modal is opened via
 `StationDetails.openModal(stationId, parentId, isNewlyCreated, stationType)`. It
@@ -171,18 +171,18 @@ discriminator (`'subsurface'` or `'surface'`).
 
 | Tab             | Sub-module                | Description                                             |
 | --------------- | ------------------------- | ------------------------------------------------------- |
-| **Details**     | inline in `details.js`    | Name, description, type badge, coordinates, dates       |
-| **Logs**        | `stations/logs.js`        | Timestamped field-log entries with optional images      |
-| **Resources**   | `stations/resources.js`   | File attachments (photos, documents, data files)        |
-| **Sensors**     | `stations/sensors.js`     | Sensor install history, fleet integration, Excel export |
-| **Experiments** | `stations/experiments.js` | Experiment records linked to the station                |
+| **Details**     | inline in `details.ts`    | Name, description, type badge, coordinates, dates       |
+| **Logs**        | `stations/logs.ts`        | Timestamped field-log entries with optional images      |
+| **Resources**   | `stations/resources.ts`   | File attachments (photos, documents, data files)        |
+| **Sensors**     | `stations/sensors.ts`     | Sensor install history, fleet integration, Excel export |
+| **Experiments** | `stations/experiments.ts` | Experiment records linked to the station                |
 
 The active tab is tracked via the module-level `activeTab` variable (default
 `'details'`).
 
 ### 1.4 Station Tags
 
-**Module:** `stations/tags.js`
+**Module:** `stations/tags.ts`
 
 Tags provide **user-defined color coding** for stations. Each user can create
 named tags with one of 20 predefined colors (fetched from `API.getTagColors()`;
@@ -205,7 +205,7 @@ the GeoJSON source data.
 
 ## 2. Landmark Management
 
-**Module:** `landmarks/manager.js`
+**Module:** `landmarks/manager.ts`
 
 Landmarks are **collection-scoped**, not project-scoped. A user's private
 Landmarks live in their personal Landmark Collection, and shared Landmarks are
@@ -245,7 +245,7 @@ cancel, the landmark reverts to its original position via
 
 ## 3. Exploration Leads
 
-**Module:** `exploration_leads/manager.js`
+**Module:** `exploration_leads/manager.ts`
 
 Exploration leads are **project-scoped** markers that indicate promising areas
 for future exploration. They are placed at survey line endpoints (magnetic
@@ -281,7 +281,7 @@ Coordinates are stored with 7 decimal places of precision (`toFixed(7)`).
 
 ## 4. GPS Tracks
 
-**Module:** `components/gps_tracks_panel.js`
+**Module:** `components/gps_tracks_panel.ts`
 
 GPS tracks are authenticated, direct-user permissioned track files. Creator
 provenance remains on the model, while active READ_ONLY, READ_AND_WRITE, or
@@ -326,15 +326,15 @@ replace or generalize this established GPS Track lifecycle.
 
 ## 4.1 Private GIS Layers
 
-**Modules:** `api.js`, `config.js`, `state.js`, `map/layers.js`, and
-`components/gis_layers_panel.js`
+**Modules:** `api.ts`, `config.ts`, `state.ts`, `map/layers.ts`, and
+`components/gis_layers_panel.ts`
 
 GIS Layers are authenticated KML, KMZ, GeoJSON, TopoJSON, or zipped Shapefile
 overlays. Every layer defaults OFF. First activation refreshes the authenticated
 detail response and fetches its current signed GeoJSON. The standard Map Viewer
 State/Layers cache retains that original document; cooperative preparation
 derives bounds and a separate display copy for geometry-type filtering. GPS
-Tracks and GIS Layers share `toggleLazyOverlay` in `map/layers.js`, which checks
+Tracks and GIS Layers share `toggleLazyOverlay` in `map/layers.ts`, which checks
 map generation, latest visibility intent, and metadata modification time, and
 aborts replaced requests. Only current results reach scheduled map installation.
 Polygon fill/outline, line, and point roles are created.
@@ -406,7 +406,7 @@ Cylinder installs support:
 
 ## 6. Drag-and-Drop System
 
-**Module:** `map/interactions.js`, `map/geometry.js`
+**Module:** `map/interactions.ts`, `map/geometry.ts`
 
 The drag system handles repositioning of stations, landmarks, cylinder installs,
 and exploration leads on the map.
@@ -431,7 +431,7 @@ snapping: `['station', 'cylinder-install', 'exploration-lead']`.
 
 ### Magnetic snap-to-line
 
-**Module:** `map/geometry.js`
+**Module:** `map/geometry.ts`
 
 `Geometry.findMagneticSnapPoint(coords, excludeFeatureId)` searches cached
 survey line endpoints for the nearest point within `MAGNETIC_SNAP_RADIUS`
@@ -474,7 +474,7 @@ Drag initiation requires write access:
 
 ## 7. Context Menu
 
-**Module:** `components/context_menu.js`
+**Module:** `components/context_menu.ts`
 
 A right-click context menu provides actions on map features.
 
@@ -517,29 +517,50 @@ The menu hides on any document click or the Escape key.
 
 ### 8.1 Modals
 
-**Module:** `components/modal.js`
+**Module:** `components/modal.ts`
 
 Confirmation and input modals used by the drag system, deletion confirmations,
 and CRUD workflows. Modals are rendered as fixed overlays with backdrop blur.
 
+`dialog_lifecycle.ts` owns nested-dialog isolation, live dismissal guards,
+keyboard capture, and return focus. `dialog_focus.ts` computes the visible
+keyboard order, including disclosure summaries. The HTML-accepting `Modal`
+facade retains content ownership and delayed `onOpen` callbacks; callers escape
+untrusted values before building its markup. `ts-types/domain/map-dialog.ts`
+describes these capabilities without changing DOM timing or singleton identity.
+
+`panel_position.ts` positions panels below the first anchor whose inline display
+is not `none`; it does not perform a new visibility scan. Colocated tests cover
+focus/inert restoration, guarded dismissal, repeat opens, and anchor offsets.
+
 ### 8.2 Notifications
 
-**Module:** `components/notification.js`
+**Module:** `components/notification.ts`
 
 Toast-style notifications for success/error/info feedback after operations
 (station created, drag confirmed, API errors, etc.).
 
 ### 8.3 Upload with Progress
 
-**Module:** `components/upload.js`
+**Module:** `components/upload.ts`
 
 File upload component used for station resources, log entry attachments, and GPX
-imports. Supports FormData submission with progress tracking via the
-`isFormData` flag in `apiRequest`.
+imports. `uploadWithProgress` owns an XMLHttpRequest transport, returns the
+original XHR for cancellation, and forwards progress and upload-complete events.
+`UploadProgressController` owns progress markup and a promise facade. This path
+returns `null` for 204 or empty successful responses; unreadable successful
+responses remain ambiguous errors. Error objects retain status, ambiguity, and
+parsed payload fields rather than becoming a new error class.
+
+`ts-types/domain/upload.ts` separates callback payloads from untrusted
+serializer errors. Type-only class fields do not create new instance properties.
+Unit coverage checks FormData identity, callback receivers, error/abort
+payloads, promise settlement, and the delayed hide; Django subprocess
+integration checks the real transport against the application.
 
 ### 8.4 Project Panel
 
-**Module:** `components/project_panel.js`
+**Module:** `components/project_panel.ts`
 
 Left-side panel listing all projects the user has access to. Projects are
 grouped by country when the `country` field is present on at least one project;
@@ -563,7 +584,18 @@ project preferences.
 map-level visibility computed from both gates. It is set **before** the map
 guard in `applyProjectLayerVisibility` so that downstream consumers
 (`getVisibleProjectIds`) read the real on-map state. This affects stations,
-leads, cylinders, and depth domains.
+leads, cylinders, depth domains, and survey snapping. Both magnetic snapping and
+context-menu nearest-endpoint lookup use the shared selectors in
+`map/project_visibility.ts`, including when a specific project is requested.
+Each query reads current effective state; changing either gate does not rescan
+GeoJSON or discard cached endpoints. Opening a country restores snapping only
+for projects whose individual preference is still enabled. Before effective
+state has been published, selectors retain the individual-preference fallback.
+
+`geometry.visibility.test.ts` exercises both query methods with the real
+project-panel visibility operations, including immediate gate changes and
+repeated toggles without endpoint-cache rebuilding. `layers.visibility.test.ts`
+protects the existing Layers facade's receiver behavior and State resets.
 
 `_applyInitialCountryVisibility()` is called during `ProjectPanel.init()` to
 enforce country gates on page load.
@@ -574,7 +606,7 @@ under `DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY`.
 
 ### 8.5 GPS Tracks Panel
 
-**Module:** `components/gps_tracks_panel.js`
+**Module:** `components/gps_tracks_panel.ts`
 
 See Section 4. Positioned below the project panel, auto-repositions on project
 panel resize (including country group collapse/expand) via a `ResizeObserver` on
@@ -582,7 +614,7 @@ the project panel container.
 
 ### 8.6 GIS Layers Panel
 
-**Module:** `components/gis_layers_panel.js`
+**Module:** `components/gis_layers_panel.ts`
 
 Private accessible layers appear alphabetically, default OFF, and show loading
 and safe failure feedback. It is an isolated sibling below GPS Tracks in the
@@ -596,7 +628,7 @@ user-facing toggles.
 
 **Model fields:** `Project.color`, `GPSTrack.color`, `GISLayer.color`,
 `LandmarkCollection.color` (all `CharField(max_length=7)`) **Palette:**
-`ColorPalette` in `speleodb/common/enums.py` **JS module:** `map/colors.js`
+`ColorPalette` in `speleodb/common/enums.py` **JS module:** `map/colors.ts`
 
 ### Model-stored colors
 
@@ -673,7 +705,7 @@ templates for rendering color-picker preset swatches.
 
 ## 10. Country Grouping
 
-**JS module:** `components/project_panel.js` **Django view:**
+**JS module:** `components/project_panel.ts` **Django view:**
 `ProjectListingView` in `frontend_private/views/project.py`
 
 Projects are grouped by country in two places: the project panel inside the map
@@ -729,7 +761,7 @@ template filter. Collapse state is persisted to `localStorage` under
 | Context          | Function                                    | Input            |
 | ---------------- | ------------------------------------------- | ---------------- |
 | Django templates | `country_flag` filter (`project_colors.py`) | ISO alpha-2 code |
-| JS (ES modules)  | `Utils.countryFlag(code)` (`utils.js`)      | ISO alpha-2 code |
+| JS (ES modules)  | `Utils.countryFlag(code)` (`utils.ts`)      | ISO alpha-2 code |
 
 Both convert a two-letter code to the corresponding regional indicator emoji
 pair (e.g. `"FR"` -> the French flag emoji).
@@ -760,5 +792,42 @@ Map behavior:
 `MAP_SOURCES` order is part of the UI/default contract: it determines menu order
 and the first token-satisfied fallback. A registry reorder must update the
 order-sensitive available-source and tokenless-default expectations in
-`map/sources.test.js` and the documented list together. Verify the intended
+`map/sources.test.ts` and the documented list together. Verify the intended
 default and manifest-owned output after a clean build.
+
+## Station feature contracts
+
+Station feature declarations distinguish API records from display projections.
+The tag owner retains the API tag-array and tag-object identities; mutation
+updates the existing station and then its marker/detail display. Its deferred
+color initialization calls the original receiver.
+
+Journal and resource forms keep multipart `FormData`, upload progress for files,
+and their separate text-only API paths. Successful mutations start the existing
+refresh without awaiting it. Resource sorting mutates the fetched array, and
+edit/delete operations use its cached records. Replacing the file preview
+preserves the selected input and File identity. Photo, video, and note viewers
+retain their individual scroll/keyboard lifecycles.
+
+Cylinder fleet availability is cached within an install-modal session and
+refetched for the next session. Install/status changes dispatch
+`speleo:refresh-cylinder-installs` on Document without an explicit detail value.
+Pressure operations refresh the pressure tab. Sensor availability retains its
+separate cache and current-sensor editing exception; empty expiries are omitted
+on create and serialized by FormData as the literal string `null` on edit.
+Sensor sorting/filtering, permission checks, and dynamic State imports remain
+owned by the sensor module.
+
+Collocated TypeScript tests characterize API payloads, callback receivers,
+response/cache identity, mutation ordering, cancellation, failure settlement,
+file-input preservation, and malicious display values. These contracts prevent
+shared presentation work from changing transport or lifetime policies.
+
+Station and surface-station manager composition remains separate in
+`stations/ui.ts` and `surface_stations/ui.ts`. Both retain return-focus
+forwarding and context-preserving details navigation. Subsurface creation uses
+the existing snapping result; surface creation reads writable networks and
+validates coordinate bounds. The details module owns family/parent context,
+clones tab controls during initialization, and retains the supplied navigation
+handler object. Tests exercise both families, absent DOM, permission-negative
+creation, malformed station types, submission values, and callback ordering.

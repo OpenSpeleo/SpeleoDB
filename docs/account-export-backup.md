@@ -242,3 +242,13 @@ recorded attempt deadlines, and abandoned scratch retention derive from those
 settings; recovery grace and operation-specific timeouts remain separate
 budgets. Access uses ordinary active-account/resource permissions, without a
 feature-enable or staff-only rollout switch.
+
+The browser controller is `frontend_common/controllers/user-exports.ts`. Its
+endpoint context belongs to `ts-types/controllers/user-exports.ts`; export
+records and history presentation contracts belong to
+`ts-types/domain/exports.ts`. The transport retains ordinary errors with a
+status property and bounds both fetch and JSON body reads. It preserves the
+page-one fallback, capped retry budget, expiry timers, focus retention, and its
+existing absence of a returned cleanup function. Direct initialization tests
+include missing DOM/context, foreign endpoints, and repeated attachment
+alongside real HTTP request tests.

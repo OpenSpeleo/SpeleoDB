@@ -6,26 +6,39 @@
   },
   "scripts": {
     "start": "bun run dev",
-    "build": "bun run build:clean && bun run build:assets",
-    "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/js/dist/ ./frontend_public/static/js/dist/",
-    "build:assets": "vite build --mode production",
-    "dev": "vite build --watch --mode development",
+    "build": "bun run typecheck && bun run audit:javascript && bun run audit:templates && bun run build:clean && vite build --mode production",
+    "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/ts/dist/ ./frontend_public/static/ts/dist/",
+    "build:assets": "bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --mode production",
+    "dev": "bun scripts/dev.ts",
     "pre-commit": "bun run build",
     "update": "bun update --latest && bunx --bun update-browserslist-db@latest",
-    "lint:js": "eslint \"vite.config.mjs\" \"playwright.config.mjs\" \"tests/browser/**/*.mjs\" \"scripts/**/*.mjs\" \"frontend_common/**/*.js\" \"frontend_private/static/private/js/**/*.js\" \"frontend_public/static/js/**/*.js\" \"frontend_errors/static/js/**/*.js\" --ignore-pattern \"frontend_private/static/private/js/dist/**\" --ignore-pattern \"frontend_private/static/private/js/vendors/**\" --ignore-pattern \"frontend_public/static/js/dist/**\" --ignore-pattern \"frontend_public/static/js/vendors/**\" --report-unused-disable-directives-severity off --max-warnings=0",
-    "lint:js:fix": "bun run lint:js --fix",
-    "test:js": "vitest run --config ./vitest.config.mjs",
-    "test:js:watch": "vitest --config ./vitest.config.mjs",
-    "test:assets-watch": "bun scripts/verify-vite-watch.mjs",
-    "typecheck:railway": "tsc --noEmit --strict --skipLibCheck --target es2023 --module preserve --moduleResolution bundler --types node .railway/railway.ts",
-    "test:browser": "playwright test --config ./playwright.config.mjs"
+    "test:assets-watch": "bun scripts/verify-vite-watch.ts",
+    "test:browser": "playwright test --config ./playwright.config.ts",
+    "lint:frontend": "eslint --config eslint.config.ts . --max-warnings=0",
+    "test:frontend": "vitest run --config ./vitest.config.ts",
+    "test:frontend:watch": "vitest --config ./vitest.config.ts",
+    "typecheck:runtime": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "typecheck:worker": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.worker.json",
+    "typecheck": "bun ./node_modules/@typescript/native/bin/tsc --build tsconfig.json tsconfig.worker.json tsconfig.development.json",
+    "typecheck:watch": "bun ./node_modules/@typescript/native/bin/tsc --build tsconfig.json tsconfig.worker.json tsconfig.development.json --watch --preserveWatchOutput",
+    "audit:javascript": "bun scripts/audit-javascript.ts",
+    "audit:templates": "bun scripts/audit-templates.ts",
+    "lint:frontend:fix": "bun run lint:frontend --fix",
+    "typecheck:development": "bun ./node_modules/@typescript/native/bin/tsc -p tsconfig.development.json"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "1.4.2",
+    "@types/geojson": "7946.0.16",
+    "@types/jquery": "3.5.34",
+    "@types/jsdom": "30.0.0",
     "@types/node": "26.6.4",
+    "@types/prismjs": "1.26.6",
+    "@types/sortablejs": "1.15.9",
+    "@typescript/native": "npm:typescript@7.0.2",
     "cross-env": "^10.1.0",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
@@ -33,7 +46,8 @@
     "railway": "3.13.0",
     "rimraf": "^6.1.3",
     "tailwindcss": "4.3.3",
-    "typescript": "7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.71.1",
     "vite": "8.3.3",
     "vitest": "^5.0.3"
   },
@@ -41,5 +55,6 @@
   "trustedDependencies": [
     "esbuild",
     "fsevents"
-  ]
+  ],
+  "type": "module"
 }
