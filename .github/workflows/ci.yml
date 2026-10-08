@@ -210,8 +210,10 @@ jobs:
         run: bunx --bun playwright install --with-deps chromium webkit
 
       - name: Run serial browser workloads against the Django live server
+        # This pytest case wraps the complete browser suite, bounded at 1800s.
+        # Diagnose a stuck wrapper/teardown after that deadline, not at 60s.
         run:
-          pytest tests/browser/test_django_browser.py -o faulthandler_timeout=60
+          pytest tests/browser/test_django_browser.py -o faulthandler_timeout=1860
           --durations=20
         env: *django-test-environment
 

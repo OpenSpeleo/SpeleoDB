@@ -141,6 +141,7 @@ def controller_routes(user: User) -> dict[str, str]:
 def test_viewer_browser_workloads(
     live_server: LiveServer,
     django_user_model: type[User],
+    capfd: pytest.CaptureFixture[str],
 ) -> None:
     """Keep browser timing separate from the serial backend suite and its load."""
     manifest: Path = (
@@ -180,22 +181,28 @@ def test_viewer_browser_workloads(
     if browser_grep:
         command.extend(["--grep", browser_grep])
     process: subprocess.Popen[str]
-    with subprocess.Popen(  # noqa: S603 - fixed root script
-        command,
-        cwd=BASE_DIR,
-        env=browser_environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
-    ) as process:
+    # Keep Playwright's per-case progress visible while this single pytest test
+    # orchestrates the whole serial browser suite.
+    with (
+        capfd.disabled(),
+        subprocess.Popen(  # noqa: S603 - fixed root script
+            command,
+            cwd=BASE_DIR,
+            env=browser_environment,
+            text=True,
+            start_new_session=True,
+        ) as process,
+    ):
         try:
-            stdout, stderr = process.communicate(timeout=1800)
+            process.wait(timeout=1800)
         finally:
             if process.poll() is None:
                 # Bun, Playwright and its browser workers share this new group.
                 # A timeout/interruption must not leave renderer workers alive.
                 with suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGKILL)
-                process.communicate()
-    assert process.returncode == 0, stdout + stderr
+                process.wait()
+    assert process.returncode == 0, (
+        f"Playwright exited with status {process.returncode}; "
+        "see the browser output above and report.json in the browser artifacts"
+    )

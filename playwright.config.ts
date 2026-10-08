@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { BROWSER_TEST_BUDGETS } from './tests/browser/budgets.ts';
 
 const artifacts = process.env.VIEWER_BROWSER_ARTIFACTS || join(tmpdir(), 'speleodb-viewer-browser');
 
@@ -10,8 +11,8 @@ export default defineConfig({
     fullyParallel: false,
     workers: 1,
     retries: 0,
-    timeout: 120_000,
-    expect: { timeout: 20_000 },
+    timeout: BROWSER_TEST_BUDGETS.testMs,
+    expect: { timeout: BROWSER_TEST_BUDGETS.assertionMs },
     outputDir: artifacts,
     reporter: [['list'], ['json', { outputFile: join(artifacts, 'report.json') }]],
     use: {

@@ -2,6 +2,7 @@ import type { BrowserContext, Page, Locator } from '@playwright/test';
 import type { Feature, FeatureCollection } from 'geojson';
 import type { EvidenceMapbox, ViewerEvidence, ViewerTrace } from '../../ts-types/testing/browser/viewer.ts';
 import { expect } from '@playwright/test';
+import { BROWSER_TEST_BUDGETS } from './budgets.ts';
 
 export const projectId = (index: number) => `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 export const trackId = '20000000-0000-4000-8000-000000000001';
@@ -158,9 +159,9 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
     const hideDebugToolbar = page.getByRole('link', { name: 'Hide »', exact: true });
     if (await hideDebugToolbar.isVisible()) await hideDebugToolbar.click();
     await expect(page.locator(publicUrl ? '#color-mode-button' : '#map-settings-button')).toBeVisible();
-    await expect.poll(() => page.evaluate(ids => ids.filter(id => window.__viewerEvidence?.map.getSource(`project-geojson-${id}`)).length, selectedProjects.map(project => project.id)), { timeout: 90_000 }).toBe(selectedProjects.length);
-    await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: 90_000 });
-    await page.waitForFunction(() => window.__viewerEvidence.map.loaded());
+    await expect.poll(() => page.evaluate(ids => ids.filter(id => window.__viewerEvidence?.map.getSource(`project-geojson-${id}`)).length, selectedProjects.map(project => project.id)), { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs }).toBe(selectedProjects.length);
+    await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
+    await page.waitForFunction(() => window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     return { requests, failures, gates };
 }
 

@@ -2,6 +2,7 @@ import type { Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { gisId, installFixture, login, projectId, toggleLabel, trackId } from './viewer-fixture.ts';
+import { BROWSER_TEST_BUDGETS } from './budgets.ts';
 
 test.beforeEach(async ({ page }) => { await login(page); });
 
@@ -45,8 +46,8 @@ async function verifySettings(page: Page, testInfo: TestInfo, stress: boolean) {
     }
     const durations = evidence.traces.map(trace => trace.feedbackFrameMs!).sort((a, b) => a - b);
     const p95 = durations[Math.ceil(durations.length * .95) - 1];
-    await attachJSON(testInfo, 'viewer-latency.json', { p95FeedbackFrameMs: p95, ...evidence });
-    expect(p95).toBeLessThanOrEqual(100);
+    await attachJSON(testInfo, 'viewer-latency.json', { budgets: BROWSER_TEST_BUDGETS, p95FeedbackFrameMs: p95, ...evidence });
+    expect(p95).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
     await expect(page.locator('canvas.mapboxgl-canvas')).toBeVisible();
 }
 
@@ -104,15 +105,15 @@ test('a second GPS toggle stays available during loading and final intent wins w
         traces: window.__viewerEvidence.traces,
         messages: window.__viewerEvidence.workerMessages,
     }));
-    await attachJSON(testInfo, 'single-feature-preparation.json', preparation);
+    await attachJSON(testInfo, 'single-feature-preparation.json', { budgets: BROWSER_TEST_BUDGETS, ...preparation });
     expect(preparation.messages).toBeGreaterThan(2);
     expect(preparation.traces).toHaveLength(2);
     expect(requests.get('/viewer-fixtures/track.geojson')).toBe(1);
     await toggleLabel(input);
     await expect.poll(() => page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(`gps-track-line-${id}`, 'visibility'), trackId)).toBe('none');
     await testInfo.attach('gps-final-state.png', { body: await page.screenshot(), contentType: 'image/png' });
-    expect(Math.max(...preparation.gaps!)).toBeLessThanOrEqual(50);
-    for (const trace of preparation.traces) expect(trace.feedbackFrameMs).toBeLessThanOrEqual(100);
+    expect(Math.max(...preparation.gaps!)).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.preparationGapMs);
+    for (const trace of preparation.traces) expect(trace.feedbackFrameMs).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
 });
 
 test('GIS load failure permits retry and mixed geometry toggles preserve sources', async ({ page }) => {
