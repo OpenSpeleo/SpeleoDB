@@ -5,6 +5,7 @@
     "bun": "1.4.2"
   },
   "scripts": {
+    "lock": "bun scripts/lock.ts",
     "start": "bun run build",
     "build": "bun run typecheck && bun run audit:javascript && bun run audit:templates && bun run build:clean && vite build --mode production",
     "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/ts/dist/ ./frontend_public/static/ts/dist/",
@@ -57,11 +58,11 @@
   ],
   "type": "module",
   "dependencies": {
-    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#cb1cb131ae10dc57727ddf671f54df3c57bbd019",
-    "@speleodb/map-viewer": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer.git#a1fcbc080a8da87fe86baeb7b16e27957e433916",
+    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188",
+    "@speleodb/map-viewer": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer.git#6e2e7eea22da6d39874647256bea8a13da3fd922",
     "maplibre-gl": "6.10.0"
   },
   "overrides": {
-    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#cb1cb131ae10dc57727ddf671f54df3c57bbd019"
+    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188"
   }
 }

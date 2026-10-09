@@ -26,6 +26,7 @@
     "scripts/audit-javascript.ts",
     "scripts/audit-templates.ts",
     "scripts/jsdom-runtime.ts",
+    "scripts/lock.ts",
     "scripts/test-frontend-uploads.ts",
     "speleodb/gis/geometry_contract.json",
     "tests/browser/**/*.ts",

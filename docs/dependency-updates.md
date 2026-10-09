@@ -35,6 +35,42 @@ commit-time validation enforce different rule sets.
 
 ## Lockfile invariants
 
+### Relocking the standalone web checkout
+
+Inside the monorepo, run `bun run lock` from `apps/web` after editing
+`package.json`. Use `bun run lock --upgrade` to refresh all direct and
+transitive resolutions within the existing manifest constraints, like
+`uv lock --upgrade`. Exact versions, Git SHAs, overrides and semver ranges
+remain authoritative; this command never changes `package.json` or opts into
+major upgrades outside its ranges. Ordinary relocking retains already satisfied
+locked versions.
+
+The web entrypoint delegates to the monorepo's `utilities/bun-lock/lock.mjs`,
+shared with mobile and the map packages. It also works from `/app` in the
+monorepo container, where the helper is available under `/workspace`. Standalone
+clones do not include this convenience helper; use
+`bun install --lockfile-only --ignore-scripts` there. Existing standalone CI and
+install commands remain independent of the helper.
+
+The helper requires the exact `.bun-version` runtime, copies only resolver
+inputs into an external temporary directory, and atomically publishes only
+`bun.lock` after success. It rejects temporary directories under another
+package, unsupported local/workspace dependencies and patches, unknown flags,
+and inputs edited during resolution. An upgrade starts without the previous lock
+and bypasses cached registry metadata so transitive versions are refreshed too.
+Resolver failure leaves the original lock untouched.
+
+It does not install `node_modules`, run lifecycle scripts, or refresh the
+monorepo integration locks. Registry and Git resolution can still access the
+network and Bun's shared cache. Optional `.npmrc` and Bun configuration are
+preserved; file-based certificate paths must be absolute. Temporary copies are
+removed on normal completion and exceptions. See the monorepo utility README for
+scope and verification details. The web regression tests cover argument,
+working-directory and failure forwarding through its entrypoint. There is no
+application runtime cost.
+
+### Dependency upgrades
+
 `bun run update` (also exposed as `make update`) runs `bun update --latest` for
 all dependencies, including major upgrades, then refreshes Browserslist data.
 Review peer constraints and resolver warnings before accepting the refreshed

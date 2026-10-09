@@ -158,6 +158,11 @@ lives in typed function-valued bindings with inert template identifiers.
 - Run web installs and checks from `/app` inside the application container. This
   standalone mount prevents Bun from discovering the enclosing monorepo
   workspace and changing its dependency graph or lockfile.
+- For monorepo relocking, run `bun run lock` (or `--upgrade`) from this
+  checkout. The shared monorepo utility resolves a temporary standalone copy
+  with the pinned Bun version and copies back only `bun.lock` after success,
+  without installing dependencies. See `docs/dependency-updates.md` for its
+  scope.
 - Do not re-introduce nested `package.json` files for frontend tooling.
 - Vite 8 is the only first-party asset compiler. `frontend_common/entries.json`
   is the logical-entry registry consumed by `vite.config.ts` and the Django
@@ -201,6 +206,7 @@ lives in typed function-valued bindings with inert template identifiers.
 
 ### Root frontend commands
 
+- `bun run lock [--upgrade]` (monorepo-only standalone lockfile resolution)
 - `bun run typecheck` (all three TypeScript environments)
 - `bun run lint:frontend`
 - `bun run test:frontend`
