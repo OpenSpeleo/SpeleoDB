@@ -4,13 +4,13 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
 const names = ['@speleodb/map-core', '@speleodb/map-viewer'];
 for (const name of names) {
     const dependency = manifest.dependencies?.[name];
-    if (typeof dependency !== 'string' || !/^git\+https:\/\/github\.com\/[^/]+\/[^#]+#[a-f0-9]{40}$/.test(dependency)) {
-        console.error(`Standalone release unavailable: ${name} needs its public GitHub URL and full 40-character commit SHA. Use a reachable published revision; local development uses the monorepo source overlay. These packages are not distributed through npm.`);
+    if (typeof dependency !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(dependency)) {
+        console.error(`${name} must pin an exact stable npm version (for example, 0.1.0).`);
         process.exitCode = 1;
     }
 }
 
 if (manifest.overrides?.['@speleodb/map-core'] !== manifest.dependencies?.['@speleodb/map-core']) {
-    console.error('The map-core Bun override must exactly match its direct Git pin, so viewer peer resolution never falls back to npm.');
+    console.error('The map-core override must exactly match its direct dependency.');
     process.exitCode = 1;
 }

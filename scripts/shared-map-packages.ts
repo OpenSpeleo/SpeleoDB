@@ -17,7 +17,7 @@ if (process.env.SPELEODB_LOCAL_PACKAGES === '1') {
 }
 
 export const sharedMapResolution = {
-    // Compatibility with existing Git pins; new package exports default to source.
+    // Compatibility with older source-enabled revisions; npm exports default to source.
     conditions: ['speleodb-source', 'module', 'browser', 'development|production'],
     dedupe: ['maplibre-gl', '@speleodb/map-core', '@speleodb/map-viewer'],
     preserveSymlinks: true,

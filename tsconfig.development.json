@@ -41,8 +41,7 @@
     "vitest.config.ts",
     "scripts/shared-map-packages.ts",
     "scripts/typecheck.ts",
-    "scripts/check-shared-package-pins.ts",
-    "scripts/check-shared-package-ci.ts"
+    "scripts/check-shared-package-pins.ts"
   ],
   "exclude": [
     "**/dist/**",

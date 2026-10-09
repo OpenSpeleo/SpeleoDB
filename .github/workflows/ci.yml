@@ -20,26 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  shared-package-ci:
-    name: Shared Package CI
-    runs-on: ubuntu-latest
-    # Share a 30-minute verification deadline; allow extra time for setup.
-    timeout-minutes: 32
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: .bun-version
-      - name: Verify published map package commits and CI
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: bun scripts/check-shared-package-ci.ts
-
   linter:
-    needs: [shared-package-ci]
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     env:
@@ -92,7 +73,6 @@ jobs:
           DJANGO_DEBUG: True  # necessary to collect all URLs
 
   js-tests:
-    needs: [shared-package-ci]
     runs-on: ubuntu-latest
 
     steps:
@@ -129,7 +109,6 @@ jobs:
         run: bun run build
 
   pytest:
-    needs: [shared-package-ci]
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -241,7 +220,6 @@ jobs:
           include-hidden-files: true
 
   browser-tests:
-    needs: [shared-package-ci]
     name: Chromium and WebKit
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest

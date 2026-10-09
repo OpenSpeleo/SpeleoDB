@@ -58,11 +58,11 @@
   ],
   "type": "module",
   "dependencies": {
-    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188",
-    "@speleodb/map-viewer": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer.git#6e2e7eea22da6d39874647256bea8a13da3fd922",
+    "@speleodb/map-core": "0.1.0",
+    "@speleodb/map-viewer": "0.1.0",
     "maplibre-gl": "6.10.0"
   },
   "overrides": {
-    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188"
+    "@speleodb/map-core": "0.1.0"
   }
 }

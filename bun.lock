@@ -5,8 +5,8 @@
     "": {
       "name": "speleodb",
       "dependencies": {
-        "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188",
-        "@speleodb/map-viewer": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer.git#6e2e7eea22da6d39874647256bea8a13da3fd922",
+        "@speleodb/map-core": "0.1.0",
+        "@speleodb/map-viewer": "0.1.0",
         "maplibre-gl": "6.10.0",
       },
       "devDependencies": {
@@ -41,7 +41,7 @@
     "fsevents",
   ],
   "overrides": {
-    "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188",
+    "@speleodb/map-core": "0.1.0",
   },
   "packages": {
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@7.1.4", "", { "dependencies": { "@csstools/css-calc": "^3.4.3", "@csstools/css-color-parser": "^4.2.6", "@csstools/css-parser-algorithms": "^4.0.2", "@csstools/css-tokenizer": "^4.0.2", "lru-cache": "^11.5.3" } }, "sha512-KdNhWlAh2sbYB8Of0Yw84/a+LO/vsBOHJcIg8BpyXo2RGrFWVJvEMRviMON+ysQu0KpV7wxrWrq9jaX0P21GzA=="],
@@ -216,9 +216,9 @@
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
-    "@speleodb/map-core": ["@speleodb/map-core@github:OpenSpeleo/SpeleoDB-TS-MapCore#4b84691", { "dependencies": { "@types/geojson": "7946.0.16" } }, "OpenSpeleo-SpeleoDB-TS-MapCore-4b84691", "sha512-deogYEreku7w//HZdn8LJX4Dz7zyLGCmjMaJoDdERfiTEYQqjwL8pQl2KLAUwJWU8d6qMNCDIi+PSc7b1j5sqw=="],
+    "@speleodb/map-core": ["@speleodb/map-core@0.1.0", "", { "dependencies": { "@types/geojson": "7946.0.16" } }, "sha512-j8eBHscldlXVj+AeNnz562QIsaQKf0xjOuNxHqy7cZ6aIwxXCaPySePsnrtMMsRU7xDspM6hp5qxUxLQ1fME7A=="],
 
-    "@speleodb/map-viewer": ["@speleodb/map-viewer@github:OpenSpeleo/SpeleoDB-TS-MapViewer#6e2e7ee", { "dependencies": { "@speleodb/map-core": "git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#4b846912ccc25319ac200c2587f98ebce88d3188" }, "peerDependencies": { "maplibre-gl": "6.10.0" } }, "OpenSpeleo-SpeleoDB-TS-MapViewer-6e2e7ee", "sha512-NRRzIuIffaVi4BTuxuJej4KfsMtFQeUNzVOL06nR/oXrH1G8yceA5lYNnO1xzRrstHbfeqbZlM1ZKea5sYj6/A=="],
+    "@speleodb/map-viewer": ["@speleodb/map-viewer@0.1.0", "", { "dependencies": { "@speleodb/map-core": ">=0.1.0 <1.0.0" }, "peerDependencies": { "maplibre-gl": "6.10.0" } }, "sha512-xqKw0zNdoRVgA5b9jE0fsQnYQhgFJnlhDzDWbMM0Ou7Eso4SJpnX545ZEzYcQ9xJB6AwE+YPjPuAEqJY/LW7cA=="],
 
     "@tailwindcss/forms": ["@tailwindcss/forms@0.5.11", "", { "dependencies": { "mini-svg-data-uri": "^1.2.3" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1" } }, "sha512-h9wegbZDPurxG22xZSoWtdzc41/OlNEUQERNqI/0fOwa2aVlWGu7C35E/x6LDyD3lgtztFSSjKZyuVM0hxhbgA=="],
 
@@ -663,8 +663,6 @@
     "yocto-queue": ["yocto-queue@0.1.0", "", {}, "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q=="],
 
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
-
-    "@speleodb/map-viewer/@speleodb/map-core": ["@speleodb/map-core@github:OpenSpeleo/SpeleoDB-TS-MapCore#4b84691", { "dependencies": { "@types/geojson": "7946.0.16" } }, "OpenSpeleo-SpeleoDB-TS-MapCore-4b84691", "sha512-deogYEreku7w//HZdn8LJX4Dz7zyLGCmjMaJoDdERfiTEYQqjwL8pQl2KLAUwJWU8d6qMNCDIi+PSc7b1j5sqw=="],
 
     "@tailwindcss/node/lightningcss": ["lightningcss@1.32.0", "", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "lightningcss-android-arm64": "1.32.0", "lightningcss-darwin-arm64": "1.32.0", "lightningcss-darwin-x64": "1.32.0", "lightningcss-freebsd-x64": "1.32.0", "lightningcss-linux-arm-gnueabihf": "1.32.0", "lightningcss-linux-arm64-gnu": "1.32.0", "lightningcss-linux-arm64-musl": "1.32.0", "lightningcss-linux-x64-gnu": "1.32.0", "lightningcss-linux-x64-musl": "1.32.0", "lightningcss-win32-arm64-msvc": "1.32.0", "lightningcss-win32-x64-msvc": "1.32.0" } }, "sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ=="],
 

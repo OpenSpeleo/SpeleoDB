@@ -172,20 +172,13 @@ exit 0
         expect(lock.overrides).toEqual(packageJson.overrides);
 
         for (const [packagePath, lockedPackage] of Object.entries(lock.packages)) {
-            // Bun can record the same Git dependency beneath another package.
             const packageName = ['@speleodb/map-core', '@speleodb/map-viewer'].find(name => (
                 packagePath === name || packagePath.endsWith(`/${name}`)
             ));
             if (packageName) {
-                // The manifest preserves the full immutable revision; Bun's
-                // GitHub archive identity abbreviates it in the package tuple.
                 const declaration = packageJson.dependencies?.[packageName];
-                expect(declaration).toMatch(/^git\+https:\/\/github\.com\/[^/]+\/[^#]+#[a-f0-9]{40}$/);
-                const repository = new URL(declaration!.replace(/^git\+/, ''));
-                const archive = repository.pathname.slice(1).replace(/\.git$/, '');
-                expect(lockedPackage[0], packagePath).toBe(`${packageName}@github:${archive}${repository.hash.slice(0, 8)}`);
-                expect(lockedPackage[3]).toMatch(/^sha512-/);
-                continue;
+                expect(declaration).toMatch(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+                expect(lockedPackage[0], packagePath).toBe(`${packageName}@${declaration}`);
             }
             expect(lockedPackage[0], packagePath).toMatch(/@\d+\.\d+\.\d+/);
             if (!lockedPackage[2].bundled) {
@@ -195,10 +188,15 @@ exit 0
     });
 
     it.each([
-        { description: 'published immutable revisions', replacement: undefined, override: undefined, status: 0 },
+        { description: 'exact npm releases', replacement: undefined, override: undefined, status: 0 },
         { description: 'local paths', replacement: 'file:./packages/map-core', override: undefined, status: 1 },
         { description: 'floating branches', replacement: 'git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#master', override: undefined, status: 1 },
-        { description: 'abbreviated revisions', replacement: 'git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#6ce4262', override: undefined, status: 1 },
+        { description: 'Git revisions', replacement: `git+https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore.git#${'a'.repeat(40)}`, override: undefined, status: 1 },
+        { description: 'version ranges', replacement: '^0.1.0', override: undefined, status: 1 },
+        { description: 'distribution tags', replacement: 'latest', override: undefined, status: 1 },
+        { description: 'prereleases', replacement: '0.1.0-beta.1', override: undefined, status: 1 },
+        { description: 'noncanonical versions', replacement: '00.1.0', override: undefined, status: 1 },
+        { description: 'a missing version', replacement: '', override: undefined, status: 1 },
         { description: 'a mismatched core override', replacement: undefined, override: '^0.1.0', status: 1 },
     ])('checks shared-package release pins for $description', ({ replacement, override, status }) => {
         const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-package-pins-'));
@@ -220,7 +218,7 @@ exit 0
             expect(result.error).toBeUndefined();
             expect(result.status).toBe(status);
             if (status === 0) expect(result.stderr).toBe('');
-            else expect(result.stderr).toMatch(/full 40-character commit SHA|override must exactly match/);
+            else expect(result.stderr).toMatch(/exact stable npm version|override must exactly match/);
         } finally {
             fs.rmSync(directory, { recursive: true, force: true });
         }

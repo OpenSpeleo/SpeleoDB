@@ -131,40 +131,6 @@ collection before calling `setData`. No code reads the undocumented engine
 sources and their data can be garbage collected. Survey sources keep their
 existing preparation caches and are not rebuilt by display toggles.
 
-## Shared package CI gate
-
-Before any app checks or dependency installation, `Shared Package CI` runs
-`bun scripts/check-shared-package-ci.ts`. It verifies the full SHA pins for
-`@speleodb/map-core` and `@speleodb/map-viewer` against their public OpenSpeleo
-repositories and checks each repository's `.github/workflows/ci.yml` (`Verify`)
-using the GitHub Actions API. Only a `push` run on that exact SHA counts; PR
-merge runs and unrelated workflows cannot satisfy the gate.
-
-Both commits must exist. A missing commit, API error, or completed run with any
-conclusion other than `success` fails immediately. The newest workflow run is
-selected by run ID, including its current rerun attempt. Queued/in-progress runs
-and an absent run are polled every 30 seconds, with one shared 30-minute
-deadline for both packages, including API time. Each request has at most 30
-seconds to finish. Both packages are rechecked every round, so a rerun of a
-previously green package is observed while the other is pending. No verification
-result is cached between app runs. The job timeout is 32 minutes to allow
-checkout/Bun setup; the verification script itself stops at 30 minutes.
-
-All downstream CI jobs depend directly or transitively on this gate and are
-skipped when it fails. The job uses the read-only `GITHUB_TOKEN` supplied by
-Actions, including fork/Dependabot runs; no extra secret is required for these
-public repositories. API/authentication/rate-limit errors fail closed. For local
-verification, provide `GITHUB_TOKEN` with public-repository Actions read access;
-unauthenticated polling can exhaust GitHub's lower rate limit before 30 minutes.
-
-The small script uses only Bun built-ins and is kept in each standalone app:
-loading a shared dependency to decide whether that dependency is safe to install
-would make this bootstrap check circular. Keep both copies and their policy
-aligned. Vitest exercises the actual checker with simulated GitHub responses and
-a virtual clock, covering failure propagation, exact-SHA selection, reruns,
-pagination and the shared deadline. Workflow contract tests verify downstream
-dependencies. There is no application runtime or browser impact.
-
 ## Verification
 
 The package suites test shared algorithms and expression/layer builders. Web
@@ -191,25 +157,21 @@ bun run test:frontend
 bun run build
 ```
 
-Standalone production builds consume immutable full-SHA revisions from
-[SpeleoDB-TS-MapCore](https://github.com/OpenSpeleo/SpeleoDB-TS-MapCore) and
-[SpeleoDB-TS-MapViewer](https://github.com/OpenSpeleo/SpeleoDB-TS-MapViewer).
-The application manifest and Bun lock pin the exact revisions. The matching
-`map-core` override ensures the viewer peer resolves to that same revision.
-`bun run check:shared-packages` rejects local paths, floating Git branches and
-inconsistent core overrides before standalone CI or Railway installs. Both Git
-installs and monorepo development consume package TypeScript sources. Vite
-compiles that code as part of the application build; no package installation
+Standalone production builds consume exact npm releases of
+[`@speleodb/map-core`](https://www.npmjs.com/package/@speleodb/map-core) and
+[`@speleodb/map-viewer`](https://www.npmjs.com/package/@speleodb/map-viewer).
+Both currently use `0.1.0`. The application manifest and Bun lock pin those
+versions and archive integrity. The matching `map-core` override keeps the
+viewer's compatible core dependency on the same installed version.
+`bun run check:shared-packages` rejects local paths, Git dependencies, version
+ranges and inconsistent core overrides before standalone CI or Railway installs.
+Both npm installs and monorepo development consume package TypeScript sources.
+Vite compiles that code as part of the application build; no package installation
 script or checked-in `dist/` is required. Type checking and ESLint use the same
-source exports, and the runtime import audit follows their actual
-implementation.
+source exports, and the runtime import audit follows their implementation.
 
-The `speleodb-source` condition remains enabled in every environment for
-compatibility with the existing immutable Git pins, which already include
-sources but still default to compiled exports. New package revisions export
-source by default. Advance the application pins and locks only after those
-revisions are published; the compatibility condition prevents that release
-sequence from blocking source builds now.
+The `speleodb-source` condition remains enabled for compatibility with older
+source-enabled package revisions; npm releases export source by default.
 
 The monorepo overlay links the same source and asset directories without
 rewriting exports. `SPELEODB_LOCAL_PACKAGES=1` verifies that both packages came
