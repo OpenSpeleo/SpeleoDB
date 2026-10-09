@@ -179,6 +179,9 @@ test('distance measurement supports keyboard placement, draft cancellation and c
 test('geometry drawing preserves keyboard history and draft state until explicit discard', async ({ page }) => {
     await login(page);
     await installFixture(page);
+    // Canvas clicks stop camera animations. Finish the initial fit before drawing
+    // so these pixel offsets describe a local draft within the 30 km² limit.
+    await expect.poll(() => page.evaluate(() => window.__viewerEvidence.map.isMoving())).toBe(false);
     const mutations: string[] = [];
     page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method())) mutations.push(request.url()); });
     const trigger = page.locator('#create-geometry-btn');
@@ -197,6 +200,7 @@ test('geometry drawing preserves keyboard history and draft state until explicit
     await canvas.click({ position: { x: first.x + 60, y: first.y + 25 } });
     const vertices = editor.locator('[data-editor-action="select"]');
     await expect(vertices).toHaveText('Edit 2 points');
+    await expect(editor.getByRole('status')).toContainText('Ready to save');
     await expect(editor.getByRole('button', { name: 'Save geometry', exact: true })).toBeEnabled();
 
     await canvas.focus();

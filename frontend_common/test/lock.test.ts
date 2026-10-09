@@ -38,12 +38,18 @@ describe('monorepo bun run lock entrypoint', () => {
         cwd: web, encoding: 'utf8', timeout: 30_000,
     });
 
-    it.each([[], ['--upgrade'], ['--', '--upgrade'], ['--unknown']].map((args) => ({ args })))('forwards arguments $args and the package directory to the shared helper', ({ args }) => {
+    it.each([
+        { args: [], forwarded: [] },
+        { args: ['--upgrade'], forwarded: ['--upgrade'] },
+        // Bun consumes the run command's separator before invoking the script.
+        { args: ['--', '--upgrade'], forwarded: ['--upgrade'] },
+        { args: ['--unknown'], forwarded: ['--unknown'] },
+    ])('forwards arguments $args and the package directory to the shared helper', ({ args, forwarded }) => {
         writeFileSync(helper, `import { writeFileSync } from 'node:fs';
 writeFileSync('invocation.json', JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2) }));`);
         const result = run(...args);
         expect(result.status, result.stderr + result.stdout).toBe(0);
-        expect(JSON.parse(readFileSync(join(web, 'invocation.json'), 'utf8'))).toEqual({ cwd: web, args });
+        expect(JSON.parse(readFileSync(join(web, 'invocation.json'), 'utf8'))).toEqual({ cwd: web, args: forwarded });
         expect(readFileSync(join(workspace, 'bun.lock'), 'utf8')).toBe('parent lock sentinel');
         expect(readFileSync(join(web, 'bun.lock'), 'utf8')).toBe('child lock sentinel');
     });

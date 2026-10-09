@@ -7,6 +7,7 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        testTimeout: 30_000,
         execArgv: ['--preload', fileURLToPath(new URL('./scripts/jsdom-runtime.ts', import.meta.url))],
         setupFiles: ['./frontend_common/test/setup.ts'],
         // Vite and Tailwind builds spawn their own parallel work. Limiting

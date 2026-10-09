@@ -5,6 +5,7 @@ from importlib import reload
 import pytest
 from django.template import Context
 from django.template import Template
+from django.templatetags.static import static
 from django.test import override_settings
 from django.urls import NoReverseMatch
 from django.urls import Resolver404
@@ -38,11 +39,9 @@ def test_manual_assets_never_emit_reload_attributes(
         DEBUG=debug, VITE_ALLOW_MISSING_MANIFEST=True, STATIC_URL="/static/"
     ):
         html: str = template.render(Context())
+        asset_url: str = static(f"speleodb/vite/{asset_file}")
 
-    assert html == (
-        f'<script type="module" src="/static/speleodb/vite/{asset_file}" '
-        "crossorigin></script>"
-    )
+    assert html == f'<script type="module" src="{asset_url}" crossorigin></script>'
     assert "data-speleodb-generation" not in html
     assert "data-speleodb-reload" not in html
 

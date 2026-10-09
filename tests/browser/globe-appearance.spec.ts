@@ -4,7 +4,13 @@ import { installFixture, login } from './viewer-fixture.ts';
 
 /** Screenshot pixels establish that the GPU produced stars and an outer rim. */
 async function appearancePixels(page: import('@playwright/test').Page) {
-    const screenshot = await page.locator('.maplibregl-canvas').screenshot({ scale: 'css' });
+    const screenshot = await page.locator('.maplibregl-canvas').screenshot({
+        scale: 'css',
+        // Element screenshots include overlapping DOM. Hide controls and the
+        // public welcome dialog only during capture so they cannot count as
+        // stars/atmosphere or obscure the space pixels being measured.
+        style: 'body * { visibility: hidden !important; } .maplibregl-canvas { visibility: visible !important; }',
+    });
     return page.evaluate(async dataUrl => {
         const image = new Image(); image.src = dataUrl; await image.decode();
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;

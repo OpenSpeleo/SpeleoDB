@@ -172,14 +172,18 @@ exit 0
         expect(lock.overrides).toEqual(packageJson.overrides);
 
         for (const [packagePath, lockedPackage] of Object.entries(lock.packages)) {
-            if (packagePath === '@speleodb/map-core' || packagePath === '@speleodb/map-viewer') {
+            // Bun can record the same Git dependency beneath another package.
+            const packageName = ['@speleodb/map-core', '@speleodb/map-viewer'].find(name => (
+                packagePath === name || packagePath.endsWith(`/${name}`)
+            ));
+            if (packageName) {
                 // The manifest preserves the full immutable revision; Bun's
                 // GitHub archive identity abbreviates it in the package tuple.
-                const declaration = packageJson.dependencies?.[packagePath];
+                const declaration = packageJson.dependencies?.[packageName];
                 expect(declaration).toMatch(/^git\+https:\/\/github\.com\/[^/]+\/[^#]+#[a-f0-9]{40}$/);
                 const repository = new URL(declaration!.replace(/^git\+/, ''));
                 const archive = repository.pathname.slice(1).replace(/\.git$/, '');
-                expect(lockedPackage[0]).toBe(`${packagePath}@github:${archive}${repository.hash.slice(0, 8)}`);
+                expect(lockedPackage[0], packagePath).toBe(`${packageName}@github:${archive}${repository.hash.slice(0, 8)}`);
                 expect(lockedPackage[3]).toMatch(/^sha512-/);
                 continue;
             }
