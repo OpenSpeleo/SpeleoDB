@@ -15,20 +15,20 @@ service lifecycle, not an automatic retry of a failed operation.
 
 ## Policies and ownership
 
-| Operation                                | Budget and delay                                                                                               | Exhaustion behavior                                                         |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| GitLab REST                              | Five total attempts; 1/2/4/8-second backoff, capped at 30 seconds; 30-second request timeout (15 in bootstrap) | Original SDK error propagates; server delay headers cannot extend sleep     |
-| Git remote operations                    | Five attempts; 1/2/4/8-second backoff; 60-second command deadline and five-second cleanup                      | Sanitized Git error; no automatic deletion of the working copy              |
-| Git proxy discovery GET                  | Five attempts; exponential delay capped at 30 seconds                                                          | Final response/error; a longer server delay returns immediately             |
-| PostgreSQL container readiness           | Six attempts; 1/2/4/8/16-second backoff; five-second connect timeout                                           | Entrypoint exits with failure                                               |
-| Celery broker connection                 | Five retries after the initial attempt; 1/2/4/8/16-second backoff                                              | Connection error leaves worker startup/reconnection                         |
-| Beat ownership lock                      | Six attempts; 5/10/20/40/80-second waits                                                                       | Command error; shutdown also bounds child termination                       |
-| Export generation/publication            | Three attempts per cycle; 60/120-second delays                                                                 | Durable failed job; explicit retry creates a fresh cycle                    |
-| Export notification publication/delivery | Five combined attempts; 60/120/240/480-second delays                                                           | Durable failed notification; explicit staff retry                           |
-| Artifact and orphan cleanup              | Five persisted attempts; 60/120/240/480-second delays                                                          | Error/counters retained; audited staff action resets budget                 |
-| Export browser refresh                   | Five failed refreshes; 5/10/20/30-second delays; 30-second request/JSON deadline                               | Error message and no automatic network retry until explicit action/reload   |
-| GeoJSON cache contention                 | Seven cache rechecks; 0.1/0.2/0.4/0.8/1/1/1-second waits                                                       | Direct storage fallback; fewer cache operations than the previous 50 checks |
-| FFmpeg thumbnail                         | One execution; 60-second process deadline, five-second cleanup                                                 | Existing thumbnail error path                                               |
+| Operation                                | Budget and delay                                                                                                     | Exhaustion behavior                                                          |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| GitLab REST                              | Five total attempts; 1/2/4/8-second backoff, capped at 30 seconds; 30-second request timeout (15 in bootstrap)       | Original SDK error propagates; server delay headers cannot extend sleep      |
+| Git remote operations                    | Five attempts; 1/2/4/8-second backoff; 60-second command deadline and five-second cleanup                            | Sanitized Git error; no automatic deletion of the working copy               |
+| Git proxy discovery GET                  | Five attempts; exponential delay capped at 30 seconds                                                                | Final response/error; a longer server delay returns immediately              |
+| PostgreSQL container readiness           | Six attempts; 1/2/4/8/16-second backoff; five-second connect timeout                                                 | Entrypoint exits with failure                                                |
+| Celery broker connection                 | Five retries after the initial attempt; 1/2/4/8/16-second backoff                                                    | Connection error leaves worker startup/reconnection                          |
+| Beat ownership lock                      | Six attempts; 5/10/20/40/80-second waits; five-second connection/statement timeout and bounded TCP failure detection | Launcher exits with failure; no child process or automatic lock reconnection |
+| Export generation/publication            | Three attempts per cycle; 60/120-second delays                                                                       | Durable failed job; explicit retry creates a fresh cycle                     |
+| Export notification publication/delivery | Five combined attempts; 60/120/240/480-second delays                                                                 | Durable failed notification; explicit staff retry                            |
+| Artifact and orphan cleanup              | Five persisted attempts; 60/120/240/480-second delays                                                                | Error/counters retained; audited staff action resets budget                  |
+| Export browser refresh                   | Five failed refreshes; 5/10/20/30-second delays; 30-second request/JSON deadline                                     | Error message and no automatic network retry until explicit action/reload    |
+| GeoJSON cache contention                 | Seven cache rechecks; 0.1/0.2/0.4/0.8/1/1/1-second waits                                                             | Direct storage fallback; fewer cache operations than the previous 50 checks  |
+| FFmpeg thumbnail                         | One execution; 60-second process deadline, five-second cleanup                                                       | Existing thumbnail error path                                                |
 
 The shared retry helper validates finite delay parameters and positive attempt
 counts, doubles delays iteratively up to a cap, and never sleeps after the final
@@ -45,11 +45,50 @@ waits are bounded; `Popen` context-manager exit cannot add an unbounded wait.
 
 Celery's consumer and database-scheduler extensions share a broker retry helper,
 because Kombu's standard connection retry delay is linear. Worker
-startup/runtime retry flags, failover, and shutdown checks remain supported.
-Beat's launcher reads the scheduler class from settings so its CLI cannot bypass
-this policy. Redis cache connections now explicitly bound connection/read socket
-waits. Existing storage SDK retry budgets and Celery result-backend retry limits
-remain finite and unchanged.
+startup/runtime retry flags, failover, and shutdown checks remain supported. The
+disabled-retry branch explicitly uses `Connection.ensure_connection` with
+`max_retries=0`; Kombu's `connect()` would otherwise add one retry and could
+fail over despite that setting. Transport exceptions retain their original type.
+The helper lives in `speleodb.background_jobs.broker`, so importing it in Beat
+does not import the worker consumer. Beat's launcher reads the scheduler class
+from minimal settings and injects its already-acquired ownership lease. Redis
+cache connections explicitly bound connection/read socket waits. Existing
+storage SDK retry budgets and worker result-backend retry limits remain finite
+and unchanged; Beat's own result backend is disabled.
+
+### Beat ownership during recovery
+
+`python -m speleodb.background_jobs.beat` holds the advisory lock and schedules
+work in the same process and OS thread. Its dedicated raw psycopg connection is
+separate from Django's scheduler connection and never reconnects. Lock checks
+verify the current session's actual `pg_locks` ownership. A closed connection,
+database error, or missing lock permanently invalidates that lease; acquiring a
+new database session cannot allow the old scheduler to resume.
+
+Broker connection backoff checks ownership between sleep intervals and before
+each connection attempt. Publication retry policies additionally carry guarded
+`errback` and `on_revive` callbacks into Kombu's connection and declaration
+recovery. Once a check detects ownership loss, the scheduler rejects further
+publication or recovery. Each scheduler tick checks ownership before and after
+Celery's tick implementation, since Celery catches publication exceptions
+internally. Lease failure therefore reaches the process boundary instead of
+becoming only a logged publication failure.
+
+The lease, ORM persistence, and broker use separate connections. Their checks
+are not an atomic fence: an SQL write or message already in flight can complete
+after ownership is lost or a replacement acquires the lock. Task idempotency and
+duplicate-delivery handling remain required.
+
+SIGTERM/SIGINT raise out of synchronous work, including acquisition sleeps. The
+Celery service performs final synchronization before the launcher closes the
+lock session. Signal handlers do not call `service.sync()` eagerly: during
+scheduler construction that access would recursively instantiate a second
+scheduler. Closed and lazy-banner schedulers skip persistence, as do schedulers
+whose ownership check detects loss. Repeated closes and exit finalizers honor
+these checks; they cannot cancel an operation already in flight. There is no
+supervisor subprocess to terminate and no heartbeat thread. See
+[background runtime operations](background-jobs-operations.md#beat-runtime-and-ownership)
+for deployment handover, observability, and memory boundaries.
 
 ## Durable export recovery
 
@@ -92,6 +131,23 @@ budgets, durable publication failures, lost workers, stale completion tokens,
 cleanup retention/admin recovery, and browser cancellation/body timeouts. Use
 real PostgreSQL and the isolated worker broker for database/worker recovery, and
 verify the additive migration path.
+
+Beat regressions also cover real PostgreSQL lock handover, a live session whose
+lock was removed, a closed lock connection, retry callbacks rejecting stale
+ownership, and SIGTERM during scheduler construction. Fresh-interpreter tests
+exercise database schedule behavior without importing application tasks. These
+checks complement the long-running memory probe; unit tests alone do not prove
+production service memory or every possible network failure timing.
+
+The consumer and scheduler regressions use normal Celery constructors and
+configuration, real Kombu connections, and PostgreSQL advisory locks. Bound,
+non-listening TCP sockets produce actual connection refusal; failover uses
+Kombu's supported broker URL list. Redis's administrative pause API produces
+real write timeouts on the dedicated test broker. Lease revocation uses SQL or
+connection closure, and subprocess signals exercise shutdown and the full
+155-second standby retry budget. No framework methods, clocks, executables, or
+lease objects are replaced. The hard-timeout worker selects a test settings
+module with no soft limit before normal Celery CLI startup.
 
 GitLab integrations exercise the real configured service and actual connection
 refusal. Separate deterministic policy tests cover scripted SDK-boundary

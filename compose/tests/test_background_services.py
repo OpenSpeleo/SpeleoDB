@@ -3,21 +3,42 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
+import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
 import yaml
+from celery import Celery
+from celery._state import get_current_app
+from django.db import connection
+from redis import Redis
 
 from compose.setup_local_gitlab import read_env_file
 from config.celery_app import app
+from speleodb.testing.celery import isolated_test_broker_url
+from speleodb.testing.database import postgres_test_database_url
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 BACKGROUND_SERVICES = ("celery-worker", "celery-beat")
-MIGRATION_FAILURE_EXIT_CODE = 23
+WORKER_START_TIMEOUT_SECONDS: int = 60
+NATIVE_THREAD_VARIABLES: tuple[str, ...] = (
+    "OPENBLAS_NUM_THREADS",
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+)
 
 
 @pytest.mark.parametrize(
@@ -149,79 +170,199 @@ def test_live_tests_have_separate_pubsub_broker(
     assert "volumes" not in broker
 
 
-def test_worker_script_consumes_both_queues_with_unique_replica_names(
-    tmp_path: Path,
-) -> None:
-    executable: Path = tmp_path / "celery"
-    executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n', encoding="utf-8")
-    executable.chmod(0o700)
+@pytest.fixture
+def worker_script_environment(transactional_db: None) -> dict[str, str]:
+    if connection.vendor != "postgresql":
+        pytest.skip("Real worker startup requires the isolated PostgreSQL test DB.")
     environment: dict[str, str] = os.environ.copy()
-    environment["PATH"] = f"{tmp_path}:{environment['PATH']}"
-    names: set[str] = set()
-    expected_arguments: list[str] = [
-        "-A",
-        "config.celery_app",
-        "worker",
-        "--loglevel",
-        "INFO",
-        "--events",
-        "--queues",
-        "exports,background_control",
-        "--concurrency",
-        "1",
-        "--prefetch-multiplier",
-        "1",
-        "--hostname",
-    ]
-    for _ in range(2):
-        result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
-            ["/bin/bash", str(REPOSITORY_ROOT / "compose/celery/worker/start")],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=environment,
+    for name in NATIVE_THREAD_VARIABLES:
+        environment.pop(name, None)
+    broker_url: str = isolated_test_broker_url()
+    environment.update(
+        {
+            "DJANGO_SETTINGS_MODULE": "compose.tests.worker_settings",
+            "TEST_DATABASE_URL": postgres_test_database_url(),
+            "CELERY_BROKER_URL": broker_url,
+            "TEST_CELERY_BROKER_URL": broker_url,
+            "SPELEODB_TEST_BROKER_PREFIX": f"worker-start-{uuid.uuid4()}:",
+            "PYTHONUNBUFFERED": "1",
+        }
+    )
+    return environment
+
+
+@contextmanager
+def running_script_worker(
+    environment: dict[str, str], tmp_path: Path
+) -> Iterator[tuple[subprocess.Popen[bytes], Celery, str]]:
+    previous_app: Celery = get_current_app()
+    broker_url: str = environment["TEST_CELERY_BROKER_URL"]
+    key_prefix: str = environment["SPELEODB_TEST_BROKER_PREFIX"]
+    log_path: Path = tmp_path / f"worker-{uuid.uuid4()}.log"
+    with Celery("worker-script-tests", broker=broker_url) as application:
+        application.conf.update(
+            broker_read_url=broker_url,
+            broker_write_url=broker_url,
+            broker_transport_options={"global_keyprefix": key_prefix},
         )
-        arguments: list[str] = result.stdout.splitlines()
-        assert arguments[:-1] == expected_arguments
-        hostname: str = arguments[-1]
-        assert hostname.startswith("worker-")
-        assert hostname.endswith("@%h")
-        uuid.UUID(hostname.removeprefix("worker-").removesuffix("@%h"))
-        assert hostname not in names
-        names.add(hostname)
+        with log_path.open("wb") as log:
+            process: subprocess.Popen[bytes] = subprocess.Popen(  # noqa: S603
+                ["/bin/bash", str(REPOSITORY_ROOT / "compose/celery/worker/start")],
+                cwd=REPOSITORY_ROOT,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        try:
+            deadline: float = time.monotonic() + WORKER_START_TIMEOUT_SECONDS
+            hostname: str | None = None
+            while time.monotonic() < deadline:
+                assert process.poll() is None, log_path.read_text()
+                replies: dict[str, Any] | None = application.control.inspect(
+                    timeout=1
+                ).stats()
+                if replies:
+                    matches: list[str] = [
+                        name
+                        for name, stats in replies.items()
+                        if stats["pid"] == process.pid
+                    ]
+                    if matches:
+                        [hostname] = matches
+                        break
+                time.sleep(0.2)
+            assert hostname is not None, log_path.read_text()
+            yield process, application, hostname
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=5)
+            previous_app.set_current()
+            # Delete only this test's unique namespace on the dedicated broker.
+            with Redis.from_url(broker_url) as broker:
+                for key in broker.scan_iter(match=f"{key_prefix}*"):
+                    broker.delete(key)
 
 
-def test_entrypoint_preserves_explicit_broker(tmp_path: Path) -> None:
-    executable: Path = tmp_path / "python"
-    executable.write_text("#!/bin/sh\ncat >/dev/null\n", encoding="utf-8")
-    executable.chmod(0o700)
+@pytest.mark.skipif(
+    os.environ.get("EXPORTS_LIVE_WORKER_TESTS") != "1",
+    reason="Set EXPORTS_LIVE_WORKER_TESTS=1 to use the isolated real broker.",
+)
+@pytest.mark.parametrize("explicit_threads", [None, "3"])
+def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limits(
+    tmp_path: Path,
+    worker_script_environment: dict[str, str],
+    explicit_threads: str | None,
+) -> None:
+    environment: dict[str, str] = worker_script_environment
+    if explicit_threads is not None:
+        environment.update(dict.fromkeys(NATIVE_THREAD_VARIABLES, explicit_threads))
+    names: set[str] = set()
+    for _ in range(2):
+        with running_script_worker(environment, tmp_path) as (
+            process,
+            application,
+            hostname,
+        ):
+            assert hostname not in names
+            names.add(hostname)
+            assert hostname.startswith("worker-")
+            uuid.UUID(hostname.split("@", maxsplit=1)[0].removeprefix("worker-"))
+            inspector = application.control.inspect(destination=[hostname], timeout=3)
+            queues: dict[str, Any] | None = inspector.active_queues()
+            assert queues is not None
+            assert {queue["name"] for queue in queues[hostname]} == {
+                "exports",
+                "background_control",
+            }
+            statistics: dict[str, Any] | None = inspector.stats()
+            assert statistics is not None
+            assert statistics[hostname]["pool"]["max-concurrency"] == 1
+            assert statistics[hostname]["pool"]["implementation"].endswith(
+                ".prefork:TaskPool"
+            )
+            assert statistics[hostname]["prefetch_count"] == 1
+            command: list[str] = (
+                Path(f"/proc/{process.pid}/cmdline").read_text().split("\0")
+            )
+            assert "--events" in command
+            assert "--skip-checks" in command
+            process_environment: dict[str, str] = dict(
+                entry.split("=", maxsplit=1)
+                for entry in Path(f"/proc/{process.pid}/environ")
+                .read_text()
+                .split("\0")
+                if entry
+            )
+            assert process_environment["SPELEODB_CELERY_WORKER_RUNTIME"] == "true"
+            for name in NATIVE_THREAD_VARIABLES:
+                assert process_environment[name] == (explicit_threads or "1")
+
+
+@pytest.mark.skipif(
+    os.environ.get("EXPORTS_LIVE_WORKER_TESTS") != "1",
+    reason="Set EXPORTS_LIVE_WORKER_TESTS=1 to use the isolated real broker.",
+)
+def test_worker_script_does_not_start_after_real_django_check_failure(
+    worker_script_environment: dict[str, str],
+) -> None:
+    environment: dict[str, str] = worker_script_environment
+    environment["SPELEODB_TEST_INVALID_STATIC_URL"] = "1"
+    result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
+        ["/bin/bash", str(REPOSITORY_ROOT / "compose/celery/worker/start")],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+        timeout=WORKER_START_TIMEOUT_SECONDS,
+    )
+    assert result.returncode == 1
+    assert "SystemCheckError" in result.stderr
+    assert "urls.E006" in result.stderr
+    assert "ready." not in result.stdout
+    assert "ready." not in result.stderr
+
+
+@pytest.mark.django_db(transaction=True)
+def test_entrypoint_checks_real_postgres_and_preserves_broker() -> None:
+    if connection.vendor != "postgresql":
+        pytest.skip("The real entrypoint readiness check requires PostgreSQL.")
+    postgres_test_database_url()
+    database: dict[str, Any] = connection.settings_dict
     environment: dict[str, str] = os.environ.copy()
     environment.update(
         {
-            "PATH": f"{tmp_path}:{environment['PATH']}",
-            "POSTGRES_USER": "test",
-            "POSTGRES_PASSWORD": "local-test-only",
-            "POSTGRES_HOST": "localhost",
-            "POSTGRES_PORT": "5432",
-            "POSTGRES_DB": "test",
+            "POSTGRES_USER": str(database["USER"]),
+            "POSTGRES_PASSWORD": str(database["PASSWORD"]),
+            "POSTGRES_HOST": str(database["HOST"]),
+            "POSTGRES_PORT": str(database["PORT"]),
+            "POSTGRES_DB": str(database["NAME"]),
             "REDIS_URL": "redis://cache:6379/0",
-            "CELERY_BROKER_URL": "redis://isolated-test-broker:6379/0",
+            "CELERY_BROKER_URL": "redis://isolated-test-broker:6381/0",
         }
     )
     result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
         [
             "/bin/bash",
             str(REPOSITORY_ROOT / "compose/entrypoint"),
-            "/bin/sh",
+            sys.executable,
             "-c",
-            'printf "%s" "$CELERY_BROKER_URL"',
+            "import os; print(os.environ['CELERY_BROKER_URL'])",
         ],
+        cwd=REPOSITORY_ROOT,
         check=True,
         capture_output=True,
         text=True,
         env=environment,
+        timeout=30,
     )
-    assert result.stdout == "redis://isolated-test-broker:6379/0"
+    assert result.stdout.strip() == "redis://isolated-test-broker:6381/0"
+    assert "PostgreSQL is available" in result.stderr
 
 
 def test_test_settings_override_the_inherited_development_broker() -> None:
@@ -253,34 +394,15 @@ def test_test_settings_override_the_inherited_development_broker() -> None:
     assert connection_uri.startswith("memory://")
 
 
-def test_setup_stops_on_migration_failure(tmp_path: Path) -> None:
-    log: Path = tmp_path / "commands"
-    executable: Path = tmp_path / "python"
-    executable.write_text(
-        '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n'
-        'if [ "$*" = "manage.py migrate" ]; then exit 23; fi\n',
-        encoding="utf-8",
+def test_setup_shell_orders_migrations_before_schedules_and_superuser() -> None:
+    setup_path: Path = REPOSITORY_ROOT / "compose/setup"
+    setup: str = setup_path.read_text(encoding="utf-8")
+    subprocess.run(["/bin/bash", "-n", str(setup_path)], check=True)  # noqa: S603
+    commands: list[str] = setup.splitlines()
+    assert commands.index("set -o errexit") < commands.index("python manage.py migrate")
+    assert commands.index("python manage.py migrate") < commands.index(
+        "python manage.py install_background_schedules"
     )
-    executable.chmod(0o700)
-    # Skip the root-only ownership branch without requiring a privileged test.
-    identity: Path = tmp_path / "id"
-    identity.write_text("#!/bin/sh\nprintf '1000\\n'\n", encoding="utf-8")
-    identity.chmod(0o700)
-    setup: str = (REPOSITORY_ROOT / "compose/setup").read_text(encoding="utf-8")
-    setup = setup.replace("bash /app/compose/prepare_node_modules", ":")
-    environment: dict[str, str] = os.environ.copy()
-    environment.update(
-        {"PATH": f"{tmp_path}:{environment['PATH']}", "COMMAND_LOG": str(log)}
-    )
-    result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
-        ["/bin/bash", "-c", setup],
-        check=False,
-        capture_output=True,
-        text=True,
-        env=environment,
-    )
-    assert result.returncode == MIGRATION_FAILURE_EXIT_CODE
-    commands: str = log.read_text(encoding="utf-8")
-    assert "manage.py migrate" in commands
-    assert "install_background_schedules" not in commands
-    assert "ensure_local_superuser" not in commands
+    assert commands.index(
+        "python manage.py install_background_schedules"
+    ) < commands.index("python manage.py ensure_local_superuser")

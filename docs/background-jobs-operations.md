@@ -16,10 +16,10 @@ running Celery Beat process uses `django-celery-beat`'s database scheduler. One
 Celery worker service consumes both archive generation and scheduled
 maintenance.
 
-| Process   | Command                                | Queue                        |
-| --------- | -------------------------------------- | ---------------------------- |
-| Worker    | `bash compose/celery/worker/start`     | `exports,background_control` |
-| Scheduler | `python manage.py run_background_beat` | Publishes scheduled tasks    |
+| Process   | Command                            | Queue                        |
+| --------- | ---------------------------------- | ---------------------------- |
+| Worker    | `bash compose/celery/worker/start` | `exports,background_control` |
+| Scheduler | `bash compose/celery/beat/start`   | Publishes scheduled tasks    |
 
 Each worker replica starts with `--queues exports,background_control`,
 concurrency one, prefetch one, and task events enabled. Scale the same worker
@@ -28,10 +28,182 @@ behind exports when every replica is occupied. The authenticated download
 endpoint enforces artifact expiry independently of cleanup scheduling; expired
 downloads become unavailable even when physical deletion is still queued.
 
-The Beat management command holds a PostgreSQL advisory lock for its lifetime,
-including during deployment overlap. Only `install_background_schedules` owns
-the feature's periodic task installation. Run it after migrations. Celery result
-cleanup must also route to `background_control`.
+Beat holds a PostgreSQL advisory lock for its lifetime, including during
+deployment handover. Only `install_background_schedules` owns the feature's
+periodic task installation. Run it after migrations. Celery result cleanup must
+also route to `background_control`.
+
+### Beat runtime and ownership
+
+The start script execs `python -m speleodb.background_jobs.beat`. This launcher
+forces `config.settings.beat`, even when the service inherits production Django
+settings. Its only installed Django application is `django_celery_beat`. Shared
+environment, database, timezone, broker, routing, serialization, and retry
+settings live in lightweight configuration modules. Beat does not import the web
+application's settings, models, admin, task implementations, scientific or media
+libraries, or result-backend models. It publishes registered task names and
+arguments from the schedule database; workers execute them.
+
+One process and one OS thread perform lock acquisition, scheduling, and
+publication synchronously. There is no supervisor process, heartbeat thread,
+watchdog, or threaded database pool. Beat uses standard Django/Celery logging
+and does not initialize Sentry or its background threads. Monitor its
+Railway/container logs and process exits. Start Beat through
+`compose/celery/beat/start` or its underlying Python module. There is no Django
+management-command entrypoint: initializing the full application before Beat
+would defeat the small startup-memory contract.
+
+`SchedulerLease` owns a dedicated raw psycopg connection and the existing
+PostgreSQL advisory lock `736735226`. Django's scheduler connections remain
+separate, so connection cleanup cannot release ownership. Acquisition allows six
+attempts with 5/10/20/40/80-second waits. Connection and statement timeouts are
+five seconds; TCP keepalives and the TCP user timeout bound detection of a dead
+lock connection. The lock session never reconnects or reacquires ownership.
+
+The scheduler checks ownership before and after each tick, before publication,
+during broker-connection backoff, and in Kombu's publication/declaration retry
+and connection-revival callbacks. A failed check marks the lease permanently
+lost. The outer tick rechecks ownership because Celery normally logs and catches
+publication exceptions. Detecting lost ownership therefore stops this scheduler
+with failure instead of allowing it to continue after a broker recovery. These
+checks add small synchronous database queries, without scanning application data
+or creating background work.
+
+These checks do not form an atomic fence across the separate lease, Django ORM,
+and broker connections. SQL writes or messages already in flight can complete
+after the lock is lost, including after a replacement acquires it. The scheduler
+starts no further work once it detects that loss, but duplicate delivery remains
+possible; tasks must retain their idempotency and duplicate-handling
+protections.
+
+SIGTERM and SIGINT interrupt lock waits and scheduler execution. The scheduler
+service performs its normal final synchronization while ownership is held; the
+launcher then closes the lock connection. The signal handler never creates a
+scheduler while another scheduler is still being initialized. Repeated close
+calls, the banner's lazy scheduler, and exit finalizers skip persistence when
+the scheduler is closed or ownership loss is detected. The same in-flight
+operation limit applies during shutdown.
+
+Beat's local result backend and automatic result-expiry schedule installation
+are disabled. The stored `celery.backend_cleanup` schedule remains owned by
+`install_background_schedules`, and workers retain result recording and the
+30-day result-retention policy. Message `ignore_result` behavior is unchanged.
+No task names, queues, database tables, or public APIs change with this runtime.
+
+### Worker runtime and execution-slot memory
+
+The worker start script first runs `python manage.py check` in a short-lived
+process using the full application profile. A failed check prevents worker
+startup. After success it exports `SPELEODB_CELERY_WORKER_RUNTIME=true` and
+execs Celery with `--skip-checks`. This retains startup validation without
+keeping the checks' URL/API import graph resident in the worker parent.
+
+The worker profile uses Django's `SimpleAdminConfig` to avoid admin
+autodiscovery, and excludes web-only debug toolbar, Silk, extensions, and
+development instrumentation. Application models, signals, tasks, templates,
+storage, email, result recording, and production observability remain available.
+The worker keeps prefork, concurrency one, prefetch one, both queues, events,
+and the existing task deadlines and recovery behavior.
+
+Before either Python process starts, the script defaults `OPENBLAS_NUM_THREADS`,
+`OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `NUMEXPR_NUM_THREADS`,
+`VECLIB_MAXIMUM_THREADS`, and `BLIS_NUM_THREADS` to one. An explicitly
+configured value overrides that library's default. These limits avoid
+multiplying native numerical-library threads and their memory per execution
+slot. They do not change Celery's pool or impose a one-thread limit on all
+worker internals. Benchmark representative conversion/export workloads before
+increasing them. No arbitrary worker recycling threshold hides retained
+application memory.
+
+### Memory measurements
+
+The October 2026 investigation found that the old Beat launcher kept two full
+Django runtimes resident: its lock supervisor and the scheduler child. Eager
+application imports loaded scientific/media libraries into both. Production
+reported approximately 425 MB for Beat, with 95 and 97 threads in those two
+Python processes. The minimal runtime removes both sources of overhead rather
+than imposing a memory limit or periodically restarting the scheduler.
+
+The new canonical Beat command completed a 15-minute run against a separate
+PostgreSQL database and Redis queue, publishing a real five-second schedule.
+Across 984 Linux process samples it had exactly one OS thread and no children:
+
+| Beat endurance measurement   |                     Result |
+| ---------------------------- | -------------------------: |
+| Peak RSS, including startup  | 81,780,736 bytes (81.8 MB) |
+| Peak PSS                     | 64,645,120 bytes (64.6 MB) |
+| Final RSS                    |           81,780,736 bytes |
+| Scheduled messages published |                        180 |
+| SIGTERM exit code            |                          0 |
+
+This meets the 100 MB **process RSS** regression budget in the local container.
+It is not a production whole-service measurement: the shared application
+container also hosted the test runner, and service accounting includes page
+cache and container overhead. Confirm the whole Beat service stays below 100 MB
+after releasing the code on Railway. Reproduce the endurance check with an
+isolated migrated Beat database, a five-second `PeriodicTask` on a unique queue,
+the canonical start script, and the `/proc` sampling described below; delete
+only those test-owned resources afterward.
+
+The worker comparison used the same ARM Linux application container, Python
+3.14.7, dependencies, prefork concurrency one, and test settings. Baseline
+configuration came from commit `6b1144c9`; the new profile skipped resident
+system-check imports and admin autodiscovery and applied the native thread
+defaults. Both registered the same nine application tasks. Decimal MB below
+means 1,000,000 bytes. PSS apportions shared pages between processes; summing
+RSS would double-count those pages.
+
+| Worker measurement                     | Baseline MB | New MB |
+| -------------------------------------- | ----------: | -----: |
+| Idle parent RSS                        |       279.0 |  254.7 |
+| Idle execution child RSS               |       209.2 |  184.9 |
+| Idle combined PSS                      |       231.8 |  206.7 |
+| After conversions: parent RSS          |       279.0 |  254.7 |
+| After conversions: execution child RSS |       248.5 |  226.9 |
+| After conversions: combined PSS        |       366.1 |  326.7 |
+
+Each profile executed three real conversions of the checked-in `sample.mak`
+Compass survey plus `gis_layers/us_states/us_states_5m.zip`, using
+`Project.build_geojson()` and `compile_gis_layer_bytes()` in its prefork child.
+Compass geometry, feature count, datum and UTM metadata matched, and the
+2,197,492-byte shapefile conversion output matched byte for byte. Whole Compass
+JSON includes varying generated metadata, so geometry was compared separately.
+Median conversion time was 0.634 seconds before and 0.613 seconds after; three
+runs establish no statistical throughput claim. Sampled combined peak PSS was
+also 366.1 versus 326.7 MB, about 11% lower. Both profiles used one thread per
+process in this ARM container; the production native-thread reduction still
+requires deployment measurement.
+
+These native conversion measurements exclude network export, email and storage
+work; live integration tests cover those flows. They measure resident worker
+processes, excluding the separate startup preflight and container page cache.
+Production Sentry and workload size can change the footprint. Application code
+must be released before these savings can be verified on Railway.
+
+Container verification for this change passed the full local SQLite Python suite
+with 5,227 tests passed and 208 skipped, plus 2,326 frontend tests. The
+production asset build, development TypeScript/IaC check, Django system check,
+changed-file Ruff/format checks, and whole-project mypy check (790 Python files)
+passed. The full-suite GitLab audit recorded nine creations, ten creation
+requests, zero violations and no unresolved outcomes. All nine created
+repositories were confirmed marked for deletion by GitLab; asynchronous deletion
+is not reported as immediate physical removal.
+
+A separate PostgreSQL/isolated-Redis run passed all 74 focused checks, including
+real lock handover, all eight prefork-worker tests,
+archive/download/notification and expiry flows, Beat-published result recording,
+soft-timeout recovery, hard timeout child replacement, and worker-death
+recovery. This run created no GitLab repositories and recorded no audit
+violations. Its temporary Redis server was stopped after verification; the
+shared development Redis remained available.
+
+These scheduler, consumer, runtime, and worker-startup checks use real framework
+construction and supported configuration without mocks or monkeypatches. They
+include real connection refusal/failover, Redis write timeouts, PostgreSQL
+session loss, process signals, and the full 155-second lock-wait budget. A final
+15-test PostgreSQL consumer run also passed after tightening fixture lifecycle
+cleanup. The disabled-retry tests exposed and fixed an implicit Kombu retry that
+mocked connection calls had not detected.
 
 ## One-shot GeoJSON rebuild
 
@@ -266,6 +438,13 @@ database, a nonlocal storage endpoint, and any bucket other than
 `speleodb-user-artifacts-test`. Run it without parallel test processes. The test
 bucket must already exist with the local test credentials from `.envs/test.env`.
 
+PostgreSQL tests create their schema from the pristine `template0`, avoiding
+developer objects and stale libc collation metadata in `template1`. SQLite test
+configuration is unchanged. This does not alter either shared template or the
+development database. A separate ephemeral Redis server on `redis:6381` is also
+accepted for tests inside the existing container network; `redis:6379` remains
+refused.
+
 These tests start and stop their own Celery subprocess. They exercise real
 request dispatch, an empty-account archive, a signed S3 download, notification
 delivery state, expiry deletion, same-UUID duplicate delivery, and durable
@@ -274,11 +453,46 @@ own actual worker process and verify bounded recovery into a new attempt without
 a stale artifact. No Kanchi process observes the isolated test broker. The
 worker's log is retained in pytest's temporary directory for failures.
 
-The Compose tests exercise actual shell argument forwarding, broker
-preservation, migration failure propagation, default-service dependencies, and
-network/storage isolation. Runtime verification also checks migrations, task
-ingestion, restart durability, authentication, and export completion while
-Kanchi is down.
+The Compose tests launch the actual worker script and inspect its queues,
+prefork concurrency, prefetch, unique node names, and native thread limits. An
+invalid Django setting exercises a real failed startup check. The entrypoint
+connects to pytest's PostgreSQL database and preserves the supplied broker URL.
+Setup command order and fail-fast shell options are checked statically; these
+checks do not execute provisioning or prove a migration failure at runtime.
+Other Compose assertions cover default-service dependencies and network/storage
+isolation. Runtime verification also checks migrations, task ingestion, restart
+durability, authentication, and export completion while Kanchi is down.
+
+Runtime-isolation regressions launch fresh interpreters, check the Beat import
+graph, one OS thread and a 100,000,000-byte RSS high-water limit, and publish
+through an in-memory broker without importing task implementations. Database
+scheduler tests exercise due, disabled, and one-off entries, edited schedules,
+timezone behavior, stored counters, queue routing, and unchanged managed result
+cleanup. Lease tests use separate real PostgreSQL sessions for contention,
+handover, and ownership loss. Signal and retry tests cover interrupted scheduler
+construction, terminal failure propagation, and finalizer safety. Worker tests
+cover its profile, failed preflight, explicit native-thread overrides, and
+actual prefork timeouts/recovery.
+
+Run the complete focused checks inside the already-running application
+container, with the dedicated test broker available on `redis:6381`:
+
+```bash
+docker exec -e TEST_CELERY_BROKER_URL=redis://redis:6381/0 -w /app speleodb-monorepo-django python compose/run_live_worker_tests.py compose/tests/test_celery_runtime.py compose/tests/test_celery_result_backend.py compose/tests/test_runtime_settings.py compose/tests/test_background_services.py speleodb/background_jobs/tests/test_scheduler.py speleodb/background_jobs/tests/test_consumer.py -q
+```
+
+The runner configures PostgreSQL from the container credentials, enables real
+worker tests, and includes the live-worker module automatically. Pytest creates
+its isolated `test_` database. Bare pytest runs using SQLite skip lease tests;
+they do not substitute for this integration run. Compare service memory and
+per-process RSS/PSS, parent/child membership, thread count, and startup high
+water in the same environment. For Linux subprocess probes, read
+`/proc/<pid>/status` (`VmRSS`, `VmHWM`, `Threads`) and
+`/proc/<pid>/smaps_rollup` (`Pss`). `getrusage().ru_maxrss` can retain the
+launching process's high water across exec and misrepresent a fresh lightweight
+runtime. Exercise at least 15 minutes of real scheduling, and sample worker
+memory before, during, and after representative tasks. Keep startup-preflight
+memory separate from the long-lived worker parent and its execution child.
 
 The CI pytest job supplies both Django's `DATABASE_URL` and the provisioner's
 `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
@@ -476,6 +690,17 @@ and storage credentials. Kanchi receives only its own database and broker
 credentials plus its authentication configuration. Keep export scratch files
 ephemeral and validate available space against representative archives.
 
+Beat explicitly sets both `deploy.overlapSeconds: 0` and
+`RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0`. The worker's deployment policy is
+unchanged. Railway still starts the replacement before retiring the previous
+deployment; zero overlap removes the extra coexistence delay after the
+replacement starts. The advisory lock admits one owner while the replacement
+waits for the previous owner to exit; the in-flight operation limits described
+above still apply if ownership is lost. This is not a guarantee that two
+container processes never briefly exist. Preserve the existing 120-second
+termination grace so in-flight work can shut down cleanly. See
+[Railway deployment teardown](https://docs.railway.com/deployments/deployment-teardown).
+
 Deployment order:
 
 1. Finish container tests, review, commit, and CI; record the release commit.
@@ -508,7 +733,29 @@ preserving additive tables and history. Keep artifact cleanup and published
 downloads available where supported by that release. Roll back Kanchi
 independently.
 
+The lightweight runtime adds no migrations or task-message changes. Roll back
+the worker and Beat code together with the start commands supported by that
+revision, preserving the advisory-lock identifier and schedule records. The new
+release removes the old management command. Coordinate a rollback's reviewed
+source revision and matching start command in the same deployment; neither
+revision may start with a command it does not support. Revert Railway
+configuration through a reviewed IaC plan/apply when a rollback requires a
+different start command or overlap policy.
+
 ### Production rollout verification
+
+In October 2026, an isolated IaC plan applied only Beat's
+`deploy.overlapSeconds=0` and `RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0`. Read-back
+confirmed both values and an empty overlap-only plan. Beat's 120-second
+termination grace and the worker's deployment policy were retained. The
+lightweight application code and canonical Beat start-command change were not
+deployed as part of that configuration update. Coordinate the reviewed source
+revision and its matching Beat start command in the same deployment; do not
+start the new release with the removed management command. Then verify the exact
+deployment, whole-service memory, one Beat PID/thread, lease handover, scheduled
+publication and worker results. Existing unrelated IaC drift must be reviewed
+separately, especially any proposed change from Kanchi's pinned image digest to
+a mutable tag.
 
 The September 15, 2026 rollout verified successful worker, Beat, web, and pinned
 Kanchi deployments. At that time one worker consumed both queues, one PostgreSQL

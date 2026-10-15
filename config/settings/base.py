@@ -5,20 +5,25 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import environ
-
-BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
-
-APPS_DIR = BASE_DIR / "speleodb"
-
-env = environ.Env()
-
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=True)
-if READ_DOT_ENV_FILE:
-    # OS environment variables take precedence over variables from .env
-    env.read_env(str(BASE_DIR / ".env"))
+from config.settings.celery import *  # noqa: F403
+from config.settings.database import (
+    DATABASES as DATABASES,  # noqa: PLC0414 - Settings re-export.
+)
+from config.settings.environment import (
+    APPS_DIR as APPS_DIR,  # noqa: PLC0414 - Settings re-export.
+)
+from config.settings.environment import (
+    BASE_DIR as BASE_DIR,  # noqa: PLC0414 - Settings re-export.
+)
+from config.settings.environment import (
+    TIME_ZONE as TIME_ZONE,  # noqa: PLC0414 - Settings re-export.
+)
+from config.settings.environment import (
+    USE_TZ as USE_TZ,  # noqa: PLC0414 - Settings re-export.
+)
+from config.settings.environment import (
+    env as env,  # noqa: PLC0414 - Settings re-export.
+)
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -31,17 +36,10 @@ ALLOW_USER_DEBUG = env.bool("ALLOW_USER_DEBUG", default=False)  # pyright: ignor
 allowed_hosts: str | None = env("DJANGO_ALLOWED_HOSTS", default=None)  # pyright: ignore[reportAssignmentType]
 ALLOWED_HOSTS = allowed_hosts.split(",") if allowed_hosts is not None else []
 
-# Local time zone. Choices are
-# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
-# though not all of them may be available with every OS.
-# In Windows, this must be set to your system time zone.
-TIME_ZONE = "America/New_York"
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
 USE_I18N = False
-# https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
-USE_TZ = True
 
 # Git Project Saving
 # ------------------------------------------------------------------------------
@@ -89,26 +87,6 @@ DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT = env(
 # Maxmimum number of files simultaneously uploaded
 DJANGO_UPLOAD_TOTAL_FILES_LIMIT = 20
 
-# DATABASES
-# ------------------------------------------------------------------------------
-# https://docs.djangoproject.com/en/dev/ref/settings/#databases
-if env.bool("USE_DOCKER", default=False):
-    # DATABASES = {"default": env.db("DATABASE_URL")}
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "HOST": env("POSTGRES_HOST"),
-            "PORT": env("POSTGRES_PORT"),
-            "NAME": env("POSTGRES_DB"),
-            "USER": env("POSTGRES_USER"),
-            "PASSWORD": env("POSTGRES_PASSWORD"),
-        }
-    }
-else:
-    DATABASES = {"default": env.db("DATABASE_URL")}
-
-DATABASES["default"]["ATOMIC_REQUESTS"] = True
-
 # URLS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
@@ -135,6 +113,11 @@ MIDDLEWARE = [
     "speleodb.middleware.DRFWrapResponseMiddleware",
 ]
 
+# Application workers retain models and signals without importing admin views.
+SPELEODB_CELERY_WORKER_RUNTIME: bool = env.bool(
+    "SPELEODB_CELERY_WORKER_RUNTIME", default=False
+)
+
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
@@ -146,7 +129,11 @@ DJANGO_APPS = [
     "django.contrib.sitemaps",
     "speleodb.common.staticfiles.CompiledStaticFilesConfig",
     # "django.contrib.humanize", # Handy template tags
-    "django.contrib.admin",
+    (
+        "django.contrib.admin.apps.SimpleAdminConfig"
+        if SPELEODB_CELERY_WORKER_RUNTIME
+        else "django.contrib.admin"
+    ),
     "django.forms",
 ]
 
@@ -177,7 +164,7 @@ THIRD_PARTY_APPS = [
     "django_js_reverse",
 ]
 
-if DEBUG:
+if DEBUG and not SPELEODB_CELERY_WORKER_RUNTIME:
     THIRD_PARTY_APPS += [
         "schema_viewer",
     ]
@@ -211,7 +198,7 @@ LOCAL_APPS = [
 # Hide notification if `None`.
 HIJACK_INSERT_BEFORE: str | None = None
 
-if DEBUG or ALLOW_USER_DEBUG:
+if (DEBUG or ALLOW_USER_DEBUG) and not SPELEODB_CELERY_WORKER_RUNTIME:
     # With Django Hijack, admins can log in and work on behalf of other users
     # without having to know their credentials.
     # Author's NOTE: This mechanism should only be used in local development.
@@ -542,40 +529,6 @@ LOGGING = {
     "root": {"level": "INFO", "handlers": ["console"]},
 }
 
-# Celery
-# ------------------------------------------------------------------------------
-if USE_TZ:
-    # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-timezone
-    CELERY_TIMEZONE = TIME_ZONE
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379/1")
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
-CELERY_RESULT_BACKEND = "django-db"
-CELERY_TASK_TRACK_STARTED = True
-CELERY_RESULT_EXPIRES = 30 * 24 * 60 * 60
-CELERY_BROKER_CONNECTION_TIMEOUT = 3
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-# Maximum broker retries after the initial connection attempt (six attempts).
-CELERY_BROKER_CONNECTION_MAX_RETRIES = 5
-# Worker connection retries double their delay, capped at the maximum below.
-CELERY_BROKER_RETRY_BASE_DELAY_SECONDS = 1.0
-CELERY_BROKER_RETRY_MAX_DELAY_SECONDS = 30.0
-# Use Celery's supported consumer extension to replace Kombu's linear sleeps.
-CELERY_WORKER_CONSUMER = "speleodb.background_jobs.consumer:ExponentialBackoffConsumer"
-CELERY_BROKER_TRANSPORT_OPTIONS = {
-    "visibility_timeout": 3600,
-    "socket_connect_timeout": 3,
-    "socket_timeout": 5,
-}
-CELERY_VISIBILITY_TIMEOUT = 3600
-CELERY_TASK_DEFAULT_QUEUE = "background_control"
-CELERY_TASK_ROUTES = {
-    "speleodb.gis.tasks.*": {"queue": "background_control"},
-    "speleodb.background_jobs.tasks.generate_export": {"queue": "exports"},
-    "speleodb.background_jobs.tasks.*": {"queue": "background_control"},
-    "celery.backend_cleanup": {"queue": "background_control"},
-}
-
 # Beat owns all scheduling; Railway runs long-lived services and never
 # configures a cron job for these tasks.
 
@@ -626,26 +579,6 @@ EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
 # Kanchi dashboard URL shown in Django job administration. Empty means no
 # dashboard link; this setting does not configure Kanchi or its credentials.
 KANCHI_URL = env.str("KANCHI_URL", default="")
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended
-CELERY_RESULT_EXTENDED = True
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-backend-always-retry
-# https://github.com/celery/celery/pull/6122
-CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-backend-max-retries
-CELERY_RESULT_BACKEND_MAX_RETRIES = 10
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-accept_content
-CELERY_ACCEPT_CONTENT = ["json"]
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-task_serializer
-CELERY_TASK_SERIALIZER = "json"
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_serializer
-CELERY_RESULT_SERIALIZER = "json"
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-time-limit
-# TODO: set to whatever value is adequate in your circumstances
-CELERY_TASK_TIME_LIMIT = 5 * 60
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-soft-time-limit
-# TODO: set to whatever value is adequate in your circumstances
-CELERY_TASK_SOFT_TIME_LIMIT = 60
-
 # Per-commit maps run outside uploads. Beat dispatches committed pending rows;
 # broker outages retain work without spending a conversion attempt.
 GEOJSON_GENERATION_SOFT_TIME_LIMIT = 5 * 60
@@ -669,14 +602,6 @@ GEOJSON_REBUILD_SOFT_TIME_LIMIT = env.int(
 GEOJSON_REBUILD_HARD_TIME_LIMIT = env.int(
     "GEOJSON_REBUILD_HARD_TIME_LIMIT", default=GEOJSON_REBUILD_SOFT_TIME_LIMIT + 60
 )
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#beat-scheduler
-CELERY_BEAT_SCHEDULER = (
-    "speleodb.background_jobs.scheduler:ExponentialBackoffDatabaseScheduler"
-)
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-send-task-events
-CELERY_WORKER_SEND_TASK_EVENTS = True
-# https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-task_send_sent_event
-CELERY_TASK_SEND_SENT_EVENT = True
 # django-allauth
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)

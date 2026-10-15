@@ -16,11 +16,11 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
-from .base import *  # noqa: F403
-from .base import DATABASES
-from .base import INSTALLED_APPS
-from .base import SPECTACULAR_SETTINGS
-from .base import env
+from config.settings.base import *  # noqa: F403
+from config.settings.base import DATABASES
+from config.settings.base import INSTALLED_APPS
+from config.settings.base import SPECTACULAR_SETTINGS
+from config.settings.base import env
 
 # GENERAL
 # ------------------------------------------------------------------------------

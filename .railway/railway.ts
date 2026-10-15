@@ -150,10 +150,15 @@ export default defineRailway(() => {
   const beat = service("Celery-Beat", {
     source: applicationSource,
     build: { builder: "RAILPACK", watchPatterns: [] },
-    start: "python manage.py run_background_beat",
+    start: "bash compose/celery/beat/start",
     replicas: { "us-east4-eqdc4a": 1 },
-    env: applicationEnvironment,
-    deploy: workerDeployment,
+    env: {
+      ...applicationEnvironment,
+      RAILWAY_DEPLOYMENT_OVERLAP_SECONDS: "0",
+    },
+    // Railway starts the replacement before retiring the old container even at
+    // zero overlap. The PostgreSQL advisory lock coordinates scheduler ownership.
+    deploy: { ...workerDeployment, overlapSeconds: 0 },
   });
 
   const kanchi = service("Kanchi", {

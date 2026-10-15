@@ -1,65 +1,131 @@
+"""Exercise consumer retries with real Celery construction and broker sockets."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-from unittest.mock import PropertyMock
-from unittest.mock import patch
+import os
+import socket
+import subprocess
+import sys
+import time
+from textwrap import dedent
+from typing import TYPE_CHECKING
 
 import pytest
-from celery.exceptions import WorkerShutdown
+from celery import Celery
+from celery.result import denied_join_result
+from celery.worker import WorkController
+from django.db import connections
 from kombu import Connection
 from kombu.exceptions import OperationalError
 
 from speleodb.background_jobs.consumer import ExponentialBackoffConsumer
-from speleodb.background_jobs.scheduler import ExponentialBackoffDatabaseScheduler
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+RETRY_BASE_SECONDS: float = 0.01
+RETRY_MAX_SECONDS: float = 0.3
+STARTUP_TIMEOUT_SECONDS: float = 15.0
+SHUTDOWN_TIMEOUT_SECONDS: float = 5.0
 
 
 @pytest.fixture
-def consumer() -> ExponentialBackoffConsumer:
-    instance = object.__new__(ExponentialBackoffConsumer)
-    instance.app = MagicMock()
-    instance.app.conf.broker_connection_retry_on_startup = True
-    instance.app.conf.broker_connection_retry = True
-    instance.app.conf.broker_connection_max_retries = 5
-    instance.app.conf.broker_retry_base_delay_seconds = 1.0
-    instance.app.conf.broker_retry_max_delay_seconds = 30.0
-    instance.first_connection_attempt = True
-    instance.broker_connection_retry_attempt = 0
-    return instance
+def consumer(transactional_db: None) -> Iterator[ExponentialBackoffConsumer]:
+    # A real worker initializes Django's process-wide database lifecycle hooks.
+    # Release pytest's connection first, outside an enclosing atomic test.
+    connections.close_all()
+    with (
+        Celery(
+            "consumer-retry-tests", broker="memory://", fixups=[], set_as_current=False
+        ) as application,
+        denied_join_result(),
+    ):
+        application.conf.update(
+            broker_read_url="memory://",
+            broker_write_url="memory://",
+            worker_consumer=(
+                "speleodb.background_jobs.consumer:ExponentialBackoffConsumer"
+            ),
+            broker_connection_retry_on_startup=True,
+            broker_connection_retry=True,
+            broker_connection_max_retries=5,
+            broker_retry_base_delay_seconds=RETRY_BASE_SECONDS,
+            broker_retry_max_delay_seconds=RETRY_MAX_SECONDS,
+        )
+        controller = WorkController(
+            app=application,
+            pool="prefork",
+            concurrency=1,
+            use_eventloop=False,
+            without_gossip=True,
+            without_mingle=True,
+            without_heartbeat=True,
+        )
+        # Celery's bootstep installs this attribute during normal construction;
+        # the upstream WorkController stub does not declare it.
+        current_consumer: object = controller.consumer  # type: ignore[attr-defined]
+        assert isinstance(current_consumer, ExponentialBackoffConsumer)
+        try:
+            yield current_consumer
+        finally:
+            controller.stop()
+
+
+@pytest.fixture
+def unavailable_broker() -> Iterator[str]:
+    # A bound, non-listening socket reserves a real port and reliably refuses
+    # connections without risking a port another process could acquire.
+    with socket.socket() as reserved:
+        reserved.bind(("127.0.0.1", 0))
+        yield f"redis://127.0.0.1:{reserved.getsockname()[1]}/0"
+
+
+def retry_delays(caplog: pytest.LogCaptureFixture) -> list[float]:
+    delays: list[float] = []
+    for record in caplog.records:
+        if record.name == "speleodb.utils.helpers":
+            assert isinstance(record.args, tuple)
+            delay = record.args[3]
+            assert isinstance(delay, float)
+            delays.append(delay)
+    return delays
+
+
+def connection_attempts(caplog: pytest.LogCaptureFixture) -> int:
+    return sum(
+        record.name == "speleodb.background_jobs.broker" for record in caplog.records
+    )
 
 
 def test_broker_retries_stop_at_budget_with_exponential_delays(
     consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    conn = MagicMock(spec=Connection)
-    failure = OperationalError("Connection refused")
-    conn.ensure_connection.side_effect = failure
-    with (
-        patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep,
-        pytest.raises(OperationalError) as error,
-    ):
-        consumer.ensure_connected(conn)
-
-    assert error.value is failure
-    assert conn.ensure_connection.call_count == 6  # noqa: PLR2004
-    assert conn.maybe_switch_next.call_count == 5  # noqa: PLR2004
-    assert [item.args[0] for item in sleep.call_args_list] == [1, 2, 4, 8, 16]
-    assert all(
-        item.kwargs["max_retries"] == 0
-        for item in conn.ensure_connection.call_args_list
-    )
+    with Connection(unavailable_broker, connect_timeout=0.1) as broker:
+        started: float = time.monotonic()
+        with caplog.at_level("DEBUG"), pytest.raises(OperationalError):
+            consumer.ensure_connected(broker)
+        elapsed: float = time.monotonic() - started
+        assert not broker.connected
+    expected: list[float] = [0.01, 0.02, 0.04, 0.08, 0.16]
+    assert connection_attempts(caplog) == 6  # noqa: PLR2004
+    assert retry_delays(caplog) == expected
+    assert elapsed >= sum(expected)
 
 
 def test_broker_success_resets_state_and_retains_failover(
     consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.side_effect = [OperationalError("first broker down"), conn]
-    with patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep:
-        assert consumer.ensure_connected(conn) is conn
-
-    conn.maybe_switch_next.assert_called_once_with()
-    assert sleep.call_count == 1
-    assert sleep.call_args.args == (1.0,)
+    with Connection(f"{unavailable_broker};memory://", connect_timeout=0.1) as broker:
+        with caplog.at_level("DEBUG"):
+            assert consumer.ensure_connected(broker) is broker
+        assert broker.connected
+        assert broker.transport.driver_type == "memory"
+    assert retry_delays(caplog) == [RETRY_BASE_SECONDS]
     assert consumer.first_connection_attempt is False
     assert consumer.broker_connection_retry_attempt == 0
 
@@ -68,171 +134,166 @@ def test_broker_success_resets_state_and_retains_failover(
     ("first_connection", "startup_retry", "runtime_retry"),
     [(True, False, True), (False, True, False), (True, None, False)],
 )
-def test_disabled_retry_uses_single_direct_connect(
+def test_disabled_retry_does_not_fail_over_after_connection_refusal(  # noqa: PLR0917
     consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
     first_connection: bool,
     startup_retry: bool | None,
     runtime_retry: bool,
 ) -> None:
-    consumer.first_connection_attempt = first_connection
-    consumer.app.conf.broker_connection_retry_on_startup = startup_retry
-    consumer.app.conf.broker_connection_retry = runtime_retry
-    conn = MagicMock(spec=Connection)
-
-    with patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep:
-        assert consumer.ensure_connected(conn) is conn
-
-    conn.connect.assert_called_once_with()
-    conn.ensure_connection.assert_not_called()
-    sleep.assert_not_called()
+    if not first_connection:
+        with Connection("memory://") as initial:
+            consumer.ensure_connected(initial)
+    consumer.app.conf.update(
+        broker_connection_retry_on_startup=startup_retry,
+        broker_connection_retry=runtime_retry,
+    )
+    with Connection(f"{unavailable_broker};memory://", connect_timeout=0.1) as broker:
+        with pytest.raises(broker.connection_errors):
+            consumer.ensure_connected(broker)
+        assert not broker.connected
+        assert broker.transport.driver_type == "redis"
+    assert connection_attempts(caplog) == 0
 
 
 @pytest.mark.parametrize(
     ("first_connection", "startup_retry", "runtime_retry"),
     [(True, True, False), (False, False, True), (True, None, True)],
 )
-def test_enabled_retry_respects_startup_and_runtime_flags(
+def test_enabled_retry_respects_startup_and_runtime_flags(  # noqa: PLR0917
     consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
     first_connection: bool,
     startup_retry: bool | None,
     runtime_retry: bool,
 ) -> None:
-    consumer.first_connection_attempt = first_connection
-    consumer.app.conf.broker_connection_retry_on_startup = startup_retry
-    consumer.app.conf.broker_connection_retry = runtime_retry
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.return_value = conn
-
-    assert consumer.ensure_connected(conn) is conn
-
-    conn.ensure_connection.assert_called_once()
-    conn.connect.assert_not_called()
+    if not first_connection:
+        with Connection("memory://") as initial:
+            consumer.ensure_connected(initial)
+    consumer.app.conf.update(
+        broker_connection_retry_on_startup=startup_retry,
+        broker_connection_retry=runtime_retry,
+    )
+    with Connection(f"{unavailable_broker};memory://", connect_timeout=0.1) as broker:
+        assert consumer.ensure_connected(broker) is broker
+        assert broker.connected
+        assert broker.transport.driver_type == "memory"
+    assert connection_attempts(caplog) == 1
 
 
 def test_worker_shutdown_interrupts_backoff_before_another_attempt(
-    consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str, tmp_path: Path
 ) -> None:
-    consumer.app.conf.broker_retry_base_delay_seconds = 4.0
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.side_effect = OperationalError("broker unavailable")
-    with (
-        patch(
-            "speleodb.background_jobs.consumer.maybe_shutdown",
-            side_effect=[None, None, None, WorkerShutdown()],
-        ),
-        patch("speleodb.background_jobs.consumer.time.sleep") as sleep,
-        pytest.raises(WorkerShutdown),
-    ):
-        consumer.ensure_connected(conn)
+    environment: dict[str, str] = os.environ.copy()
+    environment.pop("DJANGO_SETTINGS_MODULE", None)
+    environment["PYTHONUNBUFFERED"] = "1"
+    environment["CELERY_BROKER_URL"] = unavailable_broker
+    environment["CELERY_BROKER_READ_URL"] = unavailable_broker
+    environment["CELERY_BROKER_WRITE_URL"] = unavailable_broker
+    script: str = dedent(
+        """
+        import sys
+        from celery import Celery
 
-    conn.ensure_connection.assert_called_once()
-    sleep.assert_called_once_with(1.0)
+        application = Celery("shutdown-test", broker=sys.argv[1], fixups=[])
+        application.conf.update(
+            worker_consumer=(
+                "speleodb.background_jobs.consumer:ExponentialBackoffConsumer"
+            ),
+            broker_connection_max_retries=5,
+            broker_retry_base_delay_seconds=30.0,
+            broker_retry_max_delay_seconds=30.0,
+        )
+        application.worker_main([
+            "worker", "--pool=solo", "--concurrency=1", "--loglevel=INFO",
+            "--without-gossip", "--without-mingle", "--without-heartbeat",
+        ])
+        """
+    )
+    log_path: Path = tmp_path / "worker.log"
+    with log_path.open("w") as log:
+        process: subprocess.Popen[str] = subprocess.Popen(  # noqa: S603
+            [sys.executable, "-c", script, unavailable_broker],
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        try:
+            deadline: float = time.monotonic() + STARTUP_TIMEOUT_SECONDS
+            while "Broker connection attempt 1/6 failed" not in log_path.read_text():
+                assert process.poll() is None, log_path.read_text()
+                assert time.monotonic() < deadline, log_path.read_text()
+                time.sleep(0.05)
+            process.terminate()
+            assert process.wait(timeout=SHUTDOWN_TIMEOUT_SECONDS) == 0
+            assert "attempt 2/6" not in log_path.read_text()
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=SHUTDOWN_TIMEOUT_SECONDS)
 
 
 def test_non_connection_failure_is_not_retried(
     consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.side_effect = ValueError("invalid broker configuration")
+    invalid_database: str = unavailable_broker.removesuffix("/0") + "/invalid"
     with (
-        patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep,
-        pytest.raises(ValueError, match="invalid broker configuration"),
+        Connection(invalid_database, connect_timeout=0.1) as broker,
+        pytest.raises(ValueError, match="Database is int"),
     ):
-        consumer.ensure_connected(conn)
-
-    conn.ensure_connection.assert_called_once()
-    conn.maybe_switch_next.assert_not_called()
-    sleep.assert_not_called()
+        consumer.ensure_connected(broker)
+    assert connection_attempts(caplog) == 0
 
 
 @pytest.mark.parametrize("max_retries", [None, -1, True])
 def test_unbounded_or_invalid_broker_budget_is_rejected(
-    consumer: ExponentialBackoffConsumer, max_retries: int | None
+    consumer: ExponentialBackoffConsumer,
+    max_retries: int | None,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    consumer.app.conf.broker_connection_max_retries = max_retries
-    conn = MagicMock(spec=Connection)
-
-    with pytest.raises(ValueError, match="finite nonnegative integer"):
-        consumer.ensure_connected(conn)
-
-    conn.ensure_connection.assert_not_called()
-
-
-def test_broker_backoff_is_capped(consumer: ExponentialBackoffConsumer) -> None:
-    consumer.app.conf.broker_retry_max_delay_seconds = 3.0
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.side_effect = OperationalError("unavailable")
-    with (
-        patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep,
-        pytest.raises(OperationalError),
-    ):
-        consumer.ensure_connected(conn)
-
-    assert [item.args[0] for item in sleep.call_args_list] == [1, 2, 3, 3, 3]
+    consumer.app.conf.update(broker_connection_max_retries=max_retries)
+    with Connection("memory://") as broker:
+        with pytest.raises(ValueError, match="finite nonnegative integer"):
+            consumer.ensure_connected(broker)
+        assert not broker.connected
+    assert connection_attempts(caplog) == 0
 
 
-def test_broker_retry_logs_do_not_include_raw_error_credentials(
-    consumer: ExponentialBackoffConsumer, caplog: pytest.LogCaptureFixture
+def test_broker_backoff_is_capped(
+    consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    conn = MagicMock(spec=Connection)
-    conn.as_uri.return_value = "redis://:**@redis:6379/1"
-    conn.ensure_connection.side_effect = OperationalError("secret-password")
+    consumer.app.conf.update(broker_retry_max_delay_seconds=0.03)
     with (
+        Connection(unavailable_broker, connect_timeout=0.1) as broker,
         caplog.at_level("DEBUG"),
-        patch("speleodb.background_jobs.consumer._sleep_before_retry"),
         pytest.raises(OperationalError),
     ):
-        consumer.ensure_connected(conn)
+        consumer.ensure_connected(broker)
+    assert retry_delays(caplog) == [0.01, 0.02, 0.03, 0.03, 0.03]
 
-    assert "secret-password" not in caplog.text
+
+def test_broker_retry_logs_redact_connection_credentials(
+    consumer: ExponentialBackoffConsumer,
+    unavailable_broker: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    credential_url: str = unavailable_broker.replace(
+        "redis://", "redis://:test-only-redaction-token@"
+    )
+    consumer.app.conf.update(broker_connection_max_retries=0)
+    with (
+        Connection(credential_url, connect_timeout=0.1) as broker,
+        caplog.at_level("DEBUG"),
+        pytest.raises(OperationalError),
+    ):
+        consumer.ensure_connected(broker)
+    assert "test-only-redaction-token" not in caplog.text
     assert "OperationalError" in caplog.text
-
-
-def test_database_scheduler_uses_same_finite_exponential_budget(
-    consumer: ExponentialBackoffConsumer,
-) -> None:
-    scheduler = object.__new__(ExponentialBackoffDatabaseScheduler)
-    scheduler.app = consumer.app
-    conn = MagicMock(spec=Connection)
-    failure = OperationalError("broker down")
-    conn.ensure_connection.side_effect = failure
-
-    with (
-        patch.object(
-            ExponentialBackoffDatabaseScheduler,
-            "connection",
-            new_callable=PropertyMock,
-            return_value=conn,
-        ),
-        patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep,
-        pytest.raises(OperationalError) as error,
-    ):
-        scheduler._ensure_connected()  # noqa: SLF001
-
-    assert error.value is failure
-    assert conn.ensure_connection.call_count == 6  # noqa: PLR2004
-    assert [item.args[0] for item in sleep.call_args_list] == [1, 2, 4, 8, 16]
-
-
-def test_database_scheduler_connection_can_recover(
-    consumer: ExponentialBackoffConsumer,
-) -> None:
-    scheduler = object.__new__(ExponentialBackoffDatabaseScheduler)
-    scheduler.app = consumer.app
-    conn = MagicMock(spec=Connection)
-    conn.ensure_connection.side_effect = [OperationalError("temporary"), conn]
-
-    with (
-        patch.object(
-            ExponentialBackoffDatabaseScheduler,
-            "connection",
-            new_callable=PropertyMock,
-            return_value=conn,
-        ),
-        patch("speleodb.background_jobs.consumer._sleep_before_retry") as sleep,
-    ):
-        assert scheduler._ensure_connected() is conn  # noqa: SLF001
-
-    conn.maybe_switch_next.assert_called_once()
-    assert sleep.call_count == 1
-    assert sleep.call_args.args == (1.0,)
+    assert ":**@" in caplog.text

@@ -4,6 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# The management command holds a PostgreSQL advisory lock for its lifetime.
-# Its PID file is container-local; no shared source-tree PID is deleted.
-exec python manage.py run_background_beat
+# The single scheduler process holds its own PostgreSQL advisory lock.
+# No source-tree PID file is created or deleted.
+exec python -m speleodb.background_jobs.beat

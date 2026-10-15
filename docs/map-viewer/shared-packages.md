@@ -166,9 +166,10 @@ viewer's compatible core dependency on the same installed version.
 `bun run check:shared-packages` rejects local paths, Git dependencies, version
 ranges and inconsistent core overrides before standalone CI or Railway installs.
 Both npm installs and monorepo development consume package TypeScript sources.
-Vite compiles that code as part of the application build; no package installation
-script or checked-in `dist/` is required. Type checking and ESLint use the same
-source exports, and the runtime import audit follows their implementation.
+Vite compiles that code as part of the application build; no package
+installation script or checked-in `dist/` is required. Type checking and ESLint
+use the same source exports, and the runtime import audit follows their
+implementation.
 
 The `speleodb-source` condition remains enabled for compatibility with older
 source-enabled package revisions; npm releases export source by default.

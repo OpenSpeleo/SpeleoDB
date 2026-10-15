@@ -39,6 +39,16 @@ required; this rule only specifies where an authorized commit must run.
 - **Tests are cheap**: Every behavior should be tested. Untested code is broken
   code.
 
+## Legacy and backward compatibility
+
+**Do not assume legacy support or backward compatibility is required.** Add or
+retain legacy entrypoints, compatibility wrappers, aliases, or fallback paths
+only when the user explicitly requests compatibility. Hypothetical external
+consumers are not a reason to preserve a superseded interface.
+
+When replacing an interface, migrate its in-scope callers, tests, and
+documentation to the supported interface and remove the superseded code.
+
 ## Temporary agent files
 
 Keep agent plans, task lists, TODO tracking, progress notes, review notes, and
@@ -313,6 +323,24 @@ Backend/API changes should also run relevant `pytest` targets:
 
 New tests should respects coding existing structures
 
+### No avoidable mocks or monkeypatching
+
+**Monkeypatching in tests is permitted ONLY when it is STRICTLY IMPOSSIBLE to
+test the behavior without it.** Convenience, execution speed, setup complexity,
+or difficulty reproducing a failure do not qualify as impossibility.
+
+Use real constructors, supported public APIs, normal test configuration, and
+isolated real databases, brokers, files, and subprocesses. Do not bypass
+initialization, replace framework internals, fabricate SDK responses, or install
+fake executables when the behavior can be exercised through the real interface.
+Mocks and other test doubles must likewise be removed wherever a real test is
+possible. Normal configuration through a supported API is not monkeypatching.
+
+This rule covers `pytest.monkeypatch`, `unittest.mock.patch`, manual runtime
+replacement of attributes or functions, and equivalent mechanisms. Every
+unavoidable exception must document the specific technical impossibility next to
+the patch and limit the replacement to the smallest necessary boundary.
+
 ### Django GitLab repository contract
 
 - Read `docs/ci-gitlab-testing.md` before modifying Git-related fixtures. A test
@@ -443,6 +471,12 @@ except (ValueError, TypeError) as exc:
 ```
 
 ### Python imports
+
+**Relative imports are prohibited unless an absolute import is technically
+impossible.** Use absolute package paths throughout the repository, including
+`config/settings/`. Shorter spelling, convenience, and existing style do not
+justify an exception. Document the specific technical necessity beside any
+unavoidable relative import.
 
 All imports belong at module scope. Never place imports inside functions,
 methods, `setUp`, tests, or other local scopes, even for a symbol used only

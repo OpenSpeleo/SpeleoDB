@@ -139,6 +139,9 @@ the rendering function that documents the contract. See
 
 ### Import & Module-Level Code
 
+- **Use absolute imports.** Relative imports are prohibited unless an absolute
+  import is technically impossible; document that necessity beside the import.
+  This includes every module under `config/settings/`.
 - **All imports must be at the top of the file.** Never use inline/local imports
   inside functions, methods, or `setUp`. This violates ruff PLC0415. If you need
   a symbol, import it at the top with all other imports.
@@ -203,9 +206,11 @@ before transferring ownership. Keep annotations at genuinely untyped library
 boundaries narrow and explain upstream stub gaps.
 
 Include new untracked files in direct lint/type checks: Git-based hook
-inventories may omit them. Use `PropertyMock` for a read-only property when a
-unit test needs one, and keep setup outside `pytest.raises` so only the intended
-failing operation is covered.
+inventories may omit them. Follow the strict no-avoidable-mocks rule in
+`AGENTS.md`, including for read-only properties: use real objects and supported
+configuration unless testing without a replacement is technically impossible.
+Keep setup outside `pytest.raises` so only the intended failing operation is
+covered.
 
 Annotate a fixture that yields without a value as `Generator[None, None, None]`,
 not `None`. Give heterogeneous nested fixture mappings an explicit mapping type

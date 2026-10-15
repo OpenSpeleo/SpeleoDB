@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 import os
+import socket
 from typing import TYPE_CHECKING
 
 from debug_toolbar.settings import PANELS_DEFAULTS
 from django.core.mail.backends.filebased import EmailBackend
 from django.utils import timezone
 
-from .base import *  # noqa: F403
-from .base import AWS_STORAGE_BUCKET_NAME
-from .base import INSTALLED_APPS
-from .base import LOGGING
-from .base import MAILERS
-from .base import MIDDLEWARE
-from .base import env
+from config.settings.base import *  # noqa: F403
+from config.settings.base import AWS_STORAGE_BUCKET_NAME
+from config.settings.base import INSTALLED_APPS
+from config.settings.base import LOGGING
+from config.settings.base import MAILERS
+from config.settings.base import MIDDLEWARE
+from config.settings.base import SPELEODB_CELERY_WORKER_RUNTIME
+from config.settings.base import env
 
 if TYPE_CHECKING:
     from typing import Any
@@ -124,9 +126,11 @@ if MAILERS["default"]["BACKEND"] in {
 # django-debug-toolbar
 # ------------------------------------------------------------------------------
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#prerequisites
-INSTALLED_APPS += ["debug_toolbar"]
+if not SPELEODB_CELERY_WORKER_RUNTIME:
+    INSTALLED_APPS += ["debug_toolbar"]
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#middleware
-MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+if not SPELEODB_CELERY_WORKER_RUNTIME:
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
 
 # Keep the toolbar available while making every diagnostic panel opt-in. Import
 # the package's canonical list so newly added default panels also start disabled.
@@ -144,17 +148,16 @@ DEBUG_TOOLBAR_CONFIG = {
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
-if env.bool("USE_DOCKER", default=False):  # pyright: ignore[reportArgumentType]
-    import socket
-
+if not SPELEODB_CELERY_WORKER_RUNTIME and env.bool("USE_DOCKER", default=False):
     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
     INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
 
 
 # django-silk
 # ------------------------------------------------------------------------------
-INSTALLED_APPS += ["silk"]
-MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
+if not SPELEODB_CELERY_WORKER_RUNTIME:
+    INSTALLED_APPS += ["silk"]
+    MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
 
 __ENABLE_PROFILING__ = False
 
@@ -175,7 +178,8 @@ SILKY_META = __ENABLE_PROFILING__  # optional, include meta info
 # django-extensions
 # ------------------------------------------------------------------------------
 # https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
-INSTALLED_APPS += ["django_extensions"]
+if not SPELEODB_CELERY_WORKER_RUNTIME:
+    INSTALLED_APPS += ["django_extensions"]
 
 # Celery
 # ------------------------------------------------------------------------------

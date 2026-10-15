@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -17,8 +18,6 @@ from datetime import timedelta
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
-from urllib.parse import quote
-from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from zipfile import ZipFile
 
@@ -43,6 +42,9 @@ from speleodb.background_jobs.models import JobState
 from speleodb.background_jobs.services import GENERATION_TASK
 from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.storage import delete_archive
+from speleodb.testing.celery import isolated_test_broker_url
+from speleodb.testing.database import postgres_test_database_url
+from speleodb.users.models import User
 from speleodb.users.tasks import get_users_count
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.s3_storages import ExportStorage
@@ -51,11 +53,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterator
     from pathlib import Path
-    from urllib.parse import SplitResult
 
     from django.http import HttpResponse
-
-    from speleodb.users.models import User
 
 pytestmark = [
     pytest.mark.django_db(transaction=True),
@@ -69,16 +68,12 @@ WAIT_SECONDS: int = 45
 TEST_BUCKET: str = "speleodb-user-artifacts-test"
 MAINTENANCE_TASK: str = "speleodb.background_jobs.tasks.maintain_background_jobs"
 CLEANUP_TASK: str = "speleodb.background_jobs.tasks.delete_expired_artifacts"
-TEST_BROKER_PORT: int = 6381
-REDIS_PORT: int = 6379
 
 
 @contextmanager
 def _publisher(broker_url: str) -> Iterator[Celery]:
     """Use a fresh real connection pool when switching between live/dead brokers."""
     previous: Celery = get_current_app()
-    previous_broker: str | None = os.environ.get("CELERY_BROKER_URL")
-    os.environ["CELERY_BROKER_URL"] = broker_url
     with Celery(f"exports-test-{uuid.uuid4()}") as application:
         application.config_from_object("django.conf:settings", namespace="CELERY")
         application.conf.update(
@@ -97,32 +92,6 @@ def _publisher(broker_url: str) -> Iterator[Celery]:
             yield application
         finally:
             previous.set_current()
-            if previous_broker is None:
-                os.environ.pop("CELERY_BROKER_URL", None)
-            else:
-                os.environ["CELERY_BROKER_URL"] = previous_broker
-
-
-def _test_database_url() -> str:
-    database: dict[str, Any] = connection.settings_dict
-    assert connection.vendor == "postgresql", "Live workers require PostgreSQL."
-    assert str(database["NAME"]).startswith("test_"), (
-        "Refusing to run a worker against a database without the test_ prefix."
-    )
-    host: str = str(database.get("HOST") or "localhost")
-    assert not host.startswith("/"), "Use a TCP PostgreSQL address for live tests."
-    authority: str = f"[{host}]" if ":" in host else host
-    user: str = quote(str(database.get("USER") or ""), safe="")
-    password: str = quote(str(database.get("PASSWORD") or ""), safe="")
-    name: str = quote(str(database["NAME"]), safe="")
-    port: str = str(database.get("PORT") or "5432")
-    options: dict[str, str] = {
-        key: str(value)
-        for key, value in database.get("OPTIONS", {}).items()
-        if key in {"sslmode", "sslrootcert", "sslcert", "sslkey", "options"}
-    }
-    query: str = f"?{urlencode(options)}" if options else ""
-    return f"postgresql://{user}:{password}@{authority}:{port}/{name}{query}"
 
 
 @dataclass
@@ -142,6 +111,7 @@ class LiveWorker:
                 cwd=settings.BASE_DIR,
                 stdout=log,
                 stderr=subprocess.STDOUT,
+                start_new_session=True,
             )
         self.wait_for(
             lambda: bool(
@@ -189,24 +159,17 @@ class LiveWorker:
 
 
 @pytest.fixture
-def live_worker(tmp_path: Path, transactional_db: None) -> Iterator[LiveWorker]:
-    broker_url: str = os.environ.get("TEST_CELERY_BROKER_URL", "")
-    broker: SplitResult = urlsplit(broker_url)
-    allowed_broker: bool = (
-        broker.hostname in {"localhost", "127.0.0.1"}
-        and broker.port == TEST_BROKER_PORT
-    ) or (broker.hostname == "celery-test-redis" and broker.port == REDIS_PORT)
-    assert broker.scheme == "redis"
-    assert allowed_broker, (
-        "Use the dedicated celery-test-redis service; development brokers are refused."
-    )
+def live_worker(
+    tmp_path: Path, transactional_db: None, request: pytest.FixtureRequest
+) -> Iterator[LiveWorker]:
+    broker_url: str = isolated_test_broker_url()
     assert settings.AWS_STORAGE_BUCKET_NAME == TEST_BUCKET
     assert urlsplit(settings.AWS_S3_ENDPOINT_URL).hostname in {
         "localhost",
         "127.0.0.1",
         "rustfs",
     }, "Use the local RustFS test bucket."
-    database_url: str = _test_database_url()
+    database_url: str = postgres_test_database_url()
     ExportStorage().connection.meta.client.head_bucket(Bucket=TEST_BUCKET)
     hostname: str = f"exports-integration-{uuid.uuid4()}@localhost"
     environment: dict[str, str] = os.environ.copy()
@@ -218,40 +181,53 @@ def live_worker(tmp_path: Path, transactional_db: None) -> Iterator[LiveWorker]:
             "CELERY_BROKER_URL": broker_url,
             "EXPORTS_SCRATCH_DIR": str(tmp_path / "scratch"),
             "PYTHONUNBUFFERED": "1",
+            "SPELEODB_CELERY_WORKER_RUNTIME": "true",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
         }
     )
+    if getattr(request, "param", None) == "hard-timeout":
+        environment["DJANGO_SETTINGS_MODULE"] = (
+            "config.settings.test_celery_hard_timeout"
+        )
+    arguments: list[str] = [
+        sys.executable,
+        "-m",
+        "celery",
+        "-A",
+        "config.celery_app",
+        "--skip-checks",
+        "worker",
+        "--pool",
+        "prefork",
+        "--concurrency",
+        "1",
+        "--prefetch-multiplier",
+        "1",
+        "--queues",
+        "exports,background_control",
+        "--hostname",
+        hostname,
+        "--loglevel",
+        "INFO",
+        "--events",
+        "--without-gossip",
+        "--without-mingle",
+    ]
     log_path: Path = tmp_path / "celery-worker.log"
     with _publisher(broker_url) as application, log_path.open("wb") as log:
         with application.connection_for_write() as broker_connection:
             broker_connection.ensure_connection(max_retries=0)
         process: subprocess.Popen[bytes] = subprocess.Popen(  # noqa: S603
-            [
-                sys.executable,
-                "-m",
-                "celery",
-                "-A",
-                "config.celery_app",
-                "worker",
-                "--pool",
-                "solo",
-                "--concurrency",
-                "1",
-                "--prefetch-multiplier",
-                "1",
-                "--queues",
-                "exports,background_control",
-                "--hostname",
-                hostname,
-                "--loglevel",
-                "INFO",
-                "--events",
-                "--without-gossip",
-                "--without-mingle",
-            ],
+            arguments,
             env=environment,
             cwd=settings.BASE_DIR,
             stdout=log,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         worker: LiveWorker = LiveWorker(
             application, process, log_path, hostname, environment
@@ -270,7 +246,7 @@ def live_worker(tmp_path: Path, transactional_db: None) -> Iterator[LiveWorker]:
             try:
                 worker.process.wait(timeout=20)
             except subprocess.TimeoutExpired:
-                worker.process.kill()
+                os.killpg(worker.process.pid, signal.SIGKILL)
                 worker.process.wait(timeout=5)
             # Only delete object keys created in this transaction-isolated test DB.
             for attempt in JobAttempt.objects.exclude(object_key="").iterator():
@@ -299,6 +275,103 @@ def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     )
     assert orjson.loads(TaskResult.objects.get(task_id=task_id).result or "null") == (
         expected_count
+    )
+
+
+def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
+    live_worker: LiveWorker,
+) -> None:
+    task_id: str = str(uuid.uuid4())
+    with psycopg.connect(**connection.get_connection_params()) as blocked_users:
+        blocked_users.execute(
+            psycopg.sql.SQL("LOCK TABLE {} IN ACCESS EXCLUSIVE MODE").format(
+                psycopg.sql.Identifier(User._meta.db_table)  # noqa: SLF001
+            )
+        )
+        live_worker.application.send_task(
+            "speleodb.users.tasks.get_users_count",
+            task_id=task_id,
+            time_limit=2,
+            soft_time_limit=1,
+        )
+        live_worker.wait_for(
+            lambda: TaskResult.objects.filter(
+                task_id=task_id, status="FAILURE"
+            ).exists()
+        )
+    failed: TaskResult = TaskResult.objects.get(task_id=task_id)
+    # A soft signal during libpq I/O can surface as a driver OperationalError;
+    # verify the actual timeout signal as well as the persisted task failure.
+    assert "Soft time limit (1s) exceeded" in live_worker.log_path.read_text()
+    assert orjson.loads(failed.result or "null")["exc_type"] in {
+        "SoftTimeLimitExceeded",
+        "OperationalError",
+    }
+    live_worker.run_control_task("speleodb.users.tasks.get_users_count")
+
+
+@pytest.mark.parametrize("live_worker", ["hard-timeout"], indirect=True)
+def test_live_prefork_hard_timeout_replaces_child_and_accepts_next_task(
+    live_worker: LiveWorker,
+) -> None:
+    task_name: str = "speleodb.users.tasks.get_users_count"
+    task_id: str = str(uuid.uuid4())
+    with psycopg.connect(**connection.get_connection_params()) as blocked_users:
+        blocked_users.execute(
+            psycopg.sql.SQL("LOCK TABLE {} IN ACCESS EXCLUSIVE MODE").format(
+                psycopg.sql.Identifier(User._meta.db_table)  # noqa: SLF001
+            )
+        )
+        live_worker.application.send_task(
+            task_name, task_id=task_id, time_limit=2, soft_time_limit=0
+        )
+        live_worker.wait_for(
+            lambda: TaskResult.objects.filter(
+                task_id=task_id, status="FAILURE"
+            ).exists()
+        )
+    failed: TaskResult = TaskResult.objects.get(task_id=task_id)
+    assert "TimeLimitExceeded" in (failed.result or "")
+    assert "Hard time limit (2s) exceeded" in live_worker.log_path.read_text(
+        encoding="utf-8"
+    )
+    live_worker.run_control_task(task_name)
+
+
+def test_live_beat_publication_preserves_worker_result_recording(
+    live_worker: LiveWorker,
+) -> None:
+    task_id: str = str(uuid.uuid4())
+    environment: dict[str, str] = live_worker.environment.copy()
+    environment.update(
+        {
+            "DJANGO_SETTINGS_MODULE": "config.settings.beat",
+            "DATABASE_URL": postgres_test_database_url(),
+            "USE_DOCKER": "false",
+        }
+    )
+    subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-c",
+            "from config.celery_app import app; "
+            "app.loader.init_worker(); "
+            "assert app.conf.result_backend is None; "
+            "app.send_task('speleodb.users.tasks.get_users_count', "
+            f"task_id='{task_id}')",
+        ],
+        env=environment,
+        cwd=settings.BASE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    live_worker.wait_for(
+        lambda: TaskResult.objects.filter(task_id=task_id, status="SUCCESS").exists()
+    )
+    assert orjson.loads(TaskResult.objects.get(task_id=task_id).result or "null") == (
+        get_users_count()
     )
 
 
@@ -442,7 +515,7 @@ def test_live_worker_death_recovers_with_a_new_attempt(live_worker: LiveWorker) 
                 pk=job.pk, state=JobState.RUNNING
             ).exists()
         )
-        live_worker.process.kill()
+        os.killpg(live_worker.process.pid, signal.SIGKILL)
         live_worker.process.wait(timeout=10)
 
     abandoned: JobAttempt = job.attempts.get()

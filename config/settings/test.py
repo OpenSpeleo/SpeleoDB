@@ -40,11 +40,11 @@ def load_env_files_from_pyproject() -> None:
 load_env_files_from_pyproject()
 
 
-from .base import *  # noqa: E402, F403
-from .base import AWS_STORAGE_BUCKET_NAME  # noqa: E402
-from .base import INSTALLED_APPS  # noqa: E402
-from .base import TEMPLATES  # noqa: E402
-from .base import env  # noqa: E402
+from config.settings.base import *  # noqa: E402, F403
+from config.settings.base import AWS_STORAGE_BUCKET_NAME  # noqa: E402
+from config.settings.base import INSTALLED_APPS  # noqa: E402
+from config.settings.base import TEMPLATES  # noqa: E402
+from config.settings.base import env  # noqa: E402
 
 # Have to overwrite because of `USE_DOCKER` in base.py
 DATABASES = {"default": env.db("DATABASE_URL")}
@@ -54,6 +54,12 @@ if test_database_url := env.str("TEST_DATABASE_URL", default=""):
     DATABASES = {"default": env.db_url_config(test_database_url)}
 # Replacing the connection mapping above must preserve production transactions.
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# SQLite configuration is unchanged; this applies only when PostgreSQL is
+# already selected by DATABASE_URL or TEST_DATABASE_URL.
+# Tests own their schema. A developer's template1 can contain custom objects or
+# stale collation metadata after a glibc/musl container-image change.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"]["TEST"] = {"TEMPLATE": "template0"}
 # DATABASES = {
 #     "default": {
 #         "ENGINE": "django.db.backends.sqlite3",
