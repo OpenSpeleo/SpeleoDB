@@ -608,8 +608,8 @@ the private map controller. Vite compiles assets on explicit request while
 Django remains the server. Both build modes use hashed filenames; production is
 minified and development mode includes source maps. Run
 `docker exec -w /app speleodb-monorepo-django bun run build`, wait for success,
-then refresh the browser. No asset watcher or reload client runs at startup.
-For automatic rebuilds on save, explicitly run `bun run dev` from `/app` in the
+then refresh the browser. No asset watcher or reload client runs at startup. For
+automatic rebuilds on save, explicitly run `bun run dev` from `/app` in the
 container. Refresh the browser after each successful rebuild, and stop the
 watcher before running a production build or final browser checks.
 
@@ -629,13 +629,13 @@ the public custom stylesheet. Production builds use `--minify`.
 
 ### Key Bun Scripts
 
-| Script                         | Purpose                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| `bun run dev`                 | Automatic development rebuilds; refresh the browser after each build    |
-| `bun run start`               | Finite alias for the clean production build                             |
-| `bun run build`                | Full clean + production build                                           |
-| `bun run lint:frontend`        | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
-| `bun run test:frontend`        | Vitest test runner for frontend tests                                   |
+| Script                  | Purpose                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `bun run dev`           | Automatic development rebuilds; refresh the browser after each build    |
+| `bun run start`         | Finite alias for the clean production build                             |
+| `bun run build`         | Full clean + production build                                           |
+| `bun run lint:frontend` | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
+| `bun run test:frontend` | Vitest test runner for frontend tests                                   |
 
 ### Integration Points
 

@@ -8,6 +8,7 @@ from typing import override
 
 from django_celery_beat.schedulers import DatabaseScheduler
 
+from config.task_results import HOUSEKEEPING_TASK_NAMES
 from speleodb.background_jobs.broker import connect_with_backoff
 from speleodb.background_jobs.lease import SchedulerLeaseLostError
 
@@ -56,6 +57,10 @@ class ExponentialBackoffDatabaseScheduler(DatabaseScheduler):
         **kwargs: Any,
     ) -> Any:
         self.lease.assert_owned()
+        if advance:
+            # ModelEntry reconstructs options from the database when reserved.
+            # Apply publication policy to that entry, after advancing it once.
+            entry = self.reserve(entry)  # type: ignore[no-untyped-call]
         original_options: dict[str, Any] | None = entry.options
         options: dict[str, Any] = original_options or {}
         policy: dict[str, Any] = {
@@ -65,9 +70,13 @@ class ExponentialBackoffDatabaseScheduler(DatabaseScheduler):
             "on_revive": self._check_publish_retry,
         }
         entry.options = {**options, "retry_policy": policy}
+        # Minimal Beat sends unknown task names directly. Celery's send_task
+        # defaults to ignore_result=False, which overrides worker annotations.
+        if entry.task in HOUSEKEEPING_TASK_NAMES:
+            entry.options["ignore_result"] = True
         try:
             return super().apply_async(
-                entry, producer=producer, advance=advance, **kwargs
+                entry, producer=producer, advance=False, **kwargs
             )
         finally:
             entry.options = original_options

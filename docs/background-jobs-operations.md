@@ -3,13 +3,12 @@
 ## Ownership and scheduling
 
 SpeleoDB stores user requests, attempts, artifact availability, and notification
-state in its application database. `django-celery-results` stores Celery's
-technical execution records in that same PostgreSQL instance. Kanchi observes
-Celery events and stores its own operational history in a separate database with
-its own user on the existing PostgreSQL server. Cache and Celery share the
-existing Redis server, using logical databases 0 and 1 respectively. This reuses
-the application's infrastructure and keeps worker scaling straightforward. A
-Kanchi outage must not prevent exports, retries, or artifact deletion.
+state in its application database. The existing `django-celery-results`
+`django-db` backend stores technical task execution records in that same
+PostgreSQL database and exposes them through Django admin. No separate
+monitoring service or database is required. Cache and Celery share the existing
+Redis server, using logical databases 0 and 1 respectively. This reuses the
+application's infrastructure and keeps worker scaling straightforward.
 
 **There is no Railway cron job or Railway cron schedule.** A continuously
 running Celery Beat process uses `django-celery-beat`'s database scheduler. One
@@ -22,11 +21,12 @@ maintenance.
 | Scheduler | `bash compose/celery/beat/start`   | Publishes scheduled tasks    |
 
 Each worker replica starts with `--queues exports,background_control`,
-concurrency one, prefetch one, and task events enabled. Scale the same worker
-service through replicas as demand grows. Maintenance and email tasks can wait
-behind exports when every replica is occupied. The authenticated download
-endpoint enforces artifact expiry independently of cleanup scheduling; expired
-downloads become unavailable even when physical deletion is still queued.
+concurrency one and prefetch one. Task-event publication is disabled; result
+recording does not depend on events. Scale the same worker service through
+replicas as demand grows. Maintenance and email tasks can wait behind exports
+when every replica is occupied. The authenticated download endpoint enforces
+artifact expiry independently of cleanup scheduling; expired downloads become
+unavailable even when physical deletion is still queued.
 
 Beat holds a PostgreSQL advisory lock for its lifetime, including during
 deployment handover. Only `install_background_schedules` owns the feature's
@@ -87,8 +87,10 @@ operation limit applies during shutdown.
 Beat's local result backend and automatic result-expiry schedule installation
 are disabled. The stored `celery.backend_cleanup` schedule remains owned by
 `install_background_schedules`, and workers retain result recording and the
-30-day result-retention policy. Message `ignore_result` behavior is unchanged.
-No task names, queues, database tables, or public APIs change with this runtime.
+30-day result-retention policy. The scheduler sets the message `ignore_result`
+option from the same lightweight housekeeping policy as the worker, without
+importing task implementations. Actual tasks keep results, including work
+published by Beat. No database schema change is needed.
 
 ### Worker runtime and execution-slot memory
 
@@ -102,8 +104,9 @@ The worker profile uses Django's `SimpleAdminConfig` to avoid admin
 autodiscovery, and excludes web-only debug toolbar, Silk, extensions, and
 development instrumentation. Application models, signals, tasks, templates,
 storage, email, result recording, and production observability remain available.
-The worker keeps prefork, concurrency one, prefetch one, both queues, events,
-and the existing task deadlines and recovery behavior.
+The worker keeps prefork, concurrency one, prefetch one, both queues, and the
+existing task deadlines and recovery behavior. It no longer starts with
+`--events`; normal worker control and heartbeats remain available.
 
 Before either Python process starts, the script defaults `OPENBLAS_NUM_THREADS`,
 `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `NUMEXPR_NUM_THREADS`,
@@ -180,8 +183,10 @@ processes, excluding the separate startup preflight and container page cache.
 Production Sentry and workload size can change the footprint. Application code
 must be released before these savings can be verified on Railway.
 
-Container verification for this change passed the full local SQLite Python suite
-with 5,227 tests passed and 208 skipped, plus 2,326 frontend tests. The
+Historical verification of the earlier October 2026 runtime optimization passed
+the full local SQLite Python suite with 5,227 tests passed and 208 skipped, plus
+2,326 frontend tests. These results predate the monitoring removal and
+task-result policy changes; they are not validation of this release. The
 production asset build, development TypeScript/IaC check, Django system check,
 changed-file Ruff/format checks, and whole-project mypy check (790 Python files)
 passed. The full-suite GitLab audit recorded nine creations, ten creation
@@ -189,13 +194,13 @@ requests, zero violations and no unresolved outcomes. All nine created
 repositories were confirmed marked for deletion by GitLab; asynchronous deletion
 is not reported as immediate physical removal.
 
-A separate PostgreSQL/isolated-Redis run passed all 74 focused checks, including
-real lock handover, all eight prefork-worker tests,
-archive/download/notification and expiry flows, Beat-published result recording,
-soft-timeout recovery, hard timeout child replacement, and worker-death
-recovery. This run created no GitLab repositories and recorded no audit
-violations. Its temporary Redis server was stopped after verification; the
-shared development Redis remained available.
+That earlier verification also passed all 74 focused checks in a separate
+PostgreSQL/isolated-Redis run, including real lock handover, all eight
+prefork-worker tests, archive/download/notification and expiry flows,
+Beat-published result recording, soft-timeout recovery, hard timeout child
+replacement, and worker-death recovery. This run created no GitLab repositories
+and recorded no audit violations. Its temporary Redis server was stopped after
+verification; the shared development Redis remained available.
 
 These scheduler, consumer, runtime, and worker-startup checks use real framework
 construction and supported configuration without mocks or monkeypatches. They
@@ -211,8 +216,9 @@ Superusers can open **Background jobs** in Django admin
 (`/admin/background_jobs/backgroundjob/`) and use **Rebuild all GeoJSONs** in
 the maintenance panel above the list. Each submission queues one full-history
 rebuild and returns its Celery task ID. It creates no periodic schedule; monitor
-the task in Celery results or Kanchi. This maintenance task does not create an
-export-request row in the Background jobs list.
+the task in Django admin under **Celery Results → Task results**. This
+maintenance task does not create an export-request row in the Background jobs
+list.
 
 The panel uses the admin theme colors, keyboard focus styling and a stacked
 layout on small screens. The endpoint requires a superuser, POST and a valid
@@ -247,128 +253,55 @@ Start the full graph from the repository root:
 docker compose -f local.yml up --build
 ```
 
-Selecting only `django-webserver` does not start the worker, scheduler, and
-dashboard. The devcontainer uses the same graph and forwards Django port 8000
-and Kanchi port 8765.
+Selecting only `django-webserver` does not start the worker and scheduler. The
+devcontainer uses the same service graph and exposes Django port 8000. Task
+history is available through the application's authenticated Django admin.
 
-| Service             | Reachable from host        | Persistent storage                                                  |
-| ------------------- | -------------------------- | ------------------------------------------------------------------- |
-| Existing PostgreSQL | `localhost:5432`           | Existing data/backups volumes; separate Django and Kanchi databases |
-| Shared Redis        | `localhost:6379`           | `speleodb_local_redis_data`; cache DB0, Celery DB1                  |
-| Kanchi              | `http://localhost:8765/ui` | Its database on the existing PostgreSQL server                      |
+| Service             | Reachable from host     | Persistent storage                                           |
+| ------------------- | ----------------------- | ------------------------------------------------------------ |
+| Existing PostgreSQL | `localhost:5432`        | Existing data/backups volumes, including Django task results |
+| Shared Redis        | `localhost:6379`        | `speleodb_local_redis_data`; cache DB0, Celery DB1           |
+| Django              | `http://localhost:8000` | Application records and task history in PostgreSQL           |
 
 Shared Redis uses a persistent volume, AOF persistence, and `noeviction` so
 cache pressure cannot evict queued tasks. The databases share process memory and
 availability; monitor total memory and rejected writes on this server. The
 host-networked Django services use `redis://localhost:6379/1` for Celery while
-the existing cache URL remains `redis://localhost:6379/0`. Kanchi runs on the
-Compose bridge and connects to `redis://redis:6379/1` and
-`postgres:5432/kanchi`. Logical databases separate keys, not credentials or
-Redis Pub/Sub channels. Do not give Kanchi the Django environment files, source
-mount, S3 credentials, GitLab token, or email credentials.
+the cache URL remains `redis://localhost:6379/0`. The monorepo Compose override
+uses `redis://redis:6379/1` and Compose networking. Logical databases separate
+keys, not credentials or Redis Pub/Sub channels.
 
-The pinned Kanchi release uses synchronous SQLAlchemy sessions. Its PostgreSQL
-URL therefore uses `postgresql+psycopg://`; the upstream installation page's
-`postgresql+asyncpg://` example does not match this runtime execution model.
+The worker and Beat wait for successful setup and Redis health. Setup retains
+local GitLab/storage provisioning, application migrations, periodic schedule
+installation, and the local superuser. It stops on failure. Running
+`python manage.py migrate` installs the existing `django_celery_results` tables
+on a fresh database; no new application migration or dependency is needed for
+the task-history interface.
 
-The worker and Beat wait for successful setup and Redis health. Setup runs
-`compose/setup_kanchi_database.py` to provision Kanchi's database and user on
-the existing PostgreSQL server, including when its volume already contains
-Django data. It then runs application migrations and installs the periodic
-schedules. Setup stops on failure. Kanchi also waits for this setup service and
-the shared database/Redis health checks; there is no separate PostgreSQL
-container for it.
+### Local configuration
 
-### Kanchi application versus database provisioning
+Existing developer environment files remain intact. Recreate affected containers
+after changing their environment when authorized; a restart does not replace a
+container's environment.
 
-**The Kanchi image contains the application; its PostgreSQL database is
-external.** In this Compose configuration, `DATABASE_URL` points to
-`postgres:5432/kanchi` on the same PostgreSQL server that hosts Django's
-separate database. Redis is also an external service. Packaging Kanchi in its
-own container does not create its database or login on that server.
+Updating Compose configuration does not stop an already-running orphan
+container. Identify its exact Compose project and ownership before explicitly
+stopping or removing it. Preserve shared volumes, databases, roles, and private
+credentials; removing stored data requires separate authorization after checking
+that no other service uses it. Setup does not drop existing databases or task
+history.
 
-| Component                                                  | Responsibility                                                                                                        |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Shared `postgres` service                                  | Runs PostgreSQL and persists both applications' separate databases in its existing volume.                            |
-| Our `setup` service and `compose/setup_kanchi_database.py` | Create Kanchi's database and restricted login, check existing ownership, and manage its password and database access. |
-| Upstream `getkanchi/kanchi` image                          | Runs Kanchi and manages its own schema/migrations inside the provisioned database.                                    |
-
-Startup order is: PostgreSQL becomes healthy, our setup provisions the database
-and role, then Kanchi starts against that database. The Django migrations run by
-`compose/setup` belong to Django; they do not install Kanchi's tables. Keeping
-provisioning in setup lets Kanchi use a restricted login rather than PostgreSQL
-administrator credentials and supports existing development volumes without
-recreating them.
-
-New Kanchi databases explicitly clone PostgreSQL's pristine `template0` because
-Kanchi migrations own the schema; local additions to `template1` must not leak
-into it. This also avoids inheriting a recorded `template1` collation version
-that the current container runtime cannot determine, as can happen when a
-development volume moves from glibc to Alpine/musl. PostgreSQL records the new
-database's current collation version during creation. See
-[PostgreSQL template databases](https://www.postgresql.org/docs/16/manage-ag-templatedbs.html).
-Provisioning does not repair cluster-wide collation metadata or rebuild existing
-databases. Repeated setup preserves Kanchi history and only rotates its
-dedicated role's password and reapplies database access restrictions. Template
-selection adds no queries or ongoing runtime cost.
-
-### What the Kanchi database tests cover
-
-**`compose/tests/test_kanchi_database.py` tests our provisioning script, not the
-Kanchi application.** It creates temporary databases and roles on real local
-PostgreSQL and removes them afterward. It does not launch or call the Kanchi
-container, run Kanchi migrations, or use Kanchi's existing database.
-
-The tests verify database creation, ownership, restricted access, password
-rotation, quoted identifiers, and CLI secret handling. The `kanchi_history`
-table in these tests is a dummy table created by the test, not an assertion
-about Kanchi's schema. It proves that repeating our setup preserves stored data.
-Ownership and privilege checks prove that our setup refuses to take over an
-unrelated database or reuse an unsafe role.
-
-The collation regression checks that new database metadata matches the running
-provider. Another test holds an active connection to `template1`, preventing
-PostgreSQL from cloning it, and confirms that our provisioning still succeeds
-using `template0`. This tests independence from the shared template without
-changing its contents or metadata. Together these tests protect startup against
-the provisioning failures that otherwise block Kanchi from starting.
-
-A passing suite does **not** establish that Kanchi starts successfully, applies
-its migrations, serves its UI, authenticates users, or observes Celery tasks.
-The Compose `/api/health` check separately probes the running Kanchi service; it
-is not an end-to-end task-monitoring test. Run the provisioning tests inside the
-already-running application devcontainer:
-
-```bash
-pytest compose/tests/test_kanchi_database.py
-```
-
-### Local credentials and configuration
-
-The local username/password are `kanchi-local` / `kanchi-local-only`.
-Authentication stays enabled. Override local credentials and token secrets in
-the private root `.env`. These defaults are for loopback development only. If
-overriding `KANCHI_POSTGRES_PASSWORD`, use a URL-safe random value because it
-also appears in the database connection URL.
-
-Compose resolves `.env` interpolation before starting setup. Every required
-local Kanchi value therefore has a local default in the Compose file; setup does
-not need to generate a new environment file before the graph can start. Existing
-developer environment files remain intact. Recreate affected containers after
-changing variables; a restart does not replace a container's environment.
-
-The private root `.env` also owns `GITLAB_GROUP_NAME`. Compose passes that same
-value to setup and all application services, with `speleodb` as the
-fresh-install default. Keep an existing namespace such as `speleodb_surveys_dev`
-when that is where the repositories live; a copied application database alone
-does not move GitLab repositories. The tracked Django env file must not shadow
-this choice. Bootstrap refreshes the token for the chosen group without moving
-repositories.
+The private root `.env` owns `GITLAB_GROUP_NAME`. Compose passes that same value
+to setup and all application services, with `speleodb` as the fresh-install
+default. Keep an existing namespace such as `speleodb_surveys_dev` when that is
+where the repositories live; a copied application database alone does not move
+GitLab repositories. The tracked Django env file must not shadow this choice.
+Bootstrap refreshes the token for the chosen group without moving repositories.
 
 `CELERY_BROKER_URL` belongs to the caller/Compose configuration. The Django
 entrypoint must not replace it with the cache `REDIS_URL`. If using an external
-local broker, set both `CELERY_BROKER_URL` and `KANCHI_CELERY_BROKER_URL` to the
-appropriate address for each network namespace.
+local broker, set `CELERY_BROKER_URL` to the appropriate address for the
+application network namespace.
 
 The worker intentionally has no source auto-reloader: editing a Python file must
 not terminate an archive mid-generation. Restart it explicitly after code
@@ -450,8 +383,8 @@ request dispatch, an empty-account archive, a signed S3 download, notification
 delivery state, expiry deletion, same-UUID duplicate delivery, and durable
 request recovery after a real broker connection refusal. They also kill their
 own actual worker process and verify bounded recovery into a new attempt without
-a stale artifact. No Kanchi process observes the isolated test broker. The
-worker's log is retained in pytest's temporary directory for failures.
+a stale artifact. The worker's log is retained in pytest's temporary directory
+for failures.
 
 The Compose tests launch the actual worker script and inspect its queues,
 prefork concurrency, prefetch, unique node names, and native thread limits. An
@@ -460,8 +393,9 @@ connects to pytest's PostgreSQL database and preserves the supplied broker URL.
 Setup command order and fail-fast shell options are checked statically; these
 checks do not execute provisioning or prove a migration failure at runtime.
 Other Compose assertions cover default-service dependencies and network/storage
-isolation. Runtime verification also checks migrations, task ingestion, restart
-durability, authentication, and export completion while Kanchi is down.
+isolation, the expected service graph, and preserved shared PostgreSQL volumes.
+Runtime verification also checks migrations, task results, restart durability,
+authentication, and export completion through the application alone.
 
 Runtime-isolation regressions launch fresh interpreters, check the Beat import
 graph, one OS thread and a 100,000,000-byte RSS high-water limit, and publish
@@ -494,13 +428,11 @@ runtime. Exercise at least 15 minutes of real scheduling, and sample worker
 memory before, during, and after representative tasks. Keep startup-preflight
 memory separate from the long-lived worker parent and its execution child.
 
-The CI pytest job supplies both Django's `DATABASE_URL` and the provisioner's
-`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and
-`POSTGRES_PASSWORD`, all targeting the same disposable PostgreSQL service.
-Service-container environment variables are not inherited by runner processes.
-The Kanchi tests use this administrator connection to create uniquely named
-databases and restricted roles, then remove their own resources after each test.
-Keep that explicit connection contract so CI exercises real provisioning.
+The CI pytest job supplies Django's `DATABASE_URL` and `POSTGRES_HOST`,
+`POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`, all
+targeting the same disposable PostgreSQL service. Service-container environment
+variables are not inherited by runner processes. Keep explicit connection
+settings for real entrypoint and isolated-worker tests.
 
 The reloader subprocess loads `config.settings.local`, which requires an
 explicit `DJANGO_SECRET_KEY`; the default in test settings is not an environment
@@ -510,22 +442,12 @@ without `.env` or `.envs/test.env`, using the workflow's environment. This
 catches missing inputs that local credentials can hide. These settings affect
 test setup only and add no application runtime work.
 
-After consolidation and the archive-layout correction, container verification
-passed 4,259 Python tests with 108 subtests (162 skipped). The final UI/API and
-reloader updates passed 1,003 JavaScript tests and 54 focused backend checks.
-All pre-commit hooks passed. Four isolated live-worker tests also passed,
-including actual worker death and recovery. The PostgreSQL bootstrap passed 11
-tests. Kanchi migration preserved all 21 tables and 321 rows; shared Redis data
-survived a restart. Scaling to two worker replicas verified distinct node names
-and both queues on each replica, then returned to one worker. A real local
-export completed on the consolidated worker with a verified signed download;
-generation and maintenance recorded the same worker identity.
-
-A real archive containing a 4,294,967,313-byte member passed ZIP64 creation, S3
-upload, download, and full SHA256 verification; peak process memory was
-approximately 405 MiB. A local export also completed with Kanchi stopped. Those
-large-archive and observer outage checks preceded consolidation. Production
-email and the production expiry cycle remain rollout checks.
+Earlier archive verification exercised a real ZIP containing a
+4,294,967,313-byte member through creation, S3 upload, download, and full SHA256
+verification, with approximately 405 MiB peak process memory. That historical
+measurement does not establish the footprint of every workload or the health of
+a new deployment. Production email and a real expiry cycle remain release
+verification requirements.
 
 ## Local development reloads
 
@@ -533,44 +455,95 @@ For local development, generated repositories and scratch files under `.workdir`
 must not restart Django while exports or tests run. The local settings select
 Werkzeug's stat reloader and exclude `.workdir` paths; normal application code
 changes still reload. This also avoids watchdog/inotify directory-removal races
-on Docker bind mounts. Do not restart/recreate Django to load worker changes;
-reload only the Celery worker after its checks pass.
+on Docker bind mounts. Bind-mounted Python changes require restarting the
+affected Celery worker or Beat after its checks pass; neither process reloads
+that code automatically. Do not restart/recreate Django to load those changes.
 
-## Kanchi operating contract
+The Docker image copies the worker and Beat launchers to `/start-celeryworker`
+and `/start-celerybeat`. Changes to `compose/celery/worker/start` or
+`compose/celery/beat/start` require an image rebuild through the normal approved
+Compose/devcontainer lifecycle. Restarting an existing container retains its old
+copied launcher. After rebuilding, verify that the worker is ready and its
+startup banner reports task events **OFF**.
 
-Use one Kanchi instance and an immutable image digest. Give it a separate
-database and restricted user on the existing PostgreSQL server. Its history is
-independent of Django's Celery result records; both databases share server
-capacity and availability. Verify the pinned image's own migrations during
-upgrades.
+## Task history and scheduler health
 
-After first startup, sign in and set task-history retention to 30 days with
-daily automatic cleanup. Confirm the saved retention configuration survives a
-restart. Do not invent environment switches for settings the pinned version only
-exposes in its dashboard/API.
+Open **Celery Results → Task results** in Django admin to inspect task IDs,
+names, status, start/update timestamps, workers, arguments, result payloads,
+tracebacks, and the periodic task name when present. Group results retain their
+existing diagnostic view. Both interfaces are read-only, including for
+superusers: no manual create, status edit, delete, or arbitrary replay action is
+available. Django's authenticated staff permissions protect this operational
+data; do not put credentials or unnecessary personal data in task arguments or
+return values. Application jobs and attempts link to their technical records.
+The task list labels `date_done` as **Last updated** because Celery also updates
+it during STARTED and RETRY; it is not exclusively a completion timestamp.
 
-The persisted settings are `data_retention.task_successful_days=30`,
-`data_retention.task_unsuccessful_days=30`, and the `data_retention.schedule`
-settings `preset=daily`, `hour=3`, `minute=0`, `timezone=UTC`, and
-`enabled=true`. The pinned release stores them through `AppConfigService`;
-authenticated API updates use `PUT /api/config/settings/{key}`. Verify them
-through the service or `GET /api/config` after saving. Configure the schedule
-before enabling it.
+`CELERY_RESULT_BACKEND="django-db"`, `CELERY_RESULT_EXTENDED=True`, and STARTED
+tracking retain useful execution metadata. Task state transitions update one row
+per Celery task ID; this is a latest-state record, not a separate event row for
+every transition. Task ID guards still protect export claims against duplicate
+delivery. Export STARTED is written only after acquiring the application attempt
+claim, so a stale delivery cannot replace a completed task's result. Ordinary
+task execution failures remain visible with their tracebacks.
 
-Leave workflow automation rules disabled. Django admin is the supported export
-retry interface; raw task replays from Kanchi do not create new application
-attempts. Existing task-ID/attempt guards must make stale replays harmless.
-Kanchi reports an operational view based on observed events. Application job
-state remains authoritative when events are missed or the observer is offline.
+The shared `config.task_results` policy excludes routine successful runs and
+STARTED records for exactly these housekeeping tasks:
 
-Production requires password-hash authentication, independent random session and
-token secrets, explicit allowed hosts/origins, and a username allowlist. Kanchi
-access is limited initially to trusted superuser operators; it does not inherit
-Django's permissions. Include `healthcheck.railway.app` in production allowed
-hosts so Railway can probe `/api/health`, and set `PORT=8765`.
+| Task                                                      | Managed interval | Purpose                                               |
+| --------------------------------------------------------- | ---------------- | ----------------------------------------------------- |
+| `speleodb.gis.tasks.dispatch_project_geojsons`            | 60 seconds       | Dispatch durable pending generation work              |
+| `speleodb.background_jobs.tasks.maintain_background_jobs` | 60 seconds       | Recover attempts and send due notifications           |
+| `speleodb.background_jobs.tasks.delete_expired_artifacts` | 300 seconds      | Delete expired artifacts and eligible old job history |
+| `celery.backend_cleanup`                                  | 86,400 seconds   | Expire old technical result records                   |
 
-An HTTP health response is insufficient proof of task monitoring. Check broker
-connection logs, worker heartbeats, and an actual application's task in the UI.
+Workers use `ignore_result=True` and `store_errors_even_if_ignored=True` for
+these task names. Beat applies the same policy when publishing, because Celery's
+message option can override the worker's default. Unhandled housekeeping
+failures are retained. Actual export generation, notification delivery, survey
+GeoJSON generation, and explicit rebuilds keep results regardless of whether a
+request, another task, or Beat publishes them. Suppression is based on the
+task's purpose, not its publisher. Existing records are not hidden or deleted by
+the policy change.
+
+**A technical `SUCCESS` means the task returned normally.** It does not prove
+that an archive is complete, email was delivered, or a GeoJSON artifact was
+published. These tasks may catch a recoverable error, store it in a durable job
+or generation record, and arrange a bounded retry before returning. Consult
+Background jobs / Job attempts, notification fields, cleanup counters, and
+GeoJSON generation administration for the business outcome. Use their authorized
+retry/resend/rebuild actions; changing or replaying technical result records
+bypasses domain ownership and is not a recovery procedure.
+
+Results expire after 30 days. `install_background_schedules` owns the daily
+`celery.backend_cleanup` entry on `background_control`; an available Beat and
+worker must execute it for expiry to remove rows. Cleanup is not a migration or
+an immediate purge of historical rows. Retained unsuccessful housekeeping
+results follow the same expiry. Application export history has its separate
+90-day policy and preserves records needed for pending cleanup.
+
+Check Beat logs, process health, advisory-lock ownership, and the Periodic tasks
+admin to diagnose scheduling. `last_run_at` and `total_run_count` indicate
+scheduler dispatch, not successful worker execution. Successful housekeeping
+runs deliberately have no result row. Check worker logs, queue consumption,
+pending-work age, application progress and error records, and retained task
+failures together. A missing result is not proof that a scheduled task did not
+run, and a recent Beat counter is not proof that it succeeded.
+
+Removing event consumers and task-event publication avoids maintaining another
+indexed history database. Updating one result row per actual execution and
+omitting frequent successful sweeps bounds routine writes; result retention
+still needs monitoring. Neither change caps PostgreSQL RAM or changes its
+resource limits. Existing worker heartbeats and control commands remain
+available without the removed task event stream.
+
+Regression coverage uses real Celery publication/execution and the existing
+Django backend: actual tasks record STARTED/SUCCESS, retries and failures;
+housekeeping records failures while omitting successful rows; Beat's minimal
+runtime applies the same message policy without importing application tasks.
+Admin tests check diagnostic metadata, permissions and rejected mutations;
+retention tests remove expired results while preserving recent rows. These
+checks complement the existing domain retry, artifact and worker-loss tests.
 
 ## Railway deployment
 
@@ -595,41 +568,37 @@ release branch with GitHub check suites enabled. Worker and Beat sources have no
 fixed commit SHA, and their empty watch-pattern lists allow every repository
 change to trigger a rebuild after checks pass. This keeps application tasks
 aligned with releases that update shared code, dependencies, or build
-configuration. Kanchi follows its pinned image digest and upgrades independently
-of application Git pushes. Check the live web service's source branch and
-migration history before applying the prepared graph, and record the actual
-commit on each resulting deployment. After service creation, read back the
-worker and Beat source settings to confirm the `master` branch, absent commit
-pin, and enabled GitHub check suites were retained.
+configuration. Check the live web service's source branch and migration history
+before applying the prepared graph, and record the actual commit on each
+resulting deployment. After service creation, read back the worker and Beat
+source settings to confirm the `master` branch, absent commit pin, and enabled
+GitHub check suites were retained.
 
 Railway may normalize omitted fields to default restart-policy or watch-pattern
 values on read-back. Compare any `null`-to-default plan differences with the
 effective deployment manifest before applying again; correct runtime settings do
 not require repeated deployments to chase representational differences.
 
-The authorized rollout creates `Celery-Worker`, `Celery-Beat`, and `Kanchi` and
-updates the web service's broker, dashboard link, and deployment
-commands/settings. Generate a fresh plan before applying and reject unrelated
-changes or removals. A plan does not provision services or validate missing
-referenced values; verify those prerequisites against the target production
-environment.
+The named partial manages the existing `SpeleoDB-Prod`, `Celery-Worker`, and
+`Celery-Beat` services. Generate a fresh plan against `speleoDB` / `production`
+before applying. Reject unrelated changes or removals. A plan does not provision
+missing referenced values; verify prerequisites in the target environment.
 
 Before rollout, verify the existing Redis server has a persistent volume, AOF,
-and `noeviction`. Provision a separate Kanchi database and restricted login on
-the existing PostgreSQL server. Neither existing infrastructure service is
-managed or replaced by this named IaC partial. Verify these prerequisites in
-production; local setup does not provision production resources.
+and `noeviction`. Neither Redis nor PostgreSQL is managed or replaced by this
+named IaC partial. The application database stores the result backend; do not
+provision a separate monitoring database. This change does not alter PostgreSQL
+memory settings, resource limits, roles, or stored application data.
 
 This topology needs no environment-wide shared variables. Redis owns its
-connection settings, PostgreSQL owns its private hostname, and Kanchi owns its
-dedicated database password and authentication secrets. Consumers use Railway
-references so credential/address changes have one source of truth and Railway
-can display service dependencies. Never copy a resolved infrastructure URL into
-shared storage or a consumer's variables.
+connection settings. Consumers use Railway references so credential/address
+changes have one source of truth and Railway can display service dependencies.
+Never copy a resolved infrastructure URL into shared storage or a consumer's
+variables.
 
 Set `CELERY_BROKER_URL=${{REDIS_URL}}/1` on `Redis-Prod`. Its existing
 `REDIS_URL` already references Redis's own password and private domain and has
-no database suffix. Web, worker, Beat, and Kanchi each set
+no database suffix. Web, worker, and Beat each set
 `CELERY_BROKER_URL=${{Redis-Prod.CELERY_BROKER_URL}}`. This selects logical
 database 1; the web cache continues using database 0. The Redis-owned variable
 is a prerequisite managed on that existing service, outside this IaC partial.
@@ -640,40 +609,15 @@ verify a broker `PING` and database connection from a deployed consumer. Remove
 the obsolete shared value only after checking every service for remaining
 references. An equivalent reference-only correction does not require a restart.
 
-Configure these native environment variables directly on the Kanchi service:
-
-- `DATABASE_PASSWORD`, holding only Kanchi's dedicated database login password.
-- `DATABASE_URL`:
-  `postgresql+psycopg://kanchi:${{DATABASE_PASSWORD}}@${{Postgres-Prod.PGPRIVATEHOST}}:5432/kanchi`.
-  The dedicated database/user remain separate from Django. `PGPRIVATEHOST`
-  references PostgreSQL's private domain; its existing `PGHOST` and `PGPORT`
-  describe the public proxy and must not be used for this private connection.
-- `BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD_HASH` (Django-compatible
-  `pbkdf2_sha256` format). The username does not need to be an email address.
-- Independent random `SESSION_SECRET_KEY` and `TOKEN_SECRET_KEY` values.
-- `ALLOWED_EMAIL_PATTERNS`, referencing the same service's
-  `${{BASIC_AUTH_USERNAME}}` variable to allow only that operator username.
-- `ALLOWED_HOSTS`: `${{RAILWAY_PUBLIC_DOMAIN}},healthcheck.railway.app`.
-- `ALLOWED_ORIGINS`: `https://${{RAILWAY_PUBLIC_DOMAIN}}`.
-
-Set `KANCHI_URL=https://${{Kanchi.RAILWAY_PUBLIC_DOMAIN}}/ui/` on
-`SpeleoDB-Prod`, which displays the dashboard link. Kanchi's public domain must
-resolve to the configured custom hostname, `kanchi.speleodb.org`. Kanchi's
-credentials, authentication settings, and hostname configuration have one
-consumer, so they remain on Kanchi instead of shared environment scope. The IaC
-file uses `preserve()` for its sensitive service-local values. When moving an
-existing value, verify the destination before removing its shared copy, and
-preserve any pending operator changes.
-
 The IaC file references the existing web service's runtime variables for Django
 worker and Beat. Inventory those variable names before applying; optional
 deployment overrides such as a custom sender address or Sentry configuration
 must be carried over explicitly when present. Existing web variables use
 `preserve()` because declaring an IaC environment map owns the complete map.
 Refresh that inventory before each plan so newly added settings cannot be
-deleted. Web, worker, Beat, and Kanchi reference the same Redis-owned broker
-URL. The application background services explicitly use
-`https://www.speleodb.org` for notification links.
+deleted. Web, worker, and Beat reference the same Redis-owned broker URL. The
+application background services explicitly use `https://www.speleodb.org` for
+notification links.
 
 Deploy these continuously running services in `us-east4-eqdc4a`, alongside the
 existing web service:
@@ -682,13 +626,11 @@ existing web service:
   one; begin with 2 vCPU/4 GiB limits. Scale this service's replicas to add
   capacity; do not create separate services for task categories.
 - Beat: one replica with the application advisory lock.
-- Kanchi: one pinned-image replica and an authenticated HTTPS endpoint.
 
 Provision secrets through Railway variables or references, never tracked source.
 Workers need the existing Django runtime settings, including the shared database
-and storage credentials. Kanchi receives only its own database and broker
-credentials plus its authentication configuration. Keep export scratch files
-ephemeral and validate available space against representative archives.
+and storage credentials. Keep export scratch files ephemeral and validate
+available space against representative archives.
 
 Beat explicitly sets both `deploy.overlapSeconds: 0` and
 `RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0`. The worker's deployment policy is
@@ -707,17 +649,20 @@ Deployment order:
 2. Inventory existing service configuration and preview the IaC plan. Reject
    unrelated deletions or secret replacements. Reconcile legacy web-config
    ownership before applying an IaC file that manages that service.
-3. Validate durability and eviction settings on shared Redis; provision only the
-   Kanchi database/user on existing PostgreSQL, then set the Redis-owned broker
-   and service-local variables described above.
+3. Validate durability and eviction settings on shared Redis and verify the
+   existing Redis-owned broker references. Preserve shared infrastructure and
+   databases; task history uses the application database.
 4. Verify storage configuration and signed/anonymous download behavior. Deploy
    additive application migrations, then install the intended periodic
    schedules.
-5. Deploy the shared worker, Beat, and Kanchi. Confirm all application services
-   use the intended commit and Kanchi uses the intended image digest.
+5. Deploy web, the shared worker, and Beat together so publisher and worker
+   result policies agree. Confirm all three use the intended commit; messages
+   already queued by an older publisher may retain their old result policy.
 6. Check each exact deployment ID reaches `SUCCESS`, then verify queue
    consumption from both queues, distinct replica node names, singleton Beat,
-   authentication, and actual Kanchi task ingestion.
+   authenticated read-only result administration, and actual task results. Check
+   a successful housekeeping run produces no new row and an unhandled failure
+   remains visible; Beat counters alone cannot establish execution.
 7. Verify complete and partial archives from an ordinary account, historical Git
    restoration, email, authenticated download, recovery, large-archive memory
    and disk usage, and a real 24-hour expiry/deletion cycle.
@@ -730,13 +675,13 @@ guard must continue rejecting expired artifacts immediately.
 
 For rollback, return application services to a compatible release while
 preserving additive tables and history. Keep artifact cleanup and published
-downloads available where supported by that release. Roll back Kanchi
-independently.
+downloads available where supported by that release. Review an older IaC file's
+service graph before applying it.
 
-The lightweight runtime adds no migrations or task-message changes. Roll back
-the worker and Beat code together with the start commands supported by that
-revision, preserving the advisory-lock identifier and schedule records. The new
-release removes the old management command. Coordinate a rollback's reviewed
+The result-policy change adds no database migrations. Roll back the application
+publishers, worker and Beat together, preserving the advisory-lock identifier
+and schedule records. The canonical Beat launcher remains the lightweight Python
+module, not the retired management command. Coordinate a rollback's reviewed
 source revision and matching start command in the same deployment; neither
 revision may start with a command it does not support. Revert Railway
 configuration through a reviewed IaC plan/apply when a rollback requires a
@@ -744,40 +689,23 @@ different start command or overlap policy.
 
 ### Production rollout verification
 
-In October 2026, an isolated IaC plan applied only Beat's
-`deploy.overlapSeconds=0` and `RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0`. Read-back
-confirmed both values and an empty overlap-only plan. Beat's 120-second
-termination grace and the worker's deployment policy were retained. The
-lightweight application code and canonical Beat start-command change were not
-deployed as part of that configuration update. Coordinate the reviewed source
-revision and its matching Beat start command in the same deployment; do not
-start the new release with the removed management command. Then verify the exact
-deployment, whole-service memory, one Beat PID/thread, lease handover, scheduled
-publication and worker results. Existing unrelated IaC drift must be reviewed
-separately, especially any proposed change from Kanchi's pinned image digest to
-a mutable tag.
+Configuration apply does not deploy updated Python code. Read back the managed
+service variables after configuration apply, and verify the exact new
+application deployments and their real task results before claiming the release
+is live. A Git push alone does not apply IaC changes.
 
-The September 15, 2026 rollout verified successful worker, Beat, web, and pinned
-Kanchi deployments. At that time one worker consumed both queues, one PostgreSQL
-advisory-lock owner ran Beat, and scheduled maintenance/cleanup dispatch was
-visible. Read-only application tasks completed in Django and appeared as
-successful in Kanchi; normal web task dispatch also completed. Kanchi stored
-30-day retention and daily cleanup, its first automatic cleanup succeeded, and
-workflow automation was disabled.
-
-HTTPS web/health/login-page availability and rejection of anonymous config API
-requests were verified. This historical infrastructure check did not establish
-successful operator login, retention persistence across a restart, real-account
-export, notification email, authenticated download, or the full expiry/deletion
-cycle. Verify those feature paths and the exact deployed revisions when
-assessing a release; the historical result is not a current production health
-check.
+Earlier runtime work verified Beat's zero-overlap settings and canonical worker
+and Beat launch commands. Preserve the 120-second shutdown grace and advisory
+lock. Recheck each deployment's process, queue consumption, scheduler ownership,
+result policy and application behavior for this release; historical successful
+deployments are not a current production health check. Review unrelated live
+configuration drift independently instead of silently applying it with the
+release.
 
 ## Sources
 
-- [Kanchi installation](https://kanchi.io/docs/getting-started/installation)
-- [Kanchi authentication](https://kanchi.io/docs/configuration/authentication)
-- [Kanchi workflow automation](https://kanchi.io/docs/core/workflow-automation)
+- [Celery task result policy](https://docs.celeryq.dev/en/stable/userguide/tasks.html#Task.store_errors_even_if_ignored)
+- [django-celery-results](https://django-celery-results.readthedocs.io/)
 - [Redis Pub/Sub database scoping](https://redis.io/docs/latest/develop/pubsub/)
 - [Railway Infrastructure as Code](https://docs.railway.com/infrastructure-as-code)
 - [Railway health checks](https://docs.railway.com/deployments/healthchecks)

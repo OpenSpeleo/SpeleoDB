@@ -5,7 +5,6 @@ set -o nounset
 set -o pipefail
 
 bash /app/compose/prepare_node_modules
-python compose/setup_kanchi_database.py
 
 python -m compose.setup_local_gitlab \
     --env-file /app/.env \

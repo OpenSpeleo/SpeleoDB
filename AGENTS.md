@@ -246,6 +246,47 @@ lives in typed function-valued bindings with inert template identifiers.
 - Dependabot: `.github/dependabot.yml` uses the `bun` ecosystem for the root
   manifest and lockfile; preserve the existing scheduling and grouping policy.
 
+## Railway configuration apply and session handoff
+
+`.railway/railway.ts` is the source of truth for Railway service settings.
+Railway does **not** read this file during ordinary application deployments.
+Committing, pushing, building, restarting, or redeploying application code does
+not apply changes to this configuration.
+
+- Run `railway config plan` against the intended project and environment when
+  changing this file or a helper that affects its evaluated configuration, or
+  when repairing live settings that have drifted from it. Review the exact
+  service/settings changes and preserve the existing named partial's ownership.
+- Changes to configured startup/build/pre-deploy commands, service sources,
+  variables/references, replicas, resource limits, or other managed settings
+  require `railway config apply` to become live. Application code or startup
+  script content changes with unchanged configured settings require the normal
+  application deployment, not an additional configuration apply. A plan with no
+  effective changes does not require an apply solely because the file was
+  edited.
+- Apply within the user's authorized scope. Keep unrelated services, settings,
+  variables, and staged Railway changes intact. Do not substitute independently
+  hardcoded dashboard/MCP values for the source configuration. If a targeted
+  repair uses MCP, derive values from the evaluated file and verify their scope.
+- After applying configuration, read back the affected settings and verify the
+  resulting deployments and runtime logs. A cached redeploy may retain an old
+  image's launch command; use a fresh source build when needed. A deployment's
+  initial `SUCCESS` status alone is insufficient if its runtime is crashing.
+
+**Mandatory final-response notice:** If required configuration changes remain
+unapplied, or their live application has not been verified, end the session's
+final response with a separate, prominent paragraph beginning: **ACTION REQUIRED
+— RAILWAY CONFIGURATION NOT CONFIRMED LIVE.** Name the target
+project/environment, affected services/settings, and whether the apply is
+pending, failed, or awaiting verification. Provide the exact remaining
+plan/apply/deploy or verification steps, including the working directory and
+target environment; explain any missing authorization or blocker. Explicitly
+state that a Git push alone will not finish the configuration change. Do not
+bury this notice in a test list, progress update, or linked document, or
+describe the rollout as complete. If application and runtime verification are
+complete, report that result instead of presenting an unnecessary pending-action
+warning.
+
 ## Dependency Update Workflow
 
 - Treat the open Dependabot PRs targeting `dev` as the authoritative branch set.

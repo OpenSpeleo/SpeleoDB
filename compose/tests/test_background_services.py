@@ -87,7 +87,7 @@ def test_existing_gitlab_namespace_reaches_every_application_and_setup_service(
     assert "GITLAB_GROUP_NAME" not in read_env_file(REPOSITORY_ROOT / ".envs/.django")
 
 
-def test_background_services_start_after_migrations_without_kanchi(
+def test_background_services_start_after_migrations(
     compose_config: dict[str, Any],
 ) -> None:
     services: dict[str, Any] = compose_config["services"]
@@ -127,38 +127,26 @@ def test_shared_redis_is_durable_with_separate_broker_database(
     assert broker["volumes"] == ["speleodb_local_redis_data:/data"]
 
 
-def test_kanchi_uses_shared_postgres_with_its_own_database_credentials(
+def test_task_history_uses_existing_application_infrastructure(
     compose_config: dict[str, Any],
 ) -> None:
     services: dict[str, Any] = compose_config["services"]
-    kanchi: dict[str, Any] = services["kanchi"]
-    assert kanchi["depends_on"] == {
-        "redis": {"condition": "service_healthy"},
-        "postgres": {"condition": "service_healthy"},
-        "setup": {"condition": "service_completed_successfully"},
+    assert set(services) == {
+        "django",
+        "django-webserver",
+        "postgres",
+        "redis",
+        "celery-worker",
+        "celery-beat",
+        "celery-test-redis",
+        "gitlab",
+        "rustfs",
+        "setup",
     }
-    assert "env_file" not in kanchi
-    assert "volumes" not in kanchi
-    assert "entrypoint" not in kanchi
-    assert "network_mode" not in kanchi
-    assert kanchi["ports"] == ["127.0.0.1:8765:8765"]
-    environment: dict[str, str] = kanchi["environment"]
-    assert environment["AUTH_ENABLED"] == "true"
-    assert environment["AUTH_BASIC_ENABLED"] == "true"
-    assert environment["ENABLE_PICKLE_SERIALIZATION"] == "false"
-    assert environment["DATABASE_URL"].startswith("postgresql+psycopg://")
-    assert "@postgres:5432/kanchi" in environment["DATABASE_URL"]
-    assert environment["CELERY_BROKER_URL"] == (
-        "${KANCHI_CELERY_BROKER_URL:-redis://redis:6379/1}"
-    )
-    assert not any(
-        key.startswith(("AWS_", "GITLAB_", "MAILERSEND_", "DJANGO_"))
-        for key in environment
-    )
-    assert "kanchi-postgres" not in services
-    assert services["setup"]["environment"]["KANCHI_POSTGRES_PASSWORD"] == (
-        "${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}"  # noqa: S105 - Local default.
-    )
+    assert services["postgres"]["volumes"] == [
+        "speleodb_local_postgres_data:/var/lib/postgresql/data",
+        "speleodb_local_postgres_data_backups:/backups",
+    ]
 
 
 def test_live_tests_have_separate_pubsub_broker(
@@ -289,7 +277,7 @@ def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limi
             command: list[str] = (
                 Path(f"/proc/{process.pid}/cmdline").read_text().split("\0")
             )
-            assert "--events" in command
+            assert "--events" not in command
             assert "--skip-checks" in command
             process_environment: dict[str, str] = dict(
                 entry.split("=", maxsplit=1)

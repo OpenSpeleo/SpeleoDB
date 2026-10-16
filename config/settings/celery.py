@@ -5,6 +5,7 @@ from __future__ import annotations
 from config.settings.environment import TIME_ZONE
 from config.settings.environment import USE_TZ
 from config.settings.environment import env
+from config.task_results import HOUSEKEEPING_TASK_NAMES
 
 # Celery
 # ------------------------------------------------------------------------------
@@ -17,6 +18,12 @@ CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379
 CELERY_RESULT_BACKEND: str | None = "django-db"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_RESULT_EXPIRES: int | None = 30 * 24 * 60 * 60
+# Frequent housekeeping should leave history only when it fails. Keep actual
+# work, including tasks published by Beat, in Django's result administration.
+CELERY_TASK_ANNOTATIONS: dict[str, dict[str, bool]] = {
+    name: {"ignore_result": True, "store_errors_even_if_ignored": True}
+    for name in HOUSEKEEPING_TASK_NAMES
+}
 CELERY_BROKER_CONNECTION_TIMEOUT = 3
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # Maximum broker retries after the initial connection attempt (six attempts).
@@ -65,6 +72,6 @@ CELERY_BEAT_SCHEDULER = (
     "speleodb.background_jobs.scheduler:ExponentialBackoffDatabaseScheduler"
 )
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-send-task-events
-CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_WORKER_SEND_TASK_EVENTS = False
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-task_send_sent_event
-CELERY_TASK_SEND_SENT_EVENT = True
+CELERY_TASK_SEND_SENT_EVENT = False

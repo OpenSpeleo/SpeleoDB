@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import cast
 from urllib.parse import urlencode
-from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib import admin
@@ -117,7 +117,7 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             self.message_user(
                 request,
                 "Could not confirm that the rebuild was queued. "
-                "Check the worker monitor before trying again.",
+                "Check task results and worker logs before trying again.",
                 level=messages.ERROR,
             )
         else:
@@ -171,7 +171,6 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "notification_due_at",
         "attachment",
         "artifact_metadata",
-        "kanchi_dashboard",
         "download_link",
     )
 
@@ -269,16 +268,6 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         return format_html(
             '<a href="{}">Download ZIP</a>',
             reverse("api:v2:user-export-download", kwargs={"id": obj.pk}),
-        )
-
-    @admin.display(description="Operational dashboard")
-    def kanchi_dashboard(self, obj: BackgroundJob) -> str:
-        url: str = getattr(settings, "KANCHI_URL", "")
-        if not url or urlsplit(url).scheme not in {"http", "https"}:
-            return "Kanchi is not configured."
-        return format_html(
-            '<a href="{}" target="_blank" rel="noopener noreferrer">Open Kanchi</a>',
-            url,
         )
 
     @staticmethod
@@ -395,6 +384,25 @@ admin.site.unregister([TaskResult, GroupResult])
 @admin.register(TaskResult)
 class TaskResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryTaskResultAdmin):
     """Keep upstream task diagnostics and filters with application permissions."""
+
+    list_per_page = 50
+
+    def get_list_display(self, request: HttpRequest) -> tuple[str, ...]:
+        return (
+            "task_id",
+            "task_name",
+            "status",
+            "date_started",
+            "last_updated",
+            "worker",
+            "periodic_task_name",
+        )
+
+    @admin.display(description="Last updated", ordering="date_done")
+    def last_updated(self, obj: TaskResult) -> datetime:
+        # The backend updates date_done on STARTED and RETRY as well as completion.
+        # The upstream field descriptor does not expose its datetime return type.
+        return cast("datetime", obj.date_done)
 
 
 @admin.register(GroupResult)

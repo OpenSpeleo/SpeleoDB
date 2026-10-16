@@ -116,6 +116,78 @@ def test_beat_loader_and_publication_stay_small_and_do_not_import_tasks(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_minimal_scheduler_publishes_housekeeping_policy_without_task_imports(
+    tmp_path: Path,
+) -> None:
+    if connection.vendor != "postgresql":
+        pytest.skip("Scheduler ownership requires a real PostgreSQL test database.")
+    observed: dict[str, Any] = _run_beat_probe(
+        """
+        import json
+        import sys
+        from importlib import import_module
+
+        from celery.beat import ScheduleEntry
+        from django.db import connection
+        from config.celery_app import app
+        from config.task_results import HOUSEKEEPING_TASK_NAMES
+        from speleodb.background_jobs.lease import SchedulerLease
+
+        app.loader.init_worker()
+        scheduler_module = import_module("speleodb.background_jobs.scheduler")
+        names = sorted(HOUSEKEEPING_TASK_NAMES) + [
+            "speleodb.users.tasks.get_users_count",
+        ]
+        lease = SchedulerLease(connection.get_connection_params())
+        lease.acquire()
+        scheduler = scheduler_module.ExponentialBackoffDatabaseScheduler(
+            app=app, lease=lease, lazy=True,
+        )
+        try:
+            for name in names:
+                entry = ScheduleEntry(
+                    name=name, task=name,
+                    options={"queue": "background_control"}, app=app,
+                )
+                scheduler.apply_async(entry, advance=False)
+            with app.connection_for_read() as broker:
+                with broker.SimpleQueue("background_control") as queue:
+                    messages = []
+                    while queue.qsize():
+                        message = queue.get(block=False)
+                        messages.append(message.headers)
+                        message.ack()
+        finally:
+            scheduler.close()
+            lease.close()
+        print(json.dumps({
+            "messages": messages,
+            "tasks": list(app.tasks),
+            "modules": sorted(sys.modules),
+            "backend": type(app.backend).__name__,
+        }))
+        """,
+        tmp_path,
+        database_url=postgres_test_database_url(),
+    )
+    assert {
+        message["task"]: message["ignore_result"] for message in observed["messages"]
+    } == {
+        "speleodb.gis.tasks.dispatch_project_geojsons": True,
+        "speleodb.background_jobs.tasks.maintain_background_jobs": True,
+        "speleodb.background_jobs.tasks.delete_expired_artifacts": True,
+        "celery.backend_cleanup": True,
+        "speleodb.users.tasks.get_users_count": False,
+    }
+    assert observed["backend"] == "DisabledBackend"
+    assert not any(name.startswith("speleodb.") for name in observed["tasks"])
+    assert not any(
+        name.startswith(("django_celery_results", "speleodb.background_jobs.tasks"))
+        for name in observed["modules"]
+    )
+
+
+@pytest.mark.django_db(transaction=True)
 def test_minimal_scheduler_preserves_database_schedule_behavior(tmp_path: Path) -> None:
     if connection.vendor != "postgresql":
         pytest.skip("Scheduler ownership requires a real PostgreSQL test database.")

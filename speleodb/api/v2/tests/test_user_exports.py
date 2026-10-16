@@ -8,7 +8,6 @@ from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
 from django.contrib.admin.models import LogEntry
-from django.test import override_settings
 from django.urls import resolve
 from django.urls import reverse
 from django.utils import timezone
@@ -318,21 +317,21 @@ class TestUserExports(BaseAPITestCase):
             change_message__contains="new export attempt",
         ).exists()
 
-    def test_admin_superuser_has_authorized_download_and_kanchi_root_link(self) -> None:
+    def test_admin_superuser_has_authorized_download_and_task_history(self) -> None:
         superuser: User = UserFactory.create(is_staff=True, is_superuser=True)
         ready: BackgroundJob = self._job(JobState.READY)
         self._artifact(ready)
         self.client.force_login(superuser)
-        with override_settings(KANCHI_URL="https://kanchi.example.test"):
-            response = self.client.get(
-                reverse("admin:background_jobs_backgroundjob_change", args=[ready.pk])
-            )
+        response = self.client.get(
+            reverse("admin:background_jobs_backgroundjob_change", args=[ready.pk])
+        )
         assert response.status_code == status.HTTP_200_OK
         download_url: str = reverse(
             "api:v2:user-export-download", kwargs={"id": ready.pk}
         )
         assert f'href="{download_url}"' in response.content.decode()
-        assert 'href="https://kanchi.example.test"' in response.content.decode()
+        task_filter: str = f"task_id__exact={ready.attempts.get().task_id}"
+        assert task_filter in response.content.decode()
         assert self.client.get(download_url).status_code == status.HTTP_302_FOUND
 
     def test_admin_notification_retry_handles_expired_archives(self) -> None:
@@ -397,3 +396,88 @@ class TestUserExports(BaseAPITestCase):
             task.refresh_from_db()
             assert task.status == "FAILURE"
             assert GroupResult.objects.filter(pk=group.pk).exists()
+
+    def test_task_history_navigation_metadata_search_and_failure_filter(self) -> None:
+        task: TaskResult = TaskResult.objects.create(
+            task_id="33333333-3333-4333-8333-333333333333",
+            task_name="speleodb.background_jobs.tasks.generate_export",
+            status="FAILURE",
+            date_started=timezone.now() - timedelta(seconds=5),
+            worker="task-history-worker",
+            content_type="application/json",
+            content_encoding="utf-8",
+            result='{"error": "<script>alert(1)</script>"}',
+            traceback="ExportExecutionError: Source unavailable",
+        )
+        succeeded: TaskResult = TaskResult.objects.create(
+            task_id="44444444-4444-4444-8444-444444444444",
+            task_name="speleodb.users.tasks.get_users_count",
+            status="SUCCESS",
+            content_type="application/json",
+            content_encoding="utf-8",
+            result="1",
+        )
+        history_url: str = reverse("admin:django_celery_results_taskresult_changelist")
+        for is_superuser in (False, True):
+            operator: User = UserFactory.create(
+                is_staff=True, is_superuser=is_superuser
+            )
+            self.client.force_login(operator)
+            jobs = self.client.get(
+                reverse("admin:background_jobs_backgroundjob_changelist")
+            )
+            assert jobs.status_code == status.HTTP_200_OK
+            assert f'href="{history_url}"' in jobs.content.decode()
+            assert "View task execution history" in jobs.content.decode()
+
+            history = self.client.get(history_url)
+            assert history.status_code == status.HTTP_200_OK
+            html: str = history.content.decode()
+            assert task.task_id in html
+            assert succeeded.task_id in html
+            assert "task-history-worker" in html
+            assert "column-date_started" in html
+            assert "column-last_updated" in html
+            assert 'name="action"' not in html
+
+            filtered = self.client.get(history_url, {"status__exact": "FAILURE"})
+            assert filtered.status_code == status.HTTP_200_OK
+            assert task.task_id in filtered.content.decode()
+            assert succeeded.task_id not in filtered.content.decode()
+            searched = self.client.get(history_url, {"q": succeeded.task_id})
+            assert searched.status_code == status.HTTP_200_OK
+            assert succeeded.task_id in searched.content.decode()
+            assert task.task_id not in searched.content.decode()
+
+            detail = self.client.get(
+                reverse("admin:django_celery_results_taskresult_change", args=[task.pk])
+            )
+            assert detail.status_code == status.HTTP_200_OK
+            assert "ExportExecutionError: Source unavailable" in detail.content.decode()
+            assert "<script>alert(1)</script>" not in detail.content.decode()
+            assert "&lt;script&gt;alert(1)&lt;/script&gt;" in detail.content.decode()
+
+    def test_task_history_requires_active_staff_access(self) -> None:
+        task: TaskResult = TaskResult.objects.create(
+            task_id="55555555-5555-4555-8555-555555555555",
+            task_name="speleodb.background_jobs.tasks.generate_export",
+            status="FAILURE",
+            result='{"error": "Private execution details"}',
+        )
+        urls: tuple[str, ...] = (
+            reverse("admin:django_celery_results_taskresult_changelist"),
+            reverse("admin:django_celery_results_taskresult_change", args=[task.pk]),
+            reverse("admin:django_celery_results_groupresult_changelist"),
+        )
+        self.client.logout()
+        for url in urls:
+            response = self.client.get(url)
+            assert response.status_code == status.HTTP_302_FOUND
+            assert "Private execution details" not in response.content.decode()
+        for is_active, is_staff in ((True, False), (False, True)):
+            operator: User = UserFactory.create(is_active=is_active, is_staff=is_staff)
+            self.client.force_login(operator)
+            for url in urls:
+                response = self.client.get(url)
+                assert response.status_code == status.HTTP_302_FOUND
+                assert "Private execution details" not in response.content.decode()

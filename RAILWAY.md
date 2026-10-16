@@ -1,10 +1,10 @@
 # Railway configuration
 
 `.railway/railway.ts` is the sole Railway service configuration for this
-repository. It owns the production web, Celery worker, Beat, and Kanchi
-settings. The deprecated `railway.toml` has been removed; do not recreate it or
-add a `railway.json`. Preserve the existing named partial so applying this file
-does not take ownership of unrelated services or databases.
+repository. It owns the production web, Celery worker, and Beat settings. The
+deprecated `railway.toml` has been removed; do not recreate it or add a
+`railway.json`. Preserve the existing named partial so applying this file does
+not take ownership of unrelated services or databases.
 
 `railpack.json` is the image-build recipe, including Python dependencies and
 frontend assets. It keeps the Python provider and runs frontend commands through

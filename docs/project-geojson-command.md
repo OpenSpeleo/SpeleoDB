@@ -73,7 +73,7 @@ python manage.py shell -c 'from speleodb.surveys.tasks import refresh_all_projec
 ```
 
 The call returns a task ID immediately. The existing worker consumes it from
-`background_control`; inspect its status in the Celery results admin or Kanchi
+`background_control`; inspect its technical status in the Celery results admin
 and review worker logs for individual project/commit failures. Deploy or restart
 the worker with the updated task code before enqueueing: an already-running
 worker retains the older task implementation.

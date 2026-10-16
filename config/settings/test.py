@@ -148,7 +148,7 @@ INSTALLED_APPS += ["django_extensions"]
 # ------------------------------------------------------------------------------
 
 # Real worker tests opt into an isolated broker explicitly. Ordinary tests use
-# an in-process transport that cannot reach development workers or Kanchi.
+# an in-process transport that cannot reach development workers.
 CELERY_BROKER_URL = env.str("TEST_CELERY_BROKER_URL", default="memory://")
 # Celery reads this environment key before its app configuration. Override the
 # inherited development broker so test settings actually isolate every publisher.

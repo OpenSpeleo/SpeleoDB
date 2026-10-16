@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from allauth.account.models import EmailAddress
-from celery import current_app
 from celery import shared_task
 from celery.exceptions import Ignore
 from django.conf import settings
@@ -54,36 +53,6 @@ PROGRESS_INTERVAL_SECONDS: int = 5
 
 class ExportExecutionError(RuntimeError):
     """A safe error suitable for Celery results and operator dashboards."""
-
-
-def _emit_progress(
-    *,
-    task_id: str,
-    task_name: str,
-    job_id: str,
-    stage: str,
-    completed: int,
-    total: int,
-) -> None:
-    """Publish optional dashboard observations without changing job ownership."""
-    try:
-        with (
-            current_app.connection_for_write(connect_timeout=1) as connection,
-            current_app.events.Dispatcher(
-                connection=connection, buffer_while_offline=False
-            ) as dispatcher,
-        ):
-            dispatcher.send(
-                "kanchi-task-progress",
-                task_id=task_id,
-                task_name=task_name,
-                progress=round(completed * 100 / total) if total else 0,
-                message=stage,
-                meta={"current": completed, "total": total},
-                retry=False,
-            )
-    except Exception:  # noqa: BLE001 - Optional telemetry cannot fail an export.
-        logger.debug("Export progress event unavailable", extra={"job_id": job_id})
 
 
 def _clean_scratch(root: Path) -> None:
@@ -148,14 +117,6 @@ def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
         if not updated:
             raise ExportExecutionError("This export attempt has been superseded.")
         last_update, last_stage = now, stage
-        _emit_progress(
-            task_id=str(self.request.id),
-            task_name=self.name,
-            job_id=job_id,
-            stage=stage,
-            completed=completed,
-            total=total,
-        )
 
     failure: str | None = None
     try:
@@ -195,18 +156,10 @@ def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
                 raise ExportExecutionError(  # noqa: TRY301 - Use the task failure boundary.
                     "This export attempt expired before publication."
                 )
-            _emit_progress(
-                task_id=str(self.request.id),
-                task_name=self.name,
-                job_id=job_id,
-                stage="Ready with omissions" if result.partial else "Ready",
-                completed=1,
-                total=1,
-            )
         return {"job_id": job_id, "state": "partial" if result.partial else "ready"}
     except Exception as error:  # noqa: BLE001 - Record a safe terminal attempt outcome.
-        # Credential-bearing dependency exceptions must not enter task results,
-        # progress events, or notifications. Keep the error category for diagnosis.
+        # Credential-bearing dependency exceptions must not enter task results
+        # or notifications. Keep the error category for diagnosis.
         failure = (
             str(error)
             if isinstance(error, (ArchiveBuildError, ExportExecutionError))

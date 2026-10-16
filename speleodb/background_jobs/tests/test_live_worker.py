@@ -16,6 +16,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from http import HTTPStatus
+from textwrap import dedent
 from typing import TYPE_CHECKING
 from typing import Any
 from urllib.parse import urlsplit
@@ -52,6 +53,7 @@ from speleodb.utils.s3_storages import ExportStorage
 if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterator
+    from collections.abc import Mapping
     from pathlib import Path
 
     from django.http import HttpResponse
@@ -88,6 +90,7 @@ def _publisher(broker_url: str) -> Iterator[Celery]:
             },
             task_always_eager=False,
         )
+        application.autodiscover_tasks(force=True)
         try:
             yield application
         finally:
@@ -148,14 +151,23 @@ class LiveWorker:
         )
         return attempt
 
-    def run_control_task(self, name: str) -> None:
-        task_id: str = str(uuid.uuid4())
-        self.application.send_task(name, queue="background_control", task_id=task_id)
+    def wait_task_success(self, name: str, task_id: str) -> None:
+        # Celery logs success after task execution and backend handling finish.
+        # Housekeeping intentionally has no successful result row to poll.
         self.wait_for(
-            lambda: TaskResult.objects.filter(
-                task_id=task_id, status="SUCCESS"
-            ).exists()
+            lambda: (
+                f"Task {name}[{task_id}] succeeded"
+                in self.log_path.read_text(encoding="utf-8")
+            )
         )
+
+    def run_control_task(self, name: str) -> str:
+        task_id: str = str(uuid.uuid4())
+        self.application.tasks[name].apply_async(
+            queue="background_control", task_id=task_id
+        )
+        self.wait_task_success(name, task_id)
+        return task_id
 
 
 @pytest.fixture
@@ -213,7 +225,6 @@ def live_worker(
         hostname,
         "--loglevel",
         "INFO",
-        "--events",
         "--without-gossip",
         "--without-mingle",
     ]
@@ -261,21 +272,145 @@ def _verified_user() -> User:
     return user
 
 
+def _publish_scheduled_task(
+    live_worker: LiveWorker, task_name: str, task_id: str
+) -> None:
+    environment: dict[str, str] = live_worker.environment.copy()
+    environment.update(
+        {
+            "DJANGO_SETTINGS_MODULE": "config.settings.beat",
+            "DATABASE_URL": postgres_test_database_url(),
+            "USE_DOCKER": "false",
+        }
+    )
+    script: str = dedent(
+        """
+        import sys
+        from importlib import import_module
+
+        from django.db import connection
+        from config.celery_app import app
+        from speleodb.background_jobs.lease import SchedulerLease
+
+        app.loader.init_worker()
+        models = import_module("django_celery_beat.models")
+        schedules = import_module("django_celery_beat.schedulers")
+        scheduler_module = import_module("speleodb.background_jobs.scheduler")
+
+        assert app.conf.result_backend is None
+        assert not any(name.startswith("speleodb.") for name in app.tasks)
+        task_name, task_id = sys.argv[1:]
+        interval, _ = models.IntervalSchedule.objects.get_or_create(
+            every=86400, period="seconds",
+        )
+        model = models.PeriodicTask.objects.create(
+            name=f"live-{task_id}", task=task_name, interval=interval,
+            queue="background_control",
+        )
+        entry = schedules.ModelEntry(model, app=app)
+        entry.options["task_id"] = task_id
+        lease = SchedulerLease(connection.get_connection_params())
+        lease.acquire()
+        scheduler = scheduler_module.ExponentialBackoffDatabaseScheduler(
+            app=app, lease=lease, lazy=True,
+        )
+        try:
+            scheduler.apply_async(entry, advance=False)
+        finally:
+            scheduler.close()
+            lease.close()
+        """
+    )
+    subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script, task_name, task_id],
+        env=environment,
+        cwd=settings.BASE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+
+
 def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     live_worker: LiveWorker,
 ) -> None:
     _verified_user()
     expected_count: int = get_users_count()
     task_id: str = str(uuid.uuid4())
-    live_worker.application.send_task(
-        "speleodb.users.tasks.get_users_count", task_id=task_id
-    )
+    task_name: str = "speleodb.users.tasks.get_users_count"
+    with psycopg.connect(**connection.get_connection_params()) as blocked_users:
+        blocked_users.execute(
+            psycopg.sql.SQL("LOCK TABLE {} IN ACCESS EXCLUSIVE MODE").format(
+                psycopg.sql.Identifier(User._meta.db_table)  # noqa: SLF001
+            )
+        )
+        live_worker.application.send_task(task_name, task_id=task_id)
+        live_worker.wait_for(
+            lambda: TaskResult.objects.filter(
+                task_id=task_id, status="STARTED"
+            ).exists()
+        )
+        started: Mapping[str, object] = TaskResult.objects.values(
+            "id", "date_started"
+        ).get(task_id=task_id)
     live_worker.wait_for(
         lambda: TaskResult.objects.filter(task_id=task_id, status="SUCCESS").exists()
     )
-    assert orjson.loads(TaskResult.objects.get(task_id=task_id).result or "null") == (
-        expected_count
+    completed: TaskResult = TaskResult.objects.get(task_id=task_id)
+    metadata: Mapping[str, object] = TaskResult.objects.values(
+        "date_started", "worker"
+    ).get(task_id=task_id)
+    assert orjson.loads(completed.result or "null") == expected_count
+    assert completed.pk == started["id"]
+    assert metadata["date_started"] == started["date_started"]
+    assert metadata["date_started"] is not None
+    assert completed.task_name == task_name
+    assert metadata["worker"] == live_worker.hostname
+    assert TaskResult.objects.filter(task_id=task_id).count() == 1
+
+
+@pytest.mark.parametrize(
+    "task_name",
+    [
+        "speleodb.gis.tasks.dispatch_project_geojsons",
+        MAINTENANCE_TASK,
+        CLEANUP_TASK,
+        "celery.backend_cleanup",
+    ],
+)
+def test_live_housekeeping_records_only_failures(
+    live_worker: LiveWorker, task_name: str
+) -> None:
+    direct_id: str = live_worker.run_control_task(task_name)
+    assert not TaskResult.objects.filter(task_id=direct_id).exists()
+
+    scheduled_id: str = str(uuid.uuid4())
+    _publish_scheduled_task(live_worker, task_name, scheduled_id)
+    live_worker.wait_task_success(task_name, scheduled_id)
+    assert not TaskResult.objects.filter(task_id=scheduled_id).exists()
+
+    failed_id: str = str(uuid.uuid4())
+    # Publish a malformed invocation through the broker, bypassing the local
+    # argument check so the actual worker records its unhandled TypeError.
+    live_worker.application.send_task(
+        task_name,
+        kwargs={"unsupported_argument": True},
+        task_id=failed_id,
+        ignore_result=live_worker.application.tasks[task_name].ignore_result,
     )
+    live_worker.wait_for(
+        lambda: TaskResult.objects.filter(task_id=failed_id, status="FAILURE").exists()
+    )
+    failed: TaskResult = TaskResult.objects.get(task_id=failed_id)
+    metadata: Mapping[str, object] = TaskResult.objects.values(
+        "date_started", "worker"
+    ).get(task_id=failed_id)
+    assert orjson.loads(failed.result or "null")["exc_type"] == "TypeError"
+    assert failed.task_name == task_name
+    assert metadata["worker"] == live_worker.hostname
+    assert metadata["date_started"] is None
+    assert "unsupported_argument" in (failed.traceback or "")
 
 
 def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
@@ -342,37 +477,19 @@ def test_live_beat_publication_preserves_worker_result_recording(
     live_worker: LiveWorker,
 ) -> None:
     task_id: str = str(uuid.uuid4())
-    environment: dict[str, str] = live_worker.environment.copy()
-    environment.update(
-        {
-            "DJANGO_SETTINGS_MODULE": "config.settings.beat",
-            "DATABASE_URL": postgres_test_database_url(),
-            "USE_DOCKER": "false",
-        }
-    )
-    subprocess.run(  # noqa: S603
-        [
-            sys.executable,
-            "-c",
-            "from config.celery_app import app; "
-            "app.loader.init_worker(); "
-            "assert app.conf.result_backend is None; "
-            "app.send_task('speleodb.users.tasks.get_users_count', "
-            f"task_id='{task_id}')",
-        ],
-        env=environment,
-        cwd=settings.BASE_DIR,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=True,
+    _publish_scheduled_task(
+        live_worker, "speleodb.users.tasks.get_users_count", task_id
     )
     live_worker.wait_for(
         lambda: TaskResult.objects.filter(task_id=task_id, status="SUCCESS").exists()
     )
-    assert orjson.loads(TaskResult.objects.get(task_id=task_id).result or "null") == (
-        get_users_count()
-    )
+    result: TaskResult = TaskResult.objects.get(task_id=task_id)
+    metadata: Mapping[str, object] = TaskResult.objects.values(
+        "periodic_task_name", "worker"
+    ).get(task_id=task_id)
+    assert orjson.loads(result.result or "null") == get_users_count()
+    assert metadata["periodic_task_name"] == f"live-{task_id}"
+    assert metadata["worker"] == live_worker.hostname
 
 
 def test_live_export_download_notification_and_expiration(

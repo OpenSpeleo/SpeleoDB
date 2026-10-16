@@ -12,11 +12,10 @@ history. Zero-commit projects contain only a zero-byte file named
 
 Django owns user authorization, accepted requests, retries, and artifact expiry.
 `django-celery-results` stores technical execution results in the application
-PostgreSQL database. Redis delivers messages. Kanchi observes Celery events and
-stores its own operational history in a separate database/user on the existing
-PostgreSQL server. Cache and Celery share Redis, using logical databases 0 and 1
-respectively, with AOF persistence and no eviction. Losing Kanchi never loses an
-accepted request or prevents a download.
+PostgreSQL database and exposes read-only task history in Django admin. Redis
+delivers messages. Cache and Celery share Redis, using logical databases 0 and 1
+respectively, with AOF persistence and no eviction. Accepted requests, artifact
+availability, and authorized downloads are determined by application records.
 
 **Celery Beat owns all scheduling. Railway hosts continuously running services;
 there are no Railway cron jobs or cron schedules.**
@@ -196,27 +195,33 @@ Interrupted sends consume the same attempt budget. After five failed or
 unconfirmed attempts, another send requires an explicit admin retry.
 
 The Django admin provides controlled retry/resend actions, attempt history,
-artifacts, and links to technical Celery records and the protected Kanchi
-console. Arbitrary Kanchi reruns of export tasks are rejected by the task-ID
-guard. Automatic Kanchi recovery workflows stay disabled; retention cleanup is
-enabled.
+artifacts, and links to read-only technical Celery results. Task-ID guards
+reject stale duplicate deliveries; technical result pages offer no arbitrary
+replay actions. Successful housekeeping sweeps are omitted from technical
+history, while actual export and notification tasks retain results and unhandled
+housekeeping failures remain visible. A Celery `SUCCESS` means the task returned
+normally; check job, notification and cleanup state for the business outcome and
+use the application's authorized recovery actions. See
+[task history and retention](background-jobs-operations.md#task-history-and-scheduler-health).
 
 ## Verification
 
 Run every test, linter, type checker, build, and runtime check inside Docker.
-See the implementation task for command output and final evidence. Integration
-uses a dedicated test Redis broker, test database, test GitLab group and test
-storage bucket. Real worker tests must cover outbox recovery, duplicate
-delivery, worker interruption, stale publication, email failure, expiry
-enforcement, object deletion, and monitoring outage isolation. Archive tests
-validate Git restoration, source bytes, permissions, GeoJSON/GPX, ZIP integrity
-and checksums. Real GitLab regressions cover never-initialized projects, empty
-repositories, remote history absent from the database index, missing recorded
-history, and invalid credentials or namespace configuration. Populated project
-tests verify directly readable current files, a clean working tree, and
-preserved historical branches/tags after extraction. Zero-commit project tests
-assert exactly one empty marker file and no Git directory. Real download tests
-verify the filename returned to the browser.
+See
+[background job verification](background-jobs-operations.md#container-only-verification-and-isolated-live-tests)
+for commands and isolation requirements. Integration uses a dedicated test Redis
+broker, test database, test GitLab group and test storage bucket. Real worker
+tests must cover outbox recovery, duplicate delivery, worker interruption, stale
+publication, email failure, expiry enforcement, object deletion, and technical
+result policy. Archive tests validate Git restoration, source bytes,
+permissions, GeoJSON/GPX, ZIP integrity and checksums. Real GitLab regressions
+cover never-initialized projects, empty repositories, remote history absent from
+the database index, missing recorded history, and invalid credentials or
+namespace configuration. Populated project tests verify directly readable
+current files, a clean working tree, and preserved historical branches/tags
+after extraction. Zero-commit project tests assert exactly one empty marker file
+and no Git directory. Real download tests verify the filename returned to the
+browser.
 
 The populated GitLab fixture can receive a temporary HTTP 404 when it creates
 the first commit immediately after project creation. Only that initial commit is

@@ -4,10 +4,9 @@
 
 The Account Settings **Export / Backup** page gives an account owner a durable
 place to request archives and return to completed downloads. Email delivery and
-the Kanchi dashboard are independent: an email or monitoring outage must not
-hide a valid archive. The application job service owns permission decisions,
-request deduplication, retries, and signing. Views do not enqueue arbitrary
-tasks.
+technical task history do not determine whether a valid archive is available.
+The application job service owns permission decisions, request deduplication,
+retries, and signing. Views do not enqueue arbitrary tasks.
 
 The feature exports six documented dataset categories, including GIS Geometries
 as GeoJSON in `geometries/` and imported GIS Layers in `layers/`. New archives
@@ -92,9 +91,11 @@ partial archives. Cleanup counters, due times, and errors remain visible in
 attempt history after exhaustion. Only superusers see attachment download links
 for other users.
 
-`KANCHI_URL` optionally provides a link to the dashboard root. No undocumented
-Kanchi deep-link format is assumed, and the dashboard is not the source of truth
-for application permissions or export retries.
+Job and attempt pages link directly to their technical task records in Django
+admin. A Celery `SUCCESS` indicates a normal task return, not necessarily a
+successful business outcome: handled notification, cleanup, and generation
+failures are recorded on their application records. Use those records to decide
+whether an authorized retry is needed.
 
 Celery task and group result tables retain their upstream diagnostic views and
 filters, but their admin pages are read-only for staff and superusers. No manual

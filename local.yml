@@ -36,7 +36,6 @@ x-django: &django
     # tracked Django env file free of placeholder values that would shadow it.
     MAPBOX_API_TOKEN: "${MAPBOX_API_TOKEN:-}"
     CELERY_BROKER_URL: "${CELERY_BROKER_URL:-redis://localhost:6379/1}"
-    KANCHI_URL: "${KANCHI_URL:-http://localhost:8765/ui}"
     GITLAB_GROUP_NAME: "${GITLAB_GROUP_NAME:-speleodb}"
   ports: []
   command: sleep infinity
@@ -110,54 +109,6 @@ services:
     <<: *celery-worker
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_beat"
     command: /start-celerybeat
-
-  kanchi:
-    image: getkanchi/kanchi:2.0.1
-    restart: unless-stopped
-    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_kanchi"
-    depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      setup:
-        condition: service_completed_successfully
-    environment:
-      # Kanchi uses Compose DNS and its own database. Never inherit Django's
-      # entrypoint, source mount, storage, GitLab, or email credentials here.
-      CELERY_BROKER_URL: "${KANCHI_CELERY_BROKER_URL:-redis://redis:6379/1}"
-      DATABASE_URL: "postgresql+psycopg://kanchi:\
-        ${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}@postgres:5432/kanchi"
-      WS_HOST: "0.0.0.0"
-      WS_PORT: "8765"
-      AUTH_ENABLED: "true"
-      AUTH_BASIC_ENABLED: "true"
-      AUTH_GOOGLE_ENABLED: "false"
-      AUTH_GITHUB_ENABLED: "false"
-      BASIC_AUTH_USERNAME: "${KANCHI_USERNAME:-kanchi-local}"
-      BASIC_AUTH_PASSWORD: "${KANCHI_PASSWORD:-kanchi-local-only}"
-      SESSION_SECRET_KEY: "${KANCHI_SESSION_SECRET_KEY:-\
-        speleodb-local-session-secret-not-for-production}"
-      TOKEN_SECRET_KEY: "${KANCHI_TOKEN_SECRET_KEY:-\
-        speleodb-local-token-secret-not-for-production}"
-      ALLOWED_EMAIL_PATTERNS: "${KANCHI_USERNAME:-kanchi-local}"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,kanchi"
-      ALLOWED_ORIGINS: "http://localhost:8765,http://127.0.0.1:8765"
-      ENABLE_PICKLE_SERIALIZATION: "false"
-    ports:
-      - "127.0.0.1:8765:8765"
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - >-
-          import urllib.request;
-          urllib.request.urlopen('http://localhost:8765/api/health', timeout=5)
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      start_period: 30s
 
   # A different Redis process isolates Pub/Sub events and remote-control
   # traffic, which Redis logical database numbers alone do not isolate.
@@ -248,7 +199,6 @@ services:
       gitlab:
         condition: service_healthy
     environment:
-      KANCHI_POSTGRES_PASSWORD: "${KANCHI_POSTGRES_PASSWORD:-kanchi-local-only}"
       GITLAB_GROUP_NAME: "${GITLAB_GROUP_NAME:-speleodb}"
       GITLAB_BOOTSTRAP_TOKEN: glpat-speleodb-local-bootstrap-2026
       GITLAB_GROUP_TOKEN_NAME: speleodb-local-development

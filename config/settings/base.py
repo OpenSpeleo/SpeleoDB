@@ -564,9 +564,6 @@ EXPORT_GPX_MAX_BYTES = env.int("EXPORT_GPX_MAX_BYTES", default=16 * 1024 * 1024)
 # retain their GeoJSON, with the GPX omission reported in the export manifest.
 EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
 
-# Kanchi dashboard URL shown in Django job administration. Empty means no
-# dashboard link; this setting does not configure Kanchi or its credentials.
-KANCHI_URL = env.str("KANCHI_URL", default="")
 # Per-commit maps run outside uploads. Beat dispatches committed pending rows;
 # broker outages retain work without spending a conversion attempt.
 GEOJSON_GENERATION_SOFT_TIME_LIMIT = 5 * 60

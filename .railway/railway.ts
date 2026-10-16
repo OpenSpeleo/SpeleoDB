@@ -1,7 +1,6 @@
 import {
   defineRailway,
   github,
-  image,
   preserve,
   project,
   ref,
@@ -72,7 +71,6 @@ export default defineRailway(() => {
     env: {
       ...Object.fromEntries(preservedWebVariables.map((key) => [key, preserve()])),
       CELERY_BROKER_URL: brokerUrl,
-      KANCHI_URL: "https://${{Kanchi.RAILWAY_PUBLIC_DOMAIN}}/ui/",
     },
     domains: [{ domain: publicHostname, port: 8080 }],
     networking: { privateNetworkEndpoint: "speleodb" },
@@ -90,7 +88,7 @@ export default defineRailway(() => {
   });
 
   // Preserve ownership of the web service's existing variables. References here
-  // do not copy plaintext secrets into the source or Kanchi's environment.
+  // do not copy plaintext secrets into the source.
   const applicationVariables = [
     "DATABASE_URL",
     "DJANGO_SECRET_KEY",
@@ -161,38 +159,7 @@ export default defineRailway(() => {
     deploy: { ...workerDeployment, overlapSeconds: 0 },
   });
 
-  const kanchi = service("Kanchi", {
-    source: image("getkanchi/kanchi:2.0.1"),
-    replicas: { "us-east4-eqdc4a": 1 },
-    domains: [{ domain: "kanchi.speleodb.org", port: 8765 }],
-    healthcheck: "/api/health",
-    env: {
-      CELERY_BROKER_URL: brokerUrl,
-      // Provision a separate database and restricted user on the existing
-      // PostgreSQL server. Supply a synchronous SQLAlchemy connection URL
-      // (postgresql+psycopg://), never Django's database credentials.
-      DATABASE_PASSWORD: preserve(),
-      DATABASE_URL: "postgresql+psycopg://kanchi:${{DATABASE_PASSWORD}}@${{Postgres-Prod.PGPRIVATEHOST}}:5432/kanchi",
-      PORT: "8765",
-      WS_PORT: "8765",
-      WS_HOST: "0.0.0.0",
-      AUTH_ENABLED: "true",
-      AUTH_BASIC_ENABLED: "true",
-      AUTH_GOOGLE_ENABLED: "false",
-      AUTH_GITHUB_ENABLED: "false",
-      BASIC_AUTH_USERNAME: preserve(),
-      BASIC_AUTH_PASSWORD_HASH: preserve(),
-      SESSION_SECRET_KEY: preserve(),
-      TOKEN_SECRET_KEY: preserve(),
-      ALLOWED_EMAIL_PATTERNS: "${{BASIC_AUTH_USERNAME}}",
-      ALLOWED_HOSTS: "${{RAILWAY_PUBLIC_DOMAIN}},healthcheck.railway.app",
-      ALLOWED_ORIGINS: "https://${{RAILWAY_PUBLIC_DOMAIN}}",
-      ENABLE_PICKLE_SERIALIZATION: "false",
-    },
-    deploy: { sleepApplication: false, restartPolicyType: "ON_FAILURE" },
-  });
-
   return project("speleoDB", {
-    resources: [SpeleoDB_Prod, worker, beat, kanchi],
+    resources: [SpeleoDB_Prod, worker, beat],
   });
 });

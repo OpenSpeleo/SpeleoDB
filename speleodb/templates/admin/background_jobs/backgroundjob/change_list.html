@@ -6,6 +6,12 @@
   {{ block.super }}
   {% vite_styles 'style-admin-background-jobs' %}
 {% endblock extrastyle %}
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'admin:django_celery_results_taskresult_changelist' %}">{% translate "View task execution history" %}</a>
+  </li>
+  {{ block.super }}
+{% endblock object-tools-items %}
 {% block content %}
   {% if request.user.is_superuser %}
     <section class="job-maintenance" aria-labelledby="geojson-maintenance-title">

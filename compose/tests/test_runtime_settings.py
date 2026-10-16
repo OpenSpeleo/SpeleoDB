@@ -38,6 +38,8 @@ print(json.dumps({
     'serializer': app.conf.task_serializer,
     'result_backend': app.conf.result_backend,
     'result_expires': app.conf.result_expires,
+    'task_events': app.conf.worker_send_task_events,
+    'sent_events': app.conf.task_send_sent_event,
     'tasks': list(app.tasks),
     'threads': len(list(Path('/proc/self/task').iterdir())),
 }))
@@ -83,6 +85,8 @@ def test_beat_loads_only_schedule_models_and_no_application_tasks() -> None:
     assert snapshot["threads"] == 1
     assert snapshot["result_backend"] is None
     assert snapshot["result_expires"] is None
+    assert snapshot["task_events"] is False
+    assert snapshot["sent_events"] is False
     assert snapshot["timezone"] == snapshot["celery_timezone"] == "America/New_York"
     assert snapshot["broker"] == "memory://"
     assert snapshot["serializer"] == "json"
@@ -168,6 +172,8 @@ def test_worker_profile_preserves_tasks_and_results_without_admin_autodiscovery(
     )
     assert snapshot["result_backend"] == "django-db"
     assert snapshot["result_expires"] == 30 * 24 * 60 * 60
+    assert snapshot["task_events"] is False
+    assert snapshot["sent_events"] is False
     expected_tasks: set[str] = {
         "speleodb.background_jobs.tasks.generate_export",
         "speleodb.background_jobs.tasks.maintain_background_jobs",

@@ -28,6 +28,7 @@ from django.db import connection
 from django.utils import timezone
 from django_celery_beat.models import IntervalSchedule
 from django_celery_beat.models import PeriodicTask
+from django_celery_beat.schedulers import ModelEntry
 from kombu import Exchange
 from kombu import Producer
 from kombu import Queue
@@ -46,6 +47,8 @@ from speleodb.testing.database import postgres_test_database_url
 if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterator
+
+    from celery.beat import ScheduleEntry
 
 pytestmark = pytest.mark.django_db(transaction=True)
 PROCESS_TIMEOUT_SECONDS: int = 20
@@ -221,6 +224,64 @@ def test_standby_acquires_lock_after_previous_scheduler_exits(
         release.join()
         previous.close()
         replacement.close()
+
+
+@pytest.mark.parametrize(
+    ("task_name", "ignore_result"),
+    [
+        ("speleodb.gis.tasks.dispatch_project_geojsons", True),
+        ("speleodb.background_jobs.tasks.maintain_background_jobs", True),
+        ("speleodb.background_jobs.tasks.delete_expired_artifacts", True),
+        ("celery.backend_cleanup", True),
+        ("speleodb.users.tasks.get_users_count", False),
+    ],
+)
+@pytest.mark.parametrize("advance", [False, True])
+def test_scheduler_result_policy_preserves_original_entry_options(
+    runtime: SchedulerRuntime, task_name: str, ignore_result: bool, advance: bool
+) -> None:
+    # The first change check establishes django-celery-beat's timestamp. Prime
+    # it before changing the row so the next read actually reloads this task.
+    assert runtime.scheduler.schedule[runtime.task.name].task == runtime.task.task
+    runtime.task.task = task_name
+    runtime.task.save(update_fields=["task"])
+    entry: ScheduleEntry = runtime.scheduler.schedule[runtime.task.name]
+    assert isinstance(entry, ModelEntry)
+    assert entry.task == task_name
+    assert entry.options is not None
+    entry.options["ignore_result"] = False
+    original_options: dict[str, Any] = entry.options
+    options_before: dict[str, Any] = original_options.copy()
+    observed_policies: list[dict[str, Any]] = []
+
+    def observe_policy(retry_policy: dict[str, Any], **kwargs: Any) -> None:
+        observed_policies.append(retry_policy)
+
+    before_task_publish.connect(observe_policy, sender=task_name, weak=False)
+    try:
+        result = runtime.scheduler.apply_async(entry, advance=advance)
+    finally:
+        before_task_publish.disconnect(observe_policy, sender=task_name)
+
+    assert entry.options is original_options
+    assert entry.options == options_before
+    assert len(observed_policies) == 1
+    assert callable(observed_policies[0]["errback"])
+    assert callable(observed_policies[0]["on_revive"])
+    runtime.scheduler.sync()
+    runtime.task.refresh_from_db()
+    assert runtime.task.total_run_count == int(advance)
+    with (
+        runtime.app.connection_for_read() as broker,
+        broker.SimpleQueue(runtime.queue) as queue,
+    ):
+        message = queue.get(block=False)
+        assert message.headers["task"] == task_name
+        assert message.headers["id"] == result.id
+        # Kombu's headers stub permits strings, but Celery sends booleans.
+        received_ignore_result: object = message.headers["ignore_result"]
+        assert received_ignore_result is ignore_result
+        message.ack()
 
 
 @pytest.mark.parametrize("failure", ["close", "unlock", "terminate"])
