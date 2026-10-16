@@ -817,8 +817,6 @@ export async function initPrivateMapViewer() {
                 // Panel doesn't exist but we now have tracks - initialize it
                 GPSTracksPanel.init();
             }
-            GISLayersPanel.setupStackListener();
-            GISGeometriesPanel.setupStackListener();
 
             Utils.showNotification('success', 'GPS tracks refreshed');
         } catch (e) {

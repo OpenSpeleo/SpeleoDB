@@ -18,7 +18,6 @@ vi.mock('../map/layers.ts', () => ({ Layers: {
 } }));
 
 beforeEach(() => {
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     document.body.innerHTML = '<div><div id="map"></div></div>';
     State.resetLayerState();
     map = { fitBounds: vi.fn() };
@@ -52,17 +51,29 @@ it('skips rendering when no tracks exist and clears retained registries on teard
     expect(requests.size).toBe(0);
 });
 
-it('disconnects observers and removes its loading listener without removing panel DOM', () => {
+it('removes its panel and loading listener on teardown', () => {
     GPSTracksPanel.init();
-    const disconnect = vi.spyOn(GPSTracksPanel._resizeObserver!, 'disconnect');
     const row = document.querySelector<HTMLElement>('.gps-track-button')!;
-    const update = vi.spyOn(GPSTracksPanel, 'updateRow');
+    const checkbox = row.querySelector('input')!;
     GPSTracksPanel.destroy();
+    State.gpsTrackLayerStates.set('one', true);
     window.dispatchEvent(new CustomEvent('speleo:gps-track-loading-changed', { detail: { trackId: 'one' } }));
-    expect(disconnect).toHaveBeenCalledOnce();
-    expect(update).not.toHaveBeenCalled();
-    expect(row.isConnected).toBe(true);
-    update.mockRestore();
+    expect(checkbox.checked).toBe(false);
+    expect(row.isConnected).toBe(false);
+    expect(document.getElementById('gps-tracks-panel')).toBeNull();
+});
+
+it('renders full track names in case-insensitive alphabetical order', () => {
+    const longName = 'A very long GPS track name that remains entirely available';
+    Config._gpsTracks = [
+        { id: 'z', name: 'Zulu', color: '#123456', file: '/z' },
+        { id: 'b', name: 'bravo', color: '#123456', file: '/b' },
+        { id: 'a', name: longName, color: '#123456', file: '/a' },
+    ];
+    GPSTracksPanel.init();
+
+    expect([...document.querySelectorAll('.gps-track-button span[title]')].map(span => span.textContent))
+        .toEqual([longName, 'bravo', 'Zulu']);
 });
 
 it('shows intent immediately and preserves a usable focused switch during load and reversal', async () => {

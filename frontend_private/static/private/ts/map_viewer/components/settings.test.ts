@@ -42,10 +42,18 @@ afterEach(() => {
 });
 
 describe('private map Settings', () => {
-    it('contains appearance, marker categories, and station types', () => {
+    it('contains appearance and alphabetized visibility controls with station types under their parent', () => {
         expect([...dialog.querySelectorAll<HTMLInputElement>('[data-category]')].map(input => input.dataset.category))
-            .toEqual(['caveEntrances', 'surveyStations', 'surfaceStations', 'landmarks', 'explorationLeads', 'cylinders']);
-        expect(dialog.querySelectorAll<HTMLInputElement>('[data-station-type]')).toHaveLength(DEFAULTS.DISPLAY.STATION_TYPES.length);
+            .toEqual(['caveEntrances', 'explorationLeads', 'landmarks', 'cylinders', 'surfaceStations', 'surveyStations']);
+        expect([...dialog.querySelectorAll('#map-settings-visibility > label > span:first-child')]
+            .map(label => label.textContent)).toEqual([
+            'Cave entrances', 'Exploration leads', 'Geometry labels', 'Landmarks',
+            'Safety cylinders', 'Surface stations', 'Survey stations',
+        ]);
+        expect([...dialog.querySelectorAll('.map-settings-types > label > span:first-child')]
+            .map(label => label.textContent)).toEqual(['Artifact', 'Biology', 'Bones', 'Geology', 'Sensor']);
+        expect(dialog.querySelector('.map-settings-station-types')!.previousElementSibling)
+            .toBe(dialog.querySelector('[data-category="surveyStations"]')!.closest('label'));
         for (const { id, label } of DEFAULTS.DISPLAY.CATEGORIES) {
             const input = dialog.querySelector<HTMLInputElement>(`[data-category="${id}"]`)!;
             expect(input.checked).toBe(true);

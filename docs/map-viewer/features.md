@@ -308,11 +308,9 @@ sharing contracts.
 
 ### Panel behavior
 
-- The panel positions itself below the project panel (expanded or minimized),
-  using a `ResizeObserver` on the project panel to reposition dynamically
-  (catches country group collapse/expand).
-- Each track item shows: color dot, name (truncated at 30 chars), loading
-  spinner (when fetching), and a toggle switch.
+- The panel joins the shared alphabetical menu stack described in Section 8.4.
+- Each track item shows: color dot, full name, loading spinner (when fetching),
+  and a toggle switch.
 - Clicking the track card body activates the track and flies to its bounds
   (`fitBounds` with padding 50, maxZoom 16).
 - Colors are model-stored; resolved via `Colors.getGPSTrackColor(trackId)` which
@@ -529,9 +527,10 @@ facade retains content ownership and delayed `onOpen` callbacks; callers escape
 untrusted values before building its markup. `ts-types/domain/map-dialog.ts`
 describes these capabilities without changing DOM timing or singleton identity.
 
-`panel_position.ts` positions panels below the first anchor whose inline display
-is not `none`; it does not perform a new visibility scan. Colocated tests cover
-focus/inert restoration, guarded dismissal, repeat opens, and anchor offsets.
+`panel_stack.ts` owns overlay-menu registration and disclosure. CSS flex flow
+positions the menus without cross-panel observers or measured anchor offsets.
+Colocated tests cover focus/inert restoration, guarded dismissal, repeat opens,
+and alphabetical, mutually exclusive menu expansion.
 
 ### 8.2 Notifications
 
@@ -567,6 +566,29 @@ grouped by country when the `country` field is present on at least one project;
 otherwise a flat alphabetical list is rendered. Each country group has a
 collapsible header with a flag emoji, project count, and a bulk-toggle switch
 that acts as a **visibility gate** for all projects in the group.
+
+#### Overlay menu layout
+
+`components/panel_stack.ts` places available menus in alphabetical DOM and
+visual order: Active Projects, GIS Geometries, GIS Layers, GPS Tracks. Opening
+one collapses the others, without changing any layer selections. Active Projects
+starts open; users can also close every menu. Imported categories register in
+the correct position. Each panel unregisters its controls on teardown, while its
+row/request registries retain their singleton identity.
+
+All four menus use Active Projects' 250px minimum width. Collapsed cards are 250
+× 48px. Expanded cards grow to fit complete names, bounded by the map edge;
+exceptionally long names wrap at that boundary instead of scrolling sideways.
+Lists retain vertical scrolling, with flex sizing reserving space for the other
+collapsed menus on short maps. CSS handles content and country-group resizing
+without observer callbacks or layout measurements. Opening and closing controls
+expose `aria-expanded`/`aria-controls` and keep keyboard focus visible.
+
+The public viewer reuses the same controller with its project panel only.
+Existing mobile availability is preserved: the three desktop menus remain hidden
+at 640px and below, while GIS Geometries stays available. Unit tests exercise
+menu ordering, disclosure, focus, teardown and repeated registration; browser
+checks verify intrinsic widths, wrapping and vertical overflow.
 
 #### Two-level visibility model
 
@@ -608,19 +630,17 @@ under `DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY`.
 
 **Module:** `components/gps_tracks_panel.ts`
 
-See Section 4. Positioned below the project panel, auto-repositions on project
-panel resize (including country group collapse/expand) via a `ResizeObserver` on
-the project panel container.
+See Section 4. GPS Tracks follows GIS Layers in the shared alphabetical menu
+stack; natural document flow handles other panels and country-group resizing.
 
 ### 8.6 GIS Layers Panel
 
 **Module:** `components/gis_layers_panel.ts`
 
 Private accessible layers appear alphabetically, default OFF, and show loading
-and safe failure feedback. It is an isolated sibling below GPS Tracks in the
-existing left-side panel stack and is hidden at the same established mobile
-breakpoint. Its collapsed width is 130px. Geometry-role children never become
-user-facing toggles.
+and safe failure feedback. It follows GIS Geometries and precedes GPS Tracks in
+the shared menu stack, and is hidden at the established mobile breakpoint.
+Geometry-type sub-toggles appear after loading mixed-geometry layers.
 
 ---
 

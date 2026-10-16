@@ -543,9 +543,9 @@ Replacing a source updates that ID set, while a destructive style rebuild clears
 it, so there are no per-layer handlers to accumulate. The popup owns
 presentation only; it does not introduce a second data-loading lifecycle.
 
-The GIS panel is an isolated sibling positioned below the existing GPS panel in
-the left-side stack. It copies the GPS card, toggle, loading, and minimize
-interaction conventions without owning or duplicating Project/GPS controls. It
+The GIS panel follows GIS Geometries and precedes GPS Tracks in the alphabetical
+left-side accordion owned by `components/panel_stack.ts`. Shared disclosure and
+CSS flex layout keep one menu open without duplicating Project/GPS controls. It
 is hidden at the same established mobile breakpoint as those panels. Clicking
 the card shows the layer if necessary and calls only `fitBounds`; the toggle
 changes visibility without moving the camera.

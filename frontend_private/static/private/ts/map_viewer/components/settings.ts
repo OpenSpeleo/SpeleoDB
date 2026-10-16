@@ -123,9 +123,12 @@ export const MapSettings = {
     renderVisibility() {
         const container = this.dialog!.querySelector<HTMLElement>('#map-settings-visibility')!;
         container.replaceChildren();
-        container.append(createSwitch('geometryLabelsVisible', 'Geometry labels', 'displayPreference'));
-        DEFAULTS.DISPLAY.CATEGORIES.forEach(category => {
-            container.append(createSwitch(category.id, category.label, 'category'));
+        const controls = [
+            ...DEFAULTS.DISPLAY.CATEGORIES.map(category => ({ ...category, preference: 'category' })),
+            { id: 'geometryLabelsVisible', label: 'Geometry labels', preference: 'displayPreference' },
+        ].sort((first, second) => first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }));
+        controls.forEach(category => {
+            container.append(createSwitch(category.id, category.label, category.preference));
             if (category.id !== 'surveyStations') return;
             const details = document.createElement('details');
             details.className = 'map-settings-station-types';
@@ -142,9 +145,11 @@ export const MapSettings = {
             legend.className = 'sr-only';
             legend.textContent = 'Survey station types';
             types.append(legend);
-            DEFAULTS.DISPLAY.STATION_TYPES.forEach(type => {
-                types.append(createSwitch(type.id, type.label, 'stationType'));
-            });
+            [...DEFAULTS.DISPLAY.STATION_TYPES]
+                .sort((first, second) => first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }))
+                .forEach(type => {
+                    types.append(createSwitch(type.id, type.label, 'stationType'));
+                });
             details.append(summary, types);
             container.append(details);
         });

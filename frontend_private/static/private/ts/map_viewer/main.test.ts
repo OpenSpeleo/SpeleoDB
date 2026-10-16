@@ -126,7 +126,7 @@ vi.mock('./components/gis_layers_panel.ts', () => ({
     GISLayersPanel: { init: vi.fn(), refreshList: vi.fn() }
 }));
 vi.mock('./components/gis_geometries_panel.ts', () => ({
-    GISGeometriesPanel: { init: vi.fn(), refreshList: vi.fn(), setupStackListener: vi.fn(), setExpanded: vi.fn() },
+    GISGeometriesPanel: { init: vi.fn(), refreshList: vi.fn(), setExpanded: vi.fn() },
 }));
 vi.mock('./geometry_editor/editor.ts', () => ({
     GeometryEditor: { init: vi.fn(), restoreLayers: vi.fn(), isActive: vi.fn(() => false), isOpening: vi.fn(() => false), create: vi.fn(async () => true) },

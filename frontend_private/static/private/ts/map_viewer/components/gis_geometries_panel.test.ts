@@ -2,7 +2,7 @@ import type { GISGeometryMetadata } from '../../../../../../ts-types/domain/map-
 import type { Mock } from 'vitest';
 import type { ViewerState } from '../../../../../../ts-types/domain/map-state.ts';
 import type { CameraBounds } from '../../../../../../ts-types/domain/map-geometry.ts';
-import { Config, DEFAULTS } from '../config.ts';
+import { Config } from '../config.ts';
 import { State } from '../state.ts';
 import { Layers as RuntimeLayers } from '../map/layers.ts';
 import { GISGeometriesPanel } from './gis_geometries_panel.ts';
@@ -18,7 +18,6 @@ vi.mock('../map/layers.ts', () => ({ Layers: {
 
 let editor: { create: Mock; edit: Mock<(record: GISGeometryMetadata) => Promise<boolean> | boolean> };
 beforeEach(() => {
-    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     document.body.innerHTML = '<div><div id="map"></div></div>';
     Config._gisGeometries = [];
     Config.gisGeometriesError = false;
@@ -41,19 +40,18 @@ it('replaces panel DOM on repeated initialization while retaining row and reques
     const panel = GISGeometriesPanel.panel!;
     const rows = GISGeometriesPanel.rows;
     const requests = GISGeometriesPanel.requests;
-    const disconnect = vi.spyOn(GISGeometriesPanel.observer!, 'disconnect');
     GISGeometriesPanel.init(editor);
     expect(panel.isConnected).toBe(false);
     expect(GISGeometriesPanel.panel!).not.toBe(panel);
     expect(GISGeometriesPanel.rows).toBe(rows);
     expect(GISGeometriesPanel.requests).toBe(requests);
-    expect(disconnect).toHaveBeenCalledTimes(2);
     expect(document.querySelectorAll<HTMLElement>('#gis-geometries-panel')).toHaveLength(1);
+    expect(document.querySelectorAll('#map-panel-stack > .map-panel-slot')).toHaveLength(1);
 });
 
 it('is available inside the fullscreen map container even when empty', () => {
     GISGeometriesPanel.init(editor);
-    expect(document.querySelector<HTMLElement>('#map > #gis-geometries-panel')!).not.toBeNull();
+    expect(document.querySelector<HTMLElement>('#map > #map-panel-stack #gis-geometries-panel')!).not.toBeNull();
     expect(document.querySelector<HTMLElement>('#gis-geometries-panel-minimized')!.hidden).toBe(false);
     document.querySelector<HTMLElement>('#gis-geometries-panel-minimized')!.click();
     expect(document.querySelector<HTMLElement>('#gis-geometries-panel')!.hidden).toBe(false);
@@ -74,8 +72,24 @@ it('exposes editing only to writers and safely renders untrusted names', () => {
     GISGeometriesPanel.init(editor);
     expect(document.querySelector<HTMLElement>('img')!).toBeNull();
     expect(document.querySelectorAll<HTMLElement>('.gis-geometries-edit')).toHaveLength(1);
-    document.querySelector<HTMLElement>('.gis-geometries-edit')!.click();
+    const edit = document.querySelector<HTMLButtonElement>('.gis-geometries-edit')!;
+    expect(edit.getAttribute('aria-label')).toBe('Edit Outline');
+    expect(edit.querySelector('svg')).not.toBeNull();
+    edit.click();
     expect(editor.edit).toHaveBeenCalledWith(Config._gisGeometries[1]);
+});
+
+it('renders full geometry names in case-insensitive alphabetical order', () => {
+    const longName = 'A very long GIS geometry name that remains entirely available';
+    Config._gisGeometries = [
+        { id: 'z', revision: 1, name: 'Zulu', color: '#123456' },
+        { id: 'b', revision: 1, name: 'bravo', color: '#123456' },
+        { id: 'a', revision: 1, name: longName, color: '#123456' },
+    ];
+    GISGeometriesPanel.init(editor);
+
+    expect([...document.querySelectorAll('.gis-geometries-name')].map(name => name.textContent))
+        .toEqual([longName, 'bravo', 'Zulu']);
 });
 
 it('toggles without zoom and frames only on an explicit name click', async () => {
@@ -169,37 +183,12 @@ it('does not steal focus moved elsewhere during a pending visibility change', as
     expect(document.activeElement).toBe(other);
 });
 
-it('keeps its trigger and expanded list inside a short map when earlier panels overflow', () => {
-    document.body.innerHTML = '<div id="project-panel"></div><div id="map"></div>';
-    const map = document.getElementById('map')!;
-    vi.spyOn(map, 'getBoundingClientRect').mockReturnValue({ top: 100, height: 320 } as DOMRect);
-    vi.spyOn(document.getElementById('project-panel')!, 'getBoundingClientRect').mockReturnValue({ bottom: 900 } as DOMRect);
+it('keeps the geometry slot available independently of desktop-only panel slots', () => {
     GISGeometriesPanel.init(editor);
-    vi.spyOn(GISGeometriesPanel.minimized!, 'getBoundingClientRect').mockReturnValue({ height: 44 } as DOMRect);
-    vi.spyOn(GISGeometriesPanel.panel!, 'getBoundingClientRect').mockReturnValue({ height: 240 } as DOMRect);
-    GISGeometriesPanel.positionPanel();
-    expect(GISGeometriesPanel.minimized!.style.top).toBe(`${320 - 44 - DEFAULTS.UI.MAP_PANEL_EDGE_PX}px`);
-    GISGeometriesPanel.setExpanded(true);
-    expect(GISGeometriesPanel.panel!.style.top).toBe(`${320 - 240 - DEFAULTS.UI.MAP_PANEL_EDGE_PX}px`);
-    expect(GISGeometriesPanel.panel!.style.maxHeight).toBe(`${320 - DEFAULTS.UI.MAP_PANEL_EDGE_PX * 2}px`);
-});
-
-it('retains the normal stack position when space is available', () => {
-    document.body.innerHTML = '<div id="project-panel"></div><div id="map"></div>';
-    vi.spyOn(document.getElementById('map')!, 'getBoundingClientRect').mockReturnValue({ top: 100, height: 600 } as DOMRect);
-    vi.spyOn(document.getElementById('project-panel')!, 'getBoundingClientRect').mockReturnValue({ bottom: 200 } as DOMRect);
-    GISGeometriesPanel.init(editor);
-    vi.spyOn(GISGeometriesPanel.minimized!, 'getBoundingClientRect').mockReturnValue({ height: 44 } as DOMRect);
-    GISGeometriesPanel.positionPanel();
-    expect(GISGeometriesPanel.minimized!.style.top).toBe(`${100 + DEFAULTS.UI.MAP_PANEL_GAP_PX}px`);
-});
-
-it('uses the top edge when desktop anchors are hidden by responsive CSS', () => {
-    document.body.innerHTML = '<div id="project-panel"></div><div id="map"></div>';
-    vi.spyOn(document.getElementById('map')!, 'getBoundingClientRect').mockReturnValue({ top: 300, height: 600 } as DOMRect);
-    vi.spyOn(document.getElementById('project-panel')!, 'getBoundingClientRect').mockReturnValue({ bottom: 0 } as DOMRect);
-    GISGeometriesPanel.init(editor);
-    expect(GISGeometriesPanel.minimized!.style.top).toBe(`${DEFAULTS.UI.MAP_PANEL_EDGE_PX}px`);
+    const slot = GISGeometriesPanel.panel!.closest('.map-panel-slot')!;
+    expect(slot).not.toBeNull();
+    expect(slot.classList.contains('map-panel-slot--desktop')).toBe(false);
+    expect(GISGeometriesPanel.minimized!.parentElement).toBe(slot);
 });
 
 it('collapses after opening an editor but keeps the list open when the transition is declined', async () => {

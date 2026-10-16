@@ -19,9 +19,8 @@ vi.mock('../map/layers.ts', () => ({ Layers: {
     toggleGPSTrackVisibility: vi.fn(), isGPSTrackVisible: vi.fn(),
 } }));
 vi.mock('../map/geometry_camera.ts', () => ({ fitGISGeometry: vi.fn() }));
-vi.mock('./gis_layers_panel.ts', () => ({ GISLayersPanel: { refreshList: vi.fn(), init: vi.fn(), setupStackListener: vi.fn() } }));
+vi.mock('./gis_layers_panel.ts', () => ({ GISLayersPanel: { refreshList: vi.fn(), init: vi.fn() } }));
 vi.mock('./gps_tracks_panel.ts', () => ({ GPSTracksPanel: { refreshList: vi.fn(), init: vi.fn() } }));
-vi.mock('./gis_geometries_panel.ts', () => ({ GISGeometriesPanel: { setupStackListener: vi.fn() } }));
 
 describe('imported map data navigation', () => {
     beforeEach(() => {

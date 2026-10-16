@@ -268,7 +268,7 @@ describe('ProjectPanel', () => {
             document.getElementById('panel-toggle')!.click();
 
             expect(document.getElementById('project-panel')!.style.display).toBe('none');
-            expect(document.getElementById('project-panel-minimized')!.style.display).toBe('block');
+            expect(document.getElementById('project-panel-minimized')!.hidden).toBe(false);
         });
 
         it('expands panel when expand button is clicked', () => {
@@ -277,7 +277,7 @@ describe('ProjectPanel', () => {
             document.getElementById('panel-toggle')!.click();
             document.getElementById('panel-expand')!.click();
 
-            expect(document.getElementById('project-panel')!.style.display).toBe('block');
+            expect(document.getElementById('project-panel')!.hidden).toBe(false);
             expect(document.getElementById('project-panel-minimized')!.style.display).toBe('none');
         });
     });

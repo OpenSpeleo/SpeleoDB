@@ -1,7 +1,5 @@
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerGISLayer } from '../../../../../../ts-types/domain/map-config.ts';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 const mocks = vi.hoisted(() => ({
     visible: false,
@@ -49,14 +47,8 @@ vi.mock('../state.ts', () => ({
 
 import { GISLayersPanel } from './gis_layers_panel.ts';
 
-class ResizeObserverMock {
-    observe() {}
-    disconnect() {}
-}
-
 describe('GIS Layers panel', () => {
     beforeEach(() => {
-        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         mocks.visible = false;
         mocks.loading = false;
         mocks.layers = [];
@@ -72,29 +64,66 @@ describe('GIS Layers panel', () => {
     vi.clearAllMocks();
     });
 
-    it('disconnects previous observers on repeated initialization and keeps one panel', () => {
+    it('keeps one registered panel on repeated initialization', () => {
         mocks.layers = [{ id: 'layer-1', name: 'Layer', color: '#123456' }];
         GISLayersPanel.init();
-        const observer = GISLayersPanel._resizeObserver;
-        const disconnect = vi.spyOn(observer!, 'disconnect');
         const rows = GISLayersPanel._rows;
         GISLayersPanel.init();
-        expect(disconnect).toHaveBeenCalledOnce();
-        expect(GISLayersPanel._resizeObserver).not.toBe(observer);
         expect(GISLayersPanel._rows).toBe(rows);
         expect(document.querySelectorAll<HTMLElement>('#gis-layers-panel')).toHaveLength(1);
+        expect(document.querySelectorAll('#map-panel-stack > .map-panel-slot')).toHaveLength(1);
     });
 
-    it('uses the shared folded-card dimensions in the private left stack', () => {
+    it('registers a collapsed card inside the fullscreen map stack', () => {
         mocks.layers = [{ id: 'layer-1', name: 'Protected areas', color: '#6366f1' }];
         GISLayersPanel.init();
 
         const minimized = document.getElementById('gis-layers-panel-minimized')!;
-        expect(document.getElementById('gis-layers-panel')!.style.left).toBe('16px');
-        expect(minimized.style.display).toBe('block');
-        const css = readFileSync(resolve('frontend_private/static/private/css/map_viewer.css'), 'utf8');
-        expect(css).toMatch(/#gis-layers-panel-minimized,\s*#gis-geometries-panel-minimized\s*\{[^}]*width:\s*160px;[^}]*height:\s*48px/s);
+        expect(document.getElementById('gis-layers-panel')!.hidden).toBe(true);
+        expect(minimized.hidden).toBe(false);
+        expect(minimized.closest('#map-panel-stack')?.parentElement?.id).toBe('map');
         expect(document.getElementById('map-layers-mobile-drawer')!).toBeNull();
+    });
+
+    it('renders full layer names in case-insensitive alphabetical order', () => {
+        const longName = 'A very long GIS layer name that remains entirely available';
+        mocks.layers = [
+            { id: 'z', name: 'Zulu', color: '#6366f1' },
+            { id: 'b', name: 'bravo', color: '#6366f1' },
+            { id: 'a', name: longName, color: '#6366f1' },
+        ];
+        GISLayersPanel.init();
+
+        expect([...document.querySelectorAll('.gis-layer-button span[title]')].map(span => span.textContent))
+            .toEqual([longName, 'bravo', 'Zulu']);
+    });
+
+    it('restores a usable collapsed card after an expanded layer list becomes empty and is repopulated', () => {
+        mocks.layers = [{ id: 'layer-1', name: 'Original layer', color: '#6366f1' }];
+        GISLayersPanel.init();
+        const panel = document.getElementById('gis-layers-panel')!;
+        const minimized = document.getElementById('gis-layers-panel-minimized')!;
+        const expand = document.getElementById('gis-panel-expand')!;
+        const slot = panel.closest<HTMLElement>('.map-panel-slot')!;
+        expand.click();
+        expect(panel.hidden).toBe(false);
+
+        mocks.layers = [];
+        GISLayersPanel.refreshList();
+        expect(slot.hidden).toBe(true);
+        expect(GISLayersPanel._rows.size).toBe(0);
+
+        mocks.layers = [{ id: 'layer-2', name: 'New layer', color: '#6366f1' }];
+        GISLayersPanel.refreshList();
+        expect(slot.hidden).toBe(false);
+        expect(slot.classList.contains('is-expanded')).toBe(false);
+        expect(panel.hidden).toBe(true);
+        expect(minimized.hidden).toBe(false);
+        expect(expand.getAttribute('aria-expanded')).toBe('false');
+        expand.click();
+        expect(panel.hidden).toBe(false);
+        expect(minimized.hidden).toBe(true);
+        expect([...GISLayersPanel._rows.keys()]).toEqual(['layer-2']);
     });
 
     it('activates a hidden layer and zooms only with its bounds', async () => {

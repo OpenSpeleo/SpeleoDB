@@ -8,6 +8,7 @@ import { Colors } from '../map/colors.ts';
 import { Utils } from '../utils.ts';
 import { flushPreferenceWrites, schedulePreferenceWrite } from '../display_preference_storage.ts';
 import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.ts';
+import { registerMapPanel, unregisterMapPanel } from './panel_stack.ts';
 
 function readRecord(key: string): Record<string, unknown> {
     try {
@@ -39,10 +40,10 @@ export const ProjectPanel = {
     render: function() {
         if (!document.getElementById('project-panel')) {
             const panelHtml = `
-            <div id="project-panel" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px;">
+            <div id="project-panel" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 z-[5]">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
                     <h3 class="text-white font-semibold text-sm">Active Projects</h3>
-                    <button id="panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize">
+                    <button id="panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize Active Projects" aria-label="Minimize Active Projects">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
@@ -53,11 +54,11 @@ export const ProjectPanel = {
             </div>
 
             <div id="project-panel-minimized" class="absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-3 z-[5]" style="display: none;">
-                <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center flow-x-2" title="Expand">
+                <button id="panel-expand" class="text-white hover:text-sky-400 transition-colors flex items-center flow-x-2" title="Expand Active Projects" aria-label="Expand Active Projects">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
-                    <span class="text-sm font-medium">Projects</span>
+                    <span class="text-sm font-medium">Active Projects</span>
                 </button>
             </div>
             `;
@@ -278,9 +279,9 @@ export const ProjectPanel = {
         this._rows.set(String(project.id), item);
 
         item.innerHTML = Utils.safeHtml`
-            <div class="flex items-center gap-2 overflow-hidden flex-1">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
                 <div class="project-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(Utils.safeCssColor(effectiveVisible ? color : DEFAULTS.COLORS.FALLBACK))}"></div>
-                <span class="text-slate-200 text-sm font-medium truncate select-none">${project.name}</span>
+                <span class="text-slate-200 text-sm font-medium map-panel-name select-none">${project.name}</span>
             </div>
             <label class="toggle-switch m-0 scale-75 origin-right">
                 <input type="checkbox" ${Utils.raw(individualOn ? 'checked' : '')}>
@@ -349,6 +350,7 @@ export const ProjectPanel = {
     },
 
     destroy() {
+        unregisterMapPanel('project-panel');
         flushPreferenceWrites(DEFAULTS.STORAGE_KEYS.COUNTRY_VISIBILITY);
         flushPreferenceWrites(DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED);
         this._countryVisibility = null;
@@ -357,25 +359,8 @@ export const ProjectPanel = {
         this._groups.clear();
     },
 
-    bindEvents: function() {
-        const panel = document.getElementById('project-panel');
-        const minimized = document.getElementById('project-panel-minimized');
-        const toggleBtn = document.getElementById('panel-toggle');
-        const expandBtn = document.getElementById('panel-expand');
-
-        if (toggleBtn && panel && minimized) {
-            toggleBtn.addEventListener('click', () => {
-                panel.style.display = 'none';
-                minimized.style.display = 'block';
-            });
-        }
-
-        if (expandBtn && panel && minimized) {
-            expandBtn.addEventListener('click', () => {
-                minimized.style.display = 'none';
-                panel.style.display = 'block';
-            });
-        }
+    bindEvents() {
+        registerMapPanel('project-panel', 'panel-expand', 'panel-toggle', true);
     },
 
     getProjectColor: function(projectId: EntityId) {

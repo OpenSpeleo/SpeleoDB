@@ -6,6 +6,7 @@ import { State } from '../state.ts';
 import { Colors } from '../map/colors.ts';
 import { Utils } from '../utils.ts';
 import { beginMapNavigation, cancelMapNavigation } from '../map/navigation_intent.ts';
+import { registerMapPanel, unregisterMapPanel } from './panel_stack.ts';
 
 export const GPSTracksPanel: GPSTracksPanelFacade = {
     _rows: new Map(),
@@ -22,14 +23,13 @@ export const GPSTracksPanel: GPSTracksPanelFacade = {
         this.render();
         this.bindEvents();
         this.setupLoadingListener();
-        this.setupProjectPanelListener();
     },
 
     render: function() {
         // Create Panel Container if not exists
         if (!document.getElementById('gps-tracks-panel')) {
             const panelHtml = `
-            <div id="gps-tracks-panel" class="absolute bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 max-w-xs z-[5]" style="min-width: 250px; display: none;">
+            <div id="gps-tracks-panel" class="absolute bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 z-[5]" style="display: none;">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,7 +37,7 @@ export const GPSTracksPanel: GPSTracksPanelFacade = {
                         </svg>
                         <h3 class="text-white font-semibold text-sm">GPS Tracks</h3>
                     </div>
-                    <button id="gps-panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize">
+                    <button id="gps-panel-toggle" class="text-slate-400 hover:text-white transition-colors" title="Minimize GPS Tracks" aria-label="Minimize GPS Tracks">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
@@ -67,114 +67,16 @@ export const GPSTracksPanel: GPSTracksPanelFacade = {
                     mapContainer.appendChild(temp.firstChild);
                 }
             }
-
-            // Position the panel below the project panel
-            this.positionPanel();
         }
 
         this.refreshList();
     },
 
-    positionPanel: function() {
-        const gpsPanel = document.getElementById('gps-tracks-panel');
-        const gpsPanelMinimized = document.getElementById('gps-tracks-panel-minimized');
-        const projectPanel = document.getElementById('project-panel');
-        const projectPanelMinimized = document.getElementById('project-panel-minimized');
-
-        if (!gpsPanel || !gpsPanelMinimized) return;
-
-        const baseLeft = 16;
-        const baseTop = 16;
-        const gap = 10;
-
-        // Determine if project panel is expanded or minimized
-        const projectPanelExpanded = projectPanel && projectPanel.style.display !== 'none';
-        const projectPanelMinimizedVisible = projectPanelMinimized && projectPanelMinimized.style.display !== 'none';
-
-        let gpsTop = baseTop;
-
-        if (projectPanelExpanded && projectPanel) {
-            // Project panel is expanded - position below it
-            const projectPanelRect = projectPanel.getBoundingClientRect();
-            const mapContainerRect = document.querySelector('#map')!.parentElement!.getBoundingClientRect();
-            gpsTop = projectPanelRect.bottom - mapContainerRect.top + gap;
-        } else if (projectPanelMinimizedVisible && projectPanelMinimized) {
-            // Project panel is minimized - position below the minimized button
-            const minimizedRect = projectPanelMinimized.getBoundingClientRect();
-            const mapContainerRect = document.querySelector('#map')!.parentElement!.getBoundingClientRect();
-            gpsTop = minimizedRect.bottom - mapContainerRect.top + gap;
-        }
-
-        // Set position - left side, below project panel
-        gpsPanel.style.left = `${baseLeft}px`;
-        gpsPanel.style.right = 'auto';
-        gpsPanel.style.top = `${gpsTop}px`;
-
-        gpsPanelMinimized.style.left = `${baseLeft}px`;
-        gpsPanelMinimized.style.right = 'auto';
-        gpsPanelMinimized.style.top = `${gpsTop}px`;
-    },
-
-    _resizeObserver: null,
-    _mutationObserver: null,
-
-    setupProjectPanelListener: function() {
-        const projectPanel = document.getElementById('project-panel');
-        const projectPanelMinimized = document.getElementById('project-panel-minimized');
-        const projectToggleBtn = document.getElementById('panel-toggle');
-        const projectExpandBtn = document.getElementById('panel-expand');
-
-        if (projectToggleBtn) {
-            projectToggleBtn.addEventListener('click', () => {
-                setTimeout(() => this.positionPanel(), 50);
-            });
-        }
-
-        if (projectExpandBtn) {
-            projectExpandBtn.addEventListener('click', () => {
-                setTimeout(() => this.positionPanel(), 50);
-            });
-        }
-
-        // ResizeObserver catches all size changes: content changes from
-        // country group collapse/expand, visibility toggles, etc.
-        const debouncedPosition = Utils.debounce(() => this.positionPanel(), 50);
-
-        this._resizeObserver = new ResizeObserver(debouncedPosition);
-
-        if (projectPanel) {
-            this._resizeObserver.observe(projectPanel);
-        }
-        if (projectPanelMinimized) {
-            this._resizeObserver.observe(projectPanelMinimized);
-        }
-
-        // MutationObserver still needed for display:none/block toggling
-        // (ResizeObserver doesn't fire when an element is hidden)
-        if (projectPanel || projectPanelMinimized) {
-            this._mutationObserver = new MutationObserver(debouncedPosition);
-
-            if (projectPanel) {
-                this._mutationObserver.observe(projectPanel, { attributes: true, attributeFilter: ['style'] });
-            }
-            if (projectPanelMinimized) {
-                this._mutationObserver.observe(projectPanelMinimized, { attributes: true, attributeFilter: ['style'] });
-            }
-        }
-    },
-
     destroy: function() {
+        unregisterMapPanel('gps-tracks-panel');
         this._requests.clear();
         this._rows.forEach((_, id) => cancelMapNavigation(`gps:${id}`));
         this._rows.clear();
-        if (this._resizeObserver) {
-            this._resizeObserver.disconnect();
-            this._resizeObserver = null;
-        }
-        if (this._mutationObserver) {
-            this._mutationObserver.disconnect();
-            this._mutationObserver = null;
-        }
         if (this._loadingListener) {
             window.removeEventListener('speleo:gps-track-loading-changed', this._loadingListener);
             this._loadingListener = null;
@@ -209,16 +111,10 @@ export const GPSTracksPanel: GPSTracksPanelFacade = {
             item.dataset.color = color;
             this._rows.set(String(track.id), item);
 
-            // Truncate long track names
-            const maxLen = DEFAULTS.UI.TRACK_NAME_MAX_LENGTH;
-            const displayName = track.name!.length > maxLen
-                ? track.name!.substring(0, maxLen - 3) + '...'
-                : track.name;
-
             item.innerHTML = Utils.safeHtml`
-                <div class="flex items-center gap-2 overflow-hidden flex-1">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
                     <div class="gps-track-color-dot w-3 h-3 rounded-full shrink-0 shadow-xs" style="background-color: ${Utils.raw(Utils.safeCssColor(isVisible ? color : DEFAULTS.COLORS.FALLBACK))}; ${Utils.raw(isVisible ? 'border: 2px dashed rgba(255,255,255,0.5);' : '')}"></div>
-                    <span class="text-slate-200 text-sm font-medium truncate select-none" title="${track.name}">${displayName}</span>
+                    <span class="text-slate-200 text-sm font-medium map-panel-name select-none" title="${track.name}">${track.name}</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="gps-track-loading-spinner ${Utils.raw(isLoading ? '' : 'hidden')}" style="width: 16px; height: 16px; border: 2px solid rgba(56, 189, 248, 0.3); border-left-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
@@ -307,25 +203,8 @@ export const GPSTracksPanel: GPSTracksPanelFacade = {
         dot.style.border = visible ? '2px dashed rgba(255,255,255,0.5)' : '';
     },
 
-    bindEvents: function() {
-        const panel = document.getElementById('gps-tracks-panel');
-        const minimized = document.getElementById('gps-tracks-panel-minimized');
-        const toggleBtn = document.getElementById('gps-panel-toggle');
-        const expandBtn = document.getElementById('gps-panel-expand');
-
-        if (toggleBtn && panel && minimized) {
-            toggleBtn.addEventListener('click', () => {
-                panel.style.display = 'none';
-                minimized.style.display = 'block';
-            });
-        }
-
-        if (expandBtn && panel && minimized) {
-            expandBtn.addEventListener('click', () => {
-                minimized.style.display = 'none';
-                panel.style.display = 'block';
-            });
-        }
+    bindEvents() {
+        registerMapPanel('gps-tracks-panel', 'gps-panel-expand', 'gps-panel-toggle');
     },
 
     setupLoadingListener: function() {

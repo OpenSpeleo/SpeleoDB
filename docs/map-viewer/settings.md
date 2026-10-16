@@ -19,8 +19,20 @@ Close, Escape, and backdrop dismissal keep changes. Desktop uses a centered,
 constrained dialog; phones use the viewport with a scrolling body and persistent
 header/footer. Station types expand inline. A danger-styled Reset button sits
 left of Close. Managers remain available even when their marker category is off.
-The backdrop uses a dark scrim without blur: filtering the live WebGL canvas can
-delay control frames even when application work yields before painting.
+Map visibility rows are alphabetical by their displayed label: **Cave
+entrances**, **Exploration leads**, **Geometry labels**, **Landmarks**, **Safety
+cylinders**, **Surface stations**, and **Survey stations**. The **Station
+types** disclosure stays directly under Survey stations and lists **Artifact**,
+**Biology**, **Bones**, **Geology**, then **Sensor**, matching mobile Settings.
+The disclosure uses an indented, bordered card with an indigo accent, a solid
+header, a leading chevron, and a count badge to distinguish it from visibility
+switches. Its native summary remains keyboard accessible; the nested switches
+retain their parent gate and saved selections. Sorting is presentation-only
+during control creation; preference keys, stored selections, defaults and
+map-rendering metadata keep their existing behavior. The rendered Settings test
+checks both orders and the parent/disclosure pairing. The backdrop uses a dark
+scrim without blur: filtering the live WebGL canvas can delay control frames
+even when application work yields before painting.
 
 The public viewer retains its existing color/source controls. Shared rendering
 supports both viewers, but public initialization does not load private display
@@ -76,7 +88,7 @@ fields are declared in `ts-types/domain/map-display.ts`; rendered hover metadata
 and the legend's narrow map capability live in `map-depth-legend.ts`. Init and
 Reset replace the preference object; teardown flushes persistence and retains
 that object. Panel registries preserve their singleton identity across teardown,
-while each panel retains its existing DOM and observer lifecycle. Tests cover
+while panel teardown unregisters its DOM from the shared menu stack. Tests cover
 repeated initialization, pending requests, focus, and retained callbacks so
 translation does not silently change cleanup behavior.
 

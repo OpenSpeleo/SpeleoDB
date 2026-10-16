@@ -1,3 +1,4 @@
+import { renderPencilIcon } from '../presentation/icons.ts';
 import type { StationTagsContext } from '../../ts-types/controllers/station-tags.ts';
 import type { StationTagPresentation } from '../../ts-types/domain/project-presentation.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
@@ -78,11 +79,7 @@ export function init(context: StationTagsContext) {
                             <div class="flex items-center justify-center gap-2">
                                 <!-- Edit Button -->
                                 <button class="btn-edit-tag cursor-pointer" data-tag-id="${tag.id}">
-                                    <svg class="h-6 w-6 stroke-current text-amber-500 hover:text-amber-400" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                        <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                                        <path d="M13.5 6.5l4 4" />
-                                    </svg>
+                                    ${renderPencilIcon('h-6 w-6 stroke-current text-amber-500 hover:text-amber-400')}
                                 </button>
                                 <!-- Delete Button -->
                                 <button class="btn-delete-tag cursor-pointer" data-tag-id="${tag.id}">
@@ -114,10 +111,7 @@ export function init(context: StationTagsContext) {
                             </div>
                             <div class="tag-card-actions">
                                 <button class="btn-edit-tag w-10 h-10 shrink-0 flex items-center justify-center bg-amber-600 hover:bg-amber-500 rounded-full transition" data-tag-id="${tag.id}">
-                                    <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">
-                                        <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
-                                        <path d="M13.5 6.5l4 4" />
-                                    </svg>
+                                    ${renderPencilIcon('h-5 w-5 text-white')}
                                 </button>
                                 <button class="btn-delete-tag w-10 h-10 shrink-0 flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-full transition" data-tag-id="${tag.id}">
                                     <svg class="h-5 w-5 text-white" viewBox="0 0 24 24" stroke-width="1.5" fill="none" stroke="currentColor">

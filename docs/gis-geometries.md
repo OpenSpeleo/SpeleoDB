@@ -48,9 +48,18 @@ control; asynchronous responses never take focus away from the editor. An older
 failed detail request cannot undo a newer saved shape's visibility or the user's
 subsequent hide action.
 
-Folded Projects, GPS Tracks, GIS Layers, and GIS Geometries cards share one 160
-× 48 px size in the shared map stylesheet, keeping their labels and chevrons
-aligned without per-component sizing overrides.
+Active Projects, GIS Geometries, GIS Layers, and GPS Tracks share an alphabetic
+accordion: opening one collapses the others without changing map visibility.
+Folded cards share a 250 × 48px size, matching the expanded project panel's
+minimum width. Expanded menus grow for complete names and wrap only at the map
+boundary; lists scroll vertically. Geometry names sort case-insensitively.
+Writable geometries reuse the existing station-tag pencil through
+`frontend_common/presentation/icons.ts`, with bold orange styling, an accessible
+Edit label and tooltip. Editing and visibility controls are grouped together,
+with more separation from the name than between the controls. The disabled
+pencil still identifies the active edit. The shared DOM stack owns
+disclosure/focus and CSS owns layout, eliminating cross-panel observers. See
+[menu layout](map-viewer/features.md#overlay-menu-layout).
 
 Polygon fills use 17.5% opacity when saved and 9% while editing, keeping the
 underlying map legible. These rendering constants are centralized in

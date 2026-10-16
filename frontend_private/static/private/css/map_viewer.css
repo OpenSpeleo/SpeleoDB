@@ -1818,31 +1818,64 @@ select.form-input:focus {
 .map-settings-switch-row input:focus-visible + .toggle-slider { outline: 2px solid #a5b4fc; outline-offset: 3px; }
 .map-settings-switch-row input:checked + .toggle-slider { background: #6366f1; box-shadow: none; }
 
-.map-settings-station-types { margin: 0 0 0.5rem 0.25rem; padding-left: 0.875rem; border-left: 1px solid #475569; }
-.map-settings-station-types summary {
+.map-settings-station-types {
+    margin: 0.25rem 0 0.75rem 0.75rem;
+    border: 1px solid #475569;
+    border-left: 3px solid #818cf8;
+    border-radius: 0.5rem;
+    background: #111c2e;
+}
+.map-settings-station-types > summary {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    min-height: 44px;
-    color: #cbd5e1;
+    gap: 0.625rem;
+    min-height: 48px;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.375rem;
+    background: #253551;
+    color: #e0e7ff;
     font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.375rem;
     cursor: pointer;
     list-style: none;
 }
-.map-settings-station-types summary::-webkit-details-marker { display: none; }
-.map-settings-station-types summary::after {
+.map-settings-station-types > summary:hover { background: #334465; }
+.map-settings-station-types > summary > span:first-child {
+    flex: 1;
+    min-width: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+.map-settings-station-types > summary::-webkit-details-marker { display: none; }
+.map-settings-station-types > summary::before {
     content: "";
+    flex: 0 0 7px;
     width: 7px;
     height: 7px;
-    margin: 0 0.375rem 0 auto;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
+    margin-right: 0.125rem;
+    border-right: 2px solid #a5b4fc;
+    border-bottom: 2px solid #a5b4fc;
     transform: rotate(-45deg);
 }
-.map-settings-station-types[open] summary::after { transform: rotate(45deg); }
-.map-settings-type-count { margin-left: auto; color: #94a3b8; font-size: 0.75rem; }
-.map-settings-station-types summary::after { margin-left: 0.25rem; }
-.map-settings-types { min-width: 0; margin: 0; padding: 0 0 0.25rem; border: 0; }
+.map-settings-station-types[open] > summary { border-bottom: 1px solid #475569; border-radius: 0.375rem 0.375rem 0 0; }
+.map-settings-station-types[open] > summary::before { transform: rotate(45deg); }
+.map-settings-type-count {
+    max-width: 48%;
+    margin-left: auto;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid #52617c;
+    border-radius: 999px;
+    background: #111c2e;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+.map-settings-types { min-width: 0; margin: 0; padding: 0.25rem 0.75rem 0.5rem; border: 0; }
 .map-settings-types:disabled { opacity: 0.5; }
 .map-settings-types:disabled .map-settings-switch-row,
 .map-settings-types:disabled input { cursor: not-allowed; }
@@ -2235,46 +2268,88 @@ select.form-input:focus {
     white-space: nowrap;
 }
 
-/* Shared folded-card dimensions keep the entire overlay stack aligned. */
-#project-panel-minimized,
-#gps-tracks-panel-minimized,
-#gis-layers-panel-minimized,
-#gis-geometries-panel-minimized {
+/* Shared intrinsic sizing and natural flow keep all overlay menus aligned. */
+.map-panel-stack {
+    --map-panel-min-width: 250px;
+    position: absolute;
+    top: var(--map-panel-edge);
+    left: var(--map-panel-edge);
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--map-panel-gap);
+    width: max-content;
+    max-width: calc(100% - 2 * var(--map-panel-edge));
+    max-height: calc(100% - 2 * var(--map-panel-edge));
+    pointer-events: none;
+}
+
+.map-panel-slot {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    width: max-content;
+    min-width: min(var(--map-panel-min-width), 100%);
+    max-width: 100%;
+    pointer-events: auto;
+}
+
+.map-panel-slot:not(.is-expanded) { flex-shrink: 0; }
+.map-panel-slot[hidden] { display: none; }
+
+.map-panel-stack .map-panel-card,
+.map-panel-stack .map-panel-minimized {
+    position: static;
     box-sizing: border-box;
-    width: 160px;
+    min-width: min(var(--map-panel-min-width), 100%);
+    max-width: 100%;
+    width: max-content;
+}
+
+.map-panel-stack .map-panel-card {
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.map-panel-card > :first-child { flex-shrink: 0; gap: 1rem; }
+.map-panel-card > :last-child {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.map-panel-stack .map-panel-minimized {
+    width: var(--map-panel-min-width);
     height: 48px;
     padding: 12px;
     line-height: 20px;
     white-space: nowrap;
 }
 
-#project-panel-minimized > button,
-#gps-tracks-panel-minimized > button,
-#gis-layers-panel-minimized > button {
+.map-panel-minimized > button {
     width: 100%;
     height: 100%;
     text-align: left;
 }
 
-#project-panel-minimized svg,
-#gps-tracks-panel-minimized svg,
-#gis-layers-panel-minimized svg {
-    flex-shrink: 0;
+.map-panel-minimized svg,
+.map-panel-card .toggle-switch { flex-shrink: 0; }
+
+.map-panel-name,
+.map-panel-card .country-group-name,
+.map-panel-card .gis-geometries-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    text-overflow: clip;
 }
 
-/* Position is set dynamically based on the preceding panel's state. */
-#gps-tracks-panel {
-    left: 16px;
-}
-
-#gps-tracks-panel-minimized {
-    left: 16px;
-}
-
-/* GIS Layers follow GPS Tracks in the same left-side panel stack. */
-#gis-layers-panel,
-#gis-layers-panel-minimized {
-    left: 16px;
+@media (max-width: 640px) {
+    .map-panel-slot--desktop { display: none; }
 }
 
 /* GPS track line style indicator in panel (dashed border on color dot) */

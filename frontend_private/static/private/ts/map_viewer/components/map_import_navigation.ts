@@ -6,7 +6,6 @@ import { Layers } from '../map/layers.ts';
 import { fitGISGeometry } from '../map/geometry_camera.ts';
 import { GISLayersPanel } from './gis_layers_panel.ts';
 import { GPSTracksPanel } from './gps_tracks_panel.ts';
-import { GISGeometriesPanel } from './gis_geometries_panel.ts';
 
 /** Refresh only imported categories. Rejection means publication succeeded but refresh failed. */
 export async function refreshImportedMapData(result: ImportedMapResult) {
@@ -25,10 +24,6 @@ export async function refreshImportedMapData(result: ImportedMapResult) {
         await Config.loadGPSTracks({ force: true, throwOnError: true });
         if (document.getElementById('gps-tracks-panel')) GPSTracksPanel.refreshList();
         else GPSTracksPanel.init();
-    }
-    if (result.kind === 'overlay' || result.gpsTracksCreated! > 0) {
-        GISLayersPanel.setupStackListener();
-        GISGeometriesPanel.setupStackListener();
     }
 }
 
