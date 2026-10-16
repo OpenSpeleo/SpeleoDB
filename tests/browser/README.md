@@ -120,7 +120,8 @@ CI runs the unchanged responsiveness workloads and browser parity cases through
 an explicit Django live-server test outside ordinary backend test discovery:
 
 ```bash
-pytest tests/browser/test_django_browser.py
+pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
+  -o faulthandler_timeout=1860
 ```
 
 Use PostgreSQL for this live-server wrapper, as CI does. Set `TEST_DATABASE_URL`
@@ -166,11 +167,12 @@ job's `gitlab-creation-audit`; the browser report remains
 Playwright's per-case progress streams directly to the console while the Django
 wrapper runs. The wrapper has a 30-minute subprocess deadline and terminates the
 browser process group on timeout or interruption. CI's Python stack diagnostic
-waits 31 minutes for this whole-suite wrapper; a one-minute diagnostic would
-only show Python waiting normally for Playwright. Individual Playwright timeouts
-and responsiveness limits come from `budgets.ts`; the backend suite retains its
-one-minute stack diagnostic. Failure details remain in the console and the
-browser report artifacts.
+waits 31 minutes for this whole-suite wrapper, as does the explicit override in
+the command above. The shared four-minute diagnostic would otherwise show Python
+waiting normally for Playwright. Individual Playwright timeouts and
+responsiveness limits come from `budgets.ts`; the backend suite uses the shared
+240-second stack diagnostic from `pyproject.toml`. Failure details remain in the
+console and the browser report artifacts.
 
 `controllers-parity.spec.ts` exercises real compiled controllers, templates and
 vendor libraries: authentication errors, public/private Alpine menus,

@@ -197,7 +197,7 @@ jobs:
           python manage.py validate_templates --settings config.settings.test \
             --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
-          pytest -o faulthandler_timeout=60 --durations=20
+          make test-py
         env:
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}

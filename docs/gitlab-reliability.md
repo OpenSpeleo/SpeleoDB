@@ -170,13 +170,20 @@ behavior.
 
 ### Diagnosing CI stalls
 
-CI runs pytest with `-vvv -s -o faulthandler_timeout=60 --durations=20`. Verbose
-output identifies individual tests, and `-s` disables output capture. Pytest's
-built-in faulthandler prints all Python thread stacks when a test takes longer
-than 60 seconds, including setup and teardown. This reports where execution is
-waiting without aborting the test or changing its retry behavior. The duration
-summary identifies slow phases when the run completes. These diagnostics require
-no extra dependency.
+CI invokes `make test-py`, which runs one plain `pytest` command for the entire
+suite. Shared settings in `pyproject.toml` retain normal output capture, set
+`faulthandler_timeout = 240`, and enable `--durations=20`. Pytest's built-in
+faulthandler prints all Python thread stacks when a test takes longer than 240
+seconds, including setup and teardown. This reports where execution is waiting
+without aborting the test or changing its retry behavior. The duration summary
+identifies slow phases when the run completes. These diagnostics require no
+extra dependency.
+
+The scheduler test `test_standby_exhausts_real_finite_lock_budget` intentionally
+waits through the real lock retry delays: 5 + 10 + 20 + 40 + 80 = 155 seconds.
+The 240-second threshold leaves room for that expected wait without producing a
+misleading timeout dump. The test runs with every other test in the same pytest
+invocation; its retry assertions and deadlines remain unchanged.
 
 GitHub can delay displaying an unfinished progress line, so the last visible
 module is not proof that it owns the blocked operation. Inspect the stack dump
