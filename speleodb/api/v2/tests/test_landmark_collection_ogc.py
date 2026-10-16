@@ -175,7 +175,7 @@ class TestLandmarkCollectionOGC:
         owner: User,
         collection: LandmarkCollection,
     ) -> None:
-        Landmark.objects.create(
+        landmark = Landmark.objects.create(
             name="Entrance",
             description="Main",
             latitude=45.1234567,
@@ -200,10 +200,18 @@ class TestLandmarkCollectionOGC:
         feature = payload["features"][0]
         assert feature["geometry"]["type"] == "Point"
         assert feature["properties"]["name"] == "Entrance"
+        assert feature["properties"]["icon"] == "DEFAULT"
 
         cached = api_client.get(url, HTTP_IF_NONE_MATCH=response["ETag"])
         assert cached.status_code == status.HTTP_304_NOT_MODIFIED
         assert cached["ETag"] == response["ETag"]
+
+        landmark.icon = Landmark.Icon.CAVE
+        landmark.save(update_fields=["icon", "modified_date"])
+        changed = api_client.get(url, HTTP_IF_NONE_MATCH=response["ETag"])
+        assert changed.status_code == status.HTTP_200_OK
+        assert changed["ETag"] != response["ETag"]
+        assert _streaming_json(changed)["features"][0]["properties"]["icon"] == "CAVE"
 
     def test_personal_collection_token_returns_point_geojson(
         self,

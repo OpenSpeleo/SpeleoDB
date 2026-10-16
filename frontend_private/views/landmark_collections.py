@@ -126,6 +126,7 @@ class LandmarkCollectionDetailsView(_BaseLandmarkCollectionView):
                 "id": str(lm.id),
                 "name": lm.name,
                 "description": lm.description,
+                "icon": lm.icon,
                 "latitude": str(lm.latitude),
                 "longitude": str(lm.longitude),
                 "created_by": lm.created_by,

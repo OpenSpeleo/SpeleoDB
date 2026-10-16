@@ -65,13 +65,15 @@ export interface ViewerGISLayer extends ViewerGPSTrack {
     can_manage_permissions?: boolean | undefined;
 }
 export interface GISLayerResponse extends Omit<ViewerGISLayer, 'id'> { id: EntityId }
-export interface GISGeometryMetadata extends Omit<ViewerGISLayer, 'file' | 'source_format'> {
+export interface GISGeometryMetadata extends Omit<ViewerGISLayer, 'file' | 'source_format' | 'description'> {
+    alias?: string;
     revision: number;
     geometry_type?: string | undefined;
     bbox_area_m2?: number | undefined;
     vertex_count?: number | undefined;
 }
 export interface GISGeometryResponse extends Omit<GISGeometryMetadata, 'id'> {
+    description?: string;
     id: EntityId;
     geojson?: Geometry | undefined;
 }

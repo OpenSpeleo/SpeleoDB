@@ -224,9 +224,9 @@ performance and is not a benchmark of the current dependency versions.
 
 Migration-era Tailwind watch mode retained a candidate after its sole template
 occurrence was deleted; a clean one-shot build removed it. The current workflow
-uses explicit finite builds. Browser certification begins from `bun run build`
-and a verified served manifest hash; refresh the browser after the build
-succeeds.
+offers opt-in watched rebuilds through `bun run dev`. Stop the watcher before
+browser certification, which begins from a clean `bun run build` and a verified
+served manifest hash; refresh the browser after the build succeeds.
 
 Custom design-system rules may be removed only after all consumers of the
 affected product behavior have been intentionally redesigned and the same

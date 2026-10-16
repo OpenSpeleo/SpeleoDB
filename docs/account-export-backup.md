@@ -252,3 +252,8 @@ page-one fallback, capped retry budget, expiry timers, focus retention, and its
 existing absence of a returned cleanup function. Direct initialization tests
 include missing DOM/context, foreign endpoints, and repeated attachment
 alongside real HTTP request tests.
+
+GIS Geometry manifest entries preserve optional `alias` and plain-text
+`description` alongside their revision and color; geometry files remain bare
+GeoJSON Geometry objects. Landmark feature properties retain `icon` and the
+collection color, so exported records preserve their map presentation choices.

@@ -297,3 +297,14 @@ it('reads each stored category again when applying its checked value', () => {
     expect(State.displayPreferences.categories.caveEntrances).toBe(false);
     expect(categoryReads).toBe(4 + Object.keys(State.displayPreferences.categories).length);
 });
+
+
+it.each([undefined, null, 'false', false, true])('restores geometry labels only from a boolean: %j', geometryLabelsVisible => {
+    localStorage.setItem(storageKey, JSON.stringify({ version: DEFAULTS.DISPLAY.STORAGE_VERSION, geometryLabelsVisible }));
+    DisplayPreferences.init({ persist: true });
+    expect(State.displayPreferences.geometryLabelsVisible).toBe(geometryLabelsVisible !== false);
+    void Layers.setGeometryLabelsVisible(false);
+    expect(readSavedPreferences().geometryLabelsVisible).toBe(false);
+    DisplayPreferences.reset();
+    expect(readSavedPreferences().geometryLabelsVisible).toBe(true);
+});

@@ -27,11 +27,13 @@ class GISGeometryAdminForm(forms.ModelForm):  # type: ignore[type-arg]
 
     class Meta:
         model = GISGeometry
-        fields = ("name", "color", "geojson")
+        fields = ("name", "alias", "description", "color", "geojson")
         widgets = {"geojson": forms.Textarea(attrs={"rows": 20, "cols": 90})}
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        # HTML maxlength counts UTF-16 units; Python validates Unicode codepoints.
+        self.fields["alias"].widget.attrs.pop("maxlength", None)
         if not self.instance._state.adding:  # noqa: SLF001
             self.fields["expected_revision"].initial = self.instance.revision
             self.fields["expected_revision"].required = True
@@ -104,11 +106,19 @@ class GISGeometryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             geometry_id=obj.id,
             actor=actor,
             expected_revision=form.cleaned_data["expected_revision"],
-            updates={"name": obj.name, "color": obj.color, "geojson": obj.geojson},
+            updates={
+                "name": obj.name,
+                "alias": obj.alias,
+                "description": obj.description,
+                "color": obj.color,
+                "geojson": obj.geojson,
+            },
             administrative=True,
         )
         # Django continues to use the form's instance for its log and response.
         obj.name = updated.name
+        obj.alias = updated.alias
+        obj.description = updated.description
         obj.color = updated.color
         obj.geojson = updated.geojson
         obj.revision = updated.revision

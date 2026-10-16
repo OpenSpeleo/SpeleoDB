@@ -10,7 +10,7 @@
     "build": "bun run typecheck && bun run audit:javascript && bun run audit:templates && bun run build:clean && vite build --mode production",
     "build:clean": "rimraf ./speleodb/common/static/speleodb/vite/ ./speleodb/common/static/speleodb/css/app.css ./frontend_public/static/css/style.css ./frontend_private/static/private/css/style.css ./frontend_private/static/private/ts/dist/ ./frontend_public/static/ts/dist/",
     "build:assets": "bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --mode production",
-    "dev": "bun run build",
+    "dev": "bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --watch --mode development --emptyOutDir=false",
     "pre-commit": "bun run build",
     "update": "bun update --latest && bunx --bun update-browserslist-db@latest",
     "test:browser": "playwright test --config ./playwright.config.ts",

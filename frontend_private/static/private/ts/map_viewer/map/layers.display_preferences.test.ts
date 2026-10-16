@@ -38,6 +38,8 @@ function createMap() {
     const layers = new Map<string, RendererLayer>();
     const sources = new Map<string, TestSource>();
     return {
+        on: () => undefined,
+        off: () => undefined,
         getStyle: () => ({ layers: [...layers.values()] }),
         getLayer: (id: string) => layers.get(id) as TestLayer,
         getSource: (id: string) => sources.get(id)!,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
@@ -20,6 +21,9 @@ from speleodb.gis.geometry_services import update_gis_geometry
 from speleodb.gis.models import GISGeometry
 from speleodb.gis.models import GISGeometryUserPermission
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from django.forms import BoundField
 
 LINE: dict[str, Any] = {
     "type": "LineString",
@@ -46,6 +50,41 @@ def test_admin_creation_assigns_creator_access_and_validates_geojson() -> None:
     assert geometry.permissions.get(user=user).level == PermissionLevel.ADMIN
     assert geometry.revision == 1
     assert "created_by" in GISGeometryAdmin(GISGeometry, admin.site).readonly_fields
+
+
+@pytest.mark.django_db
+def test_admin_alias_uses_unicode_codepoints_without_browser_truncation() -> None:
+    user = UserFactory.create(is_staff=True, is_superuser=True)
+    client = Client()
+    client.force_login(user)
+    url: str = reverse("admin:gis_gisgeometry_add")
+    initial = client.get(url)
+    alias: BoundField = initial.context["adminform"].form["alias"]
+    assert "maxlength" not in str(alias)
+    payload: dict[str, Any] = {
+        "name": "Unicode admin shape",
+        "alias": "🦇" * 32,
+        "color": "#123456",
+        "geojson": json.dumps(LINE),
+    }
+    created = client.post(url, payload)
+    assert created.status_code == status.HTTP_302_FOUND
+    geometry = GISGeometry.objects.get()
+    assert geometry.alias == payload["alias"]
+    url = reverse("admin:gis_gisgeometry_change", args=[geometry.id])
+    payload.update(alias="🦇" * 33, expected_revision=1)
+    rejected = client.post(url, payload)
+    assert rejected.status_code == status.HTTP_200_OK
+    assert "alias" in rejected.context["adminform"].form.errors
+    geometry.refresh_from_db()
+    assert geometry.alias == "🦇" * 32
+    assert geometry.revision == 1
+    payload["alias"] = "🕳" * 32
+    updated = client.post(url, payload)
+    assert updated.status_code == status.HTTP_302_FOUND
+    geometry.refresh_from_db()
+    assert geometry.alias == payload["alias"]
+    assert geometry.revision == UPDATED_REVISION
 
 
 @pytest.mark.django_db

@@ -54,7 +54,7 @@ class GISGeometryCollectionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
     @extend_schema(responses=GISGeometryListSerializer(many=True))
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometries = accessible_gis_geometries_queryset(self.get_user()).defer(
-            "geojson"
+            "geojson", "description"
         )
         return SuccessResponse(GISGeometryListSerializer(geometries, many=True).data)
 

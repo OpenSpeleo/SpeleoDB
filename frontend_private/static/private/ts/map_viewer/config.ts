@@ -102,7 +102,7 @@ export const Config = {
 
     upsertGISGeometry(record: GISGeometryResponse) {
         // Metadata stays in Config; coordinate payloads belong to State's cache.
-        const { geojson: _geojson, ...metadata } = record;
+        const { geojson: _geojson, description: _description, ...metadata } = record;
         const existing = this.getGISGeometryById(record.id);
         if (existing && existing.revision > record.revision) return;
         this._gisGeometries ??= [];

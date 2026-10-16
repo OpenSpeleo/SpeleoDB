@@ -5,6 +5,9 @@ for (const viewer of ['private', 'public'] as const) {
     test(`${viewer} initial globe camera ignores provider metadata and preserves later navigation`, async ({ page }) => {
         const errors: string[] = [];
         page.on('pageerror', error => errors.push(error.message));
+        page.on('console', message => {
+            if (message.text().includes('There is no style added to the map.')) errors.push(message.text());
+        });
         // A viewport taller than a Mercator world tile reproduces the temporary
         // zoom clamp before the asynchronous globe style arrives.
         await page.setViewportSize({ width: 1440, height: 1100 });

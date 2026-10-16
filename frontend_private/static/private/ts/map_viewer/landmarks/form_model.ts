@@ -1,4 +1,5 @@
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
+import { isLandmarkIcon, type LandmarkIcon } from '@speleodb/map-core';
 import type { LandmarkFormCollection, LandmarkFormCollections, LandmarkFormPayload } from '../../../../../../ts-types/domain/landmark-forms.ts';
 
 export function getCollectionLabel(collection: LandmarkFormCollection | null) {
@@ -42,6 +43,7 @@ export function readLandmarkFormPayload(formId: string, lockedCollectionId?: Ent
     const latStr = (document.getElementById(`${formId}-latitude`) as HTMLInputElement).value;
     const lonStr = (document.getElementById(`${formId}-longitude`) as HTMLInputElement).value;
     return {
+        icon: readLandmarkIcon(document.getElementById(formId)!),
         name,
         description,
         collection: getSelectedCollection(`${formId}-collection`, lockedCollectionId),
@@ -50,8 +52,13 @@ export function readLandmarkFormPayload(formId: string, lockedCollectionId?: Ent
     };
 }
 
-export function validateLandmarkFormPayload(payload: Pick<LandmarkFormPayload, 'name' | 'latitude' | 'longitude'>) {
+export function readLandmarkIcon(form: HTMLElement): LandmarkIcon {
+    return form.querySelector<HTMLInputElement>('input[name="icon"]:checked')!.value as LandmarkIcon;
+}
+
+export function validateLandmarkFormPayload(payload: Pick<LandmarkFormPayload, 'name' | 'latitude' | 'longitude'> & Partial<Pick<LandmarkFormPayload, 'icon'>>) {
     if (!payload.name) return 'Please enter a landmark name.';
+    if (payload.icon !== undefined && !isLandmarkIcon(payload.icon)) return 'Choose a valid landmark icon.';
     if (Number.isNaN(payload.latitude) || payload.latitude < -90 || payload.latitude > 90) {
         return 'Latitude must be a number between -90 and 90.';
     }

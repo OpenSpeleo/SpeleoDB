@@ -13,9 +13,10 @@ private resource, identified by a UUID. It has no project, survey, country, or
 GPS Track foreign key; displaying it in a survey viewer does not make it part of
 that survey.
 
-The record contains a name, creator email, color, GeoJSON document, content
-revision, timestamps, and active/inactive state. Access comes from separate
-direct-user permission records. Creator email is provenance, not authorization.
+The record contains a name, optional alias and description, creator email,
+color, GeoJSON document, content revision, timestamps, and active/inactive
+state. Access comes from separate direct-user permission records. Creator email
+is provenance, not authorization.
 
 GeoJSON is stored directly in a database JSON field. Reading geometry does not
 require S3, signed download URLs, source files, source formats, conversion jobs,
@@ -225,6 +226,7 @@ timestamps is unspecified. No accessible records means `[]`, not 404.
   {
     "id": "12345678-1234-4234-8234-123456789abc",
     "name": "Survey reference line",
+    "alias": "Approach",
     "color": "#377eb8",
     "created_by": "creator@example.com",
     "geometry_type": "LineString",
@@ -244,26 +246,28 @@ timestamps is unspecified. No accessible records means `[]`, not 404.
 
 These fields appear in both collection items and detail responses:
 
-| Field                         | JSON type | Meaning                                                             |
-| ----------------------------- | --------- | ------------------------------------------------------------------- |
-| `id`                          | string    | Geometry UUID; stable identity and detail-route identifier          |
-| `name`                        | string    | Display name, maximum 255 characters; not unique                    |
-| `color`                       | string    | Six-digit hexadecimal display color with leading `#`                |
-| `created_by`                  | string    | Creator email captured as provenance; not a user ID or access grant |
-| `geometry_type`               | string    | `LineString` or `Polygon`                                           |
-| `revision`                    | integer   | Positive content revision, starting at 1                            |
-| `user_permission_level`       | integer   | Requesting user's level: 1, 2, or 3                                 |
-| `user_permission_level_label` | string    | Corresponding enum label                                            |
-| `can_write`                   | boolean   | Requesting user's content-edit capability                           |
-| `can_delete`                  | boolean   | Requesting user's deletion capability                               |
-| `can_manage_permissions`      | boolean   | Requesting user's sharing-management capability                     |
-| `creation_date`               | string    | Geometry creation timestamp                                         |
-| `modified_date`               | string    | Geometry modification timestamp; sharing changes also update it     |
+| Field                         | JSON type | Meaning                                                                 |
+| ----------------------------- | --------- | ----------------------------------------------------------------------- |
+| `id`                          | string    | Geometry UUID; stable identity and detail-route identifier              |
+| `name`                        | string    | Display name, maximum 255 characters; not unique                        |
+| `alias`                       | string    | Optional map label, maximum 32 Unicode codepoints; blank means no label |
+| `color`                       | string    | Six-digit hexadecimal display color with leading `#`                    |
+| `created_by`                  | string    | Creator email captured as provenance; not a user ID or access grant     |
+| `geometry_type`               | string    | `LineString` or `Polygon`                                               |
+| `revision`                    | integer   | Positive content revision, starting at 1                                |
+| `user_permission_level`       | integer   | Requesting user's level: 1, 2, or 3                                     |
+| `user_permission_level_label` | string    | Corresponding enum label                                                |
+| `can_write`                   | boolean   | Requesting user's content-edit capability                               |
+| `can_delete`                  | boolean   | Requesting user's deletion capability                                   |
+| `can_manage_permissions`      | boolean   | Requesting user's sharing-management capability                         |
+| `creation_date`               | string    | Geometry creation timestamp                                             |
+| `modified_date`               | string    | Geometry modification timestamp; sharing changes also update it         |
 
-The list deliberately omits `geojson`, `bbox_area_m2`, and `vertex_count`,
-keeping initial loading small. It also contains no source file, source format,
-download URL, transparency field, project ID, or `is_active` field. Only active
-records are returned. Do not attempt to render coordinates from list metadata.
+The list deliberately omits `description`, `geojson`, `bbox_area_m2`, and
+`vertex_count`, keeping initial loading small. It also contains no source file,
+source format, download URL, transparency field, project ID, or `is_active`
+field. Only active records are returned. Do not attempt to render coordinates
+from list metadata.
 
 The server annotates permission and geometry type in the listing query and
 defers the GeoJSON document, avoiding per-record geometry reads.
@@ -281,6 +285,7 @@ containing all common fields plus:
 
 | Field          | JSON type | Meaning                                                 |
 | -------------- | --------- | ------------------------------------------------------- |
+| `description`  | string    | Optional plain text description, empty when absent      |
 | `geojson`      | object    | Bare Geometry using the contract in section 2           |
 | `bbox_area_m2` | number    | Derived bounding-box area in square metres; may be zero |
 | `vertex_count` | integer   | Editable vertex count, excluding polygon closure        |
@@ -289,6 +294,8 @@ containing all common fields plus:
 {
   "id": "12345678-1234-4234-8234-123456789abc",
   "name": "Survey reference line",
+  "alias": "Approach",
+  "description": "Trail from the road to the entrance.",
   "color": "#377eb8",
   "created_by": "creator@example.com",
   "geometry_type": "LineString",
@@ -495,3 +502,13 @@ The repository implementation is authoritative if this document drifts:
 Run tests inside the existing `speleodb_local_django` container at `/app`, as
 required by `AGENTS.md`. The broader feature design is in
 [`gis-geometries.md`](gis-geometries.md).
+
+## Alias rendering
+
+Use the returned alias literally as text; never fall back to the name for a
+blank alias. Shared SpeleoDB clients use `createGeometryLabelFeature` from
+`@speleodb/map-core` for an interior polygon anchor or length-based line
+midpoint, and `createGeometryLabelLayer` from `@speleodb/map-viewer` for legible
+display. Labels default on, follow geometry visibility, and have a
+device-persisted show/hide setting. Descriptions are plain text, not HTML or
+Markdown.

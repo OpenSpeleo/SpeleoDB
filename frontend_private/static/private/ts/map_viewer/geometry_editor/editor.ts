@@ -1,3 +1,4 @@
+import { isGeometryAliasValid } from '@speleodb/map-core';
 import type { EditorCollection, EditorFeature, EditorFeatureProperties, EditorInput, GeometryEditorFacade } from '../../../../../../ts-types/domain/geometry-editor-runtime.ts';
 import type { EditableGeometry, EditableGeometryType, Position2D } from '../../../../../../ts-types/domain/geometry-editor.ts';
 import { API } from '../api.ts';
@@ -109,7 +110,7 @@ export const GeometryEditor: GeometryEditorFacade = {
 
     signature() {
         const session = this.session!;
-        return JSON.stringify([session.name, session.color, session.draft.type, session.draft.vertices]);
+        return JSON.stringify([session.name, session.alias, session.description, session.color, session.draft.type, session.draft.vertices]);
     },
 
     async create() {
@@ -155,6 +156,8 @@ export const GeometryEditor: GeometryEditorFacade = {
             this.session = {
                 record: record ? structuredClone(record) : null,
                 name: record?.name || '',
+                alias: record?.alias || '',
+                description: record?.description || '',
                 color: Utils.safeCssColor(record?.color || this.palette![Math.floor(Math.random() * this.palette!.length)] || DEFAULTS.COLORS.FALLBACK),
                 draft: createGeometryDraft(record?.geojson as EditableGeometry | undefined),
                 selected: null,
@@ -287,6 +290,23 @@ export const GeometryEditor: GeometryEditorFacade = {
         name.addEventListener('input', () => { this.session!.name = name.value; this.refreshUI(); });
         nameLabel.append(name);
         body.append(nameLabel);
+        const aliasLabel = element('label', 'gis-geometry-editor__field');
+        aliasLabel.append(element('span', '', 'Map alias (optional)'));
+        const alias = element('input');
+        alias.type = 'text';
+        alias.value = this.session!.alias;
+        alias.placeholder = 'Short label shown on the geometry';
+        alias.addEventListener('input', () => { this.session!.alias = alias.value; this.refreshUI(); });
+        aliasLabel.append(alias);
+        body.append(aliasLabel);
+        const descriptionLabel = element('label', 'gis-geometry-editor__field');
+        descriptionLabel.append(element('span', '', 'Description (optional)'));
+        const description = element('textarea');
+        description.value = this.session!.description;
+        description.rows = DEFAULTS.GIS_GEOMETRY.DESCRIPTION_ROWS;
+        description.addEventListener('input', () => { this.session!.description = description.value; this.refreshUI(); });
+        descriptionLabel.append(description);
+        body.append(descriptionLabel);
 
         const types = element('div', 'gis-geometry-editor__types');
         types.setAttribute('role', 'group');
@@ -384,7 +404,7 @@ export const GeometryEditor: GeometryEditorFacade = {
         root.addEventListener('wheel', event => event.stopPropagation(), { passive: true });
         root.addEventListener('touchmove', event => event.stopPropagation(), { passive: true });
         this.map!.getContainer().append(root);
-        this.nodes = { root, name, types, colors, currentColor, hint, toolbar, vertices, gps, gpsDisclosure, gpsTitle, latitude: latitude.input, longitude: longitude.input, apply, area, areaValue, progressFill, status, discard, conflict, copyFallback, save };
+        this.nodes = { root, name, alias, description, types, colors, currentColor, hint, toolbar, vertices, gps, gpsDisclosure, gpsTitle, latitude: latitude.input, longitude: longitude.input, apply, area, areaValue, progressFill, status, discard, conflict, copyFallback, save };
     },
 
     button(action, label, text) {
@@ -730,12 +750,12 @@ export const GeometryEditor: GeometryEditorFacade = {
         if (session.record && !this.hasUnsavedChanges()) return false;
         const geojson = geometryFromVertices(session.draft.type, session.draft.vertices);
         const validation = validateGeometry(geojson);
-        if (!session.name.trim() || !validation.valid) {
-            session.error = !session.name.trim() ? 'Enter a name for this geometry.' : validation.error;
+        if (!session.name.trim() || !isGeometryAliasValid(session.alias) || !validation.valid) {
+            session.error = !session.name.trim() ? 'Enter a name for this geometry.' : !isGeometryAliasValid(session.alias) ? `Alias must be at most ${DEFAULTS.GIS_GEOMETRY.ALIAS_MAX_LENGTH} characters.` : validation.error;
             this.refreshUI();
             return false;
         }
-        const payload: { name: string; color: string; geojson: EditableGeometry; expected_revision?: number } = { name: session.name.trim(), color: session.color, geojson };
+        const payload: { name: string; alias: string; description: string; color: string; geojson: EditableGeometry; expected_revision?: number } = { name: session.name.trim(), alias: session.alias.trim(), description: session.description.trim(), color: session.color, geojson };
         if (session.record) payload.expected_revision = session.record.revision;
         session.saving = true;
         session.error = '';
@@ -819,13 +839,14 @@ export const GeometryEditor: GeometryEditorFacade = {
         nodes.gpsTitle.textContent = selected ? `Point ${session.selected! + 1} · GPS coordinates` : 'Add GPS coordinates';
         nodes.apply.textContent = selected ? 'Update point' : 'Add point';
         nodes.apply.setAttribute('aria-label', nodes.apply.textContent);
-        const message = session.error || (over ? `Over ${limits.MAX_AREA_M2 / limits.SQUARE_METRES_PER_SQUARE_KILOMETRE} km². Reduce the bounding box to keep the map responsive.`
+        nodes.alias.setAttribute('aria-invalid', String(!isGeometryAliasValid(session.alias)));
+        const message = session.error || (!isGeometryAliasValid(session.alias) ? `Alias must be at most ${limits.ALIAS_MAX_LENGTH} characters.` : over ? `Over ${limits.MAX_AREA_M2 / limits.SQUARE_METRES_PER_SQUARE_KILOMETRE} km². Reduce the bounding box to keep the map responsive.`
             : !validation.valid ? validation.error : warning ? `Above ${limits.WARNING_AREA_M2 / limits.SQUARE_METRES_PER_SQUARE_KILOMETRE} km². The maximum is ${limits.MAX_AREA_M2 / limits.SQUARE_METRES_PER_SQUARE_KILOMETRE} km².` : `${validation.vertexCount} of ${limits.MAX_VERTICES} points · Ready to save`);
         if (nodes.status.textContent !== message) nodes.status.textContent = message;
         nodes.status.classList.toggle('has-error', Boolean(session.error) || over);
         for (const button of nodes.root.querySelectorAll('button')) button.disabled = session.saving;
-        for (const input of nodes.root.querySelectorAll('input')) input.disabled = session.saving;
-        nodes.save.disabled = session.saving || !session.name.trim() || !validation.valid || (Boolean(session.record) && !this.hasUnsavedChanges());
+        for (const input of nodes.root.querySelectorAll('input, textarea')) (input as HTMLInputElement | HTMLTextAreaElement).disabled = session.saving;
+        nodes.save.disabled = session.saving || !session.name.trim() || !isGeometryAliasValid(session.alias) || !validation.valid || (Boolean(session.record) && !this.hasUnsavedChanges());
         nodes.save.textContent = session.saving ? 'Saving…' : 'Save geometry';
         nodes.discard.hidden = !session.discardRequested;
         nodes.conflict.hidden = !session.conflict;

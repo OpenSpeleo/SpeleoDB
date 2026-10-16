@@ -25,6 +25,8 @@ beforeEach(() => {
         <form id="geometry-form">
             <fieldset><input name="csrfmiddlewaretoken" value="token">
                 <input name="name" value="Boundary">
+                <input name="alias" value="">
+                <textarea name="description"></textarea>
                 <input name="color" id="color-value" value="#123456">
                 <input id="color-hex-input" value="123456">
                 <input type="color" id="color-picker" value="#123456">
@@ -99,7 +101,7 @@ describe('GIS Geometry atomic settings form', () => {
         submit();
         const request = jqueryHost.jQuery.ajax.mock.calls[0]![0];
         expect(request.method).toBe('PATCH');
-        expect(JSON.parse(request.data!)).toEqual({ name: 'Renamed', color: '#123456', expected_revision: 3 });
+        expect(JSON.parse(request.data!)).toEqual({ name: 'Renamed', alias: '', description: '', color: '#123456', expected_revision: 3 });
         expect(element<HTMLButtonElement>('btn_submit').disabled).toBe(true);
         submit();
         expect(jqueryHost.jQuery.ajax).toHaveBeenCalledTimes(1);
@@ -112,8 +114,8 @@ describe('GIS Geometry atomic settings form', () => {
         document.querySelector<HTMLButtonElement>('.color-preset')!.click();
         submit();
         const request = jqueryHost.jQuery.ajax.mock.calls[0]![0];
-        expect(JSON.parse(request.data!)).toEqual({ name: 'Boundary', color: '#abcdef', geojson: changedGeometry, expected_revision: 3 });
-        request.success({ name: 'Boundary', color: '#abcdef', geojson: changedGeometry, revision: 4 });
+        expect(JSON.parse(request.data!)).toEqual({ name: 'Boundary', alias: '', description: '', color: '#abcdef', geojson: changedGeometry, expected_revision: 3 });
+        request.success({ name: 'Boundary', alias: '', description: '', color: '#abcdef', geojson: changedGeometry, revision: 4 });
         request.complete!();
         expect(element<HTMLButtonElement>('btn_submit').disabled).toBe(true);
         expect(element<HTMLElement>('geometry-saved').hidden).toBe(false);
@@ -181,5 +183,19 @@ describe('GIS Geometry atomic settings form', () => {
         expect(parseGeometryText(JSON.stringify({ type: 'FeatureCollection', features: [] })).valid).toBe(false);
         expect(parseGeometryText(JSON.stringify({ type: 'LineString', coordinates: Array.from({ length: 101 }, (_, index) => [index / 10000, 0]) })).valid).toBe(false);
         expect(parseGeometryText(JSON.stringify({ type: 'LineString', coordinates: [[0, 0], [1, 1]] })).valid).toBe(false);
+    });
+});
+
+
+it('tracks and saves alias and description independently, with Unicode character limits', async () => {
+    await start();
+    setField('[name="alias"]', '🦇'.repeat(33));
+    expect(element<HTMLButtonElement>('btn_submit').disabled).toBe(true);
+    setField('[name="alias"]', '🦇'.repeat(32));
+    setField('[name="description"]', 'Line one\nLine two');
+    expect(element<HTMLButtonElement>('btn_submit').disabled).toBe(false);
+    submit();
+    expect(JSON.parse(jqueryHost.jQuery.ajax.mock.calls[0]![0].data!)).toMatchObject({
+        alias: '🦇'.repeat(32), description: 'Line one\nLine two', expected_revision: 3,
     });
 });

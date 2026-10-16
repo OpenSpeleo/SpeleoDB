@@ -296,3 +296,28 @@ class TestLandmarkGeoJSONSerializer:
         data = serializer.data
 
         assert data["properties"]["description"] == ""
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("icon", Landmark.Icon.values)
+def test_landmark_icon_roundtrip_and_partial_update(
+    landmark: Landmark, icon: str
+) -> None:
+    serializer = LandmarkSerializer(landmark, data={"icon": icon}, partial=True)
+    assert serializer.is_valid(), serializer.errors
+    saved = serializer.save()
+    assert LandmarkSerializer(saved).data["icon"] == icon
+    assert LandmarkGeoJSONSerializer(saved).data["properties"]["icon"] == icon
+    update = LandmarkSerializer(saved, data={"name": "Renamed"}, partial=True)
+    assert update.is_valid(), update.errors
+    assert update.save().icon == icon
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("icon", [None, "", "cave", "OTHER", "<svg>"])
+def test_landmark_rejects_invalid_icons(landmark: Landmark, icon: str | None) -> None:
+    serializer = LandmarkSerializer(landmark, data={"icon": icon}, partial=True)
+    assert not serializer.is_valid()
+    assert "icon" in serializer.errors
+    landmark.refresh_from_db()
+    assert landmark.icon == Landmark.Icon.DEFAULT

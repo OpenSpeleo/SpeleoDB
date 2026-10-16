@@ -235,3 +235,29 @@ it('restores measurement order above saved overlays and below editor handles', a
         ...measurementIds, 'gis-geometry-draft-vertices',
     ]);
 });
+
+
+it('gates labels independently and keeps anchors out of metadata and lazy coordinate requests', async () => {
+    State.displayPreferences.geometryLabelsVisible = true;
+    const saved = record({ alias: 'Approach', description: 'Long detail text' });
+    vi.mocked(API.getGISGeometryDetails).mockResolvedValue(saved);
+    await Layers.toggleGISGeometryVisibility('g1', true);
+    const labelId = 'gis-geometry-g1-label';
+    expect(map.getLayer(labelId)?.layout?.['text-field']).toEqual(['get', 'alias']);
+    expect(map.getSource('gis-geometry-label-source-g1')?.data).toMatchObject({
+        type: 'Feature', geometry: { type: 'Point' }, properties: { alias: 'Approach' },
+    });
+    expect(Config.getGISGeometryById('g1')).not.toHaveProperty('description');
+    await Layers.setGeometryLabelsVisible(false);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith(labelId, 'visibility', 'none');
+    await Layers.setGeometryLabelsVisible(true);
+    expect(map.setLayoutProperty).toHaveBeenLastCalledWith(labelId, 'visibility', 'visible');
+    State.gisGeometryEditingId = 'g1';
+    Layers.showGISGeometryLayers('g1', true);
+    expect(map.setLayoutProperty).toHaveBeenLastCalledWith(labelId, 'visibility', 'none');
+    expect(API.getGISGeometryDetails).toHaveBeenCalledTimes(1);
+    State.gisGeometryEditingId = null;
+    await Layers.acceptGISGeometry({ ...saved, alias: '', revision: 2 });
+    expect(map.getLayer(labelId)).toBeUndefined();
+    expect(map.getSource('gis-geometry-label-source-g1')).toBeUndefined();
+});

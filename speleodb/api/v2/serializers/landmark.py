@@ -183,6 +183,7 @@ class LandmarkGeoJSONSerializer(serializers.ModelSerializer[Landmark]):
             "id",
             "name",
             "description",
+            "icon",
             "latitude",
             "longitude",
             "collection",

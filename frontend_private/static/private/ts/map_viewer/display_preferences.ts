@@ -11,6 +11,7 @@ function restorePreferences(value: unknown) {
     const stored = value as StoredDisplayPreferences | null;
     if (!stored || Array.isArray(stored) || stored.version !== DEFAULTS.DISPLAY.STORAGE_VERSION) return;
     const preferences = State.displayPreferences;
+    if (typeof stored.geometryLabelsVisible === 'boolean') preferences.geometryLabelsVisible = stored.geometryLabelsVisible;
     if (Colors.isValidColorMode(stored.colorMode)) preferences.colorMode = stored.colorMode as ColorMode;
     if (isValidDepthLimit(stored.depthLimitFeet)) preferences.depthLimitFeet = stored.depthLimitFeet;
     if (stored.depthUnit === 'ft' || stored.depthUnit === 'm') preferences.depthUnit = stored.depthUnit;

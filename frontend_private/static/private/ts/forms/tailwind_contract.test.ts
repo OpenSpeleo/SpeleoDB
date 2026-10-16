@@ -271,9 +271,9 @@ describe('Tailwind v4 single-bundle contract', () => {
         }
     });
 
-    it('exposes a finite manual build through the development and pre-commit interfaces', () => {
+    it('provides watched development builds and finite production/pre-commit builds', () => {
         expect(packageJson.scripts['build:assets']).toBe('bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --mode production');
-        expect(packageJson.scripts.dev).toBe('bun run build');
+        expect(packageJson.scripts.dev).toBe('bun run typecheck && bun run audit:javascript && bun run audit:templates && vite build --watch --mode development --emptyOutDir=false');
         expect(packageJson.scripts['test:assets-watch']).toBeUndefined();
         expect(packageJson.scripts['pre-commit']).toBe('bun run build');
 

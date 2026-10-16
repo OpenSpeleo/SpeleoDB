@@ -1,0 +1,7 @@
+[
+  {"value": "DEFAULT", "label": "Default"},
+  {"value": "CAVE", "label": "Cave"},
+  {"value": "UNKNOWN", "label": "Unknown"},
+  {"value": "ATTENTION", "label": "Attention"},
+  {"value": "NOGO", "label": "No go"}
+]

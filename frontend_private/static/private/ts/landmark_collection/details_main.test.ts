@@ -200,7 +200,7 @@ describe('initLandmarkCollectionDetails', () => {
         expect(call.landmarks!.map(lm => lm.id)).toEqual(['lm-2']);
     });
 
-    it('edit button opens edit modal via LandmarkForms', () => {
+    it('edit button supplies the source color before destination collections load', () => {
         document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
         initLandmarkCollectionDetails();
 
@@ -210,6 +210,8 @@ describe('initLandmarkCollectionDetails', () => {
         expect(LandmarkForms.openLandmarkEditModal).toHaveBeenCalledTimes(1);
         const call = LandmarkForms.openLandmarkEditModal.mock.calls[0]![0]!;
         expect(call.landmark!.id).toBe('lm-1');
+        expect(call.lockedCollectionId).toBe('col-1');
+        expect(call.collections).toEqual([expect.objectContaining({ id: 'col-1', color: '#aabbcc' })]);
     });
 
     it('delete button opens delete modal via LandmarkForms', () => {
@@ -224,7 +226,7 @@ describe('initLandmarkCollectionDetails', () => {
         expect(call.landmark!.id).toBe('lm-2');
     });
 
-    it('add button opens create modal via LandmarkForms', () => {
+    it('add button supplies the source color before destination collections load', () => {
         document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
         initLandmarkCollectionDetails();
 
@@ -234,6 +236,7 @@ describe('initLandmarkCollectionDetails', () => {
         expect(LandmarkForms.openLandmarkCreateModal).toHaveBeenCalledTimes(1);
         const call = LandmarkForms.openLandmarkCreateModal.mock.calls[0]![0]!;
         expect(call.lockedCollectionId).toBe('col-1');
+        expect(call.collections).toEqual([expect.objectContaining({ id: 'col-1', color: '#aabbcc' })]);
     });
 
     it('coordinate cell copies value on click', () => {
@@ -288,12 +291,15 @@ describe('collection initialization boundaries', () => {
         expect(error).toHaveBeenCalledWith('Failed to parse inline JSON #landmark_collection_context:', expect.any(SyntaxError));
         expect(fetch).not.toHaveBeenCalled(); error.mockRestore();
     });
-    it('normalizes fetched identifiers and permissions for the shared create form without replacing the locked source', async () => {
+    it('normalizes fetched identifiers and permissions for bulk transfer destinations', async () => {
         global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ id: 4, name: 'Target', user_permission_level: 2 }] }) as unknown as typeof fetch;
         initLandmarkCollectionDetails(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
-        document.getElementById('add-landmark-btn')!.click();
+        document.querySelector<HTMLElement>('.landmark-row-select')!.click();
+        document.getElementById('landmarks-bulk-transfer-btn')!.click();
         expect(fetch).toHaveBeenCalledWith('/collections/', { method: 'GET', credentials: 'same-origin', headers: { 'X-CSRFToken': 'test-csrf' } });
-        expect(LandmarkForms.openLandmarkCreateModal).toHaveBeenCalledWith(expect.objectContaining({ lockedCollectionId: 'col-1', collections: [{ id: '4', name: 'Target', user_permission_level: 2, can_write: true, can_admin: false }] }));
+        const call = LandmarkForms.openLandmarkBulkTransferModal.mock.calls[0]![0]!;
+        expect(call.sourceCollection).toMatchObject({ id: 'col-1', color: '#aabbcc' });
+        expect(call.collections).toEqual([{ id: '4', name: 'Target', user_permission_level: 2, can_write: true, can_admin: false }]);
     });
     it('restores selected checkboxes after DataTables redraw and resets selection on reinitialization', () => {
         let draw!: () => void;

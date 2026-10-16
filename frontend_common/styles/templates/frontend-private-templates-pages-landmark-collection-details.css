@@ -1,3 +1,5 @@
+@import "../landmark-icons.css";
+
 #collection_landmarks_table thead th,
     #collection_landmarks_table tbody td {
         text-align: center !important;

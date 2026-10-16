@@ -9,6 +9,8 @@ export interface GISGeometryDetailsContext {
 export interface GISGeometryDetailsResponse {
     revision: number;
     name: string;
+    alias: string;
+    description: string;
     color: string;
     geojson: EditableGeometry;
 }

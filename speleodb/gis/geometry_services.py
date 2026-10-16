@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-GIS_GEOMETRY_EDITABLE_FIELDS = frozenset({"name", "color", "geojson"})
+GIS_GEOMETRY_EDITABLE_FIELDS = frozenset(
+    {"name", "alias", "description", "color", "geojson"}
+)
 GIS_GEOMETRY_CONFLICT_MESSAGE = (
     "This geometry was updated elsewhere. Your changes have been kept. "
     "Load the saved version before trying again."
@@ -35,6 +37,8 @@ class GISGeometryConflictError(ValidationError):
 
 def _clean_geometry(geometry: GISGeometry) -> None:
     geometry.name = sanitize_text(geometry.name).strip()
+    geometry.alias = sanitize_text(geometry.alias).strip()
+    geometry.description = sanitize_text(geometry.description).strip()
     geometry.color = geometry.color.strip().lower()
     geometry.full_clean()
 
@@ -78,7 +82,9 @@ def update_gis_geometry(
     if geometry.revision != expected_revision:
         raise GISGeometryConflictError
     if not set(updates) <= GIS_GEOMETRY_EDITABLE_FIELDS:
-        raise ValidationError("Only name, color, and GeoJSON may be updated.")
+        raise ValidationError(
+            "Only name, alias, description, color, and GeoJSON may be updated."
+        )
     for field, value in updates.items():
         setattr(geometry, field, value)
     _clean_geometry(geometry)

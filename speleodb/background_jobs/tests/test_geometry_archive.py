@@ -48,6 +48,8 @@ def _geometry(
 ) -> GISGeometry:
     geometry: GISGeometry = GISGeometry.objects.create(
         name="Precise geometry",
+        alias="Approach",
+        description="The approach to the entrance.",
         created_by=user.email,
         color="#123456",
         geojson=LINE if geojson is None else geojson,
@@ -81,6 +83,8 @@ def test_geometry_archive_preserves_geojson_and_metadata(
     assert record["category"] == "geometries"
     assert record["id"] == str(geometry.id)
     assert record["name"] == geometry.name
+    assert record["alias"] == geometry.alias
+    assert record["description"] == geometry.description
     assert record["created_by"] == geometry.created_by
     assert record["color"] == geometry.color
     assert record["revision"] == geometry.revision

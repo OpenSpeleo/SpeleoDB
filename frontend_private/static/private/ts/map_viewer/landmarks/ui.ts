@@ -4,6 +4,8 @@ import type { ViewerLandmark, ViewerLandmarkCollection } from '../../../../../..
 import type { LandmarkCollectionGroup } from '../../../../../../ts-types/domain/landmark-presentation.ts';
 import { openMapDialog, closeMapDialog } from '../components/dialog_lifecycle.ts';
 import { LandmarkManager } from './manager.ts';
+import { readLandmarkIcon } from './form_model.ts';
+import { renderLandmarkIconPicker, initializeLandmarkIconPicker } from './form_presentation.ts';
 import { State } from '../state.ts';
 import { Utils } from '../utils.ts';
 import { Modal } from '../components/modal.ts';
@@ -349,6 +351,7 @@ export const LandmarkUI = {
                     <textarea id="landmark-description" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
                 ${this.getCollectionSelectHtml('landmark-collection')}
+                ${renderLandmarkIconPicker()}
                 <div class="bg-srgb-slate-700-50 rounded-lg p-3 text-sm text-slate-300">
                     Location: ${Number(coordinates[1]).toFixed(7)}, ${Number(coordinates[0]).toFixed(7)}
                 </div>
@@ -362,6 +365,7 @@ export const LandmarkUI = {
         const html = Modal.base('create-landmark-modal', 'Create Landmark', formHtml, footer, 'max-w-md');
 
         Modal.open('create-landmark-modal', html, () => {
+            initializeLandmarkIconPicker(document.getElementById('create-landmark-form')!, State.landmarkCollections);
             (document.getElementById('landmark-name') as HTMLInputElement).focus();
             (document.getElementById('create-landmark-form') as HTMLFormElement).onsubmit = async (e) => {
                 e.preventDefault();
@@ -370,6 +374,7 @@ export const LandmarkUI = {
 
                 try {
                     const landmark = await LandmarkManager.createLandmark({
+                        icon: readLandmarkIcon(document.getElementById('create-landmark-form')!),
                         name,
                         description: (document.getElementById('landmark-description') as HTMLTextAreaElement).value.trim(),
                         collection: this.getSelectedCollectionValue('landmark-collection'),
@@ -398,6 +403,7 @@ export const LandmarkUI = {
                     <textarea id="landmark-description-manual" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
                 </div>
                 ${this.getCollectionSelectHtml('landmark-collection-manual')}
+                ${renderLandmarkIconPicker()}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(e.g., 38.8977)</span></label>
@@ -419,6 +425,7 @@ export const LandmarkUI = {
         const html = Modal.base('create-landmark-manual-modal', 'Create Landmark', formHtml, footer, 'max-w-md');
 
         Modal.open('create-landmark-manual-modal', html, () => {
+            initializeLandmarkIconPicker(document.getElementById('create-landmark-manual-form')!, State.landmarkCollections);
             (document.getElementById('landmark-name-manual') as HTMLInputElement).focus();
             (document.getElementById('create-landmark-manual-form') as HTMLFormElement).onsubmit = async (e) => {
                 e.preventDefault();
@@ -455,6 +462,7 @@ export const LandmarkUI = {
 
                 try {
                     const landmark = await LandmarkManager.createLandmark({
+                        icon: readLandmarkIcon(document.getElementById('create-landmark-manual-form')!),
                         name,
                         description,
                         collection: this.getSelectedCollectionValue('landmark-collection-manual'),
@@ -495,6 +503,7 @@ export const LandmarkUI = {
                     <textarea id="edit-landmark-description" rows="3" class="form-input form-textarea">${landmark.description || ''}</textarea>
                 </div>
                 ${Utils.raw(this.getCollectionSelectHtml('edit-landmark-collection', landmark.collection))}
+                ${Utils.raw(renderLandmarkIconPicker(landmark.icon))}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-xs text-slate-500">(-90 to 90)</span></label>
@@ -516,6 +525,7 @@ export const LandmarkUI = {
         const html = Modal.base('edit-landmark-modal', 'Edit Landmark', formHtml, footer, 'max-w-md');
 
         Modal.open('edit-landmark-modal', html, () => {
+            initializeLandmarkIconPicker(document.getElementById('edit-landmark-form')!, State.landmarkCollections);
             (document.getElementById('edit-landmark-form') as HTMLFormElement).onsubmit = async (e) => {
                 e.preventDefault();
                 const errorEl = (document.getElementById('edit-landmark-error') as HTMLElement);
@@ -552,6 +562,7 @@ export const LandmarkUI = {
 
                 try {
                     await LandmarkManager.updateLandmark(landmarkId, {
+                        icon: readLandmarkIcon(document.getElementById('edit-landmark-form')!),
                         name,
                         description,
                         collection: this.getSelectedCollectionValue('edit-landmark-collection'),

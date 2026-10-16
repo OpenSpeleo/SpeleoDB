@@ -1,4 +1,5 @@
 import type { EntityId } from './identifiers.ts';
+import type { LandmarkIcon } from '@speleodb/map-core';
 import type { ViewerLandmark } from './map-entities.ts';
 
 export interface LandmarkFormCollection {
@@ -10,6 +11,7 @@ export interface LandmarkFormCollection {
 }
 export type LandmarkFormCollections = Map<EntityId, LandmarkFormCollection> | LandmarkFormCollection[];
 export interface LandmarkFormPayload {
+    icon: LandmarkIcon;
     name: string;
     description: string;
     collection: string | null;

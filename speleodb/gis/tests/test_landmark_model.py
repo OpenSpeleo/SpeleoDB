@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -305,3 +308,12 @@ class TestLandmarkModel:
                 collection=personal_collection,
                 description="",
             )
+
+
+def test_landmark_icon_contract_matches_frontend_fixture() -> None:
+    contract = json.loads(
+        Path(__file__).with_name("fixtures").joinpath("landmark_icons.json").read_text()
+    )
+    assert contract == [
+        {"value": value, "label": str(label)} for value, label in Landmark.Icon.choices
+    ]

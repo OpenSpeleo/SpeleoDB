@@ -1,3 +1,4 @@
+import { isGeometryAliasValid } from '@speleodb/map-core';
 import type { GISGeometryDetailsContext, GISGeometryDetailsResponse, ParsedGeometryText } from '../../ts-types/controllers/gis-geometry-details.ts';
 import type { EditableGeometry } from '../../ts-types/domain/geometry-editor.ts';
 import type { AjaxFailure } from '../../ts-types/domain/forms/errors.ts';
@@ -43,6 +44,8 @@ export async function init(context: GISGeometryDetailsContext) {
     const textarea = document.getElementById('geometry-geojson') as HTMLTextAreaElement;
     if (!form || !textarea) return;
     const name = form.querySelector<HTMLInputElement>('[name="name"]')!;
+    const alias = form.querySelector<HTMLInputElement>('[name="alias"]')!;
+    const description = form.querySelector<HTMLTextAreaElement>('[name="description"]')!;
     const color = form.querySelector<HTMLInputElement>('[name="color"]')!;
     const colorHex = document.getElementById('color-hex-input') as HTMLInputElement | null;
     const submit = document.getElementById('btn_submit') as HTMLButtonElement;
@@ -53,10 +56,10 @@ export async function init(context: GISGeometryDetailsContext) {
     let revision = context.revision;
     let pending = false;
     let permissionLost = false;
-    let baseline = { name: name.value, color: color.value, text: textarea.value };
+    let baseline = { name: name.value, alias: alias.value, description: description.value, color: color.value, text: textarea.value };
 
     function changed() {
-        return name.value !== baseline.name || color.value !== baseline.color || textarea.value !== baseline.text;
+        return name.value !== baseline.name || alias.value !== baseline.alias || description.value !== baseline.description || color.value !== baseline.color || textarea.value !== baseline.text;
     }
 
     function showError(message: string) {
@@ -81,7 +84,7 @@ export async function init(context: GISGeometryDetailsContext) {
             ? `${validation.geometry?.type || 'Invalid geometry'} · ${validation.vertexCount} / ${DEFAULTS.GIS_GEOMETRY.MAX_VERTICES} vertices · Bounding-box area: ${area!.toLocaleString(undefined, { maximumFractionDigits: 6 })} km²${warningText}`
             : 'Check the GeoJSON below to complete this geometry.';
         jsonStatus.textContent = !validation.valid ? '— Needs attention' : textarea.value !== baseline.text ? '— Unsaved changes' : '';
-        if (submit) submit.disabled = (pending || permissionLost || !validation.valid || invalidColor() || !name.value.trim() || !changed());
+        if (submit) submit.disabled = (pending || permissionLost || !validation.valid || invalidColor() || !name.value.trim() || !isGeometryAliasValid(alias.value) || !changed());
         return validation;
     }
 
@@ -97,7 +100,7 @@ export async function init(context: GISGeometryDetailsContext) {
     form.addEventListener('input', () => {
         saved.hidden = true;
         const validation = refresh();
-        showError(!validation.valid ? validation.error : invalidColor() ? 'Enter a six-digit hex color.' : '');
+        showError(!validation.valid ? validation.error : invalidColor() ? 'Enter a six-digit hex color.' : !isGeometryAliasValid(alias.value) ? `Alias must be at most ${DEFAULTS.GIS_GEOMETRY.ALIAS_MAX_LENGTH} characters.` : '');
     });
     form.addEventListener('change', refresh);
     // Color presets update their hidden input synchronously without a DOM change event.
@@ -119,12 +122,14 @@ export async function init(context: GISGeometryDetailsContext) {
         showSuccessModal: false,
         beforeSubmit(payload) {
             const validation = refresh();
-            if (pending || permissionLost || !validation.valid || invalidColor() || !name.value.trim() || !changed()) {
-                showError(validation.error || (invalidColor() ? 'Enter a six-digit hex color.' : !name.value.trim() ? 'Enter a geometry name.' : ''));
+            if (pending || permissionLost || !validation.valid || invalidColor() || !name.value.trim() || !isGeometryAliasValid(alias.value) || !changed()) {
+                showError(validation.error || (invalidColor() ? 'Enter a six-digit hex color.' : !name.value.trim() ? 'Enter a geometry name.' : !isGeometryAliasValid(alias.value) ? `Alias must be at most ${DEFAULTS.GIS_GEOMETRY.ALIAS_MAX_LENGTH} characters.` : ''));
                 return false;
             }
             delete payload.csrfmiddlewaretoken;
             payload.name = name.value.trim();
+            payload.alias = alias.value.trim();
+            payload.description = description.value.trim();
             payload.color = color.value;
             payload.expected_revision = revision;
             if (textarea.value !== baseline.text) payload.geojson = validation.geometry;
@@ -146,9 +151,11 @@ export async function init(context: GISGeometryDetailsContext) {
         onSuccess(response) {
             revision = response.revision;
             name.value = response.name;
+            alias.value = response.alias;
+            description.value = response.description;
             setColor(response.color);
             textarea.value = JSON.stringify(response.geojson, null, 2);
-            baseline = { name: name.value, color: color.value, text: textarea.value };
+            baseline = { name: name.value, alias: alias.value, description: description.value, color: color.value, text: textarea.value };
             showError('');
             saved.hidden = false;
             refresh();

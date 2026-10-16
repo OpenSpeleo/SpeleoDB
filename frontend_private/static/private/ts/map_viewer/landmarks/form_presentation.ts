@@ -1,4 +1,6 @@
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
+import { LANDMARK_ICON_OPTIONS, normalizeLandmarkIcon } from '@speleodb/map-core';
+import { LANDMARK_ICON_URLS } from '@speleodb/map-viewer/landmark-icons';
 import type { ViewerLandmark } from '../../../../../../ts-types/domain/map-entities.ts';
 import type { LandmarkFormCollection, LandmarkFormCollections, LandmarkRenderOptions } from '../../../../../../ts-types/domain/landmark-forms.ts';
 import { Utils } from '../utils.ts';
@@ -85,6 +87,7 @@ export function renderLandmarkFormHtml({
             : '');
     const selectedCollectionId = isEdit ? landmark?.collection : null;
 
+
     return Utils.safeHtml`
         <form id="${formId}" class="flow-y-4" novalidate>
             <div>
@@ -101,6 +104,7 @@ export function renderLandmarkFormHtml({
                 selectedId: selectedCollectionId,
                 lockedCollection,
             }))}
+            ${Utils.raw(renderLandmarkIconPicker(landmark?.icon))}
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(-90 to 90)</span></label>
@@ -113,6 +117,41 @@ export function renderLandmarkFormHtml({
             </div>
             <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>
         </form>`;
+}
+
+/** Shared by map creation/editing and collection detail forms. */
+export function renderLandmarkIconPicker(value?: unknown) {
+    const icon = normalizeLandmarkIcon(value);
+    const iconChoices = LANDMARK_ICON_OPTIONS.map(option => {
+        // JSON quotes keep CSS data URLs valid when Vite inlines SVG apostrophes.
+        // safeHtml then escapes the complete CSS value for the HTML attribute.
+        const iconUrl = `url(${JSON.stringify(LANDMARK_ICON_URLS[option.value])})`;
+        return Utils.safeHtml`
+            <label class="landmark-icon-choice">
+                <input type="radio" name="icon" value="${option.value}" ${option.value === icon ? 'checked' : ''}>
+                <span class="landmark-icon-choice__preview" aria-hidden="true" style="mask-image: ${iconUrl}; -webkit-mask-image: ${iconUrl}"></span>
+                <span>${option.label}</span>
+            </label>`;
+    }).join('');
+    return Utils.safeHtml`
+        <fieldset class="landmark-icon-picker">
+            <legend class="block text-sm font-medium text-slate-300 mb-2">Icon</legend>
+            <div class="landmark-icon-picker__choices">${Utils.raw(iconChoices)}</div>
+            <p class="text-xs text-slate-400 mt-2">Icons use the collection color.</p>
+        </fieldset>`;
+}
+
+/** Native radio inputs keep the shared map/table picker keyboard accessible. */
+export function initializeLandmarkIconPicker(form: HTMLElement, collections: LandmarkFormCollections, lockedCollectionId?: EntityId | null) {
+    const collectionSelect = form.querySelector<HTMLSelectElement | HTMLInputElement>('select, input[type="hidden"][id$="-collection"]');
+    const refresh = () => {
+        const id = lockedCollectionId || collectionSelect?.value;
+        const collection = findCollection(collections, id)
+            || listCollections(collections).find(item => item.is_personal) || null;
+        form.querySelector<HTMLElement>('.landmark-icon-picker__choices')!.style.color = getCollectionColor(collection);
+    };
+    collectionSelect?.addEventListener('change', refresh);
+    refresh();
 }
 
 export function renderSelectedLandmarksList(landmarks: ViewerLandmark[]) {

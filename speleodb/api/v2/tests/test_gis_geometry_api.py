@@ -82,6 +82,8 @@ class TestGISGeometryAPI(BaseAPITestCase):
         assert len(data) == EXTRA_GEOMETRY_COUNT + 1
         assert all(item["geometry_type"] == "LineString" for item in data)
         assert all("geojson" not in item for item in data)
+        assert all("description" not in item for item in data)
+        assert all(item["alias"] == "" for item in data)
         assert all(
             item["user_permission_level"] == PermissionLevel.ADMIN for item in data
         )
@@ -271,3 +273,77 @@ class TestGISGeometryAPI(BaseAPITestCase):
             format="json",
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_optional_metadata_roundtrips_and_clears_atomically(self) -> None:
+        detail = self.client.get(self.detail_url)
+        assert detail.data["alias"] == ""
+        assert detail.data["description"] == ""
+        updated = self.client.patch(
+            self.detail_url,
+            {
+                "alias": "  <b>Entrance</b>  ",
+                "description": "Line one\nLine two <script>bad()</script>",
+                "expected_revision": 1,
+            },
+            format="json",
+        )
+        assert updated.status_code == status.HTTP_200_OK
+        assert updated.data["alias"] == "Entrance"
+        assert updated.data["description"] == "Line one\nLine two"
+        assert updated.data["revision"] == UPDATED_REVISION
+        listed = self.client.get(self.list_url)
+        assert listed.data[0]["alias"] == "Entrance"
+        assert "description" not in listed.data[0]
+        stale = self.client.patch(
+            self.detail_url,
+            {"alias": "Stale", "description": "Stale", "expected_revision": 1},
+            format="json",
+        )
+        assert stale.status_code == status.HTTP_409_CONFLICT
+        cleared = self.client.patch(
+            self.detail_url,
+            {"alias": "", "description": "", "expected_revision": UPDATED_REVISION},
+            format="json",
+        )
+        assert cleared.status_code == status.HTTP_200_OK
+        self.geometry.refresh_from_db()
+        assert self.geometry.alias == ""
+        assert self.geometry.description == ""
+
+    def test_alias_boundary_and_invalid_metadata_do_not_partially_write(self) -> None:
+        response = self.client.patch(
+            self.detail_url,
+            {"alias": "a" * 32, "expected_revision": 1},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        for invalid in ({"alias": "a" * 33}, {"alias": None}, {"description": None}):
+            response = self.client.patch(
+                self.detail_url,
+                {
+                    "name": "Must not persist",
+                    "expected_revision": UPDATED_REVISION,
+                    **invalid,
+                },
+                format="json",
+            )
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            self.geometry.refresh_from_db()
+            assert self.geometry.name == "Cave entrance"
+            assert self.geometry.alias == "a" * 32
+            assert self.geometry.revision == UPDATED_REVISION
+
+    def test_alias_accepts_32_unicode_codepoints_on_creation(self) -> None:
+        response = self.client.post(
+            self.list_url,
+            {
+                "name": "Unicode",
+                "alias": "🦇" * 32,
+                "description": "Optional",
+                "geojson": LINE,
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["alias"] == "🦇" * 32
+        assert response.data["description"] == "Optional"

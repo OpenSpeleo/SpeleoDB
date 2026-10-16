@@ -165,6 +165,7 @@ describe('readLandmarkFormPayload', () => {
 
     it('reads form values from DOM elements', () => {
         document.body.innerHTML = `
+            <form id="f"><input type="radio" name="icon" value="CAVE" checked></form>
             <input id="f-name" value="Test LM">
             <textarea id="f-description">A description</textarea>
             <input id="f-latitude" value="45.5">
@@ -182,6 +183,7 @@ describe('readLandmarkFormPayload', () => {
 
     it('uses lockedCollectionId when provided', () => {
         document.body.innerHTML = `
+            <form id="f"><input type="radio" name="icon" value="CAVE" checked></form>
             <input id="f-name" value="Test">
             <textarea id="f-description"></textarea>
             <input id="f-latitude" value="10">
@@ -381,7 +383,7 @@ describe('landmark modal transport and facade contracts', () => {
         expect(url).toBe('/landmarks/');
         expect(config.method).toBe('POST');
         expect(config.headers['Content-Type']).toBe('application/json');
-        expect(JSON.parse(config.body!)).toEqual({ name: 'New landmark', description: '', collection: null, latitude: 12, longitude: 34 });
+        expect(JSON.parse(config.body!)).toEqual({ name: 'New landmark', description: '', icon: 'DEFAULT', collection: null, latitude: 12, longitude: 34 });
     });
 
     it('keeps non-JSON success data and catches callback rejection in the existing inline error path', async () => {
@@ -407,5 +409,27 @@ describe('landmark modal transport and facade contracts', () => {
         expect(config.body).toBeUndefined();
         expect(config.headers).not.toHaveProperty('Content-Type');
         expect(onSuccess).toHaveBeenCalledWith('one');
+    });
+});
+
+
+describe('landmark icon picker', () => {
+    it('retains the icon while recoloring collection previews and submitting changes', () => {
+        document.body.innerHTML = renderLandmarkFormHtml({
+            mode: 'edit', formId: 'icons', errorElId: 'error',
+            landmark: { id: 'one', name: 'Cave', icon: 'CAVE', collection: 'red', latitude: 1, longitude: 2 },
+            collections: [{ id: 'red', color: '#ff0000', can_write: true }, { id: 'blue', color: '#0000ff', can_write: true }],
+        });
+        const form = document.getElementById('icons')!;
+        landmarkPresentation.initializeLandmarkIconPicker(form, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }]);
+        expect(form.querySelectorAll('input[name="icon"]')).toHaveLength(5);
+        expect(readLandmarkFormPayload('icons').icon).toBe('CAVE');
+        const collection = document.getElementById('icons-collection') as HTMLSelectElement;
+        collection.value = 'blue';
+        collection.dispatchEvent(new Event('change'));
+        expect(form.querySelector<HTMLElement>('.landmark-icon-picker__choices')!.style.color).toBe('rgb(0, 0, 255)');
+        expect(readLandmarkFormPayload('icons').icon).toBe('CAVE');
+        (form.querySelector('input[value="NOGO"]') as HTMLInputElement).click();
+        expect(readLandmarkFormPayload('icons').icon).toBe('NOGO');
     });
 });

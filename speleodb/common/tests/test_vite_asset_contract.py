@@ -92,7 +92,10 @@ def test_root_commands_define_one_vite_pipeline() -> None:
         "bun run typecheck && bun run audit:javascript && bun run audit:templates"
         " && vite build --mode production"
     )
-    assert scripts["dev"] == "bun run build"
+    assert scripts["dev"] == (
+        "bun run typecheck && bun run audit:javascript && bun run audit:templates"
+        " && vite build --watch --mode development --emptyOutDir=false"
+    )
     assert scripts["start"] == "bun run build"
     assert not any("tailwind" in name or "esbuild" in name for name in scripts)
     templates = "\n".join(path.read_text() for path in template_files())

@@ -9,6 +9,7 @@ import { ViewerUpdates } from '../../viewer_updates.ts';
 import { Colors } from '../colors.ts';
 import { applyDepthLimit, mergeDepthDomains, isValidDepthLimit } from '../depth.ts';
 import { cancelMapNavigation } from '../navigation_intent.ts';
+import { isGISGeometryVisible, showGISGeometryLayers } from './gis_geometry.ts';
 
 /** The display owner calls back through its facade so overrides retain their receiver. */
 interface DisplayLayerOwner {
@@ -65,6 +66,13 @@ export function scheduleDisplayUpdate(this: Pick<DisplayLayerOwner, 'applyProjec
         if (!valid()) return;
         if (applyProjects) this.applyProjectScopedMarkerVisibility();
         if (dirty.has('categories')) this.applyCategoryVisibility('landmarks');
+        if (dirty.has('geometry-labels')) {
+            for (const id of State.allGISGeometryLayers.keys()) {
+                if (!valid()) return;
+                showGISGeometryLayers(id, isGISGeometryVisible(id));
+                if (context.shouldYield()) await context.yield();
+            }
+        }
         if (dirty.has('depth')) this.recomputeActiveDepthDomain(false);
         if (dirty.has('colors') || (dirty.has('depth') && this.colorMode === 'depth')) {
             for (const [projectId, layerIds] of State.allProjectLayers) {
@@ -115,6 +123,13 @@ export function setCategoryVisibility(this: Pick<DisplayLayerOwner, 'emitDisplay
     return this.scheduleDisplayUpdate('categories');
 }
 
+export function setGeometryLabelsVisible(this: Pick<DisplayLayerOwner, 'emitDisplayPreferencesChanged' | 'scheduleDisplayUpdate'>, visible: boolean) {
+    if (State.displayPreferences.geometryLabelsVisible === visible) return;
+    State.displayPreferences.geometryLabelsVisible = visible;
+    this.emitDisplayPreferencesChanged();
+    return this.scheduleDisplayUpdate('geometry-labels');
+}
+
 export function setStationTypeVisibility(this: Pick<DisplayLayerOwner, 'emitDisplayPreferencesChanged' | 'scheduleDisplayUpdate'>, type: DisplayStationType, visible: unknown) {
     if (!Object.hasOwn(State.displayPreferences.stationTypes, type) || typeof visible !== 'boolean') return;
     if (State.displayPreferences.stationTypes[type] === visible) return;
@@ -152,7 +167,7 @@ export function applyCategoryVisibility(this: Pick<DisplayLayerOwner, 'applyProj
 
 export function applyDisplayPreferences(this: Pick<DisplayLayerOwner, 'emitDisplayPreferencesChanged' | 'scheduleDisplayUpdate'>) {
     this.emitDisplayPreferencesChanged();
-    return this.scheduleDisplayUpdate('categories', 'depth', 'colors');
+    return this.scheduleDisplayUpdate('categories', 'depth', 'colors', 'geometry-labels');
 }
 
 export function applySurveyStationVisibility(projectId: EntityId, projectVisible: boolean) {

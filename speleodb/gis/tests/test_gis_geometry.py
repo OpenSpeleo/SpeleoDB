@@ -56,6 +56,7 @@ def test_python_limits_consume_the_same_contract_as_the_browser() -> None:
         "warning_area_m2": geometry_validation.GIS_GEOMETRY_WARNING_AREA_M2,
         "earth_radius_m": geometry_validation.GIS_GEOMETRY_EARTH_RADIUS_M,
         "name_max_length": geometry_validation.GIS_GEOMETRY_NAME_MAX_LENGTH,
+        "alias_max_length": geometry_validation.GIS_GEOMETRY_ALIAS_MAX_LENGTH,
         "position_dimensions": geometry_validation.POSITION_DIMENSIONS,
         "min_line_vertices": geometry_validation.MIN_LINE_VERTICES,
         "min_polygon_vertices": geometry_validation.MIN_POLYGON_VERTICES,

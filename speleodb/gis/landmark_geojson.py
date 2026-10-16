@@ -27,6 +27,7 @@ def landmark_geojson_feature(
         properties={
             "name": instance.name,
             "description": instance.description,
+            "icon": instance.icon,
             "collection": str(instance.collection_id),
             "collection_name": instance.collection.name,
             "collection_type": instance.collection.collection_type,

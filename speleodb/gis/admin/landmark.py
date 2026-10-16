@@ -43,7 +43,7 @@ class LandmarkAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     _SUPERUSER_ONLY_FIELDS: frozenset[str] = frozenset({"latitude", "longitude"})
 
     fieldsets = (
-        ("Basic Information", {"fields": ("name", "description")}),
+        ("Basic Information", {"fields": ("name", "description", "icon")}),
         ("Collection", {"fields": ("collection",)}),
         (
             "Location",

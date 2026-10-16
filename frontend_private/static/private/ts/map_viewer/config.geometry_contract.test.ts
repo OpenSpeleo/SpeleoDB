@@ -1,3 +1,5 @@
+import { LANDMARK_ICON_OPTIONS } from '@speleodb/map-core';
+import landmarkIcons from '../../../../../speleodb/gis/tests/fixtures/landmark_icons.json';
 import { GIS_GEOMETRY_CONTRACT } from '@speleodb/map-core/geometry';
 import geometryCases from '@speleodb/map-core/geometry-cases.json';
 import backendCases from '../../../../../speleodb/gis/tests/fixtures/gis_geometry_cases.json';
@@ -15,4 +17,9 @@ it('uses exactly the same geometry constants as the Python contract', () => {
     expect(geometryCases).toEqual(backendCases);
     expect(browserContract.types).toEqual(['LineString', 'Polygon']);
     expect(browserContract.max_area_m2).toBe(30_000_000);
+});
+
+
+it('shares the Django landmark icon enum and labels with both applications', () => {
+    expect(LANDMARK_ICON_OPTIONS).toEqual(landmarkIcons);
 });

@@ -123,6 +123,12 @@ an explicit Django live-server test outside ordinary backend test discovery:
 pytest tests/browser/test_django_browser.py
 ```
 
+Use PostgreSQL for this live-server wrapper, as CI does. Set `TEST_DATABASE_URL`
+to the existing PostgreSQL connection when the local test dotenv selects SQLite;
+pytest creates its isolated test database. Concurrent real viewer requests
+cannot safely share the in-memory SQLite connection: session reads and
+transactions can fail even though sequential API requests succeed.
+
 Run this only after installing Chromium/WebKit and building assets. The harness
 creates a verified database-only user with a generated password, starts Django
 through pytest's live-server fixture, and passes the URL and credentials through
@@ -150,7 +156,8 @@ but does not install or run Playwright browsers.
 
 The browser job supplies dummy GitLab/storage settings and does not receive a
 GitLab token or start S3/Redis services: route fixtures are database-only,
-mutations are intercepted and static assets are collected locally. It also
+legacy controller mutations are intercepted, GIS metadata/icon cases use real
+database-only API mutations, and static assets are collected locally. It also
 passes `--gitlab-audit-deny-create`, enforcing zero remote project creations.
 Its audit artifact is `browser-gitlab-creation-audit`, separate from the backend
 job's `gitlab-creation-audit`; the browser report remains
@@ -188,11 +195,13 @@ fullscreen without dispatching it; the next Escape closes the dialog. Both paths
 verify focus restoration, and ordinary dialog Escape behavior is tested
 independently.
 
-Frontend assets are rebuilt manually with
-`docker exec -w /app speleodb-monorepo-django bun run build`. Wait for
-completion before starting browser checks or refreshing a page. Container
-startup and source edits do not trigger builds; there is no asset reload client
-or generation polling endpoint. `dev` and `start` are finite build aliases.
+For development, `bun run dev` starts opt-in automatic asset rebuilds after
+initial type checks and ownership audits; refresh the browser manually after
+each successful build. Stop that watcher before running
+`docker exec -w /app speleodb-monorepo-django bun run build`, and wait for
+completion before starting browser checks. Container startup does not start an
+asset watcher, and there is no asset reload client or generation polling
+endpoint. `start` remains a finite production build alias.
 
 `viewer-assets.spec.ts` opens the real survey context menu, station manager and
 station, exploration-lead and cylinder dialogs. Every shared icon must decode,
@@ -201,6 +210,25 @@ Provider attribution coverage switches from Mapbox to ESRI and back through the
 source picker, preserving source credits and the provider logo while excluding
 only the provider's Improve this map action. API and tile data are intercepted;
 compiled application assets and the native attribution control remain real.
+
+`gis-metadata-icons.spec.ts` verifies optional geometry aliases with the real
+renderer, device-persisted label visibility, and all five Landmark icons. It
+checks the cold image decode's zoom sizing and collision policy, then switches
+styles to verify image restoration and label preferences without repeat geometry
+downloads. These cases use uniquely named test-owned collections, landmarks and
+geometries created through the real authenticated APIs. They leave existing
+developer records untouched and remove their own landmarks before deactivating
+their collections and geometries in fixture teardown, including after failures.
+The map's manual, coordinate, and edit dialogs and collection detail forms
+submit successful real mutations, verify saved values through independent API
+reads, and reopen after reload to check persistence. All five built CSS icon
+masks decode in the collection color; DEFAULT also registers from default-only
+test data. Assertions select the test collection's expected image IDs, allowing
+other records to coexist in the development account. Provider styles, raster
+tiles and font responses remain deterministic third-party boundaries. The font
+response omits glyph contents, so label assertions cover symbol/source contracts
+rather than typography. No first-party API response or renderer method is
+replaced.
 
 For a focused diagnostic wrapper run, set `VIEWER_BROWSER_GREP` to a Playwright
 test-name regular expression. The wrapper passes it as a separate `--grep`

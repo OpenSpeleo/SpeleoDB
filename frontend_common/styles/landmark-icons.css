@@ -1,0 +1,49 @@
+.landmark-icon-picker__choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.landmark-icon-choice {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.35rem;
+    position: relative;
+    min-width: 4rem;
+    padding: 0.6rem;
+    border: 1px solid #475569;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.landmark-icon-choice:has(input:checked) {
+    border-color: currentColor;
+    background: #334155;
+}
+
+.landmark-icon-choice:has(input:focus-visible) {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.landmark-icon-choice input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.landmark-icon-choice__preview {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    background-color: currentColor;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+}

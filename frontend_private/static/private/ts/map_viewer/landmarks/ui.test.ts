@@ -273,7 +273,7 @@ describe('LandmarkUI form lifecycle', () => {
         expect((document.getElementById('create-landmark-form') as HTMLFormElement).onsubmit!.constructor.name).toBe('AsyncFunction');
         await submit('create-landmark-form'); expect(LandmarkManager.createLandmark).not.toHaveBeenCalled();
         field('landmark-name', '  Place  '); field('landmark-description', '  Note  '); await submit('create-landmark-form');
-        expect(LandmarkManager.createLandmark).toHaveBeenCalledWith({ name: 'Place', description: 'Note', collection: null, latitude: '46.5', longitude: '6.5' });
+        expect(LandmarkManager.createLandmark).toHaveBeenCalledWith({ icon: 'DEFAULT', name: 'Place', description: 'Note', collection: null, latitude: '46.5', longitude: '6.5' });
         expect(details).toHaveBeenCalledWith('created', true); expect(details.mock.contexts[0]).toBe(LandmarkUI);
         expect(Modal.close).toHaveBeenCalledWith('create-landmark-modal');
     });
@@ -284,17 +284,18 @@ describe('LandmarkUI form lifecycle', () => {
     });
     it('creates manual coordinates as numbers and closes before camera navigation', async () => {
         LandmarkManager.createLandmark.mockResolvedValue({ id: 'new' }); LandmarkUI.openCreateModalManual();
+        (document.querySelector('#create-landmark-manual-form input[value="ATTENTION"]') as HTMLInputElement).checked = true;
         field('landmark-name-manual', 'Place'); field('landmark-latitude-manual', '46.5'); field('landmark-longitude-manual', '6.5');
         await submit('create-landmark-manual-form');
-        expect(LandmarkManager.createLandmark).toHaveBeenCalledWith(expect.objectContaining({ latitude: 46.5, longitude: 6.5, collection: null }));
+        expect(LandmarkManager.createLandmark).toHaveBeenCalledWith(expect.objectContaining({ icon: 'ATTENTION', latitude: 46.5, longitude: 6.5, collection: null }));
         expect(goToLandmark).toHaveBeenCalledWith('new', 46.5, 6.5);
         expect(Modal.close.mock.invocationCallOrder[0]!).toBeLessThan(goToLandmark.mock.invocationCallOrder[0]!);
     });
     it('updates writable landmarks and preserves separate edit and detail closes', async () => {
-        State.allLandmarks.set('lm', { id: 'lm', name: 'Old', latitude: 1, longitude: 2, can_write: true });
+        State.allLandmarks.set('lm', { id: 'lm', name: 'Old', icon: 'CAVE', latitude: 1, longitude: 2, can_write: true });
         LandmarkUI.openEditModal('lm'); field('edit-landmark-name', '  New  ');
         await submit('edit-landmark-form');
-        expect(LandmarkManager.updateLandmark).toHaveBeenCalledWith('lm', { name: 'New', description: '', latitude: 1, longitude: 2, collection: null });
+        expect(LandmarkManager.updateLandmark).toHaveBeenCalledWith('lm', { icon: 'CAVE', name: 'New', description: '', latitude: 1, longitude: 2, collection: null });
         expect(Modal.close.mock.calls).toEqual([['edit-landmark-modal'], ['landmark-details-modal']]);
         expect(goToLandmark).toHaveBeenCalledWith('lm', 1, 2);
     });

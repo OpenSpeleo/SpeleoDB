@@ -237,3 +237,38 @@ Coverage is split by ownership boundary:
   WRITE updates, shared view picker rendering, personal detail form hiding,
   Landmark GeoJSON `collection_color`, grouped Landmark manager rows, and map
   layer paint expressions.
+
+## Landmark icons
+
+Each Landmark has an `icon` enum: `DEFAULT`, `CAVE`, `UNKNOWN`, `ATTENTION`, or
+`NOGO`. Creation defaults to `DEFAULT`; omitted partial updates preserve the
+current value, and invalid or null values are rejected. Existing records and
+imports use DEFAULT. The collection remains the sole color owner, so transfers
+preserve the icon while adopting the destination color. The optional icon is
+editable by the same collection WRITE permission as other Landmark fields.
+
+The web map and collection detail pages use the same accessible radio picker,
+previewing the selected collection color. Collection detail forms use their
+server-rendered collection metadata immediately, independently of the request
+for bulk-transfer destinations. The mobile app uses the same enum and assets.
+`@speleodb/map-core` owns enum labels and validation;
+`@speleodb/map-viewer/landmark-icons` owns the normalized monochrome SVGs and
+per-map image registry. Registries deduplicate icon/color variants, restore them
+after style changes, and release unused images. DEFAULT uses the same SVG raster
+size and contrast halo as the other four icons, including collections containing
+only default markers. Failed image loading retains the triangle font fallback.
+Async image readiness updates only the marker layout, preserving collection
+filters, interaction IDs, visibility and layer ordering. Map coordinate
+creation, manual creation, editing, and collection forms share the picker
+renderer, initializer, and selected-value reader. The map keeps its existing
+manager mutation/refresh lifecycle. Browser tests inspect decoded CSS masks from
+the built bundles, including Vite's inlined SVG data URLs, and verify successful
+create/edit requests, persistence after reload, and preservation when editing
+other fields. The browser cases create isolated collections and geometries
+through the real API and remove only their own records during teardown.
+
+Authenticated JSON, private GeoJSON, both Landmark OGC services and backup
+GeoJSON expose `icon`. OGC validators include the representation version and
+Landmark modification timestamp, so icon changes invalidate cached output. Tests
+cover enum agreement with the shared packages, all choices, omitted and invalid
+values, image lifecycle, picker edits, default migration and OGC ETags.

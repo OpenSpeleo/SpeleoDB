@@ -177,7 +177,7 @@ function reloadAfterMutation() {
 
 function openCreateModal() {
     LandmarkForms.openLandmarkCreateModal({
-        collections: state.collections,
+        collections: [state.sourceCollection!],
         lockedCollectionId: state.sourceCollection!.id,
         onSuccess: reloadAfterMutation,
     });
@@ -188,7 +188,7 @@ function openEditModalForRow(landmarkId: string | undefined) {
     if (!landmark) return;
     LandmarkForms.openLandmarkEditModal({
         landmark,
-        collections: state.collections,
+        collections: [state.sourceCollection!],
         lockedCollectionId: state.sourceCollection!.id,
         onSuccess: reloadAfterMutation,
     });
@@ -388,9 +388,8 @@ export function initLandmarkCollectionDetails() {
     initDataTable();
     refreshBulkBar();
 
-    // Eagerly fetch writable collections so the create modal's locked badge
-    // can render the collection name + color even though the form keeps the
-    // selection invisible. The bulk transfer modal also needs this list.
+    // Bulk transfers need the writable destination collections. Locked create
+    // and edit forms already have their source collection's name and color.
     void loadCollections().then(collections => {
         state.collections = collections;
     });

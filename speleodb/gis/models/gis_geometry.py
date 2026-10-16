@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.geometry_validation import GIS_GEOMETRY_ALIAS_MAX_LENGTH
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_LIMIT_HELP
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_NAME_MAX_LENGTH
 from speleodb.gis.geometry_validation import inspect_gis_geometry
@@ -28,6 +29,19 @@ class GISGeometry(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     name = models.CharField(
         max_length=GIS_GEOMETRY_NAME_MAX_LENGTH, help_text="GIS Geometry name"
+    )
+    alias = models.CharField(
+        max_length=GIS_GEOMETRY_ALIAS_MAX_LENGTH,
+        blank=True,
+        default="",
+        db_default="",
+        help_text="Optional short label displayed on the map.",
+    )
+    description = models.TextField(
+        blank=True,
+        default="",
+        db_default="",
+        help_text="Optional description of the geometry.",
     )
     color = models.CharField(
         max_length=7,

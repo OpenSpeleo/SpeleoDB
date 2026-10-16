@@ -15,7 +15,7 @@ import {
     refreshCylinderInstallsLayer,
 } from './layers/markers.ts';
 
-import { addLandmarkLayer, toggleLandmarkVisibility, revertLandmarkPosition } from './layers/landmarks.ts';
+import { addLandmarkLayer, toggleLandmarkVisibility, revertLandmarkPosition, disposeLandmarkIcons } from './layers/landmarks.ts';
 import {
     addSubSurfaceStationLayer,
     addSurfaceStationLayer,
@@ -65,6 +65,7 @@ import {
     setProjectVisibilityBatch,
     emitDisplayPreferencesChanged,
     setCategoryVisibility,
+    setGeometryLabelsVisible,
     setStationTypeVisibility,
     revealCategory,
     applyCategoryVisibility,
@@ -116,6 +117,7 @@ export const Layers = {
     cancelPendingWork() {
         cancelLazyOverlays();
         clearAppliedGISGeometries();
+        disposeLandmarkIcons();
         ViewerUpdates.cancelAll();
         State.layerGeneration += 1;
         State.displayUpdatePending = false;
@@ -125,6 +127,7 @@ export const Layers = {
     setProjectVisibilityBatch,
     emitDisplayPreferencesChanged,
     setCategoryVisibility,
+    setGeometryLabelsVisible,
     setStationTypeVisibility,
     revealCategory,
     applyCategoryVisibility,

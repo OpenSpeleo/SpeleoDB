@@ -4,9 +4,9 @@ import type { LandmarkFormCollection, LandmarkFormPayload, LandmarkCreateOptions
 /**
  * Shared landmark create / edit / delete / bulk modals.
  *
- * Single source of truth used by:
- *   - the map viewer (consumed by `landmarks/ui.ts`)
- *   - the landmark collection details page bundle
+ * Used by the landmark collection details page bundle. The map viewer shares
+ * form_model.ts and form_presentation.ts helpers while retaining its manager's
+ * map-state refresh and navigation lifecycle in landmarks/ui.ts.
  *
  * Responsibilities:
  *   - render landmark form HTML (with optional `lockedCollectionId` to hide
@@ -20,7 +20,7 @@ import type { LandmarkFormCollection, LandmarkFormPayload, LandmarkCreateOptions
  */
 
 import { listCollections, compareCollections, readLandmarkFormPayload, validateLandmarkFormPayload } from './form_model.ts';
-import { getWritableCollectionOptions, renderLandmarkFormHtml, renderSelectedLandmarksList } from './form_presentation.ts';
+import { getWritableCollectionOptions, renderLandmarkFormHtml, renderSelectedLandmarksList, initializeLandmarkIconPicker } from './form_presentation.ts';
 export { readLandmarkFormPayload, validateLandmarkFormPayload } from './form_model.ts';
 export { renderLandmarkFormHtml } from './form_presentation.ts';
 import { Modal } from '../components/modal.ts';
@@ -148,6 +148,7 @@ export function openLandmarkCreateModal({
         const errorEl = document.getElementById(errorElId);
         const form = document.getElementById(formId);
         if (!form) return;
+        initializeLandmarkIconPicker(form, collections, lockedCollectionId);
 
         form.onsubmit = async event => {
             event.preventDefault();
@@ -199,6 +200,7 @@ export function openLandmarkEditModal({
         const errorEl = document.getElementById(errorElId);
         const form = document.getElementById(formId);
         if (!form) return;
+        initializeLandmarkIconPicker(form, collections, lockedCollectionId);
 
         form.onsubmit = async event => {
             event.preventDefault();

@@ -5,6 +5,7 @@ import { ViewerUpdates } from './viewer_updates.ts';
 
 export function createDefaultDisplayPreferences(): DisplayPreferences {
     return {
+        geometryLabelsVisible: DEFAULTS.DISPLAY.GEOMETRY_LABELS_VISIBLE,
         colorMode: DEFAULTS.DISPLAY.COLOR_MODE as DisplayPreferences['colorMode'],
         depthLimitFeet: DEFAULTS.DEPTH.LIMIT_FEET,
         depthUnit: DEFAULTS.DEPTH.UNIT as DisplayPreferences['depthUnit'],

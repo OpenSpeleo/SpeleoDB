@@ -165,11 +165,11 @@ contract tests keep the public policy and both validation paths aligned.
 
 ## Ownership, permissions, and persistence
 
-`GISGeometry` owns UUID identity, name, color, creator-email provenance,
-GeoJSON, timestamps, active state, and a content revision. Creation atomically
-creates an ADMIN permission for the authenticated creator.
-`GISGeometryUserPermission` rows are the sole application authorization source
-afterward; provenance never grants an implicit bypass. READ_ONLY views,
+`GISGeometry` owns UUID identity, name, optional alias and description, color,
+creator-email provenance, GeoJSON, timestamps, active state, and a content
+revision. Creation atomically creates an ADMIN permission for the authenticated
+creator. `GISGeometryUserPermission` rows are the sole application authorization
+source afterward; provenance never grants an implicit bypass. READ_ONLY views,
 READ_AND_WRITE edits, and ADMIN edits, shares, and soft-deletes. Team and
 WEB_VIEWER access are not part of this feature.
 
@@ -199,12 +199,12 @@ additional GIS-only permission base class or dynamically selected model field.
 | `/api/v2/gis-geometries/<id>/`             | GET, PATCH, DELETE     | Detail / atomic update / soft-delete |
 | `/api/v2/gis-geometries/<id>/permissions/` | GET, POST, PUT, DELETE | Direct-user sharing                  |
 
-Creation sends `name`, `color`, and `geojson`. PATCH sends changed fields and
-`expected_revision`; it never partially commits metadata after invalid geometry.
-Metadata includes `geometry_type`, revision, permission level, and capability
-booleans. Detail/save responses include `geojson`, derived bounding-box area,
-and vertex count. Creator, lifecycle state, timestamps, and revision are
-server-owned.
+Creation sends `name`, `color`, and `geojson`, plus optional `alias` and
+`description`. PATCH sends changed fields and `expected_revision`; it never
+partially commits metadata after invalid geometry. Metadata includes
+`geometry_type`, revision, permission level, and capability booleans.
+Detail/save responses include `geojson`, derived bounding-box area, and vertex
+count. Creator, lifecycle state, timestamps, and revision are server-owned.
 
 ```json
 {
@@ -286,3 +286,44 @@ measurement results, and mutable draft/history records belong to
 so invalid input retains the same measurement and error precedence. The shared
 backend fixture suite checks geometry validity, vertex counts, and spherical
 bounding-box area; draft tests check copied coordinates and undo/redo behavior.
+
+## Alias labels and descriptions
+
+Geometry descriptions are optional plain text, using the same sanitization and
+textarea interaction as Project descriptions. They appear in authenticated
+geometry details and editor forms, and are saved atomically with the shape.
+Descriptions remain outside the lightweight listing and Config metadata cache.
+Both the list and detail include `alias`, an optional, non-unique label of at
+most 32 Unicode codepoints. Blank aliases produce no label; the geometry name is
+not a substitute. API and browser validation reject excess characters without
+truncating. Django admin omits the browser's UTF-16 `maxlength` attribute while
+retaining server validation, so astral characters use the same limit there.
+Existing records migrate to empty strings.
+
+Web editing uses the shared alias validator from `@speleodb/map-core`; Django
+uses the checked geometry contract. Shared contract tests prevent limits
+drifting. The map-core label helper computes one point: a polygon interior point
+or a line's length midpoint. `@speleodb/map-viewer` supplies the readable symbol
+layer. The web integration owns source lifetime and visibility, keeping labels
+hidden with their geometry and while its edit draft replaces the saved shape.
+Anchors are computed once per accepted detail revision, never on every viewport
+change.
+
+Map Settings includes **Geometry labels**, enabled by default and persisted on
+this device with the existing display preferences. Changing it updates known
+label layers without fetching coordinates or changing geometry visibility.
+Restoring defaults enables labels. The mobile viewer consumes the same shared
+anchors and styles and remains read-only for geometries.
+
+Tests cover empty and Unicode aliases, metadata-only updates, descriptions,
+optimistic conflicts, constant-query listing, migration defaults, archived
+metadata, independent visibility, cached sources, settings restore/reset and
+shared contracts. Both private and public web entrypoints still build; these
+private records are not exposed through public GIS views or new OGC endpoints.
+
+Standalone rollout requires published `@speleodb/map-core` and
+`@speleodb/map-viewer` releases that include the alias, label, and icon exports,
+followed by matching exact application dependency pins and standalone lockfiles.
+Monorepo workspace builds consume the local shared sources. Packed standalone
+validation verifies that package boundary; it does not replace publishing the
+compatible shared releases before an application deployment.

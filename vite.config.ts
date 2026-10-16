@@ -42,6 +42,8 @@ export default defineConfig(({ mode }) => {
             cssMinify: production ? 'lightningcss' : false,
             sourcemap: !production,
             cssCodeSplit: true,
+            // The map-only MapLibre chunk is about 1,142 kB after minification.
+            chunkSizeWarningLimit: 1500,
             modulePreload: { polyfill: false },
             rolldownOptions: {
                 input: resolvedEntries(),

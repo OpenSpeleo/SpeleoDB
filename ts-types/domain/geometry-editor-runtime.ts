@@ -41,6 +41,8 @@ export interface EditorMap {
 export interface EditorSession {
     record: GISGeometryResponse | null;
     name: string;
+    alias: string;
+    description: string;
     color: string;
     draft: GeometryDraft;
     selected: number | null;
@@ -62,6 +64,8 @@ export interface EditorSession {
 export interface EditorNodes {
     root: HTMLElement;
     name: HTMLInputElement;
+    alias: HTMLInputElement;
+    description: HTMLTextAreaElement;
     types: HTMLDivElement;
     colors: HTMLDivElement;
     currentColor: HTMLSpanElement;

@@ -355,6 +355,7 @@ def _stage_resource(
         geometry_path.write_bytes(orjson.dumps(resource.geojson))
         staged.files.append((geometry_path, f"{prefix}.geojson"))
         staged.metadata["revision"] = resource.revision
+        staged.metadata.update(alias=resource.alias, description=resource.description)
     elif isinstance(resource, GISLayer):
         suffix: str = Path(resource.source_f.name or "").suffix.lower()
         safe_suffix: str = (

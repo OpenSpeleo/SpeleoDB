@@ -123,6 +123,7 @@ export const MapSettings = {
     renderVisibility() {
         const container = this.dialog!.querySelector<HTMLElement>('#map-settings-visibility')!;
         container.replaceChildren();
+        container.append(createSwitch('geometryLabelsVisible', 'Geometry labels', 'displayPreference'));
         DEFAULTS.DISPLAY.CATEGORIES.forEach(category => {
             container.append(createSwitch(category.id, category.label, 'category'));
             if (category.id !== 'surveyStations') return;
@@ -162,6 +163,8 @@ export const MapSettings = {
             }
         } else if (input.name === 'map-settings-color-mode' && input.checked) {
             void Layers.setColorMode(input.value);
+        } else if (input.dataset.displayPreference === 'geometryLabelsVisible') {
+            void Layers.setGeometryLabelsVisible(input.checked);
         } else if (input.dataset.category) {
             void Layers.setCategoryVisibility(input.dataset.category as DisplayCategory, input.checked);
         } else if (input.dataset.stationType) {
@@ -220,6 +223,7 @@ export const MapSettings = {
     sync() {
         if (!this.dialog || !State.displayPreferences) return;
         const preferences = State.displayPreferences;
+        this.dialog.querySelector<HTMLInputElement>('[data-display-preference="geometryLabelsVisible"]')!.checked = preferences.geometryLabelsVisible;
         this.syncDepthLimit();
         this.dialog.querySelectorAll<HTMLInputElement>('[name="map-settings-color-mode"]').forEach(input => {
             input.checked = input.value === preferences.colorMode;

@@ -14,14 +14,20 @@ Django application into a Vite-served SPA.
 `vite.config.ts` and Django resolve that registry; a name cannot silently mean
 different source files on each side. Production output is content-hashed and
 minified under `speleodb/common/static/speleodb/vite/`, with source maps off. An
-explicitly requested development-mode build also writes hashed files directly to
-that output directory, with source maps. Asset compilation and browser refresh
-are manual; neither startup nor file edits trigger a build.
+explicitly started development build watcher writes hashed files directly to
+that output directory, with source maps, and rebuilds after source edits.
+Browser refresh stays manual; container startup does not start a build watcher.
 
 One graph does not mean one payload. Tailwind is shared, shell/route styles stay
 isolated where cascade ownership matters, route controllers are lazy, and common
 imports become shared chunks. The browser receives only the bootstrap, declared
 controller branches, applicable styles, and established vendors for the route.
+
+The chunk warning limit is 1,500 kB to accommodate the approximately 1,142 kB
+minified MapLibre and map-layer chunk. Only map routes load this renderer;
+normal pages retain their smaller controller branches. The limit avoids a
+recurring warning for that known baseline without changing loading or splitting
+behavior.
 
 ## Template integration
 
@@ -138,42 +144,61 @@ Unlayered application CSS can override layered utilities, so verify computed
 styles on the real route. Keep runtime inline sizing/visibility effective; avoid
 `!important` on properties changed by map resizing or modal state.
 
-When editing live templates and their CSS/controllers together, explicitly build
-the companion assets before refreshing the page. Otherwise Django can serve new
-controls with old handlers/styles. Smoke-test an integrated slice on the
-authenticated route early, including primary actions and served hashes.
+When editing live templates and their CSS/controllers together, wait for a
+successful watched or finite build before refreshing the page. Otherwise Django
+can serve new controls with old handlers/styles. Smoke-test an integrated slice
+on the authenticated route early, including primary actions and served hashes.
 Clean-build for final browser evidence.
 
 Controller discovery must retain the negative `!./controllers/*.test.ts` glob
 alongside its positive TypeScript glob. Check a clean production graph excludes
 test modules; Vitest globals must never reach a browser controller chunk.
 
-## Manual development builds
+## Development builds
 
-Run the finite build in the already-running application container:
+Start the opt-in watcher in the already-running application container:
+
+```bash
+docker exec -w /app speleodb-monorepo-django bun run dev
+```
+
+This command checks types and source/template ownership once, then runs
+`vite build --watch --mode development --emptyOutDir=false`. Subsequent source
+saves rebuild assets without repeating those checks. Wait for each successful
+build, then refresh the browser manually. Django remains the only HTTP server;
+there is no Vite development server, HMR client, reload endpoint, or polling
+loop.
+
+Watch builds retain older hashed assets so a page opened before a rebuild can
+still finish deferred imports. Restart the watcher after changing the entry
+registry or Vite configuration; registry changes also require the Django process
+restart described above. Stop the watcher before running production builds,
+pre-commit checks, or final browser verification: they share its output
+directory.
+
+For a clean finite production build, run:
 
 ```bash
 docker exec -w /app speleodb-monorepo-django bun run build
 ```
 
 Wait for a successful result, then refresh the browser. The build checks types
-and source/template ownership before cleaning and emitting assets. `dev` and
-`start` are aliases for the same finite build. `compose/start` installs the
-locked dependencies and launches Django; it does not build assets or start an
-asset watcher. A fresh checkout needs an explicit build before frontend pages
-can use compiled assets.
+and source/template ownership before cleaning and emitting assets. `start`
+remains an alias for that finite build. `compose/start` installs the locked
+dependencies and launches Django; it does not build assets or start an asset
+watcher. A fresh checkout needs either the first successful watched build or an
+explicit finite build before frontend pages can use compiled assets.
 
-There is no development reload client, generation endpoint, polling loop, or
-automatic asset rebuild. Builds write hashed files and the manifest directly,
-without a staging or immutable-generation publication layer. Django's asset tags
-share one manifest snapshot for a template render, including inherited and
-included templates. In DEBUG, a subsequent request observes a changed manifest
-mtime; the user chooses when to refresh the page.
+Builds write hashed files and the manifest directly, without a staging or
+immutable-generation publication layer. Django's asset tags share one manifest
+snapshot for a template render, including inherited and included templates. In
+DEBUG, a subsequent request observes a changed manifest mtime; the user chooses
+when to refresh the page.
 
-Source edits remain invisible in compiled frontend assets until the next manual
-build. A clean build also avoids the utility candidates retained by historical
-long-running Tailwind compiler processes. The optional `test:frontend:watch`
-command runs tests only; it does not rebuild assets or refresh pages.
+Final browser evidence uses a clean finite build, which removes accumulated
+watch output and avoids utility candidates retained by historical long-running
+Tailwind compiler processes. The optional `test:frontend:watch` command runs
+tests only; it does not rebuild assets or refresh pages.
 
 ## Verification boundaries
 

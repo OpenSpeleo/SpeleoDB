@@ -1,3 +1,6 @@
+import { createGeometryLabelFeature } from '@speleodb/map-core';
+import { createGeometryLabelLayer } from '@speleodb/map-viewer';
+import type { RendererLayer } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
 import { State } from '../../state.ts';
@@ -13,6 +16,20 @@ import { computeGeoJSONBounds } from '../geojson.ts';
 import { addVectorOverlay } from '../vector_overlay.ts';
 import { removeLayersAndSource } from './source_lifecycle.ts';
 import { beginOverlayIntent, isOverlayIntentCurrent } from './lazy_overlay.ts';
+// Accepted detail records are immutable; retain their anchor through style restoration.
+// Weak keys release old revisions together with the owning detail cache.
+const geometryLabelCache = new WeakMap<GISGeometryResponse, ReturnType<typeof createGeometryLabelFeature>>();
+
+function labelForGeometry(record: GISGeometryResponse) {
+    if (geometryLabelCache.has(record)) return geometryLabelCache.get(record)!;
+    const geometry = record.geojson;
+    const label = geometry && (geometry.type === 'LineString' || geometry.type === 'Polygon')
+        ? createGeometryLabelFeature({ id: String(record.id), alias: record.alias || '', color: record.color || DEFAULTS.COLORS.FALLBACK, geometry })
+        : null;
+    geometryLabelCache.set(record, label);
+    return label;
+}
+
 const gisGeometryAppliedRecords = new Map<string, AppliedGISGeometry>();
 export function clearAppliedGISGeometries(): void { gisGeometryAppliedRecords.clear(); }
 interface GeometryLayerOwner {
@@ -31,7 +48,8 @@ export function showGISGeometryLayers(id: EntityId, visible: boolean) {
     const show = visible && State.gisGeometryEditingId !== key;
     for (const layerId of State.allGISGeometryLayers.get(key) || []) {
         if (State.map?.getLayer(layerId)) {
-            State.map.setLayoutProperty(layerId, 'visibility', show ? 'visible' : 'none');
+            const layerVisible = show && (!layerId.endsWith('-label') || State.displayPreferences.geometryLabelsVisible);
+            State.map.setLayoutProperty(layerId, 'visibility', layerVisible ? 'visible' : 'none');
         }
     }
 }
@@ -101,7 +119,10 @@ export function addGISGeometry(this: Pick<GeometryLayerOwner, 'showGISGeometryLa
     if (!map) return;
     const id = String(record.id);
     const sourceId = `gis-geometry-source-${id}`;
+    const labelSourceId = `gis-geometry-label-source-${id}`;
+    const labelId = `gis-geometry-${id}-label`;
     const layerIds = ['fill', 'outline', 'line', 'point'].map(role => `gis-geometry-${id}-${role}`) as [string, string, string, string];
+    removeLayersAndSource(map, [labelId], labelSourceId);
     removeLayersAndSource(map, [...layerIds].reverse(), sourceId);
     addVectorOverlay(map, {
         sourceId, layerIds,
@@ -109,7 +130,12 @@ export function addGISGeometry(this: Pick<GeometryLayerOwner, 'showGISGeometryLa
         color: record.color || DEFAULTS.COLORS.FALLBACK,
         fillOpacity: DEFAULTS.GIS_GEOMETRY.FILL_OPACITY,
     });
-    State.allGISGeometryLayers.set(id, layerIds);
+    const label = labelForGeometry(record);
+    if (label) {
+        map.addSource(labelSourceId, { type: 'geojson', data: label });
+        map.addLayer(createGeometryLabelLayer({ sourceId: labelSourceId, layerId: labelId }) as RendererLayer);
+    }
+    State.allGISGeometryLayers.set(id, label ? [...layerIds, labelId] : layerIds);
     gisGeometryAppliedRecords.set(id, { record, map, generation: State.layerGeneration });
     // Stored Geometry never has a trusted caller-supplied bbox.
     const bounds = computeGeoJSONBounds(record.geojson, { wrapLongitude: false });

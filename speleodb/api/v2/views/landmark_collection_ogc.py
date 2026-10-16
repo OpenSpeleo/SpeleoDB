@@ -91,6 +91,7 @@ def _landmark_collection_etag(collection: LandmarkCollection) -> str:
         latest_landmark_modified.isoformat() if latest_landmark_modified else ""
     )
     payload = (
+        "landmark-icons-v1:"
         f"{collection.id}:"
         f"{collection.modified_date.isoformat()}:"
         f"{latest_modified}:"

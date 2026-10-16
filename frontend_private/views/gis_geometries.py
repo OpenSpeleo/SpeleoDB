@@ -13,6 +13,7 @@ from django.urls import reverse
 from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.api.v2.gis_geometry_access import accessible_gis_geometries_queryset
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.geometry_validation import GIS_GEOMETRY_ALIAS_MAX_LENGTH
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_MAX_AREA_KM2
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_MAX_VERTICES
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_TYPES
@@ -68,10 +69,11 @@ class _BaseGISGeometryView(AuthenticatedTemplateView):
             "geojson_text": json.dumps(geometry.geojson, indent=2),
             "geometry_max_area_km2": GIS_GEOMETRY_MAX_AREA_KM2,
             "geometry_max_vertices": GIS_GEOMETRY_MAX_VERTICES,
+            "geometry_alias_max_length": GIS_GEOMETRY_ALIAS_MAX_LENGTH,
             "geometry_supported_types": " or ".join(sorted(GIS_GEOMETRY_TYPES)),
             "details_form_id": "gis_geometry_details_form",
             "details_method": "PATCH",
-            "show_description": False,
+            "show_description": True,
             "show_color": True,
             "has_admin_access": permission_level == PermissionLevel.ADMIN,
             "has_write_access": (

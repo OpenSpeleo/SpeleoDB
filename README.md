@@ -50,17 +50,26 @@ report:
 
 ### Building frontend assets
 
-Vite compiles frontend assets only when explicitly requested. In the running
-application container:
+Start automatic asset rebuilds in the running application container:
+
+```bash
+docker exec -w /app speleodb-monorepo-django bun run dev
+```
+
+Leave the command running while editing. After each successful rebuild, refresh
+the browser manually. Type checks and source/template audits run once at
+startup; subsequent saves compile without repeating them.
+
+For a clean production build, stop the watcher and run:
 
 ```bash
 docker exec -w /app speleodb-monorepo-django bun run build
 ```
 
-Wait for the build to finish, then refresh the browser. `bun run dev` and
-`bun run start` are finite build aliases. Container startup launches Django
-without building or watching frontend assets. See
-[Vite assets](docs/vite-assets.md) for the build and serving contract.
+Wait for the build to finish, then refresh the browser. `bun run start` remains
+a finite production build alias. Container startup launches Django without
+building or watching frontend assets. See [Vite assets](docs/vite-assets.md) for
+the build and serving contract.
 
 ### Celery
 

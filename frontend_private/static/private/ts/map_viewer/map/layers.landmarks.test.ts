@@ -1,3 +1,4 @@
+import { landmarkColorExpression, landmarkHaloExpression } from '@speleodb/map-viewer';
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
 import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 import { State } from '../state.ts';
@@ -12,6 +13,8 @@ describe('Layers landmark rendering', () => {
     it('colors landmark marker and label layers from collection_color', async () => {
         const addedLayers: RendererLayer[] = [];
         const mockMap = {
+            on: () => undefined,
+            off: () => undefined,
             getLayer: vi.fn(() => false),
             removeLayer: vi.fn(),
             getSource: vi.fn(() => false),
@@ -38,13 +41,8 @@ describe('Layers landmark rendering', () => {
 
         const markerLayer = addedLayers.find(layer => layer.id === 'landmarks-layer');
         const labelLayer = addedLayers.find(layer => layer.id === 'landmarks-labels');
-        const colorExpression = ['coalesce', ['get', 'collection_color'], '#94a3b8'];
-        const haloExpression = [
-            'case',
-            ['==', ['get', 'collection_color'], '#ffffff'],
-            '#0f172a',
-            '#ffffff'
-        ];
+        const colorExpression = landmarkColorExpression();
+        const haloExpression = landmarkHaloExpression();
 
         expect(markerLayer!.paint!['text-color']).toEqual(colorExpression);
         expect(labelLayer!.paint!['text-color']).toEqual(colorExpression);

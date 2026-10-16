@@ -7,6 +7,20 @@
   {% vite_preload 'controller-gis-geometry-details' %}
   {% vite_styles 'style-gis-geometry-management' %}
 {% endblock extra_css %}
+{% block entity_metadata_extra %}
+  <section>
+    <label class="block text-sm font-medium mb-1" for="alias">Map alias (optional):</label>
+    <input id="alias"
+           name="alias"
+           class="form-input max-w-full w-full"
+           type="text"
+           aria-describedby="geometry-alias-help"
+           value="{{ entity.alias }}" />
+    <p id="geometry-alias-help" class="mt-1 text-sm text-slate-400">
+      Up to {{ geometry_alias_max_length }} characters. Leave blank to hide this geometry's label.
+    </p>
+  </section>
+{% endblock entity_metadata_extra %}
 {% block entity_details_extra %}
   <section class="geometry-details p-6 border-t border-slate-700"
            aria-labelledby="geometry-details-heading">
@@ -32,7 +46,7 @@
       </summary>
       <p id="geometry-json-help" class="text-sm text-slate-400 mt-3 mb-3">
         One {{ geometry_supported_types }}, with up to {{ geometry_max_vertices }} vertices and no holes. Polygon closure does not count as a vertex.
-        {% if has_write_access %}Changes are saved together with the name and color.{% endif %}
+        {% if has_write_access %}Changes are saved together with the name, alias, description, and color.{% endif %}
       </p>
       <label for="geometry-geojson" class="sr-only">GeoJSON geometry</label>
       <textarea id="geometry-geojson"

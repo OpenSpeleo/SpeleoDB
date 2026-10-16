@@ -5,6 +5,7 @@
   "warning_area_m2": 8000000,
   "earth_radius_m": 6371008.8,
   "name_max_length": 255,
+  "alias_max_length": 32,
   "position_dimensions": 2,
   "min_line_vertices": 2,
   "min_polygon_vertices": 3,

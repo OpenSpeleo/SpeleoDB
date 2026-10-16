@@ -168,6 +168,8 @@ export const DEFAULTS = Object.freeze({
         DRAFT_LAYER_ROLES: ['fill', 'line', 'bbox', 'midpoints', 'vertices'],
         TYPES: Object.freeze(geometryContract.types),
         NAME_MAX_LENGTH: geometryContract.name_max_length,
+        ALIAS_MAX_LENGTH: geometryContract.alias_max_length,
+        DESCRIPTION_ROWS: 4,
         POSITION_DIMENSIONS: geometryContract.position_dimensions,
         MIN_LINE_VERTICES: geometryContract.min_line_vertices,
         MIN_POLYGON_VERTICES: geometryContract.min_polygon_vertices,
@@ -220,6 +222,7 @@ export const DEFAULTS = Object.freeze({
     },
 
     DISPLAY: {
+        GEOMETRY_LABELS_VISIBLE: true,
         COLOR_MODE: 'project',
         COLOR_MODES: Object.freeze(['project', 'depth', 'shot']),
         STORAGE_VERSION: 1,

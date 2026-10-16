@@ -1,6 +1,8 @@
 import type { EntityId } from './identifiers.ts';
+import type { LandmarkIcon } from '@speleodb/map-core';
 import type { RecordDates } from './station-records.ts';
 export interface LandmarkWrite {
+    icon?: LandmarkIcon;
     name?: string;
     description?: string;
     latitude?: number | string;

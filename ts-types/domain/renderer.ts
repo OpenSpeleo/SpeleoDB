@@ -3,7 +3,7 @@ import type { MapControl, MapCoreMap, MapCreationOptions } from './map-core.ts';
 import type { CheckedTileProtocol } from './map-sources.ts';
 import type { Feature, FeatureCollection, Geometry, Point } from 'geojson';
 import type { Coordinate2D, GeometryCameraMap, RendererBounds } from './map-geometry.ts';
-import type { NavigationMap } from './map-runtime.ts';
+import type { NavigationMap, NavigationGesture } from './map-runtime.ts';
 
 /** Renderer's expression language is a recursive array, not an application record. */
 export type RendererValue = string | number | boolean | null | RendererValue[] | import('maplibre-gl').ExpressionSpecification;
@@ -11,7 +11,7 @@ export interface RendererLayout {
     visibility?: 'visible' | 'none';
     'line-join'?: 'round';
     'line-cap'?: 'round';
-    'icon-image'?: string;
+    'icon-image'?: RendererValue;
     'icon-size'?: RendererValue;
     'icon-allow-overlap'?: boolean;
     'icon-ignore-placement'?: boolean;
@@ -92,6 +92,10 @@ export interface RendererPopupOptions {
     maxWidth: string;
 }
 export interface RendererMap extends NavigationMap, GeometryCameraMap {
+    on(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
+    on(event: 'remove' | 'style.load', handler: () => void): unknown;
+    off(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
+    off(event: 'remove' | 'style.load', handler: () => void): unknown;
     getLayer(id: string): RendererLayer | undefined;
     addLayer(layer: RendererLayer): unknown;
     removeLayer(id: string): unknown;
@@ -103,6 +107,7 @@ export interface RendererMap extends NavigationMap, GeometryCameraMap {
     setPaintProperty<Key extends keyof RendererPaint>(id: string, key: Key, value: RendererPaint[Key]): unknown;
     setFilter(id: string, filter: RendererValue): unknown;
     hasImage(id: string): boolean;
+    removeImage(id: string): unknown;
     loadImage(url: string): Promise<{ data: RendererImage }>;
     addImage(id: string, image: RendererImage): unknown;
     project(coordinates: readonly number[]): { x: number; y: number };
@@ -115,7 +120,7 @@ export interface PointProperties {
     color?: string;
     tag?: { id: string | number; name: string; color: string } | null;
 }
-export interface LandmarkPointProperties extends PointProperties { collection_color?: string | null }
+export interface LandmarkPointProperties extends PointProperties { icon?: import('@speleodb/map-core').LandmarkIcon; collection_color?: string | null }
 export type MapPointCollection<Properties = PointProperties> = FeatureCollection<Point, Properties>;
 
 export interface RendererMarker {

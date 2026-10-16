@@ -230,6 +230,13 @@ class Landmark(models.Model):
     Landmarks are standalone markers not linked to any project.
     """
 
+    class Icon(models.TextChoices):
+        DEFAULT = "DEFAULT", "Default"
+        CAVE = "CAVE", "Cave"
+        UNKNOWN = "UNKNOWN", "Unknown"
+        ATTENTION = "ATTENTION", "Attention"
+        NOGO = "NOGO", "No go"
+
     id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -246,6 +253,14 @@ class Landmark(models.Model):
         blank=True,
         default="",
         help_text="Optional description of the landmark",
+    )
+
+    icon = models.CharField(
+        max_length=9,
+        choices=Icon.choices,
+        default=Icon.DEFAULT,
+        db_default=Icon.DEFAULT,
+        help_text="Map icon, colored by the landmark collection.",
     )
 
     # Landmark coordinates
@@ -295,10 +310,16 @@ class Landmark(models.Model):
             models.Index(fields=["collection"], name="gis_landmark_collection_idx"),
         ]
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    icon__in=["DEFAULT", "CAVE", "UNKNOWN", "ATTENTION", "NOGO"]
+                ),
+                name="gis_landmark_icon_valid",
+            ),
             UniqueConstraint(
                 fields=["collection", "latitude", "longitude"],
                 name="gis_landmark_collection_coordinate_unique",
-            )
+            ),
         ]
 
     def __str__(self) -> str:

@@ -20,7 +20,7 @@ class GISGeometryListSerializer(
     SanitizedFieldsMixin,
     serializers.ModelSerializer[GISGeometry],
 ):
-    sanitized_fields: ClassVar[list[str]] = ["name"]
+    sanitized_fields: ClassVar[list[str]] = ["name", "alias", "description"]
     geometry_type = serializers.SerializerMethodField()
     user_permission_level = serializers.IntegerField(read_only=True, required=False)
     user_permission_level_label = serializers.SerializerMethodField()
@@ -33,6 +33,7 @@ class GISGeometryListSerializer(
         fields = [
             "id",
             "name",
+            "alias",
             "color",
             "created_by",
             "geometry_type",
@@ -92,6 +93,7 @@ class GISGeometrySerializer(GISGeometryListSerializer):
     class Meta(GISGeometryListSerializer.Meta):
         fields = [
             *GISGeometryListSerializer.Meta.fields,
+            "description",
             "geojson",
             "bbox_area_m2",
             "vertex_count",

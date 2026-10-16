@@ -47,6 +47,8 @@
                    type="text"
                    value="{{ entity.name }}" />
           </section>
+          {% block entity_metadata_extra %}
+          {% endblock entity_metadata_extra %}
           {% if show_description %}
             <section>
               <label class="block text-sm font-medium mb-1" for="description">Description:</label>

@@ -208,7 +208,7 @@ describe('native GIS geometry editor', () => {
         expect(API.createGISGeometry).not.toHaveBeenCalled();
         API.createGISGeometry.mockResolvedValue({ ...existing, name: 'Test line' });
         await GeometryEditor.save();
-        expect(API.createGISGeometry).toHaveBeenCalledWith({ name: 'Test line', color, geojson: existing.geojson });
+        expect(API.createGISGeometry).toHaveBeenCalledWith({ name: 'Test line', alias: '', description: '', color, geojson: existing.geojson });
         expect(onSaved).toHaveBeenCalledOnce();
         expect(GeometryEditor.isActive()).toBe(false);
         expect(map.sources.size).toBe(0);
