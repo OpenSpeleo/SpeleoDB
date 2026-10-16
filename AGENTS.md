@@ -248,10 +248,27 @@ lives in typed function-valued bindings with inert template identifiers.
 
 ## Railway configuration apply and session handoff
 
-`.railway/railway.ts` is the source of truth for Railway service settings.
-Railway does **not** read this file during ordinary application deployments.
-Committing, pushing, building, restarting, or redeploying application code does
-not apply changes to this configuration.
+`.railway/railway.ts` is the source of truth for Railway service settings. Keep
+all managed service definitions in this single file, including Gogs and the Git
+backup job whose application source belongs to a separate repository. Do not add
+another `railway.ts` or separate IaC SDK to that repository. Railway does
+**not** read this file during ordinary application deployments. Committing,
+pushing, building, restarting, or redeploying application code does not apply
+changes to this configuration.
+
+All eight active production services, including Redis and both backup cron jobs,
+belong in this file. Use `docs/railway-production.md` for the ownership
+inventory and Redis replacement procedure. A no-change adoption must compare
+against raw live configuration, not just the CLI's imported graph. Redis is a
+plain image service; keep it free of template-origin metadata so its builder and
+volume mount import correctly. The final plan must have no effective drift.
+
+PostgreSQL PITR requires the image's own startup; never add a custom start
+command to tune its memory. Preserve its `WAL_ARCHIVE_*` references and archive
+bucket in the same file. Memory tuning persists in
+`PGDATA/postgresql.auto.conf`; verify or restore it when replacing the volume.
+Follow `docs/railway-production.md` and verify a completed base backup plus
+healthy WAL archiving before reporting PITR ready.
 
 - Run `railway config plan` against the intended project and environment when
   changing this file or a helper that affects its evaluated configuration, or
@@ -272,6 +289,10 @@ not apply changes to this configuration.
   resulting deployments and runtime logs. A cached redeploy may retain an old
   image's launch command; use a fresh source build when needed. A deployment's
   initial `SUCCESS` status alone is insufficient if its runtime is crashing.
+- After an authorized Redis replacement, restore consumer references from this
+  file and redeploy web, worker, and Beat. Verify their deployed connection URLs
+  and Redis connectivity; preserving the private hostname alone does not refresh
+  running processes or repair references rewritten during service deletion.
 
 **Mandatory final-response notice:** If required configuration changes remain
 unapplied, or their live application has not been verified, end the session's

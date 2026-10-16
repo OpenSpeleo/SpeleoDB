@@ -10,10 +10,11 @@ monitoring service or database is required. Cache and Celery share the existing
 Redis server, using logical databases 0 and 1 respectively. This reuses the
 application's infrastructure and keeps worker scaling straightforward.
 
-**There is no Railway cron job or Railway cron schedule.** A continuously
-running Celery Beat process uses `django-celery-beat`'s database scheduler. One
-Celery worker service consumes both archive generation and scheduled
-maintenance.
+**Application background tasks use Celery Beat rather than Railway cron.** A
+continuously running Beat process uses `django-celery-beat`'s database
+scheduler. One Celery worker service consumes both archive generation and
+scheduled maintenance. The separate Git and PostgreSQL backup services use
+Railway cron schedules declared in the same infrastructure configuration.
 
 | Process   | Command                            | Queue                        |
 | --------- | ---------------------------------- | ---------------------------- |
@@ -549,17 +550,43 @@ checks complement the existing domain retry, artifact and worker-loss tests.
 
 Use the Railway skill to inspect the actual production project/environment
 before mutation. `.railway/railway.ts` is the sole Railway service configuration
-for this repository. The deprecated `railway.toml` was removed to avoid
-competing deployment settings. Preserve the existing named partial and its
-current web service; do not recreate legacy TOML/JSON service configuration or
-take ownership of unrelated services by importing/applying an incomplete
-whole-project graph. `railpack.json` separately owns image construction,
-including dependencies and frontend assets. Service configuration changes
-require a reviewed `railway config plan` and `railway config apply`; application
-Git pushes alone do not apply IaC edits. Consolidating these settings has no
-application runtime or performance effect.
+for all eight active production services and their volumes. See
+[production Railway configuration](railway-production.md) for the complete
+inventory and Redis replacement operations. Gogs and the Git backup job are
+declared in this same file; see
+[Git backup and Gogs operations](git-backup-operations.md) for their settings.
+The deprecated `railway.toml` was removed to avoid competing deployment
+settings. Preserve the existing named partial and its current web service; do
+not recreate legacy TOML/JSON service configuration or take ownership of
+unrelated services by importing/applying an incomplete whole-project graph.
+`railpack.json` separately owns image construction, including dependencies and
+frontend assets. Service configuration changes require a reviewed
+`railway config plan` and `railway config apply`; application Git pushes alone
+do not apply IaC edits. Consolidating these settings has no application runtime
+or performance effect.
 
-The root JavaScript manifest and lockfile pin `railway@3.11.0`, TypeScript, and
+The same partial also owns the existing `Postgres-Prod` service configuration:
+its PostgreSQL 16 image, build settings, region and replica count, private
+network endpoint, existing 5000 MB volume and mount, resource limits, image
+startup, PITR archive bucket, and variable map. Existing variable values and
+secrets are retained with `preserve()`. The CPU limit remains 1 and the memory
+ceiling remains 500,000,000 bytes; memory reduction comes from persistent
+PostgreSQL settings.
+
+PostgreSQL must use the image's own startup without an override so Railway can
+enable PITR. The entrypoint handles SSL, volume locking, WAL archiving and
+automatic base backups. `shared_buffers=16MB`, `temp_buffers=1MB`,
+`work_mem=1MB`, and `hash_mem_multiplier=1.0` persist in
+`PGDATA/postgresql.auto.conf`. These settings favor a smaller memory footprint
+over cache hit rate and in-memory query execution. They do not limit Linux's
+separate filesystem cache. Applying a shared-buffer change requires a database
+restart; verify all four values in `pg_settings`, SSL, and runtime logs after
+deployment, and confirm the next configuration plan has no effective changes.
+See
+[PostgreSQL PITR and memory tuning](railway-production.md#postgresql-pitr-and-memory-tuning)
+for provisioning, recovery and backup verification requirements.
+
+The root JavaScript manifest and lockfile pin `railway@3.16.0`, TypeScript, and
 the tool's type definitions. `bun run typecheck:development` validates the
 authoring file and runs through pre-commit/CI. Its native IaC runner requires
 Railway CLI 5.42.1 or newer; the read-only production plan was checked with CLI
@@ -580,16 +607,20 @@ the default `ON_FAILURE` policy with ten retries. Verify these effective values
 on the service instance when reviewing drift; explicitly repeating them in the
 source creates `null`-to-default plan differences without changing behavior.
 
-The named partial manages the existing `SpeleoDB-Prod`, `Celery-Worker`, and
-`Celery-Beat` services. Generate a fresh plan against `speleoDB` / `production`
+The `SpeleoDB-Prod` named partial manages the existing `SpeleoDB-Prod`,
+`Celery-Worker`, `Celery-Beat`, `Postgres-Prod`, `Redis-Prod`, `Gogs`,
+`Database Backup CRON`, and `SpeleoDB Git Backup CronJob` services, plus their
+four persistent volumes. Generate a fresh plan against `speleoDB` / `production`
 before applying. Reject unrelated changes or removals. A plan does not provision
 missing referenced values; verify prerequisites in the target environment.
 
 Before rollout, verify the existing Redis server has a persistent volume, AOF,
-and `noeviction`. Neither Redis nor PostgreSQL is managed or replaced by this
-named IaC partial. The application database stores the result backend; do not
-provision a separate monitoring database. This change does not alter PostgreSQL
-memory settings, resource limits, roles, or stored application data.
+and `noeviction`. Redis is managed with its existing image, variables, resource
+limits, TCP endpoint, and volume; adoption does not change its runtime policy.
+PostgreSQL is managed with the settings described above. The application
+database stores the result backend; do not provision a separate monitoring
+database. Moving the backup definitions into this file does not alter PostgreSQL
+settings or data.
 
 This topology needs no environment-wide shared variables. Redis owns its
 connection settings. Consumers use Railway references so credential/address
@@ -602,7 +633,7 @@ Set `CELERY_BROKER_URL=${{REDIS_URL}}/1` on `Redis-Prod`. Its existing
 no database suffix. Web, worker, and Beat each set
 `CELERY_BROKER_URL=${{Redis-Prod.CELERY_BROKER_URL}}`. This selects logical
 database 1; the web cache continues using database 0. The Redis-owned variable
-is a prerequisite managed on that existing service, outside this IaC partial.
+is declared on Redis in this same IaC file.
 
 When replacing copied values, inspect both raw reference expressions and
 rendered connection URLs. Compare resolved values without printing secrets, then
@@ -613,12 +644,13 @@ references. An equivalent reference-only correction does not require a restart.
 The IaC file references the existing web service's runtime variables for Django
 worker and Beat. Inventory those variable names before applying; optional
 deployment overrides such as a custom sender address or Sentry configuration
-must be carried over explicitly when present. Existing web variables use
-`preserve()` because declaring an IaC environment map owns the complete map.
-Refresh that inventory before each plan so newly added settings cannot be
-deleted. Web, worker, and Beat reference the same Redis-owned broker URL. The
-application background services explicitly use `https://www.speleodb.org` for
-notification links.
+must be carried over explicitly when present. The complete variable maps are
+declared: non-secret settings and references retain their existing values, while
+credentials use `preserve()` to keep their values in Railway. Refresh that
+inventory before each plan so newly added settings cannot be deleted. Web,
+worker, and Beat reference the same Redis-owned broker URL. The application
+background services explicitly use `https://www.speleodb.org` for notification
+links.
 
 Deploy these continuously running services in `us-east4-eqdc4a`, alongside the
 existing web service:

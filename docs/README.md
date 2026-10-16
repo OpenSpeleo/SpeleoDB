@@ -13,10 +13,16 @@ Unlike product docs, these files prioritize:
 
 ### Architecture and System Design
 
+- [Production Railway configuration](railway-production.md)
+  - All eight active services, persistent volumes, variable ownership, exact
+    configuration adoption, and Redis replacement operations.
 - [Background jobs and task history](background-jobs-operations.md)
   - Celery worker/Beat operations, read-only Django task results, housekeeping
     result policy, retention, scheduler health, startup order, isolated tests,
     and retired monitoring resources.
+- [Git backup and Gogs operations](git-backup-operations.md)
+  - Shared Railway configuration, memory tuning, persistent storage, backup
+    verification, and configuration ownership.
 - `local-object-storage.md`
   - local RustFS ownership, automatic `.env`/GitLab/bucket/superuser bootstrap,
     isolated Compose projects, signed URL flow, production boundaries,
