@@ -58,11 +58,11 @@
   ],
   "type": "module",
   "dependencies": {
-    "@speleodb/map-core": "0.1.0",
-    "@speleodb/map-viewer": "0.1.0",
+    "@speleodb/map-core": "0.2.0",
+    "@speleodb/map-viewer": "0.2.0",
     "maplibre-gl": "6.14.0"
   },
   "overrides": {
-    "@speleodb/map-core": "0.1.0"
+    "@speleodb/map-core": "0.2.0"
   }
 }
