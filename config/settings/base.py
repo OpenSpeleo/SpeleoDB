@@ -6,24 +6,12 @@
 from __future__ import annotations
 
 from config.settings.celery import *  # noqa: F403
-from config.settings.database import (
-    DATABASES as DATABASES,  # noqa: PLC0414 - Settings re-export.
-)
-from config.settings.environment import (
-    APPS_DIR as APPS_DIR,  # noqa: PLC0414 - Settings re-export.
-)
-from config.settings.environment import (
-    BASE_DIR as BASE_DIR,  # noqa: PLC0414 - Settings re-export.
-)
-from config.settings.environment import (
-    TIME_ZONE as TIME_ZONE,  # noqa: PLC0414 - Settings re-export.
-)
-from config.settings.environment import (
-    USE_TZ as USE_TZ,  # noqa: PLC0414 - Settings re-export.
-)
-from config.settings.environment import (
-    env as env,  # noqa: PLC0414 - Settings re-export.
-)
+from config.settings.database import DATABASES as DATABASES  # noqa: PLC0414 - Settings re-export.
+from config.settings.environment import APPS_DIR as APPS_DIR  # noqa: PLC0414 - Settings re-export.
+from config.settings.environment import BASE_DIR as BASE_DIR  # noqa: PLC0414 - Settings re-export.
+from config.settings.environment import TIME_ZONE as TIME_ZONE  # noqa: PLC0414 - Settings re-export.
+from config.settings.environment import USE_TZ as USE_TZ  # noqa: PLC0414 - Settings re-export.
+from config.settings.environment import env as env  # noqa: PLC0414 - Settings re-export.
 
 # GENERAL
 # ------------------------------------------------------------------------------

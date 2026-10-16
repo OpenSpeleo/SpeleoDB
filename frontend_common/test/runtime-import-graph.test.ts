@@ -6,7 +6,7 @@ import ts from 'typescript';
 import { runtimeClosure } from './runtime-import-graph.ts';
 
 let root: string;
-beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-runtime-graph-')); });
+beforeEach(() => { root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-runtime-graph-'))); });
 afterEach(() => { fs.rmSync(root, { recursive: true, force: true }); });
 function fixture(files: Record<string, string>) {
     for (const [file, source] of Object.entries(files)) {

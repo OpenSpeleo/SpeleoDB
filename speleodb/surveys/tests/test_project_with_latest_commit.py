@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -36,7 +36,7 @@ class TestWithLatestCommitQuerySet(TestCase):
                     project=project,
                     author_name=f"Author {i}",
                     author_email=f"author{i}@test.com",
-                    authored_date=timezone.now() - datetime.timedelta(days=2 - j),
+                    authored_date=timezone.now() - dt.timedelta(days=2 - j),
                     message=f"Commit {j}",
                 )
 
@@ -62,9 +62,9 @@ class TestWithLatestCommitQuerySet(TestCase):
         """Test that with_latest_commit() returns the most recent commit."""
         project = ProjectFactory.create(created_by=self.user.email)
 
-        old_time = timezone.now() - datetime.timedelta(days=3)
-        mid_time = timezone.now() - datetime.timedelta(days=2)
-        new_time = timezone.now() - datetime.timedelta(days=1)
+        old_time = timezone.now() - dt.timedelta(days=3)
+        mid_time = timezone.now() - dt.timedelta(days=2)
+        new_time = timezone.now() - dt.timedelta(days=1)
 
         _ = ProjectCommit.objects.create(
             id="a" * 40,
@@ -154,7 +154,7 @@ class TestWithLatestCommitQuerySet(TestCase):
                 project=project3,
                 author_name="Author",
                 author_email="author@test.com",
-                authored_date=timezone.now() - datetime.timedelta(days=4 - i),
+                authored_date=timezone.now() - dt.timedelta(days=4 - i),
                 message=f"Commit {i}",
             )
 

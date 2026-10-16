@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,7 +11,7 @@ describe('monorepo bun run lock entrypoint', () => {
     let helper: string;
 
     beforeEach(() => {
-        directory = mkdtempSync(join(tmpdir(), 'speleodb-lock-launcher-test-'));
+        directory = realpathSync(mkdtempSync(join(tmpdir(), 'speleodb-lock-launcher-test-')));
         workspace = join(directory, 'monorepo');
         web = join(workspace, 'apps', 'web');
         helper = join(workspace, 'utilities', 'bun-lock', 'lock.mjs');

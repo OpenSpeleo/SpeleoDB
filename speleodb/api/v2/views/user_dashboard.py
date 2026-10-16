@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from collections import Counter
 from typing import TYPE_CHECKING
 from typing import Any
@@ -41,14 +41,16 @@ COMMITS_OVER_TIME_MONTHS = 12
 CONTRIBUTION_CALENDAR_DAYS = 365
 
 
-def _first_of_month(dt: datetime.datetime, months_back: int = 0) -> datetime.datetime:
-    """Return midnight on the 1st of the month ``months_back`` months before *dt*."""
-    m = dt.month - months_back
-    y = dt.year
+def _first_of_month(value: dt.datetime, months_back: int = 0) -> dt.datetime:
+    """Return midnight on the 1st of the month ``months_back`` months before *value*."""
+    m = value.month - months_back
+    y = value.year
     while m <= 0:
         m += 12
         y -= 1
-    return dt.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+    return value.replace(
+        year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0
+    )
 
 
 class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
@@ -214,7 +216,7 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
         user: User,
         project_ids: list[uuid.UUID],
     ) -> list[str]:
-        cutoff = timezone.now() - datetime.timedelta(days=CONTRIBUTION_CALENDAR_DAYS)
+        cutoff = timezone.now() - dt.timedelta(days=CONTRIBUTION_CALENDAR_DAYS)
 
         timestamps = ProjectCommit.objects.filter(
             project_id__in=project_ids,

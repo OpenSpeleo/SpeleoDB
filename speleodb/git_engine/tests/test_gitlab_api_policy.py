@@ -19,12 +19,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.git_engine.tests.live_gitlab import (
-    configured_gitlab_fixture,  # noqa: F401
-)
-from speleodb.git_engine.tests.live_gitlab import (
-    disposable_project_fixture,  # noqa: F401
-)
+from speleodb.git_engine.tests.live_gitlab import configured_gitlab_fixture  # noqa: F401
+from speleodb.git_engine.tests.live_gitlab import disposable_project_fixture  # noqa: F401
 from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import binascii
 import calendar
 import contextlib
-import datetime
+import datetime as dt
 import logging
 import os
 import pathlib
@@ -419,9 +419,9 @@ class GitCommit(Commit):
         return time.gmtime(self.committed_date)
 
     @property
-    def date_dt(self) -> datetime.datetime:
+    def date_dt(self) -> dt.datetime:
         epoch_seconds = calendar.timegm(self.date)
-        return datetime.datetime.fromtimestamp(
+        return dt.datetime.fromtimestamp(
             epoch_seconds, tz=timezone.get_current_timezone()
         )
 

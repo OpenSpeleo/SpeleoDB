@@ -17,9 +17,7 @@ from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
-from speleodb.git_engine.tests.live_gitlab import (
-    configured_gitlab_fixture,  # noqa: F401
-)
+from speleodb.git_engine.tests.live_gitlab import configured_gitlab_fixture  # noqa: F401
 from speleodb.surveys.models import Project
 from speleodb.testing.gitlab_audit import creation_allocation
 from speleodb.testing.gitlab_lifecycle import assert_group_cleanup_lifecycle

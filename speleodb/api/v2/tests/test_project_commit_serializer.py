@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from django.test import TestCase
 from django.utils import timezone
@@ -157,7 +157,7 @@ class TestProjectCommitSerializer(TestCase):
                 project=self.project,
                 author_name=f"Author {i}",
                 author_email=f"author{i}@test.com",
-                authored_date=timezone.now() - datetime.timedelta(days=i),
+                authored_date=timezone.now() - dt.timedelta(days=i),
                 message=f"Commit {i}",
             )
             commits.append(commit)

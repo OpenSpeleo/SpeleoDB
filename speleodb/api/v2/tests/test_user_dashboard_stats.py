@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import time
 from typing import Any
 from unittest.mock import patch
@@ -484,7 +484,7 @@ class TestDashboardStatsCommitsOverTime(BaseAPITestCase):
             )
 
         # 2 commits 3 months ago
-        three_months_ago = now - datetime.timedelta(days=90)
+        three_months_ago = now - dt.timedelta(days=90)
         ProjectCommitFactory.create(
             project=self.project,
             author_email=self.user.email,
@@ -500,7 +500,7 @@ class TestDashboardStatsCommitsOverTime(BaseAPITestCase):
         ProjectCommitFactory.create(
             project=self.project,
             author_email=self.user.email,
-            authored_date=now - datetime.timedelta(days=430),
+            authored_date=now - dt.timedelta(days=430),
         )
 
         # 1 commit on inaccessible project
@@ -576,7 +576,7 @@ class TestCommitsOverTimeMonthBoundary(BaseAPITestCase):
             target=self.user, project=self.project, level=PermissionLevel.ADMIN
         )
 
-    def _get_months(self, fake_now: datetime.datetime) -> list[str]:
+    def _get_months(self, fake_now: dt.datetime) -> list[str]:
         with patch(
             "speleodb.api.v2.views.user_dashboard.timezone.now", return_value=fake_now
         ):
@@ -585,35 +585,27 @@ class TestCommitsOverTimeMonthBoundary(BaseAPITestCase):
         return [e["month"] for e in response.data["commits_over_time"]]
 
     def test_march_1st_includes_february(self) -> None:
-        months = self._get_months(
-            datetime.datetime(2026, 3, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        )
+        months = self._get_months(dt.datetime(2026, 3, 1, 12, 0, 0, tzinfo=dt.UTC))
         assert len(months) == 12  # noqa: PLR2004
         assert len(set(months)) == 12  # noqa: PLR2004
         assert "2026-02" in months
 
     def test_april_1st_includes_all_12_months(self) -> None:
-        months = self._get_months(
-            datetime.datetime(2026, 4, 1, 0, 0, 0, tzinfo=datetime.UTC)
-        )
+        months = self._get_months(dt.datetime(2026, 4, 1, 0, 0, 0, tzinfo=dt.UTC))
         assert len(months) == 12  # noqa: PLR2004
         assert len(set(months)) == 12  # noqa: PLR2004
         assert "2026-02" in months
         assert "2026-03" in months
 
     def test_january_1st_crosses_year_boundary(self) -> None:
-        months = self._get_months(
-            datetime.datetime(2026, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        )
+        months = self._get_months(dt.datetime(2026, 1, 1, 12, 0, 0, tzinfo=dt.UTC))
         assert len(months) == 12  # noqa: PLR2004
         assert len(set(months)) == 12  # noqa: PLR2004
         assert months[0] == "2025-02"
         assert months[-1] == "2026-01"
 
     def test_months_are_consecutive(self) -> None:
-        months = self._get_months(
-            datetime.datetime(2026, 3, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        )
+        months = self._get_months(dt.datetime(2026, 3, 1, 12, 0, 0, tzinfo=dt.UTC))
         for i in range(1, len(months)):
             prev_y, prev_m = map(int, months[i - 1].split("-"))
             cur_y, cur_m = map(int, months[i].split("-"))
@@ -652,8 +644,8 @@ class TestDashboardStatsContributionCalendar(BaseAPITestCase):
         )
 
         now = timezone.now()
-        self.thirty_days_ago = now - datetime.timedelta(days=30)
-        self.four_hundred_days_ago = now - datetime.timedelta(days=400)
+        self.thirty_days_ago = now - dt.timedelta(days=30)
+        self.four_hundred_days_ago = now - dt.timedelta(days=400)
 
         # 3 user commits 30 days ago (2 on project_a, 1 on project_b)
         for _ in range(2):
@@ -686,7 +678,7 @@ class TestDashboardStatsContributionCalendar(BaseAPITestCase):
         ProjectCommitFactory.create(
             project=self.inaccessible,
             author_email=self.user.email,
-            authored_date=now - datetime.timedelta(days=5),
+            authored_date=now - dt.timedelta(days=5),
         )
 
     def _get_cal(self) -> list[str]:
@@ -703,7 +695,7 @@ class TestDashboardStatsContributionCalendar(BaseAPITestCase):
         assert isinstance(cal, list)
         for ts in cal:
             assert isinstance(ts, str)
-            datetime.datetime.fromisoformat(ts)
+            dt.datetime.fromisoformat(ts)
 
     def test_dates_within_365_days_included(self) -> None:
         cal = self._get_cal()
@@ -712,8 +704,8 @@ class TestDashboardStatsContributionCalendar(BaseAPITestCase):
     def test_dates_older_than_365_days_excluded(self) -> None:
         cal = self._get_cal()
         for ts in cal:
-            dt = datetime.datetime.fromisoformat(ts)
-            days_ago = (timezone.now() - dt).days
+            date = dt.datetime.fromisoformat(ts)
+            days_ago = (timezone.now() - date).days
             assert days_ago <= CONTRIBUTION_CALENDAR_DAYS
 
     def test_multiple_projects_same_day_aggregated(self) -> None:
@@ -759,7 +751,7 @@ class TestDashboardStatsRecentActivity(BaseAPITestCase):
                 project=proj,
                 author_email=email,
                 author_name=name,
-                authored_date=now - datetime.timedelta(hours=i),
+                authored_date=now - dt.timedelta(hours=i),
                 message=f"Commit message #{i}",
             )
 
@@ -820,7 +812,7 @@ class TestDashboardStatsRecentActivity(BaseAPITestCase):
 
     def test_authored_date_is_iso_format(self) -> None:
         entry = self._get_activity()[0]
-        datetime.datetime.fromisoformat(entry["authored_date"])
+        dt.datetime.fromisoformat(entry["authored_date"])
 
     def test_message_is_not_truncated(self) -> None:
         activity = self._get_activity()
@@ -911,7 +903,7 @@ class TestDashboardStatsEdgeCases(BaseAPITestCase):
                     project=p,
                     author_email=self.user.email,
                     authored_date=timezone.now()
-                    - datetime.timedelta(days=int(360 * (hash(str(p.id)) % 100) / 100)),
+                    - dt.timedelta(days=int(360 * (hash(str(p.id)) % 100) / 100)),
                 )
 
         start = time.monotonic()

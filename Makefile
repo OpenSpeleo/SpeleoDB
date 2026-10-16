@@ -100,4 +100,5 @@ generate_enc_key:
 	python manage.py generate_field_encryption_key
 
 update:
-	bun run update
+	bun update -i
+	bun run lock --upgrade

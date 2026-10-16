@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -69,9 +69,7 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
                 )
 
             # Matching the TZ of Git Commit which are on UTC
-            commit_date = datetime.datetime.fromtimestamp(
-                obj.authored_date, tz=datetime.UTC
-            )
+            commit_date = dt.datetime.fromtimestamp(obj.authored_date, tz=dt.UTC)
 
             formats: list[FileFormat] = [
                 dl_format.raw_format

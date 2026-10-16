@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import random
 import string
 import time
@@ -60,7 +60,7 @@ def sha1_hash() -> str:
 def create_project_geojson(  # noqa: PLR0917
     project: Project,
     commit_sha: str,
-    commit_date: datetime.datetime,
+    commit_date: dt.datetime,
     author_name: str,
     author_email: str,
     message: str,
@@ -154,8 +154,8 @@ class TestProjectGeoJsonCommitsApiView(BaseAPIProjectTestCase):
     def test_commits_ordered_by_date_descending(self) -> None:
         """Test that commits are returned in descending date order."""
         # Create commits with different dates
-        old_date = timezone.now() - datetime.timedelta(days=2)
-        mid_date = timezone.now() - datetime.timedelta(days=1)
+        old_date = timezone.now() - dt.timedelta(days=2)
+        mid_date = timezone.now() - dt.timedelta(days=1)
         new_date = timezone.now()
 
         sha_old = sha1_hash()

@@ -40,10 +40,13 @@ representation limits explicit when comparing locks.
 
 The manifest explicitly trusts only `esbuild` and `fsevents` dependency
 lifecycle scripts through `trustedDependencies`. This includes the optional
-macOS package even when a Linux install does not execute it. Review changes to
-this list; do not broaden trust to all packages or suppress scripts required for
-native tools. The hoisted linker preserves the existing `node_modules` layout
-used by tools and test subprocesses.
+macOS package even when a Linux install does not execute it. Bun records only
+approvals for packages present in the resolved graph in `bun.lock`; an optional
+peer such as `esbuild` may therefore remain approved in the manifest without a
+lockfile entry. Review changes to this list; do not broaden trust to all
+packages or suppress scripts required for native tools. The hoisted linker
+preserves the existing `node_modules` layout used by tools and test
+subprocesses.
 
 ## Asset graph
 

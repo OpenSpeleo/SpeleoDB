@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -191,8 +191,8 @@ class TestProjectCommitModel(TestCase):
 
     def test_ordering_by_authored_date_descending(self) -> None:
         """Test that commits are ordered by -authored_date (most recent first)."""
-        old_time = timezone.now() - datetime.timedelta(days=2)
-        mid_time = timezone.now() - datetime.timedelta(days=1)
+        old_time = timezone.now() - dt.timedelta(days=2)
+        mid_time = timezone.now() - dt.timedelta(days=1)
         new_time = timezone.now()
 
         commit_old = ProjectCommitFactory.create(

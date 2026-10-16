@@ -15,9 +15,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from speleodb.background_jobs.tests.test_archive import INITIAL_COMMIT_ATTEMPTS
 from speleodb.background_jobs.tests.test_archive import _create_initial_gitlab_commit
-from speleodb.git_engine.tests.live_gitlab import (
-    configured_gitlab_fixture,  # noqa: F401
-)
+from speleodb.git_engine.tests.live_gitlab import configured_gitlab_fixture  # noqa: F401
 from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 

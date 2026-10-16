@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import random
 from typing import TYPE_CHECKING
 from typing import Any
@@ -420,7 +420,7 @@ class TestProjectListLatestCommit(BaseAPITestCase):
             project=project,
             author_name="Author",
             author_email="author@test.com",
-            authored_date=timezone.now() - datetime.timedelta(days=2),
+            authored_date=timezone.now() - dt.timedelta(days=2),
             message="Old commit",
         )
 
@@ -546,7 +546,7 @@ class TestProjectListLatestCommit(BaseAPITestCase):
                     project=project,
                     author_name=f"Author {i}",
                     author_email=f"author{i}@test.com",
-                    authored_date=timezone.now() - datetime.timedelta(days=2 - j),
+                    authored_date=timezone.now() - dt.timedelta(days=2 - j),
                     message=f"Commit {j}",
                 )
 

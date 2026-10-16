@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import math
 from typing import TYPE_CHECKING
 
@@ -18,17 +18,17 @@ if TYPE_CHECKING:
 register = template.Library()
 
 
-def datetime_of_struct_time(st: time.struct_time) -> datetime.datetime:
+def datetime_of_struct_time(st: time.struct_time) -> dt.datetime:
     "Convert a struct_time to datetime maintaining timezone information when present"
     tz = None
     if st.tm_gmtoff is not None:
-        tz = datetime.timezone(datetime.timedelta(seconds=st.tm_gmtoff))
+        tz = dt.timezone(dt.timedelta(seconds=st.tm_gmtoff))
     # datetime doesn't like leap seconds so just truncate to 59 seconds
     if st.tm_sec in {60, 61}:
-        dt = datetime.datetime(*st[:5], 59, tzinfo=tz)
-    dt = datetime.datetime(*st[:6], tzinfo=tz)
+        converted_time = dt.datetime(*st[:5], 59, tzinfo=tz)
+    converted_time = dt.datetime(*st[:6], tzinfo=tz)
 
-    return dt.astimezone(pytz.timezone(settings.TIME_ZONE))
+    return converted_time.astimezone(pytz.timezone(settings.TIME_ZONE))
 
 
 @register.filter(name="time_struct_since")
