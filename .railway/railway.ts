@@ -9,6 +9,8 @@ import {
 
 // Sole Railway service configuration for this repository. Keep this existing
 // ownership name: databases and other services remain managed outside this file.
+// Omit Railway defaults (no sleep, ON_FAILURE with 10 retries, unrestricted
+// watch patterns): its API omits these values, so restating them creates drift.
 export const partial = "SpeleoDB-Prod";
 
 export default defineRailway(() => {
@@ -80,9 +82,6 @@ export default defineRailway(() => {
       limitOverride: { containers: { cpu: 8, memoryBytes: 3000000000 } },
       overlapSeconds: 0,
       runtime: "V2",
-      sleepApplication: false,
-      restartPolicyType: "ON_FAILURE",
-      restartPolicyMaxRetries: 10,
       useLegacyStacker: false,
     },
   });
@@ -126,28 +125,24 @@ export default defineRailway(() => {
     checkSuites: true,
   });
   const workerDeployment = {
-    sleepApplication: false,
-    restartPolicyType: "ON_FAILURE" as const,
-    restartPolicyMaxRetries: 10,
     drainingSeconds: 120,
+    // Keep the existing production caps for both background services.
+    limitOverride: { containers: { cpu: 1, memoryBytes: 1000000000 } },
   };
 
   // Scale this shared worker through replicas; every replica consumes both
   // exports and background_control using the same start script.
   const worker = service("Celery-Worker", {
     source: applicationSource,
-    build: { builder: "RAILPACK", watchPatterns: [] },
+    build: { builder: "RAILPACK" },
     start: "bash compose/celery/worker/start",
     replicas: { "us-east4-eqdc4a": 1 },
     env: applicationEnvironment,
-    deploy: {
-      ...workerDeployment,
-      limitOverride: { containers: { cpu: 2, memoryBytes: 4 * 1024 ** 3 } },
-    },
+    deploy: workerDeployment,
   });
   const beat = service("Celery-Beat", {
     source: applicationSource,
-    build: { builder: "RAILPACK", watchPatterns: [] },
+    build: { builder: "RAILPACK" },
     start: "bash compose/celery/beat/start",
     replicas: { "us-east4-eqdc4a": 1 },
     env: {

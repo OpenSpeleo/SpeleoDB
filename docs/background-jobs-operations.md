@@ -565,7 +565,7 @@ authoring file and runs through pre-commit/CI. Its native IaC runner requires
 Railway CLI 5.42.1 or newer; the read-only production plan was checked with CLI
 5.57.1. The web service, worker, and Beat track the repository's `master`
 release branch with GitHub check suites enabled. Worker and Beat sources have no
-fixed commit SHA, and their empty watch-pattern lists allow every repository
+fixed commit SHA, and their unrestricted watch patterns allow every repository
 change to trigger a rebuild after checks pass. This keeps application tasks
 aligned with releases that update shared code, dependencies, or build
 configuration. Check the live web service's source branch and migration history
@@ -574,10 +574,11 @@ resulting deployment. After service creation, read back the worker and Beat
 source settings to confirm the `master` branch, absent commit pin, and enabled
 GitHub check suites were retained.
 
-Railway may normalize omitted fields to default restart-policy or watch-pattern
-values on read-back. Compare any `null`-to-default plan differences with the
-effective deployment manifest before applying again; correct runtime settings do
-not require repeated deployments to chase representational differences.
+Railway omits default values from its serialized configuration. The IaC source
+therefore omits unrestricted watch patterns, disabled application sleeping, and
+the default `ON_FAILURE` policy with ten retries. Verify these effective values
+on the service instance when reviewing drift; explicitly repeating them in the
+source creates `null`-to-default plan differences without changing behavior.
 
 The named partial manages the existing `SpeleoDB-Prod`, `Celery-Worker`, and
 `Celery-Beat` services. Generate a fresh plan against `speleoDB` / `production`
@@ -623,9 +624,10 @@ Deploy these continuously running services in `us-east4-eqdc4a`, alongside the
 existing web service:
 
 - `Celery-Worker`: one replica initially, consuming both queues with concurrency
-  one; begin with 2 vCPU/4 GiB limits. Scale this service's replicas to add
-  capacity; do not create separate services for task categories.
-- Beat: one replica with the application advisory lock.
+  one; retain the existing 1 vCPU/1 GB limits. Scale this service's replicas to
+  add capacity; do not create separate services for task categories.
+- Beat: one replica with the application advisory lock and the same 1 vCPU/1 GB
+  limits. Both memory caps are explicitly set to 1,000,000,000 bytes in IaC.
 
 Provision secrets through Railway variables or references, never tracked source.
 Workers need the existing Django runtime settings, including the shared database
