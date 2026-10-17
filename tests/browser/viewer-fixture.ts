@@ -90,11 +90,13 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
         };
         window.addEventListener('speleo:map-created', event => {
             const { map } = (event as CustomEvent<{ map: EvidenceMap }>).detail;
-            const stats: ViewerEvidence = { map: map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0 };
+            const stats: ViewerEvidence = { map: map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0, rendererIdle: false };
             window.__viewerEvidence = stats;
+            map.on('render', () => { stats.rendererIdle = false; });
+            map.on('idle', () => { stats.rendererIdle = true; });
             for (const name of ['setLayoutProperty', 'setPaintProperty', 'setFilter', 'moveLayer'] as const) {
                 const original = map[name];
-                map[name] = (...args) => { stats.mutations++; return original.apply(map, args); };
+                map[name] = (...args) => { stats.mutations++; stats.rendererIdle = false; return original.apply(map, args); };
             }
             const addSource = map.addSource;
             map.addSource = (id: string, source: unknown) => {
@@ -114,7 +116,8 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
             document.addEventListener('change', event => {
                 if (!(event.target instanceof HTMLInputElement)) return;
                 const trace: ViewerTrace = { key: event.target.dataset.category || event.target.name || event.target.getAttribute('aria-label'), checked: event.target.checked,
-                    start: performance.now(), mutations: stats.mutations };
+                    start: performance.now(), mutations: stats.mutations,
+                    rendererSettledAtInput: stats.rendererIdle && map.loaded() && !map.isMoving() };
                 stats.traces.push(trace);
                 requestAnimationFrame(() => {
                     trace.firstFrameMs = performance.now() - trace.start;
@@ -171,6 +174,19 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
     await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     await page.waitForFunction(() => window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     return { requests, failures, gates };
+}
+
+/** Isolate sequential feedback samples from a previous update's renderer work. */
+export async function waitForViewerIdle(page: Page) {
+    await expect.poll(() => page.evaluate(async () => {
+        const evidence = window.__viewerEvidence;
+        const settled = () => evidence.rendererIdle && evidence.map.loaded() && !evidence.map.isMoving();
+        if (!settled()) return false;
+        // MapLibre's idle event follows its final render submission. Leave an
+        // intervening paint opportunity for software GPU/compositor work too.
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        return settled();
+    }), { timeout: BROWSER_TEST_BUDGETS.assertionMs }).toBe(true);
 }
 
 export async function toggleLabel(input: Locator) {

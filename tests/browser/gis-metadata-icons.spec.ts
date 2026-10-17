@@ -5,7 +5,7 @@ import type { LandmarkIcon } from '@speleodb/map-core';
 import { landmarkIconImageId } from '@speleodb/map-viewer';
 import type { EvidenceMap } from '../../ts-types/testing/browser/viewer.ts';
 import { BROWSER_TEST_BUDGETS } from './budgets.ts';
-import { login, toggleLabel } from './viewer-fixture.ts';
+import { login, toggleLabel, waitForViewerIdle } from './viewer-fixture.ts';
 
 const collectionColor = '#38bdf8';
 const previewColor = 'rgb(56, 189, 248)';
@@ -98,7 +98,9 @@ async function openViewer(page: Page) {
     await page.addInitScript(() => {
         window.addEventListener('speleo:map-created', event => {
             const { map } = (event as CustomEvent<{ map: EvidenceMap }>).detail;
-            window.__viewerEvidence = { map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0 };
+            window.__viewerEvidence = { map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0, rendererIdle: false };
+            map.on('render', () => { window.__viewerEvidence.rendererIdle = false; });
+            map.on('idle', () => { window.__viewerEvidence.rendererIdle = true; });
         });
     });
     // External provider data is deterministic; application APIs remain untouched.
@@ -150,12 +152,17 @@ async function expectIconPreviews(dialog: Locator, color = previewColor) {
     }
 }
 
-async function successfulWrite(page: Page, method: 'POST' | 'PATCH', action: () => Promise<unknown>) {
+async function successfulWriteResponse(page: Page, method: 'POST' | 'PATCH', action: () => Promise<unknown>) {
     const pending = page.waitForResponse(response => new URL(response.url()).pathname.startsWith('/api/v2/landmarks/')
         && response.request().method() === method);
     await action();
     const response: Response = await pending;
     expect(response.status()).toBe(method === 'POST' ? 201 : 200);
+    return response;
+}
+
+async function successfulWrite(page: Page, method: 'POST' | 'PATCH', action: () => Promise<unknown>) {
+    const response = await successfulWriteResponse(page, method, action);
     return (await response.json() as { landmark: SavedLandmark }).landmark;
 }
 
@@ -212,8 +219,14 @@ test('geometry labels and collection-colored landmark icons survive settings and
     await expect.poll(() => page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(id, 'visibility'), labelId)).toBe('none');
     await expectImages(page, icons);
     expect(requests.get(detailPath)).toBe(detailRequests);
+    // Image registration and source controls finish before raster tiles render.
+    // Let the real renderer settle before the test deliberately navigates away.
+    await waitForViewerIdle(page);
+    expect(errors, 'Viewer errors before reload').toEqual([]);
     await page.reload();
     await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
+    await expectImages(page, icons);
+    await waitForViewerIdle(page);
     await page.locator('#map-settings-button').click();
     await expect(page.getByRole('switch', { name: 'Geometry labels', exact: true })).not.toBeChecked();
     expect(errors).toEqual([]);
@@ -287,23 +300,33 @@ test('collection detail forms persist shared icons through creation and editing'
     const create = page.locator('#create-landmark-modal');
     await expectIconPreviews(create);
     await expect(create.getByRole('radio', { name: 'Default', exact: true })).toBeChecked();
-    await create.locator('#landmark-create-form-name').fill(`${records.name} collection`);
+    const landmarkName = `${records.name} collection`;
+    await create.locator('#landmark-create-form-name').fill(landmarkName);
     await create.locator('#landmark-create-form-latitude').fill('20');
     await create.locator('#landmark-create-form-longitude').fill('-87');
     await toggleLabel(create.getByRole('radio', { name: 'Cave', exact: true }));
     let reloaded = page.waitForEvent('domcontentloaded');
-    const created = await successfulWrite(page, 'POST', () => create.getByRole('button', { name: 'Create Landmark', exact: true }).click());
-    expect(created.icon).toBe('CAVE');
+    await successfulWriteResponse(page, 'POST', () => create.getByRole('button', { name: 'Create Landmark', exact: true }).click());
     await reloaded;
+    // The form reloads immediately after a successful write. Read persisted
+    // state independently of the old document's evictable response body.
+    const listing = await page.request.get('/api/v2/landmarks/');
+    expect(listing.ok()).toBe(true);
+    const { landmarks } = await listing.json() as { landmarks: SavedLandmark[] };
+    const matches = landmarks.filter(landmark => landmark.collection === records.collection.id && landmark.name === landmarkName);
+    expect(matches).toHaveLength(1);
+    const created = matches[0]!;
+    expect(created.icon).toBe('CAVE');
     await page.locator(`.landmark-edit-btn[data-landmark-id="${created.id}"]`).click();
     const edit = page.locator('#edit-landmark-modal');
     await expectIconPreviews(edit);
     await expect(edit.getByRole('radio', { name: 'Cave', exact: true })).toBeChecked();
     await toggleLabel(edit.getByRole('radio', { name: 'No go', exact: true }));
     reloaded = page.waitForEvent('domcontentloaded');
-    const changed = await successfulWrite(page, 'PATCH', () => edit.getByRole('button', { name: 'Save', exact: true }).click());
-    expect(changed.icon).toBe('NOGO');
+    await successfulWriteResponse(page, 'PATCH', () => edit.getByRole('button', { name: 'Save', exact: true }).click());
     await reloaded;
+    const changed = await records.readLandmark(created.id);
+    expect(changed).toMatchObject({ id: created.id, icon: 'NOGO', collection: records.collection.id });
     await page.locator(`.landmark-edit-btn[data-landmark-id="${created.id}"]`).click();
     await expect(page.locator('#edit-landmark-modal').getByRole('radio', { name: 'No go', exact: true })).toBeChecked();
     expect((await records.readLandmark(created.id)).icon).toBe('NOGO');

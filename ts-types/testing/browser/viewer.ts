@@ -9,6 +9,7 @@ export interface EvidenceMap {
     getLayoutProperty(id: string, property: string): unknown;
     getPaintProperty(id: string, property: string): unknown;
     getFilter(id: string): unknown;
+    on(type: 'render' | 'idle', listener: () => void): unknown;
     loaded(): boolean;
     isMoving(): boolean;
     getMaxZoom(): number;
@@ -22,6 +23,7 @@ export interface ViewerTrace {
     firstFrameMs?: number;
     firstFrameChecked?: boolean;
     mutationsBeforeFrame?: number;
+    rendererSettledAtInput: boolean;
     feedbackFrameMs?: number;
 }
 export interface ViewerEvidence {
@@ -32,6 +34,7 @@ export interface ViewerEvidence {
     traces: ViewerTrace[];
     longTasks: { duration: number; start: number }[];
     workerMessages: number;
+    rendererIdle: boolean;
     preparationGaps?: number[];
     preparationTimer?: ReturnType<typeof setInterval>;
 }

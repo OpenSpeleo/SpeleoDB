@@ -174,3 +174,14 @@ completion and renderer long tasks. The target is p95 control feedback within
 100 ms on the recorded workload, with application work slices around 8 ms. These
 are measured workload targets, not guarantees for arbitrarily large payloads or
 every device.
+
+Sequential settings latency samples begin after MapLibre reports idle, its
+sources/style are loaded, camera movement has stopped, and an intervening paint
+opportunity has cleared submitted renderer work. Each trace records and asserts
+that settled starting state. Completing application setters alone does not mean
+the renderer has finished, especially under CI software rendering. The separate
+rapid GPS-toggle workload exercises inputs during a gated download, then settles
+initial viewer rendering before releasing that response and measuring
+preparation. Further inputs occur during preparation without idle waits. Both
+workloads retain the real renderer and their existing data sizes and timing
+budgets.

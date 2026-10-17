@@ -1,7 +1,7 @@
 import type { Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { gisId, installFixture, login, projectId, toggleLabel, trackId } from './viewer-fixture.ts';
+import { gisId, installFixture, login, projectId, toggleLabel, trackId, waitForViewerIdle } from './viewer-fixture.ts';
 import { BROWSER_TEST_BUDGETS } from './budgets.ts';
 
 test.beforeEach(async ({ page }) => { await login(page); });
@@ -24,9 +24,11 @@ async function verifySettings(page: Page, testInfo: TestInfo, stress: boolean) {
     });
     const downloads = new Map(requests);
     for (let iteration = 0; iteration < 12; iteration++) {
+        await waitForViewerIdle(page);
         await toggleLabel(entrances);
         await expect(page.locator('#map-settings-dialog')).not.toHaveAttribute('aria-busy', 'true');
     }
+    await waitForViewerIdle(page);
     await page.locator('input[name="map-settings-color-mode"][value="depth"]').locator('..').click();
     await expect(page.locator('#map-settings-dialog')).not.toHaveAttribute('aria-busy', 'true');
     await expect.poll(() => page.evaluate(() => window.__viewerEvidence.traces
@@ -40,13 +42,14 @@ async function verifySettings(page: Page, testInfo: TestInfo, stress: boolean) {
     expect(requests).toEqual(downloads);
     expect((evidence.color as [unknown, unknown, [string]])[2][0]).toBe('interpolate');
     expect(evidence.traces).toHaveLength(13);
-    for (const trace of evidence.traces) {
-        expect(trace.mutationsBeforeFrame).toBe(0);
-        expect(trace.firstFrameChecked).toBe(trace.checked);
-    }
     const durations = evidence.traces.map(trace => trace.feedbackFrameMs!).sort((a, b) => a - b);
     const p95 = durations[Math.ceil(durations.length * .95) - 1];
     await attachJSON(testInfo, 'viewer-latency.json', { budgets: BROWSER_TEST_BUDGETS, p95FeedbackFrameMs: p95, ...evidence });
+    for (const trace of evidence.traces) {
+        expect(trace.rendererSettledAtInput).toBe(true);
+        expect(trace.mutationsBeforeFrame).toBe(0);
+        expect(trace.firstFrameChecked).toBe(trace.checked);
+    }
     expect(p95).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
     await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible();
 }
@@ -73,7 +76,11 @@ test('a second GPS toggle stays available during loading and final intent wins w
     await expect(input).not.toBeChecked();
     await toggleLabel(input);
     await expect(input).toBeChecked();
-    await page.evaluate(id => {
+    // Settle initial map rendering while the GPS response is still gated.
+    // Inputs after release continue to exercise active source preparation.
+    await waitForViewerIdle(page);
+    expect(await page.evaluate(id => Boolean(window.__viewerEvidence.map.getSource(`gps-track-source-${id}`)), trackId)).toBe(false);
+    const preparationStartedSettled = await page.evaluate(id => {
         const evidence = window.__viewerEvidence;
         evidence.traces = [];
         evidence.preparationGaps = [];
@@ -87,7 +94,9 @@ test('a second GPS toggle stays available during loading and final intent wins w
             evidence.preparationGaps!.push(now - last);
             last = now;
         }, 0);
+        return evidence.rendererIdle && evidence.map.loaded() && !evidence.map.isMoving();
     }, trackId);
+    expect(preparationStartedSettled).toBe(true);
     release();
     // The large single feature is now being parsed/transferred/prepared, rather
     // than merely waiting for its network response.
@@ -105,7 +114,7 @@ test('a second GPS toggle stays available during loading and final intent wins w
         traces: window.__viewerEvidence.traces,
         messages: window.__viewerEvidence.workerMessages,
     }));
-    await attachJSON(testInfo, 'single-feature-preparation.json', { budgets: BROWSER_TEST_BUDGETS, ...preparation });
+    await attachJSON(testInfo, 'single-feature-preparation.json', { budgets: BROWSER_TEST_BUDGETS, preparationStartedSettled, ...preparation });
     expect(preparation.messages).toBeGreaterThan(2);
     expect(preparation.traces).toHaveLength(2);
     expect(requests.get('/viewer-fixtures/track.geojson')).toBe(1);
