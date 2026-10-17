@@ -124,9 +124,9 @@ def handle_exception(
 def request_uploaded_geojson(
     project: Project, hexsha: str, uploaded_files: list[pathlib.Path]
 ) -> str:
-    """Record optional work after a successful push; never contact the broker.
+    """Record optional work and arrange direct publication after SQL commit.
 
-    The dispatcher sees this record only after ATOMIC_REQUESTS commits. A failed
+    The on_commit callback runs after ATOMIC_REQUESTS commits. A failed
     bookkeeping write rolls back its own savepoint, preserving the source upload.
     Operators can retry the pushed commit from administration if recording fails.
     """
@@ -440,7 +440,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             return HttpResponse(status=304)
 
                     # Git push has completed. Record durable work in this request's
-                    # SQL transaction; only the background dispatcher enqueues it.
+                    # SQL transaction; its on_commit callback enqueues this revision.
                     geojson_status = request_uploaded_geojson(
                         project, hexsha, uploaded_files
                     )

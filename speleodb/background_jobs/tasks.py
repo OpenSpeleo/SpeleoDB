@@ -40,6 +40,7 @@ from speleodb.background_jobs.services import retry_delay
 from speleodb.background_jobs.services import retry_due_jobs
 from speleodb.background_jobs.storage import delete_archive
 from speleodb.background_jobs.storage import upload_archive
+from speleodb.gis.geojson_generation import recover_geojson_generations
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -228,6 +229,7 @@ def maintain_background_jobs() -> None:
         .iterator()
     ):
         dispatch_notification(job_id)
+    recover_geojson_generations()
 
 
 @shared_task(name="speleodb.background_jobs.tasks.send_export_notification")

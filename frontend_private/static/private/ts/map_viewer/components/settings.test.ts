@@ -70,9 +70,10 @@ describe('private map Settings', () => {
         expect(dialog.querySelector<HTMLElement>('#map-settings-reset')!.textContent).toBe('Reset');
     });
 
-    it('selects and restores By Shot through the actual radio group and hides depth controls', () => {
+    it('selects and restores By Section through the actual radio group and hides depth controls', () => {
         dialog.querySelector<HTMLInputElement>('[name="map-settings-color-mode"][value="depth"]')!.click();
         const shot = dialog.querySelector<HTMLInputElement>('[name="map-settings-color-mode"][value="shot"]')!;
+        expect(shot.closest('label')!.textContent.trim()).toBe('By Section');
         shot.click();
         expect(State.displayPreferences.colorMode).toBe('shot');
         expect(shot.checked).toBe(true);

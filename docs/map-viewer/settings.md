@@ -65,12 +65,13 @@ write cannot change the country gate used by a concurrent project toggle or
 newly loaded source. Display persistence is registered only on the private
 route.
 
-The private color selector offers **By Survey**, **By Depth**, and **By Shot**.
-By Shot uses exported Ariane shot colors and generated Compass section colors,
-with each feature falling back to its survey color when its color is absent or
-invalid. This mode stays available for legacy or mixed data and persists like
-the other modes. See [shot coloring](shot-coloring.md) for the rendering
-contract. Depth controls and the depth legend appear only in By Depth.
+The private color selector offers **By Survey**, **By Depth**, and **By
+Section**. By Section uses exported Ariane shot colors and generated Compass
+section colors, with each feature falling back to its survey color when its
+color is absent or invalid. This mode stays available for legacy or mixed data
+and persists like the other modes. See [section coloring](shot-coloring.md) for
+the rendering contract. Depth controls and the depth legend appear only in By
+Depth.
 
 All six marker categories and all five station types default on; color defaults
 to By Survey. **Cave entrances** is the first visibility row and controls the

@@ -31,7 +31,8 @@ def materialize_geojson_source(
         except KeyError:
             return None
         destination = directory / filename
-        destination.write_bytes(source.content.getvalue())
+        with destination.open("wb") as output:
+            source.blob.stream_data(output)
         return destination
 
     if project.type != ProjectType.COMPASS:
@@ -44,7 +45,10 @@ def materialize_geojson_source(
     config_file = files.get(CompassTOML.__FILENAME__)
     if config_file is None:
         return None
-    config = CompassTOML.from_toml(config_file.content)
+    config_path = directory / CompassTOML.__FILENAME__
+    with config_path.open("wb") as output:
+        config_file.blob.stream_data(output)
+    config = CompassTOML.from_toml(config_path)
     root = directory.resolve()
     for relative_path in config.files:
         source = files.get(relative_path)
@@ -57,5 +61,6 @@ def materialize_geojson_source(
         if not destination.resolve().is_relative_to(root):
             raise ValueError("A Compass source path escapes its temporary directory.")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(source.content.getvalue())
+        with destination.open("wb") as output:
+            source.blob.stream_data(output)
     return get_compass_mak_filepath(directory)

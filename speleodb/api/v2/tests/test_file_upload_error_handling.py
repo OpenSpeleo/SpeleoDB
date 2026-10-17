@@ -26,6 +26,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db import transaction
+from django.db.models.signals import post_save
 from django.db.utils import IntegrityError
 from django.http import Http404
 from django.test import RequestFactory
@@ -48,7 +49,6 @@ from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
-from speleodb.gis.geojson_generation import request_geojson_generation
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.git_engine.core import GIT_COMMITTER
@@ -467,7 +467,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             ProjectGeoJSONGeneration.objects.get(
                 commit_id=response.data["hexsha"]
             ).state
-            == "pending"
+            == "queued"
         )
         assert self._remote_head() != self.original_head
         assert Format.objects.filter(project=self.project).exists()
@@ -478,23 +478,28 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         self.project.save(update_fields=["exclude_geojson"])
         observed: list[str] = []
 
-        def record(project: Project, commit: ProjectCommit) -> ProjectGeoJSONGeneration:
+        def record(
+            *, instance: ProjectGeoJSONGeneration, created: bool, **_kwargs: object
+        ) -> None:
+            if not created:
+                return
             # Observe the real remote, not merely a mocked local commit return.
-            assert self._remote_head() == commit.pk
-            assert commit.pk != self.original_head
+            assert self._remote_head() == instance.commit_id
+            assert instance.commit_id != self.original_head
             assert connection.in_atomic_block
-            observed.append(commit.pk)
-            return request_geojson_generation(project, commit)
+            assert instance.state == "pending"
+            observed.append(instance.commit_id)
 
-        with patch(
-            "speleodb.api.v2.views.file.request_geojson_generation", side_effect=record
-        ):
+        post_save.connect(record, sender=ProjectGeoJSONGeneration)
+        try:
             response = self._do_upload()
+        finally:
+            post_save.disconnect(record, sender=ProjectGeoJSONGeneration)
         assert response.status_code == status.HTTP_200_OK
         assert observed == [response.data["hexsha"]]
         assert (
             ProjectGeoJSONGeneration.objects.get(commit_id=observed[0]).state
-            == "pending"
+            == "queued"
         )
 
     def test_optional_geojson_sql_failure_preserves_source_transaction(self) -> None:
@@ -547,7 +552,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             ProjectGeoJSONGeneration.objects.get(
                 commit_id=response.data["hexsha"]
             ).state
-            == "pending"
+            == "queued"
         )
         assert self._remote_head() != self.original_head
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()

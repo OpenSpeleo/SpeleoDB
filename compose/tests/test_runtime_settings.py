@@ -178,6 +178,8 @@ def test_worker_profile_preserves_tasks_and_results_without_admin_autodiscovery(
         "speleodb.background_jobs.tasks.generate_export",
         "speleodb.background_jobs.tasks.maintain_background_jobs",
         "speleodb.surveys.tasks.refresh_all_projects_geojson",
+        "speleodb.surveys.tasks.refresh_project_geojson",
+        "speleodb.gis.tasks.generate_project_geojson",
         "speleodb.users.tasks.get_users_count",
         "celery.backend_cleanup",
     }

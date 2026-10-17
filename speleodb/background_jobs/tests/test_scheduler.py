@@ -227,24 +227,34 @@ def test_standby_acquires_lock_after_previous_scheduler_exits(
 
 
 @pytest.mark.parametrize(
-    ("task_name", "ignore_result"),
+    ("task_name", "ignore_result", "task_args"),
     [
-        ("speleodb.gis.tasks.dispatch_project_geojsons", True),
-        ("speleodb.background_jobs.tasks.maintain_background_jobs", True),
-        ("speleodb.background_jobs.tasks.delete_expired_artifacts", True),
-        ("celery.backend_cleanup", True),
-        ("speleodb.users.tasks.get_users_count", False),
+        ("speleodb.background_jobs.tasks.maintain_background_jobs", True, []),
+        ("speleodb.background_jobs.tasks.delete_expired_artifacts", True, []),
+        ("celery.backend_cleanup", True, []),
+        ("speleodb.users.tasks.get_users_count", False, []),
+        (
+            "speleodb.gis.tasks.generate_project_geojson",
+            False,
+            ["a" * 40, str(uuid.uuid4())],
+        ),
+        ("speleodb.surveys.tasks.refresh_project_geojson", False, [str(uuid.uuid4())]),
     ],
 )
 @pytest.mark.parametrize("advance", [False, True])
 def test_scheduler_result_policy_preserves_original_entry_options(
-    runtime: SchedulerRuntime, task_name: str, ignore_result: bool, advance: bool
+    runtime: SchedulerRuntime,
+    task_name: str,
+    ignore_result: bool,
+    task_args: list[str],
+    advance: bool,
 ) -> None:
     # The first change check establishes django-celery-beat's timestamp. Prime
     # it before changing the row so the next read actually reloads this task.
     assert runtime.scheduler.schedule[runtime.task.name].task == runtime.task.task
     runtime.task.task = task_name
-    runtime.task.save(update_fields=["task"])
+    runtime.task.args = json.dumps(task_args)
+    runtime.task.save(update_fields=["task", "args"])
     entry: ScheduleEntry = runtime.scheduler.schedule[runtime.task.name]
     assert isinstance(entry, ModelEntry)
     assert entry.task == task_name
@@ -278,6 +288,7 @@ def test_scheduler_result_policy_preserves_original_entry_options(
         message = queue.get(block=False)
         assert message.headers["task"] == task_name
         assert message.headers["id"] == result.id
+        assert message.payload[0] == task_args
         # Kombu's headers stub permits strings, but Celery sends booleans.
         received_ignore_result: object = message.headers["ignore_result"]
         assert received_ignore_result is ignore_result

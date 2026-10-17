@@ -564,8 +564,8 @@ EXPORT_GPX_MAX_BYTES = env.int("EXPORT_GPX_MAX_BYTES", default=16 * 1024 * 1024)
 # retain their GeoJSON, with the GPX omission reported in the export manifest.
 EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
 
-# Per-commit maps run outside uploads. Beat dispatches committed pending rows;
-# broker outages retain work without spending a conversion attempt.
+# Per-commit maps enqueue directly after upload commit. Maintenance recovers
+# broker outages and expired leases without spending a conversion attempt.
 GEOJSON_GENERATION_SOFT_TIME_LIMIT = 5 * 60
 GEOJSON_GENERATION_HARD_TIME_LIMIT = 6 * 60
 GEOJSON_GENERATION_MAX_ATTEMPTS = 3
@@ -579,7 +579,7 @@ GEOJSON_GENERATION_SCRATCH_DIR = env.str(
     default="/tmp/speleodb-geojson",  # noqa: S108
 )
 
-# A full survey-history rebuild is an explicit, long-running maintenance task.
+# Each project-history rebuild is an explicit, long-running maintenance task.
 # Allow cleanup after its soft deadline before the worker forcibly stops it.
 GEOJSON_REBUILD_SOFT_TIME_LIMIT = env.int(
     "GEOJSON_REBUILD_SOFT_TIME_LIMIT", default=6 * 60 * 60

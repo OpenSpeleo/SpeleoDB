@@ -15,16 +15,14 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args: Any, **options: Any) -> None:
+        # Retire only the application's former owned schedule. User schedules
+        # and task history are independent and must remain untouched.
+        PeriodicTask.objects.filter(name="project-geojson-dispatch").delete()
         schedules: tuple[tuple[str, str, int], ...] = (
-            (
-                "project-geojson-dispatch",
-                "speleodb.gis.tasks.dispatch_project_geojsons",
-                60,
-            ),
             (
                 "background-job-maintenance",
                 "speleodb.background_jobs.tasks.maintain_background_jobs",
-                60,
+                600,
             ),
             (
                 "export-artifact-cleanup",

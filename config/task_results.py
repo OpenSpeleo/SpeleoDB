@@ -8,7 +8,6 @@ from __future__ import annotations
 
 HOUSEKEEPING_TASK_NAMES: frozenset[str] = frozenset(
     {
-        "speleodb.gis.tasks.dispatch_project_geojsons",
         "speleodb.background_jobs.tasks.maintain_background_jobs",
         "speleodb.background_jobs.tasks.delete_expired_artifacts",
         "celery.backend_cleanup",

@@ -173,7 +173,6 @@ def test_minimal_scheduler_publishes_housekeeping_policy_without_task_imports(
     assert {
         message["task"]: message["ignore_result"] for message in observed["messages"]
     } == {
-        "speleodb.gis.tasks.dispatch_project_geojsons": True,
         "speleodb.background_jobs.tasks.maintain_background_jobs": True,
         "speleodb.background_jobs.tasks.delete_expired_artifacts": True,
         "celery.backend_cleanup": True,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import uuid
 from contextlib import closing
 from datetime import timedelta
@@ -13,6 +14,9 @@ from unittest.mock import patch
 
 import orjson
 import pytest
+from celery import Celery
+from celery import current_app
+from celery._state import get_current_app
 from celery.contrib.testing.worker import start_worker
 from celery.exceptions import SoftTimeLimitExceeded
 from celery.result import EagerResult
@@ -23,22 +27,24 @@ from django.core.management import call_command
 from django.db import connection
 from django.db import transaction
 from django.utils import timezone
+from django_celery_beat.models import IntervalSchedule
 from django_celery_beat.models import PeriodicTask
 from git import Actor
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
 
-from config.celery_app import app
 from speleodb.background_jobs.archive_sources import GitSource
+from speleodb.background_jobs.tasks import maintain_background_jobs
 from speleodb.common.enums import ProjectType
 from speleodb.gis.admin.project_geojson_generation import GeoJSONGenerationForm
 from speleodb.gis.geojson_generation import GeoJSONOwnershipLostError
 from speleodb.gis.geojson_generation import claim_geojson_generation
 from speleodb.gis.geojson_generation import cleanup_geojson_work
-from speleodb.gis.geojson_generation import dispatch_pending_geojsons
+from speleodb.gis.geojson_generation import enqueue_geojson_generation
 from speleodb.gis.geojson_generation import finish_geojson_generation
 from speleodb.gis.geojson_generation import mark_geojson_ready
+from speleodb.gis.geojson_generation import recover_geojson_generations
 from speleodb.gis.geojson_generation import request_geojson_generation
 from speleodb.gis.geojson_generation import reserve_geojson_object
 from speleodb.gis.geojson_generation import retry_geojson_generation
@@ -101,18 +107,57 @@ def artifact_storage(
     return storage
 
 
+@pytest.fixture(autouse=True)
+def memory_broker() -> Generator[Celery]:
+    previous = get_current_app()
+    with Celery(f"geojson-tests-{uuid.uuid4()}") as application:
+        application.config_from_object("django.conf:settings", namespace="CELERY")
+        application.conf.update(
+            broker_url="memory://",
+            broker_read_url="memory://",
+            broker_write_url="memory://",
+            task_always_eager=False,
+            result_backend="cache+memory://",
+        )
+        application.autodiscover_tasks(force=True)
+        try:
+            with (
+                application.connection_for_write() as broker,
+                broker.SimpleQueue("background_control") as queue,
+            ):
+                queue.clear()
+            yield application
+        finally:
+            with (
+                application.connection_for_write() as broker,
+                broker.SimpleQueue("background_control") as queue,
+            ):
+                queue.clear()
+            previous.set_current()
+
+
+def _queued_messages() -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    with (
+        current_app.connection_for_write() as broker,
+        broker.SimpleQueue("background_control") as queue,
+    ):
+        while queue.qsize():
+            message = queue.get(block=False)
+            messages.append({"headers": message.headers, "body": message.payload})
+            message.ack()
+    return messages
+
+
 def _queue(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
     generation = request_geojson_generation(commit.project, commit)
-    with patch(PUBLISH) as publish:
-        dispatch_pending_geojsons()
+    enqueue_geojson_generation(commit.pk)
     generation.refresh_from_db()
-    publish.assert_called_once_with(
-        "speleodb.gis.tasks.generate_project_geojson",
-        args=[commit.pk, str(generation.token)],
-        task_id=str(generation.token),
-        queue="background_control",
-        retry=False,
-    )
+    messages = _queued_messages()
+    assert len(messages) == 1
+    assert messages[0]["headers"]["task"] == generate_project_geojson.name
+    assert messages[0]["headers"]["id"] == str(generation.token)
+    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
     return generation
 
 
@@ -123,58 +168,117 @@ def _running(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
     return claimed
 
 
-def test_request_is_durable_idempotent_and_never_calls_broker(
+@pytest.mark.django_db(transaction=True)
+def test_request_publishes_once_only_after_transaction_commit(
     commit: ProjectCommit,
 ) -> None:
-    with patch(PUBLISH, side_effect=AssertionError("No broker in requests")):
+    with transaction.atomic():
         first = request_geojson_generation(commit.project, commit)
         second = request_geojson_generation(commit.project, commit)
-    assert first.pk == second.pk
-    assert first.state == GeoJSONGenerationState.PENDING
+        assert first.pk == second.pk
+        assert first.state == GeoJSONGenerationState.PENDING
+        assert _queued_messages() == []
+    first.refresh_from_db()
+    assert first.state == GeoJSONGenerationState.QUEUED
+    messages = _queued_messages()
+    assert len(messages) == 1
+    assert messages[0]["headers"]["task"] == generate_project_geojson.name
+    assert messages[0]["body"][0] == [commit.pk, str(first.token)]
+    request_geojson_generation(commit.project, commit)
+    assert _queued_messages() == []
     assert ProjectGeoJSONGeneration.objects.count() == 1
     assert first.attempts == 0
 
 
+@pytest.mark.django_db(transaction=True)
 def test_request_rollback_removes_pending_work(commit: ProjectCommit) -> None:
     with transaction.atomic():
         request_geojson_generation(commit.project, commit)
         transaction.set_rollback(True)
-    with patch(PUBLISH) as publish:
-        dispatch_pending_geojsons()
-    publish.assert_not_called()
+    assert _queued_messages() == []
     assert not ProjectGeoJSONGeneration.objects.exists()
 
 
+@pytest.mark.django_db(transaction=True)
 def test_excluded_project_never_dispatches(commit: ProjectCommit) -> None:
     commit.project.exclude_geojson = True
+    commit.project.save(update_fields=["exclude_geojson"])
     generation = request_geojson_generation(commit.project, commit)
     assert generation.state == GeoJSONGenerationState.SKIPPED
-    with patch(PUBLISH) as publish:
-        dispatch_pending_geojsons()
-    publish.assert_not_called()
+    recover_geojson_generations()
+    assert _queued_messages() == []
 
 
-def test_broker_failure_retains_work_without_consuming_execution_budget(
-    commit: ProjectCommit, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    now = timezone.now()
-    monkeypatch.setattr(timezone, "now", lambda: now)
+def test_maintenance_recovers_pending_work(commit: ProjectCommit) -> None:
     generation = request_geojson_generation(commit.project, commit)
-    with patch(PUBLISH, side_effect=ConnectionError("broker offline")):
-        dispatch_pending_geojsons()
+    assert _queued_messages() == []
+    maintain_background_jobs.run()
+    generation.refresh_from_db()
+    assert generation.state == GeoJSONGenerationState.QUEUED
+    messages = _queued_messages()
+    assert len(messages) == 1
+    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_manual_retry_publishes_after_commit(commit: ProjectCommit) -> None:
+    generation = ProjectGeoJSONGeneration.objects.create(
+        commit=commit,
+        state=GeoJSONGenerationState.FAILED,
+        attempts=3,
+        last_error_code="invalid_survey",
+    )
+    old_token = generation.token
+    with transaction.atomic():
+        retry_geojson_generation(commit)
+        assert _queued_messages() == []
+    generation.refresh_from_db()
+    assert generation.state == GeoJSONGenerationState.QUEUED
+    assert generation.attempts == 0
+    assert generation.token != old_token
+    messages = _queued_messages()
+    assert len(messages) == 1
+    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_broker_failure_retains_work_without_consuming_execution_budget(
+    commit: ProjectCommit, memory_broker: Celery
+) -> None:
+    before = timezone.now()
+    with socket.socket() as refused:
+        refused.bind(("127.0.0.1", 0))
+        broker_url = f"redis://127.0.0.1:{refused.getsockname()[1]}/0"
+        with Celery(f"geojson-unavailable-{uuid.uuid4()}") as unavailable:
+            unavailable.config_from_object("django.conf:settings", namespace="CELERY")
+            unavailable.conf.update(
+                broker_url=broker_url,
+                broker_read_url=broker_url,
+                broker_write_url=broker_url,
+                broker_connection_timeout=0.2,
+                broker_transport_options={
+                    "socket_timeout": 0.2,
+                    "socket_connect_timeout": 0.2,
+                },
+            )
+            try:
+                generation = request_geojson_generation(commit.project, commit)
+            finally:
+                memory_broker.set_current()
     generation.refresh_from_db()
     assert generation.state == GeoJSONGenerationState.PENDING
     assert generation.attempts == 0
     assert generation.dispatch_attempts == 1
     assert generation.last_error_code == "broker_unavailable"
-    assert generation.next_attempt_at == now + timedelta(seconds=60)
-    with patch(PUBLISH) as publish:
-        dispatch_pending_geojsons()
-    publish.assert_not_called()
-    now += timedelta(seconds=60)
-    with patch(PUBLISH) as publish:
-        dispatch_pending_geojsons()
-    publish.assert_called_once()
+    assert generation.next_attempt_at is not None
+    assert generation.next_attempt_at >= before + timedelta(seconds=60)
+    recover_geojson_generations()
+    assert _queued_messages() == []
+    ProjectGeoJSONGeneration.objects.filter(pk=generation.pk).update(
+        next_attempt_at=timezone.now()
+    )
+    maintain_background_jobs.run()
+    assert len(_queued_messages()) == 1
     generation.refresh_from_db()
     assert generation.state == GeoJSONGenerationState.QUEUED
 
@@ -189,7 +293,7 @@ def test_ambiguous_delivery_does_not_reset_claimed_execution(
         raise ConnectionError("reply lost after acceptance")
 
     with patch(PUBLISH, side_effect=claim_then_fail):
-        dispatch_pending_geojsons()
+        recover_geojson_generations()
     generation.refresh_from_db()
     assert generation.state == GeoJSONGenerationState.RUNNING
     assert generation.attempts == 1
@@ -204,8 +308,8 @@ def test_duplicate_delivery_claims_once_and_expired_queue_token_is_ignored(
     assert now is not None
     monkeypatch.setattr(timezone, "now", lambda: now)
     assert claim_geojson_generation(commit.pk, old_token) is None
-    with patch(PUBLISH):
-        dispatch_pending_geojsons()
+    recover_geojson_generations()
+    assert len(_queued_messages()) == 1
     generation.refresh_from_db()
     assert str(generation.token) != old_token
     assert claim_geojson_generation(commit.pk, old_token) is None
@@ -220,17 +324,16 @@ def test_worker_lease_recovers_and_stops_after_three_attempts(
     monkeypatch.setattr(timezone, "now", lambda: now)
     generation = request_geojson_generation(commit.project, commit)
     for attempt in range(1, settings.GEOJSON_GENERATION_MAX_ATTEMPTS + 1):
-        with patch(PUBLISH):
-            dispatch_pending_geojsons()
+        recover_geojson_generations()
+        assert len(_queued_messages()) == 1
         generation.refresh_from_db()
         assert claim_geojson_generation(commit.pk, str(generation.token)) is not None
         generation.refresh_from_db()
         assert generation.attempts == attempt
         assert generation.lease_expires_at is not None
         now = generation.lease_expires_at
-        with patch(PUBLISH) as publish:
-            dispatch_pending_geojsons()
-        publish.assert_not_called()
+        recover_geojson_generations()
+        assert _queued_messages() == []
         generation.refresh_from_db()
         if generation.next_attempt_at is not None:
             now = generation.next_attempt_at
@@ -420,13 +523,30 @@ def test_soft_timeout_is_durable_and_still_escapes_to_celery(
 
 
 def test_scheduler_and_task_limits() -> None:
+    interval = IntervalSchedule.objects.create(every=60, period="seconds")
+    PeriodicTask.objects.create(
+        name="project-geojson-dispatch",
+        task="retired.geojson.scheduler",
+        interval=interval,
+    )
+    custom = PeriodicTask.objects.create(
+        name="operator-owned-schedule",
+        task="operator.task",
+        interval=interval,
+    )
     call_command("install_background_schedules")
+    schedules = dict(PeriodicTask.objects.values_list("name", "pk"))
     call_command("install_background_schedules")
-    schedule = PeriodicTask.objects.get(name="project-geojson-dispatch")
-    assert schedule.task == "speleodb.gis.tasks.dispatch_project_geojsons"
+    assert dict(PeriodicTask.objects.values_list("name", "pk")) == schedules
+    assert not PeriodicTask.objects.filter(name="project-geojson-dispatch").exists()
+    custom.refresh_from_db()
+    assert custom.interval_id == interval.pk
+    assert custom.task == "operator.task"
+    schedule = PeriodicTask.objects.get(name="background-job-maintenance")
+    assert schedule.task == maintain_background_jobs.name
     assert schedule.queue == "background_control"
     assert schedule.interval is not None
-    assert schedule.interval.every == 60  # noqa: PLR2004
+    assert schedule.interval.every == 600  # noqa: PLR2004
     assert generate_project_geojson.soft_time_limit == 300  # noqa: PLR2004
     assert generate_project_geojson.time_limit == 360  # noqa: PLR2004
 
@@ -664,15 +784,14 @@ def test_existing_artifact_winner_retains_failed_cleanup_journal(
 def test_worker_consumes_committed_job_asynchronously(
     local_source: tuple[ProjectCommit, GitRepo],
     artifact_storage: FileSystemStorage,
-    monkeypatch: pytest.MonkeyPatch,
+    memory_broker: Celery,
 ) -> None:
     if connection.vendor != "postgresql":
         pytest.skip("This integration test uses an independent worker DB connection")
     commit, _ = local_source
     generation = _queue(commit)
-    monkeypatch.setattr(app.conf, "task_always_eager", False)
     queue = f"test-geojson-{uuid.uuid4().hex}"
-    with start_worker(app, queues=[queue], perform_ping_check=False):
+    with start_worker(memory_broker, queues=[queue], perform_ping_check=False):
         result = generate_project_geojson.apply_async(
             args=(commit.pk, str(generation.token)),
             task_id=str(generation.token),

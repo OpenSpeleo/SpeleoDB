@@ -165,30 +165,30 @@ flowchart TD
 
 ## Private vs Public Viewer Comparison
 
-| Feature                                       | Private |                             Public                             |
-| --------------------------------------------- | :-----: | :------------------------------------------------------------: |
-| Survey GeoJSON (lines, points)                |   Yes   |                              Yes                               |
-| Color modes (By Survey / By Depth)            |   Yes   |                              Yes                               |
-| By Shot (source color with survey fallback)   |   Yes   |                               No                               |
-| Project colors (model-stored)                 |   Yes   |                      Yes (color from API)                      |
-| Country grouping in project panel             |   Yes   |                         No (flat list)                         |
-| Project visibility toggle panel               |   Yes   |                              Yes                               |
-| Depth legend                                  |   Yes   |                              Yes                               |
-| Auto-zoom to bounds                           |   Yes   |                              Yes                               |
-| Max zoom limiting                             |   No    | Yes (`LIMITED_MAX_ZOOM = 13` when `allowPreciseZoom` is false) |
-| Subsurface stations (CRUD)                    |   Yes   |                               No                               |
-| Surface stations (CRUD)                       |   Yes   |                               No                               |
-| Landmarks (CRUD, GPX import)                  |   Yes   |                               No                               |
-| Exploration leads (CRUD)                      |   Yes   |                               No                               |
-| Cylinder installs                             |   Yes   |                               No                               |
-| GPS tracks panel                              |   Yes   |                               No                               |
-| Private GIS Layers panel                      |   Yes   |                               No                               |
-| Station tags & colors                         |   Yes   |                               No                               |
-| Station logs, resources, sensors, experiments |   Yes   |                               No                               |
-| Context menu (right-click)                    |   Yes   |                               No                               |
-| Drag-and-drop repositioning                   |   Yes   |                               No                               |
-| URL `?goto=LAT,LONG` deep linking             |   Yes   |                               No                               |
-| Permission-gated actions                      |   Yes   |                       No (all read-only)                       |
+| Feature                                        | Private |                             Public                             |
+| ---------------------------------------------- | :-----: | :------------------------------------------------------------: |
+| Survey GeoJSON (lines, points)                 |   Yes   |                              Yes                               |
+| Color modes (By Survey / By Depth)             |   Yes   |                              Yes                               |
+| By Section (source color with survey fallback) |   Yes   |                               No                               |
+| Project colors (model-stored)                  |   Yes   |                      Yes (color from API)                      |
+| Country grouping in project panel              |   Yes   |                         No (flat list)                         |
+| Project visibility toggle panel                |   Yes   |                              Yes                               |
+| Depth legend                                   |   Yes   |                              Yes                               |
+| Auto-zoom to bounds                            |   Yes   |                              Yes                               |
+| Max zoom limiting                              |   No    | Yes (`LIMITED_MAX_ZOOM = 13` when `allowPreciseZoom` is false) |
+| Subsurface stations (CRUD)                     |   Yes   |                               No                               |
+| Surface stations (CRUD)                        |   Yes   |                               No                               |
+| Landmarks (CRUD, GPX import)                   |   Yes   |                               No                               |
+| Exploration leads (CRUD)                       |   Yes   |                               No                               |
+| Cylinder installs                              |   Yes   |                               No                               |
+| GPS tracks panel                               |   Yes   |                               No                               |
+| Private GIS Layers panel                       |   Yes   |                               No                               |
+| Station tags & colors                          |   Yes   |                               No                               |
+| Station logs, resources, sensors, experiments  |   Yes   |                               No                               |
+| Context menu (right-click)                     |   Yes   |                               No                               |
+| Drag-and-drop repositioning                    |   Yes   |                               No                               |
+| URL `?goto=LAT,LONG` deep linking              |   Yes   |                               No                               |
+| Permission-gated actions                       |   Yes   |                       No (all read-only)                       |
 
 **Shared modules used by public viewer:** `State`, `Config`, `MapCore`,
 `MapSources`, `Layers`, `Utils`, `ProjectPanel`, `DepthLegend`

@@ -67,7 +67,6 @@ def test_django_result_backend_persists_json_execution_states() -> None:
 @pytest.mark.parametrize(
     ("task_name", "ignore_result"),
     [
-        ("speleodb.gis.tasks.dispatch_project_geojsons", True),
         ("speleodb.background_jobs.tasks.maintain_background_jobs", True),
         ("speleodb.background_jobs.tasks.delete_expired_artifacts", True),
         ("celery.backend_cleanup", True),

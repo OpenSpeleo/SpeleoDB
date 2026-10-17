@@ -102,5 +102,5 @@ class ProjectGeoJSONGenerationAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 self.message_user(request, str(error), level=messages.WARNING)
         self.message_user(
             request,
-            "Eligible revisions are pending. The dispatcher will queue them.",
+            "Eligible revisions will be queued when this request commits.",
         )

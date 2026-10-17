@@ -373,7 +373,6 @@ def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
 @pytest.mark.parametrize(
     "task_name",
     [
-        "speleodb.gis.tasks.dispatch_project_geojsons",
         MAINTENANCE_TASK,
         CLEANUP_TASK,
         "celery.backend_cleanup",

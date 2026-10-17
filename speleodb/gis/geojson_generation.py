@@ -1,4 +1,4 @@
-"""Persist and fence GeoJSON work; only the dispatcher contacts the broker."""
+"""Persist and fence GeoJSON work, publishing each request after SQL commit."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import shutil
 import uuid
 from datetime import datetime
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from speleodb.common.enums import ProjectType
+from speleodb.gis.geojson_workspaces import cleanup_geojson_workspaces
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models.project_geojson_generation import GeoJSONGenerationState
 from speleodb.gis.models.project_geojson_generation import ProjectGeoJSONGeneration
@@ -53,11 +55,10 @@ def _retry_delay(attempts: int) -> timedelta:
 def request_geojson_generation(
     project: Project, commit: ProjectCommit
 ) -> ProjectGeoJSONGeneration:
-    """Record work after a successful source push; never publish to Celery here.
+    """Record work atomically with the upload, then enqueue that revision.
 
-    The caller owns the upload transaction. A dispatcher on another connection
-    cannot observe this row until that transaction commits. Failed bookkeeping
-    can be repaired by adding this commit in the generation admin.
+    Rollbacks discard the callback. A bounded broker failure leaves the durable
+    row pending for maintenance without undoing a successful source upload.
     """
     if commit.project_id != project.pk:
         raise ValueError("The source commit belongs to another project.")
@@ -81,6 +82,10 @@ def request_geojson_generation(
             "last_error": "GeoJSON generation is disabled." if skipped else "",
         },
     )
+    if generation.state in ACTIVE_STATES:
+        transaction.on_commit(
+            partial(enqueue_geojson_generation, generation.commit_id), robust=True
+        )
     return generation
 
 
@@ -112,6 +117,9 @@ def retry_geojson_generation(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
         generation.last_error = ""
         generation.updated_at = now
         generation.save()
+        transaction.on_commit(
+            partial(enqueue_geojson_generation, generation.commit_id), robust=True
+        )
         return generation
 
 
@@ -194,6 +202,7 @@ def _reserve_dispatch(commit_id: str) -> tuple[str, uuid.UUID] | None:
 
 def cleanup_geojson_work() -> None:
     """Reclaim abandoned, journaled objects without deleting published artifacts."""
+    cleanup_geojson_workspaces()
     now = timezone.now()
     commits = (
         ProjectGeoJSONGeneration.objects.exclude(unpublished_objects=[])
@@ -266,7 +275,7 @@ def cleanup_geojson_work() -> None:
             logger.warning("Unable to clean abandoned GeoJSON workspace %s", directory)
 
 
-def dispatch_pending_geojsons() -> None:
+def recover_geojson_generations() -> None:
     """Recover leases and publish a bounded batch of committed work records."""
     cleanup_geojson_work()
     now = timezone.now()
@@ -287,44 +296,47 @@ def dispatch_pending_geojsons() -> None:
         ]
     )
     for commit_id in candidates:
-        reservation = _reserve_dispatch(commit_id)
-        if reservation is None:
-            continue
-        _, token = reservation
-        try:
-            current_app.send_task(
-                GENERATION_TASK,
-                args=[commit_id, str(token)],
-                task_id=str(token),
-                queue="background_control",
-                retry=False,
+        enqueue_geojson_generation(commit_id)
+
+
+def enqueue_geojson_generation(commit_id: str) -> None:
+    """Publish one committed revision, with idempotent reservation and recovery."""
+    reservation = _reserve_dispatch(commit_id)
+    if reservation is None:
+        return
+    _, token = reservation
+    try:
+        current_app.send_task(
+            GENERATION_TASK,
+            args=[commit_id, str(token)],
+            task_id=str(token),
+            queue="background_control",
+            retry=False,
+        )
+    except Exception as error:  # noqa: BLE001 - Persist ambiguous broker delivery.
+        reraise_task_timeout(error)
+        # Delivery can be ambiguous. A worker which already claimed this
+        # token wins; never move that running execution back to pending.
+        with transaction.atomic():
+            generation = (
+                ProjectGeoJSONGeneration.objects.select_for_update()
+                .filter(pk=commit_id, token=token, state=GeoJSONGenerationState.QUEUED)
+                .first()
             )
-        except Exception as error:  # noqa: BLE001 - Persist ambiguous broker delivery.
-            reraise_task_timeout(error)
-            # Delivery can be ambiguous. A worker which already claimed this
-            # token wins; never move that running execution back to pending.
-            with transaction.atomic():
-                generation = (
-                    ProjectGeoJSONGeneration.objects.select_for_update()
-                    .filter(
-                        pk=commit_id, token=token, state=GeoJSONGenerationState.QUEUED
-                    )
-                    .first()
+            if generation is not None:
+                now = timezone.now()
+                generation.state = GeoJSONGenerationState.PENDING
+                generation.next_attempt_at = now + _retry_delay(
+                    generation.dispatch_attempts
                 )
-                if generation is not None:
-                    now = timezone.now()
-                    generation.state = GeoJSONGenerationState.PENDING
-                    generation.next_attempt_at = now + _retry_delay(
-                        generation.dispatch_attempts
-                    )
-                    generation.lease_expires_at = None
-                    generation.last_error_code = "broker_unavailable"
-                    generation.last_error = (
-                        "Map generation is waiting for the background queue."
-                    )
-                    generation.updated_at = now
-                    generation.save()
-            logger.warning("GeoJSON dispatch deferred for commit %s", commit_id)
+                generation.lease_expires_at = None
+                generation.last_error_code = "broker_unavailable"
+                generation.last_error = (
+                    "Map generation is waiting for the background queue."
+                )
+                generation.updated_at = now
+                generation.save()
+        logger.warning("GeoJSON dispatch deferred for commit %s", commit_id)
 
 
 def claim_geojson_generation(

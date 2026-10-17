@@ -1,11 +1,11 @@
-# Survey shot coloring
+# Survey section coloring
 
 ## Intent and data contract
 
-The private Survey Viewer offers **By Shot** in Settings → Appearance alongside
-By Survey and By Depth. It displays Ariane's recorded shot colors or Compass's
-assigned section colors, making source distinctions visible without changing
-survey identity, selection, geometry, or depth measurements.
+The private Survey Viewer offers **By Section** in Settings → Appearance
+alongside By Survey and By Depth. It displays Ariane's recorded shot colors or
+Compass's assigned section colors, making source distinctions visible without
+changing survey identity, selection, geometry, or depth measurements.
 
 A survey GeoJSON feature may contain `properties.color`. Exporters normalize
 opaque colors to `#rrggbb` and colors with transparency to `rgba(r,g,b,a)`.
@@ -23,13 +23,14 @@ share its displayed color.
 ## Rendering ownership
 
 `DEFAULTS.DISPLAY.COLOR_MODES` defines the supported internal values: `project`,
-`depth`, and `shot`. `Colors.isValidColorMode()` validates both preference
+`depth`, and `shot` (displayed as By Section). The label change keeps saved
+selections unchanged. `Colors.isValidColorMode()` validates both preference
 restoration and runtime changes. The existing storage version and default remain
 unchanged; resetting returns to By Survey. Public initialization does not read
 private preferences and retains its two-mode controls.
 
 `Colors.getSurveyPaint(projectId, mode, depthDomain)` owns paint selection for
-mode changes and newly loaded or rebuilt survey line layers. Shot mode uses:
+mode changes and newly loaded or rebuilt survey line layers. Section mode uses:
 
 ```javascript
 ["to-color", ["get", "color"], Colors.getProjectColor(projectId)];

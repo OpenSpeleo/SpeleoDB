@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from contextlib import closing
 from functools import partial
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any
 
 import sentry_sdk
@@ -29,11 +27,11 @@ from speleodb.gis.geojson_generation import ERROR_LIMIT
 from speleodb.gis.geojson_generation import GeoJSONOwnershipLostError
 from speleodb.gis.geojson_generation import assert_geojson_ownership
 from speleodb.gis.geojson_generation import claim_geojson_generation
-from speleodb.gis.geojson_generation import dispatch_pending_geojsons
 from speleodb.gis.geojson_generation import finish_geojson_generation
 from speleodb.gis.geojson_generation import mark_geojson_ready
 from speleodb.gis.geojson_generation import reserve_geojson_object
 from speleodb.gis.geojson_sources import materialize_geojson_source
+from speleodb.gis.geojson_workspaces import geojson_workspace
 from speleodb.gis.project_geojson_services import replace_project_geojson
 from speleodb.git_engine.core import GitRepo
 from speleodb.utils.exceptions import reraise_task_timeout
@@ -118,12 +116,6 @@ def _report_failure(error: Exception, commit_id: str, code: str) -> None:
         logger.exception("Unable to report GeoJSON generation failure")
 
 
-@shared_task(name="speleodb.gis.tasks.dispatch_project_geojsons")
-def dispatch_project_geojsons() -> None:
-    """Publish only durable rows visible after their upload transaction commits."""
-    dispatch_pending_geojsons()
-
-
 @shared_task(
     name="speleodb.gis.tasks.generate_project_geojson",
     acks_late=True,
@@ -139,10 +131,7 @@ def generate_project_geojson(commit_id: str, token: str) -> None:
     heartbeat = partial(assert_geojson_ownership, commit_id, token)
     phase = "clone"
     try:
-        scratch = Path(settings.GEOJSON_GENERATION_SCRATCH_DIR)
-        scratch.mkdir(mode=0o700, parents=True, exist_ok=True)
-        with TemporaryDirectory(prefix=f"{token}-", dir=scratch) as temporary:
-            directory = Path(temporary)
+        with geojson_workspace(prefix=f"{token}-") as directory:
             repository = directory / "repository"
             mirror_project(
                 project_git_source(project.pk),

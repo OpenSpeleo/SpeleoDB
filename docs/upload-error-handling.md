@@ -26,10 +26,11 @@ Every step above can fail. The view preserves the appropriate client response
 (including 400, 415, and 500) while reporting upload input, file-processing, and
 Git failures to Sentry. Optional map bookkeeping uses its own savepoint after
 the successful push, preserving the source transaction even if bookkeeping
-fails. After SQL commit, the dispatcher queues the generation task. Conversion
-and artifact storage run in that worker and cannot change the upload response.
-See [background map generation](project-geojson-background.md) for ordering,
-status, and recovery.
+fails. After SQL commit, an on-commit callback directly queues the generation
+task. Broker failure leaves durable work for the ten-minute maintenance pass.
+Conversion and artifact storage run in that worker and cannot change the upload
+response. See [background map generation](project-geojson-background.md) for
+ordering, status, and recovery.
 
 ---
 

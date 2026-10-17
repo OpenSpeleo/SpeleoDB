@@ -1,4 +1,4 @@
-"""Optional post-push bookkeeping never executes conversion or broker I/O."""
+"""Optional map bookkeeping defers broker publication until SQL commit."""
 
 from __future__ import annotations
 

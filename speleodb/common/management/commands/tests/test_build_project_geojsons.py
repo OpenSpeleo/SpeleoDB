@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 import pathlib
 import re
-import shutil
+import signal
+import threading
 import uuid
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
-from unittest.mock import patch
 
 import orjson
 import pytest
@@ -26,19 +27,24 @@ from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
+from speleodb.api.v2.tests.factories import ProjectCommitFactory
 from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.background_jobs.archive_sources import ArchiveBuildError
+from speleodb.background_jobs.archive_sources import GitCloneUnavailableError
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
 from speleodb.surveys.tasks import refresh_all_projects_geojson
+from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
+    from types import FrameType
+
     from speleodb.git_engine.core import GitRepo
 
 
@@ -64,6 +70,10 @@ class TestBuildProjectGeoJSONCommand(TestCase):
             type=ProjectType.ARIANE,
             exclude_geojson=False,
         )
+        self.scratch = pathlib.Path(self.enterContext(TemporaryDirectory()))
+        self.enterContext(
+            override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch))
+        )
 
     def test_command_requires_exactly_one_selection_mode(self) -> None:
         with pytest.raises(CommandError):
@@ -71,10 +81,7 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
         with pytest.raises(CommandError):
             call_command(
-                "build_project_geojsons",
-                "--all",
-                "--project",
-                str(self.project.id),
+                "build_project_geojsons", "--all", "--project", str(self.project.id)
             )
 
     def test_command_rejects_invalid_project_uuid(self) -> None:
@@ -83,13 +90,8 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
     def test_command_rejects_unknown_project(self) -> None:
         missing_project_id = uuid.uuid4()
-
         with pytest.raises(CommandError, match="does not exist"):
-            call_command(
-                "build_project_geojsons",
-                "--project",
-                str(missing_project_id),
-            )
+            call_command("build_project_geojsons", "--project", str(missing_project_id))
 
     def test_force_recompute_flag_accepts_both_spellings(self) -> None:
         parser = Command().create_parser("manage.py", "build_project_geojsons")
@@ -98,31 +100,15 @@ class TestBuildProjectGeoJSONCommand(TestCase):
             assert options.all_projects is True
             assert options.force_recompute is True
 
-    def test_task_stops_when_gitlab_wraps_initialization_timeout(self) -> None:
-        with (
-            patch.object(GitlabManager, "_gl", None),
-            patch.object(
-                GitlabManager, "_initialize", side_effect=SoftTimeLimitExceeded
-            ),
-        ):
-            result = refresh_all_projects_geojson.apply(throw=False)
-        assert result.failed()
-        assert isinstance(result.result, SoftTimeLimitExceeded)
-        assert not self.project.git_repo_dir.exists()
-
     def test_command_rejects_excluded_project(self) -> None:
         self.project.exclude_geojson = True
         self.project.save(update_fields=["exclude_geojson"])
-
         with pytest.raises(CommandError, match="excluded"):
-            call_command(
-                "build_project_geojsons",
-                "--project",
-                str(self.project.id),
-            )
+            call_command("build_project_geojsons", "--project", str(self.project.id))
+        assert not list(self.scratch.iterdir())
 
-    def test_command_rejects_fresh_in_all_mode(self) -> None:
-        with pytest.raises(CommandError, match="--fresh"):
+    def test_command_rejects_obsolete_checkout_option(self) -> None:
+        with pytest.raises(CommandError, match="unrecognized arguments"):
             call_command("build_project_geojsons", "--all", "--fresh")
 
     def test_command_rejects_project_type_in_project_mode(self) -> None:
@@ -144,12 +130,13 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
     def _run_successfully(self, *arguments: str) -> None:
         # --all logs individual failures and continues. Merely returning or
-        # deleting the local copy must never make a failed GitLab test pass.
+        # deleting the temporary copy must never make a failed GitLab test pass.
         with self.assertLogs(Command.__module__, level="INFO") as logs:
             call_command("build_project_geojsons", *arguments)
         assert all(record.levelno < logging.ERROR for record in logs.records), (
             logs.output
         )
+        assert not list(self.scratch.iterdir())
 
     @pytest.mark.skip_if_lighttest
     def test_all_mode_processes_only_eligible_project_type(self) -> None:
@@ -159,40 +146,35 @@ class TestBuildProjectGeoJSONCommand(TestCase):
             exclude_geojson=False,
         )
         excluded: Project = canonical_project(
-            PermissionLevel.READ_ONLY,
-            type=ProjectType.COMPASS,
-            exclude_geojson=True,
+            PermissionLevel.READ_ONLY, type=ProjectType.COMPASS, exclude_geojson=True
         )
         self._seed_project(self.project)
         self._seed_project(compass_project)
         self._seed_project(excluded)
-
-        self._run_successfully("--all", "--project_type", ProjectType.COMPASS)
-
-        assert not compass_project.git_repo_dir.exists()
+        with self.assertLogs(Command.__module__, level="INFO") as logs:
+            call_command(
+                "build_project_geojsons", "--all", "--project_type", ProjectType.COMPASS
+            )
+        messages = "\n".join(logs.output)
+        assert str(compass_project.id) in messages
+        assert str(self.project.id) not in messages
+        assert str(excluded.id) not in messages
+        assert all(record.levelno < logging.ERROR for record in logs.records)
+        assert compass_project.git_repo_dir.is_dir()
         assert self.project.git_repo_dir.is_dir()
         assert excluded.git_repo_dir.is_dir()
+        assert not list(self.scratch.iterdir())
 
     @pytest.mark.skip_if_lighttest
-    def test_project_mode_processes_only_selected_project(self) -> None:
-        other: Project = canonical_project(
-            PermissionLevel.READ_AND_WRITE,
-            type=ProjectType.COMPASS,
-            exclude_geojson=False,
-        )
-        self._seed_project(self.project)
-        other_sha: str = self._seed_project(other)
-
-        self._run_successfully(
-            "--project",
-            str(self.project.id),
-            "--fresh",
-            "--force_recompute",
-        )
-
-        assert not self.project.git_repo_dir.exists()
-        with other.git_repo as untouched:
-            assert untouched.head.commit.hexsha == other_sha
+    def test_project_mode_preserves_shared_checkout_and_untracked_files(self) -> None:
+        original_sha: str = self._seed_project(self.project)
+        marker = self.project.git_repo_dir / "uncommitted-upload"
+        marker.write_text("retain upload work", encoding="utf-8")
+        self._run_successfully("--project", str(self.project.id), "--force_recompute")
+        assert marker.read_text() == "retain upload work"
+        with self.project.git_repo as untouched:
+            assert untouched.head.commit.hexsha == original_sha
+        marker.unlink()
 
     @pytest.mark.skip_if_lighttest
     def test_all_mode_continues_after_project_failure(self) -> None:
@@ -200,81 +182,34 @@ class TestBuildProjectGeoJSONCommand(TestCase):
         broken: Project = ProjectFactory.create(
             type=ProjectType.COMPASS, exclude_geojson=False
         )
-        # A nonempty invalid working copy provokes an actual filesystem error;
-        # GitRepo cannot replace it with a repository without losing local files.
-        broken.git_repo_dir.mkdir(parents=True)
-        (broken.git_repo_dir / "not-a-repository").touch()
-
-        with self.assertLogs(Command.__module__, level="ERROR") as logs:
+        ProjectCommitFactory.create(project=broken)
+        # The remote is genuinely absent despite recorded history; read-only
+        # rebuilds must fail rather than provision a replacement repository.
+        with self.assertLogs(Command.__module__, level="INFO") as logs:
             call_command("build_project_geojsons", "--all")
+        errors = [record for record in logs.records if record.levelno >= logging.ERROR]
+        assert len(errors) == 1, logs.output
+        assert str(broken.id) in errors[0].getMessage()
+        assert errors[0].exc_info is not None
+        assert isinstance(errors[0].exc_info[1], GitCloneUnavailableError)
+        assert any(
+            str(self.project.id) in record.getMessage() for record in logs.records
+        )
+        assert self.project.git_repo_dir.is_dir()
+        assert not list(self.scratch.iterdir())
 
-        assert len(logs.records) == 1, logs.output
-        assert str(broken.id) in logs.records[0].getMessage()
-        assert logs.records[0].exc_info is not None
-        assert isinstance(logs.records[0].exc_info[1], OSError)
-        assert not broken.git_repo_dir.exists()
-        assert not self.project.git_repo_dir.exists()
-
-    def test_project_mode_raises_after_project_failure(self) -> None:
+    def test_project_failure_preserves_shared_files(self) -> None:
         self.project.git_repo_dir.mkdir(parents=True)
-        (self.project.git_repo_dir / "not-a-repository").touch()
-
-        with pytest.raises(CommandError, match="Unable to build GeoJSON") as raised:
+        marker = self.project.git_repo_dir / "not-a-repository"
+        marker.touch()
+        with (
+            override_settings(GITLAB_HOST_URL="invalid/host"),
+            pytest.raises(CommandError, match="Unable to build GeoJSON") as raised,
+        ):
             call_command("build_project_geojsons", "--project", str(self.project.id))
-
-        assert isinstance(raised.value.__cause__, OSError)
-        assert not self.project.git_repo_dir.exists()
-
-    @pytest.mark.skip_if_lighttest
-    def test_fresh_removes_existing_copy_before_clone_and_after_processing(
-        self,
-    ) -> None:
-        initial_sha: str = self._seed_project(self.project)
-        shutil.rmtree(self.project.git_repo_dir)
-        command: Command = Command()
-        for local_copy_exists in (False, True):
-            with self.subTest(local_copy_exists=local_copy_exists):
-                if local_copy_exists:
-                    self.project.git_repo_dir.mkdir(parents=True)
-                    (self.project.git_repo_dir / "stale-marker").touch()
-                with self.assertLogs(Command.__module__, level="INFO") as logs:
-                    command._process_project(  # noqa: SLF001
-                        self.project,
-                        force_recompute=False,
-                        fresh=True,
-                    )
-                assert all(record.levelno < logging.ERROR for record in logs.records)
-                assert not self.project.git_repo_dir.exists()
-                # Actual remote history survives both fresh rebuilds.
-                with self.project.git_repo as restored:
-                    assert restored.head.commit.hexsha == initial_sha
-                shutil.rmtree(self.project.git_repo_dir)
-
-    def test_remove_local_copy_surfaces_unexpected_filesystem_failure(self) -> None:
-        with (
-            TemporaryDirectory() as directory,
-            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory)),
-        ):
-            self.project.git_repo_dir.write_text("not a directory", encoding="utf-8")
-            with pytest.raises(NotADirectoryError):
-                Command._remove_local_copy(self.project)  # noqa: SLF001
-            assert self.project.git_repo_dir.read_text() == "not a directory"
-
-    def test_fresh_removal_failure_prevents_repository_access(self) -> None:
-        with (
-            TemporaryDirectory() as directory,
-            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory)),
-        ):
-            self.project.git_repo_dir.write_text("not a directory", encoding="utf-8")
-            with pytest.raises(NotADirectoryError):
-                Command()._process_project(  # noqa: SLF001
-                    self.project,
-                    force_recompute=False,
-                    fresh=True,
-                )
-            # Accessing Project.git_repo would unlink this file before retrying
-            # provisioning. Its survival proves processing stopped at removal.
-            assert self.project.git_repo_dir.read_text() == "not a directory"
+        assert isinstance(raised.value.__cause__, ArchiveBuildError)
+        assert marker.exists()
+        assert not list(self.scratch.iterdir())
 
 
 @pytest.mark.skip_if_lighttest
@@ -286,6 +221,14 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
             permission_type=PermissionType.USER,
         )
         get_pool().prepare(self.project)
+        self.scratch = pathlib.Path(self.enterContext(TemporaryDirectory()))
+        self.enterContext(
+            override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch))
+        )
+
+    def tearDown(self) -> None:
+        assert not list(self.scratch.iterdir())
+        super().tearDown()
 
     def _upload_files(
         self,
@@ -355,7 +298,11 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         assert skipped_creation_date == initial_creation_date
 
         with self.assertLogs(Command.__module__, level="INFO") as logs:
-            result = refresh_all_projects_geojson.apply(throw=True)
+            result = refresh_project_geojson.apply(
+                args=(str(self.project.id),),
+                kwargs={"force_recompute": True},
+                throw=True,
+            )
         assert result.successful()
         assert all(record.levelno < logging.ERROR for record in logs.records)
         regenerated = ProjectGeoJSON.objects.get(
@@ -416,7 +363,11 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         assert artifact.geojson_revision == original_revision
 
         with self.assertLogs(Command.__module__, level="INFO") as logs:
-            result = refresh_all_projects_geojson.apply(throw=True)
+            result = refresh_project_geojson.apply(
+                args=(str(self.project.id),),
+                kwargs={"force_recompute": True},
+                throw=True,
+            )
         assert result.successful()
         assert all(record.levelno < logging.ERROR for record in logs.records)
         artifact.refresh_from_db()
@@ -456,40 +407,49 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
 
         result = refresh_all_projects_geojson.apply(throw=True)
         assert result.successful()
+        assert result.result == {"enqueued": 0, "tasks": []}
 
         assert not ProjectGeoJSON.objects.filter(
             project=self.project,
             commit__id=hexsha,
         ).exists()
 
-    def test_task_timeout_stops_rebuild_and_cleans_checkout(self) -> None:
-        self.project.type = ProjectType.ARIANE
-        self.project.exclude_geojson = True
-        self.project.save(update_fields=["type", "exclude_geojson"])
-        self.project.acquire_mutex(self.user)
-        try:
-            hexsha = self._upload_files(
-                fileformat=FileFormat.ARIANE_TML,
-                artifact_paths=[ARIANE_TEST_FILE],
-                commit_message="Ariane upload for task timeout",
-            )
-        finally:
-            self.project.release_mutex(self.user)
+    def test_task_timeout_stops_clone_and_cleans_all_temporary_files(self) -> None:
         self.project.exclude_geojson = False
         self.project.save(update_fields=["exclude_geojson"])
+        self.project.git_repo_dir.mkdir(parents=True, exist_ok=True)
+        shared_marker = self.project.git_repo_dir / "unfinished-upload"
+        shared_marker.write_text("preserve", encoding="utf-8")
+        stopped = threading.Event()
+        interrupted = threading.Event()
 
-        # The worker can interrupt either materialization or conversion. Both
-        # must escape the command's commit/project error-isolation handlers.
-        for target in (
-            f"{Command.__module__}.Command._materialize_geojson_source",
-            "speleodb.surveys.models.project.survey_to_geojson",
-        ):
-            with (
-                self.subTest(target=target),
-                patch(target, side_effect=SoftTimeLimitExceeded),
-            ):
-                result = refresh_all_projects_geojson.apply(throw=False)
-            assert result.failed()
-            assert isinstance(result.result, SoftTimeLimitExceeded)
-            assert not self.project.git_repo_dir.exists()
-            assert not ProjectGeoJSON.objects.filter(commit_id=hexsha).exists()
+        def interrupt_clone() -> None:
+            while not stopped.wait(0.001):
+                if any(self.scratch.glob("*/repository")):
+                    interrupted.set()
+                    os.kill(os.getpid(), signal.SIGUSR1)
+                    return
+
+        def soft_timeout(_signum: int, _frame: FrameType | None) -> None:
+            raise SoftTimeLimitExceeded
+
+        previous = signal.signal(signal.SIGUSR1, soft_timeout)
+        watcher = threading.Thread(target=interrupt_clone)
+        watcher.start()
+        try:
+            result = refresh_project_geojson.apply(
+                args=(str(self.project.id),),
+                kwargs={"force_recompute": True},
+                throw=False,
+            )
+        finally:
+            stopped.set()
+            watcher.join(timeout=5)
+            signal.signal(signal.SIGUSR1, previous)
+        assert not watcher.is_alive()
+        assert interrupted.is_set()
+        assert result.failed()
+        assert isinstance(result.result, SoftTimeLimitExceeded)
+        assert not list(self.scratch.iterdir())
+        assert shared_marker.read_text() == "preserve"
+        shared_marker.unlink()

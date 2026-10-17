@@ -467,14 +467,16 @@ def test_lost_final_notification_lease_requires_manual_retry(
 def test_scheduler_installation_is_idempotent_and_uses_control_queue() -> None:
     call_command("install_background_schedules")
     call_command("install_background_schedules")
-    tasks = PeriodicTask.objects.filter(
-        name__in=[
-            "background-job-maintenance",
-            "project-geojson-dispatch",
-            "export-artifact-cleanup",
-            "celery.backend_cleanup",
-        ]
-    )
-    assert tasks.count() == 4  # noqa: PLR2004
+    tasks = PeriodicTask.objects.all()
+    assert set(tasks.values_list("name", flat=True)) == {
+        "background-job-maintenance",
+        "export-artifact-cleanup",
+        "celery.backend_cleanup",
+    }
+    assert not tasks.filter(name="project-geojson-dispatch").exists()
     assert set(tasks.values_list("queue", flat=True)) == {"background_control"}
     assert not tasks.filter(interval__isnull=True).exists()
+    maintenance = tasks.get(name="background-job-maintenance")
+    assert maintenance.interval is not None
+    assert maintenance.interval.every == 600  # noqa: PLR2004
+    assert maintenance.interval.period == "seconds"

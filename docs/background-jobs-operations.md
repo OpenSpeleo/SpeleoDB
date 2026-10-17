@@ -215,11 +215,15 @@ mocked connection calls had not detected.
 
 Superusers can open **Background jobs** in Django admin
 (`/admin/background_jobs/backgroundjob/`) and use **Rebuild all GeoJSONs** in
-the maintenance panel above the list. Each submission queues one full-history
-rebuild and returns its Celery task ID. It creates no periodic schedule; monitor
-the task in Django admin under **Celery Results → Task results**. This
-maintenance task does not create an export-request row in the Background jobs
-list.
+the maintenance panel above the list. Each submission queues one coordinator and
+returns its Celery task ID. The coordinator publishes one forced full-history
+rebuild child per eligible project, returns their IDs and count, and exits
+without processing a repository. Monitor both coordinator and child tasks in
+Django admin under **Celery Results → Task results**: coordinator success means
+scheduling completed, and each child's outcome belongs to that project. Each
+child owns and removes its disk workspace, including clone, extracted files and
+authentication helper. No periodic rebuild schedule is created. This maintenance
+task does not create an export-request row in the Background jobs list.
 
 The panel uses the admin theme colors, keyboard focus styling and a stacked
 layout on small screens. The endpoint requires a superuser, POST and a valid
@@ -228,12 +232,15 @@ scope, worker readiness, time limits and regression coverage.
 
 ## Bounded failure recovery
 
-Generation has three attempts per automatic cycle. Broker publication failures
-and publications left unclaimed for ten minutes consume that same budget.
-Notification publication and delivery share five attempts; object cleanup has
-five persisted attempts per object. Retries wait 60/120/240/... seconds, capped
-at one hour, without sleeping in the worker between tasks. Due times and counts
-live in PostgreSQL, so periodic sweeps and process restarts cannot reset them.
+Export generation has three attempts per automatic cycle. Broker publication
+failures and publications left unclaimed for ten minutes consume that same
+budget. Notification publication and delivery share five attempts; object
+cleanup has five persisted attempts per object. Retries wait 60/120/240/...
+seconds, capped at one hour, without sleeping in the worker between tasks. Due
+times and counts live in PostgreSQL, so periodic sweeps and process restarts
+cannot reset them. `maintain_background_jobs` runs every ten minutes; due
+retries and recovery therefore wait until its next pass and available worker
+capacity. Normal task publication still happens directly when work is requested.
 Cleanup records survive exhaustion; staff can explicitly restart cleanup in the
 job admin, with an audit entry. Download expiry remains enforced even when
 physical deletion fails.
@@ -491,12 +498,11 @@ task execution failures remain visible with their tracebacks.
 The shared `config.task_results` policy excludes routine successful runs and
 STARTED records for exactly these housekeeping tasks:
 
-| Task                                                      | Managed interval | Purpose                                               |
-| --------------------------------------------------------- | ---------------- | ----------------------------------------------------- |
-| `speleodb.gis.tasks.dispatch_project_geojsons`            | 60 seconds       | Dispatch durable pending generation work              |
-| `speleodb.background_jobs.tasks.maintain_background_jobs` | 60 seconds       | Recover attempts and send due notifications           |
-| `speleodb.background_jobs.tasks.delete_expired_artifacts` | 300 seconds      | Delete expired artifacts and eligible old job history |
-| `celery.backend_cleanup`                                  | 86,400 seconds   | Expire old technical result records                   |
+| Task                                                      | Managed interval | Purpose                                                                           |
+| --------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------- |
+| `speleodb.background_jobs.tasks.maintain_background_jobs` | 600 seconds      | Recover exports and map generations, send notifications, clean abandoned map work |
+| `speleodb.background_jobs.tasks.delete_expired_artifacts` | 300 seconds      | Delete expired artifacts and eligible old job history                             |
+| `celery.backend_cleanup`                                  | 86,400 seconds   | Expire old technical result records                                               |
 
 Workers use `ignore_result=True` and `store_errors_even_if_ignored=True` for
 these task names. Beat applies the same policy when publishing, because Celery's
@@ -746,12 +752,23 @@ release.
 
 ## Survey GeoJSON generation
 
-The managed schedules also include the per-commit GeoJSON dispatcher, running
-every 60 seconds on `background_control`. It reads durable generation records
-created only after successful source Git pushes and committed upload SQL
-transactions. Generation uses the existing worker and read-only Git source
-utility; upload requests never contact the broker. Apply the additive generation
-migration and run `install_background_schedules` when enabling the new code.
+Per-commit GeoJSON generation is published directly after the source upload's
+SQL transaction commits, following its successful Git push. The request makes a
+bounded broker attempt and leaves durable pending work on publication failure;
+it never computes the map. `maintain_background_jobs` recovers due or abandoned
+map work every 600 seconds alongside exports and notifications. This maintenance
+pass also removes unreferenced map objects and abandoned local workspaces.
+Generation uses the existing worker and read-only Git source utility, with its
+clone and extracted files beneath the disk-backed `/tmp` scratch root.
+
+For the transition, disable the retired `project-geojson-dispatch` schedule and
+let its queued messages drain on old workers before removing that task from the
+worker registry. Deploy matching web/worker/Beat code, apply outstanding
+migrations, then run `install_background_schedules`. The installer deletes that
+owned schedule and sets `background-job-maintenance` to 600 seconds
+idempotently. Preserve unrelated schedules and queued work; never globally purge
+the broker as a migration step. See the detailed
+[activation procedure](project-geojson-background.md#activation-and-standalone-releases).
 
 Use generation administration to inspect failures or retry a recorded commit.
 Monitor pending age, terminal failures, and worker timeouts; the single worker

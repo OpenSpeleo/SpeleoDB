@@ -35,7 +35,7 @@ Only exhaustion of that entire RGB pool leaves unresolved sections without
 fallback, which can display them with the same color.
 
 Consumers must tolerate old artifacts with no color and malformed values. The
-private web viewer and mobile By Shot mode fall back to the owning survey's
+private web viewer and mobile By Section mode fall back to the owning survey's
 color on each such shot. Other geometry properties, feature identities, survey
 color settings and geometry/depth data retain their existing meanings.
 
@@ -108,23 +108,22 @@ unchanged geometry, same-commit revision changes, renewed URLs, null metadata,
 bounded metadata queries, storage/database failures, pinned views and every OGC
 cache family. Backend tests run in the existing application container.
 
-## Exporter release handoff
+## Exporter availability and regeneration
 
-The shot-color upload and regeneration paths require the new `compass_lib` and
-`openspeleo_lib` exporters. The monorepo's live source overlays provide those
-changes during integration development; the standalone web application's current
-published dependency versions do not yet provide this feature.
+The standalone web application's pinned `compass-lib==0.0.9` and
+`openspeleo-lib==0.0.21` releases include color export. Compass generates
+section colors; Ariane preserves valid colors recorded in the source. Confirm
+the server performing regeneration has these color-capable exporters installed.
+Dependency updates do not add colors to previously stored GeoJSON: artifacts
+without `properties.color` still need explicit regeneration, even when the
+source commit is unchanged.
 
-When publication is authorized, release both Python libraries first. Then update
-the standalone web application's PyPI version requirements and `uv.lock`, plus
-the root integration lock. Keep web dependencies resolvable from PyPI in a
-standalone clone; never add monorepo-relative library paths to its manifest. Run
-the web upload/regeneration tests using the updated standalone dependencies and
-again with the monorepo overlays, together with the libraries' own tests, before
-deploying web or regenerating stored artifacts. The new actual-upload color
-assertions deliberately require these exporter versions.
+Keep web dependencies resolvable from PyPI in a standalone clone; never add
+monorepo-relative library paths to its manifest. Validate exporter changes with
+the web upload/regeneration tests using standalone dependencies and again with
+the monorepo overlays, together with the libraries' own tests.
 
-Deployment and production regeneration are separate authorized operations. After
-deployment, follow the targeted verification and batch rollout in the
+Deployment and production regeneration are separate authorized operations.
+Follow the targeted verification and batch rollout in the
 [build-command documentation](project-geojson-command.md); retain retired
 objects until the cleanup conditions above are satisfied.
