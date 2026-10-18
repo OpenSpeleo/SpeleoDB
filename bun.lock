@@ -5,6 +5,7 @@
     "": {
       "name": "speleodb",
       "dependencies": {
+        "@speleodb/api": "0.1.0",
         "@speleodb/map-core": "0.3.0",
         "@speleodb/map-viewer": "0.3.1",
         "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch",
@@ -162,6 +163,8 @@
     "@rolldown/binding-win32-x64-msvc": ["@rolldown/binding-win32-x64-msvc@1.2.14", "", { "os": "win32", "cpu": "x64" }, "sha512-9mE94bf2GZUaR/fUSXCMpBoWkctu421Mi0ORpm4zqfbkjKep7RxzPFa5etcGs5h+2KApoWBOA/hAJa/7saGgEQ=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
+
+    "@speleodb/api": ["@speleodb/api@0.1.0", "", {}, "sha512-pu+wUNq28XKucwTHZUbrfrmrTVfD2IKhkNyqmmtTLgEB6DPZAltUtfKDlQKwIEqIbvVjMlmEsYWyFpQHntyn9A=="],
 
     "@speleodb/map-core": ["@speleodb/map-core@0.3.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-KU1HdMR256bpI6wa+dGw/JQB2kPLSWDTRgFsAZX2cMheL+rNl9GMr8oNdONV2AsfGRaAGKWyArusf0WInX/cTw=="],
 
