@@ -1,11 +1,16 @@
-import type { Mock, MockInstance } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { setBrowserUrl, startApiServer } from '../../../frontend_common/test/api-server.ts';
 import type { ViewerProject } from '../../../ts-types/domain/map-config.ts';
 import type { MapRuntimeContext } from '../../../ts-types/domain/map-runtime.ts';
 import type { DisplayPreferences, DepthDomain } from '../../../ts-types/domain/map-display.ts';
 
-interface TestResponse { ok: boolean; status?: number; statusText?: string; json?: () => Promise<unknown> }
 const testWindow = window as Window & { MAPVIEWER_CONTEXT?: Partial<Omit<MapRuntimeContext, 'gisToken'>> & { gisToken?: string | null } };
-let fetchMock: Mock<(url: string) => Promise<TestResponse>>;
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+let loadConsumed: boolean;
+
+beforeAll(async () => { originalUrl = window.location.href; server = await startApiServer(); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 const stateMock = {
     resetLayerState: vi.fn(),
     projectBounds: new Map<string, object>(),
@@ -100,7 +105,7 @@ function createMapMock() {
     const map = {
         setMaxZoom: vi.fn(),
         on: vi.fn((eventName: 'load', handler: () => Promise<void>) => {
-            handlers[eventName] = handler;
+            handlers[eventName] = async () => { loadConsumed = true; await handler(); };
         }),
         fitBounds: vi.fn()
     };
@@ -146,6 +151,10 @@ describe('frontend_public gis_view_main', () => {
 
     beforeEach(() => {
         vi.useFakeTimers();
+        loadConsumed = false;
+        server.reset();
+        server.reply({ json: { view_name: 'Public View', projects: [] } });
+        setBrowserUrl(`${server.origin}/public/map/`);
         vi.clearAllMocks();
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
         consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
@@ -170,8 +179,6 @@ describe('frontend_public gis_view_main', () => {
         `;
 
         testWindow.MAPVIEWER_CONTEXT = {};
-        fetchMock = vi.fn();
-        vi.stubGlobal('fetch', fetchMock);
         vi.stubGlobal('__mapRenderer', { LngLatBounds: MockLngLatBounds });
         vi.stubGlobal('Urls', new Proxy(
             {},
@@ -193,7 +200,9 @@ describe('frontend_public gis_view_main', () => {
         });
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+        // Consume admitted prefetches before replacing the fixture's origin and DOM.
+        if (!loadConsumed) await mapHandlers.load?.();
         addEventListenerSpy.mockRestore();
         consoleLogSpy.mockRestore();
         consoleErrorSpy.mockRestore();
@@ -210,7 +219,7 @@ describe('frontend_public gis_view_main', () => {
         { width: 640, height: '850px' },
     ])('sizes the public map for width $width without fullscreen policy', async ({ width, height }) => {
         testWindow.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'public-token' };
-        fetchMock.mockResolvedValue({ ok: true, json: async () => ({ projects: [] }) });
+        server.reply({ json: { view_name: 'Public View', projects: [] } });
         const element = document.getElementById('map')!;
         vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 50, 800, 400));
         Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: element });
@@ -252,15 +261,14 @@ describe('frontend_public gis_view_main', () => {
         };
 
         stateMock.projectBounds = new Map([['p1', { any: 'bounds' }]]);
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Public View',
                 projects: [
                     { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' },
                     { id: 'p2', name: 'Project Two', geojson_file: '/g2.geojson' }
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -276,8 +284,8 @@ describe('frontend_public gis_view_main', () => {
 
         await mapHandlers.load!();
 
-        expect(fetchMock).toHaveBeenCalledWith(Urls['api:v2:gis-ogc:view-geojson']('public-token'));
-        expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/gis-layers'))).toBe(false);
+        expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/gis-ogc/view/public-token/geojson' });
+        expect(server.requests.some(request => request.path.includes('/gis-layers'))).toBe(false);
         expect(configMock._projects).toEqual([
             { id: 'p1', name: 'Project One', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g1.geojson' },
             { id: 'p2', name: 'Project Two', color: undefined, permissions: 'READ_ONLY', geojson_url: '/g2.geojson' }
@@ -298,7 +306,7 @@ describe('frontend_public gis_view_main', () => {
 
     it.each(['depth', 'shot'])('initializes public defaults without reading or changing saved private %s preferences', async mode => {
         testWindow.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'public-token', mapboxToken: '' };
-        fetchMock.mockResolvedValue({ ok: true, json: async () => ({ projects: [] }) });
+        server.reply({ json: { view_name: 'Public View', projects: [] } });
         const initialize = await importModuleAndGetDomReadyHandler();
         const { DEFAULTS } = await import('../../../frontend_private/static/private/ts/map_viewer/config.ts');
         const { DisplayPreferences } = await import('../../../frontend_private/static/private/ts/map_viewer/display_preferences.ts');
@@ -344,14 +352,13 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token'
         };
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Public View',
                 projects: [
                     { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -360,13 +367,13 @@ describe('frontend_public gis_view_main', () => {
         // The view data request is issued during init (concurrently with map
         // init), before the map 'load' event handler runs.
         expect(mapCoreMock.init).toHaveBeenCalledWith('mapbox-token', 'map');
-        expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(fetchMock).toHaveBeenCalledWith(Urls['api:v2:gis-ogc:view-geojson']('public-token'));
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+        expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/gis-ogc/view/public-token/geojson' });
 
         await mapHandlers.load!();
 
         // The load handler consumes the prefetch instead of issuing a 2nd request.
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
         expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson');
     });
 
@@ -380,14 +387,13 @@ describe('frontend_public gis_view_main', () => {
         };
 
         stateMock.projectBounds = new Map([['p1', { any: 'bounds' }]]);
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Public View',
                 projects: [
                     { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -410,14 +416,13 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token',
         };
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Color View',
                 projects: [
                     { id: 'p1', name: 'Red Cave', color: '#e41a1c', geojson_file: '/g1.geojson' },
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -435,14 +440,13 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token',
         };
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'No Country View',
                 projects: [
                     { id: 'p1', name: 'Cave A', geojson_file: '/g1.geojson' },
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -460,11 +464,7 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token'
         };
 
-        fetchMock.mockResolvedValue({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error'
-        });
+        server.reply({ status: 500, json: { detail: 'Internal Server Error' } });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
@@ -493,21 +493,13 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token'
         };
 
-        fetchMock
-            .mockResolvedValueOnce({
-                ok: false,
-                status: 500,
-                statusText: 'Internal Server Error'
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    view_name: 'Recovered Public View',
-                    projects: [
-                        { id: 'p1', name: 'Recovered Project', geojson_file: '/recovered.geojson' }
-                    ]
-                })
-            });
+        let attempts = 0;
+        server.handle(() => ++attempts === 1
+            ? { status: 500, json: { detail: 'Internal Server Error' } }
+            : { json: {
+                view_name: 'Recovered Public View',
+                projects: [{ id: 'p1', name: 'Recovered Project', geojson_file: '/recovered.geojson' }],
+            } });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
@@ -515,7 +507,7 @@ describe('frontend_public gis_view_main', () => {
 
         await mapHandlers.load!();
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
         expect(utilsMock.showNotification).toHaveBeenCalledWith('error', 'Failed to load map data');
         expect(configMock.projects).toEqual([]);
         expect(sourceChangeHandler).toBeTypeOf('function');
@@ -524,7 +516,7 @@ describe('frontend_public gis_view_main', () => {
             detail: { sourceId: 'future-destructive-source', reloadRequired: true }
         }));
 
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(server.requests).toHaveLength(2);
         expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/recovered.geojson');
         expect(configMock._projects).toEqual([
             { id: 'p1', name: 'Recovered Project', color: undefined, permissions: 'READ_ONLY', geojson_url: '/recovered.geojson' }
@@ -539,14 +531,13 @@ describe('frontend_public gis_view_main', () => {
         };
         mapSourcesMock.requiresDataReload.mockReturnValue(false);
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Public View',
                 projects: [
                     { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -557,7 +548,7 @@ describe('frontend_public gis_view_main', () => {
         layersMock.addProjectGeoJSON.mockClear();
         layersMock.reorderLayers.mockClear();
         projectPanelMock.refreshList.mockClear();
-        fetchMock.mockClear();
+        server.requests.length = 0;
 
         window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
             detail: { sourceId: 'esri-world-hillshade', reloadRequired: false }
@@ -568,7 +559,7 @@ describe('frontend_public gis_view_main', () => {
         expect(layersMock.addProjectGeoJSON).not.toHaveBeenCalled();
         expect(layersMock.reorderLayers).not.toHaveBeenCalled();
         expect(projectPanelMock.refreshList).not.toHaveBeenCalled();
-        expect(fetchMock).not.toHaveBeenCalled();
+        expect(server.requests).toHaveLength(0);
         expect(stateMock.allProjectLayers).toEqual(new Map([['p1', ['project-layer-p1']]]));
     });
 
@@ -579,14 +570,13 @@ describe('frontend_public gis_view_main', () => {
             mapboxToken: 'mapbox-token'
         };
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({
+        server.reply({
+            json: {
                 view_name: 'Public View',
                 projects: [
                     { id: 'p1', name: 'Project One', geojson_file: '/g1.geojson' }
                 ]
-            })
+            }
         });
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
@@ -597,7 +587,7 @@ describe('frontend_public gis_view_main', () => {
         layersMock.addProjectGeoJSON.mockClear();
         layersMock.reorderLayers.mockClear();
         projectPanelMock.refreshList.mockClear();
-        fetchMock.mockClear();
+        server.requests.length = 0;
 
         window.dispatchEvent(new CustomEvent('speleo:map-source-changed', {
             detail: { sourceId: 'future-destructive-source', reloadRequired: true }
@@ -608,16 +598,16 @@ describe('frontend_public gis_view_main', () => {
             expect(layersMock.reorderLayers).toHaveBeenCalled();
         });
         expect(projectPanelMock.refreshList).toHaveBeenCalled();
-        expect(fetchMock).not.toHaveBeenCalled();
+        expect(server.requests).toHaveLength(0);
         expect(stateMock.allProjectLayers.size).toBe(0);
     });
     it('starts prefetch before a missing map element rejects initialization', async () => {
         testWindow.MAPVIEWER_CONTEXT = { viewMode: 'public', gisToken: 'public-token' };
-        fetchMock.mockResolvedValue({ ok: true, json: async () => ({ projects: [] }) });
+        server.reply({ json: { view_name: 'Public View', projects: [] } });
         document.body.innerHTML = '';
         const initialize = await importModuleAndGetDomReadyHandler();
         await expect(initialize()).rejects.toBeInstanceOf(TypeError);
-        expect(fetchMock).toHaveBeenCalledOnce();
+        await vi.waitFor(() => expect(server.requests).toHaveLength(1));
         expect(depthLegendMock.init).toHaveBeenCalledOnce();
         expect(mapCoreMock.setupMapSourceControl).not.toHaveBeenCalled();
     });

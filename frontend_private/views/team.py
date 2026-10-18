@@ -109,10 +109,8 @@ class TeamDangerZoneView(_BaseTeamView):
         data.update(
             entity_label="Team",
             entity_settings_base_template="pages/team/base.html",
-            api_detail_url=reverse(
-                "api:v2:team-detail",
-                kwargs={"id": team.id},
-            ),
+            api_resource="team",
+            api_entity_id=str(team.id),
             listing_url=reverse("private:teams"),
             danger_success_message="The team has been deleted successfully.",
         )

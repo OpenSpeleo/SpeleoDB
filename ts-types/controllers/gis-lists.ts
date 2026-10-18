@@ -1,12 +1,11 @@
-import type { GISLayerResponse } from '../domain/map-config.ts';
+import type { GISLayerMapInput } from '../domain/map-config.ts';
 
 /** Shared listing fields delivered by GPS tracks and both GIS metadata endpoints. */
-export type GISListRecord = GISLayerResponse;
+export type GISListRecord = GISLayerMapInput;
 export interface GISListContext {
-    listEndpoint: string;
     openIconUrl?: string;
 }
-export interface GISUploadListContext extends GISListContext { csrfToken: string }
+export type GISUploadListContext = GISListContext;
 export type GISDetailsRoute = 'private:gis_layer_details' | 'private:gis_geometry_details';
 export interface GISListPresentation {
     entityLabel: string;

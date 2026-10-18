@@ -1,14 +1,16 @@
+import { v2UserAutocompleteList } from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../../frontend_common/api/client.ts';
 import type { AutocompleteUser } from '../../../../ts-types/domain/autocomplete.ts';
 import { escapeHtml } from './xss-helpers.ts';
 
 // Existing form/API contracts supply string input values and typed user records;
 // assertions retain the same coercion and failure behavior at those boundaries.
 // Shared user autocomplete helper
-// Usage: attachUserAutocomplete($("#user"), $("#user_suggestions"), autocompleteUrl)
+// Usage: attachUserAutocomplete($("#user"), $("#user_suggestions"))
 
-export function attachUserAutocomplete($input: JQuery<HTMLElement>, $suggestions: JQuery<HTMLElement>, autocompleteUrl: string): void {
+export function attachUserAutocomplete($input: JQuery<HTMLElement>, $suggestions: JQuery<HTMLElement>): void {
     let lastQuery = "";
-    let pending: JQuery.jqXHR<unknown> | null = null;
+    let pending: AbortController | null = null;
     let activeIndex = -1;
     let currentItems: AutocompleteUser[] = [];
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,14 +72,12 @@ export function attachUserAutocomplete($input: JQuery<HTMLElement>, $suggestions
         if (debounceTimer) { clearTimeout(debounceTimer); }
         debounceTimer = setTimeout(function(){
             if (pending) { pending.abort(); }
-            pending = $.ajax({
-                url: autocompleteUrl,
-                method: "GET",
-                data: { query: val },
-                success: function(resp: unknown){ render(Array.isArray(resp) ? resp as AutocompleteUser[] : []); },
-                error: function(){ $suggestions.addClass('hidden').empty(); },
-                complete: function(){ pending = null; }
-            });
+            const controller = new AbortController();
+            pending = controller;
+            void apiData(v2UserAutocompleteList({ query: val }, webApiOptions({ signal: controller.signal })))
+                .then(users => { if (pending === controller) render(users); })
+                .catch(() => { if (pending === controller) $suggestions.addClass('hidden').empty(); })
+                .finally(() => { if (pending === controller) pending = null; });
         }, 250);
     });
 

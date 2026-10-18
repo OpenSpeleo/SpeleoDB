@@ -1,3 +1,5 @@
+import * as sdk from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../../../../frontend_common/api/client.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ApiError } from '../../../../../../ts-types/domain/map-transport.ts';
 import type { LandmarkFormCollection, LandmarkFormPayload, LandmarkCreateOptions, LandmarkEditOptions, LandmarkDeleteOptions, LandmarkBulkOptions, LandmarkBulkPayload, LandmarkErrorData } from '../../../../../../ts-types/domain/landmark-forms.ts';
@@ -12,7 +14,7 @@ import type { LandmarkFormCollection, LandmarkFormPayload, LandmarkCreateOptions
  *   - render landmark form HTML (with optional `lockedCollectionId` to hide
  *     the picker and pin the create/edit collection)
  *   - validate inputs inline (name required, lat -90..90, lon -180..180)
- *   - call the backend via fetch + CSRF and surface errors inline
+ *   - call generated API operations and surface errors inline
  *   - notify callers via an `onSuccess` callback so consumers refresh state
  *     in the way that fits their page (map layers vs. table reload)
  *
@@ -59,61 +61,19 @@ function clearInlineError(errorEl: HTMLElement | null) {
 
 // ---------- Direct API calls (no state, no map dependency) ----------
 
-async function landmarkApiRequest(url: string, method: string, body: LandmarkFormPayload | LandmarkBulkPayload | null): Promise<unknown> {
-    const headers: { 'X-CSRFToken': string; 'Content-Type'?: string } = { 'X-CSRFToken': Utils.getCSRFToken() };
-    if (body !== undefined && body !== null) {
-        headers['Content-Type'] = 'application/json';
-    }
-    const response = await fetch(url, {
-        method,
-        headers,
-        credentials: 'same-origin',
-        body: body == null ? undefined : JSON.stringify(body),
-    } as RequestInit);
-
-    let data: unknown = null;
-    if (response.status !== 204) {
-        const text = await response.text();
-        if (text) {
-            try {
-                data = JSON.parse(text);
-            } catch {
-                data = text;
-            }
-        }
-    }
-
-    if (!response.ok) {
-        const message = (data && typeof data === 'object'
-            ? (data as LandmarkErrorData).error || (data as LandmarkErrorData).detail
-            : null) || response.statusText || 'Request failed';
-        const error = new Error(message as string) as ApiError;
-        error.status = response.status;
-        error.data = data;
-        throw error;
-    }
-
-    return data;
-}
-
 const LandmarkApi = {
-    create: (payload: LandmarkFormPayload) => landmarkApiRequest(Urls['api:v2:landmarks'](), 'POST', payload),
-    update: (id: EntityId, payload: LandmarkFormPayload) =>
-        landmarkApiRequest(Urls['api:v2:landmark-detail'](id), 'PATCH', payload),
-    remove: (id: EntityId) =>
-        landmarkApiRequest(Urls['api:v2:landmark-detail'](id), 'DELETE', null),
-    bulkTransfer: (sourceId: EntityId, payload: LandmarkBulkPayload) =>
-        landmarkApiRequest(
-            Urls['api:v2:landmark-collection-landmarks-transfer'](sourceId),
-            'POST',
-            payload,
-        ),
-    bulkDelete: (sourceId: EntityId, payload: LandmarkBulkPayload) =>
-        landmarkApiRequest(
-            Urls['api:v2:landmark-collection-landmarks-bulk-delete'](sourceId),
-            'POST',
-            payload,
-        ),
+    create: (payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksCreateWithJson(payload, webApiOptions())),
+    update: (id: EntityId, payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksPartialUpdateWithJson(String(id), payload, webApiOptions())),
+    remove: (id: EntityId) => apiData(sdk.v2LandmarksDestroy(String(id), webApiOptions())),
+    bulkTransfer: (sourceId: EntityId, payload: LandmarkBulkPayload) => {
+        if (!payload.target_collection) throw new Error('Select a destination collection.');
+        return apiData(sdk.v2LandmarkCollectionsLandmarksTransferCreate(String(sourceId), {
+            landmark_ids: payload.landmark_ids.map(String), target_collection: String(payload.target_collection),
+        }, webApiOptions()));
+    },
+    bulkDelete: (sourceId: EntityId, payload: LandmarkBulkPayload) => apiData(sdk.v2LandmarkCollectionsLandmarksBulkDeleteCreate(String(sourceId), {
+        landmark_ids: payload.landmark_ids.map(String),
+    }, webApiOptions())),
 };
 
 // ---------- Modal entrypoints ----------
@@ -163,7 +123,7 @@ export function openLandmarkCreateModal({
                 const response = await LandmarkApi.create(payload);
                 Modal.close(modalId);
                 if (typeof onSuccess === 'function') {
-                    await onSuccess((response as { landmark?: unknown } | null)?.landmark || response);
+                    await onSuccess(response.landmark);
                 }
             } catch (err) {
                 showInlineError(errorEl, parseValidationErrorMessage(err));
@@ -215,7 +175,7 @@ export function openLandmarkEditModal({
                 const response = await LandmarkApi.update(landmark.id, payload);
                 Modal.close(modalId);
                 if (typeof onSuccess === 'function') {
-                    await onSuccess((response as { landmark?: unknown } | null)?.landmark || response);
+                    await onSuccess(response);
                 }
             } catch (err) {
                 showInlineError(errorEl, parseValidationErrorMessage(err));
@@ -268,7 +228,7 @@ export function openLandmarkBulkTransferModal({
     sourceCollection = null,
     collections = [],
     onSuccess = null,
-}: LandmarkBulkOptions = {}) {
+}: LandmarkBulkOptions<sdk.LandmarkBulkTransferResponse> = {}) {
     if (!Array.isArray(landmarks) || landmarks.length === 0) return;
     if (!sourceCollection) return;
 
@@ -353,7 +313,7 @@ export function openLandmarkBulkDeleteModal({
     landmarks = [],
     sourceCollection = null,
     onSuccess = null,
-}: LandmarkBulkOptions = {}) {
+}: LandmarkBulkOptions<sdk.LandmarkBulkDeleteResponse> = {}) {
     if (!Array.isArray(landmarks) || landmarks.length === 0) return;
     if (!sourceCollection) return;
 

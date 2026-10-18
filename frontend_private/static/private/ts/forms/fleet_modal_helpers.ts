@@ -1,4 +1,6 @@
-import type { SensorPayload } from '../../../../../ts-types/domain/forms/fleet.ts';
+import { CylinderRequestStatus, CylinderRequestUnitSystem, SensorRequestStatus } from '@speleodb/api';
+import type { CylinderRequest, SensorRequest } from '@speleodb/api';
+import { choice } from '../../../../../frontend_common/api/entity-forms.ts';
 
 import { FormModals } from './modals.ts';
 
@@ -46,7 +48,7 @@ export function cylinderPopulateForEdit($button: JQuery<HTMLElement>) {
     $('#modal_cylinder_use_anode').prop('checked', $button.data('cylinder-use-anode') === true);
 }
 
-export function cylinderCollectPayload() {
+export function cylinderCollectPayload(): CylinderRequest | null {
     const o2 = $('#modal_cylinder_o2').val() as string;
     const he = $('#modal_cylinder_he').val() as string;
     const pressure = $('#modal_cylinder_pressure').val() as string;
@@ -64,8 +66,8 @@ export function cylinderCollectPayload() {
         o2_percentage: parseInt(o2, 10),
         he_percentage: parseInt(he, 10),
         pressure: parseInt(pressure, 10),
-        unit_system: $('#modal_cylinder_unit_system').val(),
-        status: $('#modal_cylinder_status').val(),
+        unit_system: choice(CylinderRequestUnitSystem, $('#modal_cylinder_unit_system').val()),
+        status: choice(CylinderRequestStatus, $('#modal_cylinder_status').val()),
         manufactured_date: cylinderMonthToDate($('#modal_cylinder_manufactured_date').val() as string | undefined),
         last_visual_inspection_date: cylinderMonthToDate($('#modal_cylinder_visual_date').val() as string | undefined),
         last_hydrostatic_test_date: cylinderMonthToDate($('#modal_cylinder_hydro_date').val() as string | undefined),
@@ -94,7 +96,7 @@ export function sensorCollectPayload(isEdit: boolean) {
         FormModals.showError('Sensor name is required.');
         return null;
     }
-    const payload: SensorPayload = { name, notes };
-    if (isEdit) payload.status = $('#modal_sensor_status').val() as string;
+    const payload: SensorRequest = { name, notes };
+    if (isEdit) payload.status = choice(SensorRequestStatus, $('#modal_sensor_status').val());
     return payload;
 }

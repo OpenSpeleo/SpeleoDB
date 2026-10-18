@@ -7,8 +7,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from speleodb.api.v2.serializers.summary_contract import CylinderActiveInstallSerializer
+from speleodb.api.v2.serializers.summary_contract import (
+    CylinderPressureCheckSummarySerializer,
+)
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import UnitSystem
@@ -96,6 +101,7 @@ class CylinderSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Cylin
             else None
         )
 
+    @extend_schema_field(CylinderActiveInstallSerializer(many=True))
     def get_active_installs(self, obj: Cylinder) -> list[dict[str, Any]]:
         """Get active installs with full details."""
         installs = obj.installs.filter(status=InstallStatus.INSTALLED)
@@ -208,6 +214,7 @@ class CylinderFleetWithPermSerializer(serializers.ModelSerializer[CylinderFleet]
         ]
         read_only_fields = fields
 
+    @extend_schema_field({"type": "string", "nullable": True})
     def get_user_permission_level_label(
         self, obj: CylinderFleet
     ) -> StrOrPromise | None:
@@ -226,7 +233,7 @@ class CylinderFleetUserPermissionSerializer(
     user_email = serializers.EmailField(write_only=True, required=False)
 
     # Read-only user info
-    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_id = serializers.CharField(source="user.id", read_only=True)
     user_full_name = serializers.SerializerMethodField()
     user_display_email = serializers.EmailField(source="user.email", read_only=True)
 
@@ -372,11 +379,11 @@ class CylinderInstallSerializer(
         required=True,
     )
 
-    # Project is optional
+    # Omission is allowed on updates, but the model requires an existing project.
     project = serializers.PrimaryKeyRelatedField(
         queryset=Project.objects.all(),
         required=False,
-        allow_null=True,
+        allow_null=False,
     )
 
     # Pressure check count
@@ -397,6 +404,7 @@ class CylinderInstallSerializer(
         """Get the number of pressure checks for this install."""
         return obj.pressure_checks.count()
 
+    @extend_schema_field(CylinderPressureCheckSummarySerializer(allow_null=True))
     def get_latest_pressure_check(self, obj: CylinderInstall) -> dict[str, Any] | None:
         """Get the latest pressure check data."""
         check = obj.pressure_checks.order_by("-creation_date").first()

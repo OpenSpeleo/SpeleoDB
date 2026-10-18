@@ -92,7 +92,7 @@ booleans must be validated as such before treating them as non-string data.
 Names, notes, descriptions, tags, field names, filenames, author/status labels,
 errors, and resource text are all user/API-controlled. The function assembling
 the final markup owns their escaping, including helper return values accepted by
-modal builders. `forms/ajax_errors.ts` imports the shared escape helper and uses
+modal builders. `forms/api_errors.ts` imports the shared escape helper and uses
 `.text()` where markup is unnecessary; templates no longer include the old
 executable error snippet.
 

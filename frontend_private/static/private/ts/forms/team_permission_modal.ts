@@ -1,5 +1,5 @@
 import { sendPermissionRequest } from './permission_request.ts';
-import { readFormCSRFToken, hideFormStatus, scheduleFormReload } from './lifecycle.ts';
+import { hideFormStatus, scheduleFormReload } from './lifecycle.ts';
 import type { TeamPermissionOptions } from '../../../../../ts-types/domain/forms/permissions.ts';
 
 /**
@@ -20,29 +20,29 @@ import type { TeamPermissionOptions } from '../../../../../ts-types/domain/forms
  *
  * Usage:
  *   attachTeamPermissionModal({
- *       endpoint: "{% url 'api:v2:project-team-permissions-detail' id=project.id %}",
+ *       operations: teamPermissions(projectId),
  *       addModalTitle: "Add a Team to the project",
  *       addModalHeader: "What team would you like to add?",
  *       editModalTitle: "How shall we modify this team's access?",
  *       fieldLabel: 'Access Level',
  *   });
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal.
+ * Requires: jQuery, FormModals, showApiErrorModal.
  */
 
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
 export function attachTeamPermissionModal(options: TeamPermissionOptions) {
-    var endpoint = options.endpoint;
+    var operations = options.operations;
     var addModalTitle = options.addModalTitle || 'Add a team';
     var addModalHeader = options.addModalHeader || 'What team would you like to add?';
     var editModalTitle = options.editModalTitle || 'Edit team access';
     var fieldLabel = options.fieldLabel || 'Access Level';
     var reloadDelayMs = typeof options.reloadDelayMs === 'number' ? options.reloadDelayMs : 2000;
 
-    if (!endpoint) {
-        throw new Error('attachTeamPermissionModal: endpoint is required');
+    if (!operations) {
+        throw new Error('Permission operations are required');
     }
 
     FormModals.bindAutoDismiss();
@@ -95,17 +95,13 @@ export function attachTeamPermissionModal(options: TeamPermissionOptions) {
     });
 
     $('#btn_submit_add').click(function () {
-        var csrftoken = readFormCSRFToken();
         var form = $<HTMLFormElement>('#permission_form');
         var formData = new FormData(form[0]);
 
         hideFormStatus();
 
         sendPermissionRequest({
-            endpoint: endpoint,
-            method: form.data('method') as string,
-            data: JSON.stringify(Object.fromEntries(formData)),
-            csrfToken: csrftoken,
+            request: () => (form.data('method') === 'PUT' ? operations.update : operations.create)(Object.fromEntries(formData)),
             validate: function () {
                 if ($('#team').val() === '') {
                     FormModals.showError('The team is empty!');
@@ -122,7 +118,7 @@ export function attachTeamPermissionModal(options: TeamPermissionOptions) {
                 scheduleFormReload(reloadDelayMs);
             },
             error: function (xhr) {
-                showAjaxErrorModal(xhr);
+                showApiErrorModal(xhr);
             },
         });
         return false;
@@ -133,23 +129,19 @@ export function attachTeamPermissionModal(options: TeamPermissionOptions) {
         if ($this.hasClass('disabled')) { return false; }
         $this.addClass('disabled');
 
-        var csrftoken = readFormCSRFToken();
         var formData = new FormData();
         formData.append('team', $this.data('team') as string);
 
         hideFormStatus();
 
         sendPermissionRequest({
-            endpoint: endpoint,
-            method: 'DELETE',
-            data: JSON.stringify(Object.fromEntries(formData)),
-            csrfToken: csrftoken,
+            request: () => operations.remove(Object.fromEntries(formData)),
             success: function () {
                 FormModals.showSuccess('The permission has been deleted successfully.');
                 scheduleFormReload(reloadDelayMs);
             },
             error: function (xhr) {
-                showAjaxErrorModal(xhr);
+                showApiErrorModal(xhr);
                 $this.removeClass('disabled');
             },
         });

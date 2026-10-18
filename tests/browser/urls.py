@@ -1,4 +1,4 @@
-"""HTTP fixtures for native synchronous XHR, scoped to the browser wrapper."""
+"""HTTP presentation fixtures for generated operations in the browser wrapper."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def permitted(request: HttpRequest, project_id: UUID) -> bool:
 
 
 def revision_fixture(request: HttpRequest, project_id: UUID) -> JsonResponse:
-    """Keep the controller's original URL and blocking request semantics."""
+    """Serve the revision operation through the real authenticated HTTP boundary."""
     if not permitted(request, project_id):
         return JsonResponse({"detail": "Browser fixture access denied"}, status=403)
     response: JsonResponse = JsonResponse(
@@ -94,9 +94,9 @@ def tree_fixture(request: HttpRequest, project_id: UUID, hexsha: str) -> JsonRes
     return response
 
 
-# WebKit bypasses Playwright routing for synchronous XHR. These two explicit
-# GET boundaries precede the production URLconf only in the browser test server;
-# native XHR, controller contexts, Django URL reversal and vendor code stay real.
+# These two explicit GET boundaries precede the production URLconf only in the
+# browser test server, keeping repository presentation independent of remote Git.
+# Generated operations, authentication, contexts, and vendor code stay real.
 urlpatterns: list[URLPattern | URLResolver] = [
     path("api/v2/projects/<uuid:project_id>/revisions/", revision_fixture),
     path(

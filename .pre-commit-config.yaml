@@ -87,6 +87,7 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
+        exclude: ^OpenAPI\.yaml$
         # Accept GitHub Actions `on` and capitalized YAML booleans.
         args:
           - --config-data
@@ -182,6 +183,15 @@ repos:
   # Check the URL configuration of the project didn't change and is up to date.
   - repo: local
     hooks:
+      - id: export-api-schema
+        name: Regenerate canonical OpenAPI.yaml
+        entry: python manage.py export_api_schema
+        language: system
+        pass_filenames: false
+        require_serial: true
+        files: >-
+          (?x)^(OpenAPI\.yaml|pyproject\.toml|uv\.lock|
+          config/.*\.py|speleodb/.*\.py)$
       - id: check-url-config
         name: Check Django URL config consistency
         entry: |

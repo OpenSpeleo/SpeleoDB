@@ -193,11 +193,11 @@ compiler parsing of generated markup. Their temporary repositories and files are
 created outside the checkout and removed after each test. Auditing adds no
 browser payload or runtime work.
 
-The generated URL contract currently contains 79 routes. Its finite keys and
-argument tuples are checked against Django's `url_config.json`, alongside
+The browser's Django URL contract contains twelve page-navigation routes. Its
+finite keys and argument tuples are checked against `url_config.json`, alongside
 literal frontend uses and compiler rejection cases for unknown routes, arbitrary
-strings, and incorrect arguments. This count comes from the current generated
-contract rather than the initial migration inventory estimate of 80.
+strings, and incorrect arguments. API paths and query serialization belong to
+`@speleodb/api`; authored API URL declarations are rejected by `audit:api`.
 
 ## Typed Alpine ownership
 
@@ -244,7 +244,8 @@ executable first-party template expressions.
 The authenticated upload subprocess runs directly with Bun as TypeScript. It
 still reads its live-server URL and session cookie from stdin, writes the same
 JSON result to stdout and inherits the GitLab audit environment. JSDOM's native
-XHR performs the existing HTTP/multipart requests. The development project owns
+XHR carries generated multipart operations with progress; generated fetch
+operations cover list and decoding probes. The development project owns
 Playwright and its instrumented Window alongside unit tests, tools and the
 upload subprocess. Those evidence types never enter production or worker ambient
 environments.
@@ -271,12 +272,14 @@ Shared security primitives live in `frontend_common/security/`; the existing
 form and map facades preserve their different fallback and receiver contracts.
 Map `defaults.ts` owns the single `DEFAULTS` object, re-exported by `config.ts`.
 Keeping constants independent of mutable Config breaks the Config/API/Utils
-initialization cycle. Map transport owns response parsing and augmented errors;
-endpoint forwarding and live CSRF policy remain behind API. Landmark transport
-retains its distinct empty-response and error policies.
+initialization cycle. The generated SDK owns HTTP transport, serialization,
+response decoding and documented statuses. `frontend_common/api/client.ts`
+provides request-time CSRF/session policy and application error presentation;
+map API functions call concrete generated operations. There is no separate map
+or landmark HTTP transport.
 
-Form lifecycle helpers share raw CSRF reads, modal status and navigation while
-owner callbacks retain serialization, validation, receiver and timing policies.
+Form lifecycle helpers share modal status and navigation while owner callbacks
+construct typed generated requests and retain validation and timing policies.
 Landmark form model and presentation modules are shared by map and collection
 UI, with direct function aliases retained in `LandmarkForms`. Station experiment
 and sensor validation/presentation are separate from network and permission
@@ -337,11 +340,13 @@ from unrelated routes.
 
 For an event, keep the owning domain's target, payload and dispatch order
 explicit; Window and Document events are different contracts. For an endpoint,
-add the specific request/response records and generated URL key/argument tuple,
-then extend the URL contract test. For an external global, add only the used
-constructor/method signatures in `ts-types/browser/` and keep test fakes in the
-corresponding test environment. New runtime validation and product behavior
-changes require their own behavior specification and tests.
+correct the Django/OpenAPI contract, regenerate `@speleodb/api`, and consume its
+operation and DTOs through the browser adapter. Keep Django URL declarations for
+page navigation only. See [the API client guide](typescript-api-client.md). For
+an external global, add only the used constructor/method signatures in
+`ts-types/browser/` and keep test fakes in the corresponding test environment.
+New runtime validation and product behavior changes require their own behavior
+specification and tests.
 
 ## CI, publication and rollback
 
@@ -353,11 +358,11 @@ live server with a verified temporary login user and runs controller/viewer
 parity plus the unchanged Chromium/WebKit workloads after other CPU-heavy checks
 finish. Explicit database-only project and form fixtures provide
 writable/read-only contexts; the inherited GitLab audit remains active. Two
-test-only HTTP routes supply revision/tree presentation JSON because WebKit does
-not intercept native synchronous XHR through Playwright routing. Production
-controller URLs and synchronous behavior remain unchanged. The wrapper verifies
-those routes before launching browsers and never prepares a Git repository. CI
-retains the JSON browser report, attachments and failure screenshots.
+test-only HTTP routes supply deterministic revision/tree presentation JSON for
+the generated asynchronous operations without reaching remote Git. The wrapper
+verifies those routes before launching browsers and never prepares a Git
+repository. CI retains the JSON browser report, attachments and failure
+screenshots.
 
 Railpack remains Python-provider based, selects Bun through Mise, runs the
 checked root build, then removes `node_modules`. Railway predeploy retains

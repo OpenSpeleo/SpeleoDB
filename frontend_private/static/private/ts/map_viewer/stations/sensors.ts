@@ -299,8 +299,8 @@ export const StationSensors = {
 
             const response = await API.getStationSensorInstallsAsExcel(stationId);
 
-            if (!response.ok) {
-                throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+            if (response.kind !== 'documented' || response.status !== 200) {
+                throw new Error(`Export failed: ${response.status}`);
             }
 
             const contentDisposition = response.headers.get('Content-Disposition');
@@ -312,7 +312,7 @@ export const StationSensors = {
                 }
             }
 
-            const blob = await response.blob();
+            const blob = response.data;
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

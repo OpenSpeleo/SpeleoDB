@@ -25,6 +25,7 @@ from typing import ClassVar
 import orjson
 import sentry_sdk
 from django.core.cache import cache
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -618,6 +619,7 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     serializer_class = GISViewDataSerializer
     lookup_field = "id"
 
+    @extend_schema(operation_id="v2_gis_view_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
 
@@ -720,6 +722,7 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     serializer_class = PublicGISViewSerializer
     lookup_field = "gis_token"
 
+    @extend_schema(operation_id="v2_gis_ogc_view_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
         try:

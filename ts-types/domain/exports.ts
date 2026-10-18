@@ -10,20 +10,8 @@ export interface ExportArtifact {
     expires_at?: string;
     deleted_at?: string | null;
 }
-export interface ExportJob {
-    id: string;
-    state: ExportState;
-    stage?: string;
-    completed_items?: number;
-    total_items?: number;
-    created_at?: string;
-    updated_at?: string;
-    summary?: { omissions?: unknown; error?: string };
-    notification_state?: string;
-    artifact?: ExportArtifact | null;
-    download_url?: string | null;
-    expired?: boolean;
-}
+export type { UserExport as ExportJob } from '@speleodb/api';
+import type { UserExport as ExportJob } from '@speleodb/api';
 export interface ExportPage {
     results: ExportJob[];
     previous: string | null;

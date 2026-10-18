@@ -1,4 +1,5 @@
-import type { UserExportsContext } from '../../ts-types/controllers/user-exports.ts';
+import { getV2UserExportsListUrl, getV2UserExportsDownloadRetrieveUrl, v2UserExportsList, v2UserExportsRetrieve, v2UserExportsCreate, v2UserExportsRetryCreate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { ExportHistoryOptions, ExportJob, ExportOmission, ExportPage, ExportRequestFailure, ExportState } from '../../ts-types/domain/exports.ts';
 
 const POLL_INTERVAL_MS = 5000;
@@ -85,18 +86,8 @@ export function requestedExportId(search: string) {
     return value && UUID_PATTERN.test(value) ? value : null;
 }
 
-async function responseData(response: Response): Promise<unknown> {
-    const data: unknown = await response.json();
-    if (!response.ok) {
-        const error = new Error((data as { detail?: string }).detail || 'Unable to load exports. Please try again.') as ExportRequestFailure;
-        error.status = response.status;
-        throw error;
-    }
-    return data;
-}
-
 /** Bound the full request, including JSON reads, and propagate page cancellation. */
-async function fetchExportData<Result>(url: string, options: RequestInit = {}): Promise<Result> {
+async function fetchExportData<Result>(operation: (signal: AbortSignal) => Promise<Result>, options: RequestInit = {}): Promise<Result> {
     const controller = new AbortController();
     const cancel = () => controller.abort(options.signal!.reason);
     let rejectAborted!: (reason: unknown) => void;
@@ -113,9 +104,9 @@ async function fetchExportData<Result>(url: string, options: RequestInit = {}): 
             aborted,
             Promise.resolve().then(() => {
                 controller.signal.throwIfAborted();
-                return fetch(url, { ...options, signal: controller.signal }).then(responseData);
+                return operation(controller.signal);
             }),
-        ]) as Result;
+        ]);
     } finally {
         window.clearTimeout(timeout);
         options.signal?.removeEventListener('abort', cancel);
@@ -125,11 +116,21 @@ async function fetchExportData<Result>(url: string, options: RequestInit = {}): 
 
 /** Expiry can remove the last row of a later page; fall back once to page one. */
 export async function loadExportPage(url: string, firstPageUrl: string, options?: RequestInit) {
+    const first = new URL(firstPageUrl, window.location.href);
+    const load = (value: string) => {
+        const target = new URL(value, first);
+        if (target.origin !== first.origin || target.pathname !== first.pathname) {
+            throw new Error('Invalid export page');
+        }
+        const page = Number(target.searchParams.get('page') || 1);
+        if (!Number.isSafeInteger(page) || page < 1) throw new Error('Invalid export page');
+        return fetchExportData(signal => apiData(v2UserExportsList({ page }, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), options);
+    };
     try {
-        return { url, data: await fetchExportData<ExportPage>(url, options) };
+        return { url, data: await load(url) };
     } catch (error) {
         if ((error as ExportRequestFailure).status !== 404 || url === firstPageUrl) throw error;
-        return { url: firstPageUrl, data: await fetchExportData<ExportPage>(firstPageUrl, options) };
+        return { url: firstPageUrl, data: await load(firstPageUrl) };
     }
 }
 
@@ -140,12 +141,11 @@ export function mergeExportJobs(jobs: ExportJob[], linkedJob: ExportJob | null =
         const id = String(linkedJob.id).toLowerCase();
         const pageJob = merged.get(id);
         // The two requests may observe different moments during a retry.
-        const pageIsNewer = new Date(pageJob?.updated_at as string).getTime() > new Date(linkedJob.updated_at as string).getTime();
+        const pageIsNewer = new Date(pageJob?.updated_at as string).getTime() > new Date(linkedJob.updated_at).getTime();
         if (!pageIsNewer) merged.set(id, linkedJob);
     }
     return [...merged.values()].filter(job => ACTIVE_STATES.has(job.state) || (
         !job.expired
-        && !job.artifact?.deleted_at
         && !(Date.parse(job.artifact?.expires_at as string) <= now)
     ));
 }
@@ -168,7 +168,7 @@ export function exportRefreshDelay(jobs: ExportJob[], active = false, now = Date
  * [data-export-retry] identifies its retry control. Styles use classes only.
  * All API strings are assigned through textContent.
  */
-export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], { endpoint, busy = false, linkedJob = null, focusId = null, now = Date.now() }: ExportHistoryOptions = {}) {
+export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], { busy = false, linkedJob = null, focusId = null, now = Date.now() }: ExportHistoryOptions = {}) {
     const visibleJobs = mergeExportJobs(jobs, linkedJob, now);
     const active = visibleJobs.some(job => ACTIVE_STATES.has(job.state));
     const previousFocus = document.activeElement;
@@ -214,7 +214,8 @@ export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], {
         if (job.state === 'partial') {
             const notice = element('div', '', 'exports-card-notice');
             notice.append(element('p', 'Some files could not be included. Review these omissions before relying on this backup.'));
-            const omissions = Array.isArray(job.summary?.omissions) ? job.summary.omissions : [];
+            const summary = job.summary && typeof job.summary === 'object' && 'omissions' in job.summary ? job.summary : null;
+            const omissions = Array.isArray(summary?.omissions) ? summary.omissions : [];
             if (omissions.length) {
                 const list = element('ul');
                 omissions.forEach(omission => list.append(element('li', omissionLabel(omission))));
@@ -234,7 +235,7 @@ export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], {
             if (job.download_url && !job.expired && ['ready', 'partial'].includes(job.state)) {
                 const link = action('a', 'Download ZIP', 'download', 'exports-button-download');
                 // Construct the owned route; never trust an API-provided href.
-                link.href = `${endpoint}${job.id}/download/`;
+                link.href = getV2UserExportsDownloadRetrieveUrl(job.id);
                 actions.append(link);
             }
             if (job.state === 'failed') {
@@ -261,10 +262,10 @@ export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], {
     return Boolean(focusTarget);
 }
 
-export async function init(context: UserExportsContext) {
+export async function init() {
     const root = document.getElementById('user-exports');
     if (!root) return;
-    const endpoint = new URL(context.endpoint, window.location.href);
+    const endpoint = new URL(getV2UserExportsListUrl(), window.location.href);
     if (endpoint.origin !== window.location.origin) throw new Error('Invalid export endpoint');
     const endpointPath = endpoint.pathname;
     const form = root.querySelector<HTMLFormElement>('#export-request-form')!;
@@ -373,7 +374,7 @@ export async function init(context: UserExportsContext) {
             const options: RequestInit = { credentials: 'same-origin', signal: controller.signal };
             const [pageResult, linkedResult] = await Promise.allSettled([
                 loadExportPage(currentUrl, endpoint.href, options),
-                linkedId ? fetchExportData<ExportJob>(`${endpoint.href}${linkedId}/`, options) : Promise.resolve(null),
+                linkedId ? fetchExportData(signal => apiData(v2UserExportsRetrieve(linkedId!, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), options) : Promise.resolve(null),
             ]);
             if (controller.signal.aborted) return;
             if (refreshFailures) message.textContent = '';
@@ -382,8 +383,8 @@ export async function init(context: UserExportsContext) {
                 const { url, data } = pageResult.value;
                 currentUrl = url;
                 jobs = data.results;
-                previousUrl = safePageUrl(data.previous);
-                nextUrl = safePageUrl(data.next);
+                previousUrl = safePageUrl(data.previous ?? null);
+                nextUrl = safePageUrl(data.next ?? null);
             } else {
                 message.textContent = (pageResult.reason as ExportRequestFailure).message;
                 failedLoad = true;
@@ -423,7 +424,7 @@ export async function init(context: UserExportsContext) {
         }
     }
 
-    async function submit(url: string) {
+    async function submit(retryId?: string) {
         if (mutationPending) return;
         mutationPending = true;
         resetRefreshFailures({ clearMessage: true });
@@ -433,12 +434,9 @@ export async function init(context: UserExportsContext) {
         stopPolling();
         redraw();
         try {
-            const requested = await fetchExportData<ExportJob>(url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'X-CSRFToken': csrfToken, 'Accept': 'application/json' },
-                signal: controller.signal,
-            });
+            const requested = await fetchExportData(signal => retryId
+                ? apiData(v2UserExportsRetryCreate(retryId, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS })))
+                : apiData(v2UserExportsCreate(webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), { signal: controller.signal });
             if (UUID_PATTERN.test(requested.id)) {
                 linkedId = requested.id;
                 linkedJob = requested;
@@ -460,12 +458,12 @@ export async function init(context: UserExportsContext) {
 
     function onSubmit(event: Event) {
         event.preventDefault();
-        if (!active) void submit(endpoint.href);
+        if (!active) void submit();
     }
     function onRetry(event: MouseEvent) {
         const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-export-retry]') : null;
         if (button && !button.disabled && UUID_PATTERN.test(button.dataset.exportRetry!)) {
-            void submit(`${endpointPath}${button.dataset.exportRetry}/retry/`);
+            void submit(button.dataset.exportRetry);
         }
     }
     function onPrevious() {

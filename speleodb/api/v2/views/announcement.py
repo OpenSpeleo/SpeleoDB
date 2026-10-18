@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
 
@@ -24,6 +25,8 @@ class PublicAnnouncementApiView(GenericAPIView[PublicAnnoucement], SDBAPIViewMix
 
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(responses={200: PublicAnnoucementSerializer(many=True)})
+    @extend_schema(operation_id="v2_announcements_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             PublicAnnoucement.objects.filter(is_active=True).order_by("creation_date"),

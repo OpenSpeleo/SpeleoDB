@@ -7,9 +7,12 @@ from typing import Any
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.direct_user_permissions import DirectUserPermissionData
 from speleodb.api.v2.direct_user_permissions import parse_direct_user_permission_data
 from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
@@ -22,6 +25,11 @@ from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import GPSTrackSerializer
 from speleodb.api.v2.serializers import GPSTrackUserPermissionSerializer
 from speleodb.api.v2.serializers import GPSTrackWithFileSerializer
+from speleodb.api.v2.serializers.api_contract import MessageSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -43,6 +51,9 @@ class UserGPSTracks(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     serializer_class = GPSTrackWithFileSerializer
 
     @extend_schema(operation_id="v2_gps_tracks_list")
+    @extend_schema(
+        responses={200: GPSTrackWithFileSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         tracks = accessible_gps_tracks_queryset(user=self.get_user())
         return SuccessResponse(self.get_serializer(tracks, many=True).data)
@@ -68,13 +79,20 @@ class GPSTrackSpecificAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     def get_queryset(self) -> QuerySet[GPSTrack]:
         return accessible_gps_tracks_queryset(user=self.get_user())
 
+    @extend_schema(
+        responses={200: GPSTrackWithFileSerializer(), 403: API_ERROR, 404: API_ERROR}
+    )
+    @extend_schema(responses={200: GPSTrackSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_gps_tracks_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         return SuccessResponse(self.get_serializer(gps_track).data)
 
+    @extend_schema(operation_id="v2_gps_tracks_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._update(request=request, partial=True, **kwargs)
 
+    @extend_schema(operation_id="v2_gps_tracks_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._update(request=request, partial=False, **kwargs)
 
@@ -96,6 +114,17 @@ class GPSTrackSpecificAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "GPSTrackSpecificAPIViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gps_tracks_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         gps_track.deactivate(deactivated_by=self.get_user())
@@ -131,6 +160,10 @@ class GPSTrackPermissionAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
             skip_level=skip_level,
         )
 
+    @extend_schema(
+        responses={200: GPSTrackUserPermissionSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_gps_tracks_permissions_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         permission_qs = (
@@ -144,6 +177,20 @@ class GPSTrackPermissionAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
         serializer = GPSTrackUserPermissionSerializer(permission_qs, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "GPSTrackPermissionAPIViewPostResponse",
+                gps_track=GPSTrackSerializer(),
+                permission=GPSTrackUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gps_tracks_permissions_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         permission_data = self._request_data(request)
@@ -177,6 +224,15 @@ class GPSTrackPermissionAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: GPSTrackUserPermissionSerializer(),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gps_tracks_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         permission_data = self._request_data(request)
@@ -203,6 +259,17 @@ class GPSTrackPermissionAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
         gps_track.save(update_fields=["modified_date"])
         return SuccessResponse(GPSTrackUserPermissionSerializer(permission).data)
 
+    @extend_schema(
+        request=UserRequestSerializer,
+        responses={
+            200: MessageSerializer(),
+            400: API_ERROR,
+            401: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_gps_tracks_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gps_track = self.get_object()
         permission_data = self._request_data(request, skip_level=True)

@@ -5,12 +5,17 @@ import type { FormTestJQuery } from '../../../../../ts-types/testing/vitest/form
 
 const jquerySource = readFileSync(path.join(process.cwd(), 'frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
 const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
-let originalAjax: FormTestJQuery['ajax'];
+
+const operations = {
+    create: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+    update: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+    remove: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+};
 
 beforeAll(() => { (0, eval)(jquerySource); });
 beforeEach(() => {
     vi.useFakeTimers();
-    originalAjax = jqueryHost.jQuery.ajax;
+    vi.clearAllMocks();
     document.body.innerHTML = `
         <input name="csrfmiddlewaretoken" value="csrf-team">
         <button id="btn_open_add_team">Add</button>
@@ -27,19 +32,18 @@ beforeEach(() => {
         <div id="modal_error"><span id="modal_error_txt"></span></div>`;
 });
 afterEach(() => {
-    jqueryHost.jQuery.ajax = originalAjax;
     jqueryHost.jQuery(document).off();
     document.body.innerHTML = '';
     vi.useRealTimers();
 });
 
-it('requires an endpoint and returns undefined after wiring', () => {
-    expect(() => attachTeamPermissionModal({})).toThrow('attachTeamPermissionModal: endpoint is required');
-    expect(attachTeamPermissionModal({ endpoint: '/teams/' })).toBeUndefined();
+it('requires operations and returns undefined after wiring', () => {
+    expect(() => attachTeamPermissionModal({} as never)).toThrow('Permission operations are required');
+    expect(attachTeamPermissionModal({ operations })).toBeUndefined();
 });
 
 it('adds the assigned team as inert option text, locks edit selection, and unlocks add mode', () => {
-    attachTeamPermissionModal({ endpoint: '/teams/' });
+    attachTeamPermissionModal({ operations });
     jqueryHost.jQuery('.btn_open_edit_perm').trigger('click');
     const team = document.getElementById('team') as HTMLSelectElement;
     expect(team.value).toBe('assigned');
@@ -55,64 +59,50 @@ it('adds the assigned team as inert option text, locks edit selection, and unloc
     expect(allowed.defaultPrevented).toBe(false);
 });
 
-it('preserves beforeSend field validation and CSRF while serializing PUT', () => {
+it('validates fields and supplies the update operation with form values', () => {
     const $ = jqueryHost.jQuery;
-    $.ajax = vi.fn(options => {
-        const setRequestHeader = vi.fn();
-        expect(options.beforeSend({ setRequestHeader })).toBe(true);
-        expect(setRequestHeader).toHaveBeenCalledWith('X-CSRFToken', 'csrf-team');
-        return {};
-    });
-    attachTeamPermissionModal({ endpoint: '/teams/' });
+    attachTeamPermissionModal({ operations });
     $('.btn_open_edit_perm').trigger('click');
     $('#btn_submit_add').trigger('click');
-    const request = $.ajax.mock.calls[0]![0];
-    expect(request.method).toBe('PUT');
-    expect(JSON.parse(request.data!) as unknown).toEqual({ team: 'assigned', level: 'READ_ONLY' });
+    expect(operations.update).toHaveBeenCalledWith({ team: 'assigned', level: 'READ_ONLY' });
+    expect(operations.create).not.toHaveBeenCalled();
 });
 
-it('guards duplicate deletion and permits retry after the original error callback', () => {
+it('guards duplicate deletion and permits retry after operation rejection', async () => {
     const $ = jqueryHost.jQuery;
-    $.ajax = vi.fn(() => ({}));
-    attachTeamPermissionModal({ endpoint: '/teams/' });
+    let reject!: (error: unknown) => void;
+    const remove = vi.fn((_payload: Record<string, unknown>) => new Promise((_resolve, fail) => { reject = fail; }));
+    attachTeamPermissionModal({ operations: { ...operations, remove } });
     $('.btn_delete_perm').trigger('click').trigger('click');
-    expect($.ajax).toHaveBeenCalledTimes(1);
-    const request = $.ajax.mock.calls[0]![0];
-    expect(request.method).toBe('DELETE');
-    request.error({ responseJSON: { detail: 'Denied' }, status: 403 });
+    expect(remove).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith({ team: 'assigned' });
+    reject(Object.assign(new Error('Denied'), { data: { detail: 'Denied' }, status: 403 }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect($('#modal_error_txt').text()).toBe('Denied');
     $('.btn_delete_perm').trigger('click');
-    expect($.ajax).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenCalledTimes(2);
 });
 
 it.each([
     ['', 'READ_ONLY', 'The team is empty!'],
     ['available', '', 'The Access Level field is empty!'],
-])('sets CSRF before rejecting team=%s and level=%s', (team, level, message) => {
+])('rejects team=%s and level=%s before invoking an operation', (team, level, message) => {
     const $ = jqueryHost.jQuery;
-    $.ajax = vi.fn(() => ({}));
-    attachTeamPermissionModal({ endpoint: '/teams/' });
+    attachTeamPermissionModal({ operations });
     $('#btn_open_add_team').trigger('click');
     $('#team').val(team);
     $('#level').val(level);
     $('#btn_submit_add').trigger('click');
-    const request = $.ajax.mock.calls[0]![0];
-    const header = vi.fn();
-    expect(request.beforeSend({ setRequestHeader: header })).toBe(false);
-    expect(header).toHaveBeenCalledWith('X-CSRFToken', 'csrf-team');
+    expect(operations.create).not.toHaveBeenCalled();
+    expect(operations.update).not.toHaveBeenCalled();
     expect(document.getElementById('modal_error_txt')!.textContent).toBe(message);
 });
 
-it('captures CSRF and serialized fields at click time but validates fields at beforeSend time', () => {
+it('captures selected fields at click time independently of later edits', () => {
     const $ = jqueryHost.jQuery;
-    $.ajax = vi.fn(() => ({}));
-    attachTeamPermissionModal({ endpoint: '/teams/' });
+    attachTeamPermissionModal({ operations });
     $('.btn_open_edit_perm').trigger('click');
     $('#btn_submit_add').trigger('click');
-    $('input[name=csrfmiddlewaretoken]').val('changed');
     $('#level').val('');
-    const request = $.ajax.mock.calls[0]![0];
-    const header = vi.fn();
-    expect(request.beforeSend({ setRequestHeader: header })).toBe(false);
-    expect(header).toHaveBeenCalledWith('X-CSRFToken', 'csrf-team');
-    expect(JSON.parse(request.data!) as unknown).toEqual({ team: 'assigned', level: 'READ_ONLY' });
+    expect(operations.update).toHaveBeenCalledWith({ team: 'assigned', level: 'READ_ONLY' });
 });

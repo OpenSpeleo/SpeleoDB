@@ -11,15 +11,17 @@ from django.db import IntegrityError
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import MultiPartParser
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.direct_user_permissions import DirectUserPermissionData
 from speleodb.api.v2.direct_user_permissions import parse_direct_user_permission_data
 from speleodb.api.v2.gis_layer_access import accessible_gis_layers_queryset
@@ -32,6 +34,12 @@ from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import GISLayerCreateSerializer
 from speleodb.api.v2.serializers import GISLayerSerializer
 from speleodb.api.v2.serializers import GISLayerUserPermissionSerializer
+from speleodb.api.v2.serializers.api_contract import GISProcessingErrorSerializer
+from speleodb.api.v2.serializers.api_contract import MessageSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.gis.gis_layer_processing import GISLayerProcessingError
 from speleodb.gis.gis_layer_processing import compile_gis_layer
 from speleodb.gis.models import GISLayer
@@ -65,6 +73,7 @@ class GISLayerCollectionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
         return GISLayerSerializer
 
     @extend_schema(operation_id="v2_gis_layers_list")
+    @extend_schema(responses={200: GISLayerSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layers = accessible_gis_layers_queryset(user=self.get_user())
         return SuccessResponse(GISLayerSerializer(layers, many=True).data)
@@ -74,8 +83,10 @@ class GISLayerCollectionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
         request=GISLayerCreateSerializer,
         responses={
             201: GISLayerSerializer,
-            400: OpenApiTypes.OBJECT,
-            422: OpenApiTypes.OBJECT,
+            400: API_ERROR,
+            422: GISProcessingErrorSerializer,
+            403: API_ERROR,
+            503: API_ERROR,
         },
     )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -154,9 +165,15 @@ class GISLayerSpecificAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
     def get_queryset(self) -> QuerySet[GISLayer]:
         return accessible_gis_layers_queryset(user=self.get_user())
 
+    @extend_schema(responses={200: GISLayerSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_gis_layers_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse(self.get_serializer(self.get_object()).data)
 
+    @extend_schema(
+        responses={200: GISLayerSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_gis_layers_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         serializer = self.get_serializer(layer, data=request.data, partial=True)
@@ -168,6 +185,17 @@ class GISLayerSpecificAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
         serializer.save()
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "GISLayerSpecificAPIViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_layers_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         layer.deactivate(deactivated_by=self.get_user())
@@ -195,9 +223,11 @@ class GISLayerSourceAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
             302: OpenApiResponse(
                 description="Redirect to a signed private source URL."
             ),
-            404: OpenApiTypes.OBJECT,
+            404: API_ERROR,
+            403: API_ERROR,
         }
     )
+    @extend_schema(operation_id="v2_gis_layers_source_retrieve")
     def get(
         self,
         request: Request,
@@ -237,6 +267,10 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
             skip_level=skip_level,
         )
 
+    @extend_schema(
+        responses={200: GISLayerUserPermissionSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_gis_layers_permissions_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         permission_qs = (
@@ -248,6 +282,19 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
             GISLayerUserPermissionSerializer(permission_qs, many=True).data
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "GISLayerPermissionAPIViewPostResponse",
+                gis_layer=GISLayerSerializer(),
+                permission=GISLayerUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_layers_permissions_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         permission_data = self._request_data(request)
@@ -287,6 +334,15 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: GISLayerUserPermissionSerializer(),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_layers_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         permission_data = self._request_data(request)
@@ -311,6 +367,17 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
         layer.save(update_fields=["modified_date"])
         return SuccessResponse(GISLayerUserPermissionSerializer(permission).data)
 
+    @extend_schema(
+        request=UserRequestSerializer,
+        responses={
+            200: MessageSerializer(),
+            400: API_ERROR,
+            401: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_gis_layers_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         layer = self.get_object()
         permission_data = self._request_data(request, skip_level=True)

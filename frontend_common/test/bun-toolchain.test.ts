@@ -183,7 +183,7 @@ exit 0
                 expect(lockedPackage[3], `Missing fork archive integrity for ${packagePath}`).toMatch(/^sha512-/);
                 continue;
             }
-            const packageName = ['@speleodb/map-core', '@speleodb/map-viewer'].find(name => (
+            const packageName = ['@speleodb/api', '@speleodb/map-core', '@speleodb/map-viewer'].find(name => (
                 packagePath === name || packagePath.endsWith(`/${name}`)
             ));
             if (packageName) {

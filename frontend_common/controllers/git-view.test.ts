@@ -1,31 +1,27 @@
-import type { GitTreeResponse, GitTreeFile } from '../../ts-types/domain/project-presentation.ts';
-import type { MomentRuntime, MomentValue } from '../../ts-types/browser/moment.d.ts';
-interface FakeMoment extends MomentValue { value: string }
-import type { GitViewContext } from '../../ts-types/controllers/git-view.ts';
-import type { Mock } from 'vitest';
-import type { ControllerAjaxCall } from '../../ts-types/testing/vitest/controller-ajax.ts';
-let ajax: Mock<(options: ControllerAjaxCall) => {responseJSON?: unknown}>;
+import type { GitTreeFile, GitTreeResponse } from '../../ts-types/domain/project-presentation.ts';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { init as initialize } from './git-view.ts';
-function init(context?: unknown) { return initialize(context as GitViewContext); }
-const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
-beforeAll(() => { (0, eval)(jquery); });
+import { init } from './git-view.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
+const commit = { author_name: 'Diver', author_email: 'diver@example.test', authored_date: '2026/01/01 12:00', committer_name: 'Diver', committer_email: 'diver@example.test', committed_date: '2026/01/01 12:00', dt_since: 'today', hexsha: '123456789', hexsha_short: '123', message: '<unsafe>', parents: [], url: '/commit/', formats: [] };
 function file(path: string, date = '2026/01/01 12:00'): GitTreeFile {
-    return { path, name: path.split('/').at(-1)!, size: '42 B', download_url: '/download/', commit: { message: path, url: '/commit/', dt_since: 'today', authored_date: date } };
+    return { hexsha: 'file-sha', path, name: path.split('/').at(-1)!, size: '42 B', download_url: '/download/', commit: { ...commit, message: path, authored_date: date } };
 }
 let response: GitTreeResponse;
 beforeEach(() => {
-    response = { commit: { author_name: 'Diver', message: '<unsafe>', hexsha_short: '123', dt_since: 'today' }, project: { n_commits: 7 }, files: [file('z.dat'), file('folder/old.dat'), file('a.dat'), file('folder/new.dat', '2026/02/01 12:00')] };
-    ajax = vi.fn(options => { options.success(response); return { responseJSON: response }; });
-    vi.spyOn($, 'ajax').mockImplementation(ajax as unknown as JQueryStatic['ajax']);
-    window.moment = vi.fn((value: string): FakeMoment => ({ isAfter: (previous: MomentValue) => value > (previous as FakeMoment).value, value })) as MomentRuntime;
+    response = { commit, project: { id: 'project', country: 'US', visibility: 'PRIVATE', commit_count: 7, latest_commit: null, active_mutex: null, created_by: 'diver@example.test', n_commits: 7, type: 'COMPASS', name: 'Cave', description: '', color: '#000000', exclude_geojson: false, is_active: true, creation_date: '2026-01-01', modified_date: '2026-01-01', fork_from: null }, files: [file('z.dat'), file('folder/old.dat'), file('a.dat'), file('folder/new.dat', '2026/02/01 12:00')] };
+    server.handle(() => ({ json: response }));
+    (0, eval)(readFileSync('frontend_private/static/private/ts/vendors/moment.js', 'utf8'));
     document.body.innerHTML = '<div id="loading_spinner"></div><span id="commit-author"></span><span id="commit-message"></span><span id="commit-hexsha_short"></span><span id="commit-dt_since"></span><span id="n-commits-count"></span><div id="row-template-currentdir" style="display:none"><span class="current-gitfolder-name"></span></div><div id="row-template-folder" style="display:none"><button class="gitfolder-link"><span class="gitfolder-name"></span></button><a class="commit-message"></a><a class="commit-time-ago"></a></div><div id="row-template-file" style="display:none"><a class="download-file-link"><span class="download-file-name"></span></a><a class="file-size-link"><span class="file-size"></span></a><a class="commit-message"></a><a class="commit-time-ago"></a></div><div id="git-viewer-container"></div>';
 });
-afterEach(() => { vi.restoreAllMocks(); delete (window as unknown as {moment?: MomentRuntime}).moment; document.body.innerHTML = ''; });
-it('fetches synchronously immediately, renders metadata as text and sorts files', () => {
-    expect(init({ endpoint: '/tree/' })).toBeUndefined();
-    expect(ajax.mock.calls[0]![0]).toMatchObject({ url: '/tree/', type: 'GET', dataType: 'json', async: false });
+afterEach(() => { vi.restoreAllMocks(); delete (window as unknown as {moment?: unknown}).moment; document.body.innerHTML = ''; });
+it('loads the generated Git tree asynchronously, renders text metadata and sorts files', async () => {
+    await init({ projectId: 'project', commit: 'latest' });
+    expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/projects/project/git_explorer/latest/' });
     expect($('#commit-message').text()).toBe('<unsafe>');
     expect($('#commit-message unsafe').length).toBe(0);
     expect($('#n-commits-count').text()).toBe('7');
@@ -34,35 +30,30 @@ it('fetches synchronously immediately, renders metadata as text and sorts files'
     expect($('#git-viewer-container .commit-message').first().text()).toBe('folder/new.dat');
     expect($('#loading_spinner')[0]!.style.display).toBe('none');
 });
-it('navigates into folders and back using the clicked row without refetching', () => {
-    init({ endpoint: '/tree/' });
+it('navigates into folders and back using the clicked row without refetching', async () => {
+    await init({ projectId: 'project', commit: 'latest' });
     $('#git-viewer-container .gitfolder-link').trigger('click');
     expect($('#git-viewer-container .current-gitfolder-name').text()).toBe('Current Folder: /folder');
     expect($('#git-viewer-container .gitfolder-name').text()).toBe('..');
     expect($('#git-viewer-container .download-file-name').map(function () { return $(this).text(); }).get()).toEqual(['new.dat', 'old.dat']);
     $('#git-viewer-container .gitfolder-link').trigger('click');
     expect($('#git-viewer-container .current-gitfolder-name').text()).toBe('Current Folder: /');
-    expect(ajax).toHaveBeenCalledOnce();
+    expect(server.requests).toHaveLength(1);
 });
-it('sanitizes download and commit URLs while preserving literal file names', () => {
+it('sanitizes download and commit URLs while preserving literal file names', async () => {
     response.files = [{ ...file('<b>file</b>'), name: '<b>file</b>', path: 'file', download_url: 'javascript:alert(1)', commit: { ...file('file').commit, url: 'javascript:alert(1)' } }];
-    init({ endpoint: '/tree/' });
+    await init({ projectId: 'project', commit: 'latest' });
     expect($('#git-viewer-container .download-file-name').text()).toBe('<b>file</b>');
     expect($('#git-viewer-container b').length).toBe(0);
     expect($('#git-viewer-container .download-file-link').attr('href')).not.toContain('javascript:');
     expect($('#git-viewer-container .commit-message').attr('href')).not.toContain('javascript:');
 });
-it('hides loading on AJAX errors and repeats requests without duplicating the rendered tree', () => {
-    init({ endpoint: '/tree/' });
-    init({ endpoint: '/tree/' });
-    expect($('#git-viewer-container .current-gitfolder-name').length).toBe(1);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    ajax.mockImplementation(options => { options.error('failure', 'offline'); return {}; });
-    expect(() => init({ endpoint: '/tree/' })).not.toThrow();
-    expect(console.log).toHaveBeenCalledWith('ERROR: failure & offline');
+it('hides loading after an HTTP error and allows a fresh initialization', async () => {
+    server.reply({ status: 403, json: { detail: 'Denied' } });
+    await expect(init({ projectId: 'project', commit: 'latest' })).resolves.toBeUndefined();
     expect($('#loading_spinner')[0]!.style.display).toBe('none');
-});
-it('throws synchronously for missing context and leaves loading shown', () => {
-    expect(() => init()).toThrow(TypeError);
-    expect($('#loading_spinner')[0]!.style.display).not.toBe('none');
+    expect($('#git-viewer-container .download-file-name')).toHaveLength(0);
+    server.reply({ json: response });
+    await init({ projectId: 'project', commit: 'latest' });
+    expect($('#git-viewer-container .current-gitfolder-name')).toHaveLength(1);
 });

@@ -7,11 +7,15 @@ from typing import Any
 
 from django.db import IntegrityError
 from django.db import transaction
+from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers.station_tag import StationTagSerializer
 from speleodb.gis.models import Station
@@ -41,12 +45,17 @@ class StationTagsApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
         return StationTag.objects.filter(user=user)
 
     @extend_schema(operation_id="v2_station_tags_list")
+    @extend_schema(responses={200: StationTagSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all tags for the authenticated user."""
         tags = self.get_queryset()
         serializer = self.get_serializer(tags, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: StationTagSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_station_tags_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new station tag for the authenticated user."""
         user = self.get_user()
@@ -94,6 +103,10 @@ class StationTagSpecificApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
         user = self.get_user()
         return StationTag.objects.filter(user=user)
 
+    @extend_schema(
+        responses={200: StationTagSerializer(), 403: API_ERROR, 404: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_station_tags_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get a specific station tag."""
         tag = self.get_object()
@@ -128,14 +141,25 @@ class StationTagSpecificApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(operation_id="v2_station_tags_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of a station tag."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_station_tags_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of a station tag."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "StationTagSpecificApiViewDeleteResponse", id=serializers.UUIDField()
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_station_tags_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a station tag."""
         tag = self.get_object()
@@ -158,9 +182,13 @@ class StationTagColorsApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
                 "properties": {
                     "colors": {"type": "array", "items": {"type": "string"}}
                 },
-            }
+                "required": ["colors"],
+                "additionalProperties": False,
+            },
+            403: API_ERROR,
         },
     )
+    @extend_schema(operation_id="v2_station_tags_colors_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get list of predefined colors."""
         return SuccessResponse({"colors": StationTag.get_predefined_colors()})
@@ -177,14 +205,40 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
     serializer_class = StationTagSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    @extend_schema(
+        responses={
+            200: {
+                "anyOf": [
+                    {"$ref": "#/components/schemas/StationTag"},
+                    {"type": "string", "nullable": True, "enum": [None]},
+                ]
+            },
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(responses={200: StationTagSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_stations_tags_retrieve")
+    def get(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Response | JsonResponse:
         """Get the tag assigned to a station."""
         station = self.get_object()
         if station.tag:
             serializer = StationTagSerializer(station.tag)
             return SuccessResponse(serializer.data)
-        return SuccessResponse(None)
+        # DRF renders Response(None) as empty bytes, which is not JSON null.
+        return JsonResponse(None, safe=False)
 
+    @extend_schema(
+        request=response_object(
+            "StationTagAssignmentRequest", tag_id=serializers.UUIDField()
+        )
+    )
+    @extend_schema(
+        responses={200: StationTagSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_tags_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Set a tag on a station."""
         station = self.get_object()
@@ -215,6 +269,15 @@ class StationTagsManageApiView(GenericAPIView[Station], SDBAPIViewMixin):
         serializer = StationTagSerializer(station.tag)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(responses={200: None, 403: API_ERROR, 404: API_ERROR})
+    @extend_schema(
+        responses={
+            200: {"type": "string", "nullable": True, "enum": [None]},
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_tags_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Remove the tag from a station."""
         station = self.get_object()

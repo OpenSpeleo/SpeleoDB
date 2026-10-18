@@ -13,6 +13,10 @@ Unlike product docs, these files prioritize:
 
 ### Architecture and System Design
 
+- [Generated TypeScript API client](typescript-api-client.md)
+  - Browser session/CSRF policy, generated operations and DTOs, file transfers,
+    network boundaries, consumer upgrades, and verification.
+
 - [Production Railway configuration](railway-production.md)
   - All eight active services, persistent volumes, variable ownership, exact
     configuration adoption, and Redis replacement operations.

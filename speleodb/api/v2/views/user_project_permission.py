@@ -6,13 +6,20 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.api.v2.serializers import ProjectUserPermissionSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    DirectUserPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import UserProjectPermission
@@ -39,6 +46,17 @@ class ProjectUserPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectUserPermissionListApiViewGetResponse",
+                project=ProjectSerializer(),
+                permissions=ProjectUserPermissionSerializer(many=True),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permissions_user_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()
@@ -126,6 +144,20 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
 
         return perm_data
 
+    @extend_schema(request=DirectUserPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "ProjectUserPermissionSpecificApiViewPostResponse",
+                project=ProjectSerializer(),
+                permission=ProjectUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_user_detail_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()
@@ -172,6 +204,20 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=DirectUserPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectUserPermissionSpecificApiViewPutResponse",
+                project=ProjectSerializer(),
+                permission=ProjectUserPermissionSerializer(),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_user_detail_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()
@@ -214,6 +260,19 @@ class ProjectUserPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectUserPermissionSpecificApiViewDeleteResponse",
+                project=ProjectSerializer(),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_user_detail_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()

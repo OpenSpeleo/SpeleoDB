@@ -1,4 +1,4 @@
-import { readFormCSRFToken, scheduleFormReload } from './lifecycle.ts';
+import { scheduleFormReload } from './lifecycle.ts';
 import type { FleetEntityOptions } from '../../../../../ts-types/domain/forms/fleet.ts';
 
 /**
@@ -9,7 +9,7 @@ import type { FleetEntityOptions } from '../../../../../ts-types/domain/forms/fl
  * (which reuses the same modal but never adds).
  *
  * The domain-specific parts (which fields, default values, payload
- * shape) are injected as callbacks; the AJAX wiring, modal open/close,
+ * shape and generated operations) are injected as callbacks; modal open/close,
  * and delete-confirm flow are owned by this helper.
  *
  * Usage:
@@ -28,8 +28,9 @@ import type { FleetEntityOptions } from '../../../../../ts-types/domain/forms/fl
  *       modalTitleSelector: '#cylinder_modal_title',
  *       addTitle: 'Add Cylinder',
  *       editTitle: 'Edit Cylinder',
- *       listEndpoint: "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
- *       detailEndpoint: function (id) { return Urls['api:v2:cylinder-detail'](id); },
+ *       create: payload => createCylinder(payload),
+ *       update: (id, payload) => updateCylinder(id, payload),
+ *       remove: id => deleteCylinder(id),
  *       resetForCreate: function () { ... populate defaults ... },
  *       populateForEdit: function ($button) { ... fill modal from data-* ... },
  *       collectPayload: function (isEdit) {
@@ -42,13 +43,13 @@ import type { FleetEntityOptions } from '../../../../../ts-types/domain/forms/fl
  *       // must be provided.
  *   });
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal.
+ * Requires: jQuery, FormModals, showApiErrorModal.
  */
 
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
-export function attachFleetEntityCrud(options: FleetEntityOptions) {
+export function attachFleetEntityCrud<Payload>(options: FleetEntityOptions<Payload>) {
     var entityLabel = options.entityLabel || 'entity';
     var modalSelector = options.modalSelector;
     var deleteModalSelector = options.deleteModalSelector;
@@ -63,8 +64,9 @@ export function attachFleetEntityCrud(options: FleetEntityOptions) {
     var modalTitleSelector = options.modalTitleSelector;
     var addTitle = options.addTitle || 'Add';
     var editTitle = options.editTitle || 'Edit';
-    var listEndpoint = options.listEndpoint;
-    var detailEndpoint = options.detailEndpoint;
+    var create = options.create;
+    var update = options.update;
+    var remove = options.remove;
     var resetForCreate = options.resetForCreate;
     var populateForEdit = options.populateForEdit;
     var collectPayload = options.collectPayload;
@@ -72,8 +74,8 @@ export function attachFleetEntityCrud(options: FleetEntityOptions) {
 
     if (!modalSelector) { throw new Error('attachFleetEntityCrud: modalSelector required'); }
     if (!saveButtonSelector) { throw new Error('attachFleetEntityCrud: saveButtonSelector required'); }
-    if (typeof detailEndpoint !== 'function') {
-        throw new Error('attachFleetEntityCrud: detailEndpoint must be function(id)');
+    if (typeof update !== 'function') {
+        throw new Error('attachFleetEntityCrud: update must be function(id, payload)');
     }
     if (typeof collectPayload !== 'function') {
         throw new Error('attachFleetEntityCrud: collectPayload must be function()');
@@ -93,7 +95,7 @@ export function attachFleetEntityCrud(options: FleetEntityOptions) {
         $(deleteModalSelector!).css('display', 'none').addClass('hidden');
     }
 
-    if (addButtonSelector && typeof resetForCreate === 'function' && listEndpoint) {
+    if (addButtonSelector && typeof resetForCreate === 'function' && create) {
         $(addButtonSelector).click(function () {
             currentId = null;
             if (modalTitleSelector) { $(modalTitleSelector).text(addTitle); }
@@ -131,32 +133,17 @@ export function attachFleetEntityCrud(options: FleetEntityOptions) {
         }
         if (!payload) { return; }  // collectPayload signalled validation failure internally
 
-        var csrftoken = readFormCSRFToken('[name=csrfmiddlewaretoken]');
-
-        var url = isEdit ? detailEndpoint!(currentId!) : listEndpoint;
-        var method = isEdit ? 'PUT' : 'POST';
-
-        if (!url) {
-            FormModals.showError('No endpoint configured for this action.');
+        if (!isEdit && !create) {
+            FormModals.showError('No create operation configured for this action.');
             return;
         }
-
-        $.ajax({
-            url: url,
-            method: method,
-            data: JSON.stringify(payload),
-            contentType: 'application/json; charset=utf-8',
-            headers: { 'X-CSRFToken': csrftoken },
-            success: function () {
+        const request = isEdit ? update(currentId!, payload) : create!(payload);
+        void request.then(function () {
                 var verb = isEdit ? 'updated' : 'added';
                 FormModals.showSuccess(_capitalize(entityLabel) + ' ' + verb + ' successfully.');
                 closeEntityModal();
                 scheduleFormReload(reloadDelayMs);
-            },
-            error: function (xhr) {
-                showAjaxErrorModal(xhr);
-            },
-        });
+        }).catch(showApiErrorModal);
     });
 
     if (deleteButtonSelector && deleteIdInputSelector && deleteModalSelector) {
@@ -171,20 +158,14 @@ export function attachFleetEntityCrud(options: FleetEntityOptions) {
                 var id = $(deleteIdInputSelector!).val() as string;
                 if (!id) { return; }
 
-                var csrftoken = readFormCSRFToken('[name=csrfmiddlewaretoken]');
-                $.ajax({
-                    url: detailEndpoint!(id),
-                    method: 'DELETE',
-                    headers: { 'X-CSRFToken': csrftoken },
-                    success: function () {
+                if (!remove) return;
+                void remove(id).then(function () {
                         FormModals.showSuccess(_capitalize(entityLabel) + ' deleted successfully.');
                         closeDeleteModal();
                         scheduleFormReload(reloadDelayMs);
-                    },
-                    error: function (xhr) {
+                }, function (xhr: unknown) {
                         closeDeleteModal();
-                        showAjaxErrorModal(xhr);
-                    },
+                        showApiErrorModal(xhr);
                 });
             });
         }

@@ -76,7 +76,7 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="project-upload">
     {
-      "endpoint": "{% url 'api:v2:project-upload' id=project.id fileformat='auto' %}",
+      "projectId": "{{ project.id }}",
       "maxFiles": {{ limit_number_files }},
       "maxFileSizeMb": {{ limit_individual_filesize }},
       "maxTotalSizeMb": {{ limit_total_filesize }}

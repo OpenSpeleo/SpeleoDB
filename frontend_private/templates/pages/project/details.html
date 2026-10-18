@@ -191,14 +191,14 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="project-geojson-status">
     {
-      "endpoint": "{% url 'api:v2:project-geojson-status' id=project.id %}"
+      "projectId": "{{ project.id }}"
     }
   </script>
   <script type="application/json" data-speleodb-controller="entity-crud">
     {
       "formId": "project_details_form",
-      "endpoint": "{% url 'api:v2:project-detail' id=project.id %}",
-      "method": "PUT",
+      "resource": "project",
+      "entityId": "{{ project.id }}",
       "successMessage": "The project has been updated.",
       "reloadOnSuccess": true,
       "colorPicker": true

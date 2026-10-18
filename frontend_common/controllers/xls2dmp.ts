@@ -1,9 +1,11 @@
+import type { V2ToolsXls2dmpCreateBody } from '@speleodb/api';
+import { v2ToolsXls2dmpCreate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import { validateCell, parseClipboardText } from '../survey/xls2dmp.ts';
-import type { Xls2DmpContext } from '../../ts-types/controllers/xls2dmp.ts';
-import type { SurveyToolAjaxFailure, SurveyToolErrorBody, SurveyShot, SurveyLocation, CompassSurveyPayload } from '../../ts-types/domain/survey-tools.ts';
+import type { SurveyShot } from '../../ts-types/domain/survey-tools.ts';
 import { attachSurveyTableTool } from '../../frontend_private/static/private/ts/forms/survey_table_tool.ts';
 
-export function init(context: Xls2DmpContext) {
+export function init() {
     const COLUMNS = ['depth', 'length', 'azimuth', 'left', 'right', 'up', 'down'];
         const $tbody = $('#dataTable tbody');
         const $statusEl = $('#status');
@@ -19,7 +21,7 @@ export function init(context: Xls2DmpContext) {
         const today = new Date().toISOString().split('T')[0]!;
         $('#surveyDate').attr('max', today);
 
-        let currentUnit = 'feet';
+        let currentUnit: V2ToolsXls2dmpCreateBody['unit'] = 'feet';
         $('#unitSwitch').on('change', function() {
             if ((this as HTMLInputElement).checked) {
                 currentUnit = 'feet';
@@ -32,7 +34,7 @@ export function init(context: Xls2DmpContext) {
             }
         });
 
-        let surveyDirection = 'in';
+        let surveyDirection: V2ToolsXls2dmpCreateBody['direction'] = 'in';
         $('#directionSwitch').on('change', function() {
             if ((this as HTMLInputElement).checked) {
                 surveyDirection = 'out';
@@ -92,7 +94,7 @@ export function init(context: Xls2DmpContext) {
                 $('#surveyDate').removeClass('invalid-date');
             }
 
-            const rows: SurveyShot[] = [];
+            const rows: V2ToolsXls2dmpCreateBody['shots'] = [];
             $('#dataTable tbody tr').each(function() {
                 const row: SurveyShot = {};
                 $(this).find('td[data-col]').each(function() {
@@ -100,31 +102,15 @@ export function init(context: Xls2DmpContext) {
                     row[col] = $(this).text().trim();
                 });
                 if (Object.keys(row).length > 0) {
-                    rows.push(row);
+                    rows.push({ ...row, depth: row.depth ?? '' });
                 }
             });
 
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
 
             $("#loading_spinner").show();
 
-            $.ajax({
-                url: context.endpoint,
-                method: "POST",
-                data: JSON.stringify({
-                    shots: rows,
-                    survey_date: surveyDate,
-                    unit: currentUnit,
-                    direction: surveyDirection
-                }),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function(response: unknown) {
-                    const blob = new Blob([response as BlobPart], { type: 'application/octet-stream' });
+            apiData(v2ToolsXls2dmpCreate({ shots: rows, survey_date: surveyDate, unit: currentUnit, direction: surveyDirection }, webApiOptions())).then(response => {
+                    const blob = response;
                     const a = document.createElement('a');
                     document.body.appendChild(a);
                     a.href = window.URL.createObjectURL(blob);
@@ -138,30 +124,16 @@ export function init(context: Xls2DmpContext) {
                     $('#downloadBtn').prop('disabled', false);
                     $('#status').text('Download successful!')
                                 .css({ 'color': 'green', 'font-weight': 'bold' });
-                },
-                error: function(xhr: SurveyToolAjaxFailure, status, error) {
+                            }).catch((error: unknown) => {
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
 
-                    let errorMessage = error;
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
-                    } else if (xhr.responseJSON && xhr.responseJSON.detail) {
-                        errorMessage = xhr.responseJSON.detail;
-                    } else if (xhr.responseText) {
-                        try {
-                            const response = JSON.parse(xhr.responseText) as SurveyToolErrorBody;
-                            errorMessage = response.error || response.detail || response.message || error;
-                        } catch (e) {
-                            errorMessage = xhr.responseText.substring(0, 200);
-                        }
-                    }
+                    const errorMessage = error instanceof Error ? error.message : 'Conversion failed.';
 
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
                     $('#status').text('Error occurred. See details.')
                                 .css({ 'color': 'red', 'font-weight': 'bold' });
-                }
             });
 
         });

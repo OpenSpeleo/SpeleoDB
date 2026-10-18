@@ -14,8 +14,8 @@ it('keeps escaping, CSRF policy and notification beneath the stateful Config/API
     expect(runtimeClosure(viewer + 'api.ts').has(viewer + 'config.ts')).toBe(false);
 });
 
-it('keeps request mechanics independent of presentation, state and runtime CSRF lookup', () => {
-    expect([...runtimeClosure(viewer + 'transport.ts')]).toEqual([viewer + 'transport.ts']);
+it('keeps the browser API adapter independent of map presentation and state', () => {
+    expect([...runtimeClosure('frontend_common/api/client.ts')]).toEqual([path.resolve('frontend_common/api/client.ts')]);
     for (const file of ['html.ts', 'url.ts', 'color.ts']) {
         expect([...runtimeClosure(`frontend_common/security/${file}`)]).toEqual([path.resolve(`frontend_common/security/${file}`)]);
     }

@@ -1,5 +1,5 @@
 import { sendPermissionRequest } from './permission_request.ts';
-import { readFormCSRFToken, hideFormStatus, scheduleFormReload } from './lifecycle.ts';
+import { hideFormStatus, scheduleFormReload } from './lifecycle.ts';
 import type { UserPermissionOptions } from '../../../../../ts-types/domain/forms/permissions.ts';
 
 /**
@@ -27,8 +27,7 @@ import type { UserPermissionOptions } from '../../../../../ts-types/domain/forms
  *
  * Usage:
  *   attachPermissionModal({
- *       endpoint: "{% url 'api:v2:project-user-permissions-detail' id=project.id %}",
- *       autocompleteUrl: "{% url 'api:v2:user-autocomplete' %}",
+ *       operations: userPermissions('project', projectId),
  *       addModalTitle: "Add a collaborator to the project",
  *       addModalHeader: "Who would you like to add?",
  *       editModalTitle: "How shall we modify this user's access?",
@@ -48,11 +47,11 @@ import type { UserPermissionOptions } from '../../../../../ts-types/domain/forms
  *       },
  *   });
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal, attachUserAutocomplete.
+ * Requires: jQuery, FormModals, showApiErrorModal, attachUserAutocomplete.
  */
 
 import { attachUserAutocomplete } from '../user_autocomplete.ts';
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
 var EMAIL_REGEX = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -70,8 +69,7 @@ var DEFAULT_PERMISSION_SELECTORS = {
 };
 
 export function attachPermissionModal(options: UserPermissionOptions) {
-    var endpoint = options.endpoint;
-    var autocompleteUrl = options.autocompleteUrl;
+    var operations = options.operations;
     var addModalTitle = options.addModalTitle || 'Add a collaborator';
     var addModalHeader = options.addModalHeader || 'Who would you like to add?';
     var editModalTitle = options.editModalTitle || 'Edit access';
@@ -83,11 +81,8 @@ export function attachPermissionModal(options: UserPermissionOptions) {
 
     var sel = Object.assign({}, DEFAULT_PERMISSION_SELECTORS, options.selectors || {});
 
-    if (!endpoint) {
-        throw new Error('attachPermissionModal: endpoint is required');
-    }
-    if (!autocompleteUrl) {
-        throw new Error('attachPermissionModal: autocompleteUrl is required');
+    if (!operations) {
+        throw new Error('Permission operations are required');
     }
 
     FormModals.bindAutoDismiss();
@@ -105,7 +100,7 @@ export function attachPermissionModal(options: UserPermissionOptions) {
         $(sel.modalHeader).text(addModalHeader);
         $(sel.modal).css('display', 'flex');
         $('#user').prop('readonly', false);
-        attachUserAutocomplete($('#user'), $('#user_suggestions'), autocompleteUrl!);
+        attachUserAutocomplete($('#user'), $('#user_suggestions'));
         return false;
     });
 
@@ -122,17 +117,13 @@ export function attachPermissionModal(options: UserPermissionOptions) {
     });
 
     $(sel.submitBtn).click(function () {
-        var csrftoken = readFormCSRFToken();
         var form = $<HTMLFormElement>(sel.form);
         var formData = new FormData(form[0]);
 
         hideFormStatus();
 
         sendPermissionRequest({
-            endpoint: endpoint,
-            method: form.data('method') as string,
-            data: JSON.stringify(Object.fromEntries(formData)),
-            csrfToken: csrftoken,
+            request: () => (form.data('method') === 'PUT' ? operations.update : operations.create)(Object.fromEntries(formData)),
             validate: function () {
                 if (!EMAIL_REGEX.test($('#user').val() as string) || $('#user').val() === '') {
                     FormModals.showError('The Email Address is not valid!');
@@ -149,7 +140,7 @@ export function attachPermissionModal(options: UserPermissionOptions) {
                 scheduleFormReload(reloadDelayMs);
             },
             error: function (xhr) {
-                showAjaxErrorModal(xhr);
+                showApiErrorModal(xhr);
             },
         });
         return false;
@@ -160,23 +151,19 @@ export function attachPermissionModal(options: UserPermissionOptions) {
         if ($this.hasClass('disabled')) { return false; }
         $this.addClass('disabled');
 
-        var csrftoken = readFormCSRFToken();
         var formData = new FormData();
         formData.append('user', $this.data('user') as string);
 
         hideFormStatus();
 
         sendPermissionRequest({
-            endpoint: endpoint,
-            method: 'DELETE',
-            data: JSON.stringify(Object.fromEntries(formData)),
-            csrfToken: csrftoken,
+            request: () => operations.remove(Object.fromEntries(formData)),
             success: function () {
                 FormModals.showSuccess(deleteMessage);
                 scheduleFormReload(reloadDelayMs);
             },
             error: function (xhr) {
-                showAjaxErrorModal(xhr);
+                showApiErrorModal(xhr);
                 $this.removeClass('disabled');
             },
         });

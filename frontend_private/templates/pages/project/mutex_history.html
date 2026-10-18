@@ -238,9 +238,10 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="mutex-lock">
     {
-      "unlockUrl": "{% url 'api:v2:project-release' id=project.id %}"
+      "projectId": "{{ project.id }}",
+      "canRelease": true
       {% if not project.mutex_owner and has_write_access %},
-      "lockUrl": "{% url 'api:v2:project-acquire' id=project.id %}"
+      "canAcquire": true
       {% endif %}
     }
   </script>

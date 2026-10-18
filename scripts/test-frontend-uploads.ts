@@ -1,8 +1,11 @@
+import { browserTransport, createApiClient, getV2GisLayersListUrl, v2GisLayersCreateWithFormData, v2GisLayersList, v2GisLayersPartialUpdateWithJson } from '@speleodb/api';
+import { ApiRequestError, apiData, webApiOptions } from '../frontend_common/api/client.ts';
+import type { UploadOperation } from '../ts-types/domain/upload.ts';
 import type { DOMWindow } from 'jsdom';
 import type { GISUploadListContext } from '../ts-types/controllers/gis-lists.ts';
 import type { UploadOptions, UploadError } from '../ts-types/domain/upload.ts';
 interface UploadRecord { id: string; name: string }
-interface UploadResult { response?: UploadRecord | null; error?: UploadError }
+interface UploadResult { response?: UploadRecord | undefined | null; error?: UploadError }
 interface UploadConfiguration { url: string; unavailableUrl: string; sessionCookie: { name: string; value: string } }
 // Invoked by pytest with an authenticated Django live_server configuration on
 // stdin. JSDOM's unmodified XMLHttpRequest sends real HTTP and multipart bodies.
@@ -28,13 +31,31 @@ const dom = await JSDOM.fromURL(configuration.url, {
     virtualConsole,
 });
 const { window } = dom;
+// File extends Blob in this browser realm; keep both aligned with XHR's FormData.
 Object.assign(globalThis, {
     window,
     document: window.document,
     XMLHttpRequest: window.XMLHttpRequest,
     FormData: window.FormData,
     File: window.File,
+    Blob: window.Blob,
 });
+// JSDOM has a real cookie-aware XHR. Bun's real fetch needs the same browser
+// cookie jar bridged explicitly; no response or transport is mocked.
+const nativeFetch = globalThis.fetch;
+const listRequests: { status: number; data: UploadRecord[] }[] = [];
+globalThis.fetch = Object.assign(async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const url = new URL(input instanceof Request ? input.url : String(input), configuration.url);
+    const headers = new Headers(init?.headers);
+    if (url.origin === new URL(configuration.url).origin) {
+        headers.set('Cookie', cookieJar.getCookieStringSync(url.href));
+    }
+    const response = await nativeFetch(url, { ...init, headers });
+    if (url.pathname === getV2GisLayersListUrl() && (init?.method ?? 'GET') === 'GET') {
+        listRequests.push({ status: response.status, data: await response.clone().json() as UploadRecord[] });
+    }
+    return response;
+}, { preconnect: nativeFetch.preconnect });
 window.eval(await readFile(new URL('../frontend_public/static/ts/vendors/jquery-3.7.1.js', import.meta.url), 'utf8'));
 (globalThis as unknown as {$: JQueryStatic}).$ = (window as DOMWindow & {jQuery: JQueryStatic}).jQuery;
 const { init } = await import('../frontend_common/controllers/gis-layers.ts');
@@ -80,36 +101,30 @@ function submit() {
 }
 
 function form(name: string, contents = source, filename = `${name}.geojson`) {
-    const data = new window.FormData();
-    data.append('name', name);
-    data.append('color', '#377eb8');
-    data.append('source_file', new window.File([contents], filename));
-    return data;
+    return { name, color: '#377eb8', source_file: new window.File([contents], filename) };
 }
 
-function request(url: string, data: FormData, options: UploadOptions<UploadRecord> = {}) {
+function createLayer(name: string, contents = source, filename = `${name}.geojson`): UploadOperation<UploadRecord> {
+    return options => apiData(v2GisLayersCreateWithFormData(form(name, contents, filename), webApiOptions(options)));
+}
+
+function request(operation: UploadOperation<UploadRecord | undefined>, options: UploadOptions<UploadRecord | undefined> = {}) {
     const progress: [number, number, number][] = [];
     const phases: string[] = [];
-    let xhr!: XMLHttpRequest;
+    let controller!: AbortController;
     const done = new Promise<UploadResult>(resolve => {
-        xhr = uploadWithProgress(url, data, {
+        controller = uploadWithProgress(operation, {
             ...options,
             onProgress: (...values) => progress.push(values),
             onUploaded: () => phases.push('uploaded'),
-            onSuccess: response => resolve({ response: response as UploadRecord | null }),
+            onSuccess: response => resolve({ response }),
             onError: error => resolve({ error }),
         });
     });
-    return { xhr, done, progress, phases };
+    return { controller, done, progress, phases };
 }
 
 try {
-    const listRequests: {method: string | undefined; status: number; data: UploadRecord[]}[] = [];
-    $(document).on('ajaxComplete', (_event: JQuery.Event, xhr: JQuery.jqXHR<UploadRecord[]>, options: JQuery.AjaxSettings) => {
-        if (options.url === context.listEndpoint) {
-            listRequests.push({ method: options.type, status: xhr.status, data: xhr.responseJSON as UploadRecord[] });
-        }
-    });
     init(context);
     await waitFor(() => listRequests.length === 1, 'initial real list response');
     assert.equal(listRequests[0]!.status, 200);
@@ -143,7 +158,10 @@ try {
     dismissButtons[0]!.click();
     document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
     assert.equal(element('upload-layer-modal').classList.contains('hidden'), false);
-    await waitFor(() => listRequests.length === 2, 'exactly one real list refresh after upload');
+    await waitFor(() => listRequests.length === 2 || !element('upload-layer-error-message').classList.contains('hidden'), 'real upload completion');
+    assert.equal(element('upload-layer-error-message').classList.contains('hidden'), true,
+        element('upload-layer-error-text').textContent);
+    assert.equal(listRequests.length, 2, 'Exactly one real list refresh follows upload');
     labels.disconnect();
     assert.equal(listRequests[1]!.status, 200);
     assert.equal(listRequests[1]!.data.length, 1);
@@ -166,11 +184,10 @@ try {
     assert.equal(listRequests.length, 2);
     checks.push('gis-server-validation');
 
-    const successful = request(context.listEndpoint, form('browser-helper'));
-    assert.ok(successful.xhr instanceof window.XMLHttpRequest);
+    const successful = request(createLayer('browser-helper'));
+    assert.ok(successful.controller instanceof AbortController);
     const { response, error } = await successful.done;
     assert.equal(error, undefined);
-    assert.equal(successful.xhr.status, 201);
     assert.equal(response!.name, 'browser-helper');
     assert.ok(successful.progress.length > 0);
     for (const [percent, loaded, total] of successful.progress) {
@@ -182,11 +199,8 @@ try {
     stored.push({ id: response!.id, name: 'browser-helper-renamed', contents: source });
     checks.push('upload-helper-success-and-progress');
 
-    const update = new window.FormData();
-    update.append('name', 'browser-helper-renamed');
-    const edited = request(`${context.listEndpoint}${response!.id}/`, update, { method: 'PATCH' });
+    const edited = request(options => apiData(v2GisLayersPartialUpdateWithJson(response!.id, { name: 'browser-helper-renamed' }, webApiOptions(options))));
     const editedResult = await edited.done;
-    assert.equal(edited.xhr.status, 200);
     assert.equal(editedResult.response!.name, 'browser-helper-renamed');
     checks.push('upload-helper-custom-method');
 
@@ -197,78 +211,89 @@ try {
     const csrfCookie = document.cookie.split('; ').find(cookie => cookie.startsWith('csrftoken='));
     csrfInput.value = '';
     document.cookie = 'csrftoken=; Max-Age=0; Path=/';
-    const rejectedCSRF = request(context.listEndpoint, form('must-not-save-csrf'));
+    const rejectedCSRF = request(createLayer('must-not-save-csrf'));
     assert.match((await rejectedCSRF.done).error!.message, /CSRF/);
-    assert.equal(rejectedCSRF.xhr.status, 403);
     csrfInput.value = csrfValue;
     document.cookie = `${csrfCookie}; Path=/`;
     checks.push('upload-helper-csrf');
 
-    const empty = request(context.listEndpoint, new window.FormData(), { method: 'HEAD' });
-    assert.equal((await empty.done).response, null);
-    assert.equal(empty.xhr.status, 200);
-    assert.equal(empty.xhr.responseText, '');
+    // Probe public runtime decoding against real HEAD/HTML responses. These
+    // transport probes are deliberately outside the generated API operation set.
+    async function probe(method: string, url: string, options: Parameters<UploadOperation<undefined>>[0]) {
+        const response = await browserTransport({
+            ...options, signal: options.signal!, method,
+            url: new URL(url, configuration.url).href, headers: new Headers(),
+            timeoutMs: 10_000, credentials: 'same-origin',
+            operation: { operationId: 'test-runtime-probe', responses: { '200': { content: method === 'HEAD' ? {} : { 'application/json': 'json' } } } },
+        });
+        if (response.unexpected) throw new ApiRequestError({ ...response, kind: 'unexpected' });
+        assert.equal(response.status, 200);
+        return undefined;
+    }
+    const empty = request(options => probe('HEAD', getV2GisLayersListUrl(), options));
+    assert.equal((await empty.done).response, undefined);
     checks.push('upload-helper-empty-response');
 
-    const html = request(configuration.url, new window.FormData(), { method: 'GET' });
+    const htmlClient = createApiClient({
+        baseUrl: new URL(configuration.url).origin,
+        transport: transportRequest => browserTransport({ ...transportRequest, url: configuration.url }),
+    });
+    const html = request(options => apiData(v2GisLayersList({ ...options, client: htmlClient })).then(() => undefined));
     const htmlError = (await html.done).error!;
     assert.match(htmlError.message, /unreadable response/);
     assert.equal(htmlError.ambiguous, true);
     assert.equal(htmlError.status, 200);
-    assert.equal(html.xhr.status, 200);
     checks.push('upload-helper-html-response');
 
-    const invalid = request(context.listEndpoint, form('broken', '{}', 'broken.topojson'));
+    const invalid = request(createLayer('broken', '{}', 'broken.topojson'));
     const invalidError = (await invalid.done).error!;
     assert.equal(invalidError.message, 'The uploaded file is not a TopoJSON topology.');
     assert.equal(invalidError.status, 422);
     assert.equal(invalidError.ambiguous, false);
-    assert.equal(invalid.xhr.status, 422);
-    const invalidName = request(context.listEndpoint, form('x'.repeat(256)));
+    const invalidName = request(createLayer('x'.repeat(256)));
     const nameError = (await invalidName.done).error!;
-    assert.equal(invalidName.xhr.status, 400);
     assert.match(nameError.message, /name:.*255/);
     assert.ok(Array.isArray((nameError.payload as {errors: {name: unknown}}).errors.name));
     checks.push('upload-helper-server-error');
 
-    const unavailable = request(configuration.unavailableUrl, new window.FormData());
+    const unavailable = request(options => apiData(v2GisLayersCreateWithFormData(form('offline'), { ...options, client: createApiClient({ baseUrl: new URL(configuration.unavailableUrl).origin }) })));
     const networkError = (await unavailable.done).error!;
     assert.equal(networkError.message, 'Network error during upload');
     assert.equal(networkError.status, 0);
     assert.equal(networkError.ambiguous, true);
-    assert.equal(unavailable.xhr.status, 0);
     checks.push('upload-helper-network-error');
 
     document.body.insertAdjacentHTML('beforeend', createProgressBarHTML('browser-progress'));
     const controller = new UploadProgressController('browser-progress');
-    const uploaded = controller.upload(context.listEndpoint, form('browser-progress'));
+    const uploaded = controller.upload(createLayer('browser-progress'));
     assert.equal(element('browser-progress-container').classList.contains('hidden'), false);
-    const uploadedResult = await uploaded as UploadRecord;
+    const uploadedResult = await uploaded;
     assert.equal(uploadedResult.name, 'browser-progress');
     assert.match(element('browser-progress-status').textContent, /Upload complete!/);
     stored.push({ id: uploadedResult.id, name: 'browser-progress', contents: source });
     checks.push('upload-controller-success');
 
-    await assert.rejects(controller.upload(context.listEndpoint, form('broken', '{}', 'broken.topojson')), /not a TopoJSON topology/);
+    await assert.rejects(controller.upload(createLayer('broken', '{}', 'broken.topojson')), /not a TopoJSON topology/);
     assert.ok(element('browser-progress-bar').classList.contains('bg-red-500'));
     checks.push('upload-controller-rejection');
 
     const cancellation = new UploadProgressController('browser-progress');
-    const cancelled = cancellation.upload(context.listEndpoint, form('must-not-save-cancelled'));
-    const nativeRequest = cancellation.xhr!;
+    const cancelled = cancellation.upload(createLayer('must-not-save-cancelled'));
+    const nativeRequest = cancellation.request!;
     let abortCount = 0;
-    nativeRequest.addEventListener('abort', () => { abortCount += 1; });
+    nativeRequest.signal.addEventListener('abort', () => { abortCount += 1; });
     cancellation.cancel();
     cancellation.cancel();
     await assert.rejects(cancelled, /Upload cancelled/);
     assert.equal(abortCount, 1);
-    assert.equal(cancellation.xhr, null);
-    assert.equal(nativeRequest.readyState, window.XMLHttpRequest.UNSENT);
+    assert.equal(cancellation.request, null);
+    assert.equal(nativeRequest.signal.aborted, true);
     assert.equal(element('browser-progress-container').classList.contains('hidden'), true);
     checks.push('upload-controller-cancellation');
     assert.equal(listRequests.length, 2, 'Only the successful GIS controller upload reloads its list');
 
     process.stdout.write(JSON.stringify({ checks, stored }));
 } finally {
+    globalThis.fetch = nativeFetch;
     window.close();
 }

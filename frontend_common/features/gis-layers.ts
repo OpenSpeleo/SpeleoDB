@@ -1,3 +1,5 @@
+import { v2GisLayersList, v2GisLayersCreateWithFormData } from '@speleodb/api';
+import { apiData, ApiRequestError, webApiOptions } from '../api/client.ts';
 import type { GISListRecord, GISUploadListContext, GISUploadErrorDetails, GISUploadErrorBody } from '../../ts-types/controllers/gis-lists.ts';
 import { initColorPicker } from '../../frontend_private/static/private/ts/color-picker.ts';
 import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
@@ -34,7 +36,7 @@ export function renderGISLayerUploadError(element: HTMLElement, message: string,
 
 export function attachGISLayerList(context: GISUploadListContext) {
     let selectedFile: File | null = null;
-    let uploadRequest: XMLHttpRequest | null = null;
+    let uploadRequest: AbortController | null = null;
 
     function renderLayers(layers: GISListRecord[]) {
         const { tableHtml, cardsHtml } = buildGISLayerListMarkup(layers, context.openIconUrl);
@@ -49,7 +51,7 @@ export function attachGISLayerList(context: GISUploadListContext) {
     });
 
     const listApi = attachTaggedEntityList<GISListRecord>({
-        listEndpoint: context.listEndpoint,
+        list: () => apiData(v2GisLayersList(webApiOptions())),
         renderList: renderLayers,
         entityLabel: 'GIS Layer',
         loadFailedMessage: 'Error loading GIS Layers',
@@ -63,7 +65,7 @@ export function attachGISLayerList(context: GISUploadListContext) {
     const uploadDismissButtons = document.querySelectorAll<HTMLButtonElement>('[data-layer-upload-action="hide"]');
 
     function uploadIsActive() {
-        return uploadRequest && uploadRequest.readyState !== XMLHttpRequest.DONE;
+        return uploadRequest !== null;
     }
 
     function setUploadDismissDisabled(disabled: boolean) {
@@ -127,9 +129,10 @@ export function attachGISLayerList(context: GISUploadListContext) {
         if (!nameInput.value) nameInput.value = file.name.replace(/\.(kml|kmz|geojson|json|topojson|zip)$/i, '');
     }
 
-    function parseUploadError() {
+    function parseUploadError(error: unknown) {
         try {
-            const data = JSON.parse(uploadRequest!.responseText) as GISUploadErrorBody;
+            if (!(error instanceof ApiRequestError) || !error.data || typeof error.data !== 'object') return { message: 'The upload was interrupted. Try again.' };
+            const data = error.data as GISUploadErrorBody;
             const fieldErrors = Object.values(data.errors || {}).flat().join(' ');
             const directFieldErrors = Object.values(data).flat()
                 .filter(value => typeof value === 'string').join(' ');
@@ -148,11 +151,11 @@ export function attachGISLayerList(context: GISUploadListContext) {
         if (!selectedFile) return showUploadError(`Choose ${SUPPORTED_FORMATS_LABEL}.`);
         if (!name) return showUploadError('Please enter a layer name.');
 
-        const data = new FormData();
-        data.append('source_file', selectedFile, selectedFile.name);
-        data.append('name', name);
-        data.append('description', (document.getElementById('upload-layer-description') as HTMLTextAreaElement).value.trim());
-        data.append('color', (document.getElementById('upload-layer-color-value') as HTMLInputElement).value);
+        const data = {
+            source_file: selectedFile, name,
+            description: (document.getElementById('upload-layer-description') as HTMLTextAreaElement).value.trim(),
+            color: (document.getElementById('upload-layer-color-value') as HTMLInputElement).value,
+        };
         uploadButton.disabled = true;
         (document.getElementById('upload-layer-spinner') as HTMLElement).classList.remove('hidden');
         (document.getElementById('upload-layer-button-text') as HTMLElement).textContent = 'Uploading…';
@@ -160,16 +163,16 @@ export function attachGISLayerList(context: GISUploadListContext) {
         (document.getElementById('upload-layer-error-message') as HTMLElement).classList.add('hidden');
         setUploadDismissDisabled(true);
 
-        uploadRequest = new XMLHttpRequest();
-        uploadRequest.open('POST', context.listEndpoint);
-        uploadRequest.setRequestHeader('X-CSRFToken', context.csrfToken);
-        uploadRequest.upload.addEventListener('progress', progressEvent => {
-            if (!progressEvent.lengthComputable) return;
+        uploadRequest = new AbortController();
+        apiData(v2GisLayersCreateWithFormData(data, webApiOptions({
+            signal: uploadRequest.signal,
+            onUploadProgress: progressEvent => {
+            if (!progressEvent.lengthComputable || !progressEvent.total) return;
             const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
             (document.getElementById('upload-layer-progress') as HTMLElement).style.width = `${percent}%`;
             (document.getElementById('upload-layer-progress-value') as HTMLElement).textContent = `${percent}%`;
-        });
-        uploadRequest.upload.addEventListener('load', () => {
+            },
+            onUploadComplete: () => {
             const directGeoJSON = /\.(geojson|json)$/i.test(selectedFile!.name);
             (document.getElementById('upload-layer-progress-label') as HTMLElement).textContent = directGeoJSON
                 ? 'Saving layer…'
@@ -179,39 +182,23 @@ export function attachGISLayerList(context: GISUploadListContext) {
             (document.getElementById('upload-layer-button-text') as HTMLElement).textContent = directGeoJSON
                 ? 'Saving…'
                 : 'Preparing…';
-        });
-        uploadRequest.addEventListener('load', () => {
-            if (uploadRequest!.status >= 200 && uploadRequest!.status < 300) {
-                uploadRequest = null;
-                hideUploadModal();
-                FormModals.showSuccess('GIS Layer uploaded successfully!');
-                listApi.reload();
-                return;
+            },
+        }))).then(() => {
+            uploadRequest = null;
+            hideUploadModal();
+            FormModals.showSuccess('GIS Layer uploaded successfully!');
+            listApi.reload();
+        }).catch((error: unknown) => {
+            if (!(error instanceof Error && error.name === 'AbortError')) {
+                const { message, details } = parseUploadError(error);
+                showUploadError(message, details);
             }
-            const { message, details } = parseUploadError();
-            showUploadError(message, details);
             uploadRequest = null;
             setUploadDismissDisabled(false);
             uploadButton.disabled = false;
             (document.getElementById('upload-layer-spinner') as HTMLElement).classList.add('hidden');
             (document.getElementById('upload-layer-button-text') as HTMLElement).textContent = 'Upload Layer';
         });
-        uploadRequest.addEventListener('error', () => {
-            showUploadError('The upload was interrupted. Try again.');
-            uploadRequest = null;
-            setUploadDismissDisabled(false);
-            uploadButton.disabled = false;
-            (document.getElementById('upload-layer-spinner') as HTMLElement).classList.add('hidden');
-            (document.getElementById('upload-layer-button-text') as HTMLElement).textContent = 'Upload Layer';
-        });
-        uploadRequest.addEventListener('abort', () => {
-            uploadRequest = null;
-            setUploadDismissDisabled(false);
-            uploadButton.disabled = false;
-            (document.getElementById('upload-layer-spinner') as HTMLElement).classList.add('hidden');
-            (document.getElementById('upload-layer-button-text') as HTMLElement).textContent = 'Upload Layer';
-        });
-        uploadRequest.send(data);
     });
 
     (document.getElementById('upload-layer-open') as HTMLElement).addEventListener('click', showUploadModal);

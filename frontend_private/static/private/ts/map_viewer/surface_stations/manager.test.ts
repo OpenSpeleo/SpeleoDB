@@ -205,7 +205,7 @@ describe('SurfaceStationManager', () => {
             const newStation = { id: 'new-1', name: 'New Station' };
             API.createSurfaceStation.mockResolvedValue(newStation);
 
-            const result = await SurfaceStationManager.createStation('net-1', { name: 'New Station' });
+            const result = await SurfaceStationManager.createStation('net-1', { name: 'New Station', latitude: 20, longitude: -87 });
 
             expect(result).toEqual(newStation);
             expect(State.allSurfaceStations.has('new-1')).toBe(true);
@@ -218,7 +218,7 @@ describe('SurfaceStationManager', () => {
             API.createSurfaceStation.mockResolvedValue({ id: 'new-1' });
 
             await SurfaceStationManager.ensureAllSurfaceStationsLoaded();
-            await SurfaceStationManager.createStation('net-1', {});
+            await SurfaceStationManager.createStation('net-1', { name: 'Station', latitude: 20, longitude: -87 });
 
             await SurfaceStationManager.ensureAllSurfaceStationsLoaded();
             expect(API.getAllSurfaceStationsGeoJSON).toHaveBeenCalledTimes(2);
@@ -227,7 +227,7 @@ describe('SurfaceStationManager', () => {
         it('refreshes surface station layers', async () => {
             API.createSurfaceStation.mockResolvedValue({ id: 'new-1' });
 
-            await SurfaceStationManager.createStation('net-1', {});
+            await SurfaceStationManager.createStation('net-1', { name: 'Station', latitude: 20, longitude: -87 });
 
             expect(Layers.refreshSurfaceStationsAfterChange).toHaveBeenCalledWith('net-1');
         });
@@ -236,7 +236,7 @@ describe('SurfaceStationManager', () => {
             API.createSurfaceStation.mockRejectedValue(new Error('Create failed'));
 
             await expect(
-                SurfaceStationManager.createStation('net-1', {})
+                SurfaceStationManager.createStation('net-1', { name: 'Station', latitude: 20, longitude: -87 })
             ).rejects.toThrow('Create failed');
         });
     });

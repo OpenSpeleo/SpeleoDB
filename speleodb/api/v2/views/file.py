@@ -22,6 +22,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import transaction
 from django.http import HttpResponse
 from django.urls import reverse
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from git.exc import GitCommandError
 from rest_framework import status
@@ -30,11 +31,14 @@ from rest_framework.exceptions import UnsupportedMediaType
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.permissions import UserOwnsProjectMutex
 from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.api.v2.serializers import UploadSerializer
+from speleodb.api.v2.serializers.api_contract import ProjectUploadRequestSerializer
+from speleodb.api.v2.serializers.api_contract import ProjectUploadResponseSerializer
 from speleodb.common.enums import ProjectType
 from speleodb.gis.geojson_generation import request_geojson_generation
 from speleodb.git_engine.core import GitRepo
@@ -177,7 +181,18 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             sentry_sdk.capture_exception(exc)
         return super().handle_exception(exc)
 
-    @extend_schema(operation_id="v2_projects_upload")
+    @extend_schema(
+        operation_id="v2_projects_upload",
+        request={"multipart/form-data": ProjectUploadRequestSerializer},
+        responses={
+            200: ProjectUploadResponseSerializer,
+            304: None,
+            400: API_ERROR,
+            403: API_ERROR,
+            415: API_ERROR,
+            500: API_ERROR,
+        },
+    )
     def put(
         self,
         request: Request,
@@ -533,7 +548,17 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     http_method_names = ["get"]
     lookup_field = "id"
 
-    @extend_schema(operation_id="v2_projects_download_retrieve_by_format")
+    @extend_schema(
+        operation_id="v2_projects_download_retrieve_by_format",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+            422: API_ERROR,
+            500: API_ERROR,
+        },
+    )
     def get(
         self,
         request: Request,
@@ -655,7 +680,14 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     http_method_names = ["get"]
     lookup_field = "id"
 
-    @extend_schema(operation_id="v2_projects_download_blob_retrieve")
+    @extend_schema(
+        operation_id="v2_projects_download_blob_retrieve",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
     def get(
         self,
         request: Request,
@@ -688,7 +720,13 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 class FileDownloadAtHashView(FileDownloadView):
     """Dedicated view for hexsha route to provide unique operation_id."""
 
-    @extend_schema(operation_id="v2_projects_download_retrieve_by_format_at_hash")
+    @extend_schema(
+        operation_id="v2_projects_download_retrieve_by_format_at_hash",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            403: API_ERROR,
+        },
+    )
     def get(
         self,
         request: Request,

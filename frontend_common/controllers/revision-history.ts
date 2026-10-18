@@ -1,7 +1,8 @@
+import { v2ProjectsRevisionsRetrieve } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import { registerAlpineBindings } from '../runtime/alpine.ts';
 import { revisionBindings } from '../bindings/revision.ts';
 import type { RevisionHistoryContext } from '../../ts-types/controllers/revision-history.ts';
-import type { RevisionHistoryResponse } from '../../ts-types/domain/project-presentation.ts';
 import { afterWindowLoad } from '../readiness.ts';
 import { sanitizeUrl } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
@@ -11,12 +12,8 @@ export async function init(context: RevisionHistoryContext) {
     // Ensure the loading spinner is being displayed
         $("#loading_spinner").show();
 
-        $.ajax({
-            url: context.endpoint,
-            type : "GET",
-            dataType : "json",
-            async: false,
-            success: function(data: RevisionHistoryResponse){
+        try {
+            const data = await apiData(v2ProjectsRevisionsRetrieve(context.projectId, webApiOptions()));
                 if (data && data.commits) {
 
                     // Iterate over each commit and append a new row to the table
@@ -130,19 +127,15 @@ export async function init(context: RevisionHistoryContext) {
                     });
                 }
                 else {
-                    console.error(data.error);
+                    console.error('No revisions returned.');
                     return;
                 }
 
                 // Cleanup the template row
                 $('#commit-template').remove();
-            },
-            error: function (textStatus, errorThrown) {
-                // Preserve the existing implicit jqXHR coercion in this diagnostic.
-                console.error("ERROR: " + (textStatus as unknown as string) + " & " + errorThrown);
-                return null;
-            }
-        });
-
-        $("#loading_spinner").hide();
+        } catch (error) {
+            console.error('Failed to load project revisions', error);
+        } finally {
+            $('#loading_spinner').hide();
+        }
 }

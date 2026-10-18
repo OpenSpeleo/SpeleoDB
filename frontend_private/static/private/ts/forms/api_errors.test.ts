@@ -1,14 +1,14 @@
 /**
- * Tests for forms/ajax_errors.ts - shared DRF error-modal rendering.
+ * Tests for forms/api_errors.ts - shared DRF error-modal rendering.
  *
- * Loads real jQuery via readFileSync and imports ajax_errors.ts with its
+ * Loads real jQuery via readFileSync and imports api_errors.ts with its
  * xss-helpers.ts dependency so we exercise the production module.
  */
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,24 +27,24 @@ function setupModal() {
     `;
 }
 
-describe('showAjaxErrorModal', () => {
+describe('showApiErrorModal', () => {
     beforeEach(setupModal);
     afterEach(() => { document.body.innerHTML = ''; });
 
     it('shows the error modal with a single-key error', () => {
-        showAjaxErrorModal({ responseJSON: { error: 'Boom' }, status: 500, statusText: 'Server Error' });
+        showApiErrorModal({ data: { error: 'Boom' }, status: 500, statusText: 'Server Error' });
         expect(document.getElementById('modal_error')!.style.display).toBe('flex');
         expect(document.getElementById('modal_error_txt')!.textContent).toBe('Boom');
     });
 
     it('shows a detail message', () => {
-        showAjaxErrorModal({ responseJSON: { detail: 'Auth required' }, status: 403, statusText: 'Forbidden' });
+        showApiErrorModal({ data: { detail: 'Auth required' }, status: 403, statusText: 'Forbidden' });
         expect(document.getElementById('modal_error_txt')!.textContent).toBe('Auth required');
     });
 
     it('handles DRF errors:{field:[msgs]} shape', () => {
-        showAjaxErrorModal({
-            responseJSON: { errors: { name: ['too short', 'required'] } },
+        showApiErrorModal({
+            data: { errors: { name: ['too short', 'required'] } },
             status: 400,
             statusText: 'Bad Request',
         });
@@ -56,8 +56,8 @@ describe('showAjaxErrorModal', () => {
     });
 
     it('handles DRF errors:{field:"msg"} shape (non-array value)', () => {
-        showAjaxErrorModal({
-            responseJSON: { errors: { name: 'duplicate' } },
+        showApiErrorModal({
+            data: { errors: { name: 'duplicate' } },
             status: 400,
             statusText: 'Bad Request',
         });
@@ -69,8 +69,8 @@ describe('showAjaxErrorModal', () => {
     });
 
     it('escapes XSS payloads in errors', () => {
-        showAjaxErrorModal({
-            responseJSON: { error: '<img src=x onerror=alert(1)>' },
+        showApiErrorModal({
+            data: { error: '<img src=x onerror=alert(1)>' },
             status: 400,
             statusText: 'Bad Request',
         });
@@ -82,8 +82,8 @@ describe('showAjaxErrorModal', () => {
     });
 
     it('falls back to field-by-field rendering when no known key is present', () => {
-        showAjaxErrorModal({
-            responseJSON: { price: ['must be positive'] },
+        showApiErrorModal({
+            data: { price: ['must be positive'] },
             status: 400,
             statusText: 'Bad Request',
         });
@@ -93,7 +93,7 @@ describe('showAjaxErrorModal', () => {
     });
 
     it('shows a generic fallback when responseJSON is empty', () => {
-        showAjaxErrorModal({ responseJSON: null, status: 500, statusText: 'Server Error' });
+        showApiErrorModal({ data: null, status: 500, statusText: 'Server Error' });
         const html = document.getElementById('modal_error_txt')!.innerHTML;
         expect(html).toContain('Status 500');
         expect(html).toContain('Server Error');
@@ -102,9 +102,9 @@ describe('showAjaxErrorModal', () => {
 
 it('preserves error-key priority and catches malformed response bodies before displaying the modal', () => {
     setupModal();
-    showAjaxErrorModal({ responseJSON: { detail: 'third', errors: { field: ['second'] }, error: 'first' }, status: 400 });
+    showApiErrorModal({ data: { detail: 'third', errors: { field: ['second'] }, error: 'first' }, status: 400 });
     expect(document.getElementById('modal_error_txt')!.textContent).toBe('first');
-    showAjaxErrorModal({ responseJSON: 'malformed', status: 502, statusText: 'Gateway' });
+    showApiErrorModal({ data: 'malformed', status: 502, statusText: 'Gateway' });
     expect(document.getElementById('modal_error_txt')!.textContent).toContain('Status 502');
     expect(document.getElementById('modal_error')!.style.display).toBe('flex');
 });

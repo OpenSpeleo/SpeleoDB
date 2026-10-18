@@ -1,8 +1,10 @@
-import type { FleetContext, FleetDetailRoute, FleetExportRoute } from '../../ts-types/controllers/fleet.ts';
+import * as sdk from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
+import type { FleetContext } from '../../ts-types/controllers/fleet.ts';
 import type { FleetEntityOptions } from '../../ts-types/domain/forms/fleet.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 import { afterWindowLoad } from '../readiness.ts';
-import { showAjaxErrorModal } from '../../frontend_private/static/private/ts/forms/ajax_errors.ts';
+import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
 import { attachFleetEntityCrud } from '../../frontend_private/static/private/ts/forms/fleet_entity_crud.ts';
 import {
     cylinderCollectPayload,
@@ -15,13 +17,7 @@ import {
 import { attachFleetSettingsForm } from '../../frontend_private/static/private/ts/forms/fleet_settings_form.ts';
 import { attachFleetWatchlist } from '../../frontend_private/static/private/ts/forms/fleet_watchlist.ts';
 
-function route(name: FleetDetailRoute | FleetExportRoute | 'api:v2:sensor-toggle-functional', ...args: [EntityId]) {
-    const builder = window.Urls?.[name];
-    if (typeof builder !== 'function') throw new Error(`Missing Django URL route: ${name}`);
-    return builder(...args);
-}
-
-function entityOptions(context: FleetContext): FleetEntityOptions {
+function entityOptions(context: FleetContext) {
     const cylinder = context.kind === 'cylinder';
     const noun = cylinder ? 'cylinder' : 'sensor';
     return {
@@ -39,11 +35,8 @@ function entityOptions(context: FleetContext): FleetEntityOptions {
         modalTitleSelector: `#${noun}_modal_title`,
         addTitle: cylinder ? 'Add Cylinder' : 'Add Sensor',
         editTitle: cylinder ? 'Edit Cylinder' : 'Edit Sensor',
-        listEndpoint: context.listEndpoint,
-        detailEndpoint: id => route(context.detailRoute!, id),
-        resetForCreate: cylinder ? cylinderResetForCreate : sensorResetForCreate,
-        populateForEdit: cylinder ? cylinderPopulateForEdit : sensorPopulateForEdit,
-        collectPayload: cylinder ? cylinderCollectPayload : sensorCollectPayload,
+
+
     };
 }
 
@@ -60,31 +53,46 @@ export async function init(context: FleetContext) {
             dataTableOptions,
             formSelector: context.showDaysFilter ? '#watchlist_form' : undefined,
             exportBtnSelector: context.showDaysFilter ? '#btn_export_excel' : undefined,
-            exportUrlBuilder: context.exportRoute
-                ? days => `${route(context.exportRoute!, context.fleetId!)}?days=${days}`
+            exportUrlBuilder: context.showDaysFilter ? days => context.kind === 'cylinder'
+                ? sdk.getV2CylinderFleetsCylindersWatchlistExportRetrieveUrl(String(context.fleetId), { days: Number(days) })
+                : sdk.getV2SensorFleetsSensorsWatchlistExportRetrieveUrl(String(context.fleetId), { days: Number(days) })
                 : undefined,
         });
     }
 
-    if (context.settingsEndpoint) {
+    if (context.settings) {
         attachFleetSettingsForm({
-            endpoint: context.settingsEndpoint,
+            save: payload => context.kind === 'cylinder'
+                ? apiData(sdk.v2CylinderFleetsUpdateWithJson(String(context.fleetId), payload, webApiOptions()))
+                : apiData(sdk.v2SensorFleetsUpdateWithJson(String(context.fleetId), payload, webApiOptions())),
             successMessage: context.settingsMessage,
         });
     }
 
-    if (context.entityCrud) attachFleetEntityCrud(entityOptions(context));
+    if (context.entityCrud) {
+        const shared = entityOptions(context);
+        if (context.kind === 'cylinder') {
+            attachFleetEntityCrud({ ...shared,
+                resetForCreate: cylinderResetForCreate, populateForEdit: cylinderPopulateForEdit, collectPayload: cylinderCollectPayload,
+                create: payload => apiData(sdk.v2CylinderFleetsCylindersCreateWithJson(String(context.fleetId), payload, webApiOptions())),
+                update: (id, payload) => apiData(sdk.v2CylindersUpdateWithJson(String(id), payload, webApiOptions())),
+                remove: id => apiData(sdk.v2CylindersDestroy(String(id), webApiOptions())),
+            });
+        } else {
+            attachFleetEntityCrud({ ...shared,
+                resetForCreate: sensorResetForCreate, populateForEdit: sensorPopulateForEdit, collectPayload: sensorCollectPayload,
+                create: payload => apiData(sdk.v2SensorFleetsSensorsCreateWithJson(String(context.fleetId), payload, webApiOptions())),
+                update: (id, payload) => apiData(sdk.v2SensorsUpdateWithJson(String(id), payload, webApiOptions())),
+                remove: id => apiData(sdk.v2SensorsDestroy(String(id), webApiOptions())),
+            });
+        }
+    }
 
     if (context.kind === 'sensor' && context.mode === 'details') {
         $(document).on('click', '.toggle-sensor-btn', function () {
             const sensorId = $(this as HTMLElement).data('sensor-id') as EntityId;
-            $.ajax({
-                url: route('api:v2:sensor-toggle-functional', sensorId),
-                method: 'PATCH',
-                headers: { 'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val() as string },
-                success() { window.location.reload(); },
-                error: showAjaxErrorModal,
-            });
+            apiData(sdk.v2SensorsToggleFunctionalPartialUpdate(String(sensorId), webApiOptions()))
+                .then(() => window.location.reload()).catch(showApiErrorModal);
         });
     }
 }

@@ -1,5 +1,4 @@
 import type { Mock } from 'vitest';
-import type { FormTestJQuery } from '../../../../../ts-types/testing/vitest/forms.ts';
 
 /**
  * Tests for forms/entity_crud_form.ts - shared new/edit JSON-CRUD form wiring.
@@ -11,8 +10,6 @@ import { dirname, resolve } from 'node:path';
 import { attachEntityCrudForm } from './entity_crud_form.ts';
 import { FormModals } from './modals.ts';
 
-// The real vendor is callable; these tests replace only its AJAX transport.
-const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -39,7 +36,6 @@ function setupPage() {
 }
 
 describe('attachEntityCrudForm', () => {
-    let originalAjax: FormTestJQuery['ajax'];
     let originalLocation: Location;
     let locationHrefSpy: Mock<(value: unknown) => void>;
     let reloadSpy: Mock<() => void>;
@@ -47,10 +43,10 @@ describe('attachEntityCrudForm', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         setupPage();
-        originalAjax = jqueryHost.jQuery.ajax;
         originalLocation = window.location;
         locationHrefSpy = vi.fn();
         reloadSpy = vi.fn();
+        // JSDOM cannot perform navigation; observe only the unavailable navigation boundary.
         Object.defineProperty(window, 'location', {
             writable: true,
             value: new Proxy({ href: '', reload: reloadSpy }, {
@@ -65,7 +61,6 @@ describe('attachEntityCrudForm', () => {
     });
 
     afterEach(() => {
-        jqueryHost.jQuery.ajax = originalAjax;
         Object.defineProperty(window, 'location', {
             configurable: true,
             writable: true,
@@ -75,36 +70,27 @@ describe('attachEntityCrudForm', () => {
         document.body.innerHTML = '';
     });
 
-    it('requires formId and endpoint', () => {
-        expect(() => attachEntityCrudForm({ endpoint: '/x' })).toThrow(/formId/);
-        expect(() => attachEntityCrudForm({ formId: 'my_form' })).toThrow(/endpoint/);
+    it('requires formId and a submit callback', () => {
+        expect(() => attachEntityCrudForm({ submit: async () => ({}) })).toThrow(/formId/);
+        expect(() => attachEntityCrudForm({ formId: 'my_form' } as never)).toThrow(/submit/);
     });
 
-    it('POSTs JSON-stringified form data and fires redirect', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.success({ id: 'new-1' });
-            return {};
-        });
+    it('passes form values to the operation callback and fires redirect', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => ({ id: 'new-1' }));
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/teams/',
-            method: 'POST',
+            submit,
             successMessage: 'Created!',
             successRedirect: '/teams',
             redirectDelayMs: 500,
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
+        await vi.advanceTimersByTimeAsync(0);
 
-        expect($.ajax).toHaveBeenCalledTimes(1);
-        const call = $.ajax.mock.calls[0]![0];
-        expect(call.url).toBe('/api/v2/teams/');
-        expect(call.method).toBe('POST');
-        const parsed = JSON.parse(call.data!) as { user?: string };
-        expect(parsed).toEqual({
+        expect(submit).toHaveBeenCalledTimes(1);
+        expect(submit.mock.calls[0]?.[0]).toEqual({
             csrfmiddlewaretoken: 'csrf-xyz',
             name: 'Alice',
             description: 'Hi there',
@@ -115,56 +101,46 @@ describe('attachEntityCrudForm', () => {
         expect(locationHrefSpy).toHaveBeenCalledWith('/teams');
     });
 
-    it('fires redirectFromResponse instead of static redirect when provided', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.success({ id: 'xxx' });
-            return {};
-        });
+    it('fires redirectFromResponse instead of static redirect when provided', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => ({ id: 'xxx' }));
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/teams/',
+            submit,
             successMessage: 'Created!',
             redirectFromResponse: (resp: { id: string }) => `/teams/${resp.id}`,
             redirectDelayMs: 0,
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
+        await vi.advanceTimersByTimeAsync(0);
         vi.advanceTimersByTime(0);
         expect(locationHrefSpy).toHaveBeenCalledWith('/teams/xxx');
     });
 
-    it('reloadOnSuccess triggers window.location.reload', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.success({});
-            return {};
-        });
+    it('reloadOnSuccess triggers window.location.reload', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => ({}));
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/whatever/',
-            method: 'PATCH',
+            submit,
             successMessage: 'Saved.',
             reloadOnSuccess: true,
             redirectDelayMs: 0,
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
+        await vi.advanceTimersByTimeAsync(0);
         vi.advanceTimersByTime(0);
         expect(reloadSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('beforeSubmit returning false cancels the request', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn();
+    it('beforeSubmit returning false cancels the request', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => ({}));
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/teams/',
+            submit,
             successMessage: 'Created!',
             beforeSubmit: () => {
                 FormModals.showError('Validation failed');
@@ -173,55 +149,81 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        expect($.ajax).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(submit).not.toHaveBeenCalled();
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
     });
 
-    it('renders AJAX error via showAjaxErrorModal on failure', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.error({ responseJSON: { error: 'bad' }, status: 400, statusText: 'Bad' });
-            return {};
-        });
+    it('renders the rejected operation error without redirecting', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => { throw Object.assign(new Error('bad'), { data: { error: 'bad' }, status: 400 }); });
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/teams/',
+            submit,
             successMessage: 'Created!',
             successRedirect: '/list',
             redirectDelayMs: 10,
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
+        await vi.advanceTimersByTimeAsync(0);
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe('bad');
         vi.advanceTimersByTime(100);
         expect(locationHrefSpy).not.toHaveBeenCalled();
     });
 
-    it('invokes custom serialize callback when provided', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.success({});
-            return {};
-        });
+    it('invokes custom prepare callback before the operation', async () => {
+        const submit = vi.fn(async (_payload: Record<string, unknown>) => ({}));
 
         attachEntityCrudForm({
             formId: 'my_form',
-            endpoint: '/api/v2/whatever/',
+            submit,
             successMessage: 'OK',
-            serialize: (payload) => JSON.stringify({ ...payload, extra: true }),
+            prepare: (payload) => ({ ...payload, extra: true }),
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        const call = $.ajax.mock.calls[0]![0];
-        expect(JSON.parse(call.data!) as unknown).toEqual({
+        await vi.advanceTimersByTimeAsync(0);
+        expect(submit.mock.calls[0]?.[0]).toEqual({
             csrfmiddlewaretoken: 'csrf-xyz',
             name: 'Alice',
             description: 'Hi there',
             extra: true,
         });
+    });
+
+    it('blocks duplicate submissions until the configured operation settles', async () => {
+        let finish!: (value: unknown) => void;
+        const submit = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+        const onPendingChange = vi.fn();
+        attachEntityCrudForm({ formId: 'my_form', submit, onPendingChange });
+        const button = document.getElementById('btn_submit') as HTMLElement;
+        button.click();
+        button.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(submit).toHaveBeenCalledOnce();
+        expect(onPendingChange.mock.calls).toEqual([[true]]);
+        finish({});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
+        button.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(submit).toHaveBeenCalledTimes(2);
+        finish({});
+        await vi.advanceTimersByTimeAsync(0);
+    });
+
+    it('releases pending state when request preparation throws synchronously', async () => {
+        const failure = new Error('Invalid request');
+        const onError = vi.fn();
+        const onPendingChange = vi.fn();
+        attachEntityCrudForm({
+            formId: 'my_form', submit: () => { throw failure; }, onError, onPendingChange,
+        });
+        (document.getElementById('btn_submit') as HTMLElement).click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(onError).toHaveBeenCalledWith(failure);
+        expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
     });
 });

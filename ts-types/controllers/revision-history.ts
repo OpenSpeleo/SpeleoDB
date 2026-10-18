@@ -1,1 +1,1 @@
-export interface RevisionHistoryContext { endpoint: string }
+export interface RevisionHistoryContext { projectId: string }

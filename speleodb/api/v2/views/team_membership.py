@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import UserHasLeaderAccess
 from speleodb.api.v2.permissions import UserHasMemberAccess
@@ -34,6 +37,18 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "TeamMembershipApiViewGetResponse",
+                team=SurveyTeamSerializer(),
+                membership=SurveyTeamMembershipSerializer(),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_memberships_detail_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team = self.get_object()
         user = self.get_user()
@@ -57,6 +72,19 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             }
         )
 
+    @extend_schema(request=UserRequestWithTeamRoleSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "TeamMembershipApiViewPostResponse",
+                team=SurveyTeamSerializer(),
+                membership=SurveyTeamMembershipSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_memberships_detail_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = UserRequestWithTeamRoleSerializer(
@@ -110,6 +138,20 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=UserRequestWithTeamRoleSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "TeamMembershipApiViewPutResponse",
+                team=SurveyTeamSerializer(),
+                membership=SurveyTeamMembershipSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_memberships_detail_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = UserRequestWithTeamRoleSerializer(
@@ -169,6 +211,18 @@ class TeamMembershipApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "TeamMembershipApiViewDeleteResponse", team=SurveyTeamSerializer()
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_memberships_detail_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = UserRequestSerializer(
@@ -219,6 +273,17 @@ class TeamMembershipListApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     serializer_class = SurveyTeamSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "TeamMembershipListApiViewGetResponse",
+                team=SurveyTeamSerializer(),
+                memberships=SurveyTeamMembershipSerializer(many=True),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_memberships_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team: SurveyTeam = self.get_object()
         user = self.get_user()

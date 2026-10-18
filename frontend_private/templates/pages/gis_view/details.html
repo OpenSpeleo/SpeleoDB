@@ -172,9 +172,7 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="gis-view-form">
     {
-      "endpoint": "{% url 'api:v2:gis-view-detail' id=gis_view.id %}",
-      "method": "PUT",
-      "projectsEndpoint": "{% url 'api:v2:projects' %}",
+      "viewId": "{{ gis_view.id }}",
       "successMessage": "The GIS view has been updated successfully.",
       "seedFromExistingRows": true,
       "initialProjectCounter": {{ gis_view.project_views.count }},

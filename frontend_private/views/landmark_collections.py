@@ -181,10 +181,8 @@ class LandmarkCollectionDangerZoneView(_BaseLandmarkCollectionView):
         data.update(
             entity_label="Landmark Collection",
             entity_settings_base_template="pages/landmark_collection/base.html",
-            api_detail_url=reverse(
-                "api:v2:landmark-collection-detail",
-                kwargs={"collection_id": collection.id},
-            ),
+            api_resource="landmark-collection",
+            api_entity_id=str(collection.id),
             listing_url=reverse("private:landmark_collections"),
             danger_success_message=(
                 "The landmark collection has been deleted successfully."
@@ -232,10 +230,8 @@ class LandmarkCollectionUserPermissionsView(_BaseLandmarkCollectionView):
             entity=collection,
             entity_settings_base_template="pages/landmark_collection/base.html",
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:landmark-collection-permissions",
-                kwargs={"collection_id": collection.id},
-            ),
+            api_resource="landmark-collection",
+            api_entity_id=str(collection.id),
             permission_add_title=("Add a collaborator to the landmark collection"),
             permission_success_message=(
                 "The landmark collection permission has been saved."

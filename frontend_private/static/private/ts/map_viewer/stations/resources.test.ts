@@ -101,7 +101,7 @@ describe('StationResources XSS', () => {
     it('renderResourceCard escapes resource.title in text content', () => {
         const payload = '<img onerror=alert(1)>';
         const html = StationResources.renderResourceCard({
-            id: 1,
+            id: '1',
             title: payload,
             resource_type: 'photo',
             creation_date: '2024-01-15',
@@ -115,7 +115,7 @@ describe('StationResources XSS', () => {
     it('renderResourceCard escapes resource.description', () => {
         const payload = '<img onerror=alert(1)>';
         const html = StationResources.renderResourceCard({
-            id: 2,
+            id: '2',
             title: 'T',
             description: payload,
             resource_type: 'photo',
@@ -130,7 +130,7 @@ describe('StationResources XSS', () => {
     it('renderResourceCard escapes resource.created_by', () => {
         const payload = '<img onerror=alert(1)>';
         const html = StationResources.renderResourceCard({
-            id: 3,
+            id: '3',
             title: 'T',
             resource_type: 'photo',
             creation_date: '2024-01-15',

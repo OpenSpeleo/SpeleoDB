@@ -28,6 +28,8 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.v2.serializers.tool_contract import spreadsheet_input
 from speleodb.api.v2.views.tmp_utils import SurveyData
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
 from speleodb.utils.requests import require_mapping_request_data
@@ -60,13 +62,26 @@ class ToolXLSToDMP(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
-        request={"application/json": {"type": "object"}},
-        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+        request={"application/json": spreadsheet_input(compass=False)},
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            400: API_ERROR,
+            403: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_tools_xls2dmp_create")
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
         request_data = require_mapping_request_data(request.data)
+        if any(
+            key not in request_data
+            for key in ("unit", "survey_date", "direction", "shots")
+        ):
+            return ErrorResponse(
+                {"error": "unit, survey_date, direction and shots are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         survey_unit = request_data["unit"]
 
         def format_float(val: str | None) -> float:
@@ -142,7 +157,7 @@ class ToolXLSToDMP(APIView):
 
             dmp_obj = DMPFile.model_validate([survey_data])
 
-        except (ValueError, ValidationError) as e:
+        except (KeyError, TypeError, ValueError, ValidationError) as e:
             return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         obj_stream = io.BytesIO()
@@ -164,16 +179,21 @@ class ToolXLSToCompass(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
-        request={"application/json": {"type": "object"}},
-        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+        request={"application/json": spreadsheet_input(compass=True)},
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            400: API_ERROR,
+            403: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_tools_xls2compass_create")
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
         try:
             compass_survey = SurveyData.model_validate(request.data)
             buffer = compass_survey.export_to_dat_format()
-        except (ValueError, PydanticValidationError) as exc:
+        except (KeyError, TypeError, ValueError, PydanticValidationError) as exc:
             error = (
                 format_pydantic_error(exc)
                 if isinstance(exc, PydanticValidationError)
@@ -203,8 +223,14 @@ class ToolDMP2JSON(APIView):
                 "required": ["file"],
             }
         },
-        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            400: API_ERROR,
+            403: API_ERROR,
+            500: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_tools_dmp2json_create")
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
@@ -300,8 +326,13 @@ class ToolDMPDoctor(APIView):
                 "required": ["file", "data"],
             }
         },
-        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            400: API_ERROR,
+            403: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_tools_dmp_doctor_create")
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
@@ -324,8 +355,8 @@ class ToolDMPDoctor(APIView):
 
         try:
             request_data = require_mapping_request_data(request.data)
-            data = json.loads(request_data.get("data", {}))
-        except json.JSONDecodeError:
+            data = json.loads(request_data.get("data", "{}"))
+        except TypeError, json.JSONDecodeError:
             return ErrorResponse(
                 {"error": "Invalid data format"},
                 status=status.HTTP_400_BAD_REQUEST,

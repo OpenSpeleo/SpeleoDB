@@ -1,5 +1,5 @@
 export interface ProjectUploadContext {
-    endpoint: string;
+    projectId: string;
     maxFiles: number;
     maxFileSizeMb: number;
     maxTotalSizeMb: number;

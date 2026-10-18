@@ -1,1 +1,1 @@
-export interface ProjectGeoJSONStatusContext { endpoint: string }
+export interface ProjectGeoJSONStatusContext { projectId: string }

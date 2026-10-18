@@ -1,53 +1,4 @@
-import type { Mock } from 'vitest';
-interface FixtureRequest { method: string; credentials: string; headers: Record<string, string>; body?: string }
-interface FixtureResponse { ok: boolean; status: number; statusText?: string; text?: () => Promise<string> }
-let fetch: Mock<(url: string, config: FixtureRequest) => Promise<FixtureResponse>>;
-const installFetch = (mock: typeof fetch) => { fetch = mock; vi.stubGlobal('fetch', mock); };
-type HtmlPrimitive = string | number | boolean | null | undefined;
-vi.mock('../utils.ts', () => {
-    const escapeHtml = (text: HtmlPrimitive) => {
-        if (text === null || text === undefined) return '';
-        const str = String(text);
-        if (!str) return '';
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    };
-    const RAW = Symbol('RAW_HTML');
-    type RawHTML = { [RAW]: true; value: string };
-    type HtmlValue = HtmlPrimitive | RawHTML;
-    return {
-        Utils: {
-            showNotification: vi.fn(),
-            getCSRFToken: vi.fn(() => 'test-csrf'),
-            escapeHtml,
-            safeCssColor: (color: string, fallback = '#94a3b8') => (
-                /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(String(color || ''))
-                    ? color
-                    : fallback
-            ),
-            raw: (html: string): RawHTML => ({ [RAW]: true, value: String(html) }),
-            safeHtml: (strings: TemplateStringsArray, ...values: HtmlValue[]) => strings.reduce((r, s, i) => {
-                if (i < values.length) {
-                    const v = values[i];
-                    if (v && typeof v === 'object' && v[RAW]) return r + s + v.value;
-                    return r + s + escapeHtml(v as HtmlPrimitive);
-                }
-                return r + s;
-            }, ''),
-        },
-    };
-});
-
-vi.mock('../components/modal.ts', () => ({
-    Modal: {
-        base: vi.fn((id: string, title: string, content: string, footer?: string | null) => `<div id="${id}">${content}${footer || ''}</div>`),
-        open: vi.fn((id: string, html: string, cb?: (() => void) | null) => {
-            document.body.insertAdjacentHTML('beforeend', html);
-            if (cb) cb();
-        }),
-        close: vi.fn(),
-    },
-}));
-
+import { startApiServer, setBrowserUrl } from '../../../../../../frontend_common/test/api-server.ts';
 import {
     LandmarkForms, openLandmarkCreateModal, openLandmarkEditModal, openLandmarkDeleteModal,
     openLandmarkBulkDeleteModal,
@@ -56,7 +7,6 @@ import {
     readLandmarkFormPayload,
     validateLandmarkFormPayload,
 } from './forms.ts';
-import { Utils } from '../utils.ts';
 import * as landmarkModel from './form_model.ts';
 import * as landmarkPresentation from './form_presentation.ts';
 
@@ -275,143 +225,91 @@ describe('validateLandmarkFormPayload', () => {
     });
 });
 
-describe('bulk landmark modals', () => {
+describe('landmark generated operations and modal lifecycle', () => {
+    let server: Awaited<ReturnType<typeof startApiServer>>;
+    beforeAll(async () => { server = await startApiServer(); });
+    afterAll(async () => { await server.close(); });
     beforeEach(() => {
-        document.body.innerHTML = '';
-        vi.clearAllMocks();
-        vi.mocked(Utils).getCSRFToken.mockReturnValue(VALID_CSRF_TOKEN);
-        vi.stubGlobal('Urls', {
-            'private:landmark_collection_new': () => '/landmark-collections/new/',
-            'api:v2:landmark-collection-landmarks-transfer': (sourceId: string) => `/api/collections/${sourceId}/landmarks/transfer/`,
-            'api:v2:landmark-collection-landmarks-bulk-delete': (sourceId: string) => `/api/collections/${sourceId}/landmarks/bulk_delete/`,
-        });
-        installFetch(vi.fn(() => Promise.resolve({
-            ok: true,
-            status: 200,
-            statusText: 'OK',
-            text: () => Promise.resolve(JSON.stringify({ ok: true })),
-        })));
+        server.reset();
+        setBrowserUrl(server.origin);
+        document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="${VALID_CSRF_TOKEN}">`;
     });
+    afterEach(() => { document.body.replaceChildren(); });
 
-    it('posts bulk transfer with a valid-length CSRF header', async () => {
-        openLandmarkBulkTransferModal({
-            landmarks: [
-                { id: 'lm-1', name: 'Alpha' },
-                { id: 'lm-2', name: 'Beta' },
-            ],
-            sourceCollection: { id: 'source', name: 'Source Collection' },
-            collections: [
-                { id: 'source', name: 'Source Collection', can_write: true },
-                { id: 'target', name: 'Target Collection', can_write: true },
-            ],
-        });
-
-        await (document.getElementById('bulk-transfer-confirm')!.onclick as unknown as () => Promise<void>)();
-
-        expect(fetch).toHaveBeenCalledTimes(1);
-        const [url, config] = fetch.mock.calls[0]!;
-        expect(url).toBe('/api/collections/source/landmarks/transfer/');
-        expect(config.method).toBe('POST');
-        expect(config.credentials).toBe('same-origin');
-        expect(config.headers['X-CSRFToken']).toBe(VALID_CSRF_TOKEN);
-        expect(config.headers['X-CSRFToken']!).toHaveLength(64);
-        expect(JSON.parse(config.body!)).toEqual({
-            landmark_ids: ['lm-1', 'lm-2'],
-            target_collection: 'target',
-        });
-    });
-
-    it('posts bulk delete with a valid-length CSRF header', async () => {
-        openLandmarkBulkDeleteModal({
-            landmarks: [
-                { id: 'lm-1', name: 'Alpha' },
-                { id: 'lm-2', name: 'Beta' },
-            ],
-            sourceCollection: { id: 'source', name: 'Source Collection' },
-        });
-
-        await (document.getElementById('bulk-delete-confirm')!.onclick as unknown as () => Promise<void>)();
-
-        expect(fetch).toHaveBeenCalledTimes(1);
-        const [url, config] = fetch.mock.calls[0]!;
-        expect(url).toBe('/api/collections/source/landmarks/bulk_delete/');
-        expect(config.method).toBe('POST');
-        expect(config.credentials).toBe('same-origin');
-        expect(config.headers['X-CSRFToken']).toBe(VALID_CSRF_TOKEN);
-        expect(config.headers['X-CSRFToken']!).toHaveLength(64);
-        expect(JSON.parse(config.body!)).toEqual({
-            landmark_ids: ['lm-1', 'lm-2'],
-        });
-    });
-});
-
-describe('landmark modal transport and facade contracts', () => {
-    beforeEach(() => {
-        document.body.innerHTML = '';
-        vi.clearAllMocks();
-        vi.stubGlobal('Urls', {
-            'api:v2:landmarks': () => '/landmarks/',
-            'api:v2:landmark-detail': (id: string) => `/landmarks/${id}/`,
-        });
-    });
-    afterEach(() => { document.body.innerHTML = ''; vi.unstubAllGlobals(); });
-
-    function submitCreate() {
-        (document.getElementById('landmark-create-form-name') as HTMLInputElement).value = '  New landmark  ';
-        (document.getElementById('landmark-create-form-latitude') as HTMLInputElement).value = '12';
-        (document.getElementById('landmark-create-form-longitude') as HTMLInputElement).value = '34';
-        return (document.getElementById('landmark-create-form')!.onsubmit as unknown as (event: Event) => Promise<void>)(new Event('submit', { cancelable: true }));
+    async function click(id: string) {
+        const button = document.getElementById(id)!;
+        await vi.waitFor(() => { expect(button.onclick).toBeTypeOf('function'); });
+        await (button.onclick as unknown as () => Promise<void>)();
     }
-
-    it('retains named function identity in its mutable facade', () => {
+    async function submitCreate() {
+        const form = document.getElementById('landmark-create-form')!;
+        await vi.waitFor(() => { expect(form.onsubmit).toBeTypeOf('function'); });
+        document.querySelector<HTMLInputElement>('#landmark-create-form-name')!.value = '  New landmark  ';
+        document.querySelector<HTMLInputElement>('#landmark-create-form-latitude')!.value = '12';
+        document.querySelector<HTMLInputElement>('#landmark-create-form-longitude')!.value = '34';
+        await (form.onsubmit as unknown as (event: Event) => Promise<void>)(new Event('submit', { cancelable: true }));
+    }
+    it('retains named function identity in its facade', () => {
         expect(LandmarkForms.openLandmarkCreateModal).toBe(openLandmarkCreateModal);
         expect(LandmarkForms.openLandmarkEditModal).toBe(openLandmarkEditModal);
         expect(LandmarkForms.openLandmarkDeleteModal).toBe(openLandmarkDeleteModal);
-        expect(LandmarkForms.renderLandmarkFormHtml).toBe(renderLandmarkFormHtml);
-        expect(Object.isFrozen(LandmarkForms)).toBe(false);
     });
-
-    it('returns null for 204 and posts trimmed fields before awaiting the success callback', async () => {
-        const text = vi.fn();
-        installFetch(vi.fn(() => Promise.resolve({ ok: true, status: 204, text })));
-        const onSuccess = vi.fn(() => Promise.resolve());
-        expect(openLandmarkCreateModal({ onSuccess })).toBeUndefined();
+    it('posts typed bulk transfer fields with the current CSRF token', async () => {
+        server.reply({ json: { transferred: 2 } });
+        openLandmarkBulkTransferModal({
+            landmarks: [{ id: 'lm-1', name: 'Alpha' }, { id: 'lm-2', name: 'Beta' }],
+            sourceCollection: { id: 'source', name: 'Source' },
+            collections: [{ id: 'target', name: 'Target', can_write: true }],
+        });
+        await click('bulk-transfer-confirm');
+        expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/landmark-collections/source/landmarks/transfer/' });
+        expect(server.requests[0]!.headers['x-csrftoken']).toBe(VALID_CSRF_TOKEN);
+        expect(JSON.parse(server.requests[0]!.body)).toEqual({ landmark_ids: ['lm-1', 'lm-2'], target_collection: 'target' });
+    });
+    it('posts bulk delete with its generated request body', async () => {
+        server.reply({ json: { deleted: 2 } });
+        openLandmarkBulkDeleteModal({
+            landmarks: [{ id: 'lm-1', name: 'Alpha' }, { id: 'lm-2', name: 'Beta' }],
+            sourceCollection: { id: 'source', name: 'Source' },
+        });
+        await click('bulk-delete-confirm');
+        expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/landmark-collections/source/landmarks/bulk_delete/' });
+        expect(JSON.parse(server.requests[0]!.body)).toEqual({ landmark_ids: ['lm-1', 'lm-2'] });
+    });
+    it('unwraps the documented creation envelope and sends trimmed fields', async () => {
+        const landmark = { id: 'new', name: 'New landmark' };
+        server.reply({ status: 201, json: { landmark } });
+        const successes: unknown[] = [];
+        openLandmarkCreateModal({ onSuccess: result => { successes.push(result); } });
         await submitCreate();
-        expect(text).not.toHaveBeenCalled();
-        expect(onSuccess).toHaveBeenCalledWith(null);
-        const [url, config] = fetch.mock.calls[0]!;
-        expect(url).toBe('/landmarks/');
-        expect(config.method).toBe('POST');
-        expect(config.headers['Content-Type']).toBe('application/json');
-        expect(JSON.parse(config.body!)).toEqual({ name: 'New landmark', description: '', icon: 'DEFAULT', collection: null, latitude: 12, longitude: 34 });
+        expect(successes).toEqual([landmark]);
+        expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/landmarks/' });
+        expect(JSON.parse(server.requests[0]!.body)).toEqual({ name: 'New landmark', description: '', icon: 'DEFAULT', collection: null, latitude: 12, longitude: 34 });
+        expect(document.getElementById('create-landmark-modal')).toBeNull();
     });
-
-    it('keeps non-JSON success data and catches callback rejection in the existing inline error path', async () => {
-        installFetch(vi.fn(() => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve('accepted') })));
-        const onSuccess = vi.fn(() => Promise.reject(new Error('Callback failed')));
-        openLandmarkCreateModal({ onSuccess });
-        await expect(submitCreate()).resolves.toBeUndefined();
-        expect(onSuccess).toHaveBeenCalledWith('accepted');
-        expect(document.getElementById('landmark-create-error')!.textContent).toBe('Callback failed');
-    });
-
-    it('renders serializer validation text without throwing and keeps DELETE body/content-type omitted', async () => {
-        installFetch(vi.fn(() => Promise.resolve({ ok: false, status: 400, statusText: 'Bad Request', text: () => Promise.resolve('{"errors":{"name":["Name rejected"]}}') })));
+    it('renders serializer errors as text and omits the DELETE body/content-type', async () => {
+        server.reply({ status: 400, json: { errors: { name: ['<img src=x>'] } } });
         openLandmarkCreateModal();
-        await expect(submitCreate()).resolves.toBeUndefined();
-        expect(document.getElementById('landmark-create-error')!.textContent).toBe('Name rejected');
-        const onSuccess = vi.fn();
-        fetch.mockResolvedValue({ ok: true, status: 204 });
-        openLandmarkDeleteModal({ landmark: { id: 'one', name: 'One' }, onSuccess });
-        await (document.getElementById('confirm-delete-landmark')!.onclick as unknown as () => Promise<void>)();
-        const [, config] = fetch.mock.calls[1]!;
-        expect(config.method).toBe('DELETE');
-        expect(config.body).toBeUndefined();
-        expect(config.headers).not.toHaveProperty('Content-Type');
-        expect(onSuccess).toHaveBeenCalledWith('one');
+        await submitCreate();
+        expect(document.getElementById('landmark-create-error')!.textContent).toBe('<img src=x>');
+        expect(document.querySelector('#landmark-create-error img')).toBeNull();
+        server.reply({ json: { message: 'Landmark deleted successfully.' } });
+        const successes: unknown[] = [];
+        openLandmarkDeleteModal({ landmark: { id: 'one', name: 'One' }, onSuccess: result => { successes.push(result); } });
+        await click('confirm-delete-landmark');
+        expect(server.requests[1]).toMatchObject({ method: 'DELETE', body: '' });
+        expect(server.requests[1]!.headers).not.toHaveProperty('content-type');
+        expect(successes).toEqual(['one']);
+    });
+    it('keeps an unexpected non-JSON response in the error path', async () => {
+        server.reply({ text: 'unexpected html', headers: { 'Content-Type': 'text/html' } });
+        const successes: unknown[] = [];
+        openLandmarkCreateModal({ onSuccess: result => { successes.push(result); } });
+        await submitCreate();
+        expect(successes).toEqual([]);
+        expect(document.getElementById('landmark-create-error')!.textContent).toBe('unexpected html');
     });
 });
-
 
 describe('landmark icon picker', () => {
     it('retains the icon while recoloring collection previews and submitting changes', () => {

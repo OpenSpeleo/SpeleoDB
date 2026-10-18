@@ -135,8 +135,7 @@
   <script type="application/json" data-speleodb-controller="experiment-data">
     {
       "experimentId": "{{ experiment.id }}",
-      "dataUrl": "{{ request.scheme }}://{{ request.get_host }}{% url 'api:v2:gis-ogc:experiment' gis_token=experiment.gis_token %}",
-      "csrfToken": "{{ csrf_token|escapejs }}"
+      "gisToken": "{{ experiment.gis_token }}"
     }
   </script>
 {% endblock inline_extra_js %}

@@ -7,9 +7,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.surveys.models import Project
@@ -31,6 +35,9 @@ class ProjectAcquireApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(request=None)
+    @extend_schema(responses={200: ProjectSerializer(), 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_projects_acquire_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -59,6 +66,14 @@ class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        request=response_object(
+            "ProjectReleaseRequest",
+            comment=serializers.CharField(required=False, allow_blank=True),
+        )
+    )
+    @extend_schema(responses={200: ProjectSerializer(), 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_projects_release_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()

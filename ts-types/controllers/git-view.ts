@@ -1,1 +1,1 @@
-export interface GitViewContext { endpoint: string }
+export interface GitViewContext { projectId: string; commit: string }

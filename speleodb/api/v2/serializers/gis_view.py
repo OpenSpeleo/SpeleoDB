@@ -7,6 +7,7 @@ import re
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from speleodb.gis.models import GISProjectView
@@ -275,6 +276,7 @@ class PublicGISViewSerializer(serializers.Serializer[GISView]):
     allow_precise_zoom = serializers.BooleanField()
     projects = serializers.SerializerMethodField()
 
+    @extend_schema_field(PublicGISProjectViewSerializer(many=True))
     def get_projects(self, obj: GISView) -> list[dict[str, Any]]:
         """Get projects with signed GeoJSON URLs."""
         expires_in = self.context.get("expires_in", 3600)
@@ -312,6 +314,7 @@ class GISViewDataSerializer(serializers.Serializer[GISView]):
         """Return view ID as string."""
         return str(obj.id)
 
+    @extend_schema_field(GISViewDataGeoJSONFileSerializer(many=True))
     def get_geojson_files(self, obj: GISView) -> list[dict[str, Any]]:
         """Get signed URLs for all projects in the view."""
         expires_in = self.context.get("expires_in", 3600)

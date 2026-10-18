@@ -21,6 +21,7 @@ from speleodb.gis.landmark_collections import get_or_create_personal_landmark_co
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
+from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -39,6 +40,33 @@ def _streaming_json(response: object) -> dict[str, Any]:
 
 @pytest.mark.django_db
 class TestLandmarkCollectionOGC:
+    def test_user_collection_single_feature_success_contract(
+        self,
+        api_client: APIClient,
+        owner: User,
+        collection: LandmarkCollection,
+        user_token: Token,
+    ) -> None:
+        landmark = Landmark.objects.create(
+            name="Contract entrance",
+            latitude=20.5,
+            longitude=-87.5,
+            created_by=owner.email,
+            collection=collection,
+        )
+        response = api_client.get(
+            reverse(
+                "api:v2:gis-ogc:landmark-collections-user-collection-feature",
+                kwargs={
+                    "key": user_token.key,
+                    "collection_id": str(collection.id),
+                    "feature_id": str(landmark.id),
+                },
+            )
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+
     @pytest.fixture
     def api_client(self) -> APIClient:
         return APIClient()

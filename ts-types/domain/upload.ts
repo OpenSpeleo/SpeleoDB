@@ -1,3 +1,7 @@
+import type { ApiRequestOptions } from '@speleodb/api';
+
+export type UploadOperation<Result> = (options: Omit<ApiRequestOptions, 'client'>) => Promise<Result>;
+
 export interface UploadError extends Error {
     status: number;
     ambiguous?: boolean;
@@ -5,11 +9,9 @@ export interface UploadError extends Error {
 }
 export interface UploadOptions<Result = unknown> {
     onProgress?: (percent: number, loaded: number, total: number) => void;
-    onSuccess?: (response: Result | null) => void;
+    onSuccess?: (response: Result) => void;
     onError?: (error: UploadError) => void;
-    onUploaded?: (this: XMLHttpRequestUpload, event: ProgressEvent<XMLHttpRequestEventTarget>) => void;
-    csrfToken?: string;
-    method?: string;
+    onUploaded?: () => void;
 }
 /** Serializer error keys are dynamic backend field names. */
 export interface UploadErrorPayload {

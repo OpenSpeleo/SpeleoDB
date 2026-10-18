@@ -135,10 +135,8 @@ class ExperimentDangerZoneView(_BaseExperimentView):
         data.update(
             entity_label="Experiment",
             entity_settings_base_template="pages/experiment/base.html",
-            api_detail_url=reverse(
-                "api:v2:experiment-detail",
-                kwargs={"id": experiment.id},
-            ),
+            api_resource="experiment",
+            api_entity_id=str(experiment.id),
             listing_url=reverse("private:experiments"),
             danger_success_message="The experiment has been deleted successfully.",
         )
@@ -235,10 +233,8 @@ class ExperimentUserPermissionsView(_BaseExperimentView):
             has_admin_access=data["is_experiment_admin"],
             entity_settings_base_template="pages/experiment/base.html",
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:experiment-user-permissions-detail",
-                kwargs={"id": experiment.id},
-            ),
+            api_resource="experiment",
+            api_entity_id=str(experiment.id),
             permission_add_title="Add a collaborator to the experiment",
             permission_success_message=("The experiment permission has been saved."),
             permission_delete_message=("The experiment permission has been removed."),

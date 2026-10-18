@@ -1,3 +1,4 @@
+import { tagFixture } from '../../../../../frontend_common/test/api-fixtures.ts';
 import type { ViewerState } from '../../../../../ts-types/domain/map-state.ts';
 import { State, createDefaultDisplayPreferences } from './state.ts';
 import { ViewerUpdates } from './viewer_updates.ts';
@@ -200,7 +201,7 @@ describe('State', () => {
             const map = { addLayer: vi.fn(), addSource: vi.fn(), fitBounds: vi.fn() };
             // Reset only preserves this opaque identity; it invokes no map methods.
             State.map = map as unknown as NonNullable<ViewerState['map']>;
-            const tags = [{ id: 'tag1', name: 'Tag', color: '#123456' }];
+            const tags = [tagFixture({ id: 'tag1', name: 'Tag', color: '#123456' })];
             State.userTags = tags;
             State.currentStationForTagging = 'station-1';
             State.currentProjectId = 'proj-1';

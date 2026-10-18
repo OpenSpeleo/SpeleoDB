@@ -147,8 +147,8 @@ describe('LandmarkManager', () => {
 
         it('treats omitted write/delete flags as read-only', async () => {
             const feature = makeLandmarkFeature('lm1');
-            delete feature.properties.can_write;
-            delete feature.properties.can_delete;
+            Reflect.deleteProperty(feature.properties, 'can_write');
+            Reflect.deleteProperty(feature.properties, 'can_delete');
             API.getAllLandmarksGeoJSON.mockResolvedValue(makeLandmarkFC([feature]));
 
             await LandmarkManager.loadAllLandmarks();
@@ -242,7 +242,7 @@ describe('LandmarkManager', () => {
             const reloadedFC = makeLandmarkFC([makeLandmarkFeature('lm-new')]);
             API.getAllLandmarksGeoJSON.mockResolvedValue(reloadedFC);
 
-            const result = await LandmarkManager.createLandmark({ name: 'New Landmark', latitude: 46.5 });
+            const result = await LandmarkManager.createLandmark({ name: 'New Landmark', latitude: 46.5, longitude: 6.5 });
 
             expect(result).toEqual(createdLandmark);
             expect(Layers.addLandmarkLayer).toHaveBeenCalledWith(reloadedFC);
@@ -252,7 +252,7 @@ describe('LandmarkManager', () => {
         it('propagates API errors', async () => {
             API.createLandmark.mockRejectedValue(new Error('create failed'));
 
-            await expect(LandmarkManager.createLandmark({})).rejects.toThrow('create failed');
+            await expect(LandmarkManager.createLandmark({ name: 'Landmark', latitude: 46.5, longitude: 6.5 })).rejects.toThrow('create failed');
         });
     });
 

@@ -6,13 +6,20 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.serializers import ExperimentSerializer
 from speleodb.api.v2.serializers import ExperimentUserPermissionSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
@@ -39,6 +46,17 @@ class ExperimentUserPermissionListApiView(GenericAPIView[Experiment], SDBAPIView
     serializer_class = ExperimentSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExperimentUserPermissionListApiViewGetResponse",
+                experiment=ExperimentSerializer(),
+                permissions=ExperimentUserPermissionSerializer(many=True),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_permissions_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
 
@@ -131,6 +149,20 @@ class ExperimentUserPermissionSpecificApiView(
 
         return perm_data
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "ExperimentUserPermissionSpecificApiViewPostResponse",
+                experiment=ExperimentSerializer(),
+                permission=ExperimentUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_permission_detail_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
 
@@ -176,6 +208,20 @@ class ExperimentUserPermissionSpecificApiView(
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExperimentUserPermissionSpecificApiViewPutResponse",
+                experiment=ExperimentSerializer(),
+                permission=ExperimentUserPermissionSerializer(),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_permission_detail_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
 
@@ -217,6 +263,19 @@ class ExperimentUserPermissionSpecificApiView(
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExperimentUserPermissionSpecificApiViewDeleteResponse",
+                experiment=ExperimentSerializer(),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_permission_detail_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
         user = self.get_user()

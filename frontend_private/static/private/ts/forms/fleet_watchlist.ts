@@ -18,7 +18,7 @@ import type { FleetWatchlistOptions } from '../../../../../ts-types/domain/forms
  *       daysInputSelector: '#days',
  *       exportBtnSelector: '#btn_export_excel',
  *       exportUrlBuilder: function (days) {    // called on export click
- *           return Urls['api:v2:cylinder-fleet-watchlist-export'](fleetId) + '?days=' + days;
+ *           return getV2CylinderFleetsCylindersWatchlistExportRetrieveUrl(fleetId, { days: Number(days) });
  *       },
  *   });
  *

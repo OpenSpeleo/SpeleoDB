@@ -1,7 +1,8 @@
+import { assetFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
 import type { Mock, MockInstance } from 'vitest';
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry } from 'geojson';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
-import type { GISGeometryResponse, GPSTrackResponse } from '../../../../../../ts-types/domain/map-config.ts';
+import type { GISGeometryMapInput } from '../../../../../../ts-types/domain/map-config.ts';
 import type { RendererSourceOptions } from '../../../../../../ts-types/domain/renderer.ts';
 import type { DisplayGeometry } from '../../../../../../ts-types/domain/map-geometry.ts';
 type FixtureCollection = FeatureCollection<GeoJSONGeometry, JSONObject> & { url?: string };
@@ -23,9 +24,9 @@ import { beginMapNavigation } from './navigation_intent.ts';
 let notification: MockInstance<typeof Utils.showNotification>;
 
 function deferred() {
-    let resolve!: (value: unknown) => void;
+    let resolve!: (value: ReturnType<typeof assetFixture>) => void;
     let reject!: (reason: unknown) => void;
-    const promise = new Promise<GPSTrackResponse>((yes, no) => { resolve = yes as (value: unknown) => void; reject = no; });
+    const promise = new Promise<ReturnType<typeof assetFixture>>((yes, no) => { resolve = yes; reject = no; });
     return { promise, resolve, reject };
 }
 
@@ -99,7 +100,7 @@ it('deduplicates GPS loads while allowing off/on and prevents obsolete completio
     const last = Layers.toggleGPSTrackVisibility('t', true);
     expect(State.gpsTrackLayerStates.get('t')).toBe(true);
     expect(API.getGPSTrackDetails).toHaveBeenCalledOnce();
-    detail.resolve({ file: '/track' });
+    detail.resolve(assetFixture({ file: '/track' }));
     await apply();
     expect(await first).toBe(false);
     expect(await off).toBe(false);
@@ -130,7 +131,7 @@ it('does not let late results install into a replacement map or repopulate reset
     const first = Layers.toggleGPSTrackVisibility('t', true);
     State.resetLayerState();
     State.map = ({ getLayer: vi.fn() }) as unknown as NonNullable<typeof State.map>;
-    detail.resolve({ file: '/track' });
+    detail.resolve(assetFixture({ file: '/track' }));
     await apply();
     expect(await first).toBe(false);
     expect(install).not.toHaveBeenCalled();
@@ -157,7 +158,7 @@ describe.each([
         vi.spyOn(API, details).mockReturnValue(detail.promise);
         const showing = Layers[toggle]('item', true);
         Config[metadataKey] = [{ id: 'item', modified_date: 'v1', name: 'Refreshed list' }];
-        detail.resolve({ file: '/v1' });
+        detail.resolve(assetFixture({ file: '/v1' }));
         await apply();
         expect(await showing).toBe(true);
         expect(installed).toHaveBeenCalledOnce();
@@ -166,10 +167,11 @@ describe.each([
 
     it.each(['resolve', 'reject'] as const)('reconciles a changed visible revision after the old request %ss', async outcome => {
         const detail = deferred();
-        vi.spyOn(API, details).mockReturnValueOnce(detail.promise).mockResolvedValue({ file: '/v2' } as GPSTrackResponse);
+        vi.spyOn(API, details).mockReturnValueOnce(detail.promise).mockResolvedValue(assetFixture({ file: '/v2' }));
         const showing = Layers[toggle]('item', true);
         Config[metadataKey] = [{ id: 'item', modified_date: 'v2' }];
-        detail[outcome](outcome === 'resolve' ? { file: '/v1' } : new Error('obsolete file failed'));
+        if (outcome === 'resolve') detail.resolve(assetFixture({ file: '/v1' }));
+        else detail.reject(new Error('obsolete file failed'));
         await apply();
         expect(await showing).toBe(true);
         expect(API[details]).toHaveBeenCalledTimes(2);
@@ -182,14 +184,14 @@ describe.each([
 
     it('does not share a stale in-flight download with a newer revision activation', async () => {
         const detail = deferred();
-        vi.spyOn(API, details).mockReturnValueOnce(detail.promise).mockResolvedValue({ file: '/v2' } as GPSTrackResponse);
+        vi.spyOn(API, details).mockReturnValueOnce(detail.promise).mockResolvedValue(assetFixture({ file: '/v2' }));
         const first = Layers[toggle]('item', true);
         const signal = vi.mocked(API[details]).mock.calls[0]![1]!.signal!;
         Config[metadataKey] = [{ id: 'item', modified_date: 'v2' }];
         const latest = Layers[toggle]('item', true);
         expect(signal.aborted).toBe(true);
         await apply();
-        detail.resolve({ file: '/v1' });
+        detail.resolve(assetFixture({ file: '/v1' }));
         await apply();
         expect(await first).toBe(false);
         expect(await latest).toBe(true);
@@ -199,7 +201,7 @@ describe.each([
     });
 
     it('replaces an already applied old source while retaining unchanged-revision reuse', async () => {
-        vi.spyOn(API, details).mockResolvedValueOnce({ file: '/v1' } as GPSTrackResponse).mockResolvedValue({ file: '/v2' } as GPSTrackResponse);
+        vi.spyOn(API, details).mockResolvedValueOnce(assetFixture({ file: '/v1' })).mockResolvedValue(assetFixture({ file: '/v2' }));
         const first = Layers[toggle]('item', true);
         await apply();
         expect(await first).toBe(true);
@@ -221,7 +223,7 @@ describe.each([
         vi.spyOn(API, details).mockReturnValue(detail.promise);
         const showing = Layers[toggle]('item', true);
         Config[metadataKey] = [];
-        detail.resolve({ file: '/v1' });
+        detail.resolve(assetFixture({ file: '/v1' }));
         await apply();
         expect(await showing).toBe(false);
         expect(installed).not.toHaveBeenCalled();
@@ -241,13 +243,13 @@ it.each(['refreshGISGeometry', 'acceptGISGeometry'] as const)('keeps the latest 
         extend() { return this; }
         isEmpty() { return false; }
     } });
-    const original: GISGeometryResponse = { id: 'geometry', name: 'Original', revision: 1,
+    const original: GISGeometryMapInput = { id: 'geometry', name: 'Original', revision: 1,
         geojson: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } };
     State.gisGeometryCache.set('geometry', original);
     const first = Layers.toggleGISGeometryVisibility('geometry', true);
     await apply();
     expect(await first).toBe(true);
-    const saved: GISGeometryResponse = { ...original, revision: 2, name: 'Saved',
+    const saved: GISGeometryMapInput = { ...original, revision: 2, name: 'Saved',
         geojson: { type: 'LineString', coordinates: [[2, 2], [3, 3]] } };
     const refreshing = Layers[update](saved);
     const hiding = Layers.toggleGISGeometryVisibility('geometry', false);

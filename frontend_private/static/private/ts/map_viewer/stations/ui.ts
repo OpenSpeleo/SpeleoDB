@@ -1,3 +1,5 @@
+import { SubSurfaceStationRequestType } from '@speleodb/api';
+import { choice } from '../../../../../../frontend_common/api/entity-forms.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { StationRecord } from '../../../../../../ts-types/domain/station-records.ts';
 import type { Coordinate2D } from '../../../../../../ts-types/domain/map-geometry.ts';
@@ -269,7 +271,7 @@ export const StationUI = {
                         description: (document.getElementById('station-description') as HTMLInputElement).value.trim(),
                         latitude: snappedCoords[1],
                         longitude: snappedCoords[0],
-                        type: stationType
+                        type: choice(SubSurfaceStationRequestType, stationType)
                     });
                     Utils.showNotification('success', `${typeInfo.label} created!`);
                     Modal.close('create-station-modal');

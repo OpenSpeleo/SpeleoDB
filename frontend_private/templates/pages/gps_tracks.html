@@ -114,8 +114,6 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="gps-tracks">
     {
-      "csrfToken": "{{ csrf_token|escapejs }}",
-      "listEndpoint": "{% url 'api:v2:gps-tracks' %}",
       "openIconUrl": "{% static 'private/media/right_arrow.svg' %}"
     }
   </script>

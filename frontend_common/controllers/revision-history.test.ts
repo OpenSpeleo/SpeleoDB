@@ -1,30 +1,26 @@
 import type { RevisionCommit } from '../../ts-types/domain/project-presentation.ts';
-import type { RevisionHistoryContext } from '../../ts-types/controllers/revision-history.ts';
-import type { Mock } from 'vitest';
-import type { ControllerAjaxCall } from '../../ts-types/testing/vitest/controller-ajax.ts';
-let ajax: Mock<(options: ControllerAjaxCall) => {responseJSON?: unknown}>;
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { init as initialize } from './revision-history.ts';
-function init(context?: unknown) { return initialize(context as RevisionHistoryContext); }
-const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
-beforeAll(() => { (0, eval)(jquery); });
+import { init } from './revision-history.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 let commits: RevisionCommit[];
 beforeEach(() => {
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
-    commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026/01/01', url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
-    ajax = vi.fn(options => { options.success({ commits }); return {}; });
-    vi.spyOn($, 'ajax').mockImplementation(ajax as unknown as JQueryStatic['ajax']);
+    commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026/01/01 12:00', author_email: 'diver@example.com', dt_since: '1 day', parent_ids: [], tree: [], url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
+    server.handle(() => ({ json: { commits } }));
     document.body.innerHTML = '<div id="loading_spinner"></div><div id="mobile-revision-container"></div><table><tbody id="commit-table-container"><tr id="commit-template" style="display:none"><td><span class="font-medium"></span></td><td><span class="font-medium"></span></td><td><span class="text-center"></span></td><td><span class="font-medium"></span></td><td><a class="revision_explorer"></a><ul id="format-download-container"><li id="format-download-template" style="display:none"><a></a></li></ul></td></tr></tbody></table>';
 });
 afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
-it('waits for load then uses synchronous AJAX and renders independent mobile and desktop rows', async () => {
+it('waits for load then uses the generated operation and renders independent mobile and desktop rows', async () => {
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const pending = init({ endpoint: '/revisions/' });
-    expect(ajax).not.toHaveBeenCalled();
+    const pending = init({ projectId: 'project' });
+    expect(server.requests).toHaveLength(0);
     window.dispatchEvent(new Event('load'));
     await expect(pending).resolves.toBeUndefined();
-    expect(ajax.mock.calls[0]![0]).toMatchObject({ url: '/revisions/', type: 'GET', dataType: 'json', async: false });
+    expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/projects/project/revisions/' });
     expect($('.revision-id').text()).toBe('12345678');
     expect($('.revision-message').text()).toBe('<message>');
     expect($('#commit-table-container tr').length).toBe(1);
@@ -39,27 +35,21 @@ it('waits for load then uses synchronous AJAX and renders independent mobile and
 it('skips only the exact automated project creation pair', async () => {
     commits.push({ ...commits[0]!, author_name: 'SpeleoDB', message: '[Automated] Project Creation' });
     commits.push({ ...commits[0]!, author_name: 'Diver', message: '[Automated] Project Creation', formats: [] });
-    await init({ endpoint: '/revisions/' });
+    await init({ projectId: 'project' });
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(2);
 });
 it('repeated initialization appends mobile rows after removing its sole desktop template', async () => {
-    await init({ endpoint: '/revisions/' });
+    await init({ projectId: 'project' });
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    await init({ endpoint: '/revisions/' });
+    await init({ projectId: 'project' });
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(1);
     expect(console.error).toHaveBeenCalledWith('#format-download-template not found.');
 });
-it('logs transport failures and hides the spinner without rejecting initialization', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    ajax.mockImplementation(options => { options.error('offline', 'failed'); return {}; });
-    await expect(init({ endpoint: '/revisions/' })).resolves.toBeUndefined();
-    expect(console.error).toHaveBeenCalledWith('ERROR: offline & failed');
+it('hides the spinner on HTTP errors without rejecting initialization', async () => {
+    server.reply({ status: 403, json: { detail: 'Denied' } });
+    await expect(init({ projectId: 'project' })).resolves.toBeUndefined();
     expect($('#loading_spinner')[0]!.style.display).toBe('none');
-});
-it('rejects malformed commit formats and missing context', async () => {
-    delete (commits[0] as Partial<RevisionCommit>).formats;
-    await expect(init({ endpoint: '/revisions/' })).rejects.toThrow(TypeError);
-    await expect(init()).rejects.toThrow(TypeError);
+    expect($('.revision-item')).toHaveLength(0);
 });

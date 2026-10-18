@@ -24,6 +24,7 @@
     "frontend_public/static/ts/**/*.ts",
     "playwright.config.ts",
     "scripts/audit-javascript.ts",
+    "scripts/audit-api.ts",
     "scripts/audit-templates.ts",
     "scripts/jsdom-runtime.ts",
     "scripts/lock.ts",

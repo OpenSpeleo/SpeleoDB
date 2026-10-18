@@ -98,8 +98,7 @@
   <script type="application/json" data-speleodb-controller="entity-crud">
     {
       "formId": "new_sensor_fleet_form",
-      "endpoint": "{% url 'api:v2:sensor-fleets' %}",
-      "method": "POST",
+      "resource": "sensor-fleet",
       "successMessage": "The sensor fleet has been created successfully.",
       "requiredField": "name",
       "requiredMessage": "Fleet name is required.",

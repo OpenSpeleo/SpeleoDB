@@ -1,7 +1,9 @@
+import { v2GisOgcViewGeojsonRetrieve } from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../frontend_common/api/client.ts';
 import { Renderer } from '../../../frontend_private/static/private/ts/map_viewer/map/renderer.ts';
 import type { MapSourceChangeEvent } from '../../../ts-types/domain/map-sources.ts';
 import type { PublicViewerData, PublicViewerLoadOptions, PublicViewerMap } from '../../../ts-types/domain/viewer-composition.ts';
-import type { ProjectResponse, ViewerProject } from '../../../ts-types/domain/map-config.ts';
+import type { ProjectMapInput, ViewerProject } from '../../../ts-types/domain/map-config.ts';
 /**
  * Simplified Map Viewer Entry Point for Public GIS Views
  *
@@ -81,19 +83,7 @@ export async function initPublicGISViewer() {
     }
 
     async function fetchPublicViewData() {
-        const response = await fetch(Urls['api:v2:gis-ogc:view-geojson'](context.gisToken!));
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const viewData: unknown = await response.json();
-
-        if (!viewData || typeof viewData !== 'object') {
-            throw new Error('Invalid API response');
-        }
-
-        return viewData as PublicViewerData;
+        return apiData(v2GisOgcViewGeojsonRetrieve(context.gisToken!, webApiOptions()));
     }
 
     async function loadPublicMapData(options: PublicViewerLoadOptions = {}) {
@@ -104,7 +94,7 @@ export async function initPublicGISViewer() {
         } = options;
 
         try {
-            let projects: (ViewerProject | ProjectResponse)[] = Config.projects;
+            let projects: (ViewerProject | ProjectMapInput)[] = Config.projects;
 
             if (fetchProjects || projects.length === 0) {
                 console.log('🔄 Fetching GIS View GeoJSON data...');
@@ -115,7 +105,7 @@ export async function initPublicGISViewer() {
                 const pending = pendingViewData;
                 pendingViewData = null;
                 const viewData = await (pending ?? fetchPublicViewData());
-                projects = viewData.projects || [];
+                projects = [...viewData.projects];
 
                 console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);
 
@@ -123,7 +113,7 @@ export async function initPublicGISViewer() {
                     id: p.id,
                     name: p.name,
                     color: p.color,
-                    geojson_file: (p as ProjectResponse).geojson_file,
+                    geojson_file: (p as ProjectMapInput).geojson_file,
                 })));
                 projects = Config.projects;
 

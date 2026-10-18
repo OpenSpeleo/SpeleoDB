@@ -316,11 +316,7 @@ export const StationLogs = {
                     const uploadController = new UploadProgressController('log-upload');
                     buttonsContainer.classList.add('hidden');
 
-                    await uploadController.upload(
-                        Urls['api:v2:station-logs'](stationId),
-                        formData,
-                        'POST'
-                    );
+                    await uploadController.upload(options => API.createStationLog(stationId, formData, options));
                 } else {
                     await API.createStationLog(stationId, formData);
                 }

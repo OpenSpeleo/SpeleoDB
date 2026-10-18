@@ -17,9 +17,12 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.settings import api_settings
 from rest_framework.throttling import UserRateThrottle
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.serializers import AuthTokenSerializer
 from speleodb.api.v2.serializers import PasswordChangeSerializer
 from speleodb.api.v2.serializers import UserSerializer
+from speleodb.api.v2.serializers.api_contract import AuthTokenResponseSerializer
+from speleodb.api.v2.serializers.api_contract import MessageSerializer
 from speleodb.api.v2.serializers.user import UserAutocompleteSerializer
 from speleodb.users.models import User
 from speleodb.users.signals import api_auth_success
@@ -38,12 +41,16 @@ class UserInfo(GenericAPIView[User]):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: UserSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_user_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse(self.get_serializer(request.user).data)
 
+    @extend_schema(responses={200: UserSerializer(), 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_user_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
-            data=request.data, context={"request": request}
+            request.user, data=request.data, context={"request": request}
         )
         if serializer.is_valid():
             serializer.save()
@@ -53,6 +60,8 @@ class UserInfo(GenericAPIView[User]):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(responses={200: UserSerializer(), 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_user_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             request.user, data=request.data, partial=True, context={"request": request}
@@ -70,6 +79,8 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
     serializer_class = AuthTokenSerializer
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES  # type: ignore[assignment]
 
+    @extend_schema(responses={200: AuthTokenResponseSerializer, 401: API_ERROR})
+    @extend_schema(operation_id="v2_user_auth_token_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         if not request.user.is_authenticated:
             return ErrorResponse(
@@ -124,12 +135,45 @@ class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        responses={
+            200: AuthTokenResponseSerializer,
+            201: AuthTokenResponseSerializer,
+            400: API_ERROR,
+        }
+    )
+    @extend_schema(
+        request=AuthTokenSerializer(partial=True),
+        description=(
+            "Username and password are required unless the request "
+            "is already authenticated."
+        ),
+    )
+    @extend_schema(operation_id="v2_user_auth_token_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=False, emit_login_event=True)
 
+    @extend_schema(responses={201: AuthTokenResponseSerializer, 400: API_ERROR})
+    @extend_schema(
+        request=AuthTokenSerializer(partial=True),
+        description=(
+            "Username and password are required unless the request "
+            "is already authenticated."
+        ),
+    )
+    @extend_schema(operation_id="v2_user_auth_token_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=True)
 
+    @extend_schema(responses={201: AuthTokenResponseSerializer, 400: API_ERROR})
+    @extend_schema(
+        request=AuthTokenSerializer(partial=True),
+        description=(
+            "Username and password are required unless the request "
+            "is already authenticated."
+        ),
+    )
+    @extend_schema(operation_id="v2_user_auth_token_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._fetch_token(request, refresh_token=True)
 
@@ -143,6 +187,30 @@ class UserPasswordChangeView(GenericAPIView[User]):
     throttle_classes = [PasswordChangeThrottle]
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: MessageSerializer,
+            400: API_ERROR,
+            403: API_ERROR,
+            429: {
+                "type": "object",
+                "properties": {"detail": {"type": "string"}},
+                "required": ["detail"],
+                "additionalProperties": False,
+            },
+        },
+        parameters=[
+            OpenApiParameter(
+                "Retry-After",
+                int,
+                OpenApiParameter.HEADER,
+                response=[429],
+                description="Seconds until another password-change attempt is allowed.",
+                required=True,
+            )
+        ],
+    )
+    @extend_schema(operation_id="v2_user_password_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(
             data=request.data, partial=True, context={"request": request}
@@ -160,6 +228,8 @@ class ReleaseAllUserLocksView(GenericAPIView[User], SDBAPIViewMixin):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: OpenApiTypes.STR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_user_release_all_locks_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
@@ -201,8 +271,13 @@ class UserAutocompleteView(GenericAPIView[User]):
                 ),
             ),
         ],
-        responses={200: UserAutocompleteSerializer(many=True)},
+        responses={
+            200: UserAutocompleteSerializer(many=True),
+            400: API_ERROR,
+            403: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_user_autocomplete_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         query = request.query_params.get("query", "").strip().lower()
         if len(query) < self.MINIMUM_QUERY_LEN:

@@ -1,8 +1,11 @@
+import type { FlatBounds } from '../../../../ts-types/domain/map-geometry.ts';
+import { v2ImportGpxUpdate, v2ImportKmlKmzUpdate, v2ImportKmlKmzInspectCreate, v2GisLayersCreateWithFormData } from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../../frontend_common/api/client.ts';
 import { count, canImportKML, validReport } from './import_model.ts';
 import { renderImportCollections, applySuggestedLayerName, renderImportProgress, renderImportDialog } from './import_presentation.ts';
 export { canImportKML } from './import_model.ts';
 export { renderImportReview, renderImportCollections, renderImportError, applySuggestedLayerName } from './import_presentation.ts';
-import type { ImportTab, ImportMode, ImportResponse, ImportSession } from '../../../../ts-types/domain/data-import.ts';
+import type { ImportTab, ImportMode, ImportResultFields, ImportSession } from '../../../../ts-types/domain/data-import.ts';
 import type { UploadError } from '../../../../ts-types/domain/upload.ts';
 import { openMapDialog, closeMapDialog } from './map_viewer/components/dialog_lifecycle.ts';
 import { uploadWithProgress } from './map_viewer/components/upload.ts';
@@ -11,12 +14,18 @@ import { LandmarkManager } from './map_viewer/landmarks/manager.ts';
 import { State } from './map_viewer/state.ts';
 
 /** One transient dialog session; inspection never creates an import or background job. */
+/** OpenAPI arrays retain their length constraints at the camera boundary. */
+function importBounds(value: readonly number[] | null | undefined): FlatBounds | null | undefined {
+    if (value == null) return value;
+    if (value.length !== 4 || !value.every(Number.isFinite)) return null;
+    return [value[0]!, value[1]!, value[2]!, value[3]!];
+}
+
 export const DataImport = (() => {
-    let token = '';
     let modal: HTMLElement | null = null;
     let listeners: (() => void)[] = [];
     let session: ImportSession | null = null;
-    let inspection: XMLHttpRequest | null = null;
+    let inspection: AbortController | null = null;
     let generation = 0;
     const element = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
     const query = <T extends HTMLElement = HTMLElement>(selector: string) => modal!.querySelector<T>(selector)!;
@@ -40,10 +49,9 @@ export const DataImport = (() => {
         };
     }
 
-    function init(csrfToken: string) {
+    function init() {
         if (interactionLocked()) return;
         destroy();
-        token = csrfToken;
         modal = element('import-data-modal');
         if (!modal) return;
         resetSession();
@@ -203,13 +211,12 @@ export const DataImport = (() => {
         session!.progress = null;
         session!.progressText = 'Uploading for review…';
         render();
-        const data = new FormData();
-        data.append('file', session!.kmlFile, session!.kmlFile.name);
+        const file = session!.kmlFile;
         const isCurrent = () => generation === requestGeneration;
         try {
             const report = await new Promise<unknown>((resolve, reject) => {
-                inspection = uploadWithProgress(Urls['api:v2:kml-kmz-inspect'](), data, {
-                    csrfToken: token, onSuccess: resolve, onError: reject,
+                inspection = uploadWithProgress(options => apiData(v2ImportKmlKmzInspectCreate({ file }, webApiOptions(options))), {
+                    onSuccess: resolve, onError: reject,
                     onProgress: percent => {
                         if (!isCurrent()) return;
                         session!.progress = percent;
@@ -258,12 +265,9 @@ export const DataImport = (() => {
         session!.inspecting = false;
         const kind = session!.tab === 'gpx' ? 'gpx' : session!.mode;
         const file = kind === 'gpx' ? session!.gpxFile : session!.kmlFile;
-        const data = new FormData();
         const overlay = kind === 'overlay';
-        data.append(overlay ? 'source_file' : 'file', file!, file!.name);
-        if (overlay) data.append('name', element<HTMLInputElement>('kml-layer-name').value.trim());
-        else data.append('collection', element<HTMLSelectElement>(`${kind === 'gpx' ? 'gpx' : 'kml'}-landmark-collection`).value);
-        const endpoint = overlay ? 'api:v2:gis-layers' : kind === 'gpx' ? 'api:v2:gpx-import' : 'api:v2:kml-kmz-import';
+        const name = overlay ? element<HTMLInputElement>('kml-layer-name').value.trim() : '';
+        const collection = overlay ? '' : element<HTMLSelectElement>(`${kind === 'gpx' ? 'gpx' : 'kml'}-landmark-collection`).value;
         session!.busy = true;
         session!.errors[session!.tab] = '';
         session!.progress = null;
@@ -271,9 +275,12 @@ export const DataImport = (() => {
         window.addEventListener('beforeunload', beforeUnload);
         render();
         try {
-            const response = await new Promise<ImportResponse | null>((resolve, reject) => {
-                uploadWithProgress<ImportResponse>(Urls[endpoint](), data, {
-                    method: overlay ? 'POST' : 'PUT', csrfToken: token,
+            const response = await new Promise<ImportResultFields>((resolve, reject) => {
+                uploadWithProgress<ImportResultFields>(options => overlay
+                    ? apiData(v2GisLayersCreateWithFormData({ source_file: file!, name }, webApiOptions(options)))
+                    : kind === 'gpx'
+                        ? apiData(v2ImportGpxUpdate({ file: file!, collection }, webApiOptions(options)))
+                        : apiData(v2ImportKmlKmzUpdate({ file: file!, collection }, webApiOptions(options))), {
                     onSuccess: resolve, onError: reject,
                     onProgress: percent => {
                         session!.progress = percent;
@@ -293,7 +300,7 @@ export const DataImport = (() => {
             }
             session!.result = {
                 kind: kind!, layerId: response.id, collectionId: response.collection_id,
-                bounds: response.bounds, landmarksCreated: count(response.landmarks_created),
+                bounds: importBounds(response.bounds), landmarksCreated: count(response.landmarks_created),
                 gpsTracksCreated: count(response.gps_tracks_created),
                 gpsTrackIds: Array.isArray(response.gps_track_ids) ? response.gps_track_ids.map(String) : [],
                 landmarksSkipped: count(response.landmarks_skipped), duplicatesInFile: count(response.duplicates_in_file),

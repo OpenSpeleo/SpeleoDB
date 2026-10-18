@@ -278,7 +278,6 @@ class TestStationLogEntryDetailAPI(BaseTestStationLogEntryGetAPI):
         update_data = {
             "title": "New Title",
             "notes": "Updated notes",
-            "text_content": "New content",
         }
 
         response = self.client.patch(

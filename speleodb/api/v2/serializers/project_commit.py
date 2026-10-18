@@ -6,6 +6,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from frontend_private.templatetags.filter_utils import time_struct_since
@@ -20,6 +21,10 @@ class ProjectCommitSerializer(serializers.ModelSerializer[ProjectCommit]):
     url = serializers.SerializerMethodField()
 
     authored_date = serializers.DateTimeField(format="%Y/%m/%d %H:%M")
+    parent_ids = serializers.ListField(child=serializers.CharField(), read_only=True)
+    tree = serializers.ListField(
+        child=serializers.DictField(child=serializers.CharField()), read_only=True
+    )
 
     class Meta:
         model = ProjectCommit
@@ -47,6 +52,19 @@ class ProjectCommitSerializer(serializers.ModelSerializer[ProjectCommit]):
     def get_dt_since(self, obj: ProjectCommit) -> str:
         return time_struct_since(obj.authored_date.timetuple())
 
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "download_url": {"type": "string"},
+                },
+                "required": ["name", "download_url"],
+            },
+        }
+    )
     def get_formats(self, obj: ProjectCommit) -> list[dict[str, Any]]:
         project: Project = obj.project
 

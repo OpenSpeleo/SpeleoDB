@@ -13,6 +13,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
@@ -20,6 +21,7 @@ from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import ProjectSerializer
+from speleodb.api.v2.serializers.api_contract import IdentifierSerializer
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.surveys.models import Project
 from speleodb.utils.api_mixin import SDBAPIViewMixin
@@ -45,6 +47,7 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
 
     @extend_schema(operation_id="v2_project_retrieve")
+    @extend_schema(responses={200: ProjectSerializer(), 403: API_ERROR, 500: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -80,12 +83,16 @@ class ProjectSpecificApiView(GenericAPIView[Project], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_projects_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_projects_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(responses={200: IdentifierSerializer, 403: API_ERROR})
+    @extend_schema(operation_id="v2_projects_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Note: We only delete the permissions, rendering the project invisible to the
         # users. After 30 days, the project gets automatically deleted by a cronjob.
@@ -107,7 +114,10 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
 
-    @extend_schema(operation_id="v2_projects_list")
+    @extend_schema(
+        operation_id="v2_projects_list",
+        responses={200: ProjectSerializer(many=True), 403: API_ERROR},
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project_ids = [perm.project.id for perm in user.permissions]
@@ -127,6 +137,8 @@ class ProjectApiView(GenericAPIView[Project], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(responses={201: ProjectSerializer, 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_projects_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 

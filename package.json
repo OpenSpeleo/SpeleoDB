@@ -19,7 +19,8 @@
     "test:frontend:watch": "vitest --config ./vitest.config.ts",
     "typecheck:runtime": "bun scripts/typecheck.ts --scope=runtime",
     "typecheck:worker": "bun scripts/typecheck.ts --scope=worker",
-    "typecheck": "bun scripts/typecheck.ts",
+    "typecheck": "bun run audit:api && bun scripts/typecheck.ts",
+    "audit:api": "bun scripts/audit-api.ts",
     "audit:javascript": "bun scripts/audit-javascript.ts",
     "audit:templates": "bun scripts/audit-templates.ts",
     "lint:frontend:fix": "bun run lint:frontend --fix",
@@ -58,6 +59,7 @@
   ],
   "type": "module",
   "dependencies": {
+    "@speleodb/api": "0.1.0",
     "@speleodb/map-core": "0.3.0",
     "@speleodb/map-viewer": "0.3.1",
     "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch"

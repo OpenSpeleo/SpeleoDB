@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry, Point } from 'geojson';
 import type { Mock } from 'vitest';
+import { cylinderInstallFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
 import type { RendererLayer, RendererLayout, RendererPaint, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
 type Collection = FeatureCollection<GeoJSONGeometry, JSONObject>;
@@ -323,7 +324,7 @@ it('keeps landmarks, leads and cylinders gated through creation and project chan
     for (const category of ['landmarks', 'explorationLeads', 'cylinders'] as const) await Layers.setCategoryVisibility(category, false);
     Layers.addLandmarkLayer(collection([point('landmark')]));
     Layers.addExplorationLeadMarker('lead', [-87, 20], 'Survey', '', 'p1');
-    Layers.addCylinderInstallsLayer(collection([point('cylinder', { project_id: 'p1' })]));
+    Layers.addCylinderInstallsLayer({ type: 'FeatureCollection', features: [cylinderInstallFixture()] });
     Layers.applyProjectVisibility('p1', false);
     Layers.applyProjectVisibility('p1', true);
     for (const id of ['landmarks-layer', 'landmarks-labels', 'exploration-leads-layer', 'cylinder-installs-layer', 'cylinder-installs-labels']) {

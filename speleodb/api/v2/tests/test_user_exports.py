@@ -20,6 +20,7 @@ from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
+from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -27,6 +28,27 @@ if TYPE_CHECKING:
 
 
 class TestUserExports(BaseAPITestCase):
+    def test_pagination_last_and_invalid_pages_match_contract(self) -> None:
+        for _ in range(21):
+            self._job(JobState.FAILED)
+        url = reverse("api:v2:user-exports")
+        response = self.client.get(
+            url, {"page": "last"}, headers={"authorization": self.auth}
+        )
+        assert response.status_code == status.HTTP_200_OK, response.content
+        assert response.data["count"] == 21  # noqa: PLR2004 - One beyond page size.
+        assert len(response.data["results"]) == 1
+        assert response.data["next"] is None
+        assert response.data["previous"] is not None
+        assert_api_response(response)
+        for page in ("0", "999", "invalid"):
+            response = self.client.get(
+                url, {"page": page}, headers={"authorization": self.auth}
+            )
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert set(response.json()) == {"detail"}
+            assert_api_response(response)
+
     def _job(
         self, state: str = JobState.QUEUED, *, requester: User | None = None
     ) -> BackgroundJob:
@@ -209,10 +231,13 @@ class TestUserExports(BaseAPITestCase):
             "omissions": [
                 {
                     "category": "projects",
+                    "id": "00000000-0000-0000-0000-000000000001",
                     "name": "Unavailable cave",
                     "reason": "Source unavailable",
                 }
-            ]
+            ],
+            "notes": [],
+            "file_count": 0,
         }
         job.save(update_fields=["summary"])
         artifact: JobArtifact = self._artifact(job)

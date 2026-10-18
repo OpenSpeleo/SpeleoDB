@@ -1,13 +1,11 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../../../../../frontend_common/test/api-server.ts';
 import { init } from '../../../../../frontend_common/controllers/dashboard.ts';
-import type { ControllerAjaxCall } from '../../../../../ts-types/testing/vitest/controller-ajax.ts';
 import type { ContributionCalendar, DashboardActivity, DashboardSummary, DashboardResponse } from '../../../../../ts-types/domain/dashboard.ts';
 
 /**
  * Dashboard helper tests.
  *
- * Loads real helpers and drives controller rendering through its AJAX boundary;
+ * Loads real helpers and drives controller rendering through real HTTP;
  * stat/activity assertions exercise production DOM rather than copied renderers.
  */
 
@@ -25,44 +23,46 @@ import {
 } from '../dashboard-helpers.ts';
 
 
-// The transport is the only replaced boundary; the controller owns all rendering.
-const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
-const ajax = vi.fn<(options: ControllerAjaxCall) => object>(() => ({}));
-beforeAll(() => { (0, eval)(jquery); });
+let server: Awaited<ReturnType<typeof startApiServer>>;
+beforeAll(async () => { server = await startApiServer(); loadJQuery(); });
+afterAll(async () => { await server.close(); });
 beforeEach(() => {
-    ajax.mockClear();
-    vi.spyOn($, 'ajax').mockImplementation(ajax as unknown as JQueryStatic['ajax']);
+    server.reset();
+    setBrowserUrl(server.origin);
     vi.stubGlobal('Urls', {
-        'api:v2:user-dashboard-stats': () => '/stats/',
         'private:project_details': (id: string) => `/private/project/${id}/`,
         'private:project_revision_explorer': (id: string, sha: string | null) => `/private/project/${id}/${sha}/`,
     });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-function renderDashboard(overrides: Partial<Omit<DashboardResponse, 'recent_activity'>> & {
-    recent_activity?: DashboardActivity[] | null;
+async function renderDashboard(overrides: Partial<Omit<DashboardResponse, 'recent_activity'>> & {
+    recent_activity?: unknown[] | null;
 }) {
-    init();
-    const request = ajax.mock.calls.at(-1)![0];
-    expect(request).toMatchObject({ url: '/stats/', type: 'GET', dataType: 'json' });
-    request.success({
+    server.reply({ json: {
         summary: {
             total_projects: 0, total_teams: 0, user_commits: 0,
             total_stations_created: 0, total_landmarks: 0, total_gps_tracks: 0,
+            total_commits: 0, total_exploration_leads: 0,
         },
-        commits_over_time: [], projects_by_type: {}, contribution_calendar: [],
+        commits_over_time: [], projects_by_type: {}, projects_by_level: {}, contribution_calendar: [],
         recent_activity: [], ...overrides,
+    } });
+    init();
+    await vi.waitFor(() => {
+        expect(server.requests).toHaveLength(1);
+        expect(document.querySelector('#stat-projects, #recent-activity')?.textContent).not.toBe('');
     });
+    expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/user/dashboard-stats/' });
 }
 
-function populateStatCards(summary: DashboardSummary) {
-    renderDashboard({ summary });
+async function populateStatCards(summary: DashboardSummary) {
+    await renderDashboard({ summary });
 }
 
-function renderActivityFeed(activity: DashboardActivity[] | null, container: HTMLElement) {
+async function renderActivityFeed(activity: unknown[] | null, container: HTMLElement) {
     expect(container.id).toBe('recent-activity');
-    renderDashboard({ recent_activity: activity });
+    await renderDashboard({ recent_activity: activity });
 }
 
 
@@ -243,20 +243,22 @@ describe('Dashboard helpers', () => {
                 '<div id="stat-gps-tracks"></div>';
         });
 
-        it('updates DOM elements with values', () => {
-            populateStatCards({
+        it('updates DOM elements with values', async () => {
+            await populateStatCards({
                 total_projects: 12, total_teams: 3, user_commits: 89,
                 total_stations_created: 145, total_landmarks: 24, total_gps_tracks: 5,
+                total_commits: 89, total_exploration_leads: 0,
             });
             expect(document.getElementById('stat-projects')!.textContent).toContain('12');
             expect(document.getElementById('stat-teams')!.textContent).toContain('3');
             expect(document.getElementById('stat-commits')!.textContent).toContain('89');
         });
 
-        it('shows zero for zero values', () => {
-            populateStatCards({
+        it('shows zero for zero values', async () => {
+            await populateStatCards({
                 total_projects: 0, total_teams: 0, user_commits: 0,
                 total_stations_created: 0, total_landmarks: 0, total_gps_tracks: 0,
+            total_commits: 0, total_exploration_leads: 0,
             });
             expect(document.getElementById('stat-projects')!.textContent).toBe('0');
             expect(document.getElementById('stat-teams')!.textContent).toBe('0');
@@ -289,24 +291,24 @@ describe('Dashboard helpers', () => {
             document.body.appendChild(container);
         });
 
-        it('creates activity rows for each entry', () => {
-            renderActivityFeed([makeEntry(), makeEntry({ project_id: '456' })], container);
+        it('creates activity rows for each entry', async () => {
+            await renderActivityFeed([makeEntry(), makeEntry({ project_id: '456' })], container);
             const rows = container.querySelectorAll('.activity-row');
             expect(rows.length).toBe(2);
         });
 
-        it('shows empty message for empty list', () => {
-            renderActivityFeed([], container);
+        it('shows empty message for empty list', async () => {
+            await renderActivityFeed([], container);
             expect(container.textContent).toContain('No recent activity');
         });
 
-        it('shows empty message for null', () => {
-            renderActivityFeed(null, container);
+        it('shows empty message for null', async () => {
+            await renderActivityFeed(null, container);
             expect(container.textContent).toContain('No recent activity');
         });
 
-        it('filters out automated system commits', () => {
-            renderActivityFeed([
+        it('filters out automated system commits', async () => {
+            await renderActivityFeed([
                 makeEntry(),
                 makeEntry({ author_name: 'SpeleoDB', message: '[Automated] Project Creation' }),
             ], container);
@@ -314,52 +316,52 @@ describe('Dashboard helpers', () => {
             expect(rows.length).toBe(1);
         });
 
-        it('shows empty state when only automated commits exist', () => {
-            renderActivityFeed([
+        it('shows empty state when only automated commits exist', async () => {
+            await renderActivityFeed([
                 makeEntry({ author_name: 'SpeleoDB', message: '[Automated] Project Creation' }),
             ], container);
             expect(container.textContent).toContain('No recent activity');
         });
 
-        it('displays author initials in avatar', () => {
-            renderActivityFeed([makeEntry({ author_name: 'Bob Jones' })], container);
+        it('displays author initials in avatar', async () => {
+            await renderActivityFeed([makeEntry({ author_name: 'Bob Jones' })], container);
             const avatar = container.querySelector<HTMLElement>('.activity-avatar')!;
             expect(avatar.textContent).toBe('BJ');
         });
 
-        it('renders project badge with link', () => {
-            renderActivityFeed([makeEntry()], container);
+        it('renders project badge with link', async () => {
+            await renderActivityFeed([makeEntry()], container);
             const badge = container.querySelector<HTMLAnchorElement>('.activity-badge-project')!;
             expect(badge).not.toBeNull();
             expect(badge.textContent).toBe('Cave A');
             expect(badge.getAttribute('href')).toBe('/private/project/123/');
         });
 
-        it('renders short SHA badge', () => {
-            renderActivityFeed([makeEntry({ commit_id: 'a871546ebe012aa3b7a13147621c91045f7769fe' })], container);
+        it('renders short SHA badge', async () => {
+            await renderActivityFeed([makeEntry({ commit_id: 'a871546ebe012aa3b7a13147621c91045f7769fe' })], container);
             const sha = container.querySelector<HTMLElement>('.activity-badge-sha')!;
             expect(sha).not.toBeNull();
             expect(sha.textContent).toBe('a871546');
             expect(sha.getAttribute('href')).toBe('/private/project/123/a871546ebe012aa3b7a13147621c91045f7769fe/');
         });
 
-        it('renders local date+time instead of time-ago', () => {
-            renderActivityFeed([makeEntry()], container);
+        it('renders local date+time instead of time-ago', async () => {
+            await renderActivityFeed([makeEntry()], container);
             const meta = container.querySelector<HTMLElement>('.activity-meta')!;
             expect(meta.textContent).toContain('at');
         });
 
-        it('renders date group headers', () => {
-            renderActivityFeed([makeEntry()], container);
+        it('renders date group headers', async () => {
+            await renderActivityFeed([makeEntry()], container);
             const header = container.querySelector<HTMLElement>(':scope > div:not(.activity-row)')!;
             expect(header).not.toBeNull();
             expect(header.textContent).toBe('Today');
         });
 
-        it('groups entries by date', () => {
+        it('groups entries by date', async () => {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            renderActivityFeed([
+            await renderActivityFeed([
                 makeEntry(),
                 makeEntry({ authored_date: yesterday.toISOString() }),
             ], container);
@@ -369,33 +371,33 @@ describe('Dashboard helpers', () => {
             expect(headers[1]!.textContent).toBe('Yesterday');
         });
 
-        it('escapes HTML in project name to prevent XSS', () => {
-            renderActivityFeed([makeEntry({ project_name: '<script>alert("xss")</script>' })], container);
+        it('escapes HTML in project name to prevent XSS', async () => {
+            await renderActivityFeed([makeEntry({ project_name: '<script>alert("xss")</script>' })], container);
             expect(container.innerHTML).not.toContain('<script>');
             expect(container.innerHTML).toContain('&lt;script&gt;');
         });
 
-        it('escapes HTML in author name to prevent XSS', () => {
-            renderActivityFeed([makeEntry({ author_name: '<img onerror=alert(1) src=x>' })], container);
+        it('escapes HTML in author name to prevent XSS', async () => {
+            await renderActivityFeed([makeEntry({ author_name: '<img onerror=alert(1) src=x>' })], container);
             expect(container.innerHTML).not.toContain('<img');
             expect(container.innerHTML).toContain('&lt;img');
         });
 
-        it('escapes HTML in message to prevent XSS', () => {
-            renderActivityFeed([makeEntry({ message: '<div onmouseover="alert(1)">hover</div>' })], container);
+        it('escapes HTML in message to prevent XSS', async () => {
+            await renderActivityFeed([makeEntry({ message: '<div onmouseover="alert(1)">hover</div>' })], container);
             const msg = container.querySelector<HTMLElement>('.activity-msg')!;
             expect(msg.innerHTML).toContain('&lt;div');
             expect(msg.innerHTML).not.toContain('<div onmouseover');
         });
 
-        it('displays commit message in activity-msg span', () => {
-            renderActivityFeed([makeEntry({ message: 'Fixed depth readings' })], container);
+        it('displays commit message in activity-msg span', async () => {
+            await renderActivityFeed([makeEntry({ message: 'Fixed depth readings' })], container);
             const msg = container.querySelector<HTMLElement>('.activity-msg')!;
             expect(msg.textContent).toBe('Fixed depth readings');
         });
 
-        it('renders both full and short time formats', () => {
-            renderActivityFeed([makeEntry()], container);
+        it('renders both full and short time formats', async () => {
+            await renderActivityFeed([makeEntry()], container);
             const full = container.querySelector<HTMLElement>('.activity-time-full')!;
             const short = container.querySelector<HTMLElement>('.activity-time-short')!;
             expect(full).not.toBeNull();
@@ -404,27 +406,27 @@ describe('Dashboard helpers', () => {
             expect(short.textContent.length).toBeLessThan(full.textContent.length);
         });
 
-        it('renders avatar with correct background color', () => {
-            renderActivityFeed([makeEntry({ author_name: 'Alice Smith' })], container);
+        it('renders avatar with correct background color', async () => {
+            await renderActivityFeed([makeEntry({ author_name: 'Alice Smith' })], container);
             const avatar = container.querySelector<HTMLElement>('.activity-avatar')!;
             expect(avatar.style.backgroundColor).toBeTruthy();
         });
 
-        it('renders commit SHA from commit_id field', () => {
+        it('renders commit SHA from commit_id field', async () => {
             const sha40 = 'abcdef1234567890abcdef1234567890abcdef12';
-            renderActivityFeed([makeEntry({ commit_id: sha40 })], container);
+            await renderActivityFeed([makeEntry({ commit_id: sha40 })], container);
             const sha = container.querySelector<HTMLElement>('.activity-badge-sha')!;
             expect(sha.textContent).toBe('abcdef1');
         });
 
-        it('handles missing commit_id gracefully', () => {
-            renderActivityFeed([makeEntry({ commit_id: null })], container);
+        it('handles missing commit_id gracefully', async () => {
+            await renderActivityFeed([{ ...makeEntry(), commit_id: null }], container);
             const sha = container.querySelector<HTMLElement>('.activity-badge-sha')!;
             expect(sha.textContent).toBe('');
         });
 
-        it('multiple entries on same date share one header', () => {
-            renderActivityFeed([
+        it('multiple entries on same date share one header', async () => {
+            await renderActivityFeed([
                 makeEntry({ message: 'First' }),
                 makeEntry({ message: 'Second' }),
             ], container);
@@ -432,26 +434,26 @@ describe('Dashboard helpers', () => {
             expect(headers.length).toBe(1);
         });
 
-        it('entries older than yesterday get formatted date label', () => {
+        it('entries older than yesterday get formatted date label', async () => {
             const oldDate = new Date();
             oldDate.setDate(oldDate.getDate() - 5);
-            renderActivityFeed([makeEntry({ authored_date: oldDate.toISOString() })], container);
+            await renderActivityFeed([makeEntry({ authored_date: oldDate.toISOString() })], container);
             const header = container.querySelector<HTMLElement>(':scope > div:not(.activity-row)')!;
             expect(header).not.toBeNull();
             expect(header.textContent).not.toBe('Today');
             expect(header.textContent).not.toBe('Yesterday');
         });
 
-        it('does not filter non-automated commits from SpeleoDB author', () => {
-            renderActivityFeed([
+        it('does not filter non-automated commits from SpeleoDB author', async () => {
+            await renderActivityFeed([
                 makeEntry({ author_name: 'SpeleoDB', message: 'Manual fix' }),
             ], container);
             const rows = container.querySelectorAll('.activity-row');
             expect(rows.length).toBe(1);
         });
 
-        it('short time does not contain "at"', () => {
-            renderActivityFeed([makeEntry()], container);
+        it('short time does not contain "at"', async () => {
+            await renderActivityFeed([makeEntry()], container);
             const short = container.querySelector<HTMLElement>('.activity-time-short')!;
             expect(short.textContent).not.toContain('at');
         });

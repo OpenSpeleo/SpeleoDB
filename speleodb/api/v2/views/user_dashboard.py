@@ -12,8 +12,11 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
 from speleodb.gis.models import ExplorationLead
 from speleodb.gis.models import Landmark
@@ -65,6 +68,55 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
 
     @extend_schema(
         responses={
+            200: response_object(
+                "DashboardStatsResponse",
+                summary=response_object(
+                    "DashboardSummary",
+                    total_projects=serializers.IntegerField(),
+                    total_teams=serializers.IntegerField(),
+                    total_commits=serializers.IntegerField(),
+                    user_commits=serializers.IntegerField(),
+                    total_landmarks=serializers.IntegerField(),
+                    total_gps_tracks=serializers.IntegerField(),
+                    total_stations_created=serializers.IntegerField(),
+                    total_exploration_leads=serializers.IntegerField(),
+                ),
+                projects_by_level=response_object(
+                    "DashboardProjectsByLevel",
+                    ADMIN=serializers.IntegerField(min_value=0),
+                    READ_AND_WRITE=serializers.IntegerField(min_value=0),
+                    READ_ONLY=serializers.IntegerField(min_value=0),
+                ),
+                projects_by_type=serializers.DictField(
+                    child=serializers.IntegerField()
+                ),
+                commits_over_time=response_object(
+                    "DashboardCommitMonth",
+                    month=serializers.CharField(),
+                    total=serializers.IntegerField(),
+                    user=serializers.IntegerField(),
+                    many=True,
+                ),
+                contribution_calendar=serializers.ListField(
+                    child=serializers.DateTimeField()
+                ),
+                recent_activity=response_object(
+                    "DashboardActivity",
+                    commit_id=serializers.CharField(),
+                    project_name=serializers.CharField(),
+                    author_name=serializers.CharField(),
+                    author_email=serializers.CharField(),
+                    message=serializers.CharField(),
+                    project_id=serializers.UUIDField(),
+                    authored_date=serializers.DateTimeField(),
+                    many=True,
+                ),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(
+        responses={
             200: {
                 "type": "object",
                 "properties": {
@@ -79,8 +131,10 @@ class UserDashboardStatsView(GenericAPIView[User], SDBAPIViewMixin):
                     "recent_activity": {"type": "array", "items": {"type": "object"}},
                 },
             },
+            403: API_ERROR,
         },
     )
+    @extend_schema(operation_id="v2_user_dashboard_stats_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 

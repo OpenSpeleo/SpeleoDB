@@ -1,41 +1,22 @@
+import { v2ProjectsGitExplorerRetrieve } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { GitViewContext } from '../../ts-types/controllers/git-view.ts';
 import type { GitTreeResponse, GitTreeFile, GitTreeFolder } from '../../ts-types/domain/project-presentation.ts';
 import { sanitizeUrl } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
-export function init(context: GitViewContext) {
+export async function init(context: GitViewContext) {
     // Ensure the loading spinner is being displayed
        $("#loading_spinner").show();
 
-       /**
-        * jQuery ajax method with async = false, to fetch git tree data
-        * @return {mix} - the git tree information
-        */
-       function fetch_git_tree() {
-          return $.ajax({
-             url: context.endpoint,
-             type : "GET",
-             dataType : "json",
-             async : false,
-             success: function(data: GitTreeResponse){
-                if (data && data.commit && data.project) {
-                   $('#commit-author').text(data.commit.author_name + ": ");
-                   $('#commit-message').text(data.commit.message);
-                   $('#commit-hexsha_short').text(data.commit.hexsha_short);
-                   $('#commit-dt_since').text(data.commit.dt_since);
-                   $('#n-commits-count').text(data.project.n_commits);
-                   return data;
-                }
-                else {
-                   console.log("ERROR: " + (data && data.error ? data.error : "Unknown"));
-                   return null;
-                }
-             },
-             error: function (textStatus, errorThrown) {
-                // Preserve the existing implicit jqXHR coercion in this diagnostic.
-                console.log("ERROR: " + (textStatus as unknown as string) + " & " + errorThrown);
-                return null;
-             }
-          }).responseJSON as GitTreeResponse | undefined;
+       /** Load the generated Git-tree operation without blocking the browser. */
+       async function fetch_git_tree() {
+           const data = await apiData(v2ProjectsGitExplorerRetrieve(context.projectId, context.commit, webApiOptions()));
+           $('#commit-author').text(data.commit.author_name + ': ');
+           $('#commit-message').text(data.commit.message);
+           $('#commit-hexsha_short').text(data.commit.hexsha_short);
+           $('#commit-dt_since').text(data.commit.dt_since);
+           $('#n-commits-count').text(data.project.n_commits ?? 0);
+           return data;
        }
 
        /**
@@ -51,7 +32,7 @@ export function init(context: GitViewContext) {
 
           const normalizedPath = path === "" ? path : path.endsWith("/") ? path : path + "/";
 
-          globalGitTree!.files!.forEach(file => {
+          globalGitTree!.files.forEach(file => {
              if (path === "" || file.path.startsWith(normalizedPath)) {
                 const relativePath = file.path.substring(normalizedPath.length);
                 const parts = path == "" ? relativePath.split('/') : file.path.substring(normalizedPath.length).split("/");
@@ -184,12 +165,14 @@ export function init(context: GitViewContext) {
           });
        }
 
-       // Fetch the Git Tree and store it as a constant for later re-use
-       const globalGitTree = fetch_git_tree();
-
-       if (globalGitTree && Array.isArray(globalGitTree.files)) {
-          refresh_ux("");
+       // Fetch the Git Tree and store it for subsequent folder navigation.
+       let globalGitTree: Awaited<ReturnType<typeof fetch_git_tree>> | undefined;
+       try {
+           globalGitTree = await fetch_git_tree();
+           refresh_ux('');
+       } catch (error) {
+           console.error('Failed to load the Git tree', error);
+       } finally {
+           $('#loading_spinner').hide();
        }
-
-       $("#loading_spinner").hide();
 }

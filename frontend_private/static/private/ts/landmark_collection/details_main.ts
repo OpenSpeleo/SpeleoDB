@@ -1,4 +1,6 @@
-import type { LandmarkCollectionContext, LandmarkCollectionDetailsState, LandmarkBulkResult } from '../../../../../ts-types/domain/landmark-collection-details.ts';
+import { v2LandmarkCollectionsList } from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../../../frontend_common/api/client.ts';
+import type { LandmarkCollectionContext, LandmarkCollectionDetailsState } from '../../../../../ts-types/domain/landmark-collection-details.ts';
 import type { ViewerLandmark } from '../../../../../ts-types/domain/map-entities.ts';
 import type { LandmarkCollectionRecord } from '../../../../../ts-types/domain/landmark-records.ts';
 /**
@@ -67,17 +69,8 @@ function hydrateLandmarks(value: unknown) {
 }
 
 async function loadCollections() {
-    const url = window.Urls?.['api:v2:landmark-collections']?.();
-    if (!url) return [];
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'X-CSRFToken': Utils.getCSRFToken() },
-        });
-        if (!response.ok) return [];
-        const payload: unknown = await response.json();
-        const collections = (Array.isArray(payload) ? payload : []) as LandmarkCollectionRecord[];
+        const collections = await apiData(v2LandmarkCollectionsList(webApiOptions()));
         return collections.map(c => ({
             ...c,
             id: String(c.id),
@@ -211,7 +204,7 @@ function openBulkTransferModal() {
         sourceCollection: state.sourceCollection,
         collections: state.collections,
         onSuccess: value => {
-            const response = value as LandmarkBulkResult | null;
+            const response = value;
             const target = response?.target_collection?.name || 'the new collection';
             Utils.showNotification(
                 'success',
@@ -229,7 +222,7 @@ function openBulkDeleteModal() {
         landmarks,
         sourceCollection: state.sourceCollection,
         onSuccess: value => {
-            const response = value as LandmarkBulkResult | null;
+            const response = value;
             Utils.showNotification(
                 'success',
                 `${response?.deleted ?? landmarks.length} landmark(s) deleted.`,

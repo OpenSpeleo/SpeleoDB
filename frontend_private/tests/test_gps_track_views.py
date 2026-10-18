@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from django.http import HttpResponseRedirect
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
+from frontend_private.tests.controller_context import controller_context
 from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.api.v2.tests.factories import GPSTrackFactory
 from speleodb.api.v2.tests.factories import GPSTrackUserPermissionFactory
@@ -69,13 +71,11 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert "Danger Zone" in content
         assert "Export GPX" in content
         assert 'id="gps_track_details_form"' in content
-        assert (
-            reverse(
-                "api:v2:gps-track-detail",
-                kwargs={"id": self.track.id},
-            )
-            in content
-        )
+        context = controller_context(content, "entity-crud")
+        assert context["resource"] == "gps-track"
+        assert context["entityId"] == str(self.track.id)
+        assert context["formId"] == "gps_track_details_form"
+        assert context["reloadOnSuccess"] is True
 
     def test_reader_gets_read_only_details_and_no_danger_zone(self) -> None:
         reader = UserFactory.create(email="gps-details-reader@example.com")
@@ -103,13 +103,10 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
 
         assert "GPS Track Danger Zone" in content
         assert 'data-speleodb-controller="danger-zone"' in content
-        assert (
-            reverse(
-                "api:v2:gps-track-detail",
-                kwargs={"id": self.track.id},
-            )
-            in content
-        )
+        context = controller_context(content, "danger-zone")
+        assert context["resource"] == "gps-track"
+        assert context["entityId"] == str(self.track.id)
+        assert context["successRedirect"] == reverse("private:gps_tracks")
 
     def test_active_reader_can_view_collaborators_without_mutation_controls(
         self,
@@ -179,13 +176,10 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert f'data-user="{self.user.email}"' not in content
         assert 'data-speleodb-controller="permission-modal"' in content
         assert 'id="permission_modal"' in content
-        assert (
-            reverse(
-                "api:v2:gps-track-permissions",
-                kwargs={"id": self.track.id},
-            )
-            in content
-        )
+        context = controller_context(content, "permission-modal")
+        assert context["resource"] == "gps-track"
+        assert context["entityId"] == str(self.track.id)
+        assert context["fieldName"] == "level"
         assert "Read Only" in content
         assert "Read And Write" in content
         assert "Admin" in content
@@ -300,7 +294,9 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert '<div class="font-semibold text-center">Owner</div>' in content
         assert '<div class="font-semibold text-center">Access Level</div>' in content
         assert 'data-speleodb-controller="gps-tracks"' in content
-        assert reverse("api:v2:gps-tracks") in content
+        assert controller_context(content, "gps-tracks") == {
+            "openIconUrl": static("private/media/right_arrow.svg")
+        }
         assert "right_arrow.svg" in content
         assert 'id="edit-track-modal"' not in content
         assert 'id="delete-track-modal"' not in content

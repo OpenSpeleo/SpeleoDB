@@ -31,7 +31,8 @@
   {% vite_preload 'controller-danger-zone' %}
   <script type="application/json" data-speleodb-controller="danger-zone">
     {
-      "deleteUrl": "{{ api_detail_url }}",
+      "resource": "{{ api_resource }}",
+      "entityId": "{{ api_entity_id }}",
       "successMessage": "{{ danger_success_message|escapejs }}",
       "successRedirect": "{{ listing_url }}"
     }

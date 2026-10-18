@@ -11,7 +11,7 @@
  * Usage:
  *   attachAuthForm({
  *       formId: 'login_form',
- *       endpoint: "{% url 'headless:browser:account:login' %}",
+ *       submit: login,
  *       // optional custom validators that return an error string or null.
  *       validators: [
  *           (payload) => payload.email ? null : "Email is required.",
@@ -43,7 +43,7 @@ export function validateEmail(email: unknown) {
 }
 
 function _defaultErrorMessage(xhr: AuthFailure) {
-    var body = xhr.responseJSON;
+    var body = xhr.data;
     if (!body) { return 'An error occurred. Please try again.'; }
     if ('error' in body) { return body.error; }
     if ('errors' in body && Array.isArray(body.errors) && body.errors.length > 0) {
@@ -54,17 +54,17 @@ function _defaultErrorMessage(xhr: AuthFailure) {
 
 export function attachAuthForm(options: AuthFormOptions) {
     var formId = options.formId;
-    var endpoint = options.endpoint;
+    var submit = options.submit;
     var validators = options.validators || [];
     var onSuccess = options.onSuccess;
     var successMessage = options.successMessage || 'Success!';
     var treat401AsSuccess = Boolean(options.treat401AsSuccess);
     var errorHandler = options.errorHandler;
     var submitBtnId = options.submitBtnId || 'btn_submit';
-    var beforeAjax = options.beforeAjax;  // optional payload mutator; receives (payload, formData)
+    var beforeSubmit = options.beforeSubmit;  // optional payload mutator; receives (payload, formData)
 
     if (!formId) { throw new Error('attachAuthForm: formId is required'); }
-    if (!endpoint) { throw new Error('attachAuthForm: endpoint is required'); }
+    if (typeof submit !== 'function') { throw new Error('attachAuthForm: submit is required'); }
 
     function showError(msg: string | null | undefined) {
         $('#error_div').text(msg as string).show();
@@ -75,7 +75,6 @@ export function attachAuthForm(options: AuthFormOptions) {
     }
 
     $('#' + submitBtnId).click(function () {
-        var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
         var form = document.getElementById(formId!) as HTMLFormElement;
         var formData = new FormData(form);
 
@@ -84,11 +83,11 @@ export function attachAuthForm(options: AuthFormOptions) {
 
         var payload = Object.fromEntries(formData) as AuthPayload;
 
-        // beforeAjax runs first so it can short-circuit (e.g. anti-robot
+        // beforeSubmit runs first so it can short-circuit (e.g. anti-robot
         // modals) or strip fields from the outgoing payload before the
         // regular validators run.
-        if (typeof beforeAjax === 'function') {
-            var cancelled = beforeAjax(payload, formData);
+        if (typeof beforeSubmit === 'function') {
+            var cancelled = beforeSubmit(payload, formData);
             if (cancelled === false) { return false; }
         }
 
@@ -98,38 +97,28 @@ export function attachAuthForm(options: AuthFormOptions) {
             if (err) { showError(err); return false; }
         }
 
-        $.ajax({
-            url: endpoint,
-            method: 'POST',
-            data: JSON.stringify(Object.fromEntries(formData)),
-            contentType: 'application/json; charset=utf-8',
-            cache: false,
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                return true;
-            },
-            success: function () {
+        void Promise.resolve().then(() => submit(payload)).then(function () {
                 if (typeof onSuccess === 'function') {
                     onSuccess();
                 } else {
                     showSuccess(successMessage);
                 }
-            },
-            error: function (xhr) {
+        }, function (error: unknown) {
+                const xhr = error as AuthFailure;
                 if (treat401AsSuccess && xhr.status === 401) {
                     showSuccess(successMessage);
                     return;
                 }
                 var msg: string | null | undefined = null;
                 if (typeof errorHandler === 'function') {
-                    msg = errorHandler(xhr);
+                    try { msg = errorHandler(xhr); }
+                    catch { msg = 'There has been an error ...'; }
                 }
                 if (msg === null || typeof msg === 'undefined') {
                     try { msg = _defaultErrorMessage(xhr); }
                     catch (e) { msg = 'There has been an error ...'; }
                 }
                 showError(msg);
-            },
         });
         return false;
     });

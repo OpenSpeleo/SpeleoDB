@@ -1,3 +1,4 @@
+import { tagFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
 import type { StationRecord, StationTagRecord } from '../../../../../../ts-types/domain/station-records.ts';
 type HtmlPrimitive = string | number | boolean | null | undefined;
 import { StationTags } from './tags.ts';
@@ -164,7 +165,7 @@ describe('StationTags', () => {
             const tag = { id: 'tag-1', name: 'Active', color: '#00ff00' };
             API.setStationTag.mockResolvedValue(tag);
             State.allSurfaceStations.set('surf-1', {
-                id: 'surf-1', network: 'net-1', station_type: 'surface', tag: null,
+                id: 'surf-1', network: 'net-1', station_type: 'surface' as const, tag: null,
             });
 
             await StationTags.setStationTag('surf-1', 'tag-1');
@@ -223,7 +224,7 @@ describe('StationTags', () => {
         });
 
         it('calls Layers.updateSurfaceStationColor for surface stations', () => {
-            const station = { network: 'net-1', station_type: 'surface', tag: { color: '#00ff00' } };
+            const station = { network: 'net-1', station_type: 'surface' as const, tag: { color: '#00ff00' } };
             State.allSurfaceStations.set('surf-1', station);
 
             StationTags.updateStationMarkerColor('surf-1', station as StationRecord);
@@ -255,7 +256,7 @@ describe('StationTags', () => {
     describe('openTagSelector', () => {
         it('inserts tag selector overlay into DOM', () => {
             State.allStations.set('st-1', { id: 'st-1', tag: null });
-            State.userTags = [{ id: 'tag-1', name: 'Important', color: '#ff0000' }];
+            State.userTags = [tagFixture({ id: 'tag-1', name: 'Important', color: '#ff0000' })];
 
             StationTags.openTagSelector('st-1');
 
@@ -270,7 +271,7 @@ describe('StationTags', () => {
 
         it('marks the current tag with a check indicator', () => {
             State.allStations.set('st-1', { id: 'st-1', tag: { id: 'tag-1' } });
-            State.userTags = [{ id: 'tag-1', name: 'Important', color: '#ff0000' }];
+            State.userTags = [tagFixture({ id: 'tag-1', name: 'Important', color: '#ff0000' })];
 
             StationTags.openTagSelector('st-1');
 
@@ -279,7 +280,7 @@ describe('StationTags', () => {
 
         it('shows remove-tag button when station already has a tag', () => {
             State.allStations.set('st-1', { id: 'st-1', tag: { id: 'tag-1' } });
-            State.userTags = [{ id: 'tag-1', name: 'Active', color: '#00ff00' }];
+            State.userTags = [tagFixture({ id: 'tag-1', name: 'Active', color: '#00ff00' })];
 
             StationTags.openTagSelector('st-1');
 
@@ -297,7 +298,7 @@ describe('StationTags', () => {
 
         it('escapes malicious tag names to prevent XSS', () => {
             State.allStations.set('st-1', { id: 'st-1', tag: null });
-            State.userTags = [{ id: 'tag-1', name: '<img onerror=alert(1)>', color: '#ff0000' }];
+            State.userTags = [tagFixture({ id: 'tag-1', name: '<img onerror=alert(1)>', color: '#ff0000' })];
 
             StationTags.openTagSelector('st-1');
 
@@ -308,7 +309,7 @@ describe('StationTags', () => {
 
         it('escapes tag color in style attribute via safeCssColor', () => {
             // A malicious tag color should be rejected by safeCssColor
-            State.userTags = [{ id: 't1', name: 'XSS', color: 'red; background-image: url(https://evil.com)' }];
+            State.userTags = [tagFixture({ id: 't1', name: 'XSS', color: 'red; background-image: url(https://evil.com)' })];
             State.allStations.set('s1', { id: 's1', tag: { id: 't1' } });
             StationTags.openTagSelector('s1');
             const overlay = document.getElementById('tag-selector-overlay')!;

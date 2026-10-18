@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 
 pytest_plugins: tuple[str, ...] = (
+    "speleodb.testing.pytest_api_contract",
     "speleodb.testing.pytest_gitlab",
     "speleodb.testing.gitlab_fixtures",
 )

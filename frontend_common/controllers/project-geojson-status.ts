@@ -1,3 +1,5 @@
+import { v2ProjectGeojsonStatus } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { ProjectGeoJSONStatusContext } from '../../ts-types/controllers/project-geojson-status.ts';
 import type { ProjectGeoJSONStatus } from '../../ts-types/domain/project-geojson-status.ts';
 
@@ -37,8 +39,6 @@ export function renderGeoJSONStatus(root: HTMLElement, data: ProjectGeoJSONStatu
 export async function init(context: ProjectGeoJSONStatusContext) {
     const root = document.getElementById('project-geojson-status');
     if (!root) return;
-    const endpoint = new URL(context.endpoint, window.location.href);
-    if (endpoint.origin !== window.location.origin) throw new Error('Invalid map status endpoint');
     let active = true;
     let pageActive = true;
     let timer: number | null = null;
@@ -69,14 +69,7 @@ export async function init(context: ProjectGeoJSONStatusContext) {
         }, REQUEST_TIMEOUT_MS);
         root!.setAttribute('aria-busy', 'true');
         try {
-            const response = await fetch(endpoint.href, {
-                credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
-                signal: controller.signal,
-            });
-            if (!response.ok) throw new Error('Map status unavailable');
-            // Preserve the existing state guard and unchecked remaining response fields.
-            const payload = await response.json() as ProjectGeoJSONStatus;
+            const payload = await apiData(v2ProjectGeojsonStatus(context.projectId, webApiOptions({ signal: controller.signal, timeoutMs: REQUEST_TIMEOUT_MS })));
             if (controller.signal.aborted) return;
             if (!Object.hasOwn(STATE_MESSAGES, payload?.state)) {
                 throw new Error('Invalid map status');

@@ -48,8 +48,8 @@ describe('fleet template modal visibility', () => {
             saveButtonSelector: `#${kind}_modal_save`,
             cancelSelectors: `#${kind}_modal_close_x`,
             addButtonSelector: '#open-modal',
-            listEndpoint: '/unused/',
-            detailEndpoint: id => `/unused/${id}/`,
+            create: async () => ({}),
+            update: async () => ({}),
             resetForCreate: () => {},
             collectPayload: () => null,
         });

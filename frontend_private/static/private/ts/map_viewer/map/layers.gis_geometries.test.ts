@@ -1,4 +1,5 @@
-import type { GISGeometryResponse } from '../../../../../../ts-types/domain/map-config.ts';
+import { geometryFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
+import type { GISGeometry } from '@speleodb/api';
 import type { RendererLayer, RendererSourceOptions } from '../../../../../../ts-types/domain/renderer.ts';
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
 import { Config, DEFAULTS } from '../config.ts';
@@ -9,8 +10,8 @@ import { Layers } from './layers.ts';
 vi.mock('../api.ts', () => ({ API: { getGISGeometryDetails: vi.fn(), getGISGeometries: vi.fn() } }));
 vi.mock('./geojson.ts', () => ({ computeGeoJSONBounds: () => ({ isEmpty: () => false }) }));
 
-function record(overrides: Partial<GISGeometryResponse> = {}): GISGeometryResponse {
-    return { id: 'g1', name: 'Boundary', color: '#123456', can_write: true, revision: 1,
+function record(overrides: Partial<GISGeometry> = {}): GISGeometry {
+    return { ...geometryFixture(), id: 'g1', name: 'Boundary', color: '#123456', can_write: true, revision: 1,
         geojson: { type: 'LineString', coordinates: [[-87, 20], [-87.001, 20.001]] }, ...overrides };
 }
 
@@ -40,7 +41,7 @@ beforeEach(() => {
 afterEach(() => { State.resetLayerState(); State.map = null; Config._gisGeometries = null; Config.gisGeometriesError = false; vi.restoreAllMocks(); });
 
 it('starts hidden and loads metadata without fetching coordinates', async () => {
-    vi.mocked(API.getGISGeometries).mockResolvedValue([{ id: 'g1', name: 'Boundary', can_write: true, revision: 1 }]);
+    vi.mocked(API.getGISGeometries).mockResolvedValue([geometryFixture()]);
     await Config.loadGISGeometries();
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
     expect(API.getGISGeometryDetails).not.toHaveBeenCalled();
@@ -89,7 +90,7 @@ it('merges a delayed metadata retry with saves without retaining unrelated delet
     Config.upsertGISGeometry(record());
     Config.upsertGISGeometry(record({ id: 'removed' }));
     Config.gisGeometriesError = true;
-    let resolve!: (records: GISGeometryResponse[]) => void;
+    let resolve!: (records: GISGeometry[]) => void;
     vi.mocked(API.getGISGeometries).mockReturnValueOnce(new Promise(done => { resolve = done; }));
     const retry = Config.loadGISGeometries();
     Config.upsertGISGeometry(record({ name: 'Newer save', revision: 2 }));
@@ -114,7 +115,7 @@ it('accepts a newer server revision and updated permissions during metadata retr
 });
 
 it('does not show a delayed load after it was hidden', async () => {
-    let resolve!: (record: GISGeometryResponse) => void;
+    let resolve!: (record: GISGeometry) => void;
     vi.mocked(API.getGISGeometryDetails).mockReturnValue(new Promise(done => { resolve = done; }));
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
     await Layers.toggleGISGeometryVisibility('g1', false);
@@ -151,7 +152,7 @@ it('rebuilds cached overlays after a style reset', async () => {
 });
 
 it('does not let an older pending detail response replace a saved revision', async () => {
-    let resolve!: (record: GISGeometryResponse) => void;
+    let resolve!: (record: GISGeometry) => void;
     vi.mocked(API.getGISGeometryDetails).mockReturnValue(new Promise(done => { resolve = done; }));
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
     void Layers.acceptGISGeometry(record({ name: 'Saved', revision: 2 }));

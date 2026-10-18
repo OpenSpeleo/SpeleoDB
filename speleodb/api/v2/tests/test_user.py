@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import random
 from typing import Any
+from uuid import uuid4
 
+from django.test import override_settings
 from django.urls import reverse
 from django_countries import countries
 from faker import Faker
@@ -13,10 +15,58 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
+from speleodb.testing.api_contract import assert_api_response
+from speleodb.users.models import User
 from speleodb.utils.test_utils import named_product
 
 
 class TestUserAPI(BaseAPITestCase):
+    def test_password_change_throttle_matches_contract(self) -> None:
+        caches = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": f"password-contract-{uuid4()}",
+            }
+        }
+        with override_settings(CACHES=caches):
+            for attempt in range(4):
+                response = self.client.put(
+                    reverse("api:v2:user-password-update"),
+                    {},
+                    format="json",
+                    headers={"authorization": self.auth},
+                )
+                expected = (
+                    status.HTTP_400_BAD_REQUEST
+                    if attempt < 3  # noqa: PLR2004 - Configured three-per-hour quota.
+                    else status.HTTP_429_TOO_MANY_REQUESTS
+                )
+                assert response.status_code == expected, response.content
+                assert_api_response(response)
+            assert 0 < int(response.headers["Retry-After"]) <= 3600  # noqa: PLR2004
+            assert set(response.json()) == {"detail"}
+
+    def test_put_updates_existing_user_and_matches_api_contract(self) -> None:
+        user_count = User.objects.count()
+        response = self.client.put(
+            reverse("api:v2:user-detail"),
+            headers={"authorization": self.auth},
+            data={
+                "email": self.user.email,
+                "name": "Updated Profile Name",
+                "country": "MX",
+                "email_on_projects_updates": False,
+                "email_on_speleodb_updates": True,
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert_api_response(response)
+        self.user.refresh_from_db()
+        assert self.user.name == "Updated Profile Name"
+        assert self.user.country == "MX"
+        assert User.objects.count() == user_count
+
     def test_get_user_info(self) -> None:
         endpoint = reverse("api:v2:user-detail")
 

@@ -1,5 +1,5 @@
 import type entries from './entries.json';
-import type { RolldownOutput } from 'rolldown';
+import type { Rolldown } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -96,7 +96,7 @@ describe('first-party Vite graph', () => {
                 }],
             },
         });
-        const outputResult = result as RolldownOutput | RolldownOutput[];
+        const outputResult = result as Rolldown.RolldownOutput | Rolldown.RolldownOutput[];
         const outputs = Array.isArray(outputResult)
             ? outputResult.flatMap(environment => environment.output)
             : outputResult.output;

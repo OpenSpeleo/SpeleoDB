@@ -1,8 +1,9 @@
+import { geometryFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
 import type { Mock } from 'vitest';
 import type { Feature, Point, LineString } from 'geojson';
 import type { EditorActivity, EditorCollection, EditorFeatureProperties, EditorMap } from '../../../../../../ts-types/domain/geometry-editor-runtime.ts';
 import type { EditableGeometry } from '../../../../../../ts-types/domain/geometry-editor.ts';
-import type { GISGeometryResponse } from '../../../../../../ts-types/domain/map-config.ts';
+import type { GISGeometry } from '@speleodb/api';
 import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
 
 interface TestSource { type: 'geojson'; data: EditorCollection; tolerance: number; setData: Mock<(data: EditorCollection) => void> }
@@ -55,7 +56,7 @@ function gps(latitude: string, longitude: string) {
     GeometryEditor.nodes!.latitude.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-const existing: GISGeometryResponse & { geojson: LineString } = { id: 'geometry-1', name: 'Existing line', color: '#38bdf8', can_write: true, revision: 3, geojson: { type: 'LineString', coordinates: [[0, 0], [0.001, 0.001]] } };
+const existing: GISGeometry & { geojson: LineString } = { ...geometryFixture(), id: 'geometry-1', name: 'Existing line', color: '#38bdf8', can_write: true, revision: 3, geojson: { type: 'LineString', coordinates: [[0, 0], [0.001, 0.001]] } };
 
 describe('native GIS geometry editor', () => {
     const sharedCases = JSON.parse(readFileSync('speleodb/gis/tests/fixtures/gis_geometry_cases.json', 'utf8')) as { id: string; geojson: EditableGeometry }[];
@@ -437,10 +438,10 @@ describe('native GIS geometry editor', () => {
         inputName('Conflicting change');
         API.updateGISGeometry.mockRejectedValue(Object.assign(new Error('Conflict'), { status: 409 }));
         await GeometryEditor.save();
-        inputName(existing.name!);
+        inputName(existing.name);
         expect(GeometryEditor.hasUnsavedChanges()).toBe(false);
         expect(GeometryEditor.nodes!.conflict.hidden).toBe(false);
-        let resolve!: (record: GISGeometryResponse) => void;
+        let resolve!: (record: GISGeometry) => void;
         API.getGISGeometryDetails.mockReturnValue(new Promise(done => { resolve = done; }));
         GeometryEditor.performAction('reload');
         const session = GeometryEditor.session!;

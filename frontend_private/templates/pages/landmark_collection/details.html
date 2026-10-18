@@ -306,8 +306,8 @@
     <script type="application/json" data-speleodb-controller="entity-crud">
       {
         "formId": "landmark_collection_details_form",
-        "endpoint": "{% url 'api:v2:landmark-collection-detail' collection_id=collection.id %}",
-        "method": "PUT",
+        "resource": "landmark-collection",
+        "entityId": "{{ collection.id }}",
         "successMessage": "The landmark collection has been updated.",
         "requiredField": "name",
         "requiredMessage": "Collection name is required.",

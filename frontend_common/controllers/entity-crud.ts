@@ -1,8 +1,9 @@
+import { submitEntity } from '../api/entity-forms.ts';
 import { afterWindowLoad } from '../readiness.ts';
 import { initColorPicker } from '../../frontend_private/static/private/ts/color-picker.ts';
 import { attachEntityCrudForm } from '../../frontend_private/static/private/ts/forms/entity_crud_form.ts';
 import { FormModals } from '../../frontend_private/static/private/ts/forms/modals.ts';
-import type { CreatedEntity, EntityCrudContext, EntityRedirectRoute } from '../../ts-types/controllers/entity-crud.ts';
+import type { EntityCrudContext, EntityRedirectRoute } from '../../ts-types/controllers/entity-crud.ts';
 import type { FormPayload } from '../../ts-types/domain/forms/crud.ts';
 
 const COLOR_PICKER_OPTIONS = {
@@ -58,7 +59,10 @@ function initSensorRows() {
 
 function redirectFromRoute(routeName?: EntityRedirectRoute) {
     if (!routeName) return undefined;
-    return (response: CreatedEntity) => {
+    return (response: unknown) => {
+        if (!response || typeof response !== 'object' || !('id' in response) || (typeof response.id !== 'string' && typeof response.id !== 'number')) {
+            throw new Error('The operation did not return an entity identifier.');
+        }
         const route = window.Urls?.[routeName];
         if (typeof route !== 'function') {
             throw new Error(`Missing Django URL route: ${routeName}`);
@@ -90,24 +94,23 @@ export async function init(context: EntityCrudContext) {
         }
         : undefined;
 
-    const serialize = context.serializeCheckboxes
+    const prepare = context.serializeCheckboxes
         ? (payload: FormPayload) => {
             $(`#${context.formId}`).find('input[type=checkbox]').each(function () {
                 payload[$(this).attr('name') as string] = $(this).is(':checked');
             });
-            return JSON.stringify(payload);
+            return payload;
         }
         : undefined;
 
     attachEntityCrudForm({
         formId: context.formId,
-        endpoint: context.endpoint,
-        method: context.method,
+        submit: payload => submitEntity(context.resource, context.entityId, payload),
         successMessage: context.successMessage,
         successRedirect: context.successRedirect,
         reloadOnSuccess: context.reloadOnSuccess,
         redirectFromResponse: redirectFromRoute(context.redirectRoute),
         beforeSubmit,
-        serialize,
+        prepare,
     });
 }

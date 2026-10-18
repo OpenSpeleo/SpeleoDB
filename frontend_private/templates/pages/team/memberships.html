@@ -228,8 +228,8 @@
   {% block inline_extra_js %}
     <script type="application/json" data-speleodb-controller="permission-modal">
       {
-        "endpoint": "{% url 'api:v2:team-memberships-detail' id=team.id %}",
-        "autocompleteUrl": "{% url 'api:v2:user-autocomplete' %}",
+        "resource": "team",
+        "entityId": "{{ team.id }}",
         "addModalTitle": "Add a member to the team",
         "addModalHeader": "Who would you like to add 🙌 ?",
         "editModalTitle": "How shall we modify this user's access?",

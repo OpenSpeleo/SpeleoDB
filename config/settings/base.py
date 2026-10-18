@@ -95,6 +95,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "speleodb.middleware.HeadlessPhoneFeatureMiddleware",
     # Before django-hijack to log the correct user
     "speleodb.middleware.LastLoginUpdateMiddleware",
     "speleodb.middleware.ViewNameMiddleware",
@@ -198,7 +199,7 @@ if (DEBUG or ALLOW_USER_DEBUG) and not SPELEODB_CELERY_WORKER_RUNTIME:
 
     MIDDLEWARE.insert(
         MIDDLEWARE.index("speleodb.middleware.LastLoginUpdateMiddleware") + 1,
-        "hijack.middleware.HijackUserMiddleware",
+        "speleodb.middleware.HeadlessAwareHijackUserMiddleware",
     )
     HIJACK_URL = env("DJANGO_HIJACK_URL") if not DEBUG else "debug_mode/"
 
@@ -620,7 +621,7 @@ REST_FRAMEWORK = {
         "speleodb.api.v2.authentication.BearerAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "speleodb.api.schema_auto.SpeleoDBAutoSchema",
 }
 
 if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
@@ -633,6 +634,8 @@ if env.bool("DJANGO_DEBUG_DRF_AUTH", default=False):
 # By Default swagger ui is available only to admin user(s). You can change permission classes to change that
 # See more configuration options at https://drf-spectacular.readthedocs.io/en/latest/settings.html#settings
 SPECTACULAR_SETTINGS = {
+    "DEFAULT_GENERATOR_CLASS": "speleodb.api.schema.SpeleoDBSchemaGenerator",
+    "OAS_VERSION": "3.0.3",
     "TITLE": "SpeleoDB API",
     "DESCRIPTION": "Documentation of API endpoints of SpeleoDB",
     "VERSION": "1.0.0",
@@ -650,7 +653,7 @@ SPECTACULAR_SETTINGS = {
     "GENERIC_ADDITIONAL_PROPERTIES": False,
     "TITLE_SUFFIX": "",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SCHEMA_PATH_PREFIX_TRIM": True,
+    "SCHEMA_PATH_PREFIX_TRIM": False,
     "SORT_OPERATION_PARAMETERS": True,
     "PERSIST_AUTH": False,
     # Drop the legacy /api/v1/ mirror routes from the generated schema so they
@@ -660,7 +663,7 @@ SPECTACULAR_SETTINGS = {
         "speleodb.utils.schema_hooks.exclude_legacy_v1_paths",
     ],
     "POSTPROCESSING_HOOKS": [],
-    "COMPONENT_NO_READ_ONLY_REQUIRED": True,
+    "COMPONENT_NO_READ_ONLY_REQUIRED": False,
 }
 
 # Custom Settings

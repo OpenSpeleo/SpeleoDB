@@ -1,3 +1,5 @@
+import { v2GisGeometriesList } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { GISListRecord, GISListContext } from '../../ts-types/controllers/gis-lists.ts';
 import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
 import { buildGISGeometryListMarkup } from '../presentation/gis-overlays.ts';
@@ -6,7 +8,7 @@ export { buildGISGeometryListMarkup } from '../presentation/gis-overlays.ts';
 
 export function init(context: GISListContext) {
     return attachTaggedEntityList<GISListRecord>({
-        listEndpoint: context.listEndpoint,
+        list: () => apiData(v2GisGeometriesList(webApiOptions())),
         entityLabel: 'GIS Geometry',
         loadFailedMessage: 'Unable to load GIS Geometries. Refresh the page to try again.',
         renderList(geometries) {

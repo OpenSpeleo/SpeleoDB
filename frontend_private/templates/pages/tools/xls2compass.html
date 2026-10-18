@@ -189,9 +189,7 @@
 {% endblock right_panel %}
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="xls2compass">
-    {
-      "endpoint": "{% url 'api:v2:tool-xls2compass' %}"
-    }
+    {}
   </script>
   {% if debug %}
     <script src="{% static 'private/ts/vendors/prism.min.js' %}"></script>

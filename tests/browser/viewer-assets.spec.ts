@@ -30,12 +30,17 @@ async function expectLoadedImages(container: Locator, count: number) {
 }
 
 test('shared icons load in survey menus, station manager and station, lead and cylinder dialogs', async ({ page }) => {
-    const stationTypes = ['artifact', 'biology', 'bone', 'geology', 'sensor'];
+    const stationTypes = ['artifact', 'biology', 'bone', 'geology', 'sensor'] as const;
     const stations: StationFeatureCollection = {
         type: 'FeatureCollection',
         features: stationTypes.map((type, index) => ({
             type: 'Feature', id: `40000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-            properties: { type, name: `${type} station`, project: projectId(0) },
+            properties: {
+                type, name: `${type} station`, project: projectId(0),
+                network: null, station_type: 'subsurface', tag: null,
+                description: '', created_by: 'viewer@example.com',
+                creation_date: '2026-01-01T00:00:00Z', modified_date: '2026-01-01T00:00:00Z',
+            },
             geometry: { type: 'Point', coordinates: [-86.99 + index / 10000, 20.005] },
         })),
     };

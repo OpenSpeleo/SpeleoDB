@@ -7,9 +7,12 @@ from typing import Any
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectCreation
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import UserHasLeaderAccess
@@ -35,6 +38,7 @@ class TeamApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     ]
 
     @extend_schema(operation_id="v2_teams_list")
+    @extend_schema(responses={200: SurveyTeamSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = self.get_serializer(
@@ -45,6 +49,10 @@ class TeamApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: SurveyTeamSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_teams_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = self.get_serializer(
@@ -68,6 +76,7 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
     lookup_field = "id"
 
     @extend_schema(operation_id="v2_team_retrieve")
+    @extend_schema(responses={200: SurveyTeamSerializer(), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team = self.get_object()
         user = self.get_user()
@@ -75,6 +84,10 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={200: SurveyTeamSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_teams_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team: SurveyTeam = self.get_object()
         user = self.get_user()
@@ -91,6 +104,10 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(
+        responses={200: SurveyTeamSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_teams_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         team = self.get_object()
         user = self.get_user()
@@ -108,6 +125,15 @@ class TeamSpecificApiView(GenericAPIView[SurveyTeam], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "TeamSpecificApiViewDeleteResponse", id=serializers.UUIDField()
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_teams_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Soft-delete: we do not hard-delete the team. Mirroring
         # `ProjectSpecificApiView.delete` (`speleodb/api/v2/views/project.py`):

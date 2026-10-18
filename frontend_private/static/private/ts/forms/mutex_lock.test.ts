@@ -7,6 +7,8 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { attachMutexLock } from './mutex_lock.ts';
+import { createApiClient, v2ProjectsAcquireCreate, v2ProjectsReleaseCreateWithJson } from '@speleodb/api';
+import { apiData } from '../../../../../frontend_common/api/client.ts';
 
 const JQUERY_SOURCE = readFileSync(new URL(
     '../../../../../frontend_public/static/ts/vendors/jquery-3.7.1.js', import.meta.url,
@@ -59,7 +61,6 @@ describe('project mutex actions over HTTP', () => {
             document: dom.window.document,
             $: (dom.window as typeof dom.window & { jQuery: JQueryStatic }).jQuery,
         });
-        $(document).on('ajaxComplete', () => events.push('complete'));
     });
 
     afterEach(async () => {
@@ -75,8 +76,15 @@ describe('project mutex actions over HTTP', () => {
         expect(browserErrors).toEqual([]);
     });
 
-    function ajaxComplete() {
-        return new Promise(resolve => $(document).one('ajaxComplete', resolve));
+    function operations() {
+        const client = createApiClient({
+            baseUrl: dom.window.location.origin,
+            headers: () => ({ 'X-CSRFToken': document.querySelector<HTMLInputElement>('input[name=csrfmiddlewaretoken]')!.value }),
+        });
+        return {
+            acquire: () => apiData(v2ProjectsAcquireCreate('test', { client })),
+            release: () => apiData(v2ProjectsReleaseCreateWithJson('test', {}, { client })),
+        };
     }
 
     function respond(response: ServerResponse, status: number, body: unknown) {
@@ -85,15 +93,14 @@ describe('project mutex actions over HTTP', () => {
     }
 
     it('acquires with CSRF and reloads immediately, suppressing duplicate clicks while pending', async () => {
-        attachMutexLock({ lockUrl: '/acquire/', reloadDelayMs: 2000 });
+        attachMutexLock({ acquire: operations().acquire, reloadDelayMs: 2000 });
         const button = (document.getElementById('btn_lock_project') as HTMLButtonElement);
         const received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
-        const completed = ajaxComplete();
 
         button.click();
         const [request, response] = await received;
         expect(request.method).toBe('POST');
-        expect(request.url).toBe('/acquire/');
+        expect(request.url).toBe('/api/v2/projects/test/acquire/');
         expect(request.headers['x-csrftoken']).toBe('mutex-csrf-token');
         expect(button.disabled).toBe(true);
         expect(events).toEqual([]);
@@ -102,59 +109,54 @@ describe('project mutex actions over HTTP', () => {
         $(button).triggerHandler('click');
 
         respond(response, 200, { success: true });
-        await completed;
-        expect(events).toEqual(['reload', 'complete']);
+        await vi.waitFor(() => expect(events).toEqual(['reload']));
         expect(requests).toHaveLength(1);
         expect(button.disabled).toBe(true);
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('none');
     });
 
     it('shows escaped API errors and allows retry without navigating away', async () => {
-        attachMutexLock({ lockUrl: '/acquire/' });
+        attachMutexLock({ acquire: operations().acquire });
         const button = (document.getElementById('btn_lock_project') as HTMLButtonElement);
         let received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
-        let completed = ajaxComplete();
         button.click();
         const [, failureResponse] = await received;
         const message = '<img src=x onerror="alert(1)"> already owns this lock';
         respond(failureResponse, 409, { detail: message });
-        await completed;
+        await vi.waitFor(() => expect(button.disabled).toBe(false));
 
-        expect(events).toEqual(['complete']);
+        expect(events).toEqual([]);
         expect(button.disabled).toBe(false);
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe(message);
         expect(document.querySelector('#modal_error_txt img')).toBeNull();
 
         received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
-        completed = ajaxComplete();
         button.click();
         const [retryRequest, retryResponse] = await received;
-        expect(retryRequest.url).toBe('/acquire/');
+        expect(retryRequest.url).toBe('/api/v2/projects/test/acquire/');
         expect(button.disabled).toBe(true);
         respond(retryResponse, 200, { success: true });
-        await completed;
-        expect(events).toEqual(['complete', 'reload', 'complete']);
+        await vi.waitFor(() => expect(events).toEqual(['reload']));
         expect(requests).toHaveLength(2);
     });
 
     it('keeps the existing unlock success modal and deferred reload', async () => {
-        attachMutexLock({ unlockUrl: '/release/', reloadDelayMs: 1 });
+        attachMutexLock({ release: operations().release, reloadDelayMs: 100 });
         const received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
-        const completed = ajaxComplete();
         document.querySelector<HTMLButtonElement>('.btn_unlock')!.click();
         const [request, response] = await received;
         expect(request.method).toBe('POST');
-        expect(request.url).toBe('/release/');
+        expect(request.url).toBe('/api/v2/projects/test/release/');
         expect(request.headers['x-csrftoken']).toBe('mutex-csrf-token');
         const reloaded = new Promise(resolve => dom.virtualConsole.on('jsdomError', resolve));
         respond(response, 200, { success: true });
-        await completed;
-        expect(events).toEqual(['complete']);
+        await vi.waitFor(() => expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex'));
+        expect(events).toEqual([]);
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_success_txt') as HTMLElement).textContent)
             .toBe('The project has been unlocked for edition.');
         await reloaded;
-        expect(events).toEqual(['complete', 'reload']);
+        expect(events).toEqual(['reload']);
     });
 });

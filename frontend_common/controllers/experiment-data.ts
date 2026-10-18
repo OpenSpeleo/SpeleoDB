@@ -1,3 +1,5 @@
+import { v2ExperimentsRetrieve, v2GisOgcExperimentRetrieve, v2ExperimentsExportExcelRetrieve } from '@speleodb/api';
+import { apiData, ApiRequestError, webApiOptions } from '../api/client.ts';
 import type { ExperimentDataContext } from '../../ts-types/controllers/experiment-data.ts';
 import type { ExperimentTableField, ExperimentTableRow, ExperimentTableFeature, ExperimentTableDefinition, ExperimentTableGeoJSON } from '../../ts-types/domain/experiment-table.ts';
 import type { AgGridApi, AgGridOptions } from '../../ts-types/browser/ag-grid.d.ts';
@@ -22,17 +24,8 @@ export async function init(context: ExperimentDataContext) {
                 showLoading();
 
                 // First, fetch experiment details to get field definitions
-                const experimentResponse = await fetch(
-                    Urls["api:v2:experiment-detail"](experimentId),
-                    { credentials: 'same-origin' }
-                );
-
-                if (!experimentResponse.ok) {
-                    throw new Error(`Failed to fetch experiment details: ${experimentResponse.status}`);
-                }
-
-                const experimentData = await experimentResponse.json() as ExperimentTableDefinition;
-                experimentFields = experimentData.data?.experiment_fields || experimentData.experiment_fields || [];
+                const experimentData = await apiData(v2ExperimentsRetrieve(String(experimentId), webApiOptions()));
+                experimentFields = experimentData.experiment_fields;
 
                 // Sort fields by order parameter
                 if (Array.isArray(experimentFields)) {
@@ -44,14 +37,7 @@ export async function init(context: ExperimentDataContext) {
                 }
 
                 // Fetch GeoJSON data from the API
-                const apiUrl = context.dataUrl;
-                const response = await fetch(apiUrl);
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
-                }
-
-                const geojsonData = await response.json() as ExperimentTableGeoJSON;
+                const geojsonData = await apiData(v2GisOgcExperimentRetrieve(context.gisToken, webApiOptions()));
 
                 if (!geojsonData || !geojsonData.features || !Array.isArray(geojsonData.features)) {
                     throw new Error('Invalid GeoJSON data format');
@@ -225,20 +211,8 @@ export async function init(context: ExperimentDataContext) {
                 `);
 
                 // Call export API
-                const response = await fetch(
-                    Urls['api:v2:experiment-export-excel'](experimentId),
-                    {
-                        method: 'GET',
-                        headers: {
-                            'X-CSRFToken': context.csrfToken,
-                        },
-                        credentials: 'same-origin',
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`Export failed: ${response.status} ${response.statusText}`);
-                }
+                const response = await v2ExperimentsExportExcelRetrieve(String(experimentId), webApiOptions());
+                if (response.kind !== 'documented' || response.status !== 200) throw new ApiRequestError(response);
 
                 // Get filename from Content-Disposition header
                 const contentDisposition = response.headers.get('Content-Disposition');
@@ -252,7 +226,7 @@ export async function init(context: ExperimentDataContext) {
                 }
 
                 // Download file with proper MIME type
-                const blob = await response.blob();
+                const blob = response.data;
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;

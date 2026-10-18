@@ -1,3 +1,5 @@
+import { CylinderInstallRequestUnitSystem, CylinderPressureCheckRequestUnitSystem, PatchedCylinderInstallRequestStatus } from '@speleodb/api';
+import { choice } from '../../../../../../frontend_common/api/entity-forms.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { CylinderFleetRecord, CylinderRecord, CylinderInstallDetails, CylinderInstallWrite, PressureCheckWrite } from '../../../../../../ts-types/domain/fleet-records.ts';
 import type { CylinderStatusConfirmation } from '../../../../../../ts-types/domain/station-cylinders.ts';
@@ -400,13 +402,13 @@ async function handleInstall() {
 
     try {
         const installData: CylinderInstallWrite = {
-            project: projectId,
+            project: String(projectId),
             cylinder: cylinderId,
             latitude: latitude as string,
             longitude: longitude as string,
             location_name: locationName,
             install_date: installDate,
-            unit_system: unitSystem || 'metric',
+            unit_system: choice(CylinderInstallRequestUnitSystem, unitSystem || 'metric'),
         };
 
         if (distance) {
@@ -490,7 +492,7 @@ function renderCylinderDetails(install: CylinderInstallDetails) {
                 <div>
                     <h3 class="text-lg font-semibold text-white">${Utils.escapeHtml(install.cylinder_name) || 'Unnamed Cylinder'}</h3>
                     <p class="text-slate-400 text-sm">${Utils.escapeHtml(install.location_name) || 'Unknown location'}</p>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium mt-1 ${statusColors[install.status as keyof typeof statusColors] || 'bg-srgb-slate-500-20 text-slate-400'}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium mt-1 ${statusColors[install.status] || 'bg-srgb-slate-500-20 text-slate-400'}">
                         ${Utils.escapeHtml(install.status?.toUpperCase() || 'UNKNOWN')}
                     </span>
                 </div>
@@ -697,7 +699,7 @@ async function renderPressureChecksTab(installId: EntityId, contentEl: HTMLEleme
                                     // Use check_date if available, fallback to creation_date
                                     const checkDate = check.check_date
                                         ? new Date(check.check_date).toLocaleDateString()
-                                        : new Date(check.creation_date as string).toLocaleDateString();
+                                        : new Date(check.creation_date).toLocaleDateString();
                                     // Escape user-controlled fields to prevent XSS
                                     const safeUser = Utils.escapeHtml(check.user) || 'Unknown';
                                     const safeNotes = Utils.escapeHtml(check.notes) || '-';
@@ -831,7 +833,7 @@ async function savePressureCheck(installId: EntityId) {
         await API.createCylinderPressureCheck(installId, {
             check_date: checkDate,
             pressure: parseInt(pressure, 10),
-            unit_system: unitSystem as string,
+            unit_system: choice(CylinderPressureCheckRequestUnitSystem, unitSystem),
             notes: notes || ''
         });
 
@@ -961,7 +963,7 @@ async function updatePressureCheck(installId: EntityId, checkId: EntityId) {
         await API.updateCylinderPressureCheck(installId, checkId, {
             check_date: checkDate,
             pressure: parseInt(pressure, 10),
-            unit_system: unitSystem as string,
+            unit_system: choice(CylinderPressureCheckRequestUnitSystem, unitSystem),
             notes: notes || ''
         });
 
@@ -1053,7 +1055,7 @@ function showStatusConfirmModal(installId: EntityId, status: string, config: Cyl
                 confirmBtn.disabled = true;
 
                 try {
-                    await API.updateCylinderInstall(installId, { status });
+                    await API.updateCylinderInstall(installId, { status: choice(PatchedCylinderInstallRequestStatus, status) });
 
                     Modal.close(modalId);
                     Utils.showNotification('success', config.successMessage);

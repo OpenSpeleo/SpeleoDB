@@ -1,26 +1,12 @@
 interface PermissionRequestOptions {
-    endpoint: string | undefined;
-    method: string;
-    data: string;
-    csrfToken: string;
-    validate?: (this: unknown, xhr: JQuery.jqXHR<unknown>, settings: JQuery.AjaxSettings<unknown>) => boolean;
-    success: NonNullable<JQuery.AjaxSettings<unknown>['success']>;
-    error: NonNullable<JQuery.AjaxSettings<unknown>['error']>;
+    request: () => Promise<unknown>;
+    validate?: () => boolean;
+    success: () => void;
+    error: (error: unknown) => void;
 }
 
-/** Shared user/team request mechanics; validation and modal policy stay with each owner. */
+/** Shared permission form lifecycle; callers supply typed generated operations. */
 export function sendPermissionRequest(options: PermissionRequestOptions): void {
-    $.ajax({
-        url: options.endpoint,
-        method: options.method,
-        data: options.data,
-        contentType: 'application/json; charset=utf-8',
-        cache: false,
-        beforeSend: function (xhr, settings) {
-            xhr.setRequestHeader('X-CSRFToken', options.csrfToken);
-            return options.validate ? options.validate.call(this, xhr, settings) : true;
-        },
-        success: options.success,
-        error: options.error,
-    });
+    if (options.validate?.() === false) return;
+    void options.request().then(options.success, options.error);
 }

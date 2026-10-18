@@ -15,12 +15,9 @@ import type { GisViewCommit, GisViewFormOptions, GisViewProject, GisViewSelected
  *
  * Usage:
  *   attachGisViewForm({
- *       endpoint: "{% url 'api:v2:gis-views' %}",   // or gis-view-detail for edit
- *       method: 'POST',                             // or 'PUT'
- *       projectsEndpoint: "{% url 'api:v2:projects' %}",
- *       commitsEndpointBuilder: function (projectId) {
- *           return Urls['api:v2:project-geojson-commits'](projectId);
- *       },
+ *       projects: () => loadProjects(),
+ *       commits: projectId => loadProjectCommits(projectId),
+ *       save: payload => saveGISView(payload),
  *       // fired on success; receives the server's raw JSON response.
  *       onSuccess: function (data) {
  *           window.location.href = Urls['private:gis_view_details'](data.id);
@@ -38,32 +35,22 @@ import type { GisViewCommit, GisViewFormOptions, GisViewProject, GisViewSelected
  *       successMessage: 'The GIS view has been saved.',
  *   });
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal, Utils.safeHtml
+ * Requires: jQuery, FormModals, showApiErrorModal, Utils.safeHtml
  * (for escaping project names into `<option>` text).
  */
 
 import { escapeHtml } from '../xss-helpers.ts';
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
-
-function _gvfGetCSRFToken() {
-    var cookieMatch = document.cookie
-        .split('; ')
-        .filter(function (row) { return row.indexOf('csrftoken=') === 0; })[0];
-    if (cookieMatch) { return cookieMatch.split('=')[1]!; }
-    var $input = $('input[name^=csrfmiddlewaretoken]').first();
-    return $input.length ? $input.val() as string : '';
-}
 
 function _gvfEscape(value: unknown) {
     return escapeHtml(value);
 }
 
 export function attachGisViewForm<Response = unknown>(options: GisViewFormOptions<Response>) {
-    var endpoint = options.endpoint;
-    var method = options.method || 'POST';
-    var projectsEndpoint = options.projectsEndpoint;
-    var commitsEndpointBuilder = options.commitsEndpointBuilder;
+    var save = options.save;
+    var loadProjects = options.loadProjects;
+    var loadCommits = options.loadCommits;
     var onSuccess = options.onSuccess;
     var seedFromExistingRows = Boolean(options.seedFromExistingRows);
     var projectCounter = options.initialProjectCounter || 0;
@@ -71,10 +58,8 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
     var successMessage = options.successMessage || 'The GIS view has been saved.';
     var reloadDelayMs = typeof options.reloadDelayMs === 'number' ? options.reloadDelayMs : 2000;
 
-    if (!endpoint) { throw new Error('attachGisViewForm: endpoint is required'); }
-    if (!projectsEndpoint) { throw new Error('attachGisViewForm: projectsEndpoint is required'); }
-    if (typeof commitsEndpointBuilder !== 'function') {
-        throw new Error('attachGisViewForm: commitsEndpointBuilder must be function(projectId)');
+    if (typeof save !== 'function' || typeof loadProjects !== 'function' || typeof loadCommits !== 'function') {
+        throw new Error('attachGisViewForm: generated operation callbacks are required');
     }
 
     var availableProjects: GisViewProject[] = [];
@@ -100,13 +85,9 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
 
     async function loadUserProjects() {
         try {
-            var response = await fetch(projectsEndpoint!, {
-                headers: { 'X-CSRFToken': _gvfGetCSRFToken() },
-                credentials: 'same-origin',
-            });
-            var data: unknown = await response.json();
+            var data = await loadProjects();
             if (Array.isArray(data)) {
-                availableProjects = (data as GisViewProject[]).slice().sort(function (a, b) {
+                availableProjects = (data).slice().sort(function (a, b) {
                     return (a.name || '').localeCompare(b.name || '');
                 });
             }
@@ -118,14 +99,10 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
     async function loadCommitsForProject(projectId: string, $select: JQuery<HTMLElement>, initialSha?: string) {
         $select.html('<option value="">Loading commits...</option>').prop('disabled', true);
         try {
-            var response = await fetch(commitsEndpointBuilder!(projectId), {
-                headers: { 'X-CSRFToken': _gvfGetCSRFToken() },
-                credentials: 'same-origin',
-            });
-            var data: unknown = await response.json();
+            var data = await loadCommits(projectId);
             if (Array.isArray(data) && data.length > 0) {
                 $select.html('<option value="">Select a commit...</option>');
-                (data as GisViewCommit[]).forEach(function (commit) {
+                (data).forEach(function (commit) {
                     var date = (commit.commit_date || '').split('T')[0];
                     var commitSha = commit.commit_sha || '';
                     var shortSha = commitSha.substring(0, 8);
@@ -313,32 +290,16 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
             return false;
         }
 
-        var csrftoken = _gvfGetCSRFToken();
-
-        $.ajax({
-            url: endpoint,
-            method: method,
-            data: JSON.stringify(payload),
-            contentType: 'application/json; charset=utf-8',
-            cache: false,
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                return true;
-            },
-            success: function (data: unknown) {
+        void save(payload).then(function (data) {
                 FormModals.showSuccess(successMessage);
                 window.setTimeout(function () {
                     if (typeof onSuccess === 'function') {
-                        onSuccess(data as Response);
+                        onSuccess(data);
                     } else {
                         window.location.reload();
                     }
                 }, reloadDelayMs);
-            },
-            error: function (xhr) {
-                showAjaxErrorModal(xhr);
-            },
-        });
+        }).catch(showApiErrorModal);
         return false;
     });
 

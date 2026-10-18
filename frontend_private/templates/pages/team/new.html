@@ -94,8 +94,7 @@
   <script type="application/json" data-speleodb-controller="entity-crud">
     {
       "formId": "new_team_form",
-      "endpoint": "{% url 'api:v2:teams' %}",
-      "method": "POST",
+      "resource": "team",
       "successMessage": "The team has been created.",
       "successRedirect": "{% url 'private:teams' %}"
     }

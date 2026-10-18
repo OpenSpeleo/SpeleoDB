@@ -183,8 +183,7 @@
   <script type="application/json" data-speleodb-controller="entity-crud">
     {
       "formId": "new_project_form",
-      "endpoint": "{% url 'api:v2:projects' %}",
-      "method": "POST",
+      "resource": "project",
       "successMessage": "The project has been created.",
       "redirectRoute": "private:project_details",
       "colorPicker": true

@@ -1,3 +1,5 @@
+import { setBrowserUrl, startApiServer } from './api-server.ts';
+import type { ApiTestReply } from './api-server.ts';
 import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
 import type { GlobeAtmosphereMap } from '@speleodb/map-viewer';
 import type { CustomLayerInterface, SkySpecification } from 'maplibre-gl';
@@ -94,13 +96,18 @@ class VendorMap implements GlobeAtmosphereMap {
 let map: VendorMap;
 function captureMap(value: VendorMap) { map = value; }
 let requests: string[];
-let responses: Map<string, unknown>;
-const project = { id: 'project', name: 'Survey', color: '#22c55e', country: 'US', permission: 'READ_ONLY', geojson_url: '/survey.geojson', geojson_file: '/survey.geojson' };
+let responses: Map<string, ApiTestReply>;
+let server: Awaited<ReturnType<typeof startApiServer>>;
+beforeAll(async () => { server = await startApiServer(); });
+afterAll(async () => { await server.close(); });
+const project = { id: 'project', name: 'Survey', color: '#22c55e', country: 'US', permission: 'READ_ONLY', geojson_file: '/survey.geojson' };
 const survey = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { depth: 12 }, geometry: { type: 'LineString', coordinates: [[-87, 20], [-86.9, 20.1]] } }] };
 const emptyGeoJSON = { type: 'FeatureCollection', features: [] };
 let listeners: { target: EventTarget; type: string; handler: EventListenerOrEventListenerObject; options?: boolean | AddEventListenerOptions | undefined }[];
 beforeEach(() => {
-    vi.useFakeTimers();
+    server.reset();
+    setBrowserUrl(server.origin);
+    project.geojson_file = `${server.origin}/survey.geojson`;
     document.body.innerHTML = '<div id="map-viewer-shell"><div id="loading-overlay"><span id="loading-progress"></span></div><div id="map"><canvas></canvas></div></div>';
     localStorage.clear();
     State.resetLayerState();
@@ -122,29 +129,11 @@ beforeEach(() => {
             original(type, handler, options);
         });
     }
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-        requests.push(url);
-        const response = responses.get(url);
-        if (response instanceof Response) return response.clone();
-        return Response.json(responses.get(url) ?? (url.includes('view-geojson') ? { projects: [], view_name: 'Public' } : url.endsWith('-geojson') ? emptyGeoJSON : []));
-    }));
-    vi.stubGlobal('Urls', {
-        'api:v2:projects': () => '/projects',
-        'api:v2:subsurface-stations-geojson': () => '/stations-geojson',
-        'api:v2:landmark-collections': () => '/collections',
-        'api:v2:landmarks-geojson': () => '/landmarks-geojson',
-        'api:v2:exploration-lead-all-geojson': () => '/leads-geojson',
-        'api:v2:cylinder-installs-geojson': () => '/cylinders-geojson',
-        'api:v2:station-tags': () => '/tags',
-        'api:v2:station-tag-colors': () => '/tag-colors',
-
-        'api:v2:surface-networks': () => '/networks',
-        'api:v2:gps-tracks': () => '/gps',
-        'api:v2:gis-layers': () => '/gis-layers',
-        'api:v2:gis-geometry-list': () => '/geometries',
-        'api:v2:all-projects-geojson': () => '/metadata',
-        'api:v2:gis-ogc:view-geojson': (token: string) => `/view-geojson/${token}`,
+    server.handle(request => {
+        requests.push(request.path);
+        return responses.get(request.path) ?? { json: request.path.includes('/gis-ogc/')
+            ? { projects: [], view_name: 'Public' }
+            : request.path.endsWith('/geojson/') && request.path !== '/api/v2/projects/geojson/' ? emptyGeoJSON : [] };
     });
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     vi.stubGlobal('__mapRenderer', {
@@ -158,6 +147,7 @@ beforeEach(() => {
     });
 });
 afterEach(async () => {
+    await new Promise(resolve => setTimeout(resolve, 20));
     GeometryEditor.destroy(); ProjectPanel.destroy(); GPSTracksPanel.destroy(); GISLayersPanel.destroy(); GISGeometriesPanel.destroy();
     DepthLegend.destroy();
     MapSettings.destroy();
@@ -176,7 +166,8 @@ afterEach(async () => {
 it('composes the real private modules and starts six independent metadata requests before map load', async () => {
     configureRuntimeContext({ mapboxToken: '', icons: {} });
     await initPrivateMapViewer();
-    expect(requests).toEqual(['/projects', '/networks', '/gps', '/gis-layers', '/geometries', '/metadata']);
+    await vi.waitFor(() => expect(requests).toHaveLength(6));
+    expect(requests).toEqual(['/api/v2/projects/', '/api/v2/surface-networks/', '/api/v2/gps_tracks/', '/api/v2/gis-layers/', '/api/v2/gis-geometries/', '/api/v2/projects/geojson/']);
     expect(State.map).toBe(map);
     expect(document.querySelector('.measurement-control')).not.toBeNull();
     expect(document.getElementById('map-source-control')).not.toBeNull();
@@ -188,7 +179,8 @@ it('composes the real private modules and starts six independent metadata reques
 it('composes the real public modules without private tools and starts its request before map load', async () => {
     configureRuntimeContext({ viewMode: 'public', gisToken: 'shared', allowPreciseZoom: false });
     await initPublicGISViewer();
-    expect(requests).toEqual(['/view-geojson/shared']);
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests).toEqual(['/api/v2/gis-ogc/view/shared/geojson']);
     expect(State.map).toBe(map);
     expect(map.maxZoom).toBe(13);
     expect(document.getElementById('map-source-control')).not.toBeNull();
@@ -208,11 +200,11 @@ async function sourceChanged(reloadRequired: boolean) {
 
 it.each(['private', 'public'] as const)('hydrates the real %s viewer and restores survey sources after a style replacement', async mode => {
     vi.useRealTimers();
-    responses.set('/projects', [project]);
-    responses.set('/metadata', [project]);
-    responses.set('/survey.geojson', survey);
-    responses.set('/tag-colors', { colors: ['#22c55e'] });
-    responses.set('/view-geojson/shared', { projects: [project], view_name: 'Public' });
+    responses.set('/api/v2/projects/', { json: [project] });
+    responses.set('/api/v2/projects/geojson/', { json: [project] });
+    responses.set('/survey.geojson', { json: survey });
+    responses.set('/api/v2/station_tags/colors/', { json: { colors: ['#22c55e'] } });
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: { projects: [project], view_name: 'Public' } });
     configureRuntimeContext(mode === 'public'
         ? { viewMode: 'public', gisToken: 'shared', allowPreciseZoom: false }
         : { icons: {} });
@@ -247,35 +239,36 @@ it.each(['private', 'public'] as const)('hydrates the real %s viewer and restore
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(State.projectBounds.has('project')).toBe(true);
     expect(requests.filter(url => url === '/survey.geojson')).toHaveLength(2);
-    expect(requests.filter(url => url === (mode === 'public' ? '/view-geojson/shared' : '/projects'))).toHaveLength(1);
+    expect(requests.filter(url => url === (mode === 'public' ? '/api/v2/gis-ogc/view/shared/geojson' : '/api/v2/projects/'))).toHaveLength(1);
     expect(map.fits).toHaveLength(1);
     if (mode === 'public') {
         expect(requests.some(url => /stations|collections|cylinders|tags/.test(url))).toBe(false);
         expect(map.handlers.has('contextmenu')).toBe(false);
     } else {
-        expect(requests).toContain('/stations-geojson');
-        expect(requests).toContain('/landmarks-geojson');
+        expect(requests).toContain('/api/v2/stations/subsurface/geojson/');
+        expect(requests).toContain('/api/v2/landmarks/geojson/');
     }
 });
 
 it('consumes a failed public prefetch and retries through the real source-change lifecycle', async () => {
     vi.useRealTimers();
-    responses.set('/view-geojson/shared', Response.json({ detail: 'Unavailable' }, { status: 503, statusText: 'Unavailable' }));
-    responses.set('/survey.geojson', survey);
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { status: 503, json: { detail: 'Unavailable' } });
+    responses.set('/survey.geojson', { json: survey });
     configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
     await initPublicGISViewer();
     await map.fire('style.load');
     await map.fire('load');
     await ViewerUpdates.whenIdle();
-    expect(requests).toEqual(['/view-geojson/shared']);
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests).toEqual(['/api/v2/gis-ogc/view/shared/geojson']);
     expect(Config.projects).toEqual([]);
     expect(map.getSource('project-geojson-project')).toBeUndefined();
     expect(document.body.textContent).toContain('Failed to load map data');
     expect(document.querySelector('#loading-overlay')?.classList.contains('pointer-events-none')).toBe(true);
 
-    responses.set('/view-geojson/shared', { projects: [project], view_name: 'Recovered' });
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: { projects: [project], view_name: 'Recovered' } });
     await sourceChanged(true);
-    expect(requests).toEqual(['/view-geojson/shared', '/view-geojson/shared', '/survey.geojson']);
+    expect(requests).toEqual(['/api/v2/gis-ogc/view/shared/geojson', '/api/v2/gis-ogc/view/shared/geojson', '/survey.geojson']);
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(Config.projects.map(item => item.id)).toEqual(['project']);
     expect(map.fits).toEqual([]);

@@ -1,7 +1,8 @@
+import { v2ProjectsUpload } from '@speleodb/api';
+import { ApiRequestError, webApiOptions } from '../api/client.ts';
 import type { ProjectUploadContext } from '../../ts-types/controllers/project-upload.ts';
-import type { ProjectUploadResponse } from '../../ts-types/domain/project-presentation.ts';
 import { afterWindowLoad } from '../readiness.ts';
-import { showAjaxErrorModal } from '../../frontend_private/static/private/ts/forms/ajax_errors.ts';
+import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
 import { escapeHtml } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
 export async function init(context: ProjectUploadContext) {
@@ -132,65 +133,39 @@ export async function init(context: ProjectUploadContext) {
                 return false;
               }
 
-              var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
-
-              var formData = new FormData();
-              filesArray.forEach((file, index) => {
-                formData.append("artifact", file);
-              });
-              formData.append("message", $('#message').val() as string);
+              if (($('#message').val() as string).length > 125) {
+                $("#modal_error_txt").text("The `message` is too long. Maximum 125 characters.");
+                $("#modal_error").css('display', 'flex');
+                return false;
+              }
 
               $("#error_div").hide();
               $("#success_div").hide();
-
-              $.ajax({
-                url: context.endpoint,
-                method: "PUT",
-                data: formData,
-                contentType: false,
-                processData: false,
-                cache: false,
-                beforeSend: function(xhr) {
-                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
-
-                  if (($("#message").val() as string).length > 125) {
-                    $("#modal_error_txt").text("The `message` is too long. Maximum 125 characters.");
-                    $("#modal_error").css('display', 'flex');
-                    return false;
-                  }
-
-                  $("#loading_spinner").show();
-
-                  return true;
-
-                },
-                success: function(data: unknown, textStatus, xhr) {
-                  $("#loading_spinner").hide();
-
-                  if (xhr.status === 304) {
-                    $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
-                    $("#modal_error").css('display', 'flex');
-                  } else {
-                    const status = (data as ProjectUploadResponse).geojson_status;
-                    const message = status === 'pending'
-                      ? 'Upload saved. The map will update in the background.'
-                      : status === 'unavailable'
-                        ? 'Upload saved. Map generation is currently unavailable.'
-                        : 'The files have been successfully uploaded.';
-                    $("#modal_success_txt").text(message);
-                    $("#modal_success").css('display', 'flex');
-
-                    window.setTimeout(function() {
-                      // Redirect to project revisions
-                      window.location.href = (data as ProjectUploadResponse).browser_url;
-                    }, 2000);
-                  }
-                },
-                error: function(data) {
-                  $("#loading_spinner").hide();
-                  showAjaxErrorModal(data);
+              $("#loading_spinner").show();
+              v2ProjectsUpload(context.projectId, 'auto', {
+                artifact: filesArray,
+                message: $('#message').val() as string,
+              }, webApiOptions()).then(response => {
+                if (response.kind !== 'documented') throw new ApiRequestError(response);
+                if (response.status === 304) {
+                  $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");
+                  $("#modal_error").css('display', 'flex');
+                  return;
                 }
-              });
+                if (response.status !== 200) throw new ApiRequestError(response);
+                const data = response.data;
+                const message = data.geojson_status === 'pending'
+                  ? 'Upload saved. The map will update in the background.'
+                  : data.geojson_status === 'unavailable'
+                    ? 'Upload saved. Map generation is currently unavailable.'
+                    : 'The files have been successfully uploaded.';
+                $("#modal_success_txt").text(message);
+                $("#modal_success").css('display', 'flex');
+                window.setTimeout(function() {
+                  // Redirect to project revisions
+                  if (data.browser_url) window.location.href = data.browser_url;
+                }, 2000);
+              }).catch(showApiErrorModal).finally(() => $("#loading_spinner").hide());
               return false; // prevent default
             });
 }

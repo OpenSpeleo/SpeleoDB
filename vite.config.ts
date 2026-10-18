@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
     return {
         base: './',
         resolve: sharedMapResolution,
-        optimizeDeps: { exclude: ['@speleodb/map-core', '@speleodb/map-viewer'] },
+        optimizeDeps: { exclude: ['@speleodb/api', '@speleodb/map-core', '@speleodb/map-viewer'] },
         clearScreen: false,
         plugins: [tailwindcss()],
         build: {

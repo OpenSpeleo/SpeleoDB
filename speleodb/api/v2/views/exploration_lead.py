@@ -5,11 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import feature_collection
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectCreation
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
@@ -48,6 +53,10 @@ class ProjectExplorationLeadsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
     serializer_class = ExplorationLeadSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: ExplorationLeadSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_projects_exploration_leads_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all exploration leads that belong to the project."""
         project = self.get_object()
@@ -57,6 +66,10 @@ class ProjectExplorationLeadsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         )
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: ExplorationLeadSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_projects_exploration_leads_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new exploration lead for the project."""
         project = self.get_object()
@@ -92,6 +105,8 @@ class ExplorationLeadSpecificApiView(GenericAPIView[ExplorationLead], SDBAPIView
     lookup_field = "id"
     serializer_class = ExplorationLeadSerializer
 
+    @extend_schema(responses={200: ExplorationLeadSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_exploration_leads_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get exploration lead details."""
         lead = self.get_object()
@@ -113,14 +128,26 @@ class ExplorationLeadSpecificApiView(GenericAPIView[ExplorationLead], SDBAPIView
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_exploration_leads_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of exploration lead."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_exploration_leads_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of exploration lead."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExplorationLeadSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_exploration_leads_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete exploration lead."""
         lead = self.get_object()
@@ -145,6 +172,13 @@ class ProjectExplorationLeadsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixi
     lookup_field = "id"
     serializer_class = ExplorationLeadGeoJSONSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={
+            200: feature_collection(ExplorationLeadGeoJSONSerializer),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_exploration_leads_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all exploration leads for a project in a map-friendly format."""
         project = self.get_object()
@@ -175,6 +209,13 @@ class AllExploLeadsGeoJSONApiView(GenericAPIView[ExplorationLead], SDBAPIViewMix
         ]
         return ExplorationLead.objects.filter(project__in=user_projects)
 
+    @extend_schema(
+        responses={
+            200: feature_collection(ExplorationLeadGeoJSONSerializer),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_exploration_leads_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a user in a map-friendly format."""
         explo_leads = self.get_queryset()

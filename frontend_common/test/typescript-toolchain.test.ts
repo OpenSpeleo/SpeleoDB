@@ -57,8 +57,9 @@ describe('TypeScript toolchain boundaries', () => {
         const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as PackageManifest;
         const leafScripts = Object.keys(manifest.scripts!).filter(name => name.startsWith('typecheck:'));
         expect(leafScripts.sort()).toEqual(PROJECTS.map(project => `typecheck:${project}`).sort());
-        const buildCommand = 'bun scripts/typecheck.ts';
+        const buildCommand = 'bun run audit:api && bun scripts/typecheck.ts';
         expect(manifest.scripts!.typecheck).toBe(buildCommand);
+        expect(manifest.scripts!['audit:api']).toBe('bun scripts/audit-api.ts');
         expect(manifest.scripts!['typecheck:watch']).toBeUndefined();
         expect(manifest.scripts!['typecheck:runtime']).toBe('bun scripts/typecheck.ts --scope=runtime');
     });

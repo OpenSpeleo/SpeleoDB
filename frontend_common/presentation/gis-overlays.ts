@@ -1,3 +1,4 @@
+import { getV2GisLayersSourceRetrieveUrl } from '@speleodb/api';
 import type { GISListRecord, GISListPresentation, GISDetailsRoute } from '../../ts-types/controllers/gis-lists.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 import { escapeHtml, safeCssColor, sanitizeUrl } from '../../frontend_private/static/private/ts/xss-helpers.ts';
@@ -13,7 +14,7 @@ function formatDate(dateString: string | undefined) {
     });
 }
 
-function routeUrl(routeName: 'api:v2:gis-layer-source' | GISDetailsRoute, layerId: EntityId) {
+function routeUrl(routeName: GISDetailsRoute, layerId: EntityId) {
     const route = globalThis.Urls?.[routeName];
     return typeof route === 'function' ? sanitizeUrl(route(layerId)) : '';
 }
@@ -33,7 +34,7 @@ function permissionPillClass(label: string | null | undefined) {
 }
 
 function renderDesktopActions(layer: GISListRecord, openIconUrl: string, options: GISListPresentation) {
-    const sourceUrl = escapeHtml(routeUrl('api:v2:gis-layer-source', layer.id));
+    const sourceUrl = escapeHtml(getV2GisLayersSourceRetrieveUrl(String(layer.id)));
     const detailsUrl = escapeHtml(routeUrl(options.detailsRoute, layer.id));
     const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
     return `
@@ -50,7 +51,7 @@ function renderDesktopActions(layer: GISListRecord, openIconUrl: string, options
 }
 
 function renderMobileActions(layer: GISListRecord, openIconUrl: string, options: GISListPresentation) {
-    const sourceUrl = escapeHtml(routeUrl('api:v2:gis-layer-source', layer.id));
+    const sourceUrl = escapeHtml(getV2GisLayersSourceRetrieveUrl(String(layer.id)));
     const detailsUrl = escapeHtml(routeUrl(options.detailsRoute, layer.id));
     const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
     return `

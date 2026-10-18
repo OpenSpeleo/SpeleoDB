@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
+from frontend_private.tests.controller_context import controller_context
 from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISLayer
@@ -63,7 +65,9 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert response.status_code == status.HTTP_200_OK
         assert "My GIS Layers" in content
         assert 'data-speleodb-controller="gis-layers"' in content
-        assert reverse("api:v2:gis-layers") in content
+        assert controller_context(content, "gis-layers") == {
+            "openIconUrl": static("private/media/right_arrow.svg")
+        }
         assert 'id="gis-layers-cards-container"' in content
         assert 'class="tracks-table ' in content
         assert 'id="upload-layer-modal"' in content
@@ -84,13 +88,11 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert "Danger Zone" in content
         assert "Download Source" in content
         assert 'id="gis_layer_details_form"' in content
-        assert (
-            reverse(
-                "api:v2:gis-layer-detail",
-                kwargs={"id": self.layer.id},
-            )
-            in content
-        )
+        context = controller_context(content, "entity-crud")
+        assert context["resource"] == "gis-layer"
+        assert context["entityId"] == str(self.layer.id)
+        assert context["formId"] == "gis_layer_details_form"
+        assert context["reloadOnSuccess"] is True
 
     def test_reader_gets_read_only_details_and_no_danger_zone(self) -> None:
         reader = UserFactory.create(email="gis-details-reader@example.com")
@@ -118,13 +120,10 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
 
         assert "GIS Layer Danger Zone" in content
         assert 'data-speleodb-controller="danger-zone"' in content
-        assert (
-            reverse(
-                "api:v2:gis-layer-detail",
-                kwargs={"id": self.layer.id},
-            )
-            in content
-        )
+        context = controller_context(content, "danger-zone")
+        assert context["resource"] == "gis-layer"
+        assert context["entityId"] == str(self.layer.id)
+        assert context["successRedirect"] == reverse("private:gis_layers")
 
     def test_reader_can_inspect_but_not_mutate_permissions(self) -> None:
         reader = UserFactory.create(email="gis-reader@example.com")
@@ -166,13 +165,10 @@ class GISLayerFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         )
         assert f'data-user="{collaborator.email}"' in content
         assert f'data-user="{self.user.email}"' not in content
-        assert (
-            reverse(
-                "api:v2:gis-layer-permissions",
-                kwargs={"id": self.layer.id},
-            )
-            in content
-        )
+        context = controller_context(content, "permission-modal")
+        assert context["resource"] == "gis-layer"
+        assert context["entityId"] == str(self.layer.id)
+        assert context["fieldName"] == "level"
         assert 'value="READ_ONLY"' in content
         assert 'value="READ_AND_WRITE"' in content
         assert 'value="ADMIN"' in content

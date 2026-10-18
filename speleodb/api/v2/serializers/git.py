@@ -7,10 +7,12 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from frontend_private.templatetags.filter_utils import format_byte_size
 from frontend_private.templatetags.filter_utils import time_struct_since
+from speleodb.api.v2.serializers.summary_contract import GitCommitFormatSerializer
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
 from speleodb.surveys.models import FileFormat
@@ -56,6 +58,7 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
 
     # ------------------------- GitCommit Attributes ------------------------ #
 
+    @extend_schema_field(GitCommitFormatSerializer(many=True))
     def get_formats(self, obj: GitCommit) -> list[dict[str, Any]]:
         """
         Returns the short version of the commit hash (7 characters by GitHub standard).

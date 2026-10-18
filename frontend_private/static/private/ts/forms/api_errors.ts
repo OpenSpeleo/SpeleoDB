@@ -1,26 +1,19 @@
-import type { AjaxFailure } from '../../../../../ts-types/domain/forms/errors.ts';
-
 /**
- * Shared AJAX error handling for Django/DRF-backed forms.
- *
- * Replaces the inline `{% include 'snippets/ajax_error_modal_management.js' %}`
- * snippet that was duplicated across ~40 templates.  Call `showAjaxErrorModal(xhr)`
- * from the error callback of any `$.ajax` request.  The function walks the JSON
- * body looking for `error` / `errors` / `detail` keys (DRF conventions) and
- * falls back to a generic "status X" message if none are present.
- *
- * Requires jQuery; imports `escapeHtml` from xss-helpers.ts.
+ * Shared generated-API error presentation for Django/DRF-backed forms.
+ * Reads the adapter's untrusted data/status/message fields, escapes serializer
+ * validation output, and shows the shared error modal. Requires jQuery.
  */
 
 import { escapeHtml } from '../xss-helpers.ts';
 
-export function showAjaxErrorModal(xhr: AjaxFailure): void {
+export function showApiErrorModal(error: unknown): void {
+    const xhr = error && typeof error === 'object' ? error as { data?: unknown; status?: number; message?: string; statusText?: string } : {};
     const errorKeys = ['error', 'errors', 'detail'];
     let found = false;
 
     try {
         // Assertions retain the existing unchecked DRF/body and thrown-error contracts.
-        const body = xhr.responseJSON as Record<string, unknown> | null | undefined;
+        const body = xhr.data as Record<string, unknown> | null | undefined;
         if (body) {
             for (const key of errorKeys) {
                 if (key in body) {
@@ -79,7 +72,7 @@ export function showAjaxErrorModal(xhr: AjaxFailure): void {
         }
     } catch (exception) {
         const fallback = '<b>[Status ' + escapeHtml(String(xhr.status)) + '] An error occurred:</b> `'
-            + escapeHtml(String(xhr.statusText || '')) + '`<br>'
+            + escapeHtml(String(xhr.message || xhr.statusText || '')) + '`<br>'
             + 'Please email: <a class="underline" href="mailto:contact@speleodb.org">contact@speleodb.org</a>';
         if (typeof console !== 'undefined' && console.error) {
             console.error(fallback, (exception as Error).message);

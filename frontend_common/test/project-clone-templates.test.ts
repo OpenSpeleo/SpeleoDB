@@ -1,4 +1,6 @@
-import type { ControllerAjaxCall } from '../../ts-types/testing/vitest/controller-ajax.ts';
+import { setBrowserUrl, startApiServer } from './api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { init as initGitView } from '../controllers/git-view.ts';
@@ -16,16 +18,11 @@ function mountPage(page: string) {
     document.head.append(style);
 }
 
-function respondWith(data: unknown) {
-    vi.spyOn($, 'ajax').mockImplementation(((options: ControllerAjaxCall) => {
-        options.success(data);
-        return { responseJSON: data };
-    }) as unknown as JQueryStatic['ajax']);
-}
+function respondWith(data: unknown) { server.reply({ json: data }); }
 
-beforeAll(() => {
-    (0, eval)(jquery);
-});
+beforeAll(async () => { (0, eval)(jquery); originalUrl = window.location.href; server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/project/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -33,7 +30,7 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
-it('git browser hides its sources while displaying cloned rows across folder navigation', () => {
+it('git browser hides its sources while displaying cloned rows across folder navigation', async () => {
     mountPage('git_view');
     const sources = Array.from(document.querySelectorAll('[id^="row-template-"]'));
     expect(sources).toHaveLength(3);
@@ -50,7 +47,7 @@ it('git browser hides its sources while displaying cloned rows across folder nav
             { name: 'survey.dat', path: 'surveys/survey.dat', size: '24 B', download_url: '/download/survey.dat', commit },
         ],
     });
-    initGitView({ endpoint: '/git-tree/' });
+    await initGitView({ projectId: 'project', commit: 'latest' });
     const container = document.getElementById('git-viewer-container')!;
     const expectVisibleRows = () => {
         expect(container.children).toHaveLength(3);
@@ -93,7 +90,7 @@ it('revision history displays commit and download clones after removing source I
             },
         ],
     });
-    const initialization = initRevisionHistory({ endpoint: '/revisions/' });
+    const initialization = initRevisionHistory({ projectId: 'project' });
     window.dispatchEvent(new Event('load'));
     await initialization;
     const rows = document.querySelectorAll('#commit-table-container > tr');

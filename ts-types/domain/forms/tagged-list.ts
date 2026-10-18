@@ -4,15 +4,15 @@ export interface TaggedListApi {
     openEditModal: (entityId: string | number) => void;
     openDeleteModal: (entityId: string | number) => void;
 }
-export interface TaggedListOptions<Entity extends TaggedEntity> {
-    listEndpoint?: string | undefined;
-    detailEndpointBuilder?: (id: string | number) => string;
-    editMethod?: string;
-    createMethod?: string;
+export interface TaggedListOptions<Entity extends TaggedEntity, Payload = unknown> {
+    list: () => Promise<Entity[]>;
+    create?: (payload: Payload) => Promise<unknown>;
+    update?: (id: string | number, payload: Payload) => Promise<unknown>;
+    remove?: (id: string | number) => Promise<unknown>;
     renderList?: (entities: Entity[], api: TaggedListApi) => void;
     openEditModalForEntity?: (entity: Entity) => void;
     resetEditModal?: () => void;
-    collectEditPayload?: () => unknown;
+    collectEditPayload?: () => Payload | null;
     openDeleteModalForEntity?: (entity: Entity) => void;
     editFormSelector?: string;
     editIdInputSelector?: string;

@@ -166,7 +166,7 @@ describe('StationManager', () => {
             API.createStation.mockResolvedValue(newStation);
             Layers.refreshStationsAfterChange.mockResolvedValue();
 
-            const result = await StationManager.createStation('p1', { name: 'New Station' });
+            const result = await StationManager.createStation('p1', { name: 'New Station', type: 'sensor', latitude: 20, longitude: -87 });
 
             expect(result).toEqual(newStation);
             expect(State.allStations.get('s-new')!).toEqual({ ...newStation, project: 'p1' });
@@ -176,7 +176,7 @@ describe('StationManager', () => {
         it('propagates API errors', async () => {
             API.createStation.mockRejectedValue(new Error('create failed'));
 
-            await expect(StationManager.createStation('p1', {})).rejects.toThrow('create failed');
+            await expect(StationManager.createStation('p1', { name: 'Station', type: 'sensor', latitude: 20, longitude: -87 })).rejects.toThrow('create failed');
         });
     });
 

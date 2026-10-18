@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from speleodb.common.enums import ColorPalette
@@ -136,6 +137,7 @@ class LandmarkCollectionWithPermSerializer(
         ]
         read_only_fields = fields
 
+    @extend_schema_field({"type": "string", "nullable": True})
     def get_user_permission_level_label(
         self, obj: LandmarkCollection
     ) -> StrOrPromise | None:
@@ -154,7 +156,7 @@ class LandmarkCollectionUserPermissionSerializer(
     """Serializer for LandmarkCollectionUserPermission model."""
 
     user_email = serializers.EmailField(write_only=True, required=False)
-    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_id = serializers.CharField(source="user.id", read_only=True)
     user_full_name = serializers.SerializerMethodField()
     user_display_email = serializers.EmailField(source="user.email", read_only=True)
     level_label = serializers.CharField(read_only=True)

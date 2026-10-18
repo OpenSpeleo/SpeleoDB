@@ -309,10 +309,10 @@ repositories are allocated for this coverage.
 database-backed authenticated session, then invokes
 `scripts/test-frontend-uploads.ts`. The script loads the rendered GIS-layer
 page, uses its actual CSRF token and the vendored jQuery library, and imports
-the production upload modules. JSDOM supplies its unmodified XMLHttpRequest and
-FormData implementations; requests reach Django and persist files in the
-configured S3-compatible service. Python reads those files back to verify exact
-bytes and checks the database for unexpected writes.
+the production upload modules and generated SDK operations. JSDOM supplies its
+unmodified XMLHttpRequest and FormData implementations; requests reach Django
+and persist files in the configured S3-compatible service. Python reads those
+files back to verify exact bytes and checks the database for unexpected writes.
 
 The integration observes real progress events, DOM mutations, and completed list
 requests. It covers modal dismissal while uploading, one successful list

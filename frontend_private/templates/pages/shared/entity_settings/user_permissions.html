@@ -239,8 +239,8 @@
   {% if has_admin_access %}
     <script type="application/json" data-speleodb-controller="permission-modal">
       {
-        "endpoint": "{{ permission_endpoint }}",
-        "autocompleteUrl": "{% url 'api:v2:user-autocomplete' %}",
+        "resource": "{{ api_resource }}",
+        "entityId": "{{ api_entity_id }}",
         "addModalTitle": "{{ permission_add_title|escapejs }}",
         "addModalHeader": "Who would you like to add?",
         "editModalTitle": "How shall we modify this user's access?",

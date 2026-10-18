@@ -1,5 +1,5 @@
-export interface ApiRequestOptions { signal?: AbortSignal }
-export interface ApiNoContent { ok: true; status: 204 }
-/** Ordinary Error instances are augmented by apiRequest, without a subclass. */
-export interface ApiError extends Error { data: unknown; status: number }
-export interface ApiErrorMessageFields { message?: string; error?: string; detail?: string }
+import type { ApiRequestOptions as SdkRequestOptions } from '@speleodb/api';
+import type { ApiRequestError } from '../../frontend_common/api/client.ts';
+export type ApiRequestOptions = Pick<SdkRequestOptions, 'signal'>;
+/** UI error fields retained by the browser adapter. */
+export type ApiError = Error & Pick<ApiRequestError, 'data' | 'status'>;

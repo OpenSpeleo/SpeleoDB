@@ -218,7 +218,7 @@
   {% block inline_extra_js %}
     <script type="application/json" data-speleodb-controller="team-permission">
       {
-        "endpoint": "{% url 'api:v2:project-team-permissions-detail' id=project.id %}",
+        "projectId": "{{ project.id }}",
         "addModalTitle": "Add a Team to the project",
         "addModalHeader": "What team would you like to add 🙌 ?",
         "editModalTitle": "How shall we modify this team's access?",

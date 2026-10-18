@@ -1,7 +1,5 @@
-import type { Mock } from 'vitest';
+import type { GISListRecord, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
 import type { ApplicationUrls } from '../../ts-types/browser/urls.d.ts';
-import type { GISListRecord, GISListContext, GISUploadListContext, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
-import type { TaggedListApi, TaggedListOptions } from '../../ts-types/domain/forms/tagged-list.ts';
 import { buildGISGeometryListMarkup } from './gis-geometries.ts';
 
 beforeEach(() => {
@@ -46,37 +44,21 @@ describe('GIS Geometries management listing', () => {
     });
 });
 
-vi.mock('../../frontend_private/static/private/ts/forms/tagged_entity_list.ts', () => ({ attachTaggedEntityList: vi.fn() }));
-import { init as initialize } from './gis-geometries.ts';
-import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
+import { init } from './gis-geometries.ts';
 
-describe('GIS Geometries initialization', () => {
-    beforeEach(() => {
-        attachment.mockReset();
-        document.body.innerHTML = '<table><tbody id="gis-geometries-table-body"></tbody></table><div id="gis-geometries-cards-container"></div>';
-    });
-    it('immediately forwards context, returns the original facade and renders both targets', () => {
-        const api = { reload() {}, openEditModal() {}, openDeleteModal() {} };
-        attachment.mockReturnValue(api);
-        expect(init({ listEndpoint: '/geometries/', openIconUrl: '/open.svg' })).toBe(api);
-        const options = attachment.mock.calls[0]![0];
-        expect(options).toMatchObject({ listEndpoint: '/geometries/', entityLabel: 'GIS Geometry', loadFailedMessage: 'Unable to load GIS Geometries. Refresh the page to try again.' });
-        options.renderList!([{ id: 1, name: 'Boundary' }], {} as TaggedListApi);
-        expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2);
-        expect(document.getElementById('gis-geometries-table-body')!.textContent).toContain('Boundary');
-        expect(document.getElementById('gis-geometries-cards-container')!.textContent).toContain('Boundary');
-    });
-    it('attaches on every call and preserves missing context, target and helper failures', () => {
-        init({}); init({});
-        expect(attachTaggedEntityList).toHaveBeenCalledTimes(2);
-        expect(() => init()).toThrow(TypeError);
-        document.body.innerHTML = '';
-        expect(() => attachment.mock.calls[0]![0].renderList!([], {} as TaggedListApi)).toThrow(TypeError);
-        const error = new Error('list failed');
-        attachment.mockImplementationOnce(() => { throw error; });
-        expect(() => init({})).toThrow(error);
-    });
+it('loads and reloads generated geometry metadata into both responsive lists', async () => {
+    document.body.innerHTML = '<table><tbody id="gis-geometries-table-body"></tbody></table><div id="gis-geometries-cards-container"></div>';
+    server.reply({ json: [{ id: 'geometry', name: 'Boundary' }] });
+    const api = init({ openIconUrl: '/open.svg' });
+    await vi.waitFor(() => expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2));
+    expect(server.requests[0]!.path).toBe('/api/v2/gis-geometries/');
+    server.reply({ json: [] }); api.reload();
+    await vi.waitFor(() => expect(document.body.textContent).toContain('No GIS Geometries yet'));
+    expect(server.requests).toHaveLength(2);
 });
-
-function init(context?: unknown) { return initialize(context as GISListContext); }
-const attachment = vi.mocked(attachTaggedEntityList) as unknown as Mock<(options: TaggedListOptions<GISListRecord>) => TaggedListApi>;

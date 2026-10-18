@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { dependencies?: Record<string, string>; overrides?: Record<string, string> };
-const names = ['@speleodb/map-core', '@speleodb/map-viewer'];
+const names = ['@speleodb/api', '@speleodb/map-core', '@speleodb/map-viewer'];
 for (const name of names) {
     const dependency = manifest.dependencies?.[name];
     if (typeof dependency !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(dependency)) {

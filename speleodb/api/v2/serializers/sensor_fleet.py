@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from speleodb.api.v2.serializers.summary_contract import SensorActiveInstallSerializer
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Sensor
@@ -115,6 +117,7 @@ class SensorSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Sensor]
             else None
         )
 
+    @extend_schema_field(SensorActiveInstallSerializer(many=True))
     def get_active_installs(self, obj: Sensor) -> list[dict[str, Any]]:
         """Get active installs with full details."""
         installs = obj.installs.filter(status=InstallStatus.INSTALLED).select_related(
@@ -246,6 +249,7 @@ class SensorFleetWithPermSerializer(serializers.ModelSerializer[SensorFleet]):
         ]
         read_only_fields = fields
 
+    @extend_schema_field({"type": "string", "nullable": True})
     def get_user_permission_level_label(self, obj: SensorFleet) -> StrOrPromise | None:
         if perm_lvl := getattr(obj, "user_permission_level", None):
             return PermissionLevel.from_value(perm_lvl).label
@@ -262,7 +266,7 @@ class SensorFleetUserPermissionSerializer(
     user_email = serializers.EmailField(write_only=True, required=False)
 
     # Read-only user info
-    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_id = serializers.CharField(source="user.id", read_only=True)
     user_full_name = serializers.SerializerMethodField()
     user_display_email = serializers.EmailField(source="user.email", read_only=True)
 

@@ -49,7 +49,8 @@
           {% vite_preload 'controller-mutex-lock' %}
           <script type="application/json" data-speleodb-controller="mutex-lock">
             {
-              "lockUrl": "{% url 'api:v2:project-acquire' id=project.id %}"
+              "projectId": "{{ project.id }}",
+              "canAcquire": true
             }
           </script>
         {% endif %}

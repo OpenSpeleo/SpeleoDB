@@ -40,23 +40,17 @@ let authenticatedState: Awaited<ReturnType<BrowserContext['storageState']>> | un
 
 /** Normal login creates only an authenticated browser session. All viewer data is intercepted. */
 export async function login(page: Page) {
-    // Reuse the initial real session within this Playwright worker. Saving it
-    // before application navigation keeps preferences isolated between tests.
+    // Reuse the initial real session within this Playwright worker. A new browser
+    // context still keeps viewer preferences isolated between tests.
     if (authenticatedState) {
         await page.context().setStorageState(authenticatedState);
         return;
     }
-    const response = await page.request.get('/login/');
-    const html = await response.text();
-    const csrf = html.match(/name="csrfmiddlewaretoken" value="([^"]+)"/)?.[1];
-    expect(csrf, 'Django login form CSRF token').toBeTruthy();
-    const controller = JSON.parse(html.match(/data-speleodb-controller="auth-form"[^>]*>([\s\S]*?)<\/script>/)?.[1] || '{}') as {endpoint: string};
-    const loggedIn = await page.request.post(controller.endpoint, { headers: { 'X-CSRFToken': csrf! }, data: {
-        csrfmiddlewaretoken: csrf,
-        email: process.env.VIEWER_BROWSER_EMAIL || 'contact@speleodb.org',
-        password: process.env.VIEWER_BROWSER_PASSWORD || 'contact',
-    } });
-    expect(loggedIn.ok()).toBe(true);
+    await page.goto('/login/');
+    await page.locator('#email').fill(process.env.VIEWER_BROWSER_EMAIL || 'contact@speleodb.org');
+    await page.locator('#password').fill(process.env.VIEWER_BROWSER_PASSWORD || 'contact');
+    await page.locator('#btn_submit').click();
+    await page.waitForURL('**/private/**');
     authenticatedState = await page.context().storageState();
 }
 

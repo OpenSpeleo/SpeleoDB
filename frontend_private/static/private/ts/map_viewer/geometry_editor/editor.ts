@@ -159,7 +159,7 @@ export const GeometryEditor: GeometryEditorFacade = {
                 alias: record?.alias || '',
                 description: record?.description || '',
                 color: Utils.safeCssColor(record?.color || this.palette![Math.floor(Math.random() * this.palette!.length)] || DEFAULTS.COLORS.FALLBACK),
-                draft: createGeometryDraft(record?.geojson as EditableGeometry | undefined),
+                draft: createGeometryDraft(record?.geojson),
                 selected: null,
                 drawing: !record,
                 preview: null,

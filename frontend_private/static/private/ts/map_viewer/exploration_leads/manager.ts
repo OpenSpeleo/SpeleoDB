@@ -147,7 +147,7 @@ export const ExplorationLeadManager = {
         // Store in state
         State.explorationLeads.set(lead.id, {
             id: lead.id,
-            coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
+            coordinates: [Number(lead.longitude), Number(lead.latitude)],
             description: lead.description || '',
             projectId: projectId,
             lineName: 'Survey Line',
@@ -180,7 +180,7 @@ export const ExplorationLeadManager = {
         if (existing) {
             State.explorationLeads.set(leadId, {
                 ...existing,
-                coordinates: [parseFloat(lead.longitude), parseFloat(lead.latitude)],
+                coordinates: [Number(lead.longitude), Number(lead.latitude)],
                 description: lead.description || ''
             });
         }

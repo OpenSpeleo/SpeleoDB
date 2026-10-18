@@ -17,7 +17,7 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.db import transaction
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import PolymorphicProxySerializer
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
@@ -25,7 +25,10 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import MultiPartParser
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.landmark_access import user_has_collection_access
+from speleodb.api.v2.serializers.api_contract import GISProcessingErrorSerializer
+from speleodb.api.v2.serializers.api_contract import KMLNoEligiblePlacesErrorSerializer
 from speleodb.api.v2.serializers.gis_layer import safe_upload_filename
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.gis_layer_processing import GISLayerProcessingError
@@ -58,12 +61,29 @@ KML_UPLOAD_REQUEST: dict[str, Any] = {
 }
 KML_INSPECTION_SCHEMA: dict[str, Any] = {
     "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "source_format",
+        "suggested_name",
+        "source_placemarks",
+        "places",
+        "overlay",
+        "warnings",
+    ],
     "properties": {
         "source_format": {"type": "string", "enum": ["KML", "KMZ"]},
         "suggested_name": {"type": "string"},
         "source_placemarks": {"type": "integer"},
         "places": {
             "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "eligible_placemarks",
+                "point_count",
+                "unique_coordinate_count",
+                "duplicate_coordinate_count",
+                "skipped_placemarks",
+            ],
             "properties": {
                 key: {"type": "integer"}
                 for key in (
@@ -77,6 +97,14 @@ KML_INSPECTION_SCHEMA: dict[str, Any] = {
         },
         "overlay": {
             "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "source_placemarks",
+                "feature_count",
+                "point_parts",
+                "line_parts",
+                "polygon_parts",
+            ],
             "properties": {
                 key: {"type": "integer"}
                 for key in (
@@ -92,6 +120,8 @@ KML_INSPECTION_SCHEMA: dict[str, Any] = {
             "type": "array",
             "items": {
                 "type": "object",
+                "additionalProperties": False,
+                "required": ["code", "message", "count", "modes"],
                 "properties": {
                     "code": {"type": "string"},
                     "message": {"type": "string"},
@@ -107,6 +137,14 @@ KML_INSPECTION_SCHEMA: dict[str, Any] = {
 }
 KML_IMPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "landmarks_created",
+        "landmarks_skipped",
+        "duplicates_in_file",
+        "collection_id",
+        "bounds",
+    ],
     "properties": {
         "landmarks_created": {"type": "integer"},
         "landmarks_skipped": {"type": "integer"},
@@ -171,8 +209,13 @@ class KMLKMZInspectView(GenericAPIView[Landmark], SDBAPIViewMixin):
 
     @extend_schema(
         request=KML_UPLOAD_REQUEST,
-        responses={200: KML_INSPECTION_SCHEMA, 422: OpenApiTypes.OBJECT},
+        responses={
+            200: KML_INSPECTION_SCHEMA,
+            422: GISProcessingErrorSerializer,
+            403: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_import_kml_kmz_inspect_create")
     def post(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> SuccessResponse | ErrorResponse:
@@ -217,8 +260,22 @@ class KML_KMZ_ImportView(GenericAPIView[Landmark], SDBAPIViewMixin):  # noqa: N8
                 "required": ["file"],
             }
         },
-        responses={200: KML_IMPORT_SCHEMA, 422: OpenApiTypes.OBJECT},
+        responses={
+            200: KML_IMPORT_SCHEMA,
+            422: PolymorphicProxySerializer(
+                component_name="KMLImportError",
+                serializers=[
+                    GISProcessingErrorSerializer,
+                    KMLNoEligiblePlacesErrorSerializer,
+                ],
+                resource_type_field_name=None,
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            500: API_ERROR,
+        },
     )
+    @extend_schema(operation_id="v2_import_kml_kmz_update")
     def put(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> SuccessResponse | ErrorResponse:

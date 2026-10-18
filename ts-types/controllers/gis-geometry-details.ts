@@ -2,17 +2,9 @@ import type { EditableGeometry, GeometryValidation } from '../domain/geometry-ed
 
 export interface GISGeometryDetailsContext {
     formId: string;
-    endpoint: string;
+    geometryId: string;
     revision: number;
     canWrite: boolean;
-}
-export interface GISGeometryDetailsResponse {
-    revision: number;
-    name: string;
-    alias: string;
-    description: string;
-    color: string;
-    geojson: EditableGeometry;
 }
 /** Parse failures have no measurement; invalid parsed values retain their identity. */
 export interface ParsedGeometryText extends Partial<GeometryValidation> {

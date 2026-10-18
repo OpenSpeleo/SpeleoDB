@@ -7,7 +7,7 @@ import type { StationRecord, StationTagRecord } from './station-records.ts';
 import type { ViewerLandmark, ViewerLandmarkCollection } from './map-entities.ts';
 export type { ViewerLandmark } from './map-entities.ts';
 import type { CylinderInstallRecord } from './fleet-records.ts';
-import type { GISGeometryResponse } from './map-config.ts';
+import type { GISGeometryMapInput } from './map-config.ts';
 
 export type ViewerMap = RendererMap;
 export interface ViewerExplorationLead {
@@ -61,8 +61,8 @@ export interface ViewerState {
     gisLayerBounds: Map<EntityId, CameraBounds>;
     gisLayerClickableLayerIds: Set<string>;
     gisGeometryStates: Map<EntityId, boolean>;
-    gisGeometryCache: Map<EntityId, GISGeometryResponse>;
-    gisGeometryLoading: Map<EntityId, Promise<GISGeometryResponse>>;
+    gisGeometryCache: Map<EntityId, GISGeometryMapInput>;
+    gisGeometryLoading: Map<EntityId, Promise<GISGeometryMapInput>>;
     allGISGeometryLayers: Map<EntityId, string[]>;
     gisGeometryBounds: Map<EntityId, CameraBounds>;
     gisGeometryEditingId: EntityId | null;

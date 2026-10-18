@@ -1,4 +1,4 @@
-import type { UploadErrorPayload, UploadOptions } from '../../../../../../ts-types/domain/upload.ts';
+import type { UploadError, UploadErrorPayload, UploadOptions, UploadOperation } from '../../../../../../ts-types/domain/upload.ts';
 /**
  * Upload Progress Component
  *
@@ -6,7 +6,7 @@ import type { UploadErrorPayload, UploadOptions } from '../../../../../../ts-typ
  * for large file uploads (Station Resources, Journal Entries, etc.)
  */
 
-import { Utils } from '../utils.ts';
+import { ApiRequestError } from '../../../../../../frontend_common/api/client.ts';
 
 /** Preserve simple API messages and make serializer field errors actionable. */
 export function getUploadErrorMessage(data: unknown): string {
@@ -23,83 +23,37 @@ export function getUploadErrorMessage(data: unknown): string {
     return 'Upload failed';
 }
 
-/**
- * Upload a FormData object with progress tracking
- * @param {string} url - The API endpoint URL
- * @param {FormData} formData - The form data to upload
- * @param {Object} options - Configuration options
- * @param {Function} options.onProgress - Callback for progress updates (percent, loaded, total)
- * @param {Function} options.onSuccess - Callback on successful upload (response data)
- * @param {Function} options.onError - Callback on error (error object)
- * @param {string} options.method - HTTP method (default: 'POST')
- * @returns {XMLHttpRequest} - The XHR object (can be used to abort)
- */
-export function uploadWithProgress<Result = unknown>(url: string, formData: FormData, options: UploadOptions<Result> = {}) {
-    const {
-        onProgress = () => {},
-        onSuccess = () => {},
-        onError = () => {},
-        onUploaded = () => {},
-        csrfToken = Utils.getCSRFToken(),
-        method = 'POST'
-    } = options;
-
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            onProgress(percent, e.loaded, e.total);
-        }
-    });
-    xhr.upload.addEventListener('load', onUploaded);
-
-    xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-            // 204 No Content (and any other 2xx with a genuinely empty body)
-            // is a valid "success, nothing to say" response. Surface it as
-            // null so callers can distinguish it from a parsed payload.
-            if (xhr.status === 204 || !xhr.responseText) {
-                onSuccess(null);
-                return;
+/** Run a generated operation with real upload progress and an abortable request. */
+export function uploadWithProgress<Result>(operation: UploadOperation<Result>, options: UploadOptions<Result> = {}) {
+    const controller = new AbortController();
+    void Promise.resolve().then(() => operation({
+        signal: controller.signal,
+        onUploadProgress: event => {
+            if (event.lengthComputable && event.total) {
+                options.onProgress?.(Math.round(event.loaded / event.total * 100), event.loaded, event.total);
             }
-            try {
-                const response = JSON.parse(xhr.responseText) as Result;
-                onSuccess(response);
-            } catch {
-                // A 2xx status with a non-empty, unparseable body means the
-                // server (or a proxy/CDN) returned something we cannot trust
-                // -- treat this as an error rather than silently pretend
-                // the upload succeeded. The caller can decide whether to
-                // retry or surface it to the user.
-                onError(Object.assign(new Error('Upload succeeded but server returned an unreadable response. The upload state is unknown -- please refresh to verify.'), { status: xhr.status, ambiguous: true }));
-            }
-        } else {
-            let errorMessage = 'Upload failed';
-            let errorData: unknown = null;
-            try {
-                errorData = JSON.parse(xhr.responseText);
-                errorMessage = getUploadErrorMessage(errorData);
-            } catch {
-                // Use default error message
-            }
-            onError(Object.assign(new Error(errorMessage), { status: xhr.status, ambiguous: xhr.status === 0 || xhr.status >= 500, payload: errorData }));
-        }
-    });
-
-    xhr.addEventListener('error', () => {
-        onError(Object.assign(new Error('Network error during upload'), { status: 0, ambiguous: true }));
-    });
-
-    xhr.addEventListener('abort', () => {
-        onError(Object.assign(new Error('Upload cancelled'), { status: 0, name: 'AbortError' }));
-    });
-
-    xhr.open(method, url);
-    xhr.setRequestHeader('X-CSRFToken', csrfToken);
-    xhr.send(formData);
-
-    return xhr;
+        },
+        onUploadComplete: () => options.onUploaded?.(),
+    })).then(
+        result => options.onSuccess?.(result),
+        (error: unknown) => {
+            const status = error instanceof ApiRequestError ? error.status : 0;
+            const payload = error instanceof ApiRequestError ? error.data : undefined;
+            const unreadable = status >= 200 && status < 300;
+            const message = controller.signal.aborted ? 'Upload cancelled'
+                : unreadable ? 'The server returned an unreadable response. Check whether the upload was saved before retrying.'
+                    : error instanceof ApiRequestError ? getUploadErrorMessage(payload)
+                        : 'Network error during upload';
+            const failure = new Error(message, { cause: error });
+            if (controller.signal.aborted) failure.name = 'AbortError';
+            options.onError?.(Object.assign(failure, {
+                status,
+                ambiguous: !controller.signal.aborted && (status === 0 || status >= 500 || unreadable),
+                payload,
+            }));
+        },
+    );
+    return controller;
 }
 
 /**
@@ -154,10 +108,10 @@ export function createProgressBarHTML(id = 'upload-progress') {
  */
 export class UploadProgressController {
     declare containerId: string;
-    declare xhr: XMLHttpRequest | null;
+    declare request: AbortController | null;
     constructor(containerId = 'upload-progress') {
         this.containerId = containerId;
-        this.xhr = null;
+        this.request = null;
     }
 
     /**
@@ -281,49 +235,37 @@ export class UploadProgressController {
      * Cancel the current upload
      */
     cancel() {
-        if (this.xhr) {
-            this.xhr.abort();
-            this.xhr = null;
+        if (this.request) {
+            this.request.abort();
+            this.request = null;
         }
         this.hide();
     }
 
-    /**
-     * Set the XHR object for potential cancellation
-     * @param {XMLHttpRequest} xhr
-     */
-    setXHR(xhr: XMLHttpRequest) {
-        this.xhr = xhr;
+    /** Set the current generated request's cancellation controller. */
+    setRequest(request: AbortController) {
+        this.request = request;
     }
 
-    /**
-     * Upload with progress - convenience method
-     * @param {string} url - Upload URL
-     * @param {FormData} formData - Form data
-     * @param {string} method - HTTP method
-     * @returns {Promise} - Resolves with response data, rejects on error
-     */
-    upload<Result = unknown>(url: string, formData: FormData, method = 'POST'): Promise<Result | null> {
-        return new Promise<Result | null>((resolve, reject) => {
+    /** Upload through a generated operation while retaining the progress UI lifecycle. */
+    upload<Result>(operation: UploadOperation<Result>): Promise<Result> {
+        return new Promise<Result>((resolve, reject) => {
             this.show();
-
-            const xhr = uploadWithProgress<Result>(url, formData, {
-                method,
-                onProgress: (percent, loaded, total) => {
-                    this.update(percent, loaded, total);
-                },
-                onSuccess: (response) => {
+            const request = uploadWithProgress(operation, {
+                onProgress: (percent, loaded, total) => this.update(percent, loaded, total),
+                onSuccess: response => {
+                    this.request = null;
                     this.complete();
                     setTimeout(() => this.hide(), 1500);
                     resolve(response);
                 },
-                onError: (error) => {
+                onError: error => {
+                    this.request = null;
                     this.error(error.message);
                     reject(error);
-                }
+                },
             });
-
-            this.setXHR(xhr);
+            this.setRequest(request);
         });
     }
 }

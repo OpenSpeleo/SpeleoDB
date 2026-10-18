@@ -1,3 +1,4 @@
+import type { SurfaceStationRequest, PatchedStationUpdateRequest } from '@speleodb/api';
 import type { StationWrite } from '../../../../../../ts-types/domain/station-records.ts';
 import type { StationFeatureCollection } from '../../../../../../ts-types/domain/map-entities.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
@@ -88,7 +89,7 @@ export const SurfaceStationManager = {
         }
     },
 
-    async createStation(networkId: EntityId, stationData: StationWrite) {
+    async createStation(networkId: EntityId, stationData: SurfaceStationRequest) {
         try {
             const station = await API.createSurfaceStation(networkId, stationData);
 
@@ -110,7 +111,7 @@ export const SurfaceStationManager = {
         }
     },
 
-    async updateStation(stationId: EntityId, updateData: StationWrite) {
+    async updateStation(stationId: EntityId, updateData: PatchedStationUpdateRequest) {
         try {
             const updatedStation = await API.updateStation(stationId, updateData);
 

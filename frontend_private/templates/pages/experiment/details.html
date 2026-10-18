@@ -265,8 +265,7 @@
     {
       "mode": "edit",
       "formId": "experiment_details_form",
-      "endpoint": "{% url 'api:v2:experiment-detail' id=experiment.id %}",
-      "method": "PUT",
+      "experimentId": "{{ experiment.id }}",
       "successMessage": "The experiment has been updated."
     }
   </script>

@@ -1,51 +1,34 @@
-import type { Mock } from 'vitest';
-import type { MutexLockContext } from '../../ts-types/controllers/mutex-lock.ts';
-import { init as initialize } from './mutex-lock.ts';
-import { attachMutexLock } from '../../frontend_private/static/private/ts/forms/mutex_lock.ts';
+import { init } from './mutex-lock.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
 
-vi.mock('../../frontend_private/static/private/ts/forms/mutex_lock.ts', () => ({
-    attachMutexLock: vi.fn(),
-}));
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
-// The double intentionally returns values that the real attachment does not.
-const attachment = vi.mocked(attachMutexLock) as unknown as Mock<(context?: unknown) => unknown>;
-function init(context?: unknown) { return initialize(context as MutexLockContext); }
+function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf-lock"><button id="btn_lock_project">Lock</button><button class="btn_unlock">Unlock</button><div id="error_div"></div><div id="success_div"></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>`; }
 
-beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
-    attachment.mockReset();
+it('wires only allowed actions and blocks duplicates while the generated request is pending', async () => {
+    page();
+    server.reply({ status: 403, json: { detail: 'Denied' } });
+    await init({ projectId: 'project/id', canAcquire: true });
+    $('.btn_unlock').trigger('click');
+    expect(server.requests).toHaveLength(0);
+    $('#btn_lock_project').trigger('click').trigger('click');
+    await vi.waitFor(() => expect($('#modal_error_txt').text()).toBe('Denied'));
+    expect(server.requests).toHaveLength(1);
+    expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/projects/project%2Fid/acquire/', headers: { 'x-csrftoken': 'csrf-lock' } });
+    expect($('#btn_lock_project').prop('disabled')).toBe(false);
 });
 
-afterEach(() => {
-    vi.restoreAllMocks();
-});
-
-it('waits for load before forwarding the original context once', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const context = { endpoint: '/fixture/' };
-    const pending = init(context);
-    expect(attachment).not.toHaveBeenCalled();
-    window.dispatchEvent(new Event('load'));
-    await expect(pending).resolves.toBeUndefined();
-    expect(attachment).toHaveBeenCalledExactlyOnceWith(context);
-    expect(attachment.mock.calls[0]![0]).toBe(context);
-});
-
-it('repeats initialization and forwards missing context without controller validation', async () => {
-    const context = { endpoint: '/fixture/' };
-    await init(context);
-    await init(context);
-    await init();
-    expect(attachment.mock.calls.map(([argument]) => argument)).toEqual([context, context, undefined]);
-});
-
-it('rejects when the owned helper throws', async () => {
-    const error = new Error('Attachment failed');
-    attachment.mockImplementation(() => { throw error; });
-    await expect(init({})).rejects.toBe(error);
-});
-
-it('ignores helper return values and does not await a returned promise', async () => {
-    attachment.mockReturnValue(new Promise(() => {}));
-    await expect(init({})).resolves.toBeUndefined();
+it('uses the generated release request and preserves the success message', async () => {
+    page();
+    await init({ projectId: 'project', canRelease: true, reloadDelayMs: 2000 });
+    vi.useFakeTimers();
+    $('.btn_unlock').trigger('click');
+    await vi.waitFor(() => expect($('#modal_success').css('display')).toBe('flex'));
+    expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/projects/project/release/', body: '{}' });
+    expect($('#modal_success_txt').text()).toContain('unlocked');
 });

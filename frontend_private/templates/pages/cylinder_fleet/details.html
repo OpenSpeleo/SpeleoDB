@@ -377,11 +377,9 @@
       "hasRows": {% if cylinders %}true{% else %}false{% endif %},
       "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
       "orderAscending": true,
-      "settingsEndpoint": "{% url 'api:v2:cylinder-fleet-detail' fleet_id=cylinder_fleet.id %}",
+      "settings": true,
       "settingsMessage": "The cylinder fleet has been updated.",
-      "entityCrud": true,
-      "listEndpoint": "{% url 'api:v2:cylinder-fleet-cylinders' fleet_id=cylinder_fleet.id %}",
-      "detailRoute": "api:v2:cylinder-detail"
+      "entityCrud": true
     }
   </script>
 {% endblock inline_extra_js %}

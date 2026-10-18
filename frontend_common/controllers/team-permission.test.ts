@@ -1,51 +1,33 @@
-import type { Mock } from 'vitest';
-import type { TeamPermissionContext } from '../../ts-types/controllers/team-permission.ts';
-import { init as initialize } from './team-permission.ts';
-import { attachTeamPermissionModal } from '../../frontend_private/static/private/ts/forms/team_permission_modal.ts';
+import { init } from './team-permission.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
 
-vi.mock('../../frontend_private/static/private/ts/forms/team_permission_modal.ts', () => ({
-    attachTeamPermissionModal: vi.fn(),
-}));
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
-// The double intentionally returns values that the real attachment does not.
-const attachment = vi.mocked(attachTeamPermissionModal) as unknown as Mock<(context?: unknown) => unknown>;
-function init(context?: unknown) { return initialize(context as TeamPermissionContext); }
+function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf-permission"><button id="btn_open_add_team">Add</button><button class="btn_delete_perm" data-team="team-id">Delete</button><div id="permission_modal" style="display:none"><h2 id="permission_modal_title"></h2><h3 id="permission_modal_header"></h3><form id="permission_form"><select id="team" name="team"><option value="team-id">Team</option></select><select id="level" name="level"><option value="READ_ONLY">Read</option></select><button id="btn_submit_add">Save</button></form></div><div id="error_div"></div><div id="success_div"></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>`; }
 
-beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
-    attachment.mockReset();
+it('creates a team permission through generated JSON with current CSRF', async () => {
+    page(); server.reply({ status: 201, json: {} });
+    await init({ projectId: 'project' });
+    vi.useFakeTimers();
+    $('#btn_open_add_team').trigger('click');
+    $('#team').val('team-id');
+    $('#btn_submit_add').trigger('click');
+    await vi.waitFor(() => expect($('#modal_success').css('display')).toBe('flex'));
+    expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/projects/project/permission/team/detail/', headers: { 'x-csrftoken': 'csrf-permission' } });
+    expect(JSON.parse(server.requests[0]!.body)).toEqual({ team: 'team-id', level: 'READ_ONLY' });
 });
 
-afterEach(() => {
-    vi.restoreAllMocks();
-});
-
-it('waits for load before forwarding the original context once', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const context = { endpoint: '/fixture/' };
-    const pending = init(context);
-    expect(attachment).not.toHaveBeenCalled();
-    window.dispatchEvent(new Event('load'));
-    await expect(pending).resolves.toBeUndefined();
-    expect(attachment).toHaveBeenCalledExactlyOnceWith(context);
-    expect(attachment.mock.calls[0]![0]).toBe(context);
-});
-
-it('repeats initialization and forwards missing context without controller validation', async () => {
-    const context = { endpoint: '/fixture/' };
-    await init(context);
-    await init(context);
-    await init();
-    expect(attachment.mock.calls.map(([argument]) => argument)).toEqual([context, context, undefined]);
-});
-
-it('rejects when the owned helper throws', async () => {
-    const error = new Error('Attachment failed');
-    attachment.mockImplementation(() => { throw error; });
-    await expect(init({})).rejects.toBe(error);
-});
-
-it('ignores helper return values and does not await a returned promise', async () => {
-    attachment.mockReturnValue(new Promise(() => {}));
-    await expect(init({})).resolves.toBeUndefined();
+it('revokes the selected team and preserves rejected responses for retry', async () => {
+    page(); server.reply({ status: 403, json: { detail: 'Denied' } });
+    await init({ projectId: 'project' });
+    $('.btn_delete_perm').trigger('click');
+    await vi.waitFor(() => expect($('#modal_error_txt').text()).toBe('Denied'));
+    expect(server.requests[0]).toMatchObject({ method: 'DELETE', path: '/api/v2/projects/project/permission/team/detail/' });
+    expect(JSON.parse(server.requests[0]!.body)).toEqual({ team: 'team-id' });
+    expect($('.btn_delete_perm').hasClass('disabled')).toBe(false);
 });

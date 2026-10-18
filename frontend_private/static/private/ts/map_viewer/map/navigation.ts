@@ -21,7 +21,7 @@ export async function goToStation(id: EntityId, lat: number, lon: number) {
     const navigation = beginMapNavigation(map, station ? `project:${station.project}`
         : surfaceStation ? `network:${surfaceStation.network}` : `station:${id}`);
     if (station) {
-        Layers.revealCategory('surveyStations', { stationType: (station.type || 'sensor') as import('../../../../../../ts-types/domain/map-display.ts').DisplayStationType });
+        Layers.revealCategory('surveyStations', { stationType: (station.type || 'sensor') });
         ProjectPanel.revealProject(station.project!);
     } else if (surfaceStation) {
         Layers.revealCategory('surfaceStations');

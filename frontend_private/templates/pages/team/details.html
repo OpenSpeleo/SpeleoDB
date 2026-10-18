@@ -85,8 +85,8 @@
     <script type="application/json" data-speleodb-controller="entity-crud">
       {
         "formId": "team_details_form",
-        "endpoint": "{% url 'api:v2:team-detail' id=team.id %}",
-        "method": "PUT",
+        "resource": "team",
+        "entityId": "{{ team.id }}",
         "successMessage": "The team has been updated."
       }
     </script>

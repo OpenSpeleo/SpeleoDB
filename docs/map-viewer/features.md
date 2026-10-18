@@ -544,18 +544,20 @@ Toast-style notifications for success/error/info feedback after operations
 **Module:** `components/upload.ts`
 
 File upload component used for station resources, log entry attachments, and GPX
-imports. `uploadWithProgress` owns an XMLHttpRequest transport, returns the
-original XHR for cancellation, and forwards progress and upload-complete events.
-`UploadProgressController` owns progress markup and a promise facade. This path
-returns `null` for 204 or empty successful responses; unreadable successful
-responses remain ambiguous errors. Error objects retain status, ambiguity, and
-parsed payload fields rather than becoming a new error class.
+imports. `uploadWithProgress` accepts a generated-operation callback and returns
+an `AbortController`. The SDK owns multipart serialization and its XHR
+transport; the component supplies progress, upload-complete, cancellation, and
+UI callbacks. `UploadProgressController` owns progress markup and a promise
+facade. Generated empty responses use `undefined`. Unexpected HTML or transport
+failure after upload remains an ambiguous outcome that must be checked before
+retrying.
 
-`ts-types/domain/upload.ts` separates callback payloads from untrusted
-serializer errors. Type-only class fields do not create new instance properties.
-Unit coverage checks FormData identity, callback receivers, error/abort
-payloads, promise settlement, and the delayed hide; Django subprocess
-integration checks the real transport against the application.
+`ts-types/domain/upload.ts` separates UI callback payloads from untrusted
+serializer errors. Unit coverage exercises real HTTP multipart bytes, filenames,
+CSRF, progress, abort settlement, server errors, and delayed hiding. The Django
+subprocess integration also persists uploaded files and verifies their contents.
+See the [API client guide](../typescript-api-client.md) for typed operation
+callbacks, encoding variants, status handling, and package upgrades.
 
 ### 8.4 Project Panel
 

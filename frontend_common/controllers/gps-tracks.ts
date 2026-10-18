@@ -1,3 +1,5 @@
+import { v2GpsTracksList, getV2GpsTrackExportGpxUrl } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { GISListRecord, GISListContext, GISUploadListContext, GISListPresentation, GISDetailsRoute, GISUploadErrorDetails, GISUploadErrorBody } from '../../ts-types/controllers/gis-lists.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
@@ -22,7 +24,7 @@ function formatDate(dateString: string | undefined) {
     });
 }
 
-function routeUrl(routeName: 'api:v2:gps-track-export-gpx' | 'private:gps_track_details', trackId: EntityId) {
+function routeUrl(routeName: 'private:gps_track_details', trackId: EntityId) {
     const route = globalThis.Urls?.[routeName];
     if (typeof route !== 'function') return '';
     return sanitizeUrl(route(trackId));
@@ -47,7 +49,7 @@ function permissionPillClass(label: string | null | undefined) {
 }
 
 function renderDesktopActions(track: GISListRecord, openIconUrl: string) {
-    const exportUrl = escapeHtml(routeUrl('api:v2:gps-track-export-gpx', track.id));
+    const exportUrl = escapeHtml(getV2GpsTrackExportGpxUrl(String(track.id)));
     const detailsUrl = escapeHtml(routeUrl('private:gps_track_details', track.id));
     const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
     return `
@@ -64,7 +66,7 @@ function renderDesktopActions(track: GISListRecord, openIconUrl: string) {
 }
 
 function renderMobileActions(track: GISListRecord, openIconUrl: string) {
-    const exportUrl = escapeHtml(routeUrl('api:v2:gps-track-export-gpx', track.id));
+    const exportUrl = escapeHtml(getV2GpsTrackExportGpxUrl(String(track.id)));
     const detailsUrl = escapeHtml(routeUrl('private:gps_track_details', track.id));
     const iconUrl = escapeHtml(sanitizeUrl(openIconUrl));
     return `
@@ -130,7 +132,7 @@ export function buildTrackListMarkup(tracks: GISListRecord[], openIconUrl = '') 
 }
 
 export function init(context: GISUploadListContext) {
-    GPXImport.init(context.csrfToken);
+    GPXImport.init();
     $('#import-gpx-button').on('click', () => GPXImport.showModal());
     $(document).on('click', '[data-gpx-action]', function () {
         const actions = {
@@ -152,7 +154,7 @@ export function init(context: GISUploadListContext) {
     }
 
     const listApi = attachTaggedEntityList<GISListRecord>({
-        listEndpoint: context.listEndpoint,
+        list: () => apiData(v2GpsTracksList(webApiOptions())),
         renderList: renderTracks,
         entityLabel: 'GPS track',
         loadFailedMessage: 'Error loading GPS tracks',

@@ -6,9 +6,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
@@ -35,12 +39,20 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
     serializer_class = StationResourceSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
+    @extend_schema(
+        responses={200: StationResourceSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_resources_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
         serializer = StationResourceSerializer(station.resources, many=True)
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: StationResourceSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_resources_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new resource."""
         station = self.get_object()
@@ -90,6 +102,8 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
     serializer_class = StationResourceSerializer
     lookup_field = "id"
 
+    @extend_schema(responses={200: StationResourceSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_resources_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station_resource = self.get_object()
         serializer = StationResourceSerializer(station_resource)
@@ -114,12 +128,24 @@ class StationResourceSpecificApiView(GenericAPIView[StationResource], SDBAPIView
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_resources_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_resources_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "StationResourceSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_resources_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station_resource = self.get_object()
 

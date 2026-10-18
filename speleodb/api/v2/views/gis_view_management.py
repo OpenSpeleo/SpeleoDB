@@ -8,9 +8,12 @@ from typing import Any
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.serializers.gis_view import GISViewCreateUpdateSerializer
 from speleodb.api.v2.serializers.gis_view import GISViewSerializer
 from speleodb.gis.models import GISView
@@ -47,12 +50,22 @@ class GISViewManagementListApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         )
 
     @extend_schema(operation_id="v2_user_gis_views_list")
+    @extend_schema(responses={200: GISViewSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all GIS views for the authenticated user."""
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        request={"application/json": GISViewCreateUpdateSerializer},
+        responses={
+            201: GISViewCreateUpdateSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_user_gis_views_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new GIS view."""
         user = self.get_user()
@@ -92,6 +105,8 @@ class GISViewManagementDetailApiView(GenericAPIView[GISView], SDBAPIViewMixin):
             "project_views__project"
         )
 
+    @extend_schema(responses={200: GISViewSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_user_gis_views_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific GIS view."""
         gis_view = self.get_object()
@@ -121,14 +136,33 @@ class GISViewManagementDetailApiView(GenericAPIView[GISView], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(
+        operation_id="v2_user_gis_views_update",
+        request={"application/json": GISViewCreateUpdateSerializer},
+    )
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of a GIS view."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(
+        operation_id="v2_user_gis_views_partial_update",
+        request=GISViewCreateUpdateSerializer,
+    )
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of a GIS view."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "GISViewManagementDetailApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_user_gis_views_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Deactivate a GIS view (soft delete)."""
         gis_view = self.get_object()

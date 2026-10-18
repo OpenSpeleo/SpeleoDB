@@ -20,76 +20,51 @@ beforeAll(() => {
 });
 
 describe('attachTaggedEntityList', () => {
-    let originalAjax: FormTestJQuery['ajax'];
 
     beforeEach(() => {
         document.body.innerHTML = `
             <div id="modal_success"><span id="modal_success_txt"></span></div>
             <div id="modal_error"><span id="modal_error_txt"></span></div>
         `;
-        originalAjax = jqueryHost.jQuery.ajax;
-    });
+        });
 
     afterEach(() => {
-        jqueryHost.jQuery.ajax = originalAjax;
-        document.body.innerHTML = '';
+            document.body.innerHTML = '';
     });
 
-    it('supports list-only workflows without mutation modal configuration', () => {
+    it('supports list-only workflows without mutation modal configuration', async () => {
         const renderList = vi.fn();
-        jqueryHost.jQuery.ajax = vi.fn(options => {
-            options.success([{ id: 'layer-1' }]);
-        });
-
-        const list = attachTaggedEntityList({
-            listEndpoint: '/api/v2/gis-layers/',
-            renderList,
-        });
-
+        const load = vi.fn(async () => [{ id: 'layer-1' }]);
+        const list = attachTaggedEntityList({ list: load, renderList });
+        await Promise.resolve();
         expect(renderList).toHaveBeenCalledWith(
             [{ id: 'layer-1' }],
             expect.objectContaining({ reload: expect.any(Function) as unknown }),
         );
-        expect(jqueryHost.jQuery.ajax).toHaveBeenCalledWith(
-            expect.objectContaining({
-                url: '/api/v2/gis-layers/',
-                method: 'GET',
-            }),
-        );
-
+        expect(load).toHaveBeenCalledOnce();
         list.reload();
-        expect(jqueryHost.jQuery.ajax).toHaveBeenCalledTimes(2);
+        expect(load).toHaveBeenCalledTimes(2);
     });
 
-    it('still requires a detail endpoint for configured mutation controls', () => {
+    it('requires remove for configured deletion controls', () => {
         expect(() => attachTaggedEntityList({
-            listEndpoint: '/api/v2/items/',
-            renderList: () => {},
-            confirmDeleteSelector: '#confirm-delete',
-        })).toThrow(/detailEndpointBuilder/);
+            list: async () => [], renderList: () => {}, confirmDeleteSelector: '#confirm-delete',
+        })).toThrow(/remove/);
     });
 });
 
-it('starts loading before returning the same mutable facade supplied to the renderer', () => {
-    const originalAjax = jqueryHost.jQuery.ajax;
+it('starts loading before returning the same facade supplied asynchronously to the renderer', async () => {
     const events: string[] = [];
     let renderedApi: TaggedListApi | undefined;
-    jqueryHost.jQuery.ajax = vi.fn(options => {
-        events.push('request');
-        options.success([{ id: 'tag-1' }]);
+    const api = attachTaggedEntityList({
+        list: async () => { events.push('request'); return [{ id: 'tag-1' }]; },
+        renderList: (_entities, facade) => { events.push('render'); renderedApi = facade; },
     });
-    try {
-        const api = attachTaggedEntityList({ listEndpoint: '/tags/', renderList: (entities, facade) => {
-            events.push('render');
-            renderedApi = facade;
-        } });
-        events.push('returned');
-        expect(events).toEqual(['request', 'render', 'returned']);
-        expect(renderedApi).toBe(api);
-        api.reload = vi.fn();
-        api.reload();
-        expect(api.reload).toHaveBeenCalledOnce();
-    } finally {
-        jqueryHost.jQuery.ajax = originalAjax;
-    }
+    events.push('returned');
+    expect(events).toEqual(['request', 'returned']);
+    await Promise.resolve();
+    expect(events).toEqual(['request', 'returned', 'render']);
+    expect(renderedApi).toBe(api);
+    api.reload();
+    expect(events).toEqual(['request', 'returned', 'render', 'request']);
 });

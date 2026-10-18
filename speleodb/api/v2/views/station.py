@@ -7,11 +7,17 @@ from typing import Any
 
 from django.db import IntegrityError
 from django.db.models.query import QuerySet
+from drf_spectacular.utils import PolymorphicProxySerializer
+from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import feature_collection
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectCreation
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
@@ -69,6 +75,8 @@ class SubSurfaceStationsApiView(BaseSubSurfaceStationsApiView):
 
     serializer_class = StationSerializer  # type: ignore[assignment]
 
+    @extend_schema(responses={200: StationSerializer(many=True), 403: API_ERROR})
+    @extend_schema(operation_id="v2_stations_subsurface_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         stations = self.get_queryset()
         serializer = self.get_serializer(stations, many=True)
@@ -83,6 +91,10 @@ class SubSurfaceStationsGeoJSONApiView(BaseSubSurfaceStationsApiView):
 
     serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: feature_collection(StationGeoJSONSerializer), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_subsurface_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a user in a map-friendly format."""
         stations = self.get_queryset()
@@ -117,6 +129,21 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
             case _:
                 raise TypeError(f"Unexpected station type received: {type(station)}")
 
+    @extend_schema(
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name="StationDetail",
+                serializers=[
+                    SubSurfaceStationWithResourcesSerializer,
+                    SurfaceStationWithResourcesSerializer,
+                ],
+                resource_type_field_name=None,
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
         serializer_class = self._get_serializer_for_station(
@@ -142,12 +169,57 @@ class StationSpecificApiView(GenericAPIView[Station], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(
+        request=PolymorphicProxySerializer(
+            component_name="StationUpdate",
+            serializers=[SubSurfaceStationSerializer, SurfaceStationSerializer],
+            resource_type_field_name=None,
+        ),
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name="StationUpdate",
+                serializers=[SubSurfaceStationSerializer, SurfaceStationSerializer],
+                resource_type_field_name=None,
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_stations_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(
+        request=PolymorphicProxySerializer(
+            component_name="StationUpdate",
+            serializers=[SubSurfaceStationSerializer, SurfaceStationSerializer],
+            resource_type_field_name=None,
+        ),
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name="StationUpdate",
+                serializers=[SubSurfaceStationSerializer, SurfaceStationSerializer],
+                resource_type_field_name=None,
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_stations_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "StationSpecificApiViewDeleteResponse", id=serializers.UUIDField()
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
 
@@ -176,6 +248,13 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
             return SubSurfaceStationWithResourcesSerializer
         return SubSurfaceStationSerializer
 
+    @extend_schema(
+        responses={
+            200: SubSurfaceStationWithResourcesSerializer(many=True),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_stations_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations that belong to the project."""
         project = self.get_object()
@@ -185,6 +264,10 @@ class ProjectStationsApiView(GenericAPIView[Project], SDBAPIViewMixin):
         )
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: SubSurfaceStationSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_projects_stations_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new station for the project."""
         project = self.get_object()
@@ -227,6 +310,10 @@ class ProjectStationsGeoJSONView(GenericAPIView[Project], SDBAPIViewMixin):
     lookup_field = "id"
     serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: feature_collection(StationGeoJSONSerializer), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_projects_stations_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a project in a map-friendly format."""
         project = self.get_object()
@@ -273,6 +360,8 @@ class SurfaceStationsApiView(BaseSurfaceStationsApiView):
 
     serializer_class = StationSerializer  # type: ignore[assignment]
 
+    @extend_schema(responses={200: StationSerializer(many=True), 403: API_ERROR})
+    @extend_schema(operation_id="v2_stations_surface_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         stations = self.get_queryset()
         serializer = self.get_serializer(stations, many=True)
@@ -287,6 +376,10 @@ class SurfaceStationsGeoJSONApiView(BaseSurfaceStationsApiView):
 
     serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: feature_collection(StationGeoJSONSerializer), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_surface_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all surface stations for a user in a map-friendly format."""
         stations = self.get_queryset()
@@ -312,6 +405,13 @@ class NetworkStationsApiView(GenericAPIView[SurfaceMonitoringNetwork], SDBAPIVie
             return SurfaceStationWithResourcesSerializer
         return SurfaceStationSerializer
 
+    @extend_schema(
+        responses={
+            200: SurfaceStationWithResourcesSerializer(many=True),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_stations_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations that belong to the network."""
         network = self.get_object()
@@ -321,6 +421,10 @@ class NetworkStationsApiView(GenericAPIView[SurfaceMonitoringNetwork], SDBAPIVie
         )
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: SurfaceStationSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_surface_networks_stations_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new station for the network."""
         network = self.get_object()
@@ -366,6 +470,10 @@ class NetworkStationsGeoJSONView(
     lookup_url_kwarg = "network_id"
     serializer_class = StationGeoJSONSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: feature_collection(StationGeoJSONSerializer), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_surface_networks_stations_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get all stations for a network in a map-friendly format."""
         network = self.get_object()

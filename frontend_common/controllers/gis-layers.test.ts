@@ -1,7 +1,6 @@
-import type { Mock } from 'vitest';
+import type { MockInstance } from 'vitest';
+import type { GISListRecord, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
 import type { ApplicationUrls } from '../../ts-types/browser/urls.d.ts';
-import type { GISListRecord, GISListContext, GISUploadListContext, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
-import type { TaggedListApi, TaggedListOptions } from '../../ts-types/domain/forms/tagged-list.ts';
 import { buildGISLayerListMarkup, renderGISLayerUploadError } from './gis-layers.ts';
 
 function layer(overrides: Partial<GISListRecord> = {}) {
@@ -15,7 +14,6 @@ function layer(overrides: Partial<GISListRecord> = {}) {
 
 beforeEach(() => {
     globalThis.Urls = {
-        'api:v2:gis-layer-source': id => `/api/v2/gis-layers/${id}/source/`,
         'private:gis_layer_details': id => `/private/gis-layer/${id}/`,
     } as ApplicationUrls;
 });
@@ -117,7 +115,6 @@ describe('GIS Layer management markup', () => {
     });
 
     it('sanitizes action URLs while retaining trusted static icons', () => {
-        globalThis.Urls['api:v2:gis-layer-source'] = () => 'javascript:alert(1)';
         globalThis.Urls['private:gis_layer_details'] = () => 'data:text/html,<script>alert(1)</script>';
         const { tableHtml } = buildGISLayerListMarkup([layer()]);
         document.body.innerHTML = `<table><tbody>${tableHtml}</tbody></table>`;
@@ -138,124 +135,74 @@ describe('GIS Layer management markup', () => {
     });
 });
 
-import { readFileSync } from 'node:fs';
-import { init as initialize } from './gis-layers.ts';
-import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
-import { initColorPicker } from '../../frontend_private/static/private/ts/color-picker.ts';
-import { FormModals } from '../../frontend_private/static/private/ts/forms/modals.ts';
-vi.mock('../../frontend_private/static/private/ts/forms/tagged_entity_list.ts', () => ({ attachTaggedEntityList: vi.fn() }));
-vi.mock('../../frontend_private/static/private/ts/color-picker.ts', () => ({ initColorPicker: vi.fn() }));
-vi.mock('../../frontend_private/static/private/ts/forms/modals.ts', () => ({ FormModals: { showSuccess: vi.fn() } }));
-const jquery = readFileSync('frontend_public/static/ts/vendors/jquery-3.7.1.js', 'utf8');
-beforeAll(() => { (0, eval)(jquery); });
-class UploadRequest extends EventTarget {
-    static DONE = 4;
-    static requests: UploadRequest[] = [];
-    upload = new EventTarget();
-    readyState = 1;
-    status = 0;
-    responseText = '';
-    open = vi.fn<(method: string, url: string) => void>();
-    setRequestHeader = vi.fn<(name: string, value: string) => void>();
-    send = vi.fn<(data: FormData) => void>();
-    constructor() { super(); UploadRequest.requests.push(this); }
-}
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
+import { init } from './gis-layers.ts';
 
-describe('GIS Layer initialization and upload lifecycle', () => {
-    let listeners: [EventTarget, string, EventListenerOrEventListenerObject | null][];
-    let reload: Mock<() => void>;
-    let color: Mock<(color: string) => void>;
-    const context = { listEndpoint: '/layers/', csrfToken: 'csrf', openIconUrl: '/open.svg' };
+describe('generated GIS layer upload lifecycle', () => {
+    let documentListeners: MockInstance<Document['addEventListener']>;
+    let windowListeners: MockInstance<Window['addEventListener']>;
     function element<T extends HTMLElement = HTMLElement>(id: string) { return document.getElementById('upload-layer-' + id) as T; }
     function select(name = 'boundary.geojson') {
-        const file = new File(['{}'], name, { type: 'application/json' });
-        Object.defineProperty(element('file-input'), 'files', { configurable: true, value: [file] });
+        Object.defineProperty(element('file-input'), 'files', { configurable: true, value: [new File(['{"name":"café"}'], name, { type: 'application/geo+json' })] });
         element('file-input').dispatchEvent(new Event('change'));
-        return file;
     }
     function submit() { element('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
     beforeEach(() => {
-        vi.clearAllMocks();
-        reload = vi.fn(); color = vi.fn(); listeners = [];
-        attachment.mockReturnValue({ reload, openEditModal: vi.fn(), openDeleteModal: vi.fn() });
-        vi.mocked(initColorPicker).mockReturnValue(color);
-        for (const target of [document, window] as EventTarget[]) {
-            const add = target.addEventListener.bind(target);
-            vi.spyOn(target, 'addEventListener').mockImplementation((name, listener, options) => { listeners.push([target, name, listener]); add(name, listener, options); });
-        }
-        UploadRequest.requests = [];
-        vi.stubGlobal('XMLHttpRequest', UploadRequest);
-        document.body.innerHTML = `
+        documentListeners = vi.spyOn(document, 'addEventListener'); windowListeners = vi.spyOn(window, 'addEventListener');
+        server.handle(request => request.method === 'GET' ? { json: [layer()] } : { status: 201, json: { id: 'new-layer' } });
+        document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf">
             <table><tbody id="gis-layers-table-body"></tbody></table><div id="gis-layers-cards-container"></div>
             <button id="upload-layer-open"></button><div id="upload-layer-modal" class="hidden"><form id="upload-layer-form">
             <input id="upload-layer-file-input" type="file"><input id="upload-layer-name"><input id="upload-layer-description" value=" description "><input id="upload-layer-color-value" value="#123456">
             <div id="upload-layer-drop-zone"></div><div id="upload-layer-selected-file"></div><span id="upload-layer-file-name"></span><span id="upload-layer-file-size"></span>
             <div id="upload-layer-error-message"><span id="upload-layer-error-text"></span></div><div id="upload-layer-progress-wrap"><span id="upload-layer-progress"></span><span id="upload-layer-progress-value"></span><span id="upload-layer-progress-label"></span></div>
             <button id="upload-layer-button" type="submit"><span id="upload-layer-button-text"></span><span id="upload-layer-spinner"></span></button>
-            <button type="button" data-layer-upload-action="hide"></button><button type="button" data-layer-upload-action="browse"></button><button type="button" data-layer-upload-action="clear"></button></form></div>`;
+            <button type="button" data-layer-upload-action="hide"></button><button type="button" data-layer-upload-action="browse"></button><button type="button" data-layer-upload-action="clear"></button></form></div>
+            <div id="modal_success"><span id="modal_success_txt"></span></div>`;
     });
     afterEach(() => {
-        for (const [target, name, listener] of listeners) target.removeEventListener(name, listener);
-        vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = '';
+        for (const [name, listener, options] of documentListeners.mock.calls) document.removeEventListener(name, listener, options);
+        for (const [name, listener, options] of windowListeners.mock.calls) window.removeEventListener(name, listener, options);
+        vi.restoreAllMocks(); $(document).off(); document.body.innerHTML = '';
     });
-    it('attaches immediately, renders both lists and reloads for the window event', () => {
-        expect(init(context)).toBeUndefined();
-        expect(vi.mocked(initColorPicker).mock.invocationCallOrder[0]!).toBeLessThan(attachment.mock.invocationCallOrder[0]!);
-        const options = attachment.mock.calls[0]![0];
-        expect(options).toMatchObject({ listEndpoint: '/layers/', entityLabel: 'GIS Layer', loadFailedMessage: 'Error loading GIS Layers' });
-        options.renderList!([layer()], {} as TaggedListApi);
-        expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2);
+    it('loads metadata into both layouts and refreshes on the import notification', async () => {
+        init({ openIconUrl: '/open.svg' });
+        await vi.waitFor(() => expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2));
+        expect(server.requests[0]!.path).toBe('/api/v2/gis-layers/');
         window.dispatchEvent(new Event('speleo:refresh-gis-layers'));
-        expect(reload).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(server.requests).toHaveLength(2));
     });
-    it('keeps original multipart fields and upload/processing progress, locks dismissal then reloads on success', () => {
-        init(context); element('open').click();
-        expect(color).toHaveBeenCalledWith('#377eb8');
-        select(); submit();
-        const request = UploadRequest.requests[0]!;
-        expect(request.open).toHaveBeenCalledWith('POST', '/layers/');
-        expect(request.setRequestHeader).toHaveBeenCalledWith('X-CSRFToken', 'csrf');
-        const data = request.send.mock.calls[0]![0];
-        expect((data.get('source_file') as File).name).toBe('boundary.geojson');
-        expect(data.get('name')).toBe('boundary'); expect(data.get('description')).toBe('description'); expect(data.get('color')).toBe('#123456');
+    it('uploads real multipart bytes and restores the dialog after the server accepts the layer', async () => {
+        init({}); element('open').click(); select(); submit();
+        expect(element<HTMLButtonElement>('button').disabled).toBe(true);
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         expect(element('modal').classList.contains('hidden')).toBe(false);
-        expect(document.querySelector<HTMLButtonElement>('[data-layer-upload-action="hide"]')!.disabled).toBe(true);
-        request.upload.dispatchEvent(new ProgressEvent('progress', { lengthComputable: true, loaded: 1, total: 4 }));
-        expect(element('progress-value').textContent).toBe('25%');
-        request.upload.dispatchEvent(new Event('load'));
-        expect(element('progress-label').textContent).toBe('Saving layer…');
-        request.status = 201; request.readyState = 4; request.dispatchEvent(new Event('load'));
+        await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe('GIS Layer uploaded successfully!'));
+        const request = server.requests.find(value => value.method === 'POST')!;
+        expect(request.path).toBe('/api/v2/gis-layers/'); expect(request.headers['x-csrftoken']).toBe('csrf');
+        expect(request.headers['content-type']).toContain('multipart/form-data; boundary=');
+        expect(request.body).toContain('name="source_file"; filename="boundary.geojson"');
+        expect(request.body).toContain('{"name":"café"}'); expect(request.body).toContain('name="name"\r\n\r\nboundary');
         expect(element('modal').classList.contains('hidden')).toBe(true);
-        expect(FormModals.showSuccess).toHaveBeenCalledWith('GIS Layer uploaded successfully!');
-        expect(reload).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(server.requests.filter(value => value.method === 'GET')).toHaveLength(2));
     });
-    it.each(['load', 'error', 'abort'])('restores controls after %s failure while retaining selected file', event => {
-        init(context); element('open').click(); select('boundary.kml'); submit();
-        const request = UploadRequest.requests[0]!;
-        request.upload.dispatchEvent(new Event('load'));
-        expect(element('progress-label').textContent).toBe('Preparing map data…');
-        request.status = 400; request.readyState = 4; request.responseText = JSON.stringify({ code: 'XML_INVALID', error: 'Invalid XML', details: { line: 3, source_line: '<bad>' } });
-        request.dispatchEvent(new Event(event));
+    it('retains the selected file and source-line error after a rejected upload', async () => {
+        server.handle(request => request.method === 'GET' ? { json: [] } : { status: 400, json: { code: 'XML_INVALID', error: 'Invalid XML', details: { line: 3, source_line: '<bad>' } } });
+        init({}); element('open').click(); select('boundary.kml'); submit();
+        await vi.waitFor(() => expect(element('error-text').textContent).toContain('Invalid XMLLine 3<bad>'));
         expect(element<HTMLButtonElement>('button').disabled).toBe(false);
-        expect(document.querySelector<HTMLButtonElement>('[data-layer-upload-action="hide"]')!.disabled).toBe(false);
-        expect(element('file-name').textContent).toBe('boundary.kml');
-        if (event === 'load') expect(element('error-text').textContent).toContain('Invalid XMLLine 3<bad>');
-        if (event === 'error') expect(element('error-text').textContent).toBe('The upload was interrupted. Try again.');
-        expect(reload).not.toHaveBeenCalled();
+        expect(element('file-name').textContent).toBe('boundary.kml'); expect(element('error-text').querySelector('bad')).toBeNull();
     });
-    it('validates selection and name, retains duplicate wiring and required DOM failures', () => {
-        init(context); init(context); select('bad.exe');
+    it('rejects invalid file extensions and blank names locally', () => {
+        init({}); select('bad.exe'); submit();
         expect(element('error-text').textContent).toContain('Choose KML');
-        submit(); expect(UploadRequest.requests).toHaveLength(0);
         select(); element<HTMLInputElement>('name').value = ' '; submit();
         expect(element('error-text').textContent).toBe('Please enter a layer name.');
-        window.dispatchEvent(new Event('speleo:refresh-gis-layers')); expect(reload).toHaveBeenCalledTimes(2);
-        expect(() => init()).toThrow(TypeError);
-        document.body.innerHTML = '';
-        expect(() => init(context)).toThrow(TypeError);
+        expect(server.requests.filter(value => value.method === 'POST')).toHaveLength(0);
     });
 });
-
-function init(context?: unknown) { return initialize(context as GISUploadListContext); }
-const attachment = vi.mocked(attachTaggedEntityList) as unknown as Mock<(options: TaggedListOptions<GISListRecord>) => TaggedListApi>;

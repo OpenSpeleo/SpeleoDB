@@ -53,10 +53,8 @@ class _BaseGPSTrackView(AuthenticatedTemplateView):
                 "private:gps_track_danger_zone",
                 kwargs={"track_id": track.id},
             ),
-            "api_detail_url": reverse(
-                "api:v2:gps-track-detail",
-                kwargs={"id": track.id},
-            ),
+            "api_resource": "gps-track",
+            "api_entity_id": str(track.id),
             "download_url": reverse(
                 "api:v2:gps-track-export-gpx",
                 kwargs={"id": track.id},
@@ -144,10 +142,8 @@ class GPSTrackUserPermissionsView(_BaseGPSTrackView):
         data.update(
             permissions=permissions,
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:gps-track-permissions",
-                kwargs={"id": track.id},
-            ),
+            api_resource="gps-track",
+            api_entity_id=str(track.id),
             permission_add_title="Add a collaborator to the GPS track",
             permission_success_message="The GPS track permission has been saved.",
             permission_delete_message="The GPS track permission has been removed.",

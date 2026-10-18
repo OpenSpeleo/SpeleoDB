@@ -11,6 +11,21 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
+from speleodb.testing.api_contract import assert_api_response
+
+
+@pytest.mark.django_db
+class TestSpreadsheetInvalidInputs(BaseAPITestCase):
+    def test_missing_required_inputs_return_validation_errors(self) -> None:
+        for route in ("tool-xls2dmp", "tool-xls2compass"):
+            response = self.client.post(
+                reverse("api:v2:" + route),
+                {},
+                format="json",
+                headers={"authorization": self.auth},
+            )
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert_api_response(response)
 
 
 @pytest.mark.django_db

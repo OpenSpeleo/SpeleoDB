@@ -7,15 +7,23 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import sentry_sdk
+from allauth.account import app_settings as account_settings
+from allauth.headless.account.views import ManagePhoneView
+from allauth.headless.account.views import ResendPhoneVerificationCodeView
+from allauth.headless.account.views import VerifyPhoneView
 from django.conf import settings
 from django.contrib.auth.models import update_last_login
 from django.http import FileResponse
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
+from django.http import JsonResponse
 from django.http import StreamingHttpResponse
 from django.http.response import HttpResponseRedirectBase
 from django.urls import resolve
+from django.utils.cache import add_never_cache_headers
+from django.utils.deprecation import MiddlewareMixin
+from hijack.middleware import HijackUserMiddleware
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.negotiation import DefaultContentNegotiation
@@ -37,6 +45,51 @@ if TYPE_CHECKING:
     from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
+
+
+class HeadlessPhoneFeatureMiddleware(MiddlewareMixin):
+    """Reject unavailable phone management before unimplemented adapter hooks."""
+
+    def process_view(
+        self,
+        request: HttpRequest,
+        view_func: Callable[..., Any],
+        view_args: Sequence[Any],
+        view_kwargs: dict[str, Any],
+    ) -> HttpResponse | None:
+        if (
+            getattr(view_func, "view_class", None)
+            in {ManagePhoneView, VerifyPhoneView, ResendPhoneVerificationCodeView}
+            and (
+                request.method == "POST"
+                or (
+                    request.method in {"GET", "HEAD"}
+                    and getattr(view_func, "view_class", None) is ManagePhoneView
+                )
+            )
+            and "phone" not in account_settings.SIGNUP_FIELDS
+        ):
+            response = JsonResponse(
+                {"status": status.HTTP_409_CONFLICT}, status=status.HTTP_409_CONFLICT
+            )
+            add_never_cache_headers(response)
+            return response
+        return None
+
+
+class HeadlessAwareHijackUserMiddleware(HijackUserMiddleware):
+    """Keep app session-token authentication independent of browser impersonation.
+
+    django-hijack wraps a copy of the cookie user in a lazy object. Allauth's
+    app context changes request.session and resets that lazy object, but the
+    hijack closure still points at the original cookie user. Preserve Django's
+    session-aware lookup for the two mounted app routes instead.
+    """
+
+    def process_request(self, request: HttpRequest) -> None:
+        if request.path_info.startswith(("/_allauth/app/", "/api/auth/app/")):
+            return
+        super().process_request(request)  # type: ignore[no-untyped-call]
 
 
 class LastLoginUpdateMiddleware:

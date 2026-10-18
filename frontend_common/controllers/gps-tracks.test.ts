@@ -1,7 +1,5 @@
-import type { Mock } from 'vitest';
+import type { GISListRecord, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
 import type { ApplicationUrls } from '../../ts-types/browser/urls.d.ts';
-import type { GISListRecord, GISListContext, GISUploadListContext, GISUploadErrorDetails } from '../../ts-types/controllers/gis-lists.ts';
-import type { TaggedListApi, TaggedListOptions } from '../../ts-types/domain/forms/tagged-list.ts';
 import { buildTrackListMarkup } from './gps-tracks.ts';
 
 function track(overrides: Partial<GISListRecord> = {}) {
@@ -30,7 +28,6 @@ function render(tracks: GISListRecord[]) {
 
 beforeEach(() => {
     globalThis.Urls = {
-        'api:v2:gps-track-export-gpx': id => `/api/v2/gps_tracks/${id}/export/gpx/`,
         'private:gps_track_details': id => `/private/gps-track/${id}/`,
     } as ApplicationUrls;
 });
@@ -106,61 +103,27 @@ describe('GPS Tracks rendered list contract', () => {
     });
 });
 
-import { readFileSync } from 'node:fs';
-import { init as initialize } from './gps-tracks.ts';
-import { GPXImport } from '../../frontend_private/static/private/ts/gpx_import.ts';
-import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
-vi.mock('../../frontend_private/static/private/ts/gpx_import.ts', () => ({ GPXImport: { init: vi.fn(), showModal: vi.fn(), clearFile: vi.fn(), hideModal: vi.fn(), upload: vi.fn(), hideWarningModal: vi.fn() } }));
-vi.mock('../../frontend_private/static/private/ts/forms/tagged_entity_list.ts', () => ({ attachTaggedEntityList: vi.fn() }));
-const jquery = readFileSync('frontend_public/static/ts/vendors/jquery-3.7.1.js', 'utf8');
-beforeAll(() => { (0, eval)(jquery); });
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
+import { init } from './gps-tracks.ts';
 
-describe('GPS Tracks initialization', () => {
-    let listeners: [string, EventListenerOrEventListenerObject][];
-    let reload: Mock<() => void>;
-    beforeEach(() => {
-        vi.clearAllMocks();
-        listeners = [];
-        const add = window.addEventListener.bind(window);
-        vi.spyOn(window, 'addEventListener').mockImplementation((name, listener, options) => { listeners.push([name, listener]); add(name, listener, options); });
-        reload = vi.fn();
-        attachment.mockReturnValue({ reload, openEditModal: vi.fn(), openDeleteModal: vi.fn() });
-        document.body.innerHTML = '<button id="import-gpx-button"></button><input id="gpx-file-input"><table><tbody id="tracks-table-body"></tbody></table><div id="tracks-cards-container"></div>';
-    });
-    afterEach(() => { for (const [name, listener] of listeners) window.removeEventListener(name, listener); $(document).off('click'); vi.restoreAllMocks(); });
-    it('initializes imports before the list, renders both targets and reloads on the window event', () => {
-        expect(init({ csrfToken: 'csrf', listEndpoint: '/tracks/', openIconUrl: '/open.svg' })).toBeUndefined();
-        expect(GPXImport.init).toHaveBeenCalledWith('csrf');
-        expect(vi.mocked(GPXImport.init).mock.invocationCallOrder[0]!).toBeLessThan(attachment.mock.invocationCallOrder[0]!);
-        const options = attachment.mock.calls[0]![0];
-        expect(options).toMatchObject({ listEndpoint: '/tracks/', entityLabel: 'GPS track', loadFailedMessage: 'Error loading GPS tracks' });
-        options.renderList!([track()], {} as TaggedListApi);
-        expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2);
-        window.dispatchEvent(new Event('speleo:refresh-gps-tracks'));
-        expect(reload).toHaveBeenCalledTimes(1);
-        $('#import-gpx-button').trigger('click');
-        expect(GPXImport.showModal).toHaveBeenCalledTimes(1);
-    });
-    it('delegates actions with the clicked receiver, ignores unknown actions and repeats bindings', () => {
-        init({}); init({});
-        for (const action of ['clear', 'hide', 'upload', 'hide-warning', 'unknown']) {
-            const button = document.createElement('button'); button.dataset.gpxAction = action; document.body.append(button); button.click();
-        }
-        expect(GPXImport.clearFile).toHaveBeenCalledTimes(2);
-        expect(GPXImport.hideModal).toHaveBeenCalledTimes(2);
-        expect(GPXImport.upload).toHaveBeenCalledTimes(2);
-        expect(GPXImport.hideWarningModal).toHaveBeenCalledTimes(2);
-        window.dispatchEvent(new Event('speleo:refresh-gps-tracks'));
-        expect(reload).toHaveBeenCalledTimes(2);
-    });
-    it('preserves synchronous context and dependency failures', () => {
-        expect(() => init()).toThrow(TypeError);
-        const failure = new Error('import failed');
-        vi.mocked(GPXImport.init).mockImplementationOnce(() => { throw failure; });
-        expect(() => init({})).toThrow(failure);
-        expect(attachTaggedEntityList).not.toHaveBeenCalled();
-    });
+it('loads tracks through the generated client and reloads after import notification', async () => {
+    document.body.innerHTML = '<button id="import-gpx-button"></button><input id="gpx-file-input" type="file"><table><tbody id="tracks-table-body"></tbody></table><div id="tracks-cards-container"></div>';
+    server.reply({ json: [track()] });
+    const listeners = vi.spyOn(window, 'addEventListener');
+    try {
+        init({ openIconUrl: '/open.svg' });
+        await vi.waitFor(() => expect(document.querySelectorAll('img[src="/open.svg"]')).toHaveLength(2));
+        expect(server.requests[0]!.path).toBe('/api/v2/gps_tracks/');
+        server.reply({ json: [] }); window.dispatchEvent(new Event('speleo:refresh-gps-tracks'));
+        await vi.waitFor(() => expect($('#tracks-table-body').text()).toContain('No GPS tracks yet'));
+        expect(server.requests).toHaveLength(2);
+    } finally {
+        for (const [name, listener, options] of listeners.mock.calls) window.removeEventListener(name, listener, options);
+        listeners.mockRestore(); $(document).off();
+    }
 });
-
-function init(context?: unknown) { return initialize(context as GISUploadListContext); }
-const attachment = vi.mocked(attachTaggedEntityList) as unknown as Mock<(options: TaggedListOptions<GISListRecord>) => TaggedListApi>;

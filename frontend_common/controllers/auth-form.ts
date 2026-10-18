@@ -1,3 +1,5 @@
+import { authBrowserAuthLoginPost, authBrowserAuthSignupPost, authBrowserAuthPasswordRequestPost, authBrowserAuthPasswordResetPost } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { AuthFormContext } from '../../ts-types/controllers/auth-form.ts';
 import type { AuthPayload } from '../../ts-types/domain/auth.ts';
 import {
@@ -26,7 +28,7 @@ function passwordPairValidator(payload: AuthPayload) {
 function configureLogin(context: AuthFormContext) {
     attachAuthForm({
         formId: context.formId,
-        endpoint: context.endpoint,
+        submit: payload => apiData(authBrowserAuthLoginPost({ email: payload.email!, password: payload.password! }, webApiOptions())),
         onSuccess: () => {
             window.location.href = context.successRedirect!;
         },
@@ -34,8 +36,8 @@ function configureLogin(context: AuthFormContext) {
             payload.password ? null : 'The Password field is empty !'
         )],
         errorHandler: xhr => {
-            if (xhr.status !== 401 || !xhr.responseJSON?.data) return null;
-            const needsVerification = (xhr.responseJSON.data.flows || [])
+            if (xhr.status !== 401 || !xhr.data?.data) return null;
+            const needsVerification = (xhr.data.data.flows || [])
                 .some(flow => flow.id === 'verify_email');
             return needsVerification
                 ? 'Your email is not verified. We just resent you an activation link on your email.'
@@ -47,10 +49,10 @@ function configureLogin(context: AuthFormContext) {
 function configureSignup(context: AuthFormContext) {
     attachAuthForm({
         formId: context.formId,
-        endpoint: context.endpoint,
+        submit: payload => apiData(authBrowserAuthSignupPost({ name: payload.name!, country: payload.country!, email: payload.email!, password: payload.password! }, webApiOptions())),
         successMessage: context.successMessage,
         treat401AsSuccess: true,
-        beforeAjax: (payload, formData) => {
+        beforeSubmit: (payload, formData) => {
             const marker = (payload.cave_marker || '').trim().toUpperCase();
             if (marker !== 'ARROW') {
                 $('#cave_diver_modal').show();
@@ -75,7 +77,7 @@ function configureSignup(context: AuthFormContext) {
 function configurePasswordReset(context: AuthFormContext) {
     attachAuthForm({
         formId: context.formId,
-        endpoint: context.endpoint,
+        submit: payload => apiData(authBrowserAuthPasswordRequestPost({ email: payload.email! }, webApiOptions())),
         successMessage: context.successMessage,
         validators: [emailValidator],
     });
@@ -84,7 +86,7 @@ function configurePasswordReset(context: AuthFormContext) {
 function configurePasswordResetFromKey(context: AuthFormContext) {
     attachAuthForm({
         formId: context.formId,
-        endpoint: context.endpoint,
+        submit: payload => apiData(authBrowserAuthPasswordResetPost({ key: payload.key!, password: payload.password! }, webApiOptions())),
         successMessage: context.successMessage,
         treat401AsSuccess: true,
         validators: [passwordPairValidator],

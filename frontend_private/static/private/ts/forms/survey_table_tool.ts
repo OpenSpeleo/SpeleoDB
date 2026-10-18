@@ -19,9 +19,9 @@ import type { SurveyTableOptions } from '../../../../../ts-types/domain/forms/to
  *     column.
  *   - The human message for "the last row should only have X".
  *
- * These are all passed in as options. The AJAX submit + field-level
- * form validation (cave name, survey name, etc.) stays inline per
- * template because each tool has a different payload and endpoint.
+ * These are all passed in as options. Generated-operation submission and field-level
+ * form validation (cave name, survey name, etc.) stay in each route
+ * controller because each tool has a different typed request and response.
  *
  * Usage:
  *   const surveyTable = attachSurveyTableTool({

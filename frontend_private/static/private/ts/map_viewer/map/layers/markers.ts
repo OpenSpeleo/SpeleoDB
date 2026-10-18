@@ -1,3 +1,4 @@
+import type { CylinderInstallGeoJSONCollection } from '@speleodb/api';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
@@ -18,7 +19,7 @@ interface MarkerLayerOwner {
     applyProjectScopedMarkerVisibility(): void;
     showMarkerDragHighlight(type: string, coordinates: [number, number], snapped: boolean): void;
     hideMarkerDragHighlight(): void;
-    addCylinderInstallsLayer(data: MapPointCollection<Omit<CylinderInstallRecord, 'id'> & { id?: EntityId }>): void;
+    addCylinderInstallsLayer(data: CylinderInstallGeoJSONCollection): void;
     loadCylinderInstalls(): Promise<void>;
 }
 /**
@@ -374,7 +375,7 @@ export async function loadCylinderInstalls(this: Pick<MarkerLayerOwner, 'addCyli
             geojsonData.type === 'FeatureCollection' &&
             Array.isArray(geojsonData.features)
         ) {
-            this.addCylinderInstallsLayer(geojsonData as MapPointCollection<CylinderInstallRecord>);
+            this.addCylinderInstallsLayer(geojsonData);
             console.log(`✅ Loaded ${geojsonData.features.length} cylinder installs`);
         } else {
             console.log('⚠️ No cylinder installs to display or invalid response format');
@@ -387,7 +388,7 @@ export async function loadCylinderInstalls(this: Pick<MarkerLayerOwner, 'addCyli
 /**
  * Add cylinder installs layer to the map
  */
-export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProjectScopedMarkerVisibility' | 'reorderLayers'>, geojsonData: MapPointCollection<Omit<CylinderInstallRecord, 'id'> & { id?: EntityId }>) {
+export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProjectScopedMarkerVisibility' | 'reorderLayers'>, geojsonData: CylinderInstallGeoJSONCollection) {
     const map = State.map;
     if (!map) return;
 
@@ -410,15 +411,15 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
     geojsonData.features.forEach(feature => {
         // Ensure id property is set on each feature for Renderer promoteId
         if (feature.id && !feature.properties.id) {
-            feature.properties.id = feature.id;
+            feature.properties.id = String(feature.id);
         }
         // Cache cylinder install data by ID
         const id = feature.id || feature.properties.id;
         if (id) {
             State.cylinderInstalls.set(id, {
+                ...feature.properties,
                 id,
-                coordinates: feature.geometry.coordinates,
-                ...feature.properties
+                coordinates: feature.geometry.coordinates
             });
         }
     });

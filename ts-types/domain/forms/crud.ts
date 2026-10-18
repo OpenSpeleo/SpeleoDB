@@ -1,11 +1,8 @@
-import type { AjaxFailure } from './errors.ts';
-
 /** Form field names vary by caller; hooks may transform their serialized values. */
 export type FormPayload = Record<string, unknown>;
 export interface EntityCrudOptions<Response = unknown> {
     formId?: string | undefined;
-    endpoint?: string | undefined;
-    method?: string | undefined;
+    submit: (payload: FormPayload) => Promise<Response>;
     submitBtnId?: string;
     successMessage?: string | undefined;
     successRedirect?: string | undefined;
@@ -14,21 +11,21 @@ export interface EntityCrudOptions<Response = unknown> {
     redirectDelayMs?: number;
     beforeSubmit?: ((payload: FormPayload) => boolean | void) | undefined;
     onSuccess?: (response: Response) => void;
-    serialize?: ((payload: FormPayload) => string) | undefined;
+    prepare?: ((payload: FormPayload) => FormPayload) | undefined;
     submitOnForm?: boolean;
     onPendingChange?: (pending: boolean) => void;
     showSuccessModal?: boolean;
-    onError?: (xhr: AjaxFailure) => void;
+    onError?: (error: unknown) => void;
 }
 export interface DangerZoneOptions {
-    deleteUrl?: string;
+    remove: () => Promise<unknown>;
     successMessage?: string;
     successRedirect?: string;
     redirectDelayMs?: number;
 }
 export interface MutexLockOptions {
-    lockUrl?: string;
-    unlockUrl?: string;
+    acquire?: (() => Promise<unknown>) | undefined;
+    release?: (() => Promise<unknown>) | undefined;
     lockMessage?: string;
     unlockMessage?: string;
     reloadDelayMs?: number;

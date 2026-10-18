@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 if (process.env.SPELEODB_LOCAL_PACKAGES === '1') {
-    for (const name of ['@speleodb/map-core', '@speleodb/map-viewer']) {
+    for (const name of ['@speleodb/api', '@speleodb/map-core', '@speleodb/map-viewer']) {
         let manifest: { speleodbLocalSources?: boolean };
         try {
             manifest = JSON.parse(readFileSync(require.resolve(`${name}/package.json`), 'utf8')) as typeof manifest;
@@ -19,6 +19,6 @@ if (process.env.SPELEODB_LOCAL_PACKAGES === '1') {
 export const sharedMapResolution = {
     // Compatibility with older source-enabled revisions; npm exports default to source.
     conditions: ['speleodb-source', 'module', 'browser', 'development|production'],
-    dedupe: ['maplibre-gl', '@speleodb/map-core', '@speleodb/map-viewer'],
+    dedupe: ['maplibre-gl', '@speleodb/api', '@speleodb/map-core', '@speleodb/map-viewer'],
     preserveSymlinks: true,
 };

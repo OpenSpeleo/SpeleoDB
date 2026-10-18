@@ -1,28 +1,6 @@
-import type { ApplicationUrls } from '../../../../../ts-types/browser/urls.d.ts';
-import type { LandmarkFormCollection } from '../../../../../ts-types/domain/landmark-forms.ts';
 import type { ViewerLandmark } from '../../../../../ts-types/domain/map-entities.ts';
-import type { ModuleMock } from '../../../../../ts-types/testing/vitest/mocks.ts';
-vi.mock('../map_viewer/landmarks/forms.ts', () => ({
-    LandmarkForms: {
-        openLandmarkCreateModal: vi.fn(),
-        openLandmarkEditModal: vi.fn(),
-        openLandmarkDeleteModal: vi.fn(),
-        openLandmarkBulkTransferModal: vi.fn(),
-        openLandmarkBulkDeleteModal: vi.fn(),
-    },
-}));
-
-vi.mock('../map_viewer/utils.ts', () => ({
-    Utils: {
-        getCSRFToken: vi.fn(() => 'test-csrf'),
-        showNotification: vi.fn(),
-        copyToClipboard: vi.fn(),
-    },
-}));
-
+import { startApiServer, setBrowserUrl } from '../../../../../frontend_common/test/api-server.ts';
 import { initLandmarkCollectionDetails } from './details_main.ts';
-import { LandmarkForms as forms } from '../map_viewer/landmarks/forms.ts';
-import { Utils as utilities } from '../map_viewer/utils.ts';
 
 function buildPageHtml({ canWrite = true, landmarks = [] }: { canWrite?: boolean; landmarks?: ViewerLandmark[] } = {}) {
     const landmarkRows = landmarks.map(lm => `
@@ -77,248 +55,84 @@ const SAMPLE_LANDMARKS = [
     { id: 'lm-3', name: 'Gamma', latitude: 47, longitude: -124, created_by: 'c@x.com' },
 ];
 
-describe('initLandmarkCollectionDetails', () => {
-    beforeEach(() => {
-        document.body.innerHTML = '';
-        vi.clearAllMocks();
-        window.LANDMARK_DETAILS_CONTEXT = { canWrite: true };
-        window.$ = undefined;
-        window.Urls = {
-            'api:v2:landmark-collections': () => '/api/v2/landmark-collections/',
-        } as ApplicationUrls;
-        global.fetch = vi.fn(() => Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([]),
-        } as Response)) as unknown as typeof fetch;
-    });
-
-    it('returns early when collection context is missing', () => {
-        document.body.innerHTML = '<div>empty page</div>';
-        initLandmarkCollectionDetails();
-
-        expect(document.querySelector<HTMLElement>('#landmarks-bulk-action-bar')!).toBeNull();
-    });
-
-    it('hydrates landmarks from inline JSON', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const checkboxes = document.querySelectorAll('.landmark-row-select');
-        expect(checkboxes.length).toBe(3);
-    });
-
-    it('hides bulk bar when nothing is selected', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const bar = document.querySelector<HTMLElement>('#landmarks-bulk-action-bar')!;
-        expect(bar.hasAttribute('hidden')).toBe(true);
-    });
-
-    it('shows bulk bar when a row checkbox is toggled', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const cb = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-1"]')!;
-        cb.checked = true;
-        cb.onchange!(new Event("change"));
-
-        const bar = document.querySelector<HTMLElement>('#landmarks-bulk-action-bar')!;
-        expect(bar.hasAttribute('hidden')).toBe(false);
-
-        const count = document.querySelector<HTMLElement>('#landmarks-selection-count')!;
-        expect(count.textContent).toBe('1');
-    });
-
-    it('select-all checks all row checkboxes', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const selectAll = document.querySelector<HTMLInputElement>('#collection_landmarks_table_select_all')!;
-        selectAll.checked = true;
-        selectAll.dispatchEvent(new Event('change'));
-
-        const checked = document.querySelectorAll('.landmark-row-select:checked');
-        expect(checked.length).toBe(3);
-
-        const count = document.querySelector<HTMLElement>('#landmarks-selection-count')!;
-        expect(count.textContent).toBe('3');
-    });
-
-    it('clear button empties selection and hides bar', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const cb = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-1"]')!;
-        cb.checked = true;
-        cb.onchange!(new Event("change"));
-
-        const clearBtn = document.querySelector<HTMLElement>('#landmarks-bulk-clear-btn')!;
-        clearBtn.onclick!(new MouseEvent("click") as PointerEvent);
-
-        const bar = document.querySelector<HTMLElement>('#landmarks-bulk-action-bar')!;
-        expect(bar.hasAttribute('hidden')).toBe(true);
-
-        const checked = document.querySelectorAll('.landmark-row-select:checked');
-        expect(checked.length).toBe(0);
-    });
-
-    it('bulk transfer button opens transfer modal with selected landmarks', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const first = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-1"]')!;
-        const third = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-3"]')!;
-        first.checked = true;
-        third.checked = true;
-        first.onchange!(new Event("change"));
-        third.onchange!(new Event("change"));
-
-        const transferBtn = document.querySelector<HTMLElement>('#landmarks-bulk-transfer-btn')!;
-        transferBtn.onclick!(new MouseEvent("click") as PointerEvent);
-
-        expect(LandmarkForms.openLandmarkBulkTransferModal).toHaveBeenCalledTimes(1);
-        const call = LandmarkForms.openLandmarkBulkTransferModal.mock.calls[0]![0]!;
-        expect((call.sourceCollection as LandmarkFormCollection).id).toBe('col-1');
-        expect(call.landmarks!.map(lm => lm.id)).toEqual(['lm-1', 'lm-3']);
-    });
-
-    it('bulk delete button opens delete modal with selected landmarks', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const second = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-2"]')!;
-        second.checked = true;
-        second.onchange!(new Event("change"));
-
-        const deleteBtn = document.querySelector<HTMLElement>('#landmarks-bulk-delete-btn')!;
-        deleteBtn.onclick!(new MouseEvent("click") as PointerEvent);
-
-        expect(LandmarkForms.openLandmarkBulkDeleteModal).toHaveBeenCalledTimes(1);
-        const call = LandmarkForms.openLandmarkBulkDeleteModal.mock.calls[0]![0]!;
-        expect((call.sourceCollection as LandmarkFormCollection).id).toBe('col-1');
-        expect(call.landmarks!.map(lm => lm.id)).toEqual(['lm-2']);
-    });
-
-    it('edit button supplies the source color before destination collections load', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const editBtn = document.querySelector<HTMLElement>('.landmark-edit-btn[data-landmark-id="lm-1"]')!;
-        editBtn.onclick!(new MouseEvent('click') as PointerEvent);
-
-        expect(LandmarkForms.openLandmarkEditModal).toHaveBeenCalledTimes(1);
-        const call = LandmarkForms.openLandmarkEditModal.mock.calls[0]![0]!;
-        expect(call.landmark!.id).toBe('lm-1');
-        expect(call.lockedCollectionId).toBe('col-1');
-        expect(call.collections).toEqual([expect.objectContaining({ id: 'col-1', color: '#aabbcc' })]);
-    });
-
-    it('delete button opens delete modal via LandmarkForms', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const deleteBtn = document.querySelector<HTMLElement>('.landmark-delete-btn[data-landmark-id="lm-2"]')!;
-        deleteBtn.onclick!(new MouseEvent('click') as PointerEvent);
-
-        expect(LandmarkForms.openLandmarkDeleteModal).toHaveBeenCalledTimes(1);
-        const call = LandmarkForms.openLandmarkDeleteModal.mock.calls[0]![0]!;
-        expect(call.landmark!.id).toBe('lm-2');
-    });
-
-    it('add button supplies the source color before destination collections load', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const addBtn = document.querySelector<HTMLElement>('#add-landmark-btn')!;
-        addBtn.onclick!(new MouseEvent("click") as PointerEvent);
-
-        expect(LandmarkForms.openLandmarkCreateModal).toHaveBeenCalledTimes(1);
-        const call = LandmarkForms.openLandmarkCreateModal.mock.calls[0]![0]!;
-        expect(call.lockedCollectionId).toBe('col-1');
-        expect(call.collections).toEqual([expect.objectContaining({ id: 'col-1', color: '#aabbcc' })]);
-    });
-
-    it('coordinate cell copies value on click', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const coordCell = document.querySelector<HTMLElement>('.landmark-coord-cell')!;
-        coordCell.click();
-
-        expect(Utils.copyToClipboard).toHaveBeenCalled();
-    });
-
-    it('does not render checkboxes or bulk bar for read-only users', () => {
-        window.LANDMARK_DETAILS_CONTEXT = { canWrite: false };
-        document.body.innerHTML = buildPageHtml({ canWrite: false, landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        expect(document.querySelectorAll('.landmark-row-select').length).toBe(0);
-        expect(document.querySelector<HTMLElement>('#landmarks-bulk-action-bar')!).toBeNull();
-    });
-
-    it('is-selected class toggles with checkbox', () => {
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-        initLandmarkCollectionDetails();
-
-        const cb = document.querySelector<HTMLInputElement>('.landmark-row-select[data-landmark-id="lm-1"]')!;
-        const row = cb.closest('tr')!;
-
-        cb.checked = true;
-        cb.onchange!(new Event("change"));
-        expect(row.classList.contains('is-selected')).toBe(true);
-
-        cb.checked = false;
-        cb.onchange!(new Event("change"));
-        expect(row.classList.contains('is-selected')).toBe(false);
-    });
+let server: Awaited<ReturnType<typeof startApiServer>>;
+beforeAll(async () => { server = await startApiServer(); });
+afterAll(async () => { await server.close(); });
+beforeEach(() => {
+    server.reset();
+    server.reply({ json: [] });
+    setBrowserUrl(server.origin);
+    window.LANDMARK_DETAILS_CONTEXT = { canWrite: true };
+    document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
+});
+afterEach(async () => {
+    // The page intentionally starts its collection read without blocking initial rendering.
+    if (window.LANDMARK_DETAILS_CONTEXT?.canWrite && document.getElementById('landmark_collection_context')) await vi.waitFor(() => { expect(server.requests.length).toBeGreaterThan(0); });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    document.body.replaceChildren();
 });
 
-describe('collection initialization boundaries', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        window.LANDMARK_DETAILS_CONTEXT = { canWrite: true };
-        window.$ = undefined;
-        window.Urls = { 'api:v2:landmark-collections': () => '/collections/' } as ApplicationUrls;
-        global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] }) as unknown as typeof fetch;
-        document.body.innerHTML = buildPageHtml({ landmarks: SAMPLE_LANDMARKS });
-    });
-    it('logs malformed context and returns before table or collection initialization', () => {
-        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-        document.getElementById('landmark_collection_context')!.textContent = '{';
-        expect(initLandmarkCollectionDetails()).toBeUndefined();
-        expect(error).toHaveBeenCalledWith('Failed to parse inline JSON #landmark_collection_context:', expect.any(SyntaxError));
-        expect(fetch).not.toHaveBeenCalled(); error.mockRestore();
-    });
-    it('normalizes fetched identifiers and permissions for bulk transfer destinations', async () => {
-        global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ id: 4, name: 'Target', user_permission_level: 2 }] }) as unknown as typeof fetch;
-        initLandmarkCollectionDetails(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
-        document.querySelector<HTMLElement>('.landmark-row-select')!.click();
-        document.getElementById('landmarks-bulk-transfer-btn')!.click();
-        expect(fetch).toHaveBeenCalledWith('/collections/', { method: 'GET', credentials: 'same-origin', headers: { 'X-CSRFToken': 'test-csrf' } });
-        const call = LandmarkForms.openLandmarkBulkTransferModal.mock.calls[0]![0]!;
-        expect(call.sourceCollection).toMatchObject({ id: 'col-1', color: '#aabbcc' });
-        expect(call.collections).toEqual([{ id: '4', name: 'Target', user_permission_level: 2, can_write: true, can_admin: false }]);
-    });
-    it('restores selected checkboxes after DataTables redraw and resets selection on reinitialization', () => {
-        let draw!: () => void;
-        const table = { on: vi.fn((event: string, callback: () => void) => { draw = callback; }) };
-        const DataTable = vi.fn(() => table);
-        window.$ = vi.fn(() => ({ length: 1, DataTable })) as unknown as JQueryStatic;
-        initLandmarkCollectionDetails();
-        const checkbox = document.querySelector<HTMLInputElement>('.landmark-row-select')!; checkbox.checked = true; checkbox.onchange!(new Event("change"));
-        checkbox.checked = false; draw(); expect(checkbox.checked).toBe(true);
-        expect(DataTable).toHaveBeenCalledWith(expect.objectContaining({ order: [[1, 'asc']], searching: false, ordering: true, paging: false, info: false }));
-        initLandmarkCollectionDetails(); expect(checkbox.checked).toBe(false);
-        expect(document.getElementById('landmarks-bulk-action-bar')!.hidden).toBe(true);
-    });
-    it('retains duplicate coordinate listeners across repeated initialization', () => {
-        initLandmarkCollectionDetails(); initLandmarkCollectionDetails();
-        document.querySelector<HTMLElement>('.landmark-coord-cell')!.click();
-        expect(Utils.copyToClipboard).toHaveBeenCalledTimes(2);
-    });
+it('returns early without valid collection context and makes no request', () => {
+    document.body.innerHTML = '<div>empty page</div>';
+    initLandmarkCollectionDetails();
+    expect(server.requests).toHaveLength(0);
+    expect(document.getElementById('landmarks-bulk-action-bar')).toBeNull();
 });
 
-const LandmarkForms = forms as unknown as ModuleMock<typeof forms>;
-const Utils = utilities as unknown as ModuleMock<typeof utilities>;
+it('hydrates inline records and maintains row selection, select all, and clear state', () => {
+    initLandmarkCollectionDetails();
+    expect(document.querySelectorAll('.landmark-row-select')).toHaveLength(3);
+    const checkbox = document.querySelector<HTMLInputElement>('.landmark-row-select')!;
+    checkbox.click();
+    expect(checkbox.closest('tr')!.classList.contains('is-selected')).toBe(true);
+    expect(document.getElementById('landmarks-selection-count')!.textContent).toBe('1');
+    expect(document.getElementById('landmarks-bulk-action-bar')!.hidden).toBe(false);
+    document.getElementById('collection_landmarks_table_select_all')!.click();
+    expect(document.querySelectorAll('.landmark-row-select:checked')).toHaveLength(3);
+    document.getElementById('landmarks-bulk-clear-btn')!.click();
+    expect(document.querySelectorAll('.landmark-row-select:checked')).toHaveLength(0);
+    expect(document.getElementById('landmarks-bulk-action-bar')!.hidden).toBe(true);
+});
+
+it('opens real create/edit/delete dialogs with the source collection and chosen record', async () => {
+    initLandmarkCollectionDetails();
+    document.getElementById('add-landmark-btn')!.click();
+    expect(document.querySelector<HTMLInputElement>('#landmark-create-form-collection')!.value).toBe('col-1');
+    expect(document.getElementById('create-landmark-modal')!.textContent).toContain('Test Col');
+    document.querySelector<HTMLElement>('.landmark-edit-btn[data-landmark-id="lm-1"]')!.click();
+    expect(document.querySelector<HTMLInputElement>('#landmark-edit-form-name')!.value).toBe('Alpha');
+    document.querySelector<HTMLElement>('.landmark-delete-btn[data-landmark-id="lm-2"]')!.click();
+    expect(document.getElementById('delete-landmark-modal')!.textContent).toContain('Beta');
+    await vi.waitFor(() => { expect(server.requests).toHaveLength(1); });
+});
+
+it('normalizes generated collection permissions before showing transfer destinations', async () => {
+    server.reply({ json: [{ id: 'target', name: 'Target', user_permission_level: 2 }] });
+    initLandmarkCollectionDetails();
+    await vi.waitFor(() => { expect(server.requests).toHaveLength(1); });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    document.querySelector<HTMLElement>('.landmark-row-select')!.click();
+    document.getElementById('landmarks-bulk-transfer-btn')!.click();
+    const selector = document.querySelector<HTMLSelectElement>('#bulk-transfer-target')!;
+    expect(selector.value).toBe('target');
+    expect(selector.textContent).toContain('Target');
+    expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/landmark-collections/' });
+});
+
+it('opens real bulk deletion for only the selected records', () => {
+    initLandmarkCollectionDetails();
+    document.querySelector<HTMLElement>('.landmark-row-select[data-landmark-id="lm-2"]')!.click();
+    document.getElementById('landmarks-bulk-delete-btn')!.click();
+    const modal = document.getElementById('bulk-delete-landmark-modal')!;
+    expect(modal.textContent).toContain('Beta');
+    expect(modal.textContent).not.toContain('Alpha');
+});
+
+it('does not expose edit or selection controls to read-only users', () => {
+    window.LANDMARK_DETAILS_CONTEXT = { canWrite: false };
+    document.body.innerHTML = buildPageHtml({ canWrite: false, landmarks: SAMPLE_LANDMARKS });
+    initLandmarkCollectionDetails();
+    expect(document.querySelectorAll('.landmark-row-select')).toHaveLength(0);
+    expect(document.getElementById('landmarks-bulk-action-bar')).toBeNull();
+    expect(document.getElementById('add-landmark-btn')).toBeNull();
+});

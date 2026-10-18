@@ -1,9 +1,10 @@
+import { v2ToolsDmp2jsonCreate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import { attachCodeResultModal } from '../presentation/code-result.ts';
-import type { Dmp2JsonContext } from '../../ts-types/controllers/dmp2json.ts';
-import type { SurveyToolAjaxFailure, SurveyToolErrorBody, SurveyShot, SurveyLocation, CompassSurveyPayload } from '../../ts-types/domain/survey-tools.ts';
+
 import { attachToolFileUpload } from '../../frontend_private/static/private/ts/forms/tool_file_upload.ts';
 
-export function init(context: Dmp2JsonContext) {
+export function init() {
     const $downloadBtn = $('#downloadBtn');
         const $statusEl = $('#status');
 
@@ -34,29 +35,14 @@ export function init(context: Dmp2JsonContext) {
                 return;
             }
 
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
 
             // Show spinner
             $("#loading_spinner").show();
             $downloadBtn.prop('disabled', true);
 
-            // Create FormData and append the file
-            const formData = new FormData();
-            formData.append('file', selectedFile);
 
-            // AJAX call to convert DMP to JSON
-            $.ajax({
-                url: context.endpoint,
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function(response: unknown) {
+            // Convert DMP to JSON
+            apiData(v2ToolsDmp2jsonCreate({ file: selectedFile }, webApiOptions())).then(response => response.text()).then(response => {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
@@ -77,26 +63,13 @@ export function init(context: Dmp2JsonContext) {
 
                     $statusEl.text('Conversion successful!')
                               .css({ 'color': 'green', 'font-weight': 'bold' });
-                },
-                error: function(xhr: SurveyToolAjaxFailure, status, error) {
+                            }).catch((error: unknown) => {
                     // Hide spinner and show error
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
 
                     // Try to extract error message from response
-                    let errorMessage = error;
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
-                    } else if (xhr.responseJSON && xhr.responseJSON.detail) {
-                        errorMessage = xhr.responseJSON.detail;
-                    } else if (xhr.responseText) {
-                        try {
-                            const response = JSON.parse(xhr.responseText) as SurveyToolErrorBody;
-                            errorMessage = response.error || response.detail || response.message || error;
-                        } catch (e) {
-                            errorMessage = xhr.responseText.substring(0, 200); // Limit length
-                        }
-                    }
+                    const errorMessage = error instanceof Error ? error.message : 'Conversion failed.';
 
                     // Display error in modal
                     $("#modal_error_txt").text(errorMessage);
@@ -104,7 +77,6 @@ export function init(context: Dmp2JsonContext) {
 
                     $statusEl.text('Error occurred. See details.')
                               .css({ 'color': 'red', 'font-weight': 'bold' });
-                }
             });
         });
 

@@ -5,7 +5,7 @@ import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.
 import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
-import type { GISGeometryResponse } from '../../../../../../../ts-types/domain/map-config.ts';
+import type { GISGeometryMapInput } from '../../../../../../../ts-types/domain/map-config.ts';
 import type { AppliedGISGeometry } from '../../../../../../../ts-types/domain/map-layers.ts';
 import { Config } from '../../config.ts';
 import { API } from '../../api.ts';
@@ -18,9 +18,9 @@ import { removeLayersAndSource } from './source_lifecycle.ts';
 import { beginOverlayIntent, isOverlayIntentCurrent } from './lazy_overlay.ts';
 // Accepted detail records are immutable; retain their anchor through style restoration.
 // Weak keys release old revisions together with the owning detail cache.
-const geometryLabelCache = new WeakMap<GISGeometryResponse, ReturnType<typeof createGeometryLabelFeature>>();
+const geometryLabelCache = new WeakMap<GISGeometryMapInput, ReturnType<typeof createGeometryLabelFeature>>();
 
-function labelForGeometry(record: GISGeometryResponse) {
+function labelForGeometry(record: GISGeometryMapInput) {
     if (geometryLabelCache.has(record)) return geometryLabelCache.get(record)!;
     const geometry = record.geojson;
     const label = geometry && (geometry.type === 'LineString' || geometry.type === 'Polygon')
@@ -35,7 +35,7 @@ export function clearAppliedGISGeometries(): void { gisGeometryAppliedRecords.cl
 interface GeometryLayerOwner {
     isGISGeometryVisible(id: EntityId): boolean;
     showGISGeometryLayers(id: EntityId, visible: boolean): void;
-    addGISGeometry(record: GISGeometryResponse): void;
+    addGISGeometry(record: GISGeometryMapInput): void;
     reorderLayers(): Promise<ViewerUpdateResult> | undefined;
 }
 
@@ -114,7 +114,7 @@ export async function toggleGISGeometryVisibility(this: Pick<GeometryLayerOwner,
     }
 }
 
-export function addGISGeometry(this: Pick<GeometryLayerOwner, 'showGISGeometryLayers' | 'isGISGeometryVisible' | 'reorderLayers'>, record: GISGeometryResponse) {
+export function addGISGeometry(this: Pick<GeometryLayerOwner, 'showGISGeometryLayers' | 'isGISGeometryVisible' | 'reorderLayers'>, record: GISGeometryMapInput) {
     const map = State.map;
     if (!map) return;
     const id = String(record.id);
@@ -144,7 +144,7 @@ export function addGISGeometry(this: Pick<GeometryLayerOwner, 'showGISGeometryLa
     void this.reorderLayers();
 }
 
-export function acceptGISGeometry(this: Pick<GeometryLayerOwner, 'addGISGeometry'>, record: GISGeometryResponse) {
+export function acceptGISGeometry(this: Pick<GeometryLayerOwner, 'addGISGeometry'>, record: GISGeometryMapInput) {
     const id = String(record.id);
     Config.upsertGISGeometry(record);
     State.gisGeometryCache.set(id, record);
@@ -154,7 +154,7 @@ export function acceptGISGeometry(this: Pick<GeometryLayerOwner, 'addGISGeometry
     });
 }
 
-export function refreshGISGeometry(this: Pick<GeometryLayerOwner, 'addGISGeometry'>, record: GISGeometryResponse) {
+export function refreshGISGeometry(this: Pick<GeometryLayerOwner, 'addGISGeometry'>, record: GISGeometryMapInput) {
     const id = String(record.id);
     Config.upsertGISGeometry(record);
     State.gisGeometryCache.set(id, record);

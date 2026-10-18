@@ -141,10 +141,8 @@ class CylinderFleetDangerZoneView(_BaseCylinderFleetView):
         data.update(
             entity_label="Cylinder Fleet",
             entity_settings_base_template="pages/cylinder_fleet/base.html",
-            api_detail_url=reverse(
-                "api:v2:cylinder-fleet-detail",
-                kwargs={"fleet_id": fleet.id},
-            ),
+            api_resource="cylinder-fleet",
+            api_entity_id=str(fleet.id),
             listing_url=reverse("private:cylinder_fleets"),
             danger_success_message=(
                 "The Cylinder Fleet has been deleted successfully."
@@ -184,10 +182,8 @@ class CylinderFleetUserPermissionsView(_BaseCylinderFleetView):
             entity=fleet,
             entity_settings_base_template="pages/cylinder_fleet/base.html",
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:cylinder-fleet-permissions",
-                kwargs={"fleet_id": fleet.id},
-            ),
+            api_resource="cylinder-fleet",
+            api_entity_id=str(fleet.id),
             permission_add_title="Add a collaborator to the cylinder fleet",
             permission_success_message=(
                 "The cylinder fleet permission has been saved."

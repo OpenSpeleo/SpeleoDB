@@ -14,15 +14,22 @@ from django.db.models import Subquery
 from django.http import Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.api.v2.serializers.surface_network import (
     SurfaceMonitoringNetworkSerializer,
 )
@@ -67,6 +74,12 @@ class SurfaceMonitoringNetworkApiView(
     serializer_class = SurfaceMonitoringNetworkSerializer
 
     @extend_schema(operation_id="v2_surface_networks_list")
+    @extend_schema(
+        responses={
+            200: SurfaceMonitoringNetworkWithPermSerializer(many=True),
+            403: API_ERROR,
+        }
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all networks with user permissions."""
         user = self.get_user()
@@ -103,6 +116,14 @@ class SurfaceMonitoringNetworkApiView(
             SurfaceMonitoringNetworkWithPermSerializer(networks, many=True).data
         )
 
+    @extend_schema(
+        responses={
+            201: SurfaceMonitoringNetworkSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new network."""
         user = self.get_user()
@@ -138,6 +159,10 @@ class SurfaceMonitoringNetworkSpecificApiView(
     lookup_field = "id"
     lookup_url_kwarg = "network_id"
 
+    @extend_schema(
+        responses={200: SurfaceMonitoringNetworkSerializer(), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_surface_networks_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific network."""
         network = self.get_object()
@@ -159,14 +184,27 @@ class SurfaceMonitoringNetworkSpecificApiView(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_surface_networks_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of network."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_surface_networks_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of network."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SurfaceMonitoringNetworkSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Deactivate a network instead of deleting it.
@@ -270,6 +308,13 @@ class SurfaceMonitoringNetworkPermissionApiView(
 
         return perm_data
 
+    @extend_schema(
+        responses={
+            200: SurfaceMonitoringNetworkUserPermissionSerializer(many=True),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_permissions_retrieve")
     def get(
         self, request: Request, network_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -286,6 +331,19 @@ class SurfaceMonitoringNetworkPermissionApiView(
         )
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "SurfaceMonitoringNetworkPermissionApiViewPostResponse",
+                network=SurfaceMonitoringNetworkSerializer(),
+                permission=SurfaceMonitoringNetworkUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_permissions_create")
     def post(
         self, request: Request, network_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -338,6 +396,18 @@ class SurfaceMonitoringNetworkPermissionApiView(
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SurfaceMonitoringNetworkPermissionApiViewPutResponse",
+                network=SurfaceMonitoringNetworkSerializer(),
+                permission=SurfaceMonitoringNetworkUserPermissionSerializer(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         network = self.get_object()
 
@@ -374,6 +444,17 @@ class SurfaceMonitoringNetworkPermissionApiView(
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SurfaceMonitoringNetworkPermissionApiViewDeleteResponse",
+                network=SurfaceMonitoringNetworkSerializer(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_surface_networks_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         network = self.get_object()
         user = self.get_user()

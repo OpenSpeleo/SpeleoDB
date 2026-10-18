@@ -1,4 +1,4 @@
-import { readFormCSRFToken, hideFormStatus, scheduleFormRedirect } from './lifecycle.ts';
+import { hideFormStatus, scheduleFormRedirect } from './lifecycle.ts';
 import type { DangerZoneOptions } from '../../../../../ts-types/domain/forms/crud.ts';
 
 /**
@@ -10,32 +10,32 @@ import type { DangerZoneOptions } from '../../../../../ts-types/domain/forms/cru
  *
  * Wires:
  *   #btn_delete             -> opens #modal_confirmation
- *   #btn_confirmed_delete   -> DELETE deleteUrl, show success, redirect
+ *   #btn_confirmed_delete   -> the generated delete operation, show success, redirect
  *   body click              -> auto-dismiss all modals
  *
  * Usage:
  *   attachDangerZone({
- *       deleteUrl: "{% url 'api:v2:project-detail' id=project.id %}",
+ *       remove: deleteProject,
  *       successMessage: "The project has been deleted successfully.",
  *       successRedirect: "{% url 'private:projects' %}",
  *       redirectDelayMs: 2000,  // optional
  *   });
  *
- * Requires: jQuery, FormModals (forms/modals.ts), showAjaxErrorModal
- * (forms/ajax_errors.ts), and the `{% csrf_token %}` hidden input.
+ * Requires: jQuery, FormModals (forms/modals.ts), showApiErrorModal
+ * (forms/api_errors.ts), and the `{% csrf_token %}` hidden input.
  */
 
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
 export function attachDangerZone(options: DangerZoneOptions) {
-    var deleteUrl = options.deleteUrl;
+    var remove = options.remove;
     var successMessage = options.successMessage || 'Deleted successfully.';
     var successRedirect = options.successRedirect;
     var redirectDelayMs = typeof options.redirectDelayMs === 'number' ? options.redirectDelayMs : 2000;
 
-    if (!deleteUrl) {
-        throw new Error('attachDangerZone: deleteUrl is required');
+    if (typeof remove !== 'function') {
+        throw new Error('attachDangerZone: remove is required');
     }
 
     FormModals.bindAutoDismiss();
@@ -46,30 +46,15 @@ export function attachDangerZone(options: DangerZoneOptions) {
     });
 
     $('#btn_confirmed_delete').click(function () {
-        var csrftoken = readFormCSRFToken();
-
         hideFormStatus();
         FormModals.hideConfirmation();
 
-        $.ajax({
-            url: deleteUrl,
-            method: 'DELETE',
-            contentType: 'application/json; charset=utf-8',
-            cache: false,
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                return true;
-            },
-            success: function () {
+        void remove().then(function () {
                 FormModals.showSuccess(successMessage);
                 if (successRedirect) {
                     scheduleFormRedirect(successRedirect, redirectDelayMs);
                 }
-            },
-            error: function (xhr) {
-                showAjaxErrorModal(xhr);
-            },
-        });
+        }).catch(showApiErrorModal);
         return false; // prevent default
     });
 }

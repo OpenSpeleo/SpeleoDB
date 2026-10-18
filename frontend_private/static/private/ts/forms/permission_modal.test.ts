@@ -10,8 +10,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { attachPermissionModal } from './permission_modal.ts';
 
-// The real vendor is callable; these tests replace only its AJAX transport.
+// Use the real vendor and the public operation callbacks.
 const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
+
+const operations = {
+    create: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+    update: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+    remove: vi.fn(async (_payload: Record<string, unknown>) => ({})),
+};
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -51,16 +57,16 @@ function setupPage() {
 }
 
 describe('attachPermissionModal', () => {
-    let originalAjax: FormTestJQuery['ajax'];
-    let originalLocation: Location;
+        let originalLocation: Location;
     let reloadSpy: Mock<() => void>;
 
     beforeEach(() => {
         vi.useFakeTimers();
         setupPage();
-        originalAjax = jqueryHost.jQuery.ajax;
-        originalLocation = window.location;
+        vi.clearAllMocks();
+            originalLocation = window.location;
         reloadSpy = vi.fn();
+        // JSDOM cannot navigate; observe the unavailable reload boundary only.
         Object.defineProperty(window, 'location', {
             writable: true,
             value: { href: '', reload: reloadSpy },
@@ -68,8 +74,7 @@ describe('attachPermissionModal', () => {
     });
 
     afterEach(() => {
-        jqueryHost.jQuery.ajax = originalAjax;
-        Object.defineProperty(window, 'location', {
+            Object.defineProperty(window, 'location', {
             configurable: true,
             writable: true,
             value: originalLocation,
@@ -78,15 +83,13 @@ describe('attachPermissionModal', () => {
         document.body.innerHTML = '';
     });
 
-    it('requires endpoint and autocompleteUrl', () => {
-        expect(() => attachPermissionModal({ autocompleteUrl: '/a' })).toThrow(/endpoint/);
-        expect(() => attachPermissionModal({ endpoint: '/p' })).toThrow(/autocompleteUrl/);
+    it('requires operation callbacks', () => {
+        expect(() => attachPermissionModal({} as never)).toThrow(/operations/);
     });
 
     it('Add button opens modal in POST mode', () => {
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
             addModalTitle: 'Add X',
         });
         (document.getElementById('btn_open_add_user') as HTMLElement).click();
@@ -101,8 +104,7 @@ describe('attachPermissionModal', () => {
 
     it('Edit button opens modal in PUT mode and prefills user+level', () => {
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
             editModalTitle: 'Edit X',
         });
         document.querySelector<HTMLElement>('.btn_open_edit_perm')!.click();
@@ -117,16 +119,9 @@ describe('attachPermissionModal', () => {
     });
 
     it('btn_submit_add rejects invalid email', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            // beforeSend returns false -> success/error not called
-            return { abort: vi.fn() };
-        });
 
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
         });
         (document.getElementById('btn_open_add_user') as HTMLElement).click();
         (document.getElementById('user') as HTMLInputElement).value = 'not-an-email';
@@ -139,8 +134,7 @@ describe('attachPermissionModal', () => {
 
     it('btn_submit_add rejects empty level', () => {
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
             fieldLabel: 'Access Level',
         });
         (document.getElementById('btn_open_add_user') as HTMLElement).click();
@@ -152,18 +146,10 @@ describe('attachPermissionModal', () => {
         expect((document.getElementById('modal_error_txt') as HTMLElement).innerHTML).toContain('Access Level');
     });
 
-    it('btn_submit_add POSTs and reloads on success', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            // beforeSend validates
-            const allow = opts.beforeSend({ setRequestHeader: () => true });
-            if (allow !== false) { opts.success({}); }
-            return {};
-        });
+    it('btn_submit_add creates permission and reloads on success', async () => {
 
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
             reloadDelayMs: 100,
         });
         (document.getElementById('btn_open_add_user') as HTMLElement).click();
@@ -171,40 +157,27 @@ describe('attachPermissionModal', () => {
         (document.getElementById('level') as HTMLSelectElement).value = 'READ_AND_WRITE';
         (document.getElementById('btn_submit_add') as HTMLElement).click();
 
-        expect($.ajax).toHaveBeenCalledTimes(1);
-        const call = $.ajax.mock.calls[0]![0];
-        expect(call.method).toBe('POST');
+        expect(operations.create).toHaveBeenCalledWith({ user: 'new@example.com', level: 'READ_AND_WRITE' });
+        await vi.advanceTimersByTimeAsync(0);
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
         vi.advanceTimersByTime(100);
         expect(reloadSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('btn_delete_perm DELETEs for the target user', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.success({});
-            return {};
-        });
+    it('btn_delete_perm removes permission for the target user', () => {
 
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
             reloadDelayMs: 0,
         });
         document.querySelector<HTMLElement>('.btn_delete_perm')!.click();
 
-        expect($.ajax).toHaveBeenCalledTimes(1);
-        const call = $.ajax.mock.calls[0]![0];
-        expect(call.method).toBe('DELETE');
-        const parsed = JSON.parse(call.data!) as { user?: string };
-        expect(parsed.user).toBe('alice@example.com');
+        expect(operations.remove).toHaveBeenCalledWith({ user: 'alice@example.com' });
     });
 
     it('btn_close hides the permission modal', () => {
         attachPermissionModal({
-            endpoint: '/api/v2/projects/x/permission/user/detail/',
-            autocompleteUrl: '/api/v2/user/autocomplete/',
+            operations,
         });
         (document.getElementById('btn_open_add_user') as HTMLElement).click();
         expect((document.getElementById('permission_modal') as HTMLElement).style.display).toBe('flex');

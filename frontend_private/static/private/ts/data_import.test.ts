@@ -1,14 +1,13 @@
-import type { Mock } from 'vitest';
-import type { ModuleMock } from '../../../../ts-types/testing/vitest/mocks.ts';
-import type { ApplicationUrls } from '../../../../ts-types/browser/urls.d.ts';
-import type { UploadOptions } from '../../../../ts-types/domain/upload.ts';
+import type { ImportReview } from '../../../../ts-types/domain/data-import.ts';
+import { startApiServer, setBrowserUrl } from '../../../../frontend_common/test/api-server.ts';
+import { State } from './map_viewer/state.ts';
 import { readFileSync } from 'node:fs';
 import { DataImport, applySuggestedLayerName, canImportKML, renderImportCollections, renderImportError, renderImportReview } from './data_import.ts';
 import * as importModel from './import_model.ts';
 import * as importPresentation from './import_presentation.ts';
 
 const template = readFileSync('frontend_private/templates/snippets/modal_data_import.html', 'utf8');
-const report = {
+const report: ImportReview = {
     source_placemarks: 4,
     places: { eligible_placemarks: 2, point_count: 3, unique_coordinate_count: 2, duplicate_coordinate_count: 1, skipped_placemarks: 2 },
     overlay: { source_placemarks: 4, feature_count: 4, point_parts: 3, line_parts: 1, polygon_parts: 1 },
@@ -84,13 +83,13 @@ it('explains empty output without implying a layer will be created or switching 
 });
 
 it('reports skipped items once when the server includes the same compatibility warning', () => {
-    renderImportReview({ ...report, warnings: [{ code: 'PLACEMARKS_NOT_IMPORTED', message: 'Repeated skipped warning', modes: ['places'] }] }, 'places');
+    renderImportReview({ ...report, warnings: [{ code: 'PLACEMARKS_NOT_IMPORTED', message: 'Repeated skipped warning', count: 2, modes: ['places'] }] }, 'places');
     expect((document.getElementById('kml-review-warnings') as HTMLElement).children).toHaveLength(1);
     expect((document.getElementById('kml-review-warnings') as HTMLElement).textContent).not.toContain('Repeated skipped warning');
 });
 
 it('retains native format tabs and starts KML with no intent or enabled file picker', () => {
-    DataImport.init('token');
+    DataImport.init();
     DataImport.switchTab('kml');
     expect((document.getElementById('import-tab-kml') as HTMLElement).getAttribute('aria-selected')).toBe('true');
     expect((document.getElementById('import-content-gpx') as HTMLElement).hidden).toBe(true);
@@ -115,7 +114,7 @@ it('retains native format tabs and starts KML with no intent or enabled file pic
 });
 
 it('supports keyboard format navigation and keeps the GPX collection/file form intact', () => {
-    DataImport.init('token');
+    DataImport.init();
     DataImport.switchTab('kml');
     (document.getElementById('import-tab-kml') as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     expect(document.activeElement!.id).toBe('import-tab-gpx');
@@ -127,7 +126,7 @@ it('supports keyboard format navigation and keeps the GPX collection/file form i
 });
 
 it('keeps file feedback out of the intent chooser and restores it when a mode is selected', () => {
-    DataImport.init('token');
+    DataImport.init();
     DataImport.switchTab('kml');
     document.querySelector<HTMLButtonElement>('[data-import-mode="places"]')!.click();
     const drop = new Event('drop', { bubbles: true, cancelable: true });
@@ -162,8 +161,8 @@ it('exposes each intent explanation to screen-reader button navigation', () => {
 });
 
 it('does not accumulate handlers after controller reinitialization', () => {
-    DataImport.init('first');
-    DataImport.init('second');
+    DataImport.init();
+    DataImport.init();
     DataImport.switchTab('gpx');
     (document.getElementById('import-tab-gpx') as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(document.activeElement!.id).toBe('import-tab-kml');
@@ -210,15 +209,6 @@ it('uses a bounded server suggestion without replacing a name the user edited', 
     expect(input.value).toBe('Server suggestion');
 });
 
-import { uploadWithProgress as uploaded } from './map_viewer/components/upload.ts';
-import { LandmarkManager as manager } from './map_viewer/landmarks/manager.ts';
-import { State } from './map_viewer/state.ts';
-import { refreshImportedMapData, showImportedMapData } from './map_viewer/components/map_import_navigation.ts';
-vi.mock('./map_viewer/components/upload.ts', () => ({ uploadWithProgress: vi.fn() }));
-vi.mock('./map_viewer/landmarks/manager.ts', () => ({ LandmarkManager: { loadCollections: vi.fn() } }));
-vi.mock('./map_viewer/components/map_import_navigation.ts', () => ({ refreshImportedMapData: vi.fn(), showImportedMapData: vi.fn() }));
-
-const settle = async () => { for (let turn = 0; turn < 6; turn++) await Promise.resolve(); };
 function fileChange(id: string, name: string) {
     const input = document.getElementById(id) as HTMLInputElement;
     const file = new File(['file'], name);
@@ -226,98 +216,110 @@ function fileChange(id: string, name: string) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
     return file;
 }
-describe('DataImport session, inspection and submission contracts', () => {
-    let abort: Mock<() => void>;
+
+describe('DataImport HTTP and session contracts', () => {
+    let server: Awaited<ReturnType<typeof startApiServer>>;
+    beforeAll(async () => { server = await startApiServer(); });
+    afterAll(async () => { await server.close(); });
+    const collections = [{ id: 'c1', name: 'Collection', color: '#123456', collection_type: 'SHARED', user_permission_level: 3 }];
     beforeEach(() => {
-        vi.clearAllMocks();
-        abort = vi.fn();
-        vi.mocked(uploadWithProgress).mockReturnValue({ abort });
-        globalThis.Urls = {
-            'api:v2:kml-kmz-inspect': () => '/inspect/', 'api:v2:kml-kmz-import': () => '/places/',
-            'api:v2:gpx-import': () => '/gpx/', 'api:v2:gis-layers': () => '/layers/',
-        } as ApplicationUrls;
+        setBrowserUrl(server.origin);
+        server.reset();
+        server.handle(request => request.path === '/api/v2/landmark-collections/' ? { json: collections } : { json: report });
         State.landmarkCollections.clear();
-        State.landmarkCollections.set('c1', { id: 'c1', name: 'Collection', can_write: true, description: '', color: '#123456', collection_type: 'shared' });
-        vi.mocked(LandmarkManager.loadCollections).mockResolvedValue([]);
     });
-    afterEach(() => { Reflect.deleteProperty(globalThis, 'Urls'); State.landmarkCollections.clear(); });
+    afterEach(() => { State.landmarkCollections.clear(); });
     async function open(mode?: 'places' | 'overlay') {
-        DataImport.init('csrf'); DataImport.showModal(); await settle();
+        DataImport.init();
+        DataImport.showModal();
+        await vi.waitFor(() => { expect(document.querySelector<HTMLSelectElement>('#gpx-landmark-collection')!.value).toBe('c1'); });
         if (mode) { DataImport.switchTab('kml'); document.querySelector<HTMLButtonElement>(`[data-import-mode="${mode}"]`)!.click(); }
     }
-    it('retains upload aliases and ignores stale inspection success after file replacement', async () => {
-        expect(DataImport.uploadGPX).toBe(DataImport.uploadKML);
+    it('aborts an obsolete inspection when the file changes and ignores its late response', async () => {
+        let release: (() => void) | undefined;
+        server.handle(async request => {
+            if (request.path === '/api/v2/landmark-collections/') return { json: collections };
+            if (request.body.includes('one.kml')) {
+                await new Promise<void>(resolve => { release = resolve; });
+                return { json: { ...report, suggested_name: 'STALE' } };
+            }
+            return { json: { ...report, suggested_name: 'Current' } };
+        });
         await open('places');
-        const first = fileChange('kml-file-input', 'one.kml');
-        const firstCall = vi.mocked(uploadWithProgress).mock.calls[0]!;
-        expect(firstCall[0]).toBe('/inspect/'); expect(firstCall[2].csrfToken).toBe('csrf');
-        expect((firstCall[1].get('file') as File).name).toBe(first.name);
+        fileChange('kml-file-input', 'one.kml');
+        await vi.waitFor(() => { expect(server.requests).toHaveLength(2); });
         fileChange('kml-file-input', 'two.kmz');
-        expect(abort).toHaveBeenCalledTimes(1);
-        firstCall[2].onSuccess!({ ...report, suggested_name: 'STALE' }); await settle();
-        expect((document.getElementById('kml-review') as HTMLElement).hidden).toBe(true);
-        vi.mocked(uploadWithProgress).mock.calls[1]![2].onSuccess!({ ...report, suggested_name: 'Current' }); await settle();
-        expect((document.getElementById('kml-layer-name') as HTMLInputElement).value).toBe('Current');
-        expect((document.getElementById('kml-review') as HTMLElement).hidden).toBe(false);
+        await vi.waitFor(() => { expect(document.querySelector<HTMLInputElement>('#kml-layer-name')!.value).toBe('Current'); });
+        release?.();
+        expect(document.getElementById('kml-review')!.hidden).toBe(false);
+        expect(server.requests[2]!.body).toContain('filename="two.kmz"');
     });
-    it('rejects malformed inspection results locally, keeps errors tab-scoped and permits retry', async () => {
-        await open('places'); fileChange('kml-file-input', 'one.kml');
-        vi.mocked(uploadWithProgress).mock.calls[0]![2].onSuccess!({}); await settle();
-        expect((document.getElementById('import-error') as HTMLElement).textContent).toContain('file review could not be read');
-        DataImport.switchTab('gpx'); expect((document.getElementById('import-error') as HTMLElement).hidden).toBe(true);
+    it('rejects malformed inspection data, scopes its error to KML, and permits retry', async () => {
+        await open('places');
+        server.reply({ json: {} });
+        fileChange('kml-file-input', 'one.kml');
+        await vi.waitFor(() => { expect(document.getElementById('import-error')!.textContent).toContain('file review could not be read'); });
+        DataImport.switchTab('gpx');
+        expect(document.getElementById('import-error')!.hidden).toBe(true);
         DataImport.switchTab('kml');
-        const retry = DataImport.inspectKML();
-        vi.mocked(uploadWithProgress).mock.calls[1]![2].onSuccess!(report); await retry;
-        expect((document.getElementById('import-submit-button') as HTMLButtonElement).disabled).toBe(false);
+        server.reply({ json: report });
+        await DataImport.inspectKML();
+        expect(document.querySelector<HTMLButtonElement>('#import-submit-button')!.disabled).toBe(false);
     });
-    it('sends GPX through PUT, blocks dismissal while pending, then refreshes without moving until requested', async () => {
-        await open(); fileChange('gpx-file-input', 'route.gpx');
+    it('sends GPX through PUT and blocks dismissal until server publication settles', async () => {
+        await open();
+        let release: (() => void) | undefined;
+        server.handle(async () => {
+            await new Promise<void>(resolve => { release = resolve; });
+            return { json: { landmarks_created: 0, gps_tracks_created: 0, gps_track_ids: [], collection_id: 'c1', bounds: null } };
+        });
+        fileChange('gpx-file-input', 'route.gpx');
         const pending = DataImport.uploadGPX();
-        const [url, data, options] = vi.mocked(uploadWithProgress).mock.calls[0]!;
-        expect(url).toBe('/gpx/'); expect(options).toMatchObject({ method: 'PUT', csrfToken: 'csrf' });
-        expect(data.get('collection')).toBe('c1'); expect((data.get('file') as File).name).toBe('route.gpx');
-        DataImport.hideModal(); DataImport.destroy();
-        expect((document.getElementById('import-data-modal') as HTMLElement).classList.contains('hidden')).toBe(false);
-        options.onProgress(30); expect((document.getElementById('import-progress-bar') as HTMLProgressElement).value).toBe(30);
-        options.onUploaded(); expect((document.getElementById('import-progress-text') as HTMLElement).textContent).toContain('Keep this window open.');
-        options.onSuccess!({ landmarks_created: 1, gps_tracks_created: 1, gps_track_ids: [12], collection_id: 'c1', bounds: [0, 0, 1, 1] });
+        await vi.waitFor(() => { expect(server.requests).toHaveLength(2); });
+        expect(server.requests[1]).toMatchObject({ method: 'PUT', path: '/api/v2/import/gpx/' });
+        expect(server.requests[1]!.body).toContain('filename="route.gpx"');
+        expect(server.requests[1]!.body).toContain('name="collection"');
+        DataImport.hideModal();
+        DataImport.destroy();
+        expect(document.getElementById('import-data-modal')!.classList.contains('hidden')).toBe(false);
+        release?.();
         await pending;
-        expect(refreshImportedMapData).toHaveBeenCalledWith(expect.objectContaining({ kind: 'gpx', gpsTrackIds: ['12'] }));
-        expect(showImportedMapData).not.toHaveBeenCalled();
-        (document.getElementById('import-show-button') as HTMLButtonElement).click(); await settle();
-        expect(showImportedMapData).toHaveBeenCalledTimes(1);
-        expect((document.getElementById('import-data-modal') as HTMLElement).classList.contains('hidden')).toBe(true);
+        expect(document.getElementById('import-result-title')!.textContent).toBe('Nothing new to import');
     });
-    it('sends overlays through POST with source_file and selected name, separating publication from refresh failure', async () => {
-        await open('overlay'); fileChange('kml-file-input', 'areas.kml');
-        vi.mocked(uploadWithProgress).mock.calls[0]![2].onSuccess!(report); await settle();
-        (document.getElementById('kml-layer-name') as HTMLInputElement).value = ' Custom ';
-        vi.mocked(refreshImportedMapData).mockRejectedValueOnce(new Error('offline'));
-        const pending = DataImport.uploadKML();
-        const [url, data, options] = vi.mocked(uploadWithProgress).mock.calls[1]!;
-        expect(url).toBe('/layers/'); expect(options.method).toBe('POST');
-        expect((data.get('source_file') as File).name).toBe('areas.kml'); expect(data.get('name')).toBe('Custom'); expect(data.has('collection')).toBe(false);
-        options.onSuccess!({ id: 'layer', name: 'Custom' }); await pending;
-        expect((document.getElementById('import-result-title') as HTMLElement).textContent).toBe('Import complete');
-        expect((document.getElementById('import-refresh-status') as HTMLElement).textContent).toBe('Your import is saved, but the map could not refresh.');
-        expect((document.getElementById('import-show-button') as HTMLButtonElement).disabled).toBe(true);
+    it('separates successful overlay publication from a subsequent map refresh failure', async () => {
+        await open('overlay');
+        fileChange('kml-file-input', 'areas.kml');
+        await vi.waitFor(() => { expect(document.querySelector<HTMLButtonElement>('#import-submit-button')!.disabled).toBe(false); });
+        document.querySelector<HTMLInputElement>('#kml-layer-name')!.value = ' Custom ';
+        server.handle(request => request.method === 'POST'
+            ? { status: 201, json: { id: 'layer', name: 'Custom' } }
+            : { status: 503, json: { error: 'Unavailable' } });
+        await DataImport.uploadKML();
+        const request = server.requests.find(item => item.method === 'POST' && item.path === '/api/v2/gis-layers/');
+        expect(request!.body).toContain('filename="areas.kml"');
+        expect(request!.body).toContain('Custom');
+        expect(request!.body).not.toContain('name="collection"');
+        expect(document.getElementById('import-result-title')!.textContent).toBe('Import complete');
+        expect(document.getElementById('import-refresh-status')!.textContent).toBe('Your import is saved, but the map could not refresh.');
+        expect(document.querySelector<HTMLButtonElement>('#import-show-button')!.disabled).toBe(true);
     });
-    it('prevents retry after an ambiguous result until file selection is explicitly reset', async () => {
-        await open(); fileChange('gpx-file-input', 'route.gpx');
-        const pending = DataImport.uploadGPX();
-        vi.mocked(uploadWithProgress).mock.calls[0]![2].onError!(Object.assign(new Error('lost'), { ambiguous: true, status: 0 })); await pending;
-        expect((document.getElementById('import-error') as HTMLElement).textContent).toContain('could be confirmed');
-        expect((document.getElementById('import-submit-button') as HTMLButtonElement).disabled).toBe(true);
-        await DataImport.uploadGPX(); expect(uploadWithProgress).toHaveBeenCalledTimes(1);
-        DataImport.clearGPXFile(); fileChange('gpx-file-input', 'route.gpx');
-        expect((document.getElementById('import-submit-button') as HTMLButtonElement).disabled).toBe(false);
+    it('requires explicit file reset before retrying an ambiguous server result', async () => {
+        await open();
+        server.reply({ status: 503, json: { error: 'Unavailable' } });
+        fileChange('gpx-file-input', 'route.gpx');
+        await DataImport.uploadGPX();
+        expect(document.getElementById('import-error')!.textContent).toContain('could be confirmed');
+        expect(document.querySelector<HTMLButtonElement>('#import-submit-button')!.disabled).toBe(true);
+        const before = server.requests.length;
+        await DataImport.uploadGPX();
+        expect(server.requests).toHaveLength(before);
+        DataImport.clearGPXFile();
+        fileChange('gpx-file-input', 'route.gpx');
+        expect(document.querySelector<HTMLButtonElement>('#import-submit-button')!.disabled).toBe(false);
     });
-    it('does nothing when modal is absent and does not retain handlers after destroy', () => {
-        document.body.replaceChildren(); expect(DataImport.init('token')).toBeUndefined();
+    it('does nothing when the modal is absent', () => {
+        document.body.replaceChildren();
+        expect(DataImport.init()).toBeUndefined();
         expect(DataImport.showModal()).toBeUndefined();
     });
 });
-
-const LandmarkManager = manager as unknown as ModuleMock<typeof manager>;
-type UploadFixtureOptions = Omit<UploadOptions, 'onProgress' | 'onUploaded'> & { onProgress: (percent: number) => void; onUploaded: () => void };
-const uploadWithProgress = uploaded as unknown as Mock<(url: string, data: FormData, options: UploadFixtureOptions) => { abort: () => void }>;

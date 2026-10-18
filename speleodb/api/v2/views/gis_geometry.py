@@ -10,9 +10,12 @@ from django.db import IntegrityError
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.direct_user_permissions import DirectUserPermissionData
 from speleodb.api.v2.direct_user_permissions import parse_direct_user_permission_data
 from speleodb.api.v2.gis_geometry_access import accessible_gis_geometries_queryset
@@ -22,10 +25,15 @@ from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers.api_contract import MessageSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
 from speleodb.api.v2.serializers.gis_geometry import GISGeometryListSerializer
 from speleodb.api.v2.serializers.gis_geometry import GISGeometrySerializer
 from speleodb.api.v2.serializers.gis_geometry import GISGeometryUpdateSerializer
 from speleodb.api.v2.serializers.gis_geometry import GISGeometryUserPermissionSerializer
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.gis.geometry_services import GISGeometryConflictError
 from speleodb.gis.geometry_services import update_gis_geometry
 from speleodb.gis.models import GISGeometry
@@ -52,13 +60,17 @@ class GISGeometryCollectionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
     queryset = GISGeometry.objects.filter(is_active=True)
 
     @extend_schema(responses=GISGeometryListSerializer(many=True))
+    @extend_schema(operation_id="v2_gis_geometries_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometries = accessible_gis_geometries_queryset(self.get_user()).defer(
             "geojson", "description"
         )
         return SuccessResponse(GISGeometryListSerializer(geometries, many=True).data)
 
-    @extend_schema(responses={201: GISGeometrySerializer})
+    @extend_schema(
+        responses={201: GISGeometrySerializer, 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_gis_geometries_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
@@ -92,11 +104,22 @@ class GISGeometrySpecificAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin):
             else queryset
         )
 
+    @extend_schema(responses={200: GISGeometrySerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_gis_geometries_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse(self.get_serializer(self.get_object()).data)
 
     @extend_schema(request=GISGeometryUpdateSerializer)
     @transaction.atomic
+    @extend_schema(
+        responses={
+            200: GISGeometrySerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            409: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_geometries_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         serializer = GISGeometryUpdateSerializer(
@@ -126,6 +149,17 @@ class GISGeometrySpecificAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin):
         return SuccessResponse(self.get_serializer(geometry).data)
 
     @transaction.atomic
+    @extend_schema(
+        responses={
+            200: response_object(
+                "GISGeometrySpecificAPIViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_geometries_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         geometry.deactivate(self.get_user())
@@ -165,6 +199,10 @@ class GISGeometryPermissionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
             skip_level=skip_level,
         )
 
+    @extend_schema(
+        responses={200: GISGeometryUserPermissionSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_gis_geometries_permissions_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         permission_qs = (
@@ -178,7 +216,21 @@ class GISGeometryPermissionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
             GISGeometryUserPermissionSerializer(permission_qs, many=True).data
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @transaction.atomic
+    @extend_schema(
+        responses={
+            201: response_object(
+                "GISGeometryPermissionAPIViewPostResponse",
+                gis_geometry=GISGeometrySerializer(),
+                permission=GISGeometryUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_geometries_permissions_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         permission_data = self._request_data(request)
@@ -218,7 +270,17 @@ class GISGeometryPermissionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @transaction.atomic
+    @extend_schema(
+        responses={
+            200: GISGeometryUserPermissionSerializer(),
+            403: API_ERROR,
+            404: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_gis_geometries_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         permission_data = self._request_data(request)
@@ -243,7 +305,18 @@ class GISGeometryPermissionAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin)
         geometry.save(update_fields=["modified_date"])
         return SuccessResponse(GISGeometryUserPermissionSerializer(permission).data)
 
+    @extend_schema(
+        request=UserRequestSerializer,
+        responses={
+            200: MessageSerializer(),
+            400: API_ERROR,
+            401: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
     @transaction.atomic
+    @extend_schema(operation_id="v2_gis_geometries_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
         permission_data = self._request_data(request, skip_level=True)

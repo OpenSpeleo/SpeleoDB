@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.gps_track_access import accessible_gps_tracks_queryset
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_ReadAccess
@@ -46,7 +47,8 @@ class GPSTrackExportGPXAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
         operation_id="v2_gps_track_export_gpx",
         responses={
             (200, GPX_CONTENT_TYPE): OpenApiTypes.BINARY,
-            400: OpenApiTypes.OBJECT,
+            400: API_ERROR,
+            403: API_ERROR,
         },
     )
     def get(

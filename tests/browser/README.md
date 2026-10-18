@@ -12,17 +12,16 @@ pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
 
 The responsiveness fixtures use Chromium and WebKit with the real MapLibre
 renderer, a minimal local style, deterministic intercepted viewer APIs, and the
-normal Django headless login endpoint. They do not create, change, or delete
-project records. Authenticated cases reuse the initial real login's storage
-state within each Playwright worker instead of repeatedly consuming the
-production login rate limit. The snapshot stays in memory and is captured before
-application navigation; each test still gets a fresh browser context and
-independent preferences. Anonymous cases do not apply it. The stress case loads
-60 projects and 120,000 segments. Other cases isolate a 100,000-vertex GPS
-geometry and nested GIS geometry types. The harness observes the imported engine
-instance through `speleo:map-created` and intercepts provider HTTP data. Native
-engine worker behavior, all fixtures, production application work and real
-rendering remain enabled.
+normal login form and its generated allauth operation. They do not create,
+change, or delete project records. Authenticated cases reuse the initial real
+login's storage state within each Playwright worker instead of repeatedly
+consuming the production login rate limit. The snapshot stays in memory; each
+test still gets a fresh browser context and independent preferences. Anonymous
+cases do not apply it. The stress case loads 60 projects and 120,000 segments.
+Other cases isolate a 100,000-vertex GPS geometry and nested GIS geometry types.
+The harness observes the imported engine instance through `speleo:map-created`
+and intercepts provider HTTP data. Native engine worker behavior, all fixtures,
+production application work and real rendering remain enabled.
 
 `viewer-gestures.spec.ts` independently exercises real private/public viewer
 initialization, provider HTTP and application APIs without interception or
@@ -47,9 +46,10 @@ started by the suite.
 
 Direct `bun run test:browser` execution against an existing server requires
 `VIEWER_BROWSER_PUBLIC_URL` for public cases and `VIEWER_BROWSER_ROUTES` for
-database-backed controller cases. Prefer the wrapper for the complete suite; it
-supplies both from its isolated database instead of requiring persistent
-development records.
+database-backed controller cases. Resource-edit cases also require
+`VIEWER_BROWSER_RESOURCE_RECORDS`, which the wrapper seeds separately for each
+browser. Prefer the wrapper for the complete suite; it supplies these values
+from its isolated database instead of requiring persistent development records.
 
 Assertions cover native control state in the first animation-frame callback and
 verify that map mutations have not preceded it. A separate nested second-frame
@@ -162,30 +162,32 @@ without changing its handler or production storage. It preserves the GitLab
 audit environment and does not provision remote projects. Canonical project
 rows, explicit permissions, a mutex, fleets, an experiment and a landmark
 collection provide database-only route fixtures in `VIEWER_BROWSER_ROUTES`.
-Their pages do not read repository contents. WebKit bypasses browser routing for
-native synchronous XHR, so the wrapper alone uses `tests.browser.urls`: two
-explicit revision/tree HTTP fixture routes precede the normal application
-URLconf. They require the authenticated user's explicit project permission and
-return deterministic JSON without opening a repository. The wrapper verifies URL
-resolution before launching browsers, and browser cases assert fixture headers
-and data. Controller contexts, URL reversal, native XHR and its synchronous
-timing remain unchanged. Mutations use browser interception. The manifest is
-required. CI runs the `browser-tests` job (displayed as **Chromium and WebKit**)
-on its own runner, independently of the `pytest` backend job. The browser job
-installs its own locked dependencies, builds assets and runs both engines
-serially, with its own PostgreSQL service. Backend tests cannot compete with
-browser measurements for that runner's CPU or memory. The backend job still
-installs Bun and builds assets for its upload subprocess and asset contracts,
-but does not install or run Playwright browsers.
+Their pages do not read repository contents. The wrapper uses
+`tests.browser.urls`: two explicit revision/tree HTTP fixture routes precede the
+normal application URLconf. They require the authenticated user's explicit
+project permission and return deterministic JSON without opening a repository.
+The wrapper verifies URL resolution before launching browsers, and browser cases
+assert fixture headers and data. The controllers fetch both through their
+generated asynchronous operations. Other mutation cases use browser
+interception; the GIS metadata cases create and clean up records in the
+wrapper's isolated test database. The manifest is required. CI runs the
+`browser-tests` job (displayed as **Chromium and WebKit**) on its own runner,
+independently of the `pytest` backend job. The browser job installs its own
+locked dependencies, builds assets and runs both engines serially, with its own
+PostgreSQL service. Backend tests cannot compete with browser measurements for
+that runner's CPU or memory. The backend job still installs Bun and builds
+assets for its upload subprocess and asset contracts, but does not install or
+run Playwright browsers.
 
-The browser job supplies dummy GitLab/storage settings and does not receive a
-GitLab token or start S3/Redis services: route fixtures are database-only,
-legacy controller mutations are intercepted, GIS metadata/icon cases use real
-database-only API mutations, and static assets are collected locally. It also
-passes `--gitlab-audit-deny-create`, enforcing zero remote project creations.
-Its audit artifact is `browser-gitlab-creation-audit`, separate from the backend
-job's `gitlab-creation-audit`; the browser report remains
-`browser-verification`.
+The browser job supplies dummy GitLab settings and does not receive a GitLab
+token or start Redis. It starts an isolated RustFS service and provisions the
+test bucket for real resource document uploads. Other route fixtures are
+database-only, legacy controller mutations are intercepted, GIS metadata/icon
+cases use real database-only API mutations, and static assets are collected
+locally. It also passes `--gitlab-audit-deny-create`, enforcing zero remote
+project creations. Its audit artifact is `browser-gitlab-creation-audit`,
+separate from the backend job's `gitlab-creation-audit`; the browser report
+remains `browser-verification`.
 
 Playwright's per-case progress streams directly to the console while the Django
 wrapper runs. The wrapper has a 30-minute subprocess deadline and terminates the
@@ -254,6 +256,37 @@ tiles and font responses remain deterministic third-party boundaries. The font
 response omits glyph contents, so label assertions cover symbol/source contracts
 rather than typography. No first-party API response or renderer method is
 replaced.
+
+`resource-edit.spec.ts` saves a note and replaces a document using the actual
+rendered viewer edit forms. The Django wrapper creates a fresh surface network,
+ADMIN grant, station and both resources for each browser, using the real model
+and attachment storage. Surface stations require no survey Git repository or
+generated survey artifact. All application and provider HTTP remains real: the
+test observes the multipart PATCH, verifies the response, independently reads
+the saved resource and object bytes, and reloads the viewer. It checks that
+disabled resource-type controls are omitted, empty descriptions are saved, and
+omitted fields retain their values.
+
+Browser debugging protocols omit uploaded file contents from captured request
+bodies. A test-only Django middleware therefore records the actual body for
+exactly the fixture-owned resource PATCH paths, bounded to 16 KiB, before the
+unchanged application handler reads Django's cached body. It records only the
+body and content type, never authentication or cookie headers. A response marker
+confirms observation in the browser, and fixture teardown uses Django's real
+multipart parser to check every received field, filename and Unicode file byte.
+It rejects duplicate or missing companion saves for each exercised browser;
+unrelated focused workloads need not edit resources. The saved note assertion
+also respects the backend's existing accent normalization, while raw submitted
+text and stored attachment bytes must retain their exact Unicode contents.
+
+This fixture requires the test S3 endpoint, credentials and bucket configured by
+`config.settings.test`, with presigned browser URLs reachable from the
+application container. The existing local RustFS test bucket satisfies this; do
+not start another local stack. CI starts its own RustFS job service and runs
+`python manage.py create_s3_local_buckets --settings config.settings.test`
+before the browser wrapper. Fixture teardown removes only original and
+replacement keys owned by its newly created network, including after browser
+failures. The basemap provider must be reachable, as for the gesture cases.
 
 For a focused diagnostic wrapper run, set `VIEWER_BROWSER_GREP` to a Playwright
 test-name regular expression. The wrapper passes it as a separate `--grep`

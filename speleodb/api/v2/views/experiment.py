@@ -12,14 +12,19 @@ from typing import Any
 import xlsxwriter
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import feature_collection
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
@@ -156,6 +161,7 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
         )
 
     @extend_schema(operation_id="v2_experiments_list")
+    @extend_schema(responses={200: ExperimentSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
@@ -181,6 +187,10 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: ExperimentSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_experiments_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
 
@@ -307,6 +317,8 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(responses={200: ExperimentSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_experiments_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific experiment."""
         experiment = self.get_object()
@@ -330,12 +342,25 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_experiments_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_experiments_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExperimentSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Deactivate an experiment instead of deleting it.
@@ -412,6 +437,15 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+    @extend_schema(
+        responses={
+            200: ExperimentRecordSerializer(many=True),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_experiment_records_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve all experiment records for a station & experiment combination."""
         match experiment_or_response := self._get_experiment(**kwargs):
@@ -444,6 +478,28 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                     f"Unexpected type received: {type(experiment_or_response)}"
                 )
 
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "additionalProperties": True,
+                "description": (
+                    "Experiment field UUIDs mapped to their values. "
+                    "Server-owned submitter identity is restored by the "
+                    "server."
+                ),
+            }
+        }
+    )
+    @extend_schema(
+        responses={
+            201: ExperimentRecordSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_experiment_records_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Creates an experiment record for a given station & experiment."""
 
@@ -596,14 +652,65 @@ class ExperimentRecordSpecificApiView(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "additionalProperties": True,
+                "description": (
+                    "Experiment field UUIDs mapped to their values. "
+                    "Server-owned submitter identity is restored by the "
+                    "server."
+                ),
+            }
+        },
+        responses={
+            200: ExperimentRecordSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_experiment_records_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Replace a record's editable data while preserving server-owned fields."""
         return self._update_obj(request, partial=False)
 
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "additionalProperties": True,
+                "description": (
+                    "Experiment field UUIDs mapped to their values. "
+                    "Server-owned submitter identity is restored by the "
+                    "server."
+                ),
+            }
+        },
+        responses={
+            200: ExperimentRecordSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_experiment_records_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Merge the payload into the record's data, preserving server-owned fields."""
         return self._update_obj(request, partial=True)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ExperimentRecordSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiment_records_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete an experiment record for a given station & experiment."""
         exp_record = self.get_object()
@@ -626,6 +733,8 @@ class ExperimentGISApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     lookup_field = "gis_token"
     serializer_class = ExperimentRecordGISSerializer  # type: ignore[assignment]
 
+    @extend_schema(responses={200: feature_collection(ExperimentRecordGISSerializer)})
+    @extend_schema(operation_id="v2_gis_ogc_experiment_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         experiment = self.get_object()
 
@@ -649,6 +758,21 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
     lookup_field = "id"
     serializer_class = ExperimentRecordSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_experiments_export_excel_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:

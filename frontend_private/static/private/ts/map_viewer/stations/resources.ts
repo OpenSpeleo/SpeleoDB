@@ -43,7 +43,7 @@ export const StationResources = {
             const resources = Array.isArray(response) ? response : [];
 
             // Sort resources by modified date (newest first)
-            resources.sort((a, b) => (new Date((b.modified_date || b.creation_date) as string) as unknown as number) - (new Date((a.modified_date || a.creation_date) as string) as unknown as number));
+            resources.sort((a, b) => (new Date((b.modified_date || b.creation_date)) as unknown as number) - (new Date((a.modified_date || a.creation_date)) as unknown as number));
 
             // Cache resources for quick access in edit/delete operations
             cachedResources = resources;
@@ -529,11 +529,7 @@ export const StationResources = {
                 const uploadController = new UploadProgressController('resource-upload');
                 buttonsContainer.classList.add('hidden');
 
-                await uploadController.upload(
-                    Urls['api:v2:station-resources'](stationId),
-                    formData,
-                    'POST'
-                );
+                await uploadController.upload(options => API.createStationResource(stationId, formData, options));
             } else {
                 await API.createStationResource(stationId, formData);
             }
@@ -674,11 +670,7 @@ export const StationResources = {
                 const uploadController = new UploadProgressController('resource-edit-upload');
                 buttonsContainer.classList.add('hidden');
 
-                await uploadController.upload(
-                    Urls['api:v2:resource-detail'](resourceId),
-                    formData,
-                    'PATCH'
-                );
+                await uploadController.upload(options => API.updateStationResource(resourceId, formData, options));
             } else {
                 await API.updateStationResource(resourceId, formData);
             }

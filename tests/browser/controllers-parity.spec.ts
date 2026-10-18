@@ -1,4 +1,24 @@
 import { expect, test } from '@playwright/test';
+import {
+    getAuthBrowserAuthLoginPostUrl,
+    getV2GisOgcExperimentRetrieveUrl,
+    getV2ProjectsDestroyUrl,
+    getV2ProjectsGitExplorerRetrieveUrl,
+    getV2ProjectsReleaseCreateWithJsonUrl,
+    getV2ProjectsRevisionsRetrieveUrl,
+    getV2ProjectsUploadUrl,
+    getV2ToolsDmp2jsonCreateUrl,
+    getV2ToolsDmpDoctorCreateUrl,
+    getV2UserExportsCreateUrl,
+    getV2UserPartialUpdateWithJsonUrl,
+} from '@speleodb/api';
+import type { DangerZoneContext } from '../../ts-types/controllers/danger-zone.ts';
+import type { ExperimentDataContext } from '../../ts-types/controllers/experiment-data.ts';
+import type { FeedbackContext } from '../../ts-types/controllers/feedback.ts';
+import type { GitViewContext } from '../../ts-types/controllers/git-view.ts';
+import type { MutexLockContext } from '../../ts-types/controllers/mutex-lock.ts';
+import type { ProjectUploadContext } from '../../ts-types/controllers/project-upload.ts';
+import type { RevisionHistoryContext } from '../../ts-types/controllers/revision-history.ts';
 import type { Page } from '@playwright/test';
 import { login } from './viewer-fixture.ts';
 
@@ -23,10 +43,13 @@ async function openController(page: Page, path: string, controller: string) {
     return declaration;
 }
 
-async function endpoint(page: Page, controller: string) {
+async function pageContext<Context>(page: Page, controller: string): Promise<Context> {
     const declaration = page.locator(`[data-speleodb-controller="${controller}"]`);
-    const context = JSON.parse(await declaration.textContent() || '{}') as { endpoint: string };
-    return new URL(context.endpoint, page.url()).href;
+    return JSON.parse(await declaration.textContent() || '{}') as Context;
+}
+
+function apiUrl(path: string, base = process.env.VIEWER_BROWSER_BASE_URL): string {
+    return new URL(path, base).href;
 }
 
 type FixtureRoute = 'project' | 'readonly_project' | 'cylinder' | 'sensor' | 'readonly_cylinder' | 'experiment' | 'landmarks';
@@ -36,13 +59,13 @@ function fixtureRoute(name: FixtureRoute) {
     return routes[name]!;
 }
 
-async function contextFor(page: Page, path: string, controller: string) {
+async function contextFor<Context>(page: Page, path: string, controller: string): Promise<Context> {
     const response = await page.request.get(path);
     expect(response.status()).toBe(200);
     const html = await response.text();
     const content = html.match(new RegExp(`data-speleodb-controller="${controller}"[^>]*>([\\s\\S]*?)<\\/script>`));
     expect(content, `${controller} context in ${path}`).toBeTruthy();
-    return JSON.parse(content![1]!) as { endpoint: string; deleteUrl: string; unlockUrl: string; dataUrl: string };
+    return JSON.parse(content![1]!) as Context;
 }
 
 test.beforeEach(async ({ page }) => { await observeControllers(page); });
@@ -51,7 +74,7 @@ test('login validates locally and presents the server authentication error', asy
     await openController(page, '/login/', 'auth-form');
     await page.locator('#btn_submit').click();
     await expect(page.locator('#error_div')).toContainText('The Email Address is not valid');
-    const url = await endpoint(page, 'auth-form');
+    const url = apiUrl(getAuthBrowserAuthLoginPostUrl(), page.url());
     await page.route(url, route => route.fulfill({ status: 401, json: { data: { flows: [{ id: 'verify_email' }] } } }));
     await page.locator('#email').fill('browser@example.test');
     await page.locator('#password').fill('invalid-password');
@@ -91,7 +114,7 @@ test.describe('authenticated controller composition', () => {
         expect(await second.isChecked()).toBe(secondInitial);
         await expect(page.locator('[data-speleodb-bind="private-user-preferences-2"]'))
             .toHaveText(firstInitial ? 'Off' : 'On');
-        const url = await endpoint(page, 'entity-crud');
+        const url = apiUrl(getV2UserPartialUpdateWithJsonUrl(), page.url());
         await page.route(url, route => route.fulfill({ json: {} }));
         const submitted = page.waitForRequest(url);
         await page.locator('#btn_submit').click();
@@ -116,7 +139,8 @@ test.describe('authenticated controller composition', () => {
 
     test('feedback retains score selection, multipart submission and reset', async ({ page }) => {
         await openController(page, '/private/feedback/', 'feedback');
-        const url = await endpoint(page, 'feedback');
+        const context = await pageContext<FeedbackContext>(page, 'feedback');
+        const url = new URL(context.endpoint, page.url()).href;
         await page.route(url, route => route.fulfill({ json: {} }));
         await page.locator('[data-score="5"]').click();
         await page.locator('#feedback').fill('Browser feedback');
@@ -187,7 +211,8 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator('#dropzone')).not.toContainText('one.dmp');
         await expect(page.locator('#dropzone')).toContainText('two.dmp');
         await page.locator('#message').fill('Browser revision');
-        const url = await endpoint(page, 'project-upload');
+        const context = await pageContext<ProjectUploadContext>(page, 'project-upload');
+        const url = apiUrl(getV2ProjectsUploadUrl(context.projectId, 'auto'), page.url());
         await page.route(url, route => route.fulfill({ status: 400, json: { detail: 'Fixture upload rejected' } }));
         const submitted = page.waitForRequest(url);
         await page.locator('#btn_submit').click();
@@ -220,8 +245,9 @@ test.describe('authenticated controller composition', () => {
 
     test('danger confirmation submits DELETE only after confirmation and presents failure', async ({ page }) => {
         const path = `${fixtureRoute('project')}danger_zone/`;
-        const context = await contextFor(page, path, 'danger-zone');
-        const url = new URL(context.deleteUrl, process.env.VIEWER_BROWSER_BASE_URL).href;
+        const context = await contextFor<DangerZoneContext>(page, path, 'danger-zone');
+        expect(context.resource).toBe('project');
+        const url = apiUrl(getV2ProjectsDestroyUrl(context.entityId));
         let requests = 0;
         await page.route(url, route => {
             requests++;
@@ -248,8 +274,8 @@ test.describe('authenticated controller composition', () => {
 
     test('revision download clones keep independent Alpine state', async ({ page }) => {
         const path = `${fixtureRoute('project')}revisions/`;
-        const context = await contextFor(page, path, 'revision-history');
-        const fixture = await page.request.get(context.endpoint);
+        const context = await contextFor<RevisionHistoryContext>(page, path, 'revision-history');
+        const fixture = await page.request.get(getV2ProjectsRevisionsRetrieveUrl(context.projectId));
         expect(fixture.headers()['x-speleodb-browser-fixture']).toBe('revisions');
         const payload: unknown = await fixture.json();
         expect(payload).toMatchObject({ commits: [{ message: 'Browser revision 1' }, { message: 'Browser revision 2' }] });
@@ -265,8 +291,9 @@ test.describe('authenticated controller composition', () => {
 
     test('Git tree folder navigation reuses the fetched revision', async ({ page }) => {
         const path = `${fixtureRoute('project')}browser/${'a'.repeat(40)}/`;
-        const context = await contextFor(page, path, 'git-view');
-        const fixture = await page.request.get(context.endpoint);
+        const context = await contextFor<GitViewContext>(page, path, 'git-view');
+        const url = getV2ProjectsGitExplorerRetrieveUrl(context.projectId, context.commit);
+        const fixture = await page.request.get(url);
         expect(fixture.headers()['x-speleodb-browser-fixture']).toBe('tree');
         const before = Number(fixture.headers()['x-speleodb-fixture-reads']);
         await openController(page, path, 'git-view');
@@ -275,15 +302,15 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator('#git-viewer-container .download-file-name')).toHaveText('cave.dmp');
         await page.locator('#git-viewer-container .gitfolder-link').click();
         await expect(page.locator('#git-viewer-container .gitfolder-name')).toHaveText('surveys');
-        const after = await page.request.get(context.endpoint);
+        const after = await page.request.get(url);
         // One controller read plus this measurement read, with no navigation refetch.
         expect(Number(after.headers()['x-speleodb-fixture-reads']) - before).toBe(2);
     });
 
     test('mutex release restores its button after a rejected POST', async ({ page }) => {
         const path = `${fixtureRoute('project')}mutexes/`;
-        const context = await contextFor(page, path, 'mutex-lock');
-        const url = new URL(context.unlockUrl, process.env.VIEWER_BROWSER_BASE_URL).href;
+        const context = await contextFor<MutexLockContext>(page, path, 'mutex-lock');
+        const url = apiUrl(getV2ProjectsReleaseCreateWithJsonUrl(context.projectId));
         await page.route(url, route => route.fulfill({ status: 409, json: { detail: 'Fixture lock conflict' } }));
         await openController(page, path, 'mutex-lock');
         const button = page.locator('button.btn_unlock');
@@ -323,7 +350,7 @@ test.describe('authenticated controller composition', () => {
 
     test('export creation rejects safely and restores the request button', async ({ page }) => {
         await openController(page, '/private/exports/', 'user-exports');
-        const url = await endpoint(page, 'user-exports');
+        const url = apiUrl(getV2UserExportsCreateUrl(), page.url());
         await page.route(url, route => route.request().method() === 'POST'
             ? route.fulfill({ status: 403, json: { detail: 'Fixture export denied' } })
             : route.continue());
@@ -336,13 +363,14 @@ test.describe('authenticated controller composition', () => {
 
     test('read-only experiment grid retries a failed data request with the real vendor', async ({ page }) => {
         const path = fixtureRoute('experiment');
-        const context = await contextFor(page, path, 'experiment-data');
+        const context = await contextFor<ExperimentDataContext>(page, path, 'experiment-data');
+        const url = apiUrl(getV2GisOgcExperimentRetrieveUrl(context.gisToken));
         let fail = true;
-        await page.route(`**${context.dataUrl}*`, route => fail
+        await page.route(url, route => fail
             ? route.fulfill({ status: 503, json: { detail: 'Fixture unavailable' } })
             : route.fulfill({ json: { type: 'FeatureCollection', features: [] } }));
         await openController(page, path, 'experiment-data');
-        await expect(page.locator('#errorText')).toContainText('Failed to fetch data: 503');
+        await expect(page.locator('#errorText')).toContainText('Fixture unavailable');
         fail = false;
         await page.locator('#refreshDataBtn').click();
         await expect(page.locator('#dataGridContainer')).toBeVisible();
@@ -368,7 +396,7 @@ test.describe('authenticated controller composition', () => {
             await file.setInputFiles({ name: 'survey.DMP', mimeType: 'application/octet-stream', buffer: Buffer.from('survey') });
             await expect(page.locator('#fileNameDisplay')).toContainText('survey.DMP');
             await expect(page.locator('#downloadBtn')).toBeEnabled();
-            const url = await endpoint(page, controller);
+            const url = apiUrl(controller === 'dmp-doctor' ? getV2ToolsDmpDoctorCreateUrl() : getV2ToolsDmp2jsonCreateUrl(), page.url());
             await page.route(url, route => route.fulfill({ status: 400, json: { error: 'Fixture conversion rejected' } }));
             const submitted = page.waitForRequest(url);
             await page.locator('#downloadBtn').click();

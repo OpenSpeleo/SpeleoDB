@@ -1,4 +1,4 @@
-import type { RolldownOutput, OutputAsset } from 'rolldown';
+import type { Rolldown } from 'vite';
 import type tailwindContract from './fixtures/tailwind-v3.4.19-contract.json';
 import type { BunLock, PackageManifest } from '../../../../../ts-types/testing/vitest/toolchain.ts';
 interface ToolPackage extends PackageManifest { scripts: Record<string, string>; devDependencies: Record<string, string> }
@@ -85,12 +85,12 @@ const compile = async (inputPath: string, cwd: string) => {
             rolldownOptions: { input: inputPath },
         },
     });
-    const resultOutput = result as RolldownOutput | RolldownOutput[];
+    const resultOutput = result as Rolldown.RolldownOutput | Rolldown.RolldownOutput[];
     const output = Array.isArray(resultOutput)
         ? resultOutput.flatMap(environment => environment.output)
         : resultOutput.output;
     const cssAssets = output.filter(
-        (asset): asset is OutputAsset => asset.type === 'asset' && asset.fileName.endsWith('.css'),
+        (asset): asset is Rolldown.OutputAsset => asset.type === 'asset' && asset.fileName.endsWith('.css'),
     );
     expect(cssAssets).toHaveLength(1);
     return String(cssAssets[0]!.source);

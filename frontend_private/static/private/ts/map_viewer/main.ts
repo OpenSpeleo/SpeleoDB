@@ -1,7 +1,7 @@
 import { Renderer } from './map/renderer.ts';
 import type { Point } from 'geojson';
 import type { EntityId } from '../../../../../ts-types/domain/identifiers.ts';
-import type { ProjectResponse } from '../../../../../ts-types/domain/map-config.ts';
+import type { ProjectMapInput } from '../../../../../ts-types/domain/map-config.ts';
 import type { ContextMenuEntry } from '../../../../../ts-types/domain/map-dialog.ts';
 import type { DisplayStationType } from '../../../../../ts-types/domain/map-display.ts';
 import type { Coordinate2D } from '../../../../../ts-types/domain/map-geometry.ts';
@@ -130,7 +130,7 @@ export async function initPrivateMapViewer() {
     // Prefetch the all-projects GeoJSON metadata concurrently as well. It is
     // independent of map readiness, so kicking it off now overlaps its latency
     // with map init and the config loads above. Consumed via `metadataReady`.
-    let geojsonMetadataCache: ProjectResponse[] | null = null;
+    let geojsonMetadataCache: ProjectMapInput[] | null = null;
     const metadataReady = loadGeoJSONMetadata();
 
     // Simple function to set map height
@@ -459,7 +459,7 @@ export async function initPrivateMapViewer() {
         State.gisGeometryBounds = new Map();
     }
 
-    async function loadProjectAndStationLayers(geojsonMetadata: ProjectResponse[], showProgress: boolean) {
+    async function loadProjectAndStationLayers(geojsonMetadata: ProjectMapInput[], showProgress: boolean) {
         const totalProjects = Config.projects.length;
         let loadedProjects = 0;
         const progressEl = document.getElementById('loading-progress');

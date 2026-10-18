@@ -7,10 +7,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import sentry_sdk
+from drf_spectacular.utils import extend_schema
 from gitdb.exc import BadName as GitRevBadName
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.serializers import GitCommitSerializer
 from speleodb.api.v2.serializers import GitFileSerializer
@@ -38,6 +41,18 @@ class ProjectRevisionsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectRevisionsResponse",
+                project=ProjectSerializer(),
+                commits=ProjectCommitSerializer(many=True),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_revisions_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()
@@ -59,6 +74,20 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectGitExplorerResponse",
+                project=ProjectSerializer(),
+                commit=GitCommitSerializer(),
+                files=GitFileSerializer(many=True),
+            ),
+            403: API_ERROR,
+            404: API_ERROR,
+            500: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_git_explorer_retrieve")
     def get(self, request: Request, hexsha: str, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         project = self.get_object()

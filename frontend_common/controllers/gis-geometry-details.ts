@@ -1,7 +1,8 @@
+import { v2GisGeometriesPartialUpdateWithJson } from '@speleodb/api';
+import { apiData, ApiRequestError, webApiOptions } from '../api/client.ts';
 import { isGeometryAliasValid } from '@speleodb/map-core';
-import type { GISGeometryDetailsContext, GISGeometryDetailsResponse, ParsedGeometryText } from '../../ts-types/controllers/gis-geometry-details.ts';
+import type { GISGeometryDetailsContext, ParsedGeometryText } from '../../ts-types/controllers/gis-geometry-details.ts';
 import type { EditableGeometry } from '../../ts-types/domain/geometry-editor.ts';
-import type { AjaxFailure } from '../../ts-types/domain/forms/errors.ts';
 import { afterWindowLoad } from '../readiness.ts';
 import { _hexBodyRe, initColorPicker } from '../../frontend_private/static/private/ts/color-picker.ts';
 import { attachEntityCrudForm } from '../../frontend_private/static/private/ts/forms/entity_crud_form.ts';
@@ -19,8 +20,9 @@ export function parseGeometryText(text: string): ParsedGeometryText {
     return { ...validateGeometry(geometry), geometry: geometry as EditableGeometry };
 }
 
-function responseError(xhr: AjaxFailure) {
-    const response = xhr.responseJSON as { error?: unknown; errors?: unknown } | undefined;
+function responseError(xhr: unknown) {
+    if (!(xhr instanceof ApiRequestError)) return 'Unable to save. Your changes are still here. Check your connection and try again.';
+    const response = xhr.data as { error?: unknown; errors?: unknown } | undefined;
     if (xhr.status === 409) {
         return 'This geometry changed while you were editing. Your changes have not been saved. Copy your GeoJSON before reloading to review the latest version.';
     }
@@ -114,10 +116,13 @@ export async function init(context: GISGeometryDetailsContext) {
     };
     window.addEventListener('beforeunload', beforeUnload);
 
-    attachEntityCrudForm<GISGeometryDetailsResponse>({
+    attachEntityCrudForm({
         formId: context.formId,
-        endpoint: context.endpoint,
-        method: 'PATCH',
+        submit: () => apiData(v2GisGeometriesPartialUpdateWithJson(context.geometryId, {
+            name: name.value.trim(), alias: alias.value.trim(), description: description.value.trim(), color: color.value,
+            expected_revision: revision,
+            ...(textarea.value !== baseline.text ? { geojson: parseGeometryText(textarea.value).geometry } : {}),
+        }, webApiOptions())),
         submitOnForm: true,
         showSuccessModal: false,
         beforeSubmit(payload) {
@@ -161,7 +166,7 @@ export async function init(context: GISGeometryDetailsContext) {
             refresh();
         },
         onError(xhr) {
-            if (xhr.status === 403) permissionLost = true;
+            if (xhr instanceof ApiRequestError && xhr.status === 403) permissionLost = true;
             showError(responseError(xhr));
         },
     });

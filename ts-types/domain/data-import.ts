@@ -1,28 +1,15 @@
+import type { GISLayer, LandmarkCollectionWithPerm, V2ImportGpxUpdate200, V2ImportKmlKmzUpdate200, V2ImportKmlKmzInspectCreate200 } from '@speleodb/api';
 import type { EntityId } from './identifiers.ts';
 import type { CameraBounds } from './map-geometry.ts';
 import type { ImportedMapResult } from './map-import.ts';
 
 export type ImportTab = 'gpx' | 'kml';
 export type ImportMode = 'places' | 'overlay';
-export interface ImportReview {
-    places: {
-        unique_coordinate_count?: number;
-        duplicate_coordinate_count?: number;
-        skipped_placemarks?: number;
-        eligible_placemarks?: number;
-        point_count?: number;
-    };
-    overlay: {
-        feature_count?: number;
-        point_parts?: number;
-        line_parts?: number;
-        polygon_parts?: number;
-        source_placemarks?: number;
-    };
-    warnings?: { code?: string; message?: string; modes?: string[]; count?: number }[];
-    suggested_name?: string;
-    source_placemarks?: number;
-}
+/** Review presentation accepts partial counts; submission additionally validates eligibility. */
+export type ImportReview = Partial<Omit<V2ImportKmlKmzInspectCreate200, 'places' | 'overlay'>> & {
+    places: Partial<NonNullable<V2ImportKmlKmzInspectCreate200['places']>>;
+    overlay: Partial<NonNullable<V2ImportKmlKmzInspectCreate200['overlay']>>;
+};
 export interface ImportEligibility {
     file?: File | null;
     report?: ImportReview | null;
@@ -32,23 +19,10 @@ export interface ImportEligibility {
     busy?: boolean;
     uncertain?: boolean;
 }
-export interface ImportCollection {
-    id: EntityId;
-    name: string;
-    can_write?: boolean;
-    is_personal?: boolean;
-}
-export interface ImportResponse {
-    id?: EntityId;
-    name?: string;
-    collection_id?: EntityId;
-    bounds?: CameraBounds | null;
-    landmarks_created?: number;
-    gps_tracks_created?: number;
-    gps_track_ids?: EntityId[];
-    landmarks_skipped?: number;
-    duplicates_in_file?: number;
-}
+export type ImportCollection = Pick<LandmarkCollectionWithPerm, 'name'> &
+    Partial<Pick<LandmarkCollectionWithPerm, 'is_personal'>> & { id: EntityId; can_write?: boolean };
+/** Shared display projection across overlay, GPX, and places import results. */
+export type ImportResultFields = Partial<Pick<GISLayer, 'id' | 'name'> & V2ImportGpxUpdate200 & V2ImportKmlKmzUpdate200>;
 export interface ImportResult extends Omit<ImportedMapResult, 'layerId' | 'bounds'> {
     layerId: EntityId | undefined;
     collectionId: EntityId | undefined;

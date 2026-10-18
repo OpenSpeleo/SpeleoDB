@@ -289,9 +289,7 @@
       "tableSelector": "#watchlist_cylinders_table",
       "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
       "showDaysFilter": {% if show_days_filter %}true{% else %}false{% endif %},
-      "exportRoute": "api:v2:cylinder-fleet-watchlist-export",
-      "entityCrud": {% if has_write_access %}true{% else %}false{% endif %},
-      "detailRoute": "api:v2:cylinder-detail"
+      "entityCrud": {% if has_write_access %}true{% else %}false{% endif %}
     }
   </script>
 {% endblock inline_extra_js %}

@@ -179,10 +179,8 @@ class GISViewDangerZoneView(_BaseGISViewView):
         data.update(
             entity_label="GIS View",
             entity_settings_base_template="pages/gis_view/base.html",
-            api_detail_url=reverse(
-                "api:v2:gis-view-detail",
-                kwargs={"id": gis_view.id},
-            ),
+            api_resource="gis-view",
+            api_entity_id=str(gis_view.id),
             listing_url=reverse("private:gis_views"),
             danger_success_message="The GIS view has been deleted successfully.",
         )

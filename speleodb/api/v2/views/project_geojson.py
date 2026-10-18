@@ -24,6 +24,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WebViewerAccess
 from speleodb.api.v2.serializers import ProjectGeoJSONCommitSerializer
@@ -95,6 +96,9 @@ class ProjectAllProjectGeoJsonApiView(
     serializer_class = ProjectWithGeoJsonSerializer
 
     @extend_schema(operation_id="v2_projects_geojson_list")
+    @extend_schema(
+        responses={200: ProjectWithGeoJsonSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         projects = self.get_user_projects(user)
@@ -260,6 +264,10 @@ class ProjectGeoJsonCommitsApiView(GenericAPIView[Project], SDBAPIViewMixin):
     serializer_class = ProjectGeoJSONCommitSerializer  # type: ignore[assignment]
     lookup_field = "id"
 
+    @extend_schema(
+        responses={200: ProjectGeoJSONCommitSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_projects_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         serializer = ProjectGeoJSONCommitSerializer(

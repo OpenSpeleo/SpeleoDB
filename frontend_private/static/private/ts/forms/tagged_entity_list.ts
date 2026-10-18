@@ -16,11 +16,10 @@ import type { TaggedEntity, TaggedListApi, TaggedListOptions } from '../../../..
  *
  * Usage:
  *   var list = attachTaggedEntityList({
- *       listEndpoint: "{% url 'api:v2:station-tags' %}",
- *       detailEndpointBuilder: function (id) {
- *           return Urls['api:v2:station-tag-detail'](id);
- *       },
- *       editMethod: 'PUT',
+ *       list: listTags,
+ *       create: createTag,
+ *       update: updateTag,
+ *       remove: deleteTag,
  *
  *       renderList: function (entities) { ... populate table + cards ... },
  *       openEditModalForEntity: function (entity) { ... set fields ... },
@@ -55,21 +54,17 @@ import type { TaggedEntity, TaggedListApi, TaggedListOptions } from '../../../..
  * Edit and delete options are optional. List-only pages can use the same loader
  * and returned `reload()` method without providing modal configuration.
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal.
+ * Requires: jQuery, FormModals, showApiErrorModal.
  */
 
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
-function _tteGetCSRFToken() {
-    return ($('input[name^=csrfmiddlewaretoken]').val() as string) || '';
-}
-
-export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntity>(options: TaggedListOptions<Entity>): TaggedListApi {
-    var listEndpoint = options.listEndpoint;
-    var detailEndpointBuilder = options.detailEndpointBuilder;
-    var editMethod = options.editMethod || 'PUT';
-    var createMethod = options.createMethod || 'POST';
+export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntity, Payload = unknown>(options: TaggedListOptions<Entity, Payload>): TaggedListApi {
+    var list = options.list;
+    var create = options.create;
+    var update = options.update;
+    var remove = options.remove;
 
     var renderList = options.renderList;
     var openEditModalForEntity = options.openEditModalForEntity;
@@ -97,10 +92,12 @@ export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntit
     var entityLabel = options.entityLabel || 'item';
     var loadFailedMessage = options.loadFailedMessage || ('Failed to load ' + entityLabel + 's');
 
-    if (!listEndpoint) { throw new Error('attachTaggedEntityList: listEndpoint is required'); }
-    if ((editFormSelector || confirmDeleteSelector)
-        && typeof detailEndpointBuilder !== 'function') {
-        throw new Error('attachTaggedEntityList: detailEndpointBuilder must be function(id)');
+    if (typeof list !== 'function') { throw new Error('attachTaggedEntityList: list is required'); }
+    if (editFormSelector && typeof update !== 'function') {
+        throw new Error('attachTaggedEntityList: update is required for editing');
+    }
+    if (confirmDeleteSelector && typeof remove !== 'function') {
+        throw new Error('attachTaggedEntityList: remove is required for deletion');
     }
     if (typeof renderList !== 'function') {
         throw new Error('attachTaggedEntityList: renderList is required');
@@ -114,22 +111,10 @@ export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntit
     FormModals.bindAutoDismiss();
 
     function load() {
-        $.ajax({
-            url: listEndpoint,
-            method: 'GET',
-            dataType: 'json',
-            success: function (response: unknown) {
-                if (Array.isArray(response)) {
-                    allEntities = response as Entity[];
-                    renderList!(allEntities, api);
-                } else {
-                    FormModals.showError(loadFailedMessage);
-                }
-            },
-            error: function () {
-                FormModals.showError(loadFailedMessage);
-            },
-        });
+        void list().then(entities => {
+            allEntities = entities;
+            renderList!(allEntities, api);
+        }).catch(() => FormModals.showError(loadFailedMessage));
     }
 
     function openEditModal(entityId: string | number) {
@@ -186,26 +171,15 @@ export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntit
             var payload = collectEditPayload!();
             if (!payload) { return false; }
 
-            var url = entityId ? detailEndpointBuilder!(entityId) : listEndpoint;
-            var method = entityId ? editMethod : createMethod;
-
-            $.ajax({
-                url: url,
-                method: method,
-                data: JSON.stringify(payload),
-                contentType: 'application/json; charset=utf-8',
-                beforeSend: function (xhr) { xhr.setRequestHeader('X-CSRFToken', _tteGetCSRFToken()); },
-                success: function () {
+            if (!entityId && !create) return false;
+            const request = entityId ? update!(entityId, payload) : create!(payload);
+            void request.then(function () {
                     FormModals.showSuccess(
                         _tteCapitalize(entityLabel) + (entityId ? ' updated' : ' created') + ' successfully!'
                     );
                     closeEditModal();
                     window.setTimeout(load, 500);
-                },
-                error: function (xhr) {
-                    showAjaxErrorModal(xhr);
-                },
-            });
+            }).catch(showApiErrorModal);
             return false;
         });
     }
@@ -214,19 +188,11 @@ export function attachTaggedEntityList<Entity extends TaggedEntity = TaggedEntit
         $(confirmDeleteSelector).click(function () {
             var entityId = deleteIdInputSelector ? $(deleteIdInputSelector).val() as string : null;
             if (!entityId) { return; }
-            $.ajax({
-                url: detailEndpointBuilder!(entityId),
-                method: 'DELETE',
-                beforeSend: function (xhr) { xhr.setRequestHeader('X-CSRFToken', _tteGetCSRFToken()); },
-                success: function () {
+            void remove!(entityId).then(function () {
                     FormModals.showSuccess(_tteCapitalize(entityLabel) + ' deleted successfully!');
                     closeDeleteModal();
                     window.setTimeout(load, 500);
-                },
-                error: function (xhr) {
-                    showAjaxErrorModal(xhr);
-                },
-            });
+            }).catch(showApiErrorModal);
         });
     }
 

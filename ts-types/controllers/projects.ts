@@ -1,1 +1,1 @@
-export interface ProjectsContext { releaseAllUrl: string; projectsUrl: string }
+export interface ProjectsContext { projectsUrl: string }

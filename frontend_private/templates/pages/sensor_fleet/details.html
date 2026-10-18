@@ -255,11 +255,9 @@
       "hasRows": {% if sensors %}true{% else %}false{% endif %},
       "hasWrite": {% if has_write_access %}true{% else %}false{% endif %},
       "orderAscending": true,
-      "settingsEndpoint": "{% url 'api:v2:sensor-fleet-detail' fleet_id=sensor_fleet.id %}",
+      "settings": true,
       "settingsMessage": "The sensor fleet has been updated.",
-      "entityCrud": true,
-      "listEndpoint": "{% url 'api:v2:sensor-fleet-sensors' fleet_id=sensor_fleet.id %}",
-      "detailRoute": "api:v2:sensor-detail"
+      "entityCrud": true
     }
   </script>
 {% endblock inline_extra_js %}

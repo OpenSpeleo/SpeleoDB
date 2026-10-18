@@ -89,10 +89,8 @@ class SurfaceNetworkDetailsView(_BaseSurfaceNetworkView):
             entity_label_lower="surface network",
             entity_settings_base_template="pages/surface_network/base.html",
             listing_url=reverse("private:surface_networks"),
-            api_detail_url=reverse(
-                "api:v2:surface-network",
-                kwargs={"network_id": network.id},
-            ),
+            api_resource="surface-network",
+            api_entity_id=str(network.id),
             details_form_id="surface_network_details_form",
             details_method="PUT",
             details_success_message="The surface network has been updated.",
@@ -132,10 +130,8 @@ class SurfaceNetworkDangerZoneView(_BaseSurfaceNetworkView):
         data.update(
             entity_label="Surface Network",
             entity_settings_base_template="pages/surface_network/base.html",
-            api_detail_url=reverse(
-                "api:v2:surface-network",
-                kwargs={"network_id": network.id},
-            ),
+            api_resource="surface-network",
+            api_entity_id=str(network.id),
             listing_url=reverse("private:surface_networks"),
             danger_success_message=(
                 "The Surface Network has been deleted successfully."
@@ -175,10 +171,8 @@ class SurfaceNetworkUserPermissionsView(_BaseSurfaceNetworkView):
             entity=network,
             entity_settings_base_template="pages/surface_network/base.html",
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:surface-network-permissions",
-                kwargs={"network_id": network.id},
-            ),
+            api_resource="surface-network",
+            api_entity_id=str(network.id),
             permission_add_title="Add a collaborator to the network",
             permission_success_message="The network permission has been saved.",
             permission_delete_message="The network permission has been removed.",

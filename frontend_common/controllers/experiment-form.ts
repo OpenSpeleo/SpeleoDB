@@ -1,8 +1,12 @@
+import { ExperimentExperimentFieldsItemType, v2ExperimentsCreateWithJson, v2ExperimentsUpdateWithJson } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
+import { choice } from '../api/entity-forms.ts';
+import { formText } from '../api/form-values.ts';
 import { afterWindowLoad } from '../readiness.ts';
 import { ExperimentFields } from '../../frontend_private/static/private/ts/experiment-fields.ts';
-import { showAjaxErrorModal } from '../../frontend_private/static/private/ts/forms/ajax_errors.ts';
+import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
 import { FormModals } from '../../frontend_private/static/private/ts/forms/modals.ts';
-import type { ExperimentFormContext, ExperimentFormField, ExperimentFormPayload } from '../../ts-types/controllers/experiment-form.ts';
+import type { ExperimentFormContext, ExperimentFormField } from '../../ts-types/controllers/experiment-form.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 
 function collectNewFields() {
@@ -12,7 +16,7 @@ function collectNewFields() {
         if ($element.hasClass('mandatory-field-item')) {
             fields.push({
                 name: $element.data('field-name') as string,
-                type: $element.data('field-type') as string,
+                type: choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
                 required: $element.data('field-required') as boolean,
             });
         } else if ($element.hasClass('field-item')) {
@@ -21,7 +25,7 @@ function collectNewFields() {
             if (!name || !type) return;
             const field: ExperimentFormField = {
                 name,
-                type,
+                type: choice(ExperimentExperimentFieldsItemType, type),
                 required: $element.find('.field-required').is(':checked'),
             };
             if (type === 'select') {
@@ -42,9 +46,9 @@ function collectExistingAndNewFields() {
             const name = ($element.find('.existing-field-name').val() as string).trim();
             if (!name) return;
             const field: ExperimentFormField = {
-                id: $element.data('field-id') as EntityId,
+                id: String($element.data('field-id')),
                 name,
-                type: $element.data('field-type') as string,
+                type: choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
                 required: $element.data('field-required') === true || $element.data('field-required') === 'true',
             };
             const rawOptions: unknown = $element.data('field-options');
@@ -63,7 +67,7 @@ function collectExistingAndNewFields() {
             if (!name || !type) return;
             const field: ExperimentFormField = {
                 name,
-                type,
+                type: choice(ExperimentExperimentFieldsItemType, type),
                 required: $element.find('.field-required').is(':checked'),
             };
             if (type === 'select') {
@@ -121,26 +125,22 @@ export async function init(context: ExperimentFormContext) {
         }
 
         const form = document.getElementById(context.formId) as HTMLFormElement;
-        const payload = Object.fromEntries(new FormData(form)) as ExperimentFormPayload;
-        if (context.mode === 'create' || fields.length > 0) payload.experiment_fields = fields;
-        $.ajax({
-            url: context.endpoint,
-            method: context.method,
-            data: JSON.stringify(payload),
-            contentType: 'application/json; charset=utf-8',
-            cache: false,
-            beforeSend(xhr) {
-                xhr.setRequestHeader('X-CSRFToken', $('input[name^=csrfmiddlewaretoken]').val() as string);
-            },
-            success(data: { id: EntityId }) {
-                FormModals.showSuccess(context.successMessage);
-                window.setTimeout(() => {
-                    if (context.redirectRoute) window.location.href = route(context.redirectRoute, data.id);
-                    else window.location.reload();
-                }, 2000);
-            },
-            error: showAjaxErrorModal,
-        });
+        const data = new FormData(form);
+        const payload = {
+            name: formText(data, 'name'), code: formText(data, 'code'), description: formText(data, 'description'),
+            start_date: formText(data, 'start_date') || null, end_date: formText(data, 'end_date') || null,
+            ...((context.mode === 'create' || fields.length > 0) ? { experiment_fields: fields } : {}),
+        };
+        const request = context.mode === 'create'
+            ? apiData(v2ExperimentsCreateWithJson(payload, webApiOptions()))
+            : apiData(v2ExperimentsUpdateWithJson(context.experimentId!, payload, webApiOptions()));
+        request.then(data => {
+            FormModals.showSuccess(context.successMessage);
+            window.setTimeout(() => {
+                if (context.redirectRoute) window.location.href = route(context.redirectRoute, data.id);
+                else window.location.reload();
+            }, 2000);
+        }).catch(showApiErrorModal);
         return false;
     });
 }

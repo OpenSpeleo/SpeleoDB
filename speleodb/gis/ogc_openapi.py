@@ -39,11 +39,13 @@ revalidating against the ETag on the next deploy.
 from __future__ import annotations
 
 import hashlib
+from copy import deepcopy
 from typing import Any
 from typing import Final
 
 import orjson
 
+from speleodb.gis.models import Landmark
 from speleodb.gis.ogc_helpers import OGC_CONFORMANCE_CLASSES
 
 # ---------------------------------------------------------------------------
@@ -266,6 +268,58 @@ _SCHEMAS: dict[str, Any] = {
 
 
 # ---------------------------------------------------------------------------
+# Landmark feeds have a fixed point DTO; uploaded project GeoJSON remains open.
+# These declarations also govern the independently served OGC OpenAPI document.
+_LANDMARK_PROPERTIES: dict[str, Any] = {
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "icon": {"type": "string", "enum": list(Landmark.Icon.values)},
+    "collection": {"type": "string", "format": "uuid"},
+    "collection_name": {"type": "string"},
+    "collection_type": {"type": "string"},
+    "collection_color": {"type": "string"},
+    "is_personal_collection": {"type": "boolean"},
+    "created_by": {"type": "string"},
+    "creation_date": {"type": "string", "format": "date-time", "nullable": True},
+    "can_write": {"type": "boolean"},
+    "can_delete": {"type": "boolean"},
+}
+_SCHEMAS["LandmarkFeature"] = deepcopy(_SCHEMAS["Feature"])
+_SCHEMAS["LandmarkFeature"]["required"] = ["id", "type", "geometry", "properties"]
+_SCHEMAS["LandmarkFeature"]["properties"].update(
+    {
+        "id": {"type": "string", "format": "uuid"},
+        "geometry": {
+            "type": "object",
+            "required": ["type", "coordinates"],
+            "properties": {
+                "type": {"type": "string", "enum": ["Point"]},
+                "coordinates": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {"type": "number"},
+                },
+            },
+        },
+        "properties": {
+            "type": "object",
+            "properties": _LANDMARK_PROPERTIES,
+            "required": list(_LANDMARK_PROPERTIES),
+        },
+    }
+)
+_SCHEMAS["LandmarkFeatureResponse"] = {
+    "allOf": [
+        {"$ref": "#/components/schemas/LandmarkFeature"},
+        {"type": "object", "required": ["links"]},
+    ]
+}
+_SCHEMAS["LandmarkFeatureCollection"] = deepcopy(_SCHEMAS["FeatureCollection"])
+_SCHEMAS["LandmarkFeatureCollection"]["properties"]["features"]["items"] = {
+    "$ref": "#/components/schemas/LandmarkFeature"
+}
+
 # Reusable parameter components.
 # ---------------------------------------------------------------------------
 
@@ -462,6 +516,12 @@ _RESPONSES: dict[str, Any] = {
     "BadRequest": {
         "description": "Malformed query parameter (bbox / datetime / limit / offset).",
         "content": {
+            "application/geo+json": {
+                "schema": {"$ref": "#/components/schemas/Exception"}
+            },
+            "application/geojson": {
+                "schema": {"$ref": "#/components/schemas/Exception"}
+            },
             "application/json": {
                 "schema": {"$ref": "#/components/schemas/Exception"},
             },
@@ -470,6 +530,12 @@ _RESPONSES: dict[str, Any] = {
     "NotFound": {
         "description": "Token, collection, or feature not found.",
         "content": {
+            "application/geo+json": {
+                "schema": {"$ref": "#/components/schemas/Exception"}
+            },
+            "application/geojson": {
+                "schema": {"$ref": "#/components/schemas/Exception"}
+            },
             "application/json": {
                 "schema": {"$ref": "#/components/schemas/Exception"},
             },
@@ -482,6 +548,16 @@ _RESPONSES: dict[str, Any] = {
 # Path templates — one entry per OGC endpoint kind. Filled in per-family
 # below.
 # ---------------------------------------------------------------------------
+
+
+for _name, _base, _schema in (
+    ("LandmarkFeatures", "Features", "LandmarkFeatureCollection"),
+    ("LandmarkFeature", "Feature", "LandmarkFeatureResponse"),
+):
+    _RESPONSES[_name] = deepcopy(_RESPONSES[_base])
+    _RESPONSES[_name]["content"]["application/geo+json"]["schema"] = {
+        "$ref": f"#/components/schemas/{_schema}"
+    }
 
 
 def _token_param_ref(token_param: str) -> str:
@@ -517,6 +593,7 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
     prefix = family["prefix"]
     family_id = family["id"]
     family_title = family["title"]
+    feature_prefix = "Landmark" if family_id.startswith("landmark") else ""
     token_ref = {"$ref": _token_param_ref(family["token_param"])}
     collection_id_ref = {
         "$ref": _collection_id_param_ref(family["collection_id_pattern"]),
@@ -580,13 +657,23 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                 "parameters": [
                     token_ref,
                     collection_id_ref,
+                    {
+                        "in": "header",
+                        "name": "If-None-Match",
+                        "schema": {"type": "string"},
+                    },
                     {"$ref": "#/components/parameters/BboxParam"},
                     {"$ref": "#/components/parameters/DatetimeParam"},
                     {"$ref": "#/components/parameters/LimitParam"},
                     {"$ref": "#/components/parameters/OffsetParam"},
                 ],
                 "responses": {
-                    "200": {"$ref": "#/components/responses/Features"},
+                    "200": {"$ref": f"#/components/responses/{feature_prefix}Features"},
+                    "304": {
+                        "description": (
+                            "Collection ETag matches If-None-Match; no response body."
+                        )
+                    },
                     "400": {"$ref": "#/components/responses/BadRequest"},
                     "404": {"$ref": "#/components/responses/NotFound"},
                 },
@@ -603,7 +690,7 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                     {"$ref": "#/components/parameters/FeatureIdParam"},
                 ],
                 "responses": {
-                    "200": {"$ref": "#/components/responses/Feature"},
+                    "200": {"$ref": f"#/components/responses/{feature_prefix}Feature"},
                     "404": {"$ref": "#/components/responses/NotFound"},
                 },
             },

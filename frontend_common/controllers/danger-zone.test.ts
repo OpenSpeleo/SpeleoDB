@@ -1,51 +1,33 @@
-import type { Mock } from 'vitest';
-import type { DangerZoneContext } from '../../ts-types/controllers/danger-zone.ts';
-import { init as initialize } from './danger-zone.ts';
-import { attachDangerZone } from '../../frontend_private/static/private/ts/forms/danger_zone.ts';
+import { init } from './danger-zone.ts';
+import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
 
-vi.mock('../../frontend_private/static/private/ts/forms/danger_zone.ts', () => ({
-    attachDangerZone: vi.fn(),
-}));
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
+beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
+afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
-// The double intentionally returns values that the real attachment does not.
-const attachment = vi.mocked(attachDangerZone) as unknown as Mock<(context?: unknown) => unknown>;
-function init(context?: unknown) { return initialize(context as DangerZoneContext); }
+function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf-delete"><button id="btn_delete">Delete</button><div id="modal_confirmation" style="display:none"><button id="btn_confirmed_delete">Confirm</button></div><div id="error_div"></div><div id="success_div"></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>`; }
 
-beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
-    attachment.mockReset();
+it.each([['project', 'projects'], ['team', 'teams']] as const)('deletes %s through its generated operation only after confirmation', async (resource, path) => {
+    page();
+    await init({ resource, entityId: 'entity/id', successMessage: 'Removed' });
+    $('#btn_delete').trigger('click');
+    expect($('#modal_confirmation').css('display')).toBe('flex');
+    expect(server.requests).toHaveLength(0);
+    $('#btn_confirmed_delete').trigger('click');
+    await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe('Removed'));
+    expect(server.requests).toHaveLength(1);
+    expect(server.requests[0]).toMatchObject({ method: 'DELETE', path: `/api/v2/${path}/entity%2Fid/`, headers: { 'x-csrftoken': 'csrf-delete' } });
 });
 
-afterEach(() => {
-    vi.restoreAllMocks();
-});
-
-it('waits for load before forwarding the original context once', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const context = { endpoint: '/fixture/' };
-    const pending = init(context);
-    expect(attachment).not.toHaveBeenCalled();
-    window.dispatchEvent(new Event('load'));
-    await expect(pending).resolves.toBeUndefined();
-    expect(attachment).toHaveBeenCalledExactlyOnceWith(context);
-    expect(attachment.mock.calls[0]![0]).toBe(context);
-});
-
-it('repeats initialization and forwards missing context without controller validation', async () => {
-    const context = { endpoint: '/fixture/' };
-    await init(context);
-    await init(context);
-    await init();
-    expect(attachment.mock.calls.map(([argument]) => argument)).toEqual([context, context, undefined]);
-});
-
-it('rejects when the owned helper throws', async () => {
-    const error = new Error('Attachment failed');
-    attachment.mockImplementation(() => { throw error; });
-    await expect(init({})).rejects.toBe(error);
-});
-
-it('ignores helper return values and does not await a returned promise', async () => {
-    attachment.mockReturnValue(new Promise(() => {}));
-    await expect(init({})).resolves.toBeUndefined();
+it('presents rejected delete errors as inert text', async () => {
+    page();
+    server.reply({ status: 403, json: { detail: '<img src=x> denied' } });
+    await init({ resource: 'project', entityId: 'project' });
+    $('#btn_confirmed_delete').trigger('click');
+    await vi.waitFor(() => expect($('#modal_error_txt').text()).toBe('<img src=x> denied'));
+    expect($('#modal_error_txt img')).toHaveLength(0);
+    expect($('#modal_success').css('display')).toBe('none');
 });

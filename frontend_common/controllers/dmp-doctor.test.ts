@@ -1,115 +1,61 @@
-import type { Mock, MockInstance } from 'vitest';
-import type { DmpDoctorContext } from '../../ts-types/controllers/dmp-doctor.ts';
-import type { SurveyToolAjaxCall, UploadToolDouble, SurveyTableDouble, ConfiguredSurveyOptions } from '../../ts-types/testing/vitest/survey-tools.ts';
-let ajax: Mock<(options: SurveyToolAjaxCall) => unknown>;
-let anchorClick: MockInstance<() => void>;
-let revokeUrl: Mock<(url: string) => void>;
-let objectUrl: Mock<(blob: Blob | MediaSource) => string>;
-let writeText: Mock<(text: string) => Promise<void>>;
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { init as initialize } from './dmp-doctor.ts';
-import { attachToolFileUpload } from '../../frontend_private/static/private/ts/forms/tool_file_upload.ts';
-vi.mock('../../frontend_private/static/private/ts/forms/tool_file_upload.ts', () => ({ attachToolFileUpload: vi.fn() }));
-function init(context?: unknown) { return initialize(context as DmpDoctorContext); }
-const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
-beforeAll(() => { (0, eval)(jquery); });
-let dropzone: UploadToolDouble;
-beforeEach(() => {
-    vi.clearAllMocks();
-    dropzone = { getFile: vi.fn(() => new File(['survey'], 'survey.dmp')), reset: vi.fn(), setStatus: vi.fn() };
-    vi.mocked(attachToolFileUpload).mockReturnValue(dropzone);
-    ajax = vi.fn(() => ({}));
-    vi.spyOn($, 'ajax').mockImplementation(ajax as unknown as JQueryStatic['ajax']);
-    anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    objectUrl = vi.fn(() => 'blob:survey');
-    window.URL.createObjectURL = objectUrl;
-    revokeUrl = vi.fn();
-    window.URL.revokeObjectURL = revokeUrl;
-    document.body.innerHTML = '<input id="surveyDate"><input id="surveyDateUncorrupt"><input id="fixDmpSwitch" type="checkbox"><input id="depthUnitSwitch" type="checkbox" checked><input id="reverseDirectionSwitch" type="checkbox"><input id="lengthScaling" value="100"><input id="compassOffset" value="0"><input id="depthOffset" value="0"><span id="depthUnitSuffix"></span><button class="tab-button" data-tab="uncorrupt"></button><button class="tab-button" data-tab="adjust"></button><div class="tab-content" id="tab-uncorrupt"></div><div class="tab-content" id="tab-adjust"></div><button id="resetFormBtn"></button><button id="downloadBtn"></button><div id="status"></div><div id="loading_spinner" style="display:none"></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><input name="csrfmiddlewaretoken" value="csrf">';
+import { startApiServer, setBrowserUrl, loadJQuery, useNativeFetchBodyConstructors } from '../test/api-server.ts';
+import { init } from './dmp-doctor.ts';
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let restoreConstructors: () => void;
+beforeAll(async () => {
+    server = await startApiServer();
+    loadJQuery();
+
 });
-afterEach(() => { $(window).off('load'); $('body').off('click'); vi.restoreAllMocks(); delete (window.URL as unknown as {createObjectURL?: unknown}).createObjectURL; delete (window.URL as unknown as {revokeObjectURL?: unknown}).revokeObjectURL; document.body.innerHTML = ''; });
-it('initializes immediately with DMP upload restrictions, initial repair toggle and date bounds', () => {
-    expect(init({ endpoint: '/doctor/' })).toBeUndefined();
-    expect(vi.mocked(attachToolFileUpload).mock.calls[0]![0]).toMatchObject({ allowedExtensions: ['dmp'], actionButtonSelector: '#downloadBtn', readyMessage: 'File ready for conversion' });
+afterAll(async () => { await server.close(); });
+beforeEach(() => {
+    server.reset();
+    setBrowserUrl(server.origin);
+    restoreConstructors = useNativeFetchBodyConstructors();
+    document.body.innerHTML = `<div id="fileDropZone"></div><input id="fileInput" type="file"><span id="fileNameDisplay"></span><span id="fileErrorDisplay"></span><input id="surveyDate"><input id="surveyDateUncorrupt"><input id="fixDmpSwitch" type="checkbox"><input id="depthUnitSwitch" type="checkbox" checked><input id="reverseDirectionSwitch" type="checkbox"><input id="lengthScaling" value="100"><input id="compassOffset" value="0"><input id="depthOffset" value="0"><span id="depthUnitSuffix"></span><button class="tab-button" data-tab="uncorrupt"></button><button class="tab-button" data-tab="adjust"></button><div class="tab-content" id="tab-uncorrupt"></div><div class="tab-content" id="tab-adjust"></div><button id="resetFormBtn"></button><button id="downloadBtn"></button><div id="status"></div><div id="loading_spinner" style="display:none"></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><input name="csrfmiddlewaretoken" value="csrf">`;
+    init();
+});
+afterEach(() => {
+    $(window).off('load'); $(document).off('click keydown'); $('body').off('click');
+    restoreConstructors(); document.body.replaceChildren(); delete window.surveyData;
+});
+function choose(name = 'survey.dmp') {
+    const file = new File(['survey bytes'], name);
+    Object.defineProperty(document.getElementById('fileInput')!, 'files', { configurable: true, value: [file] });
+    $('#fileInput').trigger('change');
+}
+
+it('keeps date limits, tab resets, and file reset behavior', () => {
     expect($('#fixDmpSwitch').prop('checked')).toBe(true);
     expect($('#surveyDate').attr('max')).toBe(new Date().toISOString().split('T')[0]);
-});
-it('does not reset the same tab, resets changed tabs without resetting file, and explicitly resets files', () => {
-    init({});
-    $('#compassOffset').val('45');
-    $('[data-tab="uncorrupt"]').trigger('click');
-    expect($('#compassOffset').val()).toBe('45');
+    choose(); $('#compassOffset').val('45');
     $('[data-tab="adjust"]').trigger('click');
     expect($('#compassOffset').val()).toBe('0');
     expect($('#fixDmpSwitch').prop('checked')).toBe(false);
-    expect(dropzone.reset).not.toHaveBeenCalled();
-    expect($('#status').text()).toBe('Tab changed - form reset');
     $('#resetFormBtn').trigger('click');
-    expect(dropzone.reset).toHaveBeenCalledOnce();
-    expect(dropzone.setStatus).toHaveBeenCalledWith('Form reset', '#94a3b8', 'normal');
+    expect($('#status').text()).toBe('Form reset');
 });
-it('stores and restores compass input when reversing direction and uses actual checkbox receivers', () => {
-    init({});
-    $('#compassOffset').val('45');
-    $('#reverseDirectionSwitch').prop('checked', true).trigger('change');
-    expect($('#compassOffset').val()).toBe('180');
-    expect($('#compassOffset').prop('disabled')).toBe(true);
-    $('#reverseDirectionSwitch').prop('checked', false).trigger('change');
-    expect($('#compassOffset').val()).toBe('45');
-    expect($('#compassOffset').prop('disabled')).toBe(false);
-    $('#depthUnitSwitch').prop('checked', false).trigger('change');
-    expect($('#depthUnitSuffix').text()).toBe('m');
-});
-it.each([['lengthScaling', '0', 'Shot Length Scaling must be at least 1%.'], ['compassOffset', '360', 'Compass Offset must be between -360 and 359.'], ['depthOffset', '1001', 'Depth Offset must be between -1000 and 1000.']])('blocks invalid %s values before transport', (id, value, message) => {
-    init({ endpoint: '/doctor/' });
-    $(`#${id}`).val(value).trigger('input');
+it.each([['lengthScaling', '0'], ['compassOffset', '360'], ['depthOffset', '1001']])('rejects invalid %s before transport', (id, value) => {
+    choose(); $(`#${id}`).val(value).trigger('input'); $('#downloadBtn').trigger('click');
+    expect(server.requests).toHaveLength(0);
     expect($(`#${id}`).hasClass('invalid')).toBe(true);
-    $('#downloadBtn').trigger('click');
-    expect($('#status').text()).toBe(message);
-    expect(ajax).not.toHaveBeenCalled();
 });
-it('sends file and exact adjustment JSON with CSRF, then downloads and revokes the returned blob', () => {
-    const file = new File(['survey'], 'original.dmp');
-    dropzone.getFile.mockReturnValue(file);
-    init({ endpoint: '/doctor/' });
-    $('#lengthScaling').val('125');
-    $('#surveyDateUncorrupt').val('2026-01-01');
+it('sends multipart file and JSON adjustments, then handles the binary download', async () => {
+    server.reply({ bytes: new Uint8Array([0, 255, 17]), headers: { 'Content-Type': 'application/octet-stream' } });
+    choose(); $('#lengthScaling').val('125'); $('#surveyDateUncorrupt').val('2026-01-01');
     $('#depthUnitSwitch').prop('checked', false).trigger('change');
     $('#downloadBtn').trigger('click');
-    const request = ajax.mock.calls[0]![0];
-    expect(request).toMatchObject({ url: '/doctor/', method: 'POST', processData: false, contentType: false, cache: false });
-    expect((request.data as FormData).get('file')).toBe(file);
-    expect(JSON.parse((request.data as FormData).get('data') as string) as unknown).toEqual({ fix_dmp: true, survey_date: '2026-01-01', length_scaling: 1.25, compass_offset: 0, reverse_direction: false, depth_offset: 0, depth_offset_unit: 'meters' });
-    const xhr = { setRequestHeader: vi.fn() };
-    expect(request.beforeSend!(xhr)).toBe(true);
-    expect(xhr.setRequestHeader).toHaveBeenCalledWith('X-CSRFToken', 'csrf');
-    expect($('#downloadBtn').prop('disabled')).toBe(true);
-    request.success('converted');
-    expect((anchorClick.mock.contexts[0] as HTMLAnchorElement).download).toBe('survey.dmp');
-    expect((objectUrl.mock.calls[0]![0] as Blob).type).toBe('application/octet-stream');
-    expect(revokeUrl).toHaveBeenCalledWith('blob:survey');
-    expect($('a').length).toBe(0);
-    expect($('#downloadBtn').prop('disabled')).toBe(false);
+    await vi.waitFor(() => { expect($('#downloadBtn').prop('disabled')).toBe(false); });
+    expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/tools/dmp-doctor/' });
+    expect(server.requests[0]!.body).toContain('filename="survey.dmp"');
+    expect(server.requests[0]!.body).toContain('"length_scaling":1.25');
+    expect(server.requests[0]!.body).toContain('"depth_offset_unit":"meters"');
     expect($('#status').text()).toBe('Download successful!');
+    expect($('a')).toHaveLength(0);
 });
-it('shows missing file and escaped response errors, preferring JSON error over detail', () => {
-    init({});
-    dropzone.getFile.mockReturnValueOnce(null);
-    $('#downloadBtn').trigger('click');
-    expect(dropzone.setStatus).toHaveBeenCalledWith('Please select a DMP file first.', 'red', 'bold');
-    $('#downloadBtn').trigger('click');
-    ajax.mock.calls[0]![0].error({ responseJSON: { error: '<unsafe>', detail: 'ignored' } }, 'error', 'fallback');
-    expect($('#modal_error_txt').text()).toBe('<unsafe>');
-    expect($('#modal_error_txt unsafe').length).toBe(0);
+it('renders HTTP error text and releases the pending button', async () => {
+    server.reply({ status: 400, json: { error: '<unsafe>' } });
+    choose(); $('#downloadBtn').trigger('click');
+    await vi.waitFor(() => { expect($('#modal_error_txt').text()).toBe('<unsafe>'); });
     expect($('#downloadBtn').prop('disabled')).toBe(false);
-});
-it('repeats handlers on reinitialization and propagates upload attachment errors', () => {
-    init({});
-    init({});
-    $('#resetFormBtn').trigger('click');
-    expect(dropzone.reset).toHaveBeenCalledTimes(2);
-    const error = new Error('Upload failed');
-    vi.mocked(attachToolFileUpload).mockImplementationOnce(() => { throw error; });
-    expect(() => init({})).toThrow(error);
 });

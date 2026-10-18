@@ -13,12 +13,16 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import feature_collection
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.landmark_access import accessible_landmarks_queryset
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers.api_contract import MessageSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkGeoJSONSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
 from speleodb.gis.models import Landmark
@@ -47,15 +51,44 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
     serializer_class = LandmarkSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "LandmarkSpecificAPIViewGetResponse", landmark=LandmarkSerializer()
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmarks_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Get detailed Landmark information when the user has collection access."""
         landmark = self.get_object()
         serializer = self.get_serializer(landmark)
         return SuccessResponse({"landmark": serializer.data})
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "LandmarkUpdateResponse", landmark=LandmarkSerializer()
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmarks_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._update(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object("LandmarkPutResponse", landmark=LandmarkSerializer()),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmarks_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._update(request=request, partial=False, **kwargs)
 
@@ -88,6 +121,8 @@ class LandmarkSpecificAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(responses={200: MessageSerializer(), 403: API_ERROR, 404: API_ERROR})
+    @extend_schema(operation_id="v2_landmarks_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a Landmark when the user has collection WRITE access."""
         landmark = self.get_object()
@@ -111,11 +146,29 @@ class LandmarkAPIView(GenericAPIView[Landmark], SDBAPIViewMixin):
         return accessible_landmarks_queryset(user=user)
 
     @extend_schema(operation_id="v2_landmarks_list")
+    @extend_schema(
+        responses={
+            200: response_object(
+                "LandmarkAPIViewGetResponse", landmarks=LandmarkSerializer(many=True)
+            ),
+            403: API_ERROR,
+        }
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return SuccessResponse({"landmarks": serializer.data})
 
+    @extend_schema(
+        responses={
+            201: response_object(
+                "LandmarkAPIViewPostResponse", landmark=LandmarkSerializer()
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmarks_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new Landmark in a writable collection."""
         serializer = self.get_serializer(data=request.data)
@@ -162,6 +215,10 @@ class LandmarkGeoJSONView(GenericAPIView[Landmark], SDBAPIViewMixin):
         user = self.get_user()
         return accessible_landmarks_queryset(user=user)
 
+    @extend_schema(
+        responses={200: feature_collection(LandmarkGeoJSONSerializer), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_landmarks_geojson_retrieve")
     def get(self, request: Request) -> Response:
         """Get user's Landmarks in a map-friendly format."""
         landmarks = self.get_queryset()

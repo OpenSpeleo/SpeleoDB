@@ -5,6 +5,13 @@ import type {
     JsdomWindowModule,
 } from '../ts-types/tooling/jsdom-runtime.ts';
 
+// Keep a coherent set of real Bun fetch body constructors available to tests
+// that exercise fetch multipart requests. JSDOM File/FormData belong to XHR's
+// separate realm and Bun cannot serialize their private implementation fields.
+Object.assign(globalThis, {
+    __nativeFetchBodyConstructors: { FormData, File, Blob, URL },
+});
+
 // Bun replaces bare "undici" imports with an incomplete built-in implementation.
 // JSDOM needs the installed dependency's Dispatcher API for real HTTP requests.
 // Select JSDOM's declared copy through its public entrypoint, then reuse that

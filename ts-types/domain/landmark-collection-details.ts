@@ -15,8 +15,3 @@ export interface LandmarkCollectionDetailsState {
     selection: Set<string | undefined>;
     table: DataTableApi | null;
 }
-export interface LandmarkBulkResult {
-    target_collection?: { name?: string };
-    transferred?: number;
-    deleted?: number;
-}

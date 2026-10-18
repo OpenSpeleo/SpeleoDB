@@ -20,6 +20,61 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Exporting needs no service credentials and must also run on Dependabot PRs.
+  api-contract:
+    runs-on: ubuntu-latest
+    env:
+      CELERY_BROKER_URL: "redis://localhost:6379/0"
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
+      # Dummy Key - Not Used
+      DJANGO_SECRET_KEY: "s&=i@9h+)6bge)6!6vhbcx@=#^6nr73&7+6ep-xpbebhi5#)+_"
+      # Dummy Key - Not Used
+      GITLAB_GROUP_ID: "whatever"
+      GITLAB_GROUP_NAME: "whatever"
+      GITLAB_HOST_URL: "whatever"
+      GITLAB_TOKEN: "whatever"
+      AWS_ACCESS_KEY_ID: "whatever"
+      AWS_SECRET_ACCESS_KEY: "whatever"
+      AWS_S3_REGION_NAME: "whatever"
+      AWS_STORAGE_BUCKET_NAME: "whatever"
+      AWS_S3_CUSTOM_DOMAIN: "whatever"
+      MAPBOX_API_TOKEN: "whatever"
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "latest-known"
+          python-version: "3.14"
+          activate-environment: true
+        env:
+          UV_VENV_SEED: 1
+
+      - name: Install Dependencies
+        run: uv sync --extra local --frozen
+
+      - name: Checkout TypeScript API source provenance
+        uses: actions/checkout@v7
+        with:
+          repository: OpenSpeleo/SpeleoDB-TS-API
+          # Set API_SCHEMA_REF to a reviewed SDK commit for coordinated changes.
+          # Otherwise the published development contract on master is enforced.
+          ref: ${{ vars.API_SCHEMA_REF || 'master' }}
+          path: .api-contract-sdk
+          sparse-checkout: openapi-source.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Verify backend export and SDK source digest
+        run: >-
+          python manage.py export_api_schema --check
+          --compare-source .api-contract-sdk/openapi-source.json
+        env:
+          DJANGO_DEBUG: True
+
   linter:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
@@ -198,7 +253,13 @@ jobs:
             --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
           make test-py
+          python manage.py verify_api_contract_coverage \
+            .artifacts/api-contract/observations.json \
+            --settings config.settings.test
         env:
+          PYTEST_ADDOPTS: >-
+            --api-contract-enforce
+            --api-contract-report=.artifacts/api-contract/observations.json
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}
@@ -210,6 +271,14 @@ jobs:
           AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
           AWS_S3_ENDPOINT_URL: "http://localhost:9000"
           AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
+
+      - name: Upload observed API contract evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-contract-observations
+          path: .artifacts/api-contract/
+          include-hidden-files: true
 
       - name: Upload GitLab creation audit
         if: always()
@@ -233,20 +302,32 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
 
+      rustfs:
+        image: rustfs/rustfs:1.0.0
+        env:
+          RUSTFS_ACCESS_KEY: access_key
+          RUSTFS_SECRET_KEY: secret_key
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/health || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
     env:
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
-      # Browser fixtures create database rows only. No remote GitLab credentials
-      # or S3 service are needed; uploads and viewer APIs are intercepted.
+      # Browser fixtures need no Git remote. Real attachment uploads use this
+      # job's isolated RustFS service.
       GITLAB_GROUP_ID: "0"
       GITLAB_GROUP_NAME: browser-tests
       GITLAB_HOST_URL: gitlab.invalid
       GITLAB_TOKEN: unused
       MAPBOX_API_TOKEN: ${{ secrets.MAPBOX_API_TOKEN }}
-      AWS_ACCESS_KEY_ID: unused
-      AWS_SECRET_ACCESS_KEY: unused
+      AWS_ACCESS_KEY_ID: access_key
+      AWS_SECRET_ACCESS_KEY: secret_key
       AWS_S3_REGION_NAME: us-east-1
-      AWS_STORAGE_BUCKET_NAME: browser-tests
-      AWS_S3_CUSTOM_DOMAIN: storage.invalid
+      AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
+      AWS_S3_ENDPOINT_URL: "http://localhost:9000"
+      AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
 
     steps:
       - name: Checkout Code Repository
@@ -276,6 +357,11 @@ jobs:
 
       - name: Install the unchanged Chromium and WebKit runtimes
         run: bunx --bun playwright install --with-deps chromium webkit
+
+      - name: Prepare isolated attachment storage
+        run: >-
+          python manage.py create_s3_local_buckets
+          --settings config.settings.test
 
       - name: Run serial browser workloads against the Django live server
         # This pytest case wraps the complete browser suite, bounded at 1800s.

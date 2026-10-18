@@ -2,7 +2,7 @@ import type { EntityId } from './identifiers.ts';
 import type { FeatureCollection } from 'geojson';
 import type { DisplayGeometry, DisplayGeometryType, ViewerGeoJSON } from './map-geometry.ts';
 import type { CoordinateBounds } from '@speleodb/map-core/coordinate-bounds';
-import type { GISGeometryResponse } from './map-config.ts';
+import type { GISGeometryMapInput } from './map-config.ts';
 import type { ViewerMap } from './map-state.ts';
 import type { JSONObject } from './json.ts';
 
@@ -40,7 +40,7 @@ export interface LazyOverlayOptions<Prepared> {
     loading?(this: void, loading: boolean): void;
     metadata?(this: void): { modified_date?: string | undefined } | null | undefined;
 }
-export interface AppliedGISGeometry { record: GISGeometryResponse; map: ViewerMap; generation: number }
+export interface AppliedGISGeometry { record: GISGeometryMapInput; map: ViewerMap; generation: number }
 export interface GISPopupFeature {
     properties?: JSONObject | null;
     geometry?: { type?: string } | null;

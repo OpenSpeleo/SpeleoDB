@@ -1,3 +1,4 @@
+import { landmarkFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
 import type { ModuleMock } from '../../../../../../ts-types/testing/vitest/mocks.ts';
 import type { ViewerLandmarkCollection } from '../../../../../../ts-types/domain/map-entities.ts';
 import { LandmarkUI } from './ui.ts';
@@ -143,14 +144,14 @@ describe('LandmarkUI coordinate formatting', () => {
             color: '#111111',
             can_write: false,
             is_personal: false,
-        } as ViewerLandmarkCollection);
+        });
         State.landmarkCollections.set('personal-1', {
             id: 'personal-1',
             name: 'Personal Landmarks',
             color: '#222222',
             can_write: true,
             is_personal: true,
-        } as ViewerLandmarkCollection);
+        });
 
         const groups = LandmarkUI.getLandmarkCollectionGroups([
             {
@@ -185,14 +186,14 @@ describe('LandmarkUI coordinate formatting', () => {
             color: '#111111',
             can_write: false,
             is_personal: false,
-        } as ViewerLandmarkCollection);
+        });
         State.landmarkCollections.set('personal-1', {
             id: 'personal-1',
             name: 'Personal Landmarks',
             color: '#222222',
             can_write: true,
             is_personal: true,
-        } as ViewerLandmarkCollection);
+        });
         State.allLandmarks.set('lm-shared', {
             id: 'lm-shared',
             name: 'Shared Point',
@@ -268,7 +269,7 @@ describe('LandmarkUI form lifecycle', () => {
     async function submit(id: string) { return (document.getElementById(id) as HTMLFormElement).onsubmit!(new Event('submit') as SubmitEvent) as unknown; }
     it('keeps create coordinates and the null collection, trims text and opens details through the same receiver', async () => {
         const details = vi.spyOn(LandmarkUI, 'openDetailsModal').mockImplementation(() => {});
-        LandmarkManager.createLandmark.mockResolvedValue({ id: 'created' });
+        LandmarkManager.createLandmark.mockResolvedValue(landmarkFixture({ id: 'created' }));
         LandmarkUI.openCreateModal(['6.5', '46.5']);
         expect((document.getElementById('create-landmark-form') as HTMLFormElement).onsubmit!.constructor.name).toBe('AsyncFunction');
         await submit('create-landmark-form'); expect(LandmarkManager.createLandmark).not.toHaveBeenCalled();
@@ -283,7 +284,7 @@ describe('LandmarkUI form lifecycle', () => {
         expect((document.getElementById('landmark-coord-error') as HTMLElement).textContent).toContain(error);
     });
     it('creates manual coordinates as numbers and closes before camera navigation', async () => {
-        LandmarkManager.createLandmark.mockResolvedValue({ id: 'new' }); LandmarkUI.openCreateModalManual();
+        LandmarkManager.createLandmark.mockResolvedValue(landmarkFixture({ id: 'new' })); LandmarkUI.openCreateModalManual();
         (document.querySelector('#create-landmark-manual-form input[value="ATTENTION"]') as HTMLInputElement).checked = true;
         field('landmark-name-manual', 'Place'); field('landmark-latitude-manual', '46.5'); field('landmark-longitude-manual', '6.5');
         await submit('create-landmark-manual-form');

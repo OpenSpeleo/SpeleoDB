@@ -20,7 +20,7 @@ const routes = new Map(contract.members.map(member => {
 it('matches every declared URL name and argument count to the backend route inventory', () => {
     const backend = JSON.parse(readFileSync(join(ROOT, 'speleodb/common/tests/url_config.json'), 'utf8')) as Array<{ name: string; url: string }>;
     const byName = new Map(backend.map(route => [route.name, route.url]));
-    expect(routes.size).toBe(79);
+    expect(routes.size).toBe(12);
     for (const [name, arity] of routes) {
         expect(byName.has(name), name).toBe(true);
         expect(byName.get(name)!.match(/<[^>]+>/g)?.length ?? 0, name).toBe(arity);
@@ -42,7 +42,8 @@ it('covers literal URL lookups in every application module without parsing comme
         };
         visit(source);
     }
-    expect(names.size).toBeGreaterThanOrEqual(60);
+    expect([...names].sort()).toEqual(['private:landmark_collection_new', 'private:project_details', 'private:project_revision_explorer']);
+    expect([...names].some(name => name.startsWith('api:'))).toBe(false);
     expect([...names].filter(name => !routes.has(name))).toEqual([]);
 });
 
@@ -62,13 +63,13 @@ it('rejects unknown route names, broad string lookup and incorrect argument tupl
             writeFileSync(source, `export {};\n${text}\n`);
             return spawnSync(process.execPath, [join(ROOT, 'node_modules/@typescript/native/bin/tsc'), '-p', config], { cwd: ROOT, encoding: 'utf8' });
         };
-        const valid = check("Urls['api:v2:projects'](); Urls['api:v2:experiment-records']('station', 'experiment'); Urls['private:project_details'](42);");
+        const valid = check("Urls['private:landmark_collection_new'](); Urls['private:project_revision_explorer']('project', 'commit'); Urls['private:project_details'](42);");
         expect(valid.status, valid.stdout + valid.stderr).toBe(0);
         for (const text of [
             "Urls['private:unknown']('id');",
             "declare const route: string; Urls[route]('id');",
-            "Urls['api:v2:experiment-records']('station');",
-            "Urls['api:v2:projects']('extra');",
+            "Urls['private:project_revision_explorer']('project');",
+            "Urls['private:landmark_collection_new']('extra');",
         ]) {
             const invalid = check(text);
             expect(invalid.status, invalid.stdout + invalid.stderr).toBe(1);

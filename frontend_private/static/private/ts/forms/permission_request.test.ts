@@ -1,30 +1,20 @@
 import { sendPermissionRequest } from './permission_request.ts';
 
-afterEach(() => vi.unstubAllGlobals());
+it('validates before starting the supplied generated-operation callback', () => {
+    const request = vi.fn(async () => ({})); const success = vi.fn(); const error = vi.fn();
+    sendPermissionRequest({ request, validate: () => false, success, error });
+    expect(request).not.toHaveBeenCalled(); expect(success).not.toHaveBeenCalled(); expect(error).not.toHaveBeenCalled();
+});
 
-it('preserves jQuery callback identities and validation receiver after installing the CSRF header', () => {
-    const ajax = vi.fn<(settings: JQuery.AjaxSettings<unknown>) => void>();
-    vi.stubGlobal('$', { ajax });
-    const context = { url: '/context' };
-    const trace: string[] = [];
-    const xhr = { setRequestHeader: (name: string, value: string) => { trace.push(`${name}:${value}`); } } as unknown as JQuery.jqXHR<unknown>;
-    const success = vi.fn();
-    const error = vi.fn();
-    sendPermissionRequest({
-        endpoint: '/permissions', method: 'PUT', data: '{"level":"READ_ONLY"}', csrfToken: 'captured-token',
-        validate: function (receivedXhr, settings) {
-            expect(this).toBe(context);
-            expect(receivedXhr).toBe(xhr);
-            expect(settings).toBe(request);
-            trace.push('validate');
-            return false;
-        },
-        success, error,
-    });
-    const request = ajax.mock.calls[0]![0];
-    expect(request.success).toBe(success);
-    expect(request.error).toBe(error);
-    expect(request.beforeSend!.call(context, xhr, request)).toBe(false);
-    expect(trace).toEqual(['X-CSRFToken:captured-token', 'validate']);
-    expect(request).toMatchObject({ url: '/permissions', method: 'PUT', cache: false, contentType: 'application/json; charset=utf-8' });
+it('settles successful requests through the configured success callback', async () => {
+    const request = vi.fn(async () => ({ id: 'permission' })); const success = vi.fn(); const error = vi.fn();
+    sendPermissionRequest({ request, validate: () => true, success, error });
+    await Promise.resolve(); expect(request).toHaveBeenCalledOnce(); expect(success).toHaveBeenCalledOnce(); expect(error).not.toHaveBeenCalled();
+});
+
+it('forwards the original rejection to the error callback', async () => {
+    const rejected = Object.assign(new Error('Denied'), { status: 403, data: { detail: 'Denied' } });
+    const success = vi.fn(); const error = vi.fn();
+    sendPermissionRequest({ request: async () => { throw rejected; }, success, error });
+    await Promise.resolve(); expect(error).toHaveBeenCalledWith(rejected); expect(success).not.toHaveBeenCalled();
 });

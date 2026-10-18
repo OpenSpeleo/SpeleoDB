@@ -53,10 +53,8 @@ class _BaseGISLayerView(AuthenticatedTemplateView):
                 "private:gis_layer_danger_zone",
                 kwargs={"layer_id": layer.id},
             ),
-            "api_detail_url": reverse(
-                "api:v2:gis-layer-detail",
-                kwargs={"id": layer.id},
-            ),
+            "api_resource": "gis-layer",
+            "api_entity_id": str(layer.id),
             "download_url": reverse(
                 "api:v2:gis-layer-source",
                 kwargs={"id": layer.id},
@@ -141,10 +139,8 @@ class GISLayerUserPermissionsView(_BaseGISLayerView):
         data.update(
             permissions=permissions,
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:gis-layer-permissions",
-                kwargs={"id": layer.id},
-            ),
+            api_resource="gis-layer",
+            api_entity_id=str(layer.id),
             permission_add_title="Add a collaborator to the GIS Layer",
             permission_success_message="The GIS Layer permission has been saved.",
             permission_delete_message="The GIS Layer permission has been removed.",

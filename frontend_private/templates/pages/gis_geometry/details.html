@@ -70,7 +70,7 @@
   <script type="application/json" data-speleodb-controller="gis-geometry-details">
     {
       "formId": "{{ details_form_id }}",
-      "endpoint": "{{ api_detail_url }}",
+      "geometryId": "{{ api_entity_id }}",
       "revision": {{ entity.revision }},
       "canWrite": {% if has_write_access %}true{% else %}false{% endif %}
     }

@@ -61,10 +61,8 @@ class _BaseGISGeometryView(AuthenticatedTemplateView):
                 "private:gis_geometry_danger_zone",
                 kwargs={"geometry_id": geometry.id},
             ),
-            "api_detail_url": reverse(
-                "api:v2:gis-geometry-detail",
-                kwargs={"id": geometry.id},
-            ),
+            "api_resource": "gis-geometry",
+            "api_entity_id": str(geometry.id),
             "map_url": f"{reverse('private:map_viewer')}?geometry={geometry.id}",
             "geojson_text": json.dumps(geometry.geojson, indent=2),
             "geometry_max_area_km2": GIS_GEOMETRY_MAX_AREA_KM2,
@@ -158,10 +156,8 @@ class GISGeometryUserPermissionsView(_BaseGISGeometryView):
         data.update(
             permissions=permissions,
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:gis-geometry-permissions",
-                kwargs={"id": geometry.id},
-            ),
+            api_resource="gis-geometry",
+            api_entity_id=str(geometry.id),
             permission_add_title="Add a collaborator to the GIS Geometry",
             permission_success_message="The GIS Geometry permission has been saved.",
             permission_delete_message="The GIS Geometry permission has been removed.",

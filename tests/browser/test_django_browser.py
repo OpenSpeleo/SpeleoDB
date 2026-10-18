@@ -1,4 +1,4 @@
-"""Run the unchanged browser workloads against pytest's real Django server."""
+"""Run the browser workloads against pytest's real Django server."""
 
 from __future__ import annotations
 
@@ -11,9 +11,11 @@ import subprocess
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 import pytest
 from allauth.account.models import EmailAddress
+from django.test import modify_settings
 from django.test import override_settings
 from django.urls import resolve
 from django.urls import reverse
@@ -35,6 +37,7 @@ from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from tests.browser.resource_fixtures import resource_edit_records
 from tests.browser.urls import revision_fixture
 from tests.browser.urls import tree_fixture
 
@@ -134,16 +137,25 @@ def controller_routes(user: User) -> dict[str, str]:
 
 
 @pytest.mark.django_db(transaction=True)
+@modify_settings(
+    MIDDLEWARE={
+        "append": "tests.browser.resource_fixtures.ResourcePatchCaptureMiddleware"
+    }
+)
 @override_settings(
     VITE_ALLOW_MISSING_MANIFEST=False,
     ROOT_URLCONF="tests.browser.urls",
 )
 def test_viewer_browser_workloads(
-    live_server: LiveServer,
+    request: pytest.FixtureRequest,
     django_user_model: type[User],
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     """Keep browser timing separate from the serial backend suite and its load."""
+    # Construct the handler only after this test's middleware settings apply.
+    live_server: LiveServer = request.getfixturevalue("live_server")
+    server_host: str | None = urlsplit(live_server.url).hostname
+    assert server_host is not None
     manifest: Path = (
         BASE_DIR / "speleodb/common/static/speleodb/vite/.vite/manifest.json"
     )
@@ -184,11 +196,18 @@ def test_viewer_browser_workloads(
     # Keep Playwright's per-case progress visible while this single pytest test
     # orchestrates the whole serial browser suite.
     with (
+        # Dynamic fixture lookup retains its normal lifecycle, but its autouse
+        # host helper runs earlier; configure the chosen host through Django.
+        modify_settings(ALLOWED_HOSTS={"append": server_host}),
+        resource_edit_records(user) as resource_records,
         capfd.disabled(),
         subprocess.Popen(  # noqa: S603 - fixed root script
             command,
             cwd=BASE_DIR,
-            env=browser_environment,
+            env={
+                **browser_environment,
+                "VIEWER_BROWSER_RESOURCE_RECORDS": json.dumps(resource_records),
+            },
             text=True,
             start_new_session=True,
         ) as process,

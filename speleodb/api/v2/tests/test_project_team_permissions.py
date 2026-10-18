@@ -10,8 +10,8 @@ Contract notes:
   leadership. Project admins can grant/revoke permissions for any team they
   choose; being a team member is never required. This is pinned explicitly
   by `test_post_succeeds_for_non_member_of_team`.
-- The GET method on the detail view reads the team UUID from the JSON
-  request body, not query params. See `test_get_requires_json_body_with_team`.
+- The GET detail view accepts the team UUID as a query parameter, so browser
+  fetch clients can call it without an unsupported GET body.
 - Teams cannot hold ADMIN level — `TeamProjectPermission` has a
   `CheckConstraint(level__in=PermissionLevel.values_no_admin)`. The serializer
   has been tightened to use `choices_no_admin`, so a `level=ADMIN` POST is
@@ -20,7 +20,6 @@ Contract notes:
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import TYPE_CHECKING
 from typing import Any
@@ -51,23 +50,15 @@ def _unique_email(prefix: str = "user") -> str:
     return f"{prefix}-{uuid.uuid4()}@test.local"
 
 
-def _generic_json_get(
+def _query_get(
     client: APIClient, url: str, body: dict[str, Any], auth: str
 ) -> Response:
-    """GET-with-JSON-body helper.
-
-    `APIClient.generic()`'s mypy stub currently infers the wrong return
-    type; `cast(Response, ...)` pins the real runtime type so attribute
-    access (`.status_code`, `.data`) type-checks correctly. See the
-    class docstring for why a GET body is used at all.
-    """
+    """Call the browser-compatible team query contract."""
     return cast(
         "Response",
-        client.generic(
-            "GET",
+        client.get(
             url,
-            data=json.dumps(body),
-            content_type="application/json",
+            data=body,
             headers={"authorization": auth},
         ),
     )
@@ -355,18 +346,18 @@ class TestProjectTeamPermissionDetail(BaseAPIProjectTestCase):
         assert perm.level == PermissionLevel.READ_AND_WRITE
         assert perm.deactivated_by is None, perm.deactivated_by
 
-    # ---- GET (detail) — JSON body contract ----
+    # ---- GET (detail) — query parameter contract ----
 
-    def test_get_requires_json_body_with_team(self) -> None:
-        """GET reads `team` from request body. Empty body -> serializer 400."""
-        response = _generic_json_get(self.client, self.url, {}, self.auth)
+    def test_get_requires_team_query(self) -> None:
+        """The required team query is validated before lookup."""
+        response = _query_get(self.client, self.url, {}, self.auth)
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
 
     def test_get_returns_team_permission_when_exists(self) -> None:
         _ = TeamProjectPermissionFactory.create(
             target=self.team, project=self.project, level=PermissionLevel.READ_ONLY
         )
-        response = _generic_json_get(
+        response = _query_get(
             self.client, self.url, {"team": str(self.team.id)}, self.auth
         )
         assert response.status_code == status.HTTP_200_OK, response.data
@@ -375,14 +366,26 @@ class TestProjectTeamPermissionDetail(BaseAPIProjectTestCase):
         assert "team" in response.data, response.data
         assert response.data["permission"]["level"] == "READ_ONLY", response.data
 
+    def test_get_accepts_browser_compatible_team_query(self) -> None:
+        TeamProjectPermissionFactory.create(
+            target=self.team, project=self.project, level=PermissionLevel.READ_ONLY
+        )
+        response = self.client.get(
+            self.url,
+            {"team": str(self.team.id)},
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data["team"]["id"] == str(self.team.id)
+
     def test_get_404_when_no_permission(self) -> None:
-        response = _generic_json_get(
+        response = _query_get(
             self.client, self.url, {"team": str(self.team.id)}, self.auth
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND, response.data
 
     def test_get_rejects_unknown_team(self) -> None:
-        response = _generic_json_get(
+        response = _query_get(
             self.client, self.url, {"team": str(uuid.uuid4())}, self.auth
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data

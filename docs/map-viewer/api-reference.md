@@ -1,74 +1,42 @@
 # Map Viewer API Reference
 
-> Agent-focused documentation covering the frontend API client and all backend
-> endpoint groups consumed by the SpeleoDB map viewer.
-
----
-
-## 1. Frontend API Client
+## 1. Frontend generated API facade
 
 **Module:** `frontend_private/static/private/ts/map_viewer/api.ts`
 
-### Overview
+The `API` facade delegates each operation to `@speleodb/api`, generated from the
+composed Django OpenAPI contract. It supplies browser session/CSRF policy
+through `frontend_common/api/client.ts`, converts DOM file values to generated
+request bodies, and unwraps documented successful results. Endpoint paths,
+encodings, DTOs, and response media come from the package. There is no separate
+map HTTP transport or synchronous request path.
 
-The `API` object exposes endpoint-specific methods over the map transport in
-`transport.ts`. Its private `apiRequest(url, method, body, isFormData, options)`
-function obtains CSRF through a callback that reads the current
-`Utils.getCSRFToken` method on each request. The sensor-install Excel export
-retains its separate raw-response path; landmark forms retain their distinct
-transport and HTTP 204 policy.
+Map requests preserve the current `Utils.getCSRFToken()` fallback (validated
+hidden input, cookie, then configured map context). Ordinary browser controllers
+use the common adapter's request-time hidden input/cookie lookup. Both use
+same-origin session credentials. Public GIS requests retain their explicit
+credential and redirect policy.
 
-### Authentication
+`apiData` unwraps documented 2xx responses and throws `ApiRequestError`
+retaining status, data and headers otherwise. Empty responses remain
+`undefined`; binary exports return `Blob`. Unexpected statuses/content types
+remain errors, and transport/abort/deadline/JSON decoding failures reject.
+Caller-specific statuses such as unchanged project upload and allauth signup are
+interpreted by their own controllers, not generalized across the map API.
 
-- **CSRF tokens** — every request includes an `X-CSRFToken` header obtained via
-  `Utils.getCSRFToken()`: first a valid hidden form token, then a valid
-  `csrftoken` cookie, then the configured runtime token. Tokens are trimmed and
-  validated against Django's accepted lengths; malformed cookies retain the
-  existing fallback behavior.
-- **Session auth** — `credentials: 'same-origin'` is set on every request,
-  relying on Django's session middleware.
-- No Bearer/JWT tokens are used in the private viewer.
+`ts-types/domain/` contains UI/cache models derived from SDK DTOs. In
+particular, `map-config.ts` uses partial mutable fields for incrementally loaded
+map state; its `*MapInput` types are display inputs, not a second server
+contract. Generated DTOs stay exact at the operation boundary. Existing map
+caching, bulk list requests, scope permissions, and refresh behavior remain in
+their owning modules.
 
-### Request handling
-
-- `Content-Type` defaults to `application/json`; when `isFormData` is `true` the
-  header is omitted so the browser sets the multipart boundary automatically.
-- Bodies are `JSON.stringify`'d unless `isFormData` is `true`, in which case the
-  raw `FormData` object is passed. Falsey bodies are omitted, as in the original
-  JavaScript client. Supplied abort signals retain their identity.
-- Endpoint-specific request and response declarations live in `ts-types/domain/`
-  beside their record families. The transport reads untrusted JSON as `unknown`
-  and asserts each existing serializer contract at the return boundary, without
-  adding runtime guards or modifying unexpected successful payloads.
-
-### Response handling
-
-- **204 No Content** — returns `{ ok: true, status: 204 }`.
-- **Success (2xx)** — returns parsed JSON **verbatim**. v2 endpoints never wrap
-  their payloads in a `{ data, success, url, timestamp }` envelope; list
-  endpoints return the array directly, detail endpoints return the serialized
-  object directly. The legacy `DRFWrapResponseMiddleware` still wraps `/api/v1/`
-  responses for backward compatibility, but v2 callers must read fields straight
-  off the returned value.
-- **Error (4xx/5xx)** — throws an `Error` with the server's `message`, `error`,
-  or `detail` field. The error object is augmented with `.data` (full response
-  body) and `.status` (HTTP status code). It remains an ordinary `Error`, and
-  `.data` retains the parsed response identity.
-- Invalid JSON under a JSON content type returns `null`; text bodies are parsed
-  as JSON when possible and otherwise retained verbatim. Empty bodies return
-  `null`. Error messages prefer `message`, `error`, then `detail`, followed by
-  HTTP status text and the existing generic message.
-- Sensor-install Excel export returns the raw `Response` instead of using JSON
-  transport. Other form transports retain their independent 204 and header
-  policies; these types do not unify them.
-
-### URL resolution
-
-Endpoint URLs are resolved at runtime via Django's `Urls` global (provided by
-`django-js-reverse`). Each API method references a named URL pattern, e.g.
-`Urls['api:v2:project-stations'](projectId)`.
-
----
+See [Generated TypeScript API client](../typescript-api-client.md) for the
+complete browser contract, uploads/cancellation, signed object-storage and tile
+boundaries, package upgrade procedure, and verification. The generated package
+and audited Django schema are authoritative for endpoint signatures. The groups
+below describe their map features; consult the current generated operation for
+exact required fields, media types, and status variants.
 
 ## 2. Backend Endpoint Groups
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING
 
@@ -11,6 +10,7 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
+from frontend_private.tests.controller_context import controller_context
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
@@ -87,19 +87,10 @@ class TestBannerNoLockWriteAccess(ProjectLockBannerTestBase):
         assert button is not None
         assert 'type="button"' in button.group()
         assert "href=" not in button.group()
-        controller: re.Match[str] | None = re.search(
-            r'<script\b[^>]*data-speleodb-controller="mutex-lock"[^>]*>'
-            r"(.*?)</script>",
-            html,
-            re.DOTALL,
-        )
-        assert controller is not None
-        context: dict[str, str] = json.loads(controller.group(1))
-        assert context["lockUrl"] == reverse(
-            "api:v2:project-acquire", kwargs={"id": self.project.id}
-        )
+        context = controller_context(html, "mutex-lock")
+        assert context == {"projectId": str(self.project.id), "canAcquire": True}
         response: HttpResponseBase = self.client.post(
-            context["lockUrl"],
+            reverse("api:v2:project-acquire", kwargs={"id": context["projectId"]}),
             content_type="application/json",
             headers={"X-CSRFToken": self.client.cookies["csrftoken"].value},
         )
@@ -369,6 +360,12 @@ class TestBannerConsistencyAcrossPages(ProjectLockBannerTestBase):
             )
             assert html.count('id="btn_lock_project"') == 1, view_name
             assert html.count('data-speleodb-controller="mutex-lock"') == 1, view_name
+            context = controller_context(html, "mutex-lock")
+            assert context["projectId"] == str(self.project.id), view_name
+            assert context["canAcquire"] is True, view_name
+            assert context.get("canRelease", False) is (
+                view_name == "project_mutexes"
+            ), view_name
             assert html.count('id="modal_error"') == 1, view_name
             assert 'name="csrfmiddlewaretoken"' in html, view_name
 

@@ -1,281 +1,265 @@
-import type { StationFeatureCollection, LeadFeatureCollection, LandmarkFeatureCollection } from '../../../../../ts-types/domain/map-entities.ts';
-import type { GPXImportResult } from '../../../../../ts-types/domain/map-import.ts';
+import * as sdk from '@speleodb/api';
 import type { EntityId } from '../../../../../ts-types/domain/identifiers.ts';
-import type { ProjectResponse, NetworkResponse, GPSTrackResponse, GISLayerResponse, GISGeometryResponse } from '../../../../../ts-types/domain/map-config.ts';
-import type { ApiRequestOptions, ApiNoContent } from '../../../../../ts-types/domain/map-transport.ts';
-import type { StationWrite, StationRecord, StationTagRecord, StationLogRecord, StationResourceRecord, LeadWrite, LeadRecord } from '../../../../../ts-types/domain/station-records.ts';
-import type { LandmarkWrite, LandmarkRecord, LandmarkCollectionRecord } from '../../../../../ts-types/domain/landmark-records.ts';
-import type { ExperimentValues, ExperimentRecord, ExperimentDefinition } from '../../../../../ts-types/domain/experiment-records.ts';
-import type { SensorFleetRecord, SensorRecord, SensorInstallRecord, CylinderFleetRecord, CylinderRecord, CylinderInstallRecord, CylinderInstallDetails, CylinderInstallWrite, PressureCheckRecord, PressureCheckWrite, CylinderInstallQuery } from '../../../../../ts-types/domain/fleet-records.ts';
-import type { FeatureCollection, Geometry } from 'geojson';
-
-type GeometryWrite = { name?: string; color?: string; geojson?: Geometry; expected_revision?: number };
+import type { ApiRequestOptions } from '../../../../../ts-types/domain/map-transport.ts';
+import type { StationWrite, LeadWrite } from '../../../../../ts-types/domain/station-records.ts';
+import type { LandmarkWrite } from '../../../../../ts-types/domain/landmark-records.ts';
+import type { ExperimentValues } from '../../../../../ts-types/domain/experiment-records.ts';
+import type { CylinderInstallWrite, PressureCheckWrite, CylinderInstallQuery } from '../../../../../ts-types/domain/fleet-records.ts';
+import { apiData, webApiOptions } from '../../../../../frontend_common/api/client.ts';
+import { formText, logBody, resourceBody, resourceUpdateBody, sensorBody, gpxBody } from '../../../../../frontend_common/api/form-values.ts';
 import { Utils } from './utils.ts';
-import { createMapTransport } from './transport.ts';
 
-// Keep callback-time lookup and its Utils receiver when callers replace the facade.
-const apiRequest = createMapTransport(() => Utils.getCSRFToken());
+type GeometryWrite = sdk.GISGeometryRequest;
+/** The map owns its CSRF source; all transport and contracts are shared. */
+function mapApiOptions(options: Omit<sdk.ApiRequestOptions, 'client'> = {}) {
+    return webApiOptions({ ...options, headers: { 'X-CSRFToken': Utils.getCSRFToken(), ...options.headers } });
+}
 
 export const API = {
-    getGISGeometries: () => apiRequest<GISGeometryResponse[]>(Urls['api:v2:gis-geometry-list']()),
-    getGISGeometryDetails: (id: EntityId, options?: ApiRequestOptions) => apiRequest<GISGeometryResponse>(Urls['api:v2:gis-geometry-detail'](id), 'GET', null, false, options),
-    createGISGeometry: (data: GeometryWrite) => apiRequest<GISGeometryResponse>(Urls['api:v2:gis-geometry-list'](), 'POST', data),
-    updateGISGeometry: (id: EntityId, data: GeometryWrite) => apiRequest<GISGeometryResponse>(Urls['api:v2:gis-geometry-detail'](id), 'PATCH', data),
+    getGISGeometries: () => apiData(sdk.v2GisGeometriesList(mapApiOptions())),
+    getGISGeometryDetails: (id: EntityId, options?: ApiRequestOptions) => apiData(sdk.v2GisGeometriesRetrieve(String(id), mapApiOptions(options))),
+    createGISGeometry: (data: GeometryWrite) => apiData(sdk.v2GisGeometriesCreateWithJson(data, mapApiOptions())),
+    updateGISGeometry: (id: EntityId, data: sdk.PatchedGISGeometryUpdateRequest) => apiData(sdk.v2GisGeometriesPartialUpdateWithJson(String(id), data, mapApiOptions())),
 
     // Stations
-    createStation: (projectId: EntityId, stationData: StationWrite) =>
-        apiRequest<StationRecord>(Urls['api:v2:project-stations'](projectId), 'POST', stationData),
+    createStation: (projectId: EntityId, stationData: sdk.SubSurfaceStationRequest) =>
+        apiData(sdk.v2ProjectsStationsCreateWithJson(String(projectId), stationData, mapApiOptions())),
 
-    updateStation: (stationId: EntityId, stationData: StationWrite) =>
-        apiRequest<StationRecord>(Urls['api:v2:station-detail'](stationId), 'PATCH', stationData),
+    updateStation: (stationId: EntityId, stationData: sdk.PatchedStationUpdateRequest) =>
+        apiData(sdk.v2StationsPartialUpdateWithJson(String(stationId), stationData, mapApiOptions())),
 
     deleteStation: (stationId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:station-detail'](stationId), 'DELETE'),
+        apiData(sdk.v2StationsDestroy(String(stationId), mapApiOptions())),
 
     getProjectStations: (projectId: EntityId) =>
-        apiRequest<StationRecord[]>(Urls['api:v2:project-stations'](projectId)),
+        apiData(sdk.v2ProjectsStationsRetrieve(String(projectId), mapApiOptions())),
 
     getStationDetails: (stationId: EntityId) =>
-        apiRequest<StationRecord>(Urls['api:v2:station-detail'](stationId)),
+        apiData(sdk.v2StationsRetrieve(String(stationId), mapApiOptions())),
 
     // All Stations GeoJSON (single API call for all stations)
     getAllStationsGeoJSON: () =>
-        apiRequest<StationFeatureCollection>(Urls['api:v2:subsurface-stations-geojson']()),
+        apiData(sdk.v2StationsSubsurfaceGeojsonRetrieve(mapApiOptions())),
 
     // Surface Networks
     getAllSurfaceNetworks: () =>
-        apiRequest<NetworkResponse[]>(Urls['api:v2:surface-networks']()),
+        apiData(sdk.v2SurfaceNetworksList(mapApiOptions())),
 
     // Surface Stations
-    createSurfaceStation: (networkId: EntityId, stationData: StationWrite) =>
-        apiRequest<StationRecord>(Urls['api:v2:network-stations'](networkId), 'POST', stationData),
+    createSurfaceStation: (networkId: EntityId, stationData: sdk.SurfaceStationRequest) =>
+        apiData(sdk.v2SurfaceNetworksStationsCreateWithJson(String(networkId), stationData, mapApiOptions())),
 
     getNetworkStations: (networkId: EntityId) =>
-        apiRequest<StationRecord[]>(Urls['api:v2:network-stations'](networkId)),
+        apiData(sdk.v2SurfaceNetworksStationsRetrieve(String(networkId), mapApiOptions())),
 
     getNetworkStationsGeoJSON: (networkId: EntityId) =>
-        apiRequest<StationFeatureCollection>(Urls['api:v2:network-stations-geojson'](networkId)),
+        apiData(sdk.v2SurfaceNetworksStationsGeojsonRetrieve(String(networkId), mapApiOptions())),
 
     getAllSurfaceStations: () =>
-        apiRequest<StationRecord[]>(Urls['api:v2:surface-stations']()),
+        apiData(sdk.v2StationsSurfaceRetrieve(mapApiOptions())),
 
     getAllSurfaceStationsGeoJSON: () =>
-        apiRequest<StationFeatureCollection>(Urls['api:v2:surface-stations-geojson']()),
+        apiData(sdk.v2StationsSurfaceGeojsonRetrieve(mapApiOptions())),
 
     // Landmarks
-    createLandmark: (landmarkData: LandmarkWrite) =>
-        apiRequest<{ landmark: LandmarkRecord }>(Urls['api:v2:landmarks'](), 'POST', landmarkData),
+    createLandmark: (landmarkData: sdk.LandmarkRequest) =>
+        apiData(sdk.v2LandmarksCreateWithJson(landmarkData, mapApiOptions())),
 
-    updateLandmark: (landmarkId: EntityId, landmarkData: LandmarkWrite) =>
-        apiRequest<{ landmark: LandmarkRecord }>(Urls['api:v2:landmark-detail'](landmarkId), 'PATCH', landmarkData),
+    updateLandmark: (landmarkId: EntityId, landmarkData: sdk.PatchedLandmarkRequest) =>
+        apiData(sdk.v2LandmarksPartialUpdateWithJson(String(landmarkId), landmarkData, mapApiOptions())),
 
     deleteLandmark: (landmarkId: EntityId) =>
-        apiRequest<{ message: string } | ApiNoContent>(Urls['api:v2:landmark-detail'](landmarkId), 'DELETE'),
+        apiData(sdk.v2LandmarksDestroy(String(landmarkId), mapApiOptions())),
 
     getAllLandmarks: () =>
-        apiRequest<{ landmarks: LandmarkRecord[] }>(Urls['api:v2:landmarks']()),
+        apiData(sdk.v2LandmarksList(mapApiOptions())),
 
     getLandmarkCollections: () =>
-        apiRequest<LandmarkCollectionRecord[]>(Urls['api:v2:landmark-collections']()),
+        apiData(sdk.v2LandmarkCollectionsList(mapApiOptions())),
 
     // All Landmarks GeoJSON (single API call)
     getAllLandmarksGeoJSON: () =>
-        apiRequest<LandmarkFeatureCollection>(Urls['api:v2:landmarks-geojson']()),
+        apiData(sdk.v2LandmarksGeojsonRetrieve(mapApiOptions())),
 
     // Tags
     getUserTags: () =>
-        apiRequest<StationTagRecord[]>(Urls['api:v2:station-tags']()),
+        apiData(sdk.v2StationTagsList(mapApiOptions())),
 
     getTagColors: () =>
-        apiRequest<{ colors: string[] }>(Urls['api:v2:station-tag-colors']()),
+        apiData(sdk.v2StationTagsColorsRetrieve(mapApiOptions())),
 
     createTag: (name: string, color: string) =>
-        apiRequest<StationTagRecord>(Urls['api:v2:station-tags'](), 'POST', { name, color }),
+        apiData(sdk.v2StationTagsCreateWithJson({ name, color }, mapApiOptions())),
 
     setStationTag: (stationId: EntityId, tagId: EntityId) =>
-        apiRequest<StationTagRecord>(Urls['api:v2:station-tags-manage'](stationId), 'POST', { tag_id: tagId }),
+        apiData(sdk.v2StationsTagsCreateWithJson(String(stationId), { tag_id: String(tagId) }, mapApiOptions())),
 
     removeStationTag: (stationId: EntityId) =>
-        apiRequest<null>(Urls['api:v2:station-tags-manage'](stationId), 'DELETE'),
+        apiData(sdk.v2StationsTagsDestroy(String(stationId), mapApiOptions())),
 
     // Station Logs
     getStationLogs: (stationId: EntityId) =>
-        apiRequest<StationLogRecord[]>(Urls['api:v2:station-logs'](stationId)),
+        apiData(sdk.v2StationsLogsRetrieve(String(stationId), mapApiOptions())),
 
-    createStationLog: (stationId: EntityId, formData: FormData) =>
-        apiRequest<StationLogRecord>(Urls['api:v2:station-logs'](stationId), 'POST', formData, true),
+    createStationLog: (stationId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2StationsLogsCreateWithFormData(String(stationId), logBody(formData), mapApiOptions(options))),
 
-    updateStationLog: (logId: EntityId, formData: FormData) =>
-        apiRequest<StationLogRecord>(Urls['api:v2:log-detail'](logId), 'PATCH', formData, true),
+    updateStationLog: (logId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2LogsPartialUpdateWithFormData(String(logId), logBody(formData), mapApiOptions(options))),
 
     deleteStationLog: (logId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:log-detail'](logId), 'DELETE'),
+        apiData(sdk.v2LogsDestroy(String(logId), mapApiOptions())),
 
     // Experiments
     getExperiments: () =>
-        apiRequest<ExperimentDefinition[]>(Urls['api:v2:experiments']()),
+        apiData(sdk.v2ExperimentsList(mapApiOptions())),
 
     getExperimentData: (stationId: EntityId, experimentId: EntityId) =>
-        apiRequest<ExperimentRecord[]>(Urls['api:v2:experiment-records'](stationId, experimentId)),
+        apiData(sdk.v2StationsExperimentRecordsRetrieve(String(stationId), String(experimentId), mapApiOptions())),
 
     createExperimentRecord: (stationId: EntityId, experimentId: EntityId, recordData: ExperimentValues) =>
-        apiRequest<ExperimentRecord>(Urls['api:v2:experiment-records'](stationId, experimentId), 'POST', recordData),
+        apiData(sdk.v2StationsExperimentRecordsCreate(String(stationId), String(experimentId), recordData, mapApiOptions())),
 
     updateExperimentRecord: (recordId: EntityId, recordData: ExperimentValues) =>
-        apiRequest<ExperimentRecord>(Urls['api:v2:experiment-records-detail'](recordId), 'PUT', recordData),
+        apiData(sdk.v2ExperimentRecordsUpdate(String(recordId), recordData, mapApiOptions())),
 
     deleteExperimentRecord: (recordId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:experiment-records-detail'](recordId), 'DELETE'),
+        apiData(sdk.v2ExperimentRecordsDestroy(String(recordId), mapApiOptions())),
 
     // Resources
     getStationResources: (stationId: EntityId) =>
-        apiRequest<StationResourceRecord[]>(Urls['api:v2:station-resources'](stationId)),
+        apiData(sdk.v2StationsResourcesRetrieve(String(stationId), mapApiOptions())),
 
-    createStationResource: (stationId: EntityId, formData: FormData) =>
-        apiRequest<StationResourceRecord>(Urls['api:v2:station-resources'](stationId), 'POST', formData, true),
+    createStationResource: (stationId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2StationsResourcesCreateWithFormData(String(stationId), resourceBody(formData), mapApiOptions(options))),
 
-    updateStationResource: (resourceId: EntityId, formData: FormData) =>
-        apiRequest<StationResourceRecord>(Urls['api:v2:resource-detail'](resourceId), 'PATCH', formData, true),
+    updateStationResource: (resourceId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2ResourcesPartialUpdateWithFormData(String(resourceId), resourceUpdateBody(formData), mapApiOptions(options))),
 
     deleteStationResource: (resourceId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:resource-detail'](resourceId), 'DELETE'),
+        apiData(sdk.v2ResourcesDestroy(String(resourceId), mapApiOptions())),
 
     // Projects
     getAllProjects: () =>
-        apiRequest<ProjectResponse[]>(Urls['api:v2:projects']()),
+        apiData(sdk.v2ProjectsList(mapApiOptions())),
 
     getAllProjectsGeoJSON: () =>
-        apiRequest<ProjectResponse[]>(Urls['api:v2:all-projects-geojson']()),
+        apiData(sdk.v2ProjectsGeojsonList(mapApiOptions())),
 
     // Exploration Leads
     getProjectExplorationLeadsGeoJSON: (projectId: EntityId) =>
-        apiRequest<LeadFeatureCollection>(Urls['api:v2:project-exploration-leads-geojson'](projectId)),
+        apiData(sdk.v2ProjectsExplorationLeadsGeojsonRetrieve(String(projectId), mapApiOptions())),
 
     getAllProjectExplorationLeadsGeoJSON: () =>
-        apiRequest<LeadFeatureCollection>(Urls['api:v2:exploration-lead-all-geojson']()),
+        apiData(sdk.v2ExplorationLeadsGeojsonRetrieve(mapApiOptions())),
 
     getProjectExplorationLeads: (projectId: EntityId) =>
-        apiRequest<LeadRecord[]>(Urls['api:v2:project-exploration-leads'](projectId)),
+        apiData(sdk.v2ProjectsExplorationLeadsRetrieve(String(projectId), mapApiOptions())),
 
-    createExplorationLead: (projectId: EntityId, leadData: LeadWrite) =>
-        apiRequest<LeadRecord>(Urls['api:v2:project-exploration-leads'](projectId), 'POST', leadData),
+    createExplorationLead: (projectId: EntityId, leadData: sdk.ExplorationLeadRequest) =>
+        apiData(sdk.v2ProjectsExplorationLeadsCreateWithJson(String(projectId), leadData, mapApiOptions())),
 
-    updateExplorationLead: (leadId: EntityId, leadData: LeadWrite) =>
-        apiRequest<LeadRecord>(Urls['api:v2:exploration-lead-detail'](leadId), 'PATCH', leadData),
+    updateExplorationLead: (leadId: EntityId, leadData: sdk.PatchedExplorationLeadRequest) =>
+        apiData(sdk.v2ExplorationLeadsPartialUpdateWithJson(String(leadId), leadData, mapApiOptions())),
 
     deleteExplorationLead: (leadId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:exploration-lead-detail'](leadId), 'DELETE'),
+        apiData(sdk.v2ExplorationLeadsDestroy(String(leadId), mapApiOptions())),
 
     // Sensor-Fleets
     getSensorFleets: () =>
-        apiRequest<SensorFleetRecord[]>(Urls['api:v2:sensor-fleets']()),
+        apiData(sdk.v2SensorFleetsList(mapApiOptions())),
 
     getSensorFleetDetails: (fleetId: EntityId) =>
-        apiRequest<SensorFleetRecord>(Urls['api:v2:sensor-fleet-detail'](fleetId)),
+        apiData(sdk.v2SensorFleetsRetrieve(String(fleetId), mapApiOptions())),
 
     getSensorFleetSensors: (fleetId: EntityId) =>
-        apiRequest<SensorRecord[]>(Urls['api:v2:sensor-fleet-sensors'](fleetId)),
+        apiData(sdk.v2SensorFleetsSensorsRetrieve(String(fleetId), mapApiOptions())),
 
     // Sensor Installs
     getStationSensorInstalls: (stationId: EntityId) =>
-        apiRequest<SensorInstallRecord[]>(Urls['api:v2:station-sensor-installs'](stationId)),
+        apiData(sdk.v2StationsSensorInstallsList(String(stationId), undefined, mapApiOptions())),
 
     getStationSensorInstallsWithStatus: (stationId: EntityId, status: string) =>
-        apiRequest<SensorInstallRecord[]>(Urls['api:v2:station-sensor-installs'](stationId) + "?status=" + status),
+        apiData(sdk.v2StationsSensorInstallsList(String(stationId), { status }, mapApiOptions())),
 
-    // Returns raw Response object for blob download (not parsed JSON)
-    getStationSensorInstallsAsExcel: async (stationId: EntityId) => {
-        const response = await fetch(Urls['api:v2:station-sensor-installs-export'](stationId), {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': Utils.getCSRFToken()
-            },
-            credentials: 'same-origin'
-        });
-        return response;  // Return raw Response for blob handling
-    },
+    // Preserve the generated response headers alongside the binary export body.
+    getStationSensorInstallsAsExcel: (stationId: EntityId) =>
+        sdk.v2StationsSensorInstallsExportExcelRetrieve(String(stationId), mapApiOptions()),
 
     getStationSensorInstallDetails: (stationId: EntityId, installId: EntityId) =>
-        apiRequest<SensorInstallRecord>(Urls['api:v2:station-sensor-install-detail'](stationId, installId)),
+        apiData(sdk.v2StationsSensorInstallsRetrieve(String(stationId), String(installId), mapApiOptions())),
 
-    createStationSensorInstalls: (stationId: EntityId, formData: FormData) =>
-        apiRequest<SensorInstallRecord>(Urls['api:v2:station-sensor-installs'](stationId), 'POST', formData, true),
+    createStationSensorInstalls: (stationId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2StationsSensorInstallsCreateWithJson(String(stationId), { ...sensorBody(formData), sensor: formText(formData, 'sensor'), install_date: formText(formData, 'install_date') }, mapApiOptions(options))),
 
-    updateStationSensorInstalls: (stationId: EntityId, installId: EntityId, formData: FormData) =>
-        apiRequest<SensorInstallRecord>(Urls['api:v2:station-sensor-install-detail'](stationId, installId), 'PATCH', formData, true),
+    updateStationSensorInstalls: (stationId: EntityId, installId: EntityId, formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2StationsSensorInstallsPartialUpdateWithJson(String(stationId), String(installId), sensorBody(formData), mapApiOptions(options))),
 
     // GPS Tracks
     getGPSTracks: () =>
-        apiRequest<GPSTrackResponse[]>(Urls['api:v2:gps-tracks']()),
+        apiData(sdk.v2GpsTracksList(mapApiOptions())),
 
     getGPSTrackDetails: (trackId: EntityId, options?: ApiRequestOptions) =>
-        apiRequest<GPSTrackResponse>(Urls['api:v2:gps-track-detail'](trackId), 'GET', null, false, options),
+        apiData(sdk.v2GpsTracksRetrieve(String(trackId), mapApiOptions(options))),
 
     // GIS Layers (private viewer only)
     getGISLayers: () =>
-        apiRequest<GISLayerResponse[]>(Urls['api:v2:gis-layers']()),
+        apiData(sdk.v2GisLayersList(mapApiOptions())),
 
     getGISLayerDetails: (layerId: EntityId, options?: ApiRequestOptions) =>
-        apiRequest<GISLayerResponse>(Urls['api:v2:gis-layer-detail'](layerId), 'GET', null, false, options),
+        apiData(sdk.v2GisLayersRetrieve(String(layerId), mapApiOptions(options))),
 
     // GPX Import
-    importGPX: (formData: FormData) =>
-        apiRequest<GPXImportResult>(Urls['api:v2:gpx-import'](), 'PUT', formData, true),
+    importGPX: (formData: FormData, options?: Omit<sdk.ApiRequestOptions, 'client'>) =>
+        apiData(sdk.v2ImportGpxUpdate(gpxBody(formData), mapApiOptions(options))),
 
     // ================== CYLINDER FLEETS ================== //
 
     // Cylinder Fleets
     getCylinderFleets: () =>
-        apiRequest<CylinderFleetRecord[]>(Urls['api:v2:cylinder-fleets']()),
+        apiData(sdk.v2CylinderFleetsList(mapApiOptions())),
 
     getCylinderFleetDetails: (fleetId: EntityId) =>
-        apiRequest<CylinderFleetRecord>(Urls['api:v2:cylinder-fleet-detail'](fleetId)),
+        apiData(sdk.v2CylinderFleetsRetrieve(String(fleetId), mapApiOptions())),
 
     getCylinderFleetCylinders: (fleetId: EntityId) =>
-        apiRequest<CylinderRecord[]>(Urls['api:v2:cylinder-fleet-cylinders'](fleetId)),
+        apiData(sdk.v2CylinderFleetsCylindersRetrieve(String(fleetId), mapApiOptions())),
 
     // Cylinder Installs
-    getCylinderInstalls: (params: CylinderInstallQuery = {}) => {
-        let url = Urls['api:v2:cylinder-installs']();
-        const queryParams = [];
-        if (params.cylinder_id) queryParams.push(`cylinder_id=${params.cylinder_id}`);
-        if (params.fleet_id) queryParams.push(`fleet_id=${params.fleet_id}`);
-        if (params.status) queryParams.push(`status=${params.status}`);
-        if (queryParams.length > 0) url += '?' + queryParams.join('&');
-        return apiRequest<CylinderInstallRecord[]>(url);
-    },
+    getCylinderInstalls: (params: sdk.V2CylinderInstallsListParams = {}) =>
+        apiData(sdk.v2CylinderInstallsList(params, mapApiOptions())),
 
     getCylinderInstallsGeoJSON: () =>
-        apiRequest<FeatureCollection<Geometry, CylinderInstallRecord>>(Urls['api:v2:cylinder-installs-geojson']()),
+        apiData(sdk.v2CylinderInstallsGeojsonRetrieve(mapApiOptions())),
 
     getAllCylinderInstallsGeoJSON: () =>
-        apiRequest<FeatureCollection<Geometry, CylinderInstallRecord>>(Urls['api:v2:cylinder-installs-geojson']()),
+        apiData(sdk.v2CylinderInstallsGeojsonRetrieve(mapApiOptions())),
 
-    createCylinderInstall: (installData: CylinderInstallWrite) =>
-        apiRequest<CylinderInstallRecord>(Urls['api:v2:cylinder-installs'](), 'POST', installData),
+    createCylinderInstall: (installData: sdk.CylinderInstallCreateRequestRequest) =>
+        apiData(sdk.v2CylinderInstallsCreateWithJson(installData, mapApiOptions())),
 
     getCylinderInstallDetails: (installId: EntityId) =>
-        apiRequest<CylinderInstallDetails>(Urls['api:v2:cylinder-install-detail'](installId)),
+        apiData(sdk.v2CylinderInstallsRetrieve(String(installId), mapApiOptions())),
 
-    updateCylinderInstall: (installId: EntityId, installData: CylinderInstallWrite) =>
-        apiRequest<CylinderInstallRecord>(Urls['api:v2:cylinder-install-detail'](installId), 'PATCH', installData),
+    updateCylinderInstall: (installId: EntityId, installData: sdk.PatchedCylinderInstallRequest) =>
+        apiData(sdk.v2CylinderInstallsPartialUpdateWithJson(String(installId), installData, mapApiOptions())),
 
     deleteCylinderInstall: (installId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:cylinder-install-detail'](installId), 'DELETE'),
+        apiData(sdk.v2CylinderInstallsDestroy(String(installId), mapApiOptions())),
 
     // Cylinder Pressure Checks
     getCylinderPressureChecks: (installId: EntityId) =>
-        apiRequest<PressureCheckRecord[]>(Urls['api:v2:cylinder-install-pressure-checks'](installId)),
+        apiData(sdk.v2CylinderInstallsPressureChecksList(String(installId), mapApiOptions())),
 
-    createCylinderPressureCheck: (installId: EntityId, checkData: PressureCheckWrite) =>
-        apiRequest<PressureCheckRecord>(Urls['api:v2:cylinder-install-pressure-checks'](installId), 'POST', checkData),
+    createCylinderPressureCheck: (installId: EntityId, checkData: sdk.CylinderPressureCheckRequest) =>
+        apiData(sdk.v2CylinderInstallsPressureChecksCreateWithJson(String(installId), checkData, mapApiOptions())),
 
     getCylinderPressureCheckDetails: (installId: EntityId, checkId: EntityId) =>
-        apiRequest<PressureCheckRecord>(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId)),
+        apiData(sdk.v2CylinderInstallsPressureChecksRetrieve(String(installId), String(checkId), mapApiOptions())),
 
-    updateCylinderPressureCheck: (installId: EntityId, checkId: EntityId, checkData: PressureCheckWrite) =>
-        apiRequest<PressureCheckRecord>(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'PATCH', checkData),
+    updateCylinderPressureCheck: (installId: EntityId, checkId: EntityId, checkData: sdk.PatchedCylinderPressureCheckRequest) =>
+        apiData(sdk.v2CylinderInstallsPressureChecksPartialUpdateWithJson(String(installId), String(checkId), checkData, mapApiOptions())),
 
     deleteCylinderPressureCheck: (installId: EntityId, checkId: EntityId) =>
-        apiRequest<{ id: EntityId; message?: string } | ApiNoContent>(Urls['api:v2:cylinder-pressure-check-detail'](installId, checkId), 'DELETE'),
+        apiData(sdk.v2CylinderInstallsPressureChecksDestroy(String(installId), String(checkId), mapApiOptions())),
 };

@@ -33,7 +33,8 @@
   {% vite_preload 'controller-danger-zone' %}
   <script type="application/json" data-speleodb-controller="danger-zone">
     {
-      "deleteUrl": "{% url 'api:v2:project-detail' id=project.id %}",
+      "resource": "project",
+      "entityId": "{{ project.id }}",
       "successMessage": "The project has been deleted successfully.",
       "successRedirect": "{% url 'private:projects' %}"
     }

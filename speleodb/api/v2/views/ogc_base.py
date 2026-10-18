@@ -39,6 +39,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseNotModified
 from django.http import StreamingHttpResponse
 from django.utils.functional import cached_property
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -680,6 +681,7 @@ class OGCLegacyMixedCollectionGoneView(GenericAPIView, SDBAPIViewMixin):  # type
         response["Cache-Control"] = "no-store"
         return response
 
+    @extend_schema(operation_id="userFeature")
     def get(
         self,
         request: Request,

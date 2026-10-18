@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
+from frontend_private.tests.controller_context import controller_context
 from speleodb.api.v2.tests.base_testcase import BaseUserTestCaseMixin
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.geometry_validation import GIS_GEOMETRY_MAX_AREA_KM2
@@ -67,7 +69,9 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert response.status_code == status.HTTP_200_OK
         assert "My GIS Geometries" in content
         assert 'data-speleodb-controller="gis-geometries"' in content
-        assert reverse("api:v2:gis-geometry-list") in content
+        assert controller_context(content, "gis-geometries") == {
+            "openIconUrl": static("private/media/right_arrow.svg")
+        }
         assert 'id="gis-geometries-cards-container"' in content
         assert 'class="tracks-table ' in content
         assert "?geometry=new" in content
@@ -97,13 +101,12 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert "One LineString or Polygon" in content
         assert "keep the map responsive" in content
         assert f"?geometry={self.geometry.id}&amp;edit=1" in content
-        assert (
-            reverse(
-                "api:v2:gis-geometry-detail",
-                kwargs={"id": self.geometry.id},
-            )
-            in content
-        )
+        assert controller_context(content, "gis-geometry-details") == {
+            "formId": "gis_geometry_details_form",
+            "geometryId": str(self.geometry.id),
+            "revision": self.geometry.revision,
+            "canWrite": True,
+        }
 
     def test_map_toolbar_places_geometry_creation_beside_gps_import(self) -> None:
         self.client.force_login(self.user)
@@ -150,13 +153,10 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
 
         assert "GIS Geometry Danger Zone" in content
         assert 'data-speleodb-controller="danger-zone"' in content
-        assert (
-            reverse(
-                "api:v2:gis-geometry-detail",
-                kwargs={"id": self.geometry.id},
-            )
-            in content
-        )
+        context = controller_context(content, "danger-zone")
+        assert context["resource"] == "gis-geometry"
+        assert context["entityId"] == str(self.geometry.id)
+        assert context["successRedirect"] == reverse("private:gis_geometries")
 
     def test_reader_can_inspect_but_not_mutate_permissions(self) -> None:
         reader = UserFactory.create(email="gis-reader@example.com")
@@ -198,13 +198,10 @@ class GISGeometryFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         )
         assert f'data-user="{collaborator.email}"' in content
         assert f'data-user="{self.user.email}"' not in content
-        assert (
-            reverse(
-                "api:v2:gis-geometry-permissions",
-                kwargs={"id": self.geometry.id},
-            )
-            in content
-        )
+        context = controller_context(content, "permission-modal")
+        assert context["resource"] == "gis-geometry"
+        assert context["entityId"] == str(self.geometry.id)
+        assert context["fieldName"] == "level"
         assert 'value="READ_ONLY"' in content
         assert 'value="READ_AND_WRITE"' in content
         assert 'value="ADMIN"' in content

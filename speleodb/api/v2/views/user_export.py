@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.utils import OpenApiResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
@@ -17,6 +17,7 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.pagination import PageNumberPagination
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.serializers.user_export import UserExportSerializer
 from speleodb.background_jobs.models import ACTIVE_STATES
 from speleodb.background_jobs.models import BackgroundJob
@@ -82,12 +83,35 @@ class UserExportListView(UserExportBaseView):
             )
         )
 
-    @extend_schema(responses={200: UserExportSerializer(many=True)})
+    @extend_schema(
+        responses={
+            200: UserExportSerializer(many=True),
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+        parameters=[
+            OpenApiParameter(
+                "page",
+                {
+                    "oneOf": [
+                        {"type": "integer", "minimum": 1},
+                        {"type": "string", "enum": ["last"]},
+                    ]
+                },
+                description="A positive page number, or last for the final page.",
+            )
+        ],
+    )
+    @extend_schema(operation_id="v2_user_exports_list")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         page: Any = self.paginate_queryset(self.get_queryset())
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
 
-    @extend_schema(request=None, responses={202: UserExportSerializer})
+    @extend_schema(
+        request=None,
+        responses={202: UserExportSerializer, 403: API_ERROR, 503: API_ERROR},
+    )
+    @extend_schema(operation_id="v2_user_exports_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         try:
             job, _created = request_export(self.get_user())
@@ -103,14 +127,26 @@ class UserExportListView(UserExportBaseView):
 
 
 class UserExportDetailView(UserExportBaseView):
-    @extend_schema(responses={200: UserExportSerializer})
+    @extend_schema(
+        responses={200: UserExportSerializer, 403: API_ERROR, 404: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_user_exports_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         job: BackgroundJob = get_object_or_404(self.get_queryset(), pk=kwargs["id"])
         return SuccessResponse(self.get_serializer(job).data)
 
 
 class UserExportRetryView(UserExportBaseView):
-    @extend_schema(request=None, responses={202: UserExportSerializer})
+    @extend_schema(
+        request=None,
+        responses={
+            202: UserExportSerializer,
+            403: API_ERROR,
+            404: API_ERROR,
+            409: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_user_exports_retry_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         job: BackgroundJob = get_object_or_404(self.get_queryset(), pk=kwargs["id"])
         try:
@@ -130,10 +166,13 @@ class UserExportDownloadView(UserExportBaseView):
     @extend_schema(
         responses={
             302: OpenApiResponse(description="Redirect to a short-lived S3 URL."),
-            409: OpenApiTypes.OBJECT,
-            410: OpenApiTypes.OBJECT,
+            409: API_ERROR,
+            410: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
         }
     )
+    @extend_schema(operation_id="v2_user_exports_download_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | HttpResponseRedirect:

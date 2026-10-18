@@ -1,4 +1,6 @@
-import type { ContributionCalendar, MonthlyContributions, ProjectTypeCounts, DashboardSummary, DashboardActivity, DashboardResponse, HeatmapDay, HeatmapMonth } from '../../ts-types/domain/dashboard.ts';
+import { v2UserDashboardStatsRetrieve } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
+import type { ContributionCalendar, MonthlyContributions, ProjectTypeCounts, DashboardSummary, DashboardActivity, HeatmapDay, HeatmapMonth } from '../../ts-types/domain/dashboard.ts';
 import {
     buildCommitsChartConfig,
     buildProjectsChartConfig,
@@ -293,7 +295,7 @@ export function init() {
                     lastDateLabel = dateLabel;
                 }
 
-                var gitUrl = Urls['private:project_revision_explorer'](item.project_id, item.commit_id!);
+                var gitUrl = Urls['private:project_revision_explorer'](item.project_id, item.commit_id);
                 var shortSha = item.commit_id ? item.commit_id.slice(0, 7) : '';
 
                 html += '<div class="activity-row">' +
@@ -308,20 +310,14 @@ export function init() {
             container.innerHTML = html;
         }
 
-        $.ajax({
-            url: Urls['api:v2:user-dashboard-stats'](),
-            type: 'GET',
-            dataType: 'json',
-            success: function(response: DashboardResponse) {
+        void apiData(v2UserDashboardStatsRetrieve(webApiOptions())).then(function(response) {
                 populateStatCards(response.summary);
                 initCommitsChart(response.commits_over_time);
                 initProjectsChart(response.projects_by_type);
                 renderHeatmap(response.contribution_calendar);
                 renderActivityFeed(response.recent_activity);
-            },
-            error: function() {
+        }).catch(function() {
                 showStatCardErrors();
                 $('#recent-activity').html('<div class="text-sm text-slate-500 py-4 text-center">Failed to load activity</div>');
-            }
         });
 }

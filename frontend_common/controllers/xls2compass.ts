@@ -1,11 +1,13 @@
+import type { V2ToolsXls2compassCreateBody } from '@speleodb/api';
+import { v2ToolsXls2compassCreate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import { attachCodeResultModal } from '../presentation/code-result.ts';
 import { validateCell, parseClipboardText } from '../survey/xls2compass.ts';
-import type { Xls2CompassContext } from '../../ts-types/controllers/xls2compass.ts';
-import type { SurveyToolAjaxFailure, SurveyToolErrorBody, SurveyShot, SurveyLocation, CompassSurveyPayload } from '../../ts-types/domain/survey-tools.ts';
+import type { SurveyShot, SurveyLocation } from '../../ts-types/domain/survey-tools.ts';
 import { attachSurveyTableTool } from '../../frontend_private/static/private/ts/forms/survey_table_tool.ts';
 import { escapeHtml } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
-export function init(context: Xls2CompassContext) {
+export function init() {
     const COLUMNS = ["station", "depth", "length", "azimuth", "left", "right", "up", "down", "flags", "comment"];
         const $tbody = $('#dataTable tbody');
         const $statusEl = $('#status');
@@ -295,7 +297,7 @@ export function init(context: Xls2CompassContext) {
         $('#surveyDate').attr('max', today);
 
         // Unit switch handler
-        let currentUnit = 'feet'; // Default unit is feet
+        let currentUnit: V2ToolsXls2compassCreateBody['unit'] = 'feet'; // Default unit is feet
         $('#unitSwitch').on('change', function() {
             if ((this as HTMLInputElement).checked) {
                 currentUnit = 'feet';
@@ -366,7 +368,7 @@ export function init(context: Xls2CompassContext) {
             const longitude = $('#longitude').val() as string;
 
             // Collect table data
-            const rows: SurveyShot[] = [];
+            const rows: V2ToolsXls2compassCreateBody['shots'] = [];
             $('#dataTable tbody tr').each(function() {
                 const row: SurveyShot = {};
                 $(this).find('td[data-col]').each(function() {
@@ -374,76 +376,48 @@ export function init(context: Xls2CompassContext) {
                     row[col] = $(this).text().trim();
                 });
                 if (Object.keys(row).length > 0) {
-                    rows.push(row);
+                    rows.push({ ...row, station: row.station ?? '', depth: row.depth ?? '' });
                 }
             });
 
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
 
             // Show spinner
             $("#loading_spinner").show();
 
-            // Build AJAX data object
-            const ajaxData: CompassSurveyPayload = {
+            // Build the survey request
+            const payload: V2ToolsXls2compassCreateBody = {
                 shots: rows,
                 survey_date: surveyDate,
                 unit: currentUnit,
                 cave_name: caveName,
                 survey_name: surveyName,
                 survey_team: surveyTeamMembers,
-                comment: surveyComment
+                comment: surveyComment,
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
             };
 
-            // Add location coordinates if available
-            if (latitude && longitude) {
-                ajaxData.latitude = parseFloat(latitude);
-                ajaxData.longitude = parseFloat(longitude);
-            }
-
-            // AJAX call with all survey data
-            $.ajax({
-                url: context.endpoint,
-                method: "POST",
-                data: JSON.stringify(ajaxData),
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function(response: unknown) {
+            // Submit all survey data
+            apiData(v2ToolsXls2compassCreate(payload, webApiOptions())).then(async response => {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
 
                     // Store the response for later use
-                    window.surveyData = response as string;
+                    window.surveyData = await response.text();
 
                     // Display the content in the modal
-                    displayCodeInModal(response as string);
+                    displayCodeInModal(window.surveyData);
 
                     $('#status').text('Survey generated successfully!')
                                 .css({ 'color': 'green', 'font-weight': 'bold' });
-                },
-                error: function(xhr: SurveyToolAjaxFailure, status, error) {
+                            }).catch((error: unknown) => {
                     // Hide spinner and show error
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);
 
                     // Try to extract error message from response
-                    let errorMessage = error;
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
-                    } else if (xhr.responseJSON && xhr.responseJSON.detail) {
-                        errorMessage = xhr.responseJSON.detail;
-                    } else if (xhr.responseText) {
-                        try {
-                            const response = JSON.parse(xhr.responseText) as SurveyToolErrorBody;
-                            errorMessage = response.error || response.detail || response.message || error;
-                        } catch (e) {
-                            errorMessage = xhr.responseText.substring(0, 200); // Limit length
-                        }
-                    }
+                    const errorMessage = error instanceof Error ? error.message : 'Conversion failed.';
 
                     // Display error in modal
                     $("#modal_error_txt").text(errorMessage);
@@ -451,7 +425,6 @@ export function init(context: Xls2CompassContext) {
 
                     $('#status').text('Error occurred. See details.')
                                 .css({ 'color': 'red', 'font-weight': 'bold' });
-                }
             });
 
         });

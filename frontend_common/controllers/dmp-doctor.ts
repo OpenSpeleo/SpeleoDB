@@ -1,8 +1,9 @@
-import type { DmpDoctorContext } from '../../ts-types/controllers/dmp-doctor.ts';
-import type { SurveyToolAjaxFailure, SurveyToolErrorBody, SurveyShot, SurveyLocation, CompassSurveyPayload } from '../../ts-types/domain/survey-tools.ts';
+import { v2ToolsDmpDoctorCreate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
+
 import { attachToolFileUpload } from '../../frontend_private/static/private/ts/forms/tool_file_upload.ts';
 
-export function init(context: DmpDoctorContext) {
+export function init() {
     const $downloadBtn = $('#downloadBtn');
         const $statusEl = $('#status');
 
@@ -200,15 +201,11 @@ export function init(context: DmpDoctorContext) {
                 return;
             }
 
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
 
             // Show spinner
             $("#loading_spinner").show();
             $downloadBtn.prop('disabled', true);
 
-            // Create FormData and append the file and adjustment parameters
-            const formData = new FormData();
-            formData.append('file', selectedFile);
 
             // Add all parameters as JSON
             const fixDmp = $('#fixDmpSwitch').is(':checked');
@@ -216,7 +213,7 @@ export function init(context: DmpDoctorContext) {
             const surveyDate = $('#surveyDateUncorrupt').val() || $('#surveyDate').val() || null;
             const reverseDirection = $('#reverseDirectionSwitch').is(':checked');
 
-            formData.append('data', JSON.stringify({
+            const adjustments = JSON.stringify({
                 fix_dmp: fixDmp,
                 survey_date: surveyDate,
                 length_scaling: lengthScaling,
@@ -224,22 +221,11 @@ export function init(context: DmpDoctorContext) {
                 reverse_direction: reverseDirection,
                 depth_offset: depthOffset,
                 depth_offset_unit: depthOffsetUnit,
-            }));
+            });
 
-            // AJAX call to process DMP file
-            $.ajax({
-                url: context.endpoint,
-                method: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function(response: unknown) {
-                    const blob = new Blob([response as BlobPart], { type: 'application/octet-stream' });
+            // Process DMP file
+            apiData(v2ToolsDmpDoctorCreate({ file: selectedFile, data: adjustments }, webApiOptions())).then(response => {
+                    const blob = response;
                     const a = document.createElement('a');
                     document.body.appendChild(a);
                     a.href = window.URL.createObjectURL(blob);
@@ -253,30 +239,16 @@ export function init(context: DmpDoctorContext) {
                     $downloadBtn.prop('disabled', false);
                     $statusEl.text('Download successful!')
                               .css({ 'color': 'green', 'font-weight': 'bold' });
-                },
-                error: function(xhr: SurveyToolAjaxFailure, status, error) {
+                            }).catch((error: unknown) => {
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);
 
-                    let errorMessage = error;
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
-                    } else if (xhr.responseJSON && xhr.responseJSON.detail) {
-                        errorMessage = xhr.responseJSON.detail;
-                    } else if (xhr.responseText) {
-                        try {
-                            const response = JSON.parse(xhr.responseText) as SurveyToolErrorBody;
-                            errorMessage = response.error || response.detail || response.message || error;
-                        } catch (e) {
-                            errorMessage = xhr.responseText.substring(0, 200);
-                        }
-                    }
+                    const errorMessage = error instanceof Error ? error.message : 'Conversion failed.';
 
                     $("#modal_error_txt").text(errorMessage);
                     $("#modal_error").css('display', 'flex');
                     $statusEl.text('Error occurred. See details.')
                               .css({ 'color': 'red', 'font-weight': 'bold' });
-                }
             });
         });
 }

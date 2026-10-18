@@ -1,5 +1,5 @@
 import type { EntityId } from '../../../../../ts-types/domain/identifiers.ts';
-import type { ViewerProject, ViewerNetwork, ViewerGPSTrack, ViewerGISLayer, GISGeometryMetadata, GISGeometryResponse, ProjectResponse, PermissionAction as Action, StationScopeRecord, LoadOverlayOptions } from '../../../../../ts-types/domain/map-config.ts';
+import type { ViewerProject, ViewerNetwork, ViewerGPSTrack, ViewerGISLayer, GISGeometryMetadata, GISGeometryMapInput, ProjectMapInput, PermissionAction as Action, StationScopeRecord, LoadOverlayOptions } from '../../../../../ts-types/domain/map-config.ts';
 import { API } from './api.ts';
 import { DEFAULTS } from './defaults.ts';
 
@@ -100,7 +100,7 @@ export const Config = {
         return this.gisGeometries.find(geometry => geometry.id === String(id)) || null;
     },
 
-    upsertGISGeometry(record: GISGeometryResponse) {
+    upsertGISGeometry(record: GISGeometryMapInput) {
         // Metadata stays in Config; coordinate payloads belong to State's cache.
         const { geojson: _geojson, description: _description, ...metadata } = record;
         const existing = this.getGISGeometryById(record.id);
@@ -172,7 +172,7 @@ export const Config = {
         return this.gisLayers.map(layer => layer.id);
     },
 
-    setPublicProjects(projects: ProjectResponse[]) {
+    setPublicProjects(projects: ProjectMapInput[]) {
         this._projects = projects.map(p => ({
             id: String(p.id),
             name: p.name,
@@ -202,7 +202,6 @@ export const Config = {
                     latitude: p.latitude,
                     longitude: p.longitude,
                     visibility: p.visibility,
-                    geojson_url: p.geojson_url,  // If available
                 }));
                 console.log(`✅ Loaded ${this._projects.length} projects from API`);
             } else {
@@ -426,7 +425,7 @@ export const Config = {
      * Call this after fetching GeoJSON metadata to remove projects without map data.
      * @param {Array} geojsonMetadata - Array of project metadata with geojson_file field
      */
-    filterProjectsByGeoJSON: function (geojsonMetadata: Pick<ProjectResponse, 'id' | 'geojson_file'>[] | null) {
+    filterProjectsByGeoJSON: function (geojsonMetadata: Pick<ProjectMapInput, 'id' | 'geojson_file'>[] | null) {
         if (!this._projects || !Array.isArray(geojsonMetadata)) {
             return;
         }

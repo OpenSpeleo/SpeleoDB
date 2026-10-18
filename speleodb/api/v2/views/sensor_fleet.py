@@ -26,11 +26,17 @@ from django.db.models.functions import Least
 from django.http import Http404
 from django.http import StreamingHttpResponse
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_errors import INDEXED_SERIALIZER_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectCreation
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
@@ -43,6 +49,14 @@ from speleodb.api.v2.serializers import SensorFleetUserPermissionSerializer
 from speleodb.api.v2.serializers import SensorFleetWithPermSerializer
 from speleodb.api.v2.serializers import SensorInstallSerializer
 from speleodb.api.v2.serializers import SensorSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.api_contract import SensorFleetCreateRequestSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    SensorInstallCreateRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import OperationalStatus
 from speleodb.common.enums import PermissionLevel
@@ -82,6 +96,9 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     serializer_class = SensorFleetSerializer
 
     @extend_schema(operation_id="v2_sensor_fleets_list")
+    @extend_schema(
+        responses={200: SensorFleetWithPermSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all sensor fleets with user permissions."""
         user = self.get_user()
@@ -107,6 +124,15 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
 
         return SuccessResponse(SensorFleetWithPermSerializer(fleets, many=True).data)
 
+    @extend_schema(request=SensorFleetCreateRequestSerializer)
+    @extend_schema(
+        responses={
+            201: SensorFleetSerializer(),
+            400: INDEXED_SERIALIZER_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new sensor fleet."""
         user = self.get_user()
@@ -126,18 +152,14 @@ class SensorFleetApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        sensors = SensorSerializer(data=sensors_data, many=True)
+        if not sensors.is_valid():
+            return ErrorResponse(
+                {"errors": sensors.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer.save()
-
-        for sensor_data in sensors_data:
-            sensor_serializer = SensorSerializer(data=sensor_data)
-            if sensor_serializer.is_valid():
-                _ = sensor_serializer.save(fleet=serializer.instance)
-
-            else:
-                return ErrorResponse(
-                    {"errors": sensor_serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        sensors.save(fleet=serializer.instance, created_by=user.email)
 
         return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -159,6 +181,8 @@ class SensorFleetSpecificApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(responses={200: SensorFleetSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_sensor_fleets_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific sensor fleet."""
         sensor_fleet = self.get_object()
@@ -182,14 +206,27 @@ class SensorFleetSpecificApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_sensor_fleets_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of sensor fleet."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_sensor_fleets_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of sensor fleet."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SensorFleetSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Deactivate a sensor fleet instead of deleting it.
@@ -227,6 +264,8 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(responses={200: SensorSerializer(many=True), 403: API_ERROR})
+    @extend_schema(operation_id="v2_sensor_fleets_sensors_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -237,6 +276,9 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         serializer = SensorSerializer(sensors, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=SensorSerializer)
+    @extend_schema(responses={201: SensorSerializer(), 400: API_ERROR, 403: API_ERROR})
+    @extend_schema(operation_id="v2_sensor_fleets_sensors_create")
     def post(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -253,7 +295,7 @@ class SensorApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
         # Pass fleet_id in context for validation
         serializer = SensorSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=user.email)
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(
@@ -277,6 +319,8 @@ class SensorSpecificApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
     serializer_class = SensorSerializer
     lookup_field = "id"
 
+    @extend_schema(responses={200: SensorSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_sensors_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific sensor."""
         sensor = self.get_object()
@@ -298,14 +342,27 @@ class SensorSpecificApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_sensors_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of sensor."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_sensors_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of sensor."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SensorSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensors_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a sensor permanently."""
         sensor = self.get_object()
@@ -327,6 +384,9 @@ class SensorToggleFunctionalApiView(GenericAPIView[Sensor], SDBAPIViewMixin):
     serializer_class = SensorSerializer
     lookup_field = "id"
 
+    @extend_schema(request=None)
+    @extend_schema(responses={200: SensorSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_sensors_toggle_functional_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Toggle the sensor status."""
         sensor = self.get_object()
@@ -420,6 +480,10 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
 
         return perm_data
 
+    @extend_schema(
+        responses={200: SensorFleetUserPermissionSerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_permissions_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -434,6 +498,19 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
         serializer = SensorFleetUserPermissionSerializer(permissions, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "SensorFleetPermissionApiViewPostResponse",
+                fleet=SensorFleetSerializer(),
+                permission=SensorFleetUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_permissions_create")
     def post(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -482,6 +559,18 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SensorFleetPermissionApiViewPutResponse",
+                fleet=SensorFleetSerializer(),
+                permission=SensorFleetUserPermissionSerializer(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         fleet = self.get_object()
 
@@ -516,6 +605,18 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "SensorFleetPermissionApiViewDeleteResponse",
+                fleet=SensorFleetSerializer(),
+            ),
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         fleet = self.get_object()
         user = self.get_user()
@@ -568,6 +669,17 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
     lookup_url_kwarg = "fleet_id"
     serializer_class = SensorSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_sensors_export_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | StreamingHttpResponse:
@@ -695,6 +807,17 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "days", int, description="Positive number of days; default 60."
+            )
+        ]
+    )
+    @extend_schema(
+        responses={200: SensorSerializer(many=True), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_sensors_watchlist_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -801,6 +924,24 @@ class SensorFleetWatchlistExportExcelApiView(
     lookup_url_kwarg = "fleet_id"
     serializer_class = SensorSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "days", int, description="Positive number of days; default 60."
+            )
+        ]
+    )
+    @extend_schema(
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_sensor_fleets_sensors_watchlist_export_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | StreamingHttpResponse:
@@ -977,7 +1118,9 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         """Return the serializer class for sensor installs."""
         return SensorInstallSerializer
 
+    @extend_schema(parameters=[OpenApiParameter("status", str)])
     @extend_schema(operation_id="v2_stations_sensor_installs_list")
+    @extend_schema(responses={200: SensorInstallSerializer(many=True), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         List sensor installs for a station.
@@ -1003,6 +1146,11 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         serializer = SensorInstallSerializer(installs, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=SensorInstallCreateRequestSerializer)
+    @extend_schema(
+        responses={201: SensorInstallSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_sensor_installs_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new sensor install."""
         user = self.get_user()
@@ -1020,7 +1168,7 @@ class StationSensorInstallApiView(GenericAPIView[Station], SDBAPIViewMixin):
         serializer = SensorInstallSerializer(data=data)
         if serializer.is_valid():
             try:
-                serializer.save()
+                serializer.save(created_by=user.email)
                 return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
             except ValidationError as e:
                 error_dict: dict[str, Any] = {}
@@ -1054,12 +1202,18 @@ class StationSensorInstallSpecificApiView(
     lookup_field = "id"
     lookup_url_kwarg = "install_id"
 
+    @extend_schema(responses={200: SensorInstallSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_stations_sensor_installs_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific sensor install."""
         sensor_install = self.get_object()
         serializer = self.get_serializer(sensor_install)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={200: SensorInstallSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_sensor_installs_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Update sensor install status."""
         user = self.get_user()
@@ -1123,6 +1277,17 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
     lookup_field = "id"
     serializer_class = SensorInstallSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_stations_sensor_installs_export_excel_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | StreamingHttpResponse:

@@ -1,5 +1,4 @@
 import type { Mock } from 'vitest';
-import type { FormTestJQuery } from '../../../../../ts-types/testing/vitest/forms.ts';
 
 /**
  * Tests for forms/danger_zone.ts - the shared delete-with-confirm flow.
@@ -10,8 +9,6 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { attachDangerZone } from './danger_zone.ts';
 
-// The real vendor is callable; these tests replace only its AJAX transport.
-const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -37,15 +34,13 @@ function setupPage() {
 }
 
 describe('attachDangerZone', () => {
-    let originalAjax: FormTestJQuery['ajax'];
     let originalLocation: Location;
     let locationHrefSpy: Mock<(value: unknown) => void>;
 
     beforeEach(() => {
         vi.useFakeTimers();
         setupPage();
-        originalAjax = jqueryHost.jQuery.ajax;
-        // Track assignments to window.location.href.
+        // JSDOM cannot perform navigation; observe only the unavailable navigation boundary.
         originalLocation = window.location;
         locationHrefSpy = vi.fn();
         Object.defineProperty(window, 'location', {
@@ -62,7 +57,6 @@ describe('attachDangerZone', () => {
     });
 
     afterEach(() => {
-        jqueryHost.jQuery.ajax = originalAjax;
         Object.defineProperty(window, 'location', {
             configurable: true,
             writable: true,
@@ -72,31 +66,24 @@ describe('attachDangerZone', () => {
         document.body.innerHTML = '';
     });
 
-    it('throws when deleteUrl is missing', () => {
-        expect(() => attachDangerZone({})).toThrow(/deleteUrl/);
+    it('throws when the remove callback is missing', () => {
+        expect(() => attachDangerZone({} as never)).toThrow(/remove/);
     });
 
     it('opens the confirmation modal on btn_delete click', () => {
         attachDangerZone({
-            deleteUrl: '/api/v2/projects/x/',
+            remove: async () => ({}),
             successRedirect: '/list',
         });
         (document.getElementById('btn_delete') as HTMLElement).click();
         expect((document.getElementById('modal_confirmation') as HTMLElement).style.display).toBe('flex');
     });
 
-    it('sends DELETE with CSRF and fires successRedirect on 2xx', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            // capture csrf for assertion
-            const fakeXhr = { setRequestHeader: vi.fn(() => true) };
-            opts.beforeSend(fakeXhr);
-            opts.success();
-            return fakeXhr;
-        });
+    it('invokes remove only after confirmation and redirects after success', async () => {
+        const remove = vi.fn(async () => ({}));
 
         attachDangerZone({
-            deleteUrl: '/api/v2/projects/x/',
+            remove,
             successMessage: 'Gone.',
             successRedirect: '/list',
             redirectDelayMs: 1000,
@@ -106,10 +93,8 @@ describe('attachDangerZone', () => {
         (document.getElementById('btn_delete') as HTMLElement).click();
         (document.getElementById('btn_confirmed_delete') as HTMLElement).click();
 
-        expect($.ajax).toHaveBeenCalledTimes(1);
-        const call = $.ajax.mock.calls[0]![0];
-        expect(call.url).toBe('/api/v2/projects/x/');
-        expect(call.method).toBe('DELETE');
+        await Promise.resolve();
+        expect(remove).toHaveBeenCalledTimes(1);
 
         // Success modal flashed & redirect scheduled
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
@@ -119,18 +104,14 @@ describe('attachDangerZone', () => {
         expect(locationHrefSpy).toHaveBeenCalledWith('/list');
     });
 
-    it('surfaces the error modal on non-2xx', () => {
-        const $ = jqueryHost.jQuery;
-        $.ajax = vi.fn((opts) => {
-            opts.beforeSend({ setRequestHeader: () => true });
-            opts.error({ responseJSON: { error: 'nope' }, status: 400, statusText: 'Bad' });
-            return {};
-        });
+    it('surfaces rejected operations without redirecting', async () => {
+        const remove = async () => { throw Object.assign(new Error('nope'), { data: { error: 'nope' }, status: 400 }); };
 
-        attachDangerZone({ deleteUrl: '/api/v2/x/', successRedirect: '/list' });
+        attachDangerZone({ remove, successRedirect: '/list' });
         (document.getElementById('btn_delete') as HTMLElement).click();
         (document.getElementById('btn_confirmed_delete') as HTMLElement).click();
 
+        await vi.advanceTimersByTimeAsync(0);
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe('nope');
         // No redirect on failure.

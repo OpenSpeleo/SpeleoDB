@@ -15,5 +15,5 @@ export async function init(context: PrivateMapContext) {
 
     await initPrivateMapViewer();
 
-    DataImport.init(context.csrfToken);
+    DataImport.init();
 }

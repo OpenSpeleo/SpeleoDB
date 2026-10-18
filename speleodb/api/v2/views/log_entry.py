@@ -6,9 +6,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
 from speleodb.api.v2.permissions import IsReadOnly
@@ -35,6 +39,10 @@ class StationLogEntryApiView(GenericAPIView[Station], SDBAPIViewMixin):
     lookup_field = "id"
     serializer_class = StationLogEntrySerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={200: StationLogEntrySerializer(many=True), 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_logs_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         station = self.get_object()
 
@@ -42,6 +50,10 @@ class StationLogEntryApiView(GenericAPIView[Station], SDBAPIViewMixin):
 
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={201: StationLogEntrySerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_stations_logs_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new resource."""
         station = self.get_object()
@@ -90,6 +102,8 @@ class StationLogEntrySpecificApiView(GenericAPIView[StationLogEntry], SDBAPIView
     serializer_class = StationLogEntrySerializer
     lookup_field = "id"
 
+    @extend_schema(responses={200: StationLogEntrySerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_logs_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         log_entry = self.get_object()
         serializer = StationLogEntrySerializer(log_entry)
@@ -112,12 +126,24 @@ class StationLogEntrySpecificApiView(GenericAPIView[StationLogEntry], SDBAPIView
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_logs_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_logs_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "StationLogEntrySpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_logs_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         log_entry = self.get_object()
 

@@ -1,7 +1,8 @@
+import { v2UserReleaseAllLocksDestroy, v2ProjectsReleaseCreateWithJson, v2ProjectsList } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import type { ProjectsContext } from '../../ts-types/controllers/projects.ts';
-import type { ProjectCommitCount } from '../../ts-types/domain/project-presentation.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
-import { showAjaxErrorModal } from '../../frontend_private/static/private/ts/forms/ajax_errors.ts';
+import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
 
 export function init(context: ProjectsContext) {
     $("body").click(function() {
@@ -25,22 +26,11 @@ export function init(context: ProjectsContext) {
         });
 
         $('#btn_confirmed_mass_unlock').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
-
             $("#error_div").hide();
             $("#success_div").hide();
             $("#modal_confirmation_mass_unlock").hide();
 
-            $.ajax({
-                url: context.releaseAllUrl,
-                method: "DELETE",
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-                },
-                success: function (data) {
+            void apiData(v2UserReleaseAllLocksDestroy(webApiOptions())).then(function () {
                     $("#modal_success_txt").html("All the projects have been unlocked.");
                     $("#modal_success").css('display', 'flex');
 
@@ -48,11 +38,7 @@ export function init(context: ProjectsContext) {
                         // Redirect to project listing
                         window.location.href = context.projectsUrl;
                     }, 2000);
-                },
-                error: function (data) {
-                    showAjaxErrorModal(data);
-                }
-            });
+            }).catch(showApiErrorModal);
             return false; // prevent default
         });
 
@@ -64,23 +50,11 @@ export function init(context: ProjectsContext) {
         });
 
         $('#btn_confirmed_unlock').click(function () {
-            var csrftoken = $('input[name^=csrfmiddlewaretoken]').val() as string;
-
             $("#error_div").hide();
             $("#success_div").hide();
             $("#modal_confirmation_unlock").hide();
 
-            $.ajax({
-                url: Urls['api:v2:project-release'](($(this).data('project_id') as EntityId)),
-                method: "POST",
-                contentType: "application/json; charset=utf-8",
-                cache: false,
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    return true;
-
-                },
-                success: function (data) {
+            void apiData(v2ProjectsReleaseCreateWithJson(String($(this).data('project_id')), {}, webApiOptions())).then(function () {
                     $("#modal_success_txt").html("The project has been unlocked for edition.");
                     $("#modal_success").css('display', 'flex');
 
@@ -88,24 +62,16 @@ export function init(context: ProjectsContext) {
                         // Refresh the page
                         window.location.reload();
                     }, 2000);
-                },
-                error: function (data) {
-                    showAjaxErrorModal(data);
-                }
-            });
+            }).catch(showApiErrorModal);
             return false; // prevent default
         });
 
         // Fetch all projects at once and update revision counts
-        $.ajax({
-            url: Urls['api:v2:projects'](),
-            type: "GET",
-            dataType: "json",
-            success: function(data: unknown) {
+        void apiData(v2ProjectsList(webApiOptions())).then(function(data) {
                 if (Array.isArray(data)) {
                     // Create a map of project_id -> commit_count for quick lookup
                     var commitCounts: Record<string, number> = {};
-                    (data as ProjectCommitCount[]).forEach(function(project) {
+                    data.forEach(function(project) {
                         commitCounts[project.id] = project.commit_count;
                     });
 
@@ -128,15 +94,12 @@ export function init(context: ProjectsContext) {
                         $("#" + ($(this).data('id') as string)).html("-");
                     });
                 }
-            },
-            error: function(textStatus, errorThrown) {
-                // Preserve the existing implicit jqXHR coercion in this diagnostic.
-                console.log("ERROR: " + (textStatus as unknown as string) + " & " + errorThrown);
+        }).catch(function(error: unknown) {
+                console.error("Failed to load project revision counts", error);
                 // Set all elements to error state
                 $('.async_revision').each(function() {
                     $("#" + ($(this).data('id') as string)).html("-");
                 });
-            }
         });
 
         // Country group collapse/expand with localStorage persistence

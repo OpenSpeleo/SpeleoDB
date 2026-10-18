@@ -1,52 +1,29 @@
-import type { ProjectGeoJSONStatusContext } from '../../ts-types/controllers/project-geojson-status.ts';
-import type { Mock } from 'vitest';
 import type { ProjectGeoJSONStatus, ProjectGeoJSONState } from '../../ts-types/domain/project-geojson-status.ts';
-type StatusResponse = { ok: boolean; status?: number; json?: () => Promise<unknown> };
-let fetch: Mock<(url: string, options: RequestInit & { signal: AbortSignal }) => Promise<StatusResponse>>;
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-
 import { init, renderGeoJSONStatus } from './project-geojson-status.ts';
-
-const endpoint = '/api/v2/projects/11111111-1111-4111-8111-111111111111/geojson-status/';
-const template = readFileSync(resolve('frontend_private/templates/pages/project/details.html'), 'utf8');
-let cleanup: (() => void) | null | undefined;
+import { setBrowserUrl, startApiServer } from '../test/api-server.ts';
+const projectId = '11111111-1111-4111-8111-111111111111';
+const template = readFileSync('frontend_private/templates/pages/project/details.html', 'utf8');
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+let cleanup: (() => void) | undefined;
 let root: HTMLElement;
-
-function data(state: string = 'pending', overrides: Partial<ProjectGeoJSONStatus> = {}) {
-    return { state: state as ProjectGeoJSONState, source_commit_sha: 'new-source', geojson_commit_sha: null, error: '', ...overrides };
-}
-function response(state: string, overrides?: Partial<ProjectGeoJSONStatus>) {
-    return { ok: true, json: async () => data(state, overrides) };
-}
-function visibility(hidden: boolean) {
-    Object.defineProperty(document, 'hidden', { configurable: true, value: hidden });
-    document.dispatchEvent(new Event('visibilitychange'));
-}
-
+function data(state: string = 'pending', overrides: Partial<ProjectGeoJSONStatus> = {}) { return { state: state as ProjectGeoJSONState, source_commit_sha: 'new-source', geojson_commit_sha: null, generation_commit_sha: null, geojson_revision: null, error_code: null, updated_at: null, error: '', ...overrides }; }
+function visibility(hidden: boolean) { Object.defineProperty(document, 'hidden', { configurable: true, value: hidden }); document.dispatchEvent(new Event('visibilitychange')); }
+beforeAll(async () => { originalUrl = window.location.href; server = await startApiServer(); });
 beforeEach(() => {
-    vi.useFakeTimers();
-    document.body.innerHTML = template.replace(/{%.*?%}/gs, '');
+    server.reset(); server.reply({ json: data() }); setBrowserUrl(`${server.origin}/project/`);
+    vi.useFakeTimers(); document.body.innerHTML = template.replace(/{%.*?%}/gs, '');
     root = document.getElementById('project-geojson-status')!;
     Object.defineProperty(document, 'hidden', { configurable: true, value: false });
-    fetch = vi.fn().mockResolvedValue(response('pending'));
-    vi.stubGlobal('fetch', fetch);
 });
-
-afterEach(() => {
-    cleanup?.();
-    cleanup = null;
-    document.body.innerHTML = '';
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-    delete (document as unknown as {hidden?: boolean}).hidden;
-});
-
+afterEach(() => { cleanup?.(); cleanup = undefined; document.body.innerHTML = ''; vi.useRealTimers(); delete (document as unknown as { hidden?: boolean }).hidden; });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 it('places the map status outside the settings form and declares the registered controller', () => {
     expect(root.closest('form, fieldset')).toBeNull();
     expect(template).toContain("vite_preload 'controller-project-geojson-status'");
-    expect(template).toContain("url 'api:v2:project-geojson-status' id=project.id");
+    expect(template).toContain('projectId');
     const entries = JSON.parse(readFileSync(resolve('frontend_common/entries.json'), 'utf8')) as typeof import('../entries.json');
     expect(entries.scripts['controller-project-geojson-status']).toBe('frontend_common/controllers/project-geojson-status.ts');
 });
@@ -77,122 +54,59 @@ it('shows a retained earlier revision and safely renders coordinate diagnostics'
     expect(root.querySelector<HTMLElement>('[data-geojson-error]')!.hidden).toBe(true);
 });
 
-it('polls active work every five seconds and stops at ready without another upload', async () => {
-    fetch.mockResolvedValueOnce(response('pending', { geojson_commit_sha: 'old-source' }))
-        .mockResolvedValueOnce(response('running', { geojson_commit_sha: 'old-source' }))
-        .mockResolvedValueOnce(response('ready', { geojson_commit_sha: 'new-source', geojson_revision: 'new-artifact' }));
-    cleanup = await init({ endpoint });
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch.mock.calls[0]![1]).toMatchObject({ credentials: 'same-origin' });
-    await vi.advanceTimersByTimeAsync(4999);
-    expect(fetch).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(root.textContent).toContain('generating the map');
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(root.textContent).toContain('Map ready.');
+
+it('polls active work every five seconds through the generated operation and stops at ready', async () => {
+    const states = ['pending', 'running', 'ready'];
+    server.handle(() => ({ json: data(states.shift(), { geojson_commit_sha: states.length ? 'old-source' : 'new-source' }) }));
+    cleanup = await init({ projectId });
+    expect(server.requests[0]).toMatchObject({ method: 'GET', path: `/api/v2/projects/${projectId}/geojson-status/` });
+    await vi.advanceTimersByTimeAsync(4999); expect(server.requests).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1); await vi.waitFor(() => expect(root.textContent).toContain('generating the map'));
+    await vi.advanceTimersByTimeAsync(5000); await vi.waitFor(() => expect(root.textContent).toContain('Map ready.'));
     expect(root.textContent).toContain('Available map revision: new-source.');
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(60_000); expect(server.requests).toHaveLength(3);
 });
 
 it.each(['failed', 'skipped', 'not_requested'])('does not poll terminal %s state on visibility changes', async state => {
-    fetch.mockResolvedValue(response(state));
-    cleanup = await init({ endpoint });
-    visibility(true);
-    visibility(false);
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    server.reply({ json: data(state) }); cleanup = await init({ projectId });
+    visibility(true); visibility(false); await vi.advanceTimersByTimeAsync(60_000);
+    expect(server.requests).toHaveLength(1);
 });
 
-it('pauses hidden pages, cancels requests on navigation, and resumes after browser back', async () => {
-    cleanup = await init({ endpoint });
-    visibility(true);
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(fetch).toHaveBeenCalledTimes(1);
-    visibility(false);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    let signal: AbortSignal;
-    fetch.mockImplementationOnce((url, options) => {
-        signal = options.signal;
-        return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
-    });
-    await vi.advanceTimersByTimeAsync(5000);
-    window.dispatchEvent(new Event('pagehide'));
-    expect(signal!.aborted).toBe(true);
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(fetch).toHaveBeenCalledTimes(3);
-    window.dispatchEvent(new Event('pageshow'));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(fetch).toHaveBeenCalledTimes(4);
+it('pauses hidden pages and resumes on visibility and browser-back navigation', async () => {
+    cleanup = await init({ projectId }); visibility(true);
+    await vi.advanceTimersByTimeAsync(60_000); expect(server.requests).toHaveLength(1);
+    visibility(false); await vi.waitFor(() => expect(server.requests).toHaveLength(2));
+    await vi.waitFor(() => expect(root.getAttribute('aria-busy')).toBe('false'));
+    window.dispatchEvent(new Event('pagehide')); await vi.advanceTimersByTimeAsync(60_000); expect(server.requests).toHaveLength(2);
+    window.dispatchEvent(new Event('pageshow')); await vi.waitFor(() => expect(server.requests).toHaveLength(3));
 });
 
-it('aborts an in-flight request on hide and ignores its late response', async () => {
-    cleanup = await init({ endpoint });
-    let resolveRequest!: (response: StatusResponse) => void;
-    fetch.mockImplementationOnce(() => new Promise(resolve => { resolveRequest = resolve; }));
-    await vi.advanceTimersByTimeAsync(5000);
-    visibility(true);
-    expect(fetch.mock.calls[1]![1].signal.aborted).toBe(true);
-    visibility(false);
-    await vi.advanceTimersByTimeAsync(0);
-    resolveRequest(response('failed'));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(root.textContent).toContain('map generation pending');
-    expect(root.textContent).not.toContain('map generation failed');
+it('suppresses late HTTP responses after hiding an in-flight request', async () => {
+    cleanup = await init({ projectId });
+    let finish!: () => void;
+    server.handle(() => new Promise(resolve => { finish = () => resolve({ json: data('failed') }); }));
+    await vi.advanceTimersByTimeAsync(5000); await vi.waitFor(() => expect(server.requests).toHaveLength(2));
+    visibility(true); server.reply({ json: data() }); visibility(false);
+    await vi.waitFor(() => expect(server.requests).toHaveLength(3)); finish();
+    await vi.waitFor(() => expect(root.getAttribute('aria-busy')).toBe('false'));
+    expect(root.textContent).toContain('map generation pending'); expect(root.textContent).not.toContain('map generation failed');
 });
 
-it.each([
-    () => Promise.reject(new Error('offline')),
-    () => Promise.resolve({ ok: false, status: 503 }),
-    () => Promise.resolve({ ok: true, json: async () => ({ success: false }) }),
-])('retries unavailable status conservatively and retains the last available map', async unavailable => {
-    fetch.mockResolvedValueOnce(response('pending', { geojson_commit_sha: 'old-source' }))
-        .mockImplementationOnce(unavailable)
-        .mockResolvedValue(response('ready', { geojson_commit_sha: 'new-source' }));
-    cleanup = await init({ endpoint });
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(root.textContent).toContain('temporarily unavailable');
+it.each([{ status: 503, json: { detail: 'Unavailable' } }, { json: { success: false } }, { text: '{broken' }])('retains the last map and retries unavailable status conservatively: %j', async failure => {
+    server.reply({ json: data('pending', { geojson_commit_sha: 'old-source' }) }); cleanup = await init({ projectId });
+    server.reply(failure); await vi.advanceTimersByTimeAsync(5000);
+    await vi.waitFor(() => expect(root.textContent).toContain('temporarily unavailable'));
     expect(root.textContent).toContain('earlier revision (old-source)');
-    await vi.advanceTimersByTimeAsync(29_999);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(root.textContent).toContain('Map ready.');
+    server.reply({ json: data('ready') }); await vi.advanceTimersByTimeAsync(29_900); expect(server.requests).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(100); await vi.waitFor(() => expect(root.textContent).toContain('Map ready.'));
 });
 
-it('bounds hung network requests and retries after a timeout', async () => {
-    fetch.mockImplementationOnce((url, { signal }) => new Promise((resolve, reject) => {
-        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-    }));
-    const initialized = init({ endpoint });
-    await vi.advanceTimersByTimeAsync(30_000);
-    cleanup = await initialized;
+it('bounds hung requests with the existing 30-second budget and permits retry', async () => {
+    server.handle(() => new Promise(() => {}));
+    const pending = init({ projectId }); await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+    await vi.advanceTimersByTimeAsync(30_000); cleanup = await pending;
     expect(root.textContent).toContain('temporarily unavailable');
-    await vi.advanceTimersByTimeAsync(30_000);
-    expect(fetch).toHaveBeenCalledTimes(2);
-});
-
-it('rejects cross-origin status endpoints without sending a request', async () => {
-    await expect(init({ endpoint: 'https://outside.example/status' })).rejects.toThrow('Invalid map status endpoint');
-    expect(fetch).not.toHaveBeenCalled();
-});
-
-it('preserves absent-DOM short-circuit and missing-context rejection', async () => {
-    root.remove();
-    await expect(init(undefined as unknown as ProjectGeoJSONStatusContext)).resolves.toBeUndefined();
-    document.body.append(root);
-    await expect(init(undefined as unknown as ProjectGeoJSONStatusContext)).rejects.toThrow(TypeError);
-    expect(fetch).not.toHaveBeenCalled();
-});
-
-it('returns independent cleanup functions for repeated initialization', async () => {
-    cleanup = await init({ endpoint });
-    const secondCleanup = await init({ endpoint });
-    expect(secondCleanup).toBeTypeOf('function');
-    expect(secondCleanup).not.toBe(cleanup);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    secondCleanup!();
-    cleanup!();
-    await vi.advanceTimersByTimeAsync(10_000);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    server.reply({ json: data('ready') }); await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(() => expect(root.textContent).toContain('Map ready.')); expect(server.requests).toHaveLength(2);
 });

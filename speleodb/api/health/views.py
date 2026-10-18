@@ -7,10 +7,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.db import connections
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.views import APIView
 
+from speleodb.api.schema_helpers import response_object
 from speleodb.utils.response import ErrorResponse
 from speleodb.utils.response import SuccessResponse
 
@@ -21,18 +24,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+HealthErrorSerializer = response_object(
+    "HealthError", errors=serializers.ListField(child=serializers.CharField())
+)
+
+
 class StatusApiView(APIView):
     permission_classes = [permissions.AllowAny]
-    schema = None
 
+    @extend_schema(operation_id="health_status", responses={200: None})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return SuccessResponse()
 
 
 class HealthCheckApiView(APIView):
     permission_classes = [permissions.AllowAny]
-    schema = None
 
+    @extend_schema(
+        operation_id="health_details", responses={200: None, 503: HealthErrorSerializer}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Verify DB is connected
         healthy, errors = self._perform_healthchecks()

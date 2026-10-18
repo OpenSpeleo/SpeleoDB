@@ -18,9 +18,12 @@ from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.direct_user_permissions import parse_direct_user_permission_data
 from speleodb.api.v2.landmark_access import accessible_landmark_collections_queryset
 from speleodb.api.v2.landmark_access import collection_landmarks_queryset
@@ -30,6 +33,9 @@ from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
 from speleodb.api.v2.serializers.landmark_collection import LandmarkCollectionSerializer
 from speleodb.api.v2.serializers.landmark_collection import (
     LandmarkCollectionUserPermissionSerializer,
@@ -37,6 +43,7 @@ from speleodb.api.v2.serializers.landmark_collection import (
 from speleodb.api.v2.serializers.landmark_collection import (
     LandmarkCollectionWithPermSerializer,
 )
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
@@ -74,6 +81,9 @@ class LandmarkCollectionApiView(GenericAPIView[LandmarkCollection], SDBAPIViewMi
     serializer_class = LandmarkCollectionSerializer
 
     @extend_schema(operation_id="v2_landmark_collections_list")
+    @extend_schema(
+        responses={200: LandmarkCollectionWithPermSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         collections = accessible_landmark_collections_queryset(user=user).annotate(
@@ -84,6 +94,10 @@ class LandmarkCollectionApiView(GenericAPIView[LandmarkCollection], SDBAPIViewMi
             LandmarkCollectionWithPermSerializer(collections, many=True).data
         )
 
+    @extend_schema(
+        responses={201: LandmarkCollectionSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_landmark_collections_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         data = require_mapping_request_data(request.data).copy()
@@ -117,6 +131,8 @@ class LandmarkCollectionSpecificApiView(
     lookup_field = "id"
     lookup_url_kwarg = "collection_id"
 
+    @extend_schema(responses={200: LandmarkCollectionSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_landmark_collections_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         collection = self.get_object()
         serializer = self.get_serializer(collection)
@@ -155,12 +171,26 @@ class LandmarkCollectionSpecificApiView(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_landmark_collections_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_landmark_collections_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "LandmarkCollectionSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmark_collections_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         collection = self.get_object()
@@ -212,6 +242,14 @@ class LandmarkCollectionPermissionApiView(
             )
         )
 
+    @extend_schema(
+        responses={
+            200: LandmarkCollectionUserPermissionSerializer(many=True),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmark_collections_permissions_retrieve")
     def get(
         self, request: Request, collection_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -240,6 +278,19 @@ class LandmarkCollectionPermissionApiView(
         )
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "LandmarkCollectionPermissionApiViewPostResponse",
+                collection=LandmarkCollectionSerializer(),
+                permission=LandmarkCollectionUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmark_collections_permissions_create")
     def post(
         self, request: Request, collection_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -293,6 +344,15 @@ class LandmarkCollectionPermissionApiView(
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: LandmarkCollectionUserPermissionSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_landmark_collections_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         collection = self.get_object()
         if collection.is_personal:
@@ -328,6 +388,15 @@ class LandmarkCollectionPermissionApiView(
         serializer = LandmarkCollectionUserPermissionSerializer(permission)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        operation_id="v2_landmark_collections_permissions_destroy",
+        responses={
+            200: response_object(
+                "LandmarkPermissionDeleted", message=serializers.CharField()
+            )
+        },
+    )
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         collection = self.get_object()
         if collection.is_personal:
@@ -383,7 +452,10 @@ class LandmarkCollectionLandmarksExportExcelApiView(
 
     @extend_schema(
         operation_id="v2_landmark_collection_landmarks_export_excel",
-        responses={(200, _LANDMARK_EXPORT_XLSX_CONTENT_TYPE): OpenApiTypes.BINARY},
+        responses={
+            (200, _LANDMARK_EXPORT_XLSX_CONTENT_TYPE): OpenApiTypes.BINARY,
+            403: API_ERROR,
+        },
     )
     def get(
         self,
@@ -451,7 +523,7 @@ class LandmarkCollectionLandmarksExportGPXApiView(
 
     @extend_schema(
         operation_id="v2_landmark_collection_landmarks_export_gpx",
-        responses={(200, GPX_CONTENT_TYPE): OpenApiTypes.BINARY},
+        responses={(200, GPX_CONTENT_TYPE): OpenApiTypes.BINARY, 403: API_ERROR},
     )
     def get(
         self,
@@ -503,6 +575,32 @@ class LandmarkCollectionBulkTransferApiView(
     lookup_field = "id"
     lookup_url_kwarg = "collection_id"
 
+    @extend_schema(
+        request={
+            "application/json": response_object(
+                "LandmarkBulkTransferRequest",
+                landmark_ids=serializers.ListField(
+                    child=serializers.UUIDField(), min_length=1
+                ),
+                target_collection=serializers.UUIDField(),
+            )
+        },
+        responses={
+            200: response_object(
+                "LandmarkBulkTransferResponse",
+                transferred=serializers.IntegerField(),
+                target_collection=response_object(
+                    "LandmarkTransferTarget",
+                    id=serializers.UUIDField(),
+                    name=serializers.CharField(),
+                ),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_landmark_collections_landmarks_transfer_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         source = self.get_object()
         user = self.get_user()
@@ -593,6 +691,25 @@ class LandmarkCollectionBulkDeleteApiView(
     lookup_field = "id"
     lookup_url_kwarg = "collection_id"
 
+    @extend_schema(
+        request={
+            "application/json": response_object(
+                "LandmarkBulkDeleteRequest",
+                landmark_ids=serializers.ListField(
+                    child=serializers.UUIDField(), min_length=1
+                ),
+            )
+        },
+        responses={
+            200: response_object(
+                "LandmarkBulkDeleteResponse", deleted=serializers.IntegerField()
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        },
+    )
+    @extend_schema(operation_id="v2_landmark_collections_landmarks_bulk_delete_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         collection = self.get_object()
         request_data = require_mapping_request_data(request.data)

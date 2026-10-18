@@ -355,7 +355,8 @@ class TestStationTagManagementAPI:
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data is None
+        assert response.json() is None
+        assert response.content == b"null"
 
     def test_set_tag_on_station(
         self,

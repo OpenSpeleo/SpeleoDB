@@ -144,7 +144,7 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="revision-history">
     {
-      "endpoint": "{% url 'api:v2:project-revisions' id=project.id %}"
+      "projectId": "{{ project.id }}"
     }
   </script>
 {% endblock inline_extra_js %}

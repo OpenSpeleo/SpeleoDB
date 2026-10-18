@@ -151,7 +151,11 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
     afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
     it('keeps the create callback async, rejects empty descriptions and updates the existing cached object on success', async () => {
         const cached: ViewerExplorationLead = { id: 'lead', coordinates: [1, 2], lineName: '', description: '', projectId: null, createdAt: undefined }; State.explorationLeads.set('lead', cached);
-        ExplorationLeadManager.createLead.mockResolvedValue({ id: 'lead', project: 'project', longitude: '1', latitude: '2' });
+        ExplorationLeadManager.createLead.mockResolvedValue({
+            id: 'lead', project: 'project', longitude: 1, latitude: 2,
+            description: 'Passage', created_by: 'tester@example.test',
+            creation_date: '2026-01-01T00:00:00Z', modified_date: '2026-01-01T00:00:00Z',
+        });
         const coordinates: [number, number] = [1, 2];
         ExplorationLeadUI.showCreateModal(coordinates, '<Line>', 'project');
         const form = (document.getElementById('create-lead-form') as HTMLFormElement);

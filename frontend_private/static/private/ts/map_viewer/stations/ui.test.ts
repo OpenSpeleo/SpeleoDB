@@ -48,7 +48,7 @@ it('tolerates absent manager DOM and keeps empty-state output', () => {
 
 it('sorts and escapes station labels, forwards details context, and separates navigation', () => {
     State.allStations.set('b', { id: 'b', name: 'Z', type: 'sensor', project: 'project', latitude: 2, longitude: 1 });
-    State.allStations.set('a', { id: 'a', name: '<A>', type: 'biology', project: 'project', latitude: '4', longitude: '3' });
+    State.allStations.set('a', { id: 'a', name: '<A>', type: 'biology', project: 'project', latitude: 4, longitude: 3 });
     StationUI.loadStationManagerContent();
     const content = (document.getElementById('station-manager-content') as HTMLElement);
     expect(content.innerHTML).toContain('&lt;Project&gt;');
@@ -62,7 +62,9 @@ it('sorts and escapes station labels, forwards details context, and separates na
 });
 
 it('preserves the unknown station type failure', () => {
-    State.allStations.set('a', { id: 'a', type: 'unknown' });
+    const malformed: Partial<StationRecord> = { id: 'a' };
+    Reflect.set(malformed, 'type', 'unknown');
+    State.allStations.set('a', malformed);
     expect(() => StationUI.loadStationManagerContent()).toThrow(TypeError);
 });
 

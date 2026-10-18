@@ -8,6 +8,7 @@ from typing import Any
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.serializers.project import ProjectGeoJSONStatusSerializer
 from speleodb.gis.models import ProjectGeoJSONGeneration
@@ -29,6 +30,7 @@ class ProjectGeoJSONStatusView(GenericAPIView[Project], SDBAPIViewMixin):
     http_method_names = ["get", "head", "options"]
 
     @extend_schema(operation_id="v2_project_geojson_status")
+    @extend_schema(responses={200: ProjectGeoJSONStatusSerializer(), 403: API_ERROR})
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         commit = project.latest_commit

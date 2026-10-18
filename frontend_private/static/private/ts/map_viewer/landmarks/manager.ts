@@ -1,3 +1,5 @@
+import type { LandmarkRequest, PatchedLandmarkRequest } from '@speleodb/api';
+import { normalizeLandmarkIcon } from '@speleodb/map-core';
 import type { LandmarkWrite, LandmarkCollectionRecord } from '../../../../../../ts-types/domain/landmark-records.ts';
 import type { LandmarkFeatureCollection } from '../../../../../../ts-types/domain/map-entities.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
@@ -61,6 +63,7 @@ export const LandmarkManager = {
                         const collection = collectionId ? State.landmarkCollections.get(collectionId) : null;
                         State.allLandmarks.set(featureId, {
                             ...feature.properties,
+                            icon: normalizeLandmarkIcon(feature.properties.icon),
                             id: featureId,
                             latitude: Number(coords[1]),
                             longitude: Number(coords[0]),
@@ -90,7 +93,7 @@ export const LandmarkManager = {
         }
     },
 
-    async createLandmark(data: LandmarkWrite) {
+    async createLandmark(data: LandmarkRequest) {
         try {
             const result = await API.createLandmark(data);
             const landmarkData = result.landmark;
@@ -109,7 +112,7 @@ export const LandmarkManager = {
         }
     },
 
-    async updateLandmark(landmarkId: EntityId, data: LandmarkWrite) {
+    async updateLandmark(landmarkId: EntityId, data: PatchedLandmarkRequest) {
         try {
             const result = await API.updateLandmark(landmarkId, data);
 

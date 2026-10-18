@@ -1,5 +1,5 @@
 export interface FleetSettingsOptions {
-    endpoint?: string;
+    save: (payload: { name: string; description: string }) => Promise<unknown>;
     successMessage?: string | undefined;
     reloadDelayMs?: number;
     submitBtnSelector?: string;
@@ -15,7 +15,7 @@ export interface FleetWatchlistOptions {
     exportBtnSelector?: string | undefined;
     exportUrlBuilder?: ((days: string) => string) | undefined;
 }
-export interface FleetEntityOptions {
+export interface FleetEntityOptions<Payload = unknown> {
     entityLabel?: string;
     modalSelector?: string;
     deleteModalSelector?: string | undefined;
@@ -30,15 +30,11 @@ export interface FleetEntityOptions {
     modalTitleSelector?: string;
     addTitle?: string;
     editTitle?: string;
-    listEndpoint?: string | undefined;
-    detailEndpoint?: (id: string | number) => string;
+    create?: ((payload: Payload) => Promise<unknown>) | undefined;
+    update: (id: string | number, payload: Payload) => Promise<unknown>;
+    remove?: ((id: string | number) => Promise<unknown>) | undefined;
     resetForCreate?: () => void;
     populateForEdit?: ($button: JQuery<HTMLElement>) => void;
-    collectPayload?: (isEdit: boolean) => unknown;
+    collectPayload?: (isEdit: boolean) => Payload | null;
     reloadDelayMs?: number;
-}
-export interface SensorPayload {
-    name: string;
-    notes: string;
-    status?: string | undefined;
 }

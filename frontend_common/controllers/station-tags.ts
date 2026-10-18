@@ -1,12 +1,14 @@
+import { v2StationTagsList, v2StationTagsCreateWithJson, v2StationTagsUpdateWithJson, v2StationTagsDestroy } from '@speleodb/api';
+import type { StationTag, StationTagRequest } from '@speleodb/api';
+import { apiData, webApiOptions } from '../api/client.ts';
 import { renderPencilIcon } from '../presentation/icons.ts';
 import type { StationTagsContext } from '../../ts-types/controllers/station-tags.ts';
-import type { StationTagPresentation } from '../../ts-types/domain/project-presentation.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 import { attachTaggedEntityList } from '../../frontend_private/static/private/ts/forms/tagged_entity_list.ts';
 import { FormModals } from '../../frontend_private/static/private/ts/forms/modals.ts';
 import { escapeHtml, safeCssColor } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
-export function init(context: StationTagsContext) {
+export function init() {
     const predefinedColors = [
             "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
             "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
@@ -14,10 +16,10 @@ export function init(context: StationTagsContext) {
             "#ec4899", "#f43f5e", "#fb7185", "#fb923c", "#facc15"
         ];
 
-        let allTags: StationTagPresentation[] = [];  // mirror updated by renderList()
+        let allTags: StationTag[] = [];  // mirror updated by renderList()
 
         // Render tags in table and cards
-        function renderTags(tags: StationTagPresentation[]) {
+        function renderTags(tags: StationTag[]) {
             allTags = tags;
             const tableBody = $('#tags-table-body');
             const cardsContainer = $('#tags-cards-container');
@@ -210,10 +212,11 @@ export function init(context: StationTagsContext) {
         }
         $('#custom-color-input').on('change', useCustomColor);
 
-        const listApi = attachTaggedEntityList<StationTagPresentation>({
-            listEndpoint: context.listEndpoint,
-            detailEndpointBuilder: function (id) { return Urls['api:v2:station-tag-detail'](id); },
-            editMethod: 'PUT',
+        const listApi = attachTaggedEntityList<StationTag, StationTagRequest>({
+            list: () => apiData(v2StationTagsList(webApiOptions())),
+            create: payload => apiData(v2StationTagsCreateWithJson(payload, webApiOptions())),
+            update: (id, payload) => apiData(v2StationTagsUpdateWithJson(String(id), payload, webApiOptions())),
+            remove: id => apiData(v2StationTagsDestroy(String(id), webApiOptions())),
 
             renderList: renderTags,
 

@@ -1,13 +1,12 @@
-import type { GPXImportResponse } from '../../../../ts-types/domain/gpx-import.ts';
+import { v2ImportGpxUpdate } from '@speleodb/api';
+import { apiData, webApiOptions } from '../../../../frontend_common/api/client.ts';
 
 // GPX Import Module - Shared between pages
 export const GPXImport = (function() {
     let selectedFile: File | null = null;
-    let csrfToken = '';
 
-    // Initialize with CSRF token
-    function init(token: string) {
-        csrfToken = token;
+    // Initialize shared page event handlers
+    function init() {
         setupEventListeners();
     }
 
@@ -144,27 +143,7 @@ export const GPXImport = (function() {
         document.getElementById('gpx-error-message')!.classList.add('hidden');
 
         try {
-            const headers = new Headers();
-            headers.append('X-CSRFToken', csrfToken);
-
-            const formData = new FormData();
-            formData.append('file', selectedFile, selectedFile.name);
-
-            const requestOptions: RequestInit = {
-                method: 'PUT',
-                headers: headers,
-                body: formData,
-                credentials: 'same-origin',
-                redirect: 'follow'
-            };
-
-            const response = await fetch(Urls['api:v2:gpx-import'](), requestOptions);
-            // The backend response contract is asserted without new runtime validation.
-            const data = await response.json() as GPXImportResponse;
-
-            if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Import failed');
-            }
+            const data = await apiData(v2ImportGpxUpdate({ file: selectedFile }, webApiOptions()));
 
             const landmarksCreated = data?.landmarks_created || 0;
             const tracksCreated = data?.gps_tracks_created || 0;

@@ -24,8 +24,10 @@ from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import ExperimentFactory
 from speleodb.api.v2.tests.factories import ExplorationLeadFactory
+from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v2.tests.factories import UserExperimentPermissionFactory
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ExperimentRecord
 from speleodb.surveys.models import FileFormat
 
 
@@ -161,6 +163,9 @@ class TestExperimentOGCPublicGeoJSON(BaseAPITestCase):
 
     def test_returns_feature_collection_for_valid_token(self) -> None:
         experiment = ExperimentFactory.create(created_by=self.user.email)
+        record = ExperimentRecord.objects.create(
+            experiment=experiment, station=SubSurfaceStationFactory.create(), data={}
+        )
         response = self.client.get(
             reverse(
                 "api:v2:gis-ogc:experiment",
@@ -170,7 +175,10 @@ class TestExperimentOGCPublicGeoJSON(BaseAPITestCase):
         assert response.status_code == status.HTTP_200_OK, response.content
         body = response.json()
         assert body["type"] == "FeatureCollection"
-        assert "features" in body
+        assert len(body["features"]) == 1
+        properties = body["features"][0]["properties"]
+        assert properties["station_id"] == str(record.station_id)
+        assert properties["station_name"] == record.station.name
 
     def test_404_for_unknown_token(self) -> None:
         response = self.client.get(

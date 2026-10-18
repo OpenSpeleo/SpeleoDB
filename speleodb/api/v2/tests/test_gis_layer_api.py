@@ -13,6 +13,7 @@ from rest_framework import status
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISLayer
+from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -44,6 +45,32 @@ def _kml() -> SimpleUploadedFile:
 
 @pytest.mark.django_db
 class TestGISLayerAPI(BaseAPITestCase):
+    def test_detail_update_permissions_and_delete_success_contract(self) -> None:
+        created = self._create(_geojson())
+        assert created.status_code == status.HTTP_201_CREATED
+        layer = GISLayer.objects.get()
+        detail = reverse("api:v2:gis-layer-detail", kwargs={"id": layer.id})
+        response = self.client.get(detail, headers={"authorization": self.auth})
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+        response = self.client.patch(
+            detail,
+            {"name": "Updated layer"},
+            format="json",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+        response = self.client.get(
+            reverse("api:v2:gis-layer-permissions", kwargs={"id": layer.id}),
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+        response = self.client.delete(detail, headers={"authorization": self.auth})
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+
     def tearDown(self) -> None:
         for layer in GISLayer.objects.filter(created_by=self.user.email):
             names: set[str] = set()

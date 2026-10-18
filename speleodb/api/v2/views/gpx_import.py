@@ -26,6 +26,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
 from speleodb.api.v2.landmark_access import user_has_collection_access
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.gis_layer_processing.common import calculate_bbox
@@ -55,13 +56,24 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
         request={
             "multipart/form-data": {
                 "type": "object",
-                "properties": {"file": {"type": "string", "format": "binary"}},
+                "properties": {
+                    "file": {"type": "string", "format": "binary"},
+                    "collection": {"type": "string", "format": "uuid"},
+                },
                 "required": ["file"],
             }
         },
         responses={
             200: {
                 "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "landmarks_created",
+                    "gps_tracks_created",
+                    "gps_track_ids",
+                    "collection_id",
+                    "bounds",
+                ],
                 "properties": {
                     "landmarks_created": {"type": "integer"},
                     "gps_tracks_created": {"type": "integer"},
@@ -78,9 +90,13 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                         "nullable": True,
                     },
                 },
-            }
+            },
+            400: API_ERROR,
+            403: API_ERROR,
+            500: API_ERROR,
         },
     )
+    @extend_schema(operation_id="v2_import_gpx_update")
     def put(
         self,
         request: Request,

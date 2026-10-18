@@ -174,7 +174,8 @@
 {% block inline_extra_js %}
   <script type="application/json" data-speleodb-controller="git-view">
     {
-      "endpoint": "{% url 'api:v2:project-gitexplorer' id=project.id hexsha=hexsha %}"
+      "projectId": "{{ project.id }}",
+      "commit": "{{ hexsha }}"
     }
   </script>
 {% endblock inline_extra_js %}

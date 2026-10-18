@@ -1,3 +1,4 @@
+import type { FormResource } from '../../frontend_common/api/entity-forms.ts';
 import type { EntityId } from '../domain/identifiers.ts';
 import type { EntityCrudOptions } from '../domain/forms/crud.ts';
 
@@ -10,7 +11,9 @@ export type EntityRedirectRoute =
     | 'private:project_details';
 
 export interface EntityCrudContext extends Pick<EntityCrudOptions<CreatedEntity>,
-    'formId' | 'endpoint' | 'method' | 'successMessage' | 'successRedirect' | 'reloadOnSuccess'> {
+    'formId' | 'successMessage' | 'successRedirect' | 'reloadOnSuccess'> {
+    resource: FormResource;
+    entityId?: string;
     colorPicker?: boolean;
     sensorRows?: boolean;
     serializeCheckboxes?: boolean;

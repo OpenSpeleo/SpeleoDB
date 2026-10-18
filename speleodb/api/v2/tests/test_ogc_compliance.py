@@ -90,6 +90,7 @@ from speleodb.gis.ogc_helpers import normalize_features
 from speleodb.gis.ogc_helpers import parse_ogc_query
 from speleodb.gis.ogc_openapi import OGC_OPENAPI_DOC
 from speleodb.surveys.models import ProjectCommit
+from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -806,6 +807,23 @@ def _temp_geojson_for_view(commit_sha: str) -> SimpleUploadedFile:
 @pytest.mark.django_db
 class TestProjectViewOGCCompliance(BaseAPITestCase):
     """Compliance tests for the project gis-view (gis_token) family."""
+
+    def test_user_token_single_feature_success_contract(self) -> None:
+        UserProjectPermissionFactory(
+            target=self.user, project=self.project, level=PermissionLevel.READ_ONLY
+        )
+        response = self.public_client.get(
+            reverse(
+                "api:v2:gis-ogc:user-collection-feature",
+                kwargs={
+                    "key": self.token.key,
+                    "collection_id": f"{self.commit_sha}_points",
+                    "feature_id": "entrance-uuid",
+                },
+            )
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
 
     def setUp(self) -> None:
         super().setUp()

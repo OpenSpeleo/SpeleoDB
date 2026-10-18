@@ -172,7 +172,6 @@ describe('Config loading and data methods', () => {
                     latitude: 45.0,
                     longitude: -73.0,
                     visibility: 'public',
-                    geojson_url: '/geojson/p1',
                 },
             ]);
 
@@ -190,7 +189,6 @@ describe('Config loading and data methods', () => {
                     latitude: 45.0,
                     longitude: -73.0,
                     visibility: 'public',
-                    geojson_url: '/geojson/p1',
                 },
             ]);
         });

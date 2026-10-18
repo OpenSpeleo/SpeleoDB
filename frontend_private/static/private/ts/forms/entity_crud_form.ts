@@ -1,4 +1,4 @@
-import { readFormCSRFToken, hideFormStatus, scheduleFormReload, scheduleFormRedirect } from './lifecycle.ts';
+import { hideFormStatus, scheduleFormReload, scheduleFormRedirect } from './lifecycle.ts';
 import type { EntityCrudOptions } from '../../../../../ts-types/domain/forms/crud.ts';
 
 /**
@@ -13,15 +13,14 @@ import type { EntityCrudOptions } from '../../../../../ts-types/domain/forms/cru
  *   #btn_submit (or options.submitBtnId)
  *       -> serializes the form as JSON (FormData -> Object.fromEntries)
  *       -> optional `beforeSubmit(payload)` hook; return false to cancel
- *       -> fires options.method (default POST) to options.endpoint
+ *       -> invokes the caller's typed generated-operation callback
  *       -> on success: showSuccess(successMessage) then optional redirect
- *       -> on error:   showAjaxErrorModal(xhr)
+ *       -> on error:   showApiErrorModal(xhr)
  *
  * Usage:
  *   attachEntityCrudForm({
  *       formId: 'new_team_form',
- *       endpoint: "{% url 'api:v2:teams' %}",
- *       method: 'POST',
+ *       submit: createTeam,
  *       successMessage: 'The team has been created.',
  *       successRedirect: "{% url 'private:teams' %}",
  *       // optional:
@@ -36,16 +35,15 @@ import type { EntityCrudOptions } from '../../../../../ts-types/domain/forms/cru
  *       showSuccessModal: false, // caller presents success through onSuccess
  *   });
  *
- * Requires: jQuery, FormModals, showAjaxErrorModal.
+ * Requires: jQuery, FormModals, showApiErrorModal.
  */
 
-import { showAjaxErrorModal } from './ajax_errors.ts';
+import { showApiErrorModal } from './api_errors.ts';
 import { FormModals } from './modals.ts';
 
 export function attachEntityCrudForm<Response = unknown>(options: EntityCrudOptions<Response>) {
     var formId = options.formId;
-    var endpoint = options.endpoint;
-    var method = (options.method || 'POST').toUpperCase();
+    var submit = options.submit;
     var submitBtnId = options.submitBtnId || 'btn_submit';
     var successMessage = options.successMessage || 'Saved successfully.';
     var successRedirect = options.successRedirect;
@@ -54,13 +52,13 @@ export function attachEntityCrudForm<Response = unknown>(options: EntityCrudOpti
     var redirectDelayMs = typeof options.redirectDelayMs === 'number' ? options.redirectDelayMs : 2000;
     var beforeSubmit = options.beforeSubmit;
     var onSuccess = options.onSuccess;
-    var serialize = options.serialize;  // optional (payload) => stringified body
+    var prepare = options.prepare;  // optional form-value transformation
 
     if (!formId) {
         throw new Error('attachEntityCrudForm: formId is required');
     }
-    if (!endpoint) {
-        throw new Error('attachEntityCrudForm: endpoint is required');
+    if (typeof submit !== 'function') {
+        throw new Error('attachEntityCrudForm: submit is required');
     }
 
     FormModals.bindAutoDismiss();
@@ -73,7 +71,6 @@ export function attachEntityCrudForm<Response = unknown>(options: EntityCrudOpti
 
         hideFormStatus();
 
-        var csrftoken = readFormCSRFToken();
         var form = document.getElementById(formId!) as HTMLFormElement | null;
         if (!form) {
             if (typeof console !== 'undefined' && console.error) {
@@ -88,29 +85,18 @@ export function attachEntityCrudForm<Response = unknown>(options: EntityCrudOpti
             if (beforeSubmit(payload) === false) { return false; }
         }
 
-        var body = typeof serialize === 'function'
-            ? serialize(payload)
-            : JSON.stringify(payload);
+        var body = typeof prepare === 'function' ? prepare(payload) : payload;
 
         pending = true;
         options.onPendingChange?.(true);
-        $.ajax({
-            url: endpoint,
-            method: method,
-            data: body,
-            contentType: 'application/json; charset=utf-8',
-            cache: false,
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                return true;
-            },
-            success: function (response: unknown) {
+        void Promise.resolve().then(() => submit(body)).then(
+            function (response) {
                 if (options.showSuccessModal !== false) {
                     FormModals.showSuccess(successMessage);
                 }
-                if (typeof onSuccess === 'function') { onSuccess(response as Response); }
+                if (typeof onSuccess === 'function') { onSuccess(response); }
                 var target = typeof redirectFromResponse === 'function'
-                    ? redirectFromResponse(response as Response)
+                    ? redirectFromResponse(response)
                     : successRedirect;
                 if (target) {
                     scheduleFormRedirect(target, redirectDelayMs);
@@ -118,17 +104,16 @@ export function attachEntityCrudForm<Response = unknown>(options: EntityCrudOpti
                     scheduleFormReload(redirectDelayMs);
                 }
             },
-            error: function (xhr) {
+            function (xhr: unknown) {
                 if (typeof options.onError === 'function') {
                     options.onError(xhr);
                 } else {
-                    showAjaxErrorModal(xhr);
+                    showApiErrorModal(xhr);
                 }
             },
-            complete: function () {
+        ).finally(function () {
                 pending = false;
                 options.onPendingChange?.(false);
-            },
         });
         return false;
     });

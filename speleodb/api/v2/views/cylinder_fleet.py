@@ -21,12 +21,18 @@ from django.db.models import Subquery
 from django.http import Http404
 from django.http import StreamingHttpResponse
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.utils import extend_schema
 from geojson import FeatureCollection  # type: ignore[attr-defined]
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import feature_collection
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsObjectCreation
 from speleodb.api.v2.permissions import IsObjectDeletion
 from speleodb.api.v2.permissions import IsObjectEdition
@@ -41,6 +47,13 @@ from speleodb.api.v2.serializers import CylinderInstallGeoJSONSerializer
 from speleodb.api.v2.serializers import CylinderInstallSerializer
 from speleodb.api.v2.serializers import CylinderPressureCheckSerializer
 from speleodb.api.v2.serializers import CylinderSerializer
+from speleodb.api.v2.serializers.api_contract import (
+    CylinderInstallCreateRequestSerializer,
+)
+from speleodb.api.v2.serializers.api_contract import (
+    NonWebViewerPermissionRequestSerializer,
+)
+from speleodb.api.v2.serializers.request_serializers import UserRequestSerializer
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import Cylinder
@@ -79,6 +92,9 @@ class CylinderFleetApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
     serializer_class = CylinderFleetSerializer
 
     @extend_schema(operation_id="v2_cylinder_fleets_list")
+    @extend_schema(
+        responses={200: CylinderFleetWithPermSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """List all cylinder fleets with user permissions."""
         user = self.get_user()
@@ -104,6 +120,11 @@ class CylinderFleetApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
 
         return SuccessResponse(CylinderFleetWithPermSerializer(fleets, many=True).data)
 
+    @extend_schema(request=CylinderFleetSerializer)
+    @extend_schema(
+        responses={201: CylinderFleetSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new cylinder fleet."""
         user = self.get_user()
@@ -141,6 +162,8 @@ class CylinderFleetSpecificApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixi
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(responses={200: CylinderFleetSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_cylinder_fleets_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific cylinder fleet."""
         cylinder_fleet = self.get_object()
@@ -164,14 +187,27 @@ class CylinderFleetSpecificApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixi
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_cylinder_fleets_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of cylinder fleet."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_cylinder_fleets_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of cylinder fleet."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderFleetSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Deactivate a cylinder fleet instead of deleting it.
@@ -212,6 +248,8 @@ class CylinderApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(responses={200: CylinderSerializer(many=True), 403: API_ERROR})
+    @extend_schema(operation_id="v2_cylinder_fleets_cylinders_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -222,6 +260,11 @@ class CylinderApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
         serializer = CylinderSerializer(cylinders, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=CylinderSerializer)
+    @extend_schema(
+        responses={201: CylinderSerializer(), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_cylinders_create")
     def post(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -236,7 +279,7 @@ class CylinderApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
 
         serializer = CylinderSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=user.email)
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(
@@ -260,6 +303,8 @@ class CylinderSpecificApiView(GenericAPIView[Cylinder], SDBAPIViewMixin):
     serializer_class = CylinderSerializer
     lookup_field = "id"
 
+    @extend_schema(responses={200: CylinderSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_cylinders_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific cylinder."""
         cylinder = self.get_object()
@@ -281,14 +326,27 @@ class CylinderSpecificApiView(GenericAPIView[Cylinder], SDBAPIViewMixin):
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(operation_id="v2_cylinders_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of cylinder."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_cylinders_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of cylinder."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinders_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a cylinder permanently."""
         cylinder = self.get_object()
@@ -374,6 +432,13 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
 
         return perm_data
 
+    @extend_schema(
+        responses={
+            200: CylinderFleetUserPermissionSerializer(many=True),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_permissions_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -388,6 +453,19 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
         serializer = CylinderFleetUserPermissionSerializer(permissions, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "CylinderFleetPermissionApiViewPostResponse",
+                fleet=CylinderFleetSerializer(),
+                permission=CylinderFleetUserPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_permissions_create")
     def post(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -436,6 +514,18 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=NonWebViewerPermissionRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderFleetPermissionApiViewPutResponse",
+                fleet=CylinderFleetSerializer(),
+                permission=CylinderFleetUserPermissionSerializer(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_permissions_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         fleet = self.get_object()
 
@@ -470,6 +560,18 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
             }
         )
 
+    @extend_schema(request=UserRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderFleetPermissionApiViewDeleteResponse",
+                fleet=CylinderFleetSerializer(),
+            ),
+            403: API_ERROR,
+            401: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_permissions_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         fleet = self.get_object()
         user = self.get_user()
@@ -522,6 +624,17 @@ class CylinderFleetExportExcelApiView(GenericAPIView[CylinderFleet], SDBAPIViewM
     lookup_url_kwarg = "fleet_id"
     serializer_class = CylinderSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_cylinders_export_retrieve")
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | StreamingHttpResponse:
@@ -648,6 +761,17 @@ class CylinderFleetWatchlistApiView(GenericAPIView[CylinderFleet], SDBAPIViewMix
     lookup_field = "id"
     lookup_url_kwarg = "fleet_id"
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "days", int, description="Positive number of days; default 60."
+            )
+        ]
+    )
+    @extend_schema(
+        responses={200: CylinderSerializer(many=True), 400: API_ERROR, 403: API_ERROR}
+    )
+    @extend_schema(operation_id="v2_cylinder_fleets_cylinders_watchlist_retrieve")
     def get(
         self, request: Request, fleet_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -718,6 +842,26 @@ class CylinderFleetWatchlistExportExcelApiView(
     lookup_url_kwarg = "fleet_id"
     serializer_class = CylinderSerializer  # type: ignore[assignment]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "days", int, description="Positive number of days; default 60."
+            )
+        ]
+    )
+    @extend_schema(
+        responses={
+            (
+                200,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ): OpenApiTypes.BINARY,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(
+        operation_id="v2_cylinder_fleets_cylinders_watchlist_export_retrieve"
+    )
     def get(
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | StreamingHttpResponse:
@@ -837,6 +981,13 @@ class CylinderInstallGeoJSONApiView(GenericAPIView[CylinderInstall], SDBAPIViewM
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CylinderInstallGeoJSONSerializer
 
+    @extend_schema(
+        responses={
+            200: feature_collection(CylinderInstallGeoJSONSerializer),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_installs_geojson_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Return installed cylinders as GeoJSON FeatureCollection."""
         user = self.get_user()
@@ -871,7 +1022,17 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CylinderInstallSerializer
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("cylinder_id", OpenApiTypes.UUID),
+            OpenApiParameter("fleet_id", OpenApiTypes.UUID),
+            OpenApiParameter("status", str),
+        ]
+    )
     @extend_schema(operation_id="v2_cylinder_installs_list")
+    @extend_schema(
+        responses={200: CylinderInstallSerializer(many=True), 403: API_ERROR}
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         List cylinder installs.
@@ -916,6 +1077,18 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
         serializer = CylinderInstallSerializer(installs, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={
+            201: CylinderInstallSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(
+        operation_id="v2_cylinder_installs_create",
+        request=CylinderInstallCreateRequestSerializer,
+    )
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new cylinder install."""
         user = self.get_user()
@@ -956,7 +1129,7 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
 
         serializer = CylinderInstallSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=user.email)
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(
@@ -998,6 +1171,8 @@ class CylinderInstallSpecificApiView(GenericAPIView[CylinderInstall], SDBAPIView
             level__gte=min_level,
         ).exists()
 
+    @extend_schema(responses={200: CylinderInstallSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_cylinder_installs_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific cylinder install."""
         install = self.get_object()
@@ -1045,14 +1220,27 @@ class CylinderInstallSpecificApiView(GenericAPIView[CylinderInstall], SDBAPIView
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(operation_id="v2_cylinder_installs_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of cylinder install."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_cylinder_installs_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of cylinder install."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderInstallSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_installs_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a cylinder install."""
         install = self.get_object()
@@ -1123,6 +1311,13 @@ class CylinderPressureCheckApiView(
         return install, None
 
     @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_list")
+    @extend_schema(
+        responses={
+            200: CylinderPressureCheckSerializer(many=True),
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
     def get(
         self, request: Request, install_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -1138,6 +1333,15 @@ class CylinderPressureCheckApiView(
         serializer = CylinderPressureCheckSerializer(checks, many=True)
         return SuccessResponse(serializer.data)
 
+    @extend_schema(
+        responses={
+            201: CylinderPressureCheckSerializer(),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_create")
     def post(
         self, request: Request, install_id: str, *args: Any, **kwargs: Any
     ) -> Response:
@@ -1199,6 +1403,8 @@ class CylinderPressureCheckSpecificApiView(
             level__gte=min_level,
         ).exists()
 
+    @extend_schema(responses={200: CylinderPressureCheckSerializer(), 403: API_ERROR})
+    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Retrieve a specific pressure check."""
         check = self.get_object()
@@ -1239,14 +1445,27 @@ class CylinderPressureCheckSpecificApiView(
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of pressure check."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of pressure check."""
         return self._modify_obj(request=request, partial=True, **kwargs)
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "CylinderPressureCheckSpecificApiViewDeleteResponse",
+                id=serializers.UUIDField(),
+                message=serializers.CharField(),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Delete a pressure check."""
         check = self.get_object()

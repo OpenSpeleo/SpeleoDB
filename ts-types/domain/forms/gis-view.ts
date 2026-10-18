@@ -1,23 +1,20 @@
-export interface GisViewProject {
-    id: string;
-    name?: string | null;
-}
-export interface GisViewCommit {
-    commit_date?: string | null;
-    commit_sha?: string | null;
-    commit_author_name?: string | null;
-    commit_message?: string | null;
-}
-export interface GisViewSelectedProject {
-    project_id: string;
-    use_latest: boolean;
-    commit_sha: string;
-}
+import type { GISProjectViewInputRequest, Project, ProjectGeoJSONCommit, V2UserGisViewsCreateBody } from '@speleodb/api';
+
+/** Only picker labels and identities are retained by the form. */
+export type GisViewProject = Pick<Project, 'id'> & Partial<Pick<Project, 'name'>>;
+export type GisViewCommit = Partial<Pick<ProjectGeoJSONCommit,
+    'commit_date' | 'commit_sha' | 'commit_author_name' | 'commit_message'>>;
+/** The form always emits its selected project mode and an empty SHA for latest. */
+export type GisViewSelectedProject = Required<Omit<GISProjectViewInputRequest, 'commit_sha'>> & {
+    commit_sha: NonNullable<GISProjectViewInputRequest['commit_sha']>;
+};
+export type GisViewFormPayload = Required<Omit<V2UserGisViewsCreateBody, 'projects'>> & {
+    projects: GisViewSelectedProject[];
+};
 export interface GisViewFormOptions<Response = unknown> {
-    endpoint?: string;
-    method?: string;
-    projectsEndpoint?: string;
-    commitsEndpointBuilder?: (projectId: string) => string;
+    save: (payload: GisViewFormPayload) => Promise<Response>;
+    loadProjects: () => Promise<GisViewProject[]>;
+    loadCommits: (projectId: string) => Promise<GisViewCommit[]>;
     onSuccess?: ((data: Response) => void) | undefined;
     seedFromExistingRows?: boolean;
     initialProjectCounter?: number;

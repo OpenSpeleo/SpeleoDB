@@ -148,10 +148,8 @@ class SensorFleetDangerZoneView(_BaseSensorFleetView):
         data.update(
             entity_label="Sensor Fleet",
             entity_settings_base_template="pages/sensor_fleet/base.html",
-            api_detail_url=reverse(
-                "api:v2:sensor-fleet-detail",
-                kwargs={"fleet_id": fleet.id},
-            ),
+            api_resource="sensor-fleet",
+            api_entity_id=str(fleet.id),
             listing_url=reverse("private:sensor_fleets"),
             danger_success_message=("The Sensor Fleet has been deleted successfully."),
         )
@@ -189,10 +187,8 @@ class SensorFleetUserPermissionsView(_BaseSensorFleetView):
             entity=fleet,
             entity_settings_base_template="pages/sensor_fleet/base.html",
             permission_levels=PermissionLevel.members_no_webviewer,
-            permission_endpoint=reverse(
-                "api:v2:sensor-fleet-permissions",
-                kwargs={"fleet_id": fleet.id},
-            ),
+            api_resource="sensor-fleet",
+            api_entity_id=str(fleet.id),
             permission_add_title="Add a collaborator to the sensor fleet",
             permission_success_message=("The sensor fleet permission has been saved."),
             permission_delete_message=("The sensor fleet permission has been removed."),

@@ -4,15 +4,12 @@ import type { FormTestJQuery } from '../../../../../ts-types/testing/vitest/form
 
 const jquerySource = readFileSync(path.join(process.cwd(), 'frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
 const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
-let originalAjax: FormTestJQuery['ajax'];
 beforeAll(() => { (0, eval)(jquerySource); });
 beforeEach(() => {
     vi.useFakeTimers();
-    originalAjax = jqueryHost.jQuery.ajax;
     document.body.innerHTML = '<div id="modal_error"><span id="modal_error_txt"></span></div><div id="modal_success"><span id="modal_success_txt"></span></div>';
 });
 afterEach(() => {
-    jqueryHost.jQuery.ajax = originalAjax;
     jqueryHost.jQuery(document).off();
     document.body.innerHTML = '';
     vi.useRealTimers();

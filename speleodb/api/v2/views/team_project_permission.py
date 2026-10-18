@@ -6,9 +6,14 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.schema_helpers import response_object
 from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
@@ -36,6 +41,17 @@ class ProjectTeamPermissionListApiView(GenericAPIView[Project], SDBAPIViewMixin)
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectTeamPermissionListApiViewGetResponse",
+                project=ProjectSerializer(),
+                permissions=ProjectTeamPermissionSerializer(many=True),
+            ),
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permissions_team_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()
@@ -60,11 +76,29 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
     serializer_class = ProjectSerializer
     lookup_field = "id"
 
+    @extend_schema(
+        parameters=[OpenApiParameter("team", OpenApiTypes.UUID, required=True)]
+    )
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectTeamPermissionSpecificApiViewGetResponse",
+                permission=ProjectTeamPermissionSerializer(),
+                project=ProjectSerializer(),
+                team=SurveyTeamSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_team_detail_retrieve")
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         project = self.get_object()
         user = self.get_user()
 
-        serializer = TeamRequestSerializer(data=request.data)
+        # Browser fetch cannot send a GET body.
+        serializer = TeamRequestSerializer(data=request.query_params)
 
         if not serializer.is_valid():
             return ErrorResponse(
@@ -100,6 +134,19 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(request=TeamRequestWithProjectLevelSerializer)
+    @extend_schema(
+        responses={
+            201: response_object(
+                "ProjectTeamPermissionSpecificApiViewPostResponse",
+                project=ProjectSerializer(),
+                permission=ProjectTeamPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_team_detail_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = TeamRequestWithProjectLevelSerializer(
@@ -155,6 +202,20 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(request=TeamRequestWithProjectLevelSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectTeamPermissionSpecificApiViewPutResponse",
+                project=ProjectSerializer(),
+                permission=ProjectTeamPermissionSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_team_detail_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = TeamRequestWithProjectLevelSerializer(
@@ -205,6 +266,19 @@ class ProjectTeamPermissionSpecificApiView(GenericAPIView[Project], SDBAPIViewMi
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(request=TeamRequestSerializer)
+    @extend_schema(
+        responses={
+            200: response_object(
+                "ProjectTeamPermissionSpecificApiViewDeleteResponse",
+                project=ProjectSerializer(),
+            ),
+            400: API_ERROR,
+            403: API_ERROR,
+            404: API_ERROR,
+        }
+    )
+    @extend_schema(operation_id="v2_projects_permission_team_detail_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
         serializer = TeamRequestSerializer(data=request.data)

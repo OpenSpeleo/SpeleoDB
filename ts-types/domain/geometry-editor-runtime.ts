@@ -1,7 +1,7 @@
 import type { Feature, FeatureCollection, LineString, Point, Polygon } from 'geojson';
 import type { EditableGeometry, GeometryDraft, Position2D } from './geometry-editor.ts';
 import type { EntityId } from './identifiers.ts';
-import type { GISGeometryResponse } from './map-config.ts';
+import type { GISGeometryMapInput } from './map-config.ts';
 import type { MapGestureToggle } from './map-interactions.ts';
 import type { RendererLayer } from './renderer.ts';
 import type { LongitudeLatitude, ScreenPoint } from './measurement.ts';
@@ -39,7 +39,7 @@ export interface EditorMap {
     off?(event: 'dblclick', handler: (event: EditorInput) => void): unknown;
 }
 export interface EditorSession {
-    record: GISGeometryResponse | null;
+    record: GISGeometryMapInput | null;
     name: string;
     alias: string;
     description: string;
@@ -90,8 +90,8 @@ export interface EditorNodes {
 export interface EditorActivity { opening: boolean | undefined; active: boolean }
 export interface EditorOptions {
     map: EditorMap;
-    onSaved?: (record: GISGeometryResponse) => unknown;
-    onLoaded?: (record: GISGeometryResponse) => unknown;
+    onSaved?: (record: GISGeometryMapInput) => unknown;
+    onLoaded?: (record: GISGeometryMapInput) => unknown;
     onPreview?: (id: EntityId | null, active: boolean) => unknown;
     onActivityChange?: (state: EditorActivity) => unknown;
     palette?: string[];
@@ -122,8 +122,8 @@ export interface GeometryEditorFacade {
     hasUnsavedChanges(): boolean;
     signature(): string;
     create(): Promise<boolean>;
-    edit(record: Pick<GISGeometryResponse, 'id'> | null): Promise<boolean>;
-    begin(record: GISGeometryResponse | null): void;
+    edit(record: Pick<GISGeometryMapInput, 'id'> | null): Promise<boolean>;
+    begin(record: GISGeometryMapInput | null): void;
     observeViewport(): void;
     positionWithinViewport(): void;
     stopObservingViewport(): void;

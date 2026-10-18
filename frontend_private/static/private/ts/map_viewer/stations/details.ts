@@ -341,7 +341,7 @@ export const StationDetails = {
             if (!response || !response.id) {
                 throw new Error('Invalid station response');
             }
-            let station = response;
+            let station: StationRecord = response;
 
             // Update the appropriate state map with the complete data
             const stateMap = stationType === 'surface' ? State.allSurfaceStations : State.allStations;

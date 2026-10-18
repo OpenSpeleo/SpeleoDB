@@ -1,4 +1,7 @@
 import type { DangerZoneOptions } from '../domain/forms/crud.ts';
+import type { DeletableResource } from '../../frontend_common/api/entity-forms.ts';
 
-/** This controller forwards the original options object without transformation. */
-export type DangerZoneContext = DangerZoneOptions;
+export interface DangerZoneContext extends Omit<DangerZoneOptions, 'remove'> {
+    resource: DeletableResource;
+    entityId: string;
+}
