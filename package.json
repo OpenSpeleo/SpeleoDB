@@ -59,7 +59,7 @@
   ],
   "type": "module",
   "dependencies": {
-    "@speleodb/api": "0.1.0",
+    "@speleodb/api": "0.2.0",
     "@speleodb/map-core": "0.3.0",
     "@speleodb/map-viewer": "0.3.1",
     "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch"
