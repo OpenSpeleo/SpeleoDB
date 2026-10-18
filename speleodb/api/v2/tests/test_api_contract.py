@@ -94,6 +94,35 @@ def test_durable_evidence_matches_current_contract() -> None:
         )
 
 
+def test_revision_download_declares_all_shared_response_branches() -> None:
+    paths = contract_schema()["paths"]
+    latest = paths["/api/v2/projects/{id}/download/{fileformat}/"]["get"]["responses"]
+    revision = paths["/api/v2/projects/{id}/download/{fileformat}/{hexsha}/"]["get"][
+        "responses"
+    ]
+    assert set(revision) == {"200", "400", "403", "404", "422", "500"}
+    assert revision == latest
+
+
+@pytest.mark.parametrize(
+    ("path", "method", "requires_project"),
+    [
+        ("/api/v2/cylinder-installs/", "post", True),
+        ("/api/v2/cylinder-installs/{install_id}/", "put", False),
+        ("/api/v2/cylinder-installs/{install_id}/", "patch", False),
+    ],
+)
+def test_cylinder_install_project_is_required_only_for_creation(
+    path: str, method: str, requires_project: bool
+) -> None:
+    content = contract_schema()["paths"][path][method]["requestBody"]["content"]
+    for media in content.values():
+        schema = media["schema"]
+        assert "project" in schema["properties"]
+        assert ("project" in schema.get("required", [])) is requires_project
+        assert not schema["properties"]["project"].get("nullable", False)
+
+
 @pytest.mark.parametrize(
     ("path", "method"),
     [

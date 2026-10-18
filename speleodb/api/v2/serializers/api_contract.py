@@ -13,6 +13,7 @@ from speleodb.api.v2.serializers.sensor_fleet import SensorInstallSerializer
 from speleodb.api.v2.serializers.sensor_fleet import SensorSerializer
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.gis_layer_processing.errors import ProcessingErrorCode
+from speleodb.surveys.models import Project
 from speleodb.utils.serializer_fields import CustomChoiceField
 
 
@@ -38,6 +39,8 @@ class SensorInstallCreateRequestSerializer(SensorInstallSerializer):
 
 
 class CylinderInstallCreateRequestSerializer(CylinderInstallSerializer):
+    project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.all())
+
     class Meta(CylinderInstallSerializer.Meta):
         read_only_fields = [
             *CylinderInstallSerializer.Meta.read_only_fields,

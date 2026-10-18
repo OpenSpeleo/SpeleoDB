@@ -74,6 +74,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_DOWNLOAD_RESPONSES: dict[int | tuple[int, str], Any] = {
+    (200, "application/octet-stream"): OpenApiTypes.BINARY,
+    400: API_ERROR,
+    403: API_ERROR,
+    404: API_ERROR,
+    422: API_ERROR,
+    500: API_ERROR,
+}
+
 
 def upload_input_error(data: dict[str, str], *, status: int) -> ErrorResponse:
     """Report rejected upload input even when validation did not raise."""
@@ -550,14 +559,7 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
     @extend_schema(
         operation_id="v2_projects_download_retrieve_by_format",
-        responses={
-            (200, "application/octet-stream"): OpenApiTypes.BINARY,
-            400: API_ERROR,
-            403: API_ERROR,
-            404: API_ERROR,
-            422: API_ERROR,
-            500: API_ERROR,
-        },
+        responses=_DOWNLOAD_RESPONSES,
     )
     def get(
         self,
@@ -722,10 +724,7 @@ class FileDownloadAtHashView(FileDownloadView):
 
     @extend_schema(
         operation_id="v2_projects_download_retrieve_by_format_at_hash",
-        responses={
-            (200, "application/octet-stream"): OpenApiTypes.BINARY,
-            403: API_ERROR,
-        },
+        responses=_DOWNLOAD_RESPONSES,
     )
     def get(
         self,

@@ -1094,8 +1094,6 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
         user = self.get_user()
 
         data = require_mapping_request_data(request.data).copy()
-        data["install_user"] = user.email
-        data["created_by"] = user.email
 
         # Set default status if not provided
         if "status" not in data:
@@ -1127,9 +1125,9 @@ class CylinderInstallApiView(GenericAPIView[CylinderInstall], SDBAPIViewMixin):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-        serializer = CylinderInstallSerializer(data=data)
+        serializer = CylinderInstallCreateRequestSerializer(data=data)
         if serializer.is_valid():
-            serializer.save(created_by=user.email)
+            serializer.save(install_user=user.email, created_by=user.email)
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(

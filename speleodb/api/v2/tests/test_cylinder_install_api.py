@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from typing import Any
+from urllib.parse import urlencode
 
 import pytest
 from django.urls import reverse
@@ -36,6 +38,7 @@ from speleodb.common.enums import UnitSystem
 from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderInstall
+from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -245,6 +248,8 @@ class TestCylinderInstallListCreate:
             "location_name": "Test Cave",
             "install_date": timezone.localdate().isoformat(),
             "unit_system": UnitSystem.METRIC,
+            "install_user": "spoofed@example.org",
+            "created_by": "spoofed@example.org",
         }
 
         response = api_client.post(
@@ -260,6 +265,44 @@ class TestCylinderInstallListCreate:
         assert response.data["location_name"] == "Test Cave"
         assert response.data["install_user"] == user.email
         assert response.data["status"] == InstallStatus.INSTALLED
+        saved = CylinderInstall.objects.get(id=response.data["id"])
+        assert saved.project == project
+        assert saved.install_user == user.email
+        assert saved.created_by == user.email
+        assert_api_response(response)
+
+    @pytest.mark.parametrize("media", ["json", "multipart", "urlencoded"])
+    def test_create_cylinder_install_requires_project(
+        self,
+        api_client: APIClient,
+        cylinder: Cylinder,
+        user: User,
+        media: str,
+    ) -> None:
+        """An otherwise valid install cannot omit the model's required project."""
+        data = {
+            "cylinder": str(cylinder.id),
+            "latitude": "30.0000000",
+            "longitude": "-84.0000000",
+            "install_date": timezone.localdate().isoformat(),
+        }
+        before = CylinderInstall.objects.count()
+        options: dict[str, Any] = {"format": media}
+        body: Any = data
+        if media == "urlencoded":
+            options = {"content_type": "application/x-www-form-urlencoded"}
+            body = urlencode(data)
+        response = api_client.post(
+            reverse("api:v2:cylinder-installs"),
+            data=body,
+            HTTP_AUTHORIZATION=get_auth_header(user),
+            **options,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert set(response.data["errors"]) == {"project"}
+        assert CylinderInstall.objects.count() == before
+        assert_api_response(response)
 
     def test_create_cylinder_install_with_distance(
         self,
@@ -390,6 +433,39 @@ class TestCylinderInstallListCreate:
 @pytest.mark.django_db
 class TestCylinderInstallRetrieveUpdateDelete:
     """Tests for retrieving, updating, and deleting cylinder installs."""
+
+    @pytest.mark.parametrize("method", ["put", "patch"])
+    def test_update_preserves_omitted_project(
+        self,
+        api_client: APIClient,
+        cylinder_install: CylinderInstall,
+        user: User,
+        method: str,
+    ) -> None:
+        """Creation requiredness must not require resending an existing project."""
+        project_id = cylinder_install.project_id
+        response = getattr(api_client, method)(
+            reverse(
+                "api:v2:cylinder-install-detail",
+                kwargs={"install_id": cylinder_install.id},
+            ),
+            data={
+                "cylinder": str(cylinder_install.cylinder_id),
+                "latitude": str(cylinder_install.latitude),
+                "longitude": str(cylinder_install.longitude),
+                "install_date": cylinder_install.install_date.isoformat(),
+                "install_user": cylinder_install.install_user,
+                "notes": "Updated without resending the project",
+            },
+            format="json",
+            HTTP_AUTHORIZATION=get_auth_header(user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        cylinder_install.refresh_from_db()
+        assert cylinder_install.project_id == project_id
+        assert cylinder_install.notes == "Updated without resending the project"
+        assert_api_response(response)
 
     def test_retrieve_cylinder_install(
         self,

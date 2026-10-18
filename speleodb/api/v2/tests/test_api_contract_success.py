@@ -283,6 +283,36 @@ class TestSuccessfulContractVariants(BaseAPIProjectTestCase):
         assert_api_response(response)
 
     @pytest.mark.skip_if_lighttest
+    def test_download_missing_source_at_valid_revision(self) -> None:
+        get_pool().prepare(self.project)
+        repo = self.project.git_repo
+        self.addCleanup(repo.close)
+        commit = repo.head.commit
+        routes: list[tuple[str, dict[str, Any]]] = [
+            (
+                "project-download",
+                {"id": self.project.id, "fileformat": "ariane_tml"},
+            ),
+            (
+                "project-download-at-hash",
+                {
+                    "id": self.project.id,
+                    "fileformat": "ariane_tml",
+                    "hexsha": commit.hexsha,
+                },
+            ),
+        ]
+        for route, kwargs in routes:
+            response = self.client.get(
+                reverse("api:v2:" + route, kwargs=kwargs),
+                headers={"authorization": self.auth},
+            )
+            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+            assert "ariane.tml" in response.data["error"]
+            assert commit.hexsha in response.data["error"]
+            assert_api_response(response)
+
+    @pytest.mark.skip_if_lighttest
     def test_project_revision_and_download_variants(self) -> None:
         get_pool().prepare(self.project)
         repo = self.project.git_repo

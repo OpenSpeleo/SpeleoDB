@@ -2375,6 +2375,7 @@ paths:
               - install_date
               - latitude
               - longitude
+              - project
           application/x-www-form-urlencoded:
             schema:
               type: object
@@ -2468,6 +2469,7 @@ paths:
               - install_date
               - latitude
               - longitude
+              - project
           multipart/form-data:
             schema:
               type: object
@@ -2561,6 +2563,7 @@ paths:
               - install_date
               - latitude
               - longitude
+              - project
         required: true
       security:
       - cookieAuth: []
@@ -21317,6 +21320,43 @@ paths:
                 type: string
                 format: binary
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - type: object
+                  minProperties: 1
+                  additionalProperties:
+                    oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                - type: object
+                  required:
+                  - error
+                  properties:
+                    error:
+                      type: string
+                - type: object
+                  required:
+                  - detail
+                  properties:
+                    detail:
+                      type: string
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      oneOf:
+                      - type: object
+                        additionalProperties: true
+                      - type: array
+                        items:
+                          type: string
+          description: API request failed.
         '403':
           content:
             application/json:
@@ -21355,7 +21395,6 @@ paths:
                           type: string
           description: API request failed.
         '404':
-          description: API request failed.
           content:
             application/json:
               schema:
@@ -21391,6 +21430,81 @@ paths:
                       - type: array
                         items:
                           type: string
+          description: API request failed.
+        '422':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - type: object
+                  minProperties: 1
+                  additionalProperties:
+                    oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                - type: object
+                  required:
+                  - error
+                  properties:
+                    error:
+                      type: string
+                - type: object
+                  required:
+                  - detail
+                  properties:
+                    detail:
+                      type: string
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      oneOf:
+                      - type: object
+                        additionalProperties: true
+                      - type: array
+                        items:
+                          type: string
+          description: API request failed.
+        '500':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - type: object
+                  minProperties: 1
+                  additionalProperties:
+                    oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                - type: object
+                  required:
+                  - error
+                  properties:
+                    error:
+                      type: string
+                - type: object
+                  required:
+                  - detail
+                  properties:
+                    detail:
+                      type: string
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      oneOf:
+                      - type: object
+                        additionalProperties: true
+                      - type: array
+                        items:
+                          type: string
+          description: API request failed.
   /api/v2/projects/{id}/download/blob/{hexsha}/:
     get:
       operationId: v2_projects_download_blob_retrieve
@@ -40047,6 +40161,7 @@ components:
       - install_date
       - latitude
       - longitude
+      - project
     CylinderInstallFeatureProperties:
       type: object
       properties:

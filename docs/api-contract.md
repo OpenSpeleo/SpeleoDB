@@ -157,7 +157,8 @@ response. Do not work around nullable failures by dropping required properties.
 2. Fix the runtime behavior first if a defect is demonstrated. Keep server-owned
    values server-owned: a read-only serializer field ignores values inserted
    into input data, so pass provenance such as `created_by` explicitly to
-   `save()`.
+   `save()`. Use creation-specific serializers for both request validation and
+   schema declarations when creation requires fields that updates may omit.
 3. Declare transport differences at the source. Keep existing `operation_id`
    values stable: they are generated client API names. A change from one object
    to an array must not accidentally rename an established operation from
@@ -183,6 +184,16 @@ fields optional while those fields are always present in output. Conversely,
 project coordinates and selected context-dependent fields can genuinely be
 omitted. Nullable means a present key can contain `null`; it does not mean the
 key may be absent. Context-annotated fields require endpoint-specific attention.
+For example, cylinder installation creation requires a non-null `project`;
+PUT/PATCH may omit it to preserve the existing association. Test an otherwise
+valid creation with only that field missing, so unrelated validation errors
+cannot hide a database constraint failure.
+
+When a route-specific subclass delegates to a shared handler, retain the whole
+handler's response contract. Project downloads at the current revision and at a
+specified commit share binary success and JSON 400/403/404/422/500 declarations.
+A valid commit without the requested source file returns 422 on either route.
+Changing the operation ID must not drop inherited error statuses.
 
 Use numeric or string alternatives where DRF accepts both, such as decimal
 coordinate inputs. Do not copy database storage types into response types when
@@ -424,13 +435,15 @@ legitimate dynamic data.
 Profile PUT updates the authenticated user rather than constructing a new user.
 Creation paths save server-owned audit fields explicitly. Initial sensor rows
 are validated before a fleet is saved, and their creator is recorded. A cylinder
-installation's project cannot be cleared because its model requires that foreign
-key; invalid null requests return 400. Nullable installation values can still be
-cleared using all supported media. A station with no tag returns JSON `null`,
-rather than an empty body labeled JSON. Project-team permission lookup reads its
-team identifier from the GET query. Spreadsheet tools return validation errors
-for missing required inputs instead of leaking KeyError/TypeError as server
-errors.
+installation requires its project on creation and cannot clear it later because
+its model requires that foreign key; omitted creation fields and invalid null
+requests return 400. Updates preserve an omitted project. Creation records the
+authenticated installer and creator even when the input attempts to override
+them. Nullable installation values can still be cleared using all supported
+media. A station with no tag returns JSON `null`, rather than an empty body
+labeled JSON. Project-team permission lookup reads its team identifier from the
+GET query. Spreadsheet tools return validation errors for missing required
+inputs instead of leaking KeyError/TypeError as server errors.
 
 `HeadlessAwareHijackUserMiddleware` preserves Django's session-aware lazy user
 for only the two mounted allauth **app** route prefixes. The original
@@ -483,14 +496,22 @@ regenerate, synchronize, stage, or commit files. Web's export check owns
 freshness against backend declarations. No second schema is stored in the SDK
 repository or its published package.
 
-To regenerate during unpublished backend work, first export and verify backend
-behavior, update the SDK record's `sha256` to that file's digest, and set its
-`revision` to `null`. From the monorepo root:
+An exported backend correction can be ahead of the published SDK. The existing
+SDK provenance must continue identifying the backend commit that produced that
+release. In this state, the cross-repository digest comparison correctly fails;
+do not edit the published release's source pin, fabricate a revision, or weaken
+the gate. Completing synchronization requires the reviewed backend commit to be
+available upstream, followed by SDK regeneration from its real commit and
+digest, a new SDK release, and consumer version/lock updates.
+
+For draft generation before that coordinated release, use an isolated SDK
+checkout, update that draft's `sha256` to the exported file's digest, and set
+its `revision` to `null`. Supply the canonical file explicitly; the SDK never
+discovers sibling repositories:
 
 ```sh
-# Supply the canonical file explicitly; the SDK never discovers sibling repos.
-export SPELEODB_OPENAPI_PATH="$(pwd)/apps/web/OpenAPI.yaml"
-cd packages/typescript/api
+export SPELEODB_OPENAPI_PATH="/absolute/path/to/web/OpenAPI.yaml"
+cd /absolute/path/to/isolated-sdk-checkout
 bun run generate
 bun run generate:check
 bun run typecheck
@@ -503,8 +524,9 @@ publish the reviewed backend commit, record its actual immutable revision in
 `openapi-source.json`, and unset `SPELEODB_OPENAPI_PATH`. The default SDK loader
 then fetches `OpenAPI.yaml` from that exact backend revision and rejects changed
 bytes, redirects and download failures. A null revision is a local maintenance
-state, not a release-ready source pin. Follow the SDK maintenance guide for
-trusted publishing and consumer release order.
+state that requires the explicit local input for every generation/check command,
+not a release-ready source pin. Keep it out of the released SDK checkout. Follow
+the SDK maintenance guide for trusted publishing and consumer release order.
 
 Use the SDK's current package scripts and maintenance guide as the authority for
 its checks. Review the generated diff, including removals, operation names,
