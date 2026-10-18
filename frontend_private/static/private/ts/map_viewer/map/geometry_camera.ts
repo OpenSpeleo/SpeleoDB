@@ -1,37 +1,14 @@
+import { computeCameraPadding, type Rectangle, type CameraPadding } from '@speleodb/map-viewer/camera-padding';
 import { DEFAULTS } from '../config.ts';
-import type { CameraBounds, CameraPadding, FlatBounds, GeometryCameraMap, Rectangle } from '../../../../../../ts-types/domain/map-geometry.ts';
+import type { CameraBounds, FlatBounds, GeometryCameraMap } from '../../../../../../ts-types/domain/map-geometry.ts';
 
-const area = (rectangle: Rectangle) => Math.max(0, rectangle.right - rectangle.left)
-    * Math.max(0, rectangle.bottom - rectangle.top);
-
-/** Fit into the visible, unobstructed map instead of the whole canvas. */
+/** Web camera margins remain application policy; rectangle fitting is shared. */
 export function geometryCameraPadding(map: Rectangle, viewport: Rectangle, obstacles: Rectangle[] = []): CameraPadding | number {
-    let free = {
-        left: Math.max(map.left, viewport.left), right: Math.min(map.right, viewport.right),
-        top: Math.max(map.top, viewport.top), bottom: Math.min(map.bottom, viewport.bottom),
-    };
-    if (!area(free)) return DEFAULTS.MAP.FIT_BOUNDS_PADDING;
-    for (const obstacle of obstacles) {
-        if (!area(obstacle) || obstacle.right <= free.left || obstacle.left >= free.right
-            || obstacle.bottom <= free.top || obstacle.top >= free.bottom) continue;
-        // Keep the largest remaining rectangle. Each cut preserves clearance
-        // from all previously considered panels, with constant work per panel.
-        const choices = [
-            { ...free, right: Math.max(free.left, obstacle.left) },
-            { ...free, left: Math.min(free.right, obstacle.right) },
-            { ...free, bottom: Math.max(free.top, obstacle.top) },
-            { ...free, top: Math.min(free.bottom, obstacle.bottom) },
-        ];
-        const next = choices.reduce((best, choice) => area(choice) > area(best) ? choice : best);
-        if (area(next)) free = next;
-    }
-    const margin = Math.min(DEFAULTS.MAP.FIT_BOUNDS_PADDING,
-        (free.right - free.left) * DEFAULTS.GIS_GEOMETRY.FIT_MARGIN_RATIO,
-        (free.bottom - free.top) * DEFAULTS.GIS_GEOMETRY.FIT_MARGIN_RATIO);
-    return {
-        left: free.left - map.left + margin, right: map.right - free.right + margin,
-        top: free.top - map.top + margin, bottom: map.bottom - free.bottom + margin,
-    };
+    return computeCameraPadding(map, viewport, {
+        padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING,
+        marginRatio: DEFAULTS.GIS_GEOMETRY.FIT_MARGIN_RATIO,
+        obstacles,
+    });
 }
 
 export function fitGISGeometry(map: GeometryCameraMap, bounds: CameraBounds | null | undefined) {

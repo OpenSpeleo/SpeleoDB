@@ -1,7 +1,9 @@
+import { createCoordinateBounds, decodeGeoJSONBBox } from '@speleodb/map-core/coordinate-bounds';
+import type { CoordinateBounds, CoordinateBoundsAccumulator } from '@speleodb/map-core/coordinate-bounds';
 import { createPreparationRunner, transformGeometrySteps } from '@speleodb/map-core/preparation';
-import type { FeatureCollection, Geometry, Position } from 'geojson';
+import type { FeatureCollection, Geometry } from 'geojson';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
-import type { BoundedData, BoundsPreparationOptions, PreparationBounds, PreparationOptions, PreparedBounds, PreparedProject, PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
+import type { BoundsPreparationOptions, PreparationOptions, PreparedProject, PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
 import type { DisplayGeometry, DisplayGeometryType, ViewerFeature, ViewerGeoJSON } from '../../../../../../ts-types/domain/map-geometry.ts';
 import { DEFAULTS } from '../config.ts';
 import { DepthUtils, resolveLineDepthValue } from './depth.ts';
@@ -9,94 +11,15 @@ import { GEOMETRY_TYPES, GIS_GEOMETRY_TYPE_PROPERTY } from './gis_layer_geometry
 
 const runPreparation = createPreparationRunner({ budgetMs: DEFAULTS.VIEWER_WORK.BUDGET_MS });
 
-function readBBox(data: BoundedData | null | undefined): PreparedBounds | null {
-    const bbox = data?.bbox;
-    if (!Array.isArray(bbox) || bbox.length < 4 || bbox.length % 2 || !bbox.every(Number.isFinite)) return null;
-    const dimensions = bbox.length / 2;
-    const west = bbox[0];
-    const east = bbox[dimensions]! < west ? bbox[dimensions]! + DEFAULTS.MAP.ANTIMERIDIAN_WRAP_DEGREES : bbox[dimensions]!;
-    return [[west, bbox[1]], [east, bbox[dimensions + 1]!]];
-}
-
-function createBounds(data: BoundedData | null | undefined, wrapLongitude: boolean): PreparationBounds {
-    return {
-        bbox: readBBox(data), wrapLongitude, longitudes: [],
-        west: Infinity, east: -Infinity, south: Infinity, north: -Infinity,
-    };
-}
-
-function extendBounds(bounds: PreparationBounds, coordinates: Position) {
-    if (bounds.bbox) return;
-    const [longitude, latitude] = coordinates as [number, number, ...number[]];
-    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return;
-    if (bounds.wrapLongitude) {
-        const fullTurn = DEFAULTS.MAP.ANTIMERIDIAN_WRAP_DEGREES;
-        bounds.longitudes.push(((longitude % fullTurn) + fullTurn) % fullTurn);
-    } else {
-        bounds.west = Math.min(bounds.west, longitude);
-        bounds.east = Math.max(bounds.east, longitude);
-    }
-    bounds.south = Math.min(bounds.south, latitude);
-    bounds.north = Math.max(bounds.north, latitude);
-}
-
-/** Bottom-up merge sort avoids a single uninterruptible Array.sort call. */
-function* sortLongitudes(values: number[]): Generator<void, number[], unknown> {
-    let sorted = values;
-    let scratch = new Array<number>(values.length);
-    for (let width = 1; width < values.length; width *= 2) {
-        for (let start = 0; start < values.length; start += width * 2) {
-            const middle = Math.min(start + width, values.length);
-            const end = Math.min(start + width * 2, values.length);
-            let left = start;
-            let right = middle;
-            for (let out = start; out < end; out += 1) {
-                scratch[out] = left < middle && (right >= end || sorted[left]! <= sorted[right]!)
-                    ? sorted[left++]! : sorted[right++]!;
-                yield;
-            }
-        }
-        [sorted, scratch] = [scratch, sorted];
-    }
-    return sorted;
-}
-
-function* finishBounds(bounds: PreparationBounds): Generator<void, PreparedBounds | null, unknown> {
-    if (bounds.bbox) return bounds.bbox;
-    if (!Number.isFinite(bounds.south)) return null;
-    if (!bounds.wrapLongitude) return [[bounds.west, bounds.south], [bounds.east, bounds.north]];
-    const longitudes = yield* sortLongitudes(bounds.longitudes);
-    const fullTurn = DEFAULTS.MAP.ANTIMERIDIAN_WRAP_DEGREES;
-    let largestGap = -Infinity;
-    let gapIndex = 0;
-    for (let index = 0; index < longitudes.length; index += 1) {
-        const next = index === longitudes.length - 1 ? longitudes[0]! + fullTurn : longitudes[index + 1]!;
-        const gap = next - longitudes[index]!;
-        if (gap > largestGap) {
-            largestGap = gap;
-            gapIndex = index;
-        }
-        yield;
-    }
-    let west = longitudes[(gapIndex + 1) % longitudes.length]!;
-    let east = longitudes[gapIndex]!;
-    if (east < west) east += fullTurn;
-    if (west > fullTurn / 2) {
-        west -= fullTurn;
-        east -= fullTurn;
-    }
-    return [[west, bounds.south], [east, bounds.north]];
-}
-
-function* prepareGeometry<G extends Geometry | null | undefined>(geometry: G, bounds: PreparationBounds, flatten: boolean): Generator<void, G, unknown> {
+function* prepareGeometry<G extends Geometry | null | undefined>(geometry: G, bounds: CoordinateBoundsAccumulator, flatten: boolean): Generator<void, G, unknown> {
     return yield* transformGeometrySteps(geometry, {
-        visitPosition: position => extendBounds(bounds, position),
+        visitPosition: bounds.extend,
         flattenAltitude: flatten,
     });
 }
 
-function* boundsSteps(data: ViewerGeoJSON | null | undefined, wrapLongitude: boolean): Generator<void, PreparedBounds | null, unknown> {
-    const bounds = createBounds(data, wrapLongitude);
+function* boundsSteps(data: ViewerGeoJSON | null | undefined, wrapLongitude: boolean): Generator<void, CoordinateBounds | null, unknown> {
+    const bounds = createCoordinateBounds({ bbox: decodeGeoJSONBBox(data?.bbox), wrapLongitude });
     if (!bounds.bbox) {
         if (data?.type === 'FeatureCollection') {
             for (const feature of data.features || []) {
@@ -107,7 +30,7 @@ function* boundsSteps(data: ViewerGeoJSON | null | undefined, wrapLongitude: boo
             yield* prepareGeometry(data?.type === 'Feature' ? data.geometry : data, bounds, false);
         }
     }
-    return yield* finishBounds(bounds);
+    return yield* bounds.finishSteps();
 }
 
 /** Return a portable [[west, south], [east, north]] pair, or null. */
@@ -150,7 +73,7 @@ function* projectSteps<Data extends ViewerGeoJSON | null | undefined>(raw: Data)
     }
     const domain = Number.isFinite(maximum) ? { min: 0, max: Math.max(0, maximum) } : null;
     const denominator = domain ? Math.max(DEFAULTS.DEPTH.ZERO_DOMAIN_MAX_FEET, domain.max) : 1;
-    const bounds = createBounds(raw, true);
+    const bounds = createCoordinateBounds({ bbox: decodeGeoJSONBBox(raw?.bbox) });
     const features: ViewerFeature[] = [];
     const snapPoints: PreparedSnapPoint[] = [];
     for (let index = 0; index < collection.features.length; index += 1) {
@@ -185,7 +108,7 @@ function* projectSteps<Data extends ViewerGeoJSON | null | undefined>(raw: Data)
         features.push(feature);
         yield;
     }
-    return { data: { ...raw, features }, domain, snapPoints, boundsCoordinates: yield* finishBounds(bounds) };
+    return { data: { ...raw, features }, domain, snapPoints, boundsCoordinates: yield* bounds.finishSteps() };
 }
 
 /** Immutable preparation; callers publish the complete result only if still current. */

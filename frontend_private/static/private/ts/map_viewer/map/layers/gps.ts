@@ -2,7 +2,7 @@ import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerGeoJSON } from '../../../../../../../ts-types/domain/map-geometry.ts';
 import type { OverlayInstallOptions, PreparedGPSOverlay } from '../../../../../../../ts-types/domain/map-layers.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { Config, DEFAULTS } from '../../config.ts';
 import { State } from '../../state.ts';
 import { API } from '../../api.ts';

@@ -1,5 +1,5 @@
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
 import type { Feature, FeatureCollection, Point } from 'geojson';

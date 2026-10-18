@@ -88,7 +88,7 @@ import type { ColorMode } from '../../../../../../ts-types/domain/map-display.ts
 import type { RendererLngLat, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
 import type { GISPopupFeature } from '../../../../../../ts-types/domain/map-layers.ts';
 
-import type { ViewerUpdateContext } from '../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateContext } from '@speleodb/map-viewer/update-scheduler';
 import { Config, DEFAULTS } from '../config.ts';
 import { State } from '../state.ts';
 

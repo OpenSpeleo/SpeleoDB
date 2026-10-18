@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { build } from 'vite';
-import { applyGeoJSONNodes } from '../../frontend_private/static/private/ts/map_viewer/map/geojson_transport.ts';
+import { applyGeoJSONNodes } from '@speleodb/map-core/geojson-transport';
 import type { JSONContainer } from '../../ts-types/domain/json.ts';
 import type { GeoJSONWorkerRequest, GeoJSONWorkerResponse } from '../../ts-types/worker/geojson.ts';
 

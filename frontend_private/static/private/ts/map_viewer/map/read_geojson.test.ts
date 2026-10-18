@@ -1,7 +1,7 @@
 import { TextEncoder, TextDecoder } from 'node:util';
-import { geoJSONMessages, applyGeoJSONNodes } from './geojson_transport.ts';
+import { geoJSONMessages } from '@speleodb/map-core/geojson-transport';
 import { readViewerGeoJSON } from './read_geojson.ts';
-import type { JSONContainer, JSONObject, JSONValue } from '../../../../../../ts-types/domain/json.ts';
+import type { JSONValue } from '../../../../../../ts-types/domain/json.ts';
 import type { GeoJSONWorkerRequest, GeoJSONWorkerResponse } from '../../../../../../ts-types/worker/geojson.ts';
 
 vi.mock('../config.ts', () => ({ DEFAULTS: { VIEWER_WORK: { WORKER_PARSE_BYTES: 100, WORKER_NODE_BATCH_SIZE: 2 } } }));
@@ -120,46 +120,6 @@ it('reports parser failure without exposing private data and cleans up the worke
     const response = { arrayBuffer: async () => new TextEncoder().encode('private malformed survey'.repeat(10)).buffer };
     await expect(readViewerGeoJSON(response)).rejects.toThrow('Unable to parse viewer GeoJSON');
     expect(WorkerDouble.instances[0]!.terminated).toBe(true);
-});
-
-it('bounds transport batches and preserves all JSON metadata without prototype mutation', () => {
-    const input = JSON.parse(JSON.stringify(large).replace('"name":"Private survey"', '"__proto__":{"testMarker":true},"name":"Private survey"')) as JSONValue;
-    const buffer = new TextEncoder().encode(JSON.stringify(input)).buffer;
-    const messages = [...geoJSONMessages(buffer, 2)];
-    const restored = {};
-    const containers = new Map<number, JSONContainer>([[0, restored]]);
-    expect(messages[0]).toEqual({ type: 'start', array: false });
-    for (const message of messages.filter(message => message.type === 'nodes')) {
-        expect(message.nodes.length).toBeLessThanOrEqual(2);
-        applyGeoJSONNodes(containers, message.nodes);
-    }
-    expect(restored).toEqual(input);
-    expect(Object.getPrototypeOf(restored)).toBe(Object.prototype);
-    expect(({} as JSONObject).testMarker).toBeUndefined();
-    expect(messages.at(-1)).toEqual({ type: 'complete' });
-});
-
-it('splits a single huge coordinate array into bounded messages', () => {
-    const input = { type: 'Feature', geometry: { type: 'LineString',
-        coordinates: Array.from({ length: 100_000 }, (_, index) => [index, 1, 2]),
-    }, properties: { name: 'Long line' } };
-    const restored = {};
-    const containers = new Map<number, JSONContainer>([[0, restored]]);
-    let batches = 0;
-    let maximumLeafLength = 0;
-    const buffer = new TextEncoder().encode(JSON.stringify(input)).buffer;
-    for (const message of geoJSONMessages(buffer, 1000)) {
-        if (message.type !== 'nodes') continue;
-        expect(message.nodes.length).toBeLessThanOrEqual(1000);
-        for (const node of message.nodes) {
-            if (Array.isArray(node.value)) maximumLeafLength = Math.max(maximumLeafLength, node.value.length);
-        }
-        applyGeoJSONNodes(containers, message.nodes);
-        batches++;
-    }
-    expect(batches).toBeGreaterThan(100);
-    expect(maximumLeafLength).toBeLessThanOrEqual(4);
-    expect(restored).toEqual(input);
 });
 
 it('also omits private parser excerpts on small and native-fallback responses', async () => {

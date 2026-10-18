@@ -510,7 +510,9 @@ slices from JSON parsing and renderer ingestion, which are separate work.
 `readViewerGeoJSON(response, { isCurrent, yieldWork })` transfers downloaded
 buffers at or above `DEFAULTS.VIEWER_WORK.WORKER_PARSE_BYTES` to a Vite module
 worker for JSON parsing. It sends no network requests and carries no
-credentials. Parsed JSON returns in batches of tree nodes controlled by
+credentials. The worker uses `geoJSONMessages` and the receiver uses
+`applyGeoJSONNodes` from `@speleodb/map-core/geojson-transport`. Parsed JSON
+returns in batches of tree nodes controlled by
 `DEFAULTS.VIEWER_WORK.WORKER_NODE_BATCH_SIZE`; the main thread yields before
 acknowledging each batch. This prevents a single large structured clone from
 replacing the parsing stall. Completion returns the original GeoJSON shape for

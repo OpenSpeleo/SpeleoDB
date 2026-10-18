@@ -1,34 +1,15 @@
+import type { CameraPadding } from '@speleodb/map-viewer/camera-padding';
 import { geometryCameraPadding, fitGISGeometry } from './geometry_camera.ts';
-import type { CameraBounds, CameraPadding, FlatBounds, GeometryCameraMap } from '../../../../../../ts-types/domain/map-geometry.ts';
+import type { CameraBounds, FlatBounds, GeometryCameraMap } from '../../../../../../ts-types/domain/map-geometry.ts';
 
 const rectangle = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom, width: right - left, height: bottom - top });
 
-it('fits the full bounds beside the desktop editor and below the project panel', () => {
+it('applies the web margin policy around its panels', () => {
     const map = rectangle(0, 0, 1200, 800);
     const padding = geometryCameraPadding(map, map, [
         rectangle(784, 16, 1144, 760), rectangle(16, 16, 266, 96),
     ]) as CameraPadding;
     expect(padding).toEqual({ left: 50, right: 466, top: 146, bottom: 50 });
-});
-
-it('accounts for the offscreen map tail and mobile bottom sheet', () => {
-    const map = rectangle(33, 220, 357, 983);
-    const padding = geometryCameraPadding(map, rectangle(0, 0, 390, 844), [
-        rectangle(43, 450, 347, 834), rectangle(49, 236, 299, 306),
-    ]) as CameraPadding;
-    expect(map.top + padding.top).toBeGreaterThan(306);
-    expect(map.bottom - padding.bottom).toBeLessThan(450);
-    expect(map.left + padding.left).toBeGreaterThan(33);
-    expect(map.right - padding.right).toBeLessThan(357);
-});
-
-it('keeps padding valid on small viewports and after fullscreen expansion', () => {
-    for (const size of [120, 390, 1440]) {
-        const map = rectangle(0, 0, size, size);
-        const padding = geometryCameraPadding(map, map) as CameraPadding;
-        expect(padding.left + padding.right).toBeLessThan(size);
-        expect(padding.top + padding.bottom).toBeLessThan(size);
-    }
 });
 
 it('uses transient fit padding and clears tilt so no bounding-box corner is clipped', () => {

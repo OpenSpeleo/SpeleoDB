@@ -1,25 +1,42 @@
 # Viewer responsiveness browser checks
 
 Run these tests inside the existing Django application container after a clean
-`bun run build`, with other CPU-intensive suites stopped:
+`bun run build`, with other CPU-intensive suites stopped. Use the Django wrapper
+as the default entrypoint; it creates isolated users, public views and
+controller fixtures. Configure its PostgreSQL test database as described below.
 
 ```bash
-bun run test:browser
+pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
+  -o faulthandler_timeout=1860
 ```
 
-The suite uses Chromium and WebKit with the real MapLibre renderer, a minimal
-local style, deterministic intercepted viewer APIs, and the normal Django
-headless login endpoint. It does not create, change, or delete project records.
-Authenticated cases reuse the initial real login's storage state within each
-Playwright worker instead of repeatedly consuming the production login rate
-limit. The snapshot stays in memory and is captured before application
-navigation; each test still gets a fresh browser context and independent
-preferences. Anonymous cases do not apply it. The stress case loads 60 projects
-and 120,000 segments. Other cases isolate a 100,000-vertex GPS geometry and
-nested GIS geometry types. The harness observes the imported engine instance
-through `speleo:map-created` and intercepts provider HTTP data. Native engine
-worker behavior, all fixtures, production application work and real rendering
-remain enabled.
+The responsiveness fixtures use Chromium and WebKit with the real MapLibre
+renderer, a minimal local style, deterministic intercepted viewer APIs, and the
+normal Django headless login endpoint. They do not create, change, or delete
+project records. Authenticated cases reuse the initial real login's storage
+state within each Playwright worker instead of repeatedly consuming the
+production login rate limit. The snapshot stays in memory and is captured before
+application navigation; each test still gets a fresh browser context and
+independent preferences. Anonymous cases do not apply it. The stress case loads
+60 projects and 120,000 segments. Other cases isolate a 100,000-vertex GPS
+geometry and nested GIS geometry types. The harness observes the imported engine
+instance through `speleo:map-created` and intercepts provider HTTP data. Native
+engine worker behavior, all fixtures, production application work and real
+rendering remain enabled.
+
+`viewer-gestures.spec.ts` independently exercises real private/public viewer
+initialization, provider HTTP and application APIs without interception or
+method replacement. It measures every step of repeated cardinal pans following
+wheel crossings through the globe/Mercator transition, with normal/reduced
+motion and concurrent updates to 24,000 generated line features. Additional
+touch cases pause after releasing one pinch contact, verify that the remaining
+contact survives camera completion, then measure every step of its drag. Run
+through the Django wrapper below with
+`VIEWER_BROWSER_GREP='projection-crossing gestures|paused pinch handoff'` for
+isolated public/private database fixtures. The configured basemap provider must
+be reachable. See the
+[gesture regression contract](../../docs/map-viewer/testing-and-quality.md#projection-crossing-pan-regressions)
+for the one-pixel invariant, evidence attachments and device limitations.
 
 `VIEWER_BROWSER_BASE_URL` defaults to `http://127.0.0.1:8000`.
 `VIEWER_BROWSER_EMAIL` and `VIEWER_BROWSER_PASSWORD` default to the documented
@@ -27,6 +44,12 @@ local development account. Set them explicitly for a different development
 server. Install Playwright's Chromium/WebKit binaries and required system
 libraries in the test container before running; no separate Django stack is
 started by the suite.
+
+Direct `bun run test:browser` execution against an existing server requires
+`VIEWER_BROWSER_PUBLIC_URL` for public cases and `VIEWER_BROWSER_ROUTES` for
+database-backed controller cases. Prefer the wrapper for the complete suite; it
+supplies both from its isolated database instead of requiring persistent
+development records.
 
 Assertions cover native control state in the first animation-frame callback and
 verify that map mutations have not preceded it. A separate nested second-frame

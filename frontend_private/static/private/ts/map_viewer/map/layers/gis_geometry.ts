@@ -2,7 +2,7 @@ import { createGeometryLabelFeature } from '@speleodb/map-core';
 import { createGeometryLabelLayer } from '@speleodb/map-viewer';
 import type { RendererLayer } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
 import type { GISGeometryResponse } from '../../../../../../../ts-types/domain/map-config.ts';

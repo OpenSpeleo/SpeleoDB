@@ -2,10 +2,12 @@
 
 The web and mobile viewers consume two SpeleoDB packages. `@speleodb/map-core`
 owns portable geometry, depth, bounds, visibility and unit algorithms.
-`@speleodb/map-viewer` owns MapLibre style expressions, layer specifications and
-identical marker artwork and the globe atmosphere renderer. App code owns
-backend transport, permissions, persistence, scheduling, user interaction and
-provider selection. These are SpeleoDB libraries, not a generic map framework.
+`@speleodb/map-viewer` owns MapLibre style expressions, layer specifications,
+marker artwork, globe atmosphere, paint/update scheduling, camera-intent
+ownership, globe-style normalization and visible-rectangle camera padding. App
+code owns backend transport, permissions, persistence, scheduling budgets,
+interaction policy, instance lifecycle and provider selection. These are
+SpeleoDB libraries, not a generic map framework.
 
 The web startup camera is application-owned: a wide globe centred on France
 (`DEFAULTS.MAP.CENTER`, zoom `0`). Provider camera metadata is discarded. The
@@ -55,6 +57,39 @@ prevents unresolved sibling worker URLs after engine code is placed in hashed
 chunks. Geometry details and project forms link to the viewer and have no
 separate map engine.
 
+Web, mobile and map-viewer use the
+[`DEKHTIARJonathan/maplibre-gl-js` hotpatch fork](https://github.com/DEKHTIARJonathan/maplibre-gl-js/tree/hotpatch),
+based on MapLibre 6.14.0. Map-core remains renderer-independent. The fork owns
+the engine source and distributable build, including the partial-pinch handoff
+correction
+([upstream issue #8809](https://github.com/maplibre/maplibre-gl-js/issues/8809)).
+Ending a pinch with one finger still held can start zoom inertia; when that
+animation naturally ends, upstream camera cleanup resets the held touch handler.
+The next movement is then ignored until another touch starts. The fork prevents
+end inertia while the touch-pan handler retains a contact and clears its
+obsolete velocity samples. Normal `moveend` cleanup still runs, and full finger
+release retains ordinary inertia.
+
+The fork also synchronizes the requested camera's projection transition state
+with the live camera during render
+([upstream issue #8808](https://github.com/maplibre/maplibre-gl-js/issues/8808)).
+A `transformCameraUpdate` callback, including React map wrappers, can keep a
+requested camera whose globe/Mercator blend otherwise becomes stale while
+zooming. Web currently uses the engine directly, but shares this correction so
+the engine's behavior stays consistent across consumers. MapLibre 6.11.1 already
+fixed movement-event delivery through the camera; 6.14.0 uses that upstream
+cleanup without a local event correction.
+
+The application declares `github:DEKHTIARJonathan/maplibre-gl-js#hotpatch`; its
+frozen lock selects an exact fork revision containing the distributable build.
+Vite bundles the installed engine normally; web and shared packages do not
+rewrite engine files during installation or build. Both corrections live beside
+MapLibre's own unit tests, while shared test helpers and the private/public
+browser suites retain application-level gesture coverage. No per-frame
+application callback or GeoJSON traversal is added. Engine upgrades, including a
+return to upstream once it contains both fixes, must pass those mouse and touch
+regressions.
+
 MapLibre changes the engine while preserving web providers. The default remains
 Mapbox Satellite Streets v12 when a token is present, with its real vector city
 and place labels. `normalizeMapboxRequest` maps the classic style, TileJSON,
@@ -95,6 +130,41 @@ API.
 
 ## Shared logic and application policy
 
+Bounded GeoJSON tree transport is imported directly from
+`@speleodb/map-core/geojson-transport`. The module worker and main-thread reader
+share that implementation and its message types; web retains parse thresholds,
+worker lifecycle, scheduling and sanitized errors. Its portable round-trip,
+prototype-preservation and huge-coordinate-array tests live in map-core.
+
+Endpoint snapping calls `findNearestGeographicCandidate` from map-core through
+one web adapter that filters visible projects and keeps their original endpoint
+arrays. Web retains project ownership, configured distance/radius and the two
+public result shapes. Stable ties and zero-distance early exit belong to the
+shared selection algorithm. Hover, click, drag and context-menu hit rectangles
+use the existing map-viewer `hitQueryBounds`; radii and event dispatch stay web
+policy. Shared types are imported from their package subpaths directly.
+
+The `viewer_updates.ts` adapter creates the web-owned queue with a callback to
+`DEFAULTS.VIEWER_WORK.BUDGET_MS`. The shared scheduler preserves a separate
+two-frame and future-task paint boundary for every job, keyed coalescing,
+cooperative yielding and teardown cancellation. Web does not set the mobile
+WebView fallback deadline. Network work remains outside the queue.
+
+The `map/navigation_intent.ts` adapter owns one shared navigation controller for
+the current web viewer. All entity controllers compete for its latest intent;
+user-originated `movestart` events and map replacement invalidate deferred
+camera work. Teardown removes the gesture subscription. Visibility, permissions
+and entity-specific camera destinations remain in the web controllers.
+
+Provider style transforms call `normalizeGlobeStyle`; the shared helper strips
+provider camera metadata while retaining source/layer identity and cache URLs.
+`geometryCameraPadding` supplies the web padding cap and margin ratio to shared
+`computeCameraPadding`. Web retains visual-viewport measurements, panel and
+editor selectors, dateline handling and transient north-up `fitBounds` options.
+The shared rectangle algorithm uses ordered greedy cuts, preserves the previous
+region when an obstacle fully covers it, and returns the configured numeric
+fallback for an empty visible intersection.
+
 Web layer adapters use shared overview stroke construction, shot/depth color
 expressions, station/landmark specifications and GIS vector specifications. They
 supply existing source and layer IDs, colors, zoom thresholds, width and size
@@ -133,12 +203,14 @@ existing preparation caches and are not rebuilt by display toggles.
 
 ## Verification
 
-The package suites test shared algorithms and expression/layer builders. Web
-suites retain app policy, permission, persistence, scheduling and both real
-composition roots. Provider normalization tests cover source identity, retina
-sprites, glyph paths and credential boundaries; raster protocol tests cover
-missing-data hashes, abort propagation and cache metadata. Existing marker
-mutation tests verify source/record identity using registered app-owned data.
+The package suites test shared algorithms, scheduling and cancellation, camera
+intent using actual MapLibre events, style identity and rectangle fitting as
+well as expression/layer builders. Web suites retain singleton ownership,
+configuration, app policy, permissions, persistence and both real composition
+roots. Provider normalization tests cover source identity, retina sprites, glyph
+paths and credential boundaries; raster protocol tests cover missing-data
+hashes, abort propagation and cache metadata. Existing marker mutation tests
+verify source/record identity using registered app-owned data.
 
 The Playwright fixture observes `speleo:map-created` and instruments the actual
 imported MapLibre instance, intercepting provider data at the network boundary.
@@ -160,7 +232,7 @@ bun run build
 Standalone production builds consume exact npm releases of
 [`@speleodb/map-core`](https://www.npmjs.com/package/@speleodb/map-core) and
 [`@speleodb/map-viewer`](https://www.npmjs.com/package/@speleodb/map-viewer).
-Both currently use `0.1.0`. The application manifest and Bun lock pin those
+Both currently use `0.2.0`. The application manifest and Bun lock pin those
 versions and archive integrity. The matching `map-core` override keeps the
 viewer's compatible core dependency on the same installed version.
 `bun run check:shared-packages` rejects local paths, Git dependencies, version
@@ -179,8 +251,9 @@ rewriting exports. `SPELEODB_LOCAL_PACKAGES=1` verifies that both packages came
 from this overlay and rejects missing local packages. Canonical TypeScript, Vite
 and Vitest resolution preserve installed symlink paths so shared sources resolve
 dependencies from the application's installation. Package code stays independent
-of Django and browser globals. See the monorepo TypeScript package documentation
-for packaging, local overlays and publication sequencing.
+of Django and application globals; browser scheduling uses explicit cancellable
+ports and detects animation-frame availability. See the monorepo TypeScript
+package documentation for packaging, local overlays and publication sequencing.
 
 The live renderer/provider smoke is opt-in. With a valid configured provider
 token, run it through the Django browser wrapper so the ordinary isolated user

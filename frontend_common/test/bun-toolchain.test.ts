@@ -163,7 +163,7 @@ exit 0
         expect(commands).toContain('mise exec -- bun run build');
     });
 
-    it('keeps every declared dependency and registry archive in the committed lockfile', () => {
+    it('keeps every declared dependency, registry archive and MapLibre fork revision in the committed lockfile', () => {
         for (const group of ['dependencies', 'devDependencies', 'optionalDependencies'] as const) {
             expect(lock.workspaces[''][group] ?? {}).toEqual(packageJson[group] ?? {});
         }
@@ -172,6 +172,17 @@ exit 0
         expect(lock.overrides).toEqual(packageJson.overrides);
 
         for (const [packagePath, lockedPackage] of Object.entries(lock.packages)) {
+            if (packagePath === 'maplibre-gl' || packagePath.endsWith('/maplibre-gl')) {
+                expect(packageJson.dependencies?.['maplibre-gl'])
+                    .toBe('github:DEKHTIARJonathan/maplibre-gl-js#hotpatch');
+                const revision = lockedPackage[0].match(/^maplibre-gl@github:DEKHTIARJonathan\/maplibre-gl-js#([a-f0-9]{7,40})$/)?.[1];
+                expect(revision, `Unpinned MapLibre fork revision for ${packagePath}`).toBeDefined();
+                expect(lockedPackage[1]).toBeTypeOf('object');
+                expect(lockedPackage[1]).toHaveProperty('dependencies');
+                expect(lockedPackage[2]).toBe(`DEKHTIARJonathan-maplibre-gl-js-${revision}`);
+                expect(lockedPackage[3], `Missing fork archive integrity for ${packagePath}`).toMatch(/^sha512-/);
+                continue;
+            }
             const packageName = ['@speleodb/map-core', '@speleodb/map-viewer'].find(name => (
                 packagePath === name || packagePath.endsWith(`/${name}`)
             ));
@@ -181,7 +192,8 @@ exit 0
                 expect(lockedPackage[0], packagePath).toBe(`${packageName}@${declaration}`);
             }
             expect(lockedPackage[0], packagePath).toMatch(/@\d+\.\d+\.\d+/);
-            if (!lockedPackage[2].bundled) {
+            expect(typeof lockedPackage[1], `Unexpected non-registry source for ${packagePath}`).toBe('string');
+            if (typeof lockedPackage[2] !== 'object' || !lockedPackage[2].bundled) {
                 expect(lockedPackage[3], `Missing integrity for ${packagePath}`).toMatch(/^sha512-/);
             }
         }

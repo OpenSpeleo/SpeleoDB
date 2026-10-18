@@ -1,5 +1,5 @@
 import { DEFAULTS } from '../config.ts';
-import { applyGeoJSONNodes } from './geojson_transport.ts';
+import { applyGeoJSONNodes } from '@speleodb/map-core/geojson-transport';
 import type { JSONContainer, JSONValue } from '../../../../../../ts-types/domain/json.ts';
 import type { GeoJSONWorkerResponse } from '../../../../../../ts-types/worker/geojson.ts';
 

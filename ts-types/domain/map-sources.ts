@@ -1,5 +1,5 @@
 import type { RendererLayer, RendererLayout } from './renderer.ts';
-import type { ViewerUpdateContext } from './viewer-updates.ts';
+import type { ViewerUpdateContext } from '@speleodb/map-viewer/update-scheduler';
 
 export interface MapSourceDefinition {
     id: string;

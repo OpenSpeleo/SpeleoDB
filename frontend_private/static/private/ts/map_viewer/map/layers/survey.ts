@@ -2,7 +2,7 @@ import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode, DisplayConcern } from '../../../../../../../ts-types/domain/map-display.ts';
 import type { ViewerGeoJSON } from '../../../../../../../ts-types/domain/map-geometry.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { DEFAULTS } from '../../defaults.ts';
 import { State } from '../../state.ts';
 import { Colors } from '../colors.ts';

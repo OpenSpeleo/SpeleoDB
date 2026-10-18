@@ -1,3 +1,4 @@
+import type { CameraPadding } from '@speleodb/map-viewer/camera-padding';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import type { JSONObject } from './json.ts';
 import type { RendererConstructors } from './renderer.ts';
@@ -15,20 +16,6 @@ export interface RendererBounds {
 }
 
 export type RendererGlobal = RendererConstructors;
-
-export interface Rectangle {
-    left: number;
-    right: number;
-    top: number;
-    bottom: number;
-}
-
-export interface CameraPadding {
-    left: number;
-    right: number;
-    top: number;
-    bottom: number;
-}
 
 export type FlatBounds = readonly [number, number, number, number];
 export type CameraBounds = RendererBounds | FlatBounds | readonly [Coordinate2D, Coordinate2D];

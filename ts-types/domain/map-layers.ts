@@ -1,7 +1,7 @@
 import type { EntityId } from './identifiers.ts';
 import type { FeatureCollection } from 'geojson';
 import type { DisplayGeometry, DisplayGeometryType, ViewerGeoJSON } from './map-geometry.ts';
-import type { PreparedBounds } from './map-preparation.ts';
+import type { CoordinateBounds } from '@speleodb/map-core/coordinate-bounds';
 import type { GISGeometryResponse } from './map-config.ts';
 import type { ViewerMap } from './map-state.ts';
 import type { JSONObject } from './json.ts';
@@ -17,7 +17,7 @@ export interface OverlayRequest {
     controller: AbortController;
     promise: Promise<ViewerGeoJSON>;
 }
-export interface PreparedGPSOverlay { boundsCoordinates: PreparedBounds | null }
+export interface PreparedGPSOverlay { boundsCoordinates: CoordinateBounds | null }
 export interface PreparedGISOverlay extends PreparedGPSOverlay {
     data: FeatureCollection<DisplayGeometry, JSONObject>;
     geometryTypes: DisplayGeometryType[];

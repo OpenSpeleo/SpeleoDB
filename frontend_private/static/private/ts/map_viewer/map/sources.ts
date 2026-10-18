@@ -1,7 +1,7 @@
 import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
 import { Renderer } from './renderer.ts';
 import type { MapSourceDefinition, MapSourceMap, MapSourceControl, MapSourceChangeEvent, RasterStyle, RasterSourceOptions, BackgroundLayer, CheckedTileProtocol } from '../../../../../../ts-types/domain/map-sources.ts';
-import type { ViewerUpdateContext } from '../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateContext } from '@speleodb/map-viewer/update-scheduler';
 import { DEFAULTS, MAP_SOURCES } from '../config.ts';
 import { Utils } from '../utils.ts';
 import { ViewerUpdates } from '../viewer_updates.ts';

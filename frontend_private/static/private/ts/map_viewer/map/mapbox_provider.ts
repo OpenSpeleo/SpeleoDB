@@ -1,3 +1,4 @@
+import { normalizeGlobeStyle } from '@speleodb/map-viewer/style';
 import type { StyleSpecification } from 'maplibre-gl';
 import type { MapControl } from '../../../../../../ts-types/domain/map-core.ts';
 
@@ -37,15 +38,7 @@ export function normalizeMapboxRequest(url: string, accessToken: string): { url:
 
 /** Mapbox classic styles use projection.name; MapLibre uses projection.type. */
 export function normalizeProviderStyle(_previous: StyleSpecification | undefined, next: StyleSpecification): StyleSpecification {
-    const normalized: StyleSpecification = { ...next, projection: { type: 'globe' } };
-    // Provider styles own imagery, not the application's camera. MapLibre can
-    // apply their saved camera even when explicit constructor options are zero.
-    delete normalized.center;
-    delete normalized.zoom;
-    delete normalized.bearing;
-    delete normalized.pitch;
-    delete normalized.roll;
-    return normalized;
+    return normalizeGlobeStyle(next);
 }
 
 /** Keep native source credits while excluding the provider's feedback action. */

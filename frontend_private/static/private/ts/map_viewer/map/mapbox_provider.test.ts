@@ -29,15 +29,18 @@ it.each([
     expect(normalizeMapboxRequest(url, 'secret')).toEqual({ url });
 });
 
-it('translates provider projection while retaining the original source and vector label definitions', () => {
-    const style = { version: 8, sources: {}, layers: [
-        { id: 'settlement-major-label', source: 'composite', type: 'symbol', layout: { 'text-field': ['get', 'name'] } },
-    ], projection: { name: 'globe' } };
-    const normalized = normalizeProviderStyle(undefined, style as unknown as import('maplibre-gl').StyleSpecification);
+it('adapts the MapLibre style transform to shared application-owned globe presentation', () => {
+    const previous: import('maplibre-gl').StyleSpecification = { version: 8, sources: {}, layers: [] };
+    const next: import('maplibre-gl').StyleSpecification = {
+        version: 8, sources: {}, layers: [], center: [55.13, 25.12], zoom: 12,
+    };
+    const normalized = normalizeProviderStyle(previous, next);
     expect(normalized.projection).toEqual({ type: 'globe' });
-    expect(normalized.layers).toBe(style.layers);
-    expect(normalized.sources).toBe(style.sources);
-    expect(style.projection).toEqual({ name: 'globe' });
+    expect(normalized.sources).toBe(next.sources);
+    expect(normalized.layers).toBe(next.layers);
+    expect(normalized).not.toHaveProperty('center');
+    expect(normalized).not.toHaveProperty('zoom');
+    expect(next.center).toEqual([55.13, 25.12]);
 });
 
 it('retains accessible provider artwork and removes its control cleanly', () => {
@@ -49,18 +52,6 @@ it('retains accessible provider artwork and removes its control cleanly', () => 
     expect(element.querySelector('img')?.getAttribute('src')).toBe(new URL('../../../media/mapbox-provider-logo.svg', import.meta.url).href);
     control.onRemove();
     expect(element.isConnected).toBe(false);
-});
-
-it('removes the provider camera without changing the downloaded style', () => {
-    const style: import('maplibre-gl').StyleSpecification = {
-        version: 8, sources: {}, layers: [],
-        center: [55.13, 25.12], zoom: 12, bearing: 30, pitch: 45, roll: 10,
-    };
-    const normalized = normalizeProviderStyle(undefined, style);
-    for (const key of ['center', 'zoom', 'bearing', 'pitch', 'roll'] as const) {
-        expect(normalized).not.toHaveProperty(key);
-        expect(style).toHaveProperty(key);
-    }
 });
 
 describe('native attribution feedback filtering', () => {

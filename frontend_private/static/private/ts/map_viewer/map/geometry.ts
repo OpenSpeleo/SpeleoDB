@@ -1,5 +1,6 @@
 import type { GeometryFacade, SnapInfo } from '../../../../../../ts-types/domain/map-snapping.ts';
-import type { JSONValue } from '../../../../../../ts-types/domain/json.ts';
+import { findNearestGeographicCandidate } from '@speleodb/map-core/nearest';
+import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
 import { isProjectEffectivelyVisible } from './project_visibility.ts';
 import { DEFAULTS } from '../config.ts';
@@ -9,6 +10,29 @@ let MAGNETIC_SNAP_RADIUS = DEFAULTS.SNAP.RADIUS_METERS;
 
 // Cache for snap points (start/end vertices only) by project
 const snapPointsCache = new Map<string, PreparedSnapPoint[]>();
+
+/** Eligibility and project ownership stay in the web adapter. */
+function nearestVisibleSnapPoint(
+    target: readonly number[],
+    projectId: EntityId | null,
+    distanceInMeters: GeometryFacade['calculateDistanceInMeters'],
+) {
+    let point: PreparedSnapPoint | null = null;
+    let distance = Infinity;
+    let owner: string | null = null;
+    for (const [pid, points] of snapPointsCache) {
+        if (projectId && pid !== String(projectId)) continue;
+        if (!isProjectEffectivelyVisible(pid) || !Array.isArray(points) || !points.length) continue;
+        const nearest = findNearestGeographicCandidate(target, points, distanceInMeters);
+        if (nearest.distance < distance) {
+            point = nearest.candidate;
+            distance = nearest.distance;
+            owner = pid;
+        }
+        if (distance === 0) break;
+    }
+    return { point, distance, projectId: owner };
+}
 
 export const Geometry: GeometryFacade = {
     // Calculate distance in meters between two lat/lng points using Haversine formula
@@ -63,39 +87,9 @@ export const Geometry: GeometryFacade = {
     findMagneticSnapPoint: function(coordinates, projectId = null) {
         const [lng, lat] = coordinates as readonly [number, number];
         const target: [number, number] = [lng, lat];
-        let bestPoint: [number, number] | null = null;
-        let bestDistance = Infinity;
-        let bestLineName: JSONValue = null;
-        let bestPointType: 'start' | 'end' | null = null;
-        let bestProjectId: string | null = null;
-
-        // Only check snap points (start/end vertices), NOT arbitrary points on lines
-        if (snapPointsCache && snapPointsCache.size > 0) {
-            for (const [pid, points] of snapPointsCache.entries()) {
-                // If a specific project is requested, only check that project
-                if (projectId && pid !== String(projectId)) continue;
-
-                // Skip hidden projects
-                if (!isProjectEffectivelyVisible(pid)) continue;
-
-                if (!Array.isArray(points) || points.length === 0) continue;
-
-                for (const snapPoint of points) {
-                    const d = this.calculateDistanceInMeters(target, snapPoint.coordinates);
-
-                    if (d < bestDistance) {
-                        bestDistance = d;
-                        bestPoint = snapPoint.coordinates;
-                        bestLineName = snapPoint.lineName;
-                        bestPointType = snapPoint.type; // 'start' or 'end'
-                        bestProjectId = pid;
-                    }
-
-                    if (bestDistance === 0) break;
-                }
-                if (bestDistance === 0) break;
-            }
-        }
+        const nearest = nearestVisibleSnapPoint(target, projectId,
+            (a, b) => this.calculateDistanceInMeters(a, b));
+        const bestDistance = nearest.distance;
 
         // Enforce snap radius threshold
         if (!isFinite(bestDistance) || bestDistance > MAGNETIC_SNAP_RADIUS) {
@@ -110,12 +104,12 @@ export const Geometry: GeometryFacade = {
         }
 
         return {
-            coordinates: bestPoint || target,
-            lineName: bestLineName,
-            pointType: bestPointType,
+            coordinates: nearest.point?.coordinates || target,
+            lineName: nearest.point?.lineName ?? null,
+            pointType: nearest.point?.type ?? null,
             distance: bestDistance,
             snapped: true,
-            projectId: bestProjectId
+            projectId: nearest.projectId
         };
     },
 
@@ -201,31 +195,9 @@ export const Geometry: GeometryFacade = {
     findNearestSnapPointWithinRadius: function(coordinates, radiusMeters = MAGNETIC_SNAP_RADIUS) {
         const [lng, lat] = coordinates as readonly [number, number];
         const target: [number, number] = [lng, lat];
-        let bestPoint: [number, number] | null = null;
-        let bestDistance = Infinity;
-        let bestLineName: JSONValue = null;
-        let bestPointType: 'start' | 'end' | null = null;
-        let bestProjectId: string | null = null;
-
-        if (snapPointsCache && snapPointsCache.size > 0) {
-            for (const [pid, points] of snapPointsCache.entries()) {
-                if (!Array.isArray(points) || points.length === 0) continue;
-                if (!isProjectEffectivelyVisible(pid)) continue;
-
-                for (const snapPoint of points) {
-                    const d = this.calculateDistanceInMeters(target, snapPoint.coordinates);
-                    if (d < bestDistance) {
-                        bestDistance = d;
-                        bestPoint = snapPoint.coordinates;
-                        bestLineName = snapPoint.lineName;
-                        bestPointType = snapPoint.type;
-                        bestProjectId = pid;
-                    }
-                    if (bestDistance === 0) break;
-                }
-                if (bestDistance === 0) break;
-            }
-        }
+        const nearest = nearestVisibleSnapPoint(target, null,
+            (a, b) => this.calculateDistanceInMeters(a, b));
+        const bestDistance = nearest.distance;
 
         if (!isFinite(bestDistance) || bestDistance > radiusMeters) {
             return { snapped: false, coordinates: target, distance: bestDistance };
@@ -233,11 +205,11 @@ export const Geometry: GeometryFacade = {
 
         return {
             snapped: true,
-            coordinates: bestPoint,
+            coordinates: nearest.point?.coordinates ?? null,
             distance: bestDistance,
-            lineName: bestLineName,
-            pointType: bestPointType,
-            projectId: bestProjectId
+            lineName: nearest.point?.lineName ?? null,
+            pointType: nearest.point?.type ?? null,
+            projectId: nearest.projectId
         };
     },
 

@@ -1,3 +1,4 @@
+import { hitQueryBounds } from '@speleodb/map-viewer';
 import type { Point } from 'geojson';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { MapInteractions, MapPointerEvent, DraggedMarkerType } from '../../../../../../ts-types/domain/map-interactions.ts';
@@ -49,10 +50,7 @@ export const Interactions: MapInteractions = {
             if (this.dispatchToActiveTool('handleMouseMove', e)) return;
             // Use padded query box for better hit detection on icons
             const padding = this.QUERY_PADDING;
-            const queryBox = [
-                [e.point.x - padding, e.point.y - padding],
-                [e.point.x + padding, e.point.y + padding]
-            ];
+            const queryBox = hitQueryBounds(e.point, padding);
             const features = map.queryRenderedFeatures(queryBox);
             let isInteractive = false;
 
@@ -86,10 +84,7 @@ export const Interactions: MapInteractions = {
 
             // Use padded query box for better hit detection on icons
             const padding = this.QUERY_PADDING;
-            const queryBox = [
-                [e.point.x - padding, e.point.y - padding],
-                [e.point.x + padding, e.point.y + padding]
-            ];
+            const queryBox = hitQueryBounds(e.point, padding);
             const features = map.queryRenderedFeatures(queryBox);
 
             // Check for Subsurface Stations (circles, biology/bone/artifact/geology icons)
@@ -258,10 +253,7 @@ export const Interactions: MapInteractions = {
 
             // Use padded query box for better hit detection on icons (same as click/hover)
             const padding = self.QUERY_PADDING;
-            const queryBox = [
-                [e.point.x - padding, e.point.y - padding],
-                [e.point.x + padding, e.point.y + padding]
-            ];
+            const queryBox = hitQueryBounds(e.point, padding);
             const features = map.queryRenderedFeatures(queryBox);
             if (!features.length) return;
 
@@ -489,10 +481,7 @@ export const Interactions: MapInteractions = {
             if (this.dispatchToActiveTool('handleContextMenu', e)) return;
             // Use padded query box for better hit detection on icons (same as hover/click)
             const padding = this.QUERY_PADDING;
-            const queryBox = [
-                [e.point.x - padding, e.point.y - padding],
-                [e.point.x + padding, e.point.y + padding]
-            ];
+            const queryBox = hitQueryBounds(e.point, padding);
             const features = map.queryRenderedFeatures(queryBox);
 
             // Check Subsurface Station (circles, biology/bone/artifact/geology icons)

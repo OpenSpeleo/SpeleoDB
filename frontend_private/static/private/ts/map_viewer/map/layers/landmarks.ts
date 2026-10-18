@@ -1,7 +1,7 @@
 import { createLandmarkIconRegistry } from '@speleodb/map-viewer/landmark-icons';
 import { createLandmarkLayers, landmarkColorExpression, landmarkHaloExpression } from '@speleodb/map-viewer';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
 import type { MapPointCollection, RendererLayer, LandmarkPointProperties } from '../../../../../../../ts-types/domain/renderer.ts';

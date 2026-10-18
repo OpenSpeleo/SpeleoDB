@@ -31,6 +31,81 @@ build's manifest hash served by Django before screenshots.
 
 Representative map viewer coverage (use the runner's report for current totals):
 
+### Projection-crossing pan regressions
+
+`tests/browser/viewer-gestures.spec.ts` runs against the actual private and
+public Django viewers in Chromium and WebKit. It protects the screen-space
+navigation contract: the geographic point grabbed by a pointer must follow that
+pointer throughout a pan, including after zooming through the globe to Mercator
+transition. A final center assertion alone can miss sideways motion or jumps
+within a gesture.
+
+The tests observe the existing `speleo:map-created` event and use public
+MapLibre APIs to measure the grabbed point. Authentication, route controllers,
+application APIs, renderer construction, workers, provider HTTP, and input
+handlers remain real; this suite does not use `installFixture`, HTTP
+interception, private camera fields, or method replacement. The existing Django
+browser wrapper supplies an isolated database user and public GIS view. The
+tests need the configured basemap provider to be reachable.
+
+Each viewer runs with normal and reduced motion, with and without twelve
+browser-only GeoJSON sources containing 24,000 generated line features. Those
+sources are added and revised through `addSource`, `addLayer`, and `setData`;
+they do not create persistent project records. Worker updates overlap the drags,
+and the test checks source completion before ending. This covers renderer/source
+contention, not every asynchronous project-download or authorization-revocation
+race.
+
+At latitude 20.1 degrees with normal motion and latitude 46.6 degrees with
+reduced motion, real wheel input crosses from zoom 12.3 into the transition
+band, back above zoom 12, then into the transition band again. Pairing these
+conditions keeps the serial browser suite bounded while exercising both modes
+for each entrypoint, browser and source workload. Four consecutive cardinal pans
+follow each crossing, retaining the camera's input history. Every pan supplies
+48 CSS pixels in twelve steps and asserts that both projected axes stay within
+one CSS pixel of the pointer at every step, while bearing and pitch remain
+unchanged. Zoom is deliberately not fixed during globe pans: latitude
+compensation is valid engine behavior. Input-event assertions ensure that
+programmatic setup has not accidentally replaced wheel or drag coverage. JSON
+attachments retain every sampled path.
+
+Eight additional touch cases cover both entrypoints and motion preferences in
+both browsers. They pinch from zoom 12.3 into the transition band, lift one
+finger, and wait for actual camera motion to finish without a camera setter or
+new touch. Public `dragPan.isActive()` must remain true while that finger is
+held. Its next 48-pixel drag is sampled in twelve steps, with concurrent GeoJSON
+revisions and the same one-pixel axis limit. Full release must deactivate the
+handler. This pause catches MapLibre 6.14's partial-release inertia resetting a
+live contact; immediate dragging alone can pass before the faulty cleanup runs.
+The pinned fork's engine corrections are described in
+[MapLibre integration](shared-packages.md#web-renderer-and-providers).
+
+Chromium receives trusted CDP touch input and waits for the matching DOM contact
+event before paint observation. WebKit replays browser `TouchEvent` contact
+lists because Playwright does not expose native multi-touch there; it verifies
+engine contact handling but does not certify native iOS delivery. Neither path
+uses fixed sleeps, retries, geometric tolerance expansion or private handler
+mutation. Touch-path JSON attachments retain the before state and every sample.
+
+Run this coverage through the existing application container, after building
+assets, with PostgreSQL configured as described in
+[`tests/browser/README.md`](../../tests/browser/README.md):
+
+```bash
+docker exec -e VIEWER_BROWSER_GREP='projection-crossing gestures|paused pinch handoff' \
+  -w /app speleodb-monorepo-django \
+  pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
+  -o faulthandler_timeout=1860
+```
+
+The normal browser CI job discovers these cases without a separate dispatcher.
+They must run when MapLibre, shared camera setup, or viewer initialization
+changes. Real desktop mouse/wheel automation does not certify hardware trackpad
+momentum, and browser touch automation does not certify native
+touchscreen/WebView behavior; those require device verification. The web viewer
+uses MapLibre directly, so a passing web test does not establish correctness for
+a React camera wrapper in another application.
+
 ### Core modules
 
 - `frontend_private/.../map_viewer/api.test.ts` — API client methods, request

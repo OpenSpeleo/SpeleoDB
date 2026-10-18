@@ -195,6 +195,31 @@ describe('Geometry', () => {
 
     // ── findNearestSnapPointWithinRadius ────────────────────────────────
 
+    it('retains endpoint metadata and first-project ties in both shared-search adapters', () => {
+        for (const projectId of ['first', 'second']) {
+            Geo.cachePreparedSnapPoints(projectId, [
+                { coordinates: [1, 2], lineName: projectId, type: 'start', lineIndex: 0 },
+            ]);
+        }
+        for (const result of [Geo.findMagneticSnapPoint([1, 2]), Geo.findNearestSnapPointWithinRadius([1, 2], 100)]) {
+            expect(result).toMatchObject({ snapped: true, projectId: 'first', lineName: 'first', pointType: 'start', distance: 0 });
+        }
+        expect(Geo.findMagneticSnapPoint([1, 2], 'second').projectId).toBe('second');
+    });
+
+    it('retains both unsnapped result shapes and the actual distance outside the app radius', () => {
+        Geo.cachePreparedSnapPoints('far', [
+            { coordinates: [0, 1], lineName: 'Far', type: 'end', lineIndex: 1 },
+        ]);
+        const distance = Geo.calculateDistanceInMeters([0, 0], [0, 1]);
+        expect(Geo.findMagneticSnapPoint([0, 0])).toEqual({
+            snapped: false, coordinates: [0, 0], distance, lineName: null, pointType: null, projectId: null,
+        });
+        expect(Geo.findNearestSnapPointWithinRadius([0, 0], 1)).toEqual({
+            snapped: false, coordinates: [0, 0], distance,
+        });
+    });
+
     describe('country visibility', () => {
         it.each([
             ['findMagneticSnapPoint', []],

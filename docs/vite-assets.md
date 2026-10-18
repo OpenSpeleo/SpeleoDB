@@ -65,6 +65,15 @@ Django-generated `url_reverse.js` remain external globals in their existing
 relative order. Runtime-derived CSS custom properties may remain in markup;
 static style blocks do not.
 
+The application dependency and frozen lock select the MapLibre hotpatch fork,
+which owns the gesture corrections and engine distribution. Vite bundles that
+installed engine directly; install scripts and Vite do not modify its files.
+Keep the frozen standalone and monorepo dependencies aligned when changing the
+fork revision, then run both private and public gesture regressions. See
+[MapLibre integration](map-viewer/shared-packages.md#web-renderer-and-providers)
+for fork ownership, the two gesture failures and the browser regression
+contract.
+
 Dark metadata, the Dark Reader lock, private `.dark`, public roots without
 `.dark`, and stylesheet cascade order are rendering contracts. Moving a style
 into Vite must preserve its former template-block position.

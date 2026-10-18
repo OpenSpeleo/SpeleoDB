@@ -1,46 +1,31 @@
+import { Evented, type MapEventType } from 'maplibre-gl';
 import { beginMapNavigation, cancelMapNavigation, resetMapNavigation } from './navigation_intent.ts';
-import type { NavigationGesture } from '../../../../../../ts-types/domain/map-runtime.ts';
+
+class CameraEvents extends Evented<Pick<MapEventType, 'movestart'>> {}
 
 afterEach(() => resetMapNavigation());
 
-it('shares latest camera intent across entity types', () => {
-    const map = {};
+it('shares latest camera intent between web entity controllers', async () => {
+    const otherConsumer = await import('./navigation_intent.ts');
+    const map = new CameraEvents();
     const gps = beginMapNavigation(map, 'gps:one');
-    const project = beginMapNavigation(map, 'project:two');
+    const project = otherConsumer.beginMapNavigation(map, 'project:two');
     expect(gps.isCurrent()).toBe(false);
     expect(project.isCurrent()).toBe(true);
+    cancelMapNavigation('gps:one');
+    expect(project.isCurrent()).toBe(true);
+    otherConsumer.cancelMapNavigation('project:two');
+    expect(project.isCurrent()).toBe(false);
 });
 
-it('hiding an unrelated entity preserves navigation, but hiding its target cancels it', () => {
-    const intent = beginMapNavigation({}, 'gis-layer:one');
-    cancelMapNavigation('gps:other');
-    expect(intent.isCurrent()).toBe(true);
-    cancelMapNavigation('gis-layer:one');
-    expect(intent.isCurrent()).toBe(false);
-});
-
-it('cancels on map replacement, teardown and user camera gestures', () => {
-    const handlers: { movestart?: (event: NavigationGesture) => void } = {};
-    const map = { on: vi.fn((event: 'movestart', handler: (event: NavigationGesture) => void) => { handlers[event] = handler; }), off: vi.fn() };
+it('binds the web owner to map gestures and releases it on composition teardown', () => {
+    const map = new CameraEvents();
+    resetMapNavigation(map);
     const intent = beginMapNavigation(map, 'project:one');
-    handlers.movestart!({});
-    expect(intent.isCurrent()).toBe(true);
-    handlers.movestart!({ originalEvent: new Event('pointerdown') });
+    map.fire('movestart', { originalEvent: new Event('pointerdown') });
     expect(intent.isCurrent()).toBe(false);
-    const replacement = beginMapNavigation(map, 'project:one');
-    resetMapNavigation({});
-    expect(map.off).toHaveBeenCalledWith('movestart', expect.any(Function));
-    expect(replacement.isCurrent()).toBe(false);
-    const pending = beginMapNavigation({}, 'project:one');
+    const pending = beginMapNavigation(map, 'project:two');
     resetMapNavigation();
     expect(pending.isCurrent()).toBe(false);
-});
-
-it('keeps absent-map intents false and permits maps without gesture subscription methods', () => {
-    expect(beginMapNavigation(null, 'missing').isCurrent()).toBe(false);
-    const map = {};
-    const intent = beginMapNavigation(map, 'present');
-    expect(intent.isCurrent()).toBe(true);
-    cancelMapNavigation();
-    expect(intent.isCurrent()).toBe(false);
+    expect(map.listens('movestart')).toBe(false);
 });

@@ -3,7 +3,7 @@ import type { MapControl, MapCoreMap, MapCreationOptions } from './map-core.ts';
 import type { CheckedTileProtocol } from './map-sources.ts';
 import type { Feature, FeatureCollection, Geometry, Point } from 'geojson';
 import type { Coordinate2D, GeometryCameraMap, RendererBounds } from './map-geometry.ts';
-import type { NavigationMap, NavigationGesture } from './map-runtime.ts';
+import type { NavigationMap, NavigationGesture } from '@speleodb/map-viewer/navigation';
 
 /** Renderer's expression language is a recursive array, not an application record. */
 export type RendererValue = string | number | boolean | null | RendererValue[] | import('maplibre-gl').ExpressionSpecification;

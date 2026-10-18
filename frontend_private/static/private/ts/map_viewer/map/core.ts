@@ -1,4 +1,4 @@
-import { attachGlobeAtmosphere } from '@speleodb/map-viewer';
+import { announceMapCreated, attachGlobeAtmosphere } from '@speleodb/map-viewer';
 import { Renderer } from './renderer.ts';
 import { normalizeMapboxRequest, normalizeProviderStyle, createMapboxAttributionControl, withoutMapboxFeedback } from './mapbox_provider.ts';
 import type { MapCoreMap, MapCoreOptions } from '../../../../../../ts-types/domain/map-core.ts';
@@ -27,7 +27,7 @@ export const MapCore = {
         map.addControl(withoutMapboxFeedback(new Renderer.AttributionControl()), 'bottom-right');
 
         // Observability hook exposes this instance without installing a renderer global.
-        window.dispatchEvent(new CustomEvent('speleo:map-created', { detail: { map } }));
+        announceMapCreated(map);
 
         // A token means the retained Mapbox base style also supplies overlay glyphs.
         if (accessToken) map.addControl(createMapboxAttributionControl(), 'bottom-left');

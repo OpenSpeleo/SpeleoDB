@@ -1,3 +1,5 @@
+import type { NavigationMap } from '@speleodb/map-viewer/navigation';
+
 /** Inert Django context consumed by the shared public/private map runtime. */
 export interface MapRuntimeIcons {
     sensor?: string;
@@ -17,16 +19,6 @@ export interface MapRuntimeContext {
     allowPreciseZoom?: boolean;
     geometryColors?: string[];
     icons: Readonly<MapRuntimeIcons>;
-}
-
-/** Only gesture subscriptions are needed by the camera-intent owner. */
-export interface NavigationGesture {
-    originalEvent?: unknown;
-}
-
-export interface NavigationMap {
-    on?(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
-    off?(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
 }
 
 /** Read-only navigation needs only camera movement and optional gesture subscriptions. */

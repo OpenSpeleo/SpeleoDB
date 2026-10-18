@@ -2,7 +2,7 @@ import { stationTypesFilter } from '@speleodb/map-viewer/expressions';
 import { publishDisplayEvent } from './display_events.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode, DepthDomain, DisplayCategory, DisplayConcern, DisplayStationType } from '../../../../../../../ts-types/domain/map-display.ts';
-import type { ViewerUpdateResult } from '../../../../../../../ts-types/domain/viewer-updates.ts';
+import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { DEFAULTS } from '../../defaults.ts';
 import { State } from '../../state.ts';
 import { ViewerUpdates } from '../../viewer_updates.ts';

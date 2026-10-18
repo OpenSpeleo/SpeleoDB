@@ -15,7 +15,10 @@ export interface PackageManifest extends DependencyGroups {
 export interface BunLock {
     workspaces: { '': DependencyGroups };
     overrides?: Record<string, string>;
-    packages: Record<string, [string, string, { bundled?: boolean }, string?]>;
+    packages: Record<string,
+        [string, string, { bundled?: boolean }, string?]
+        | [string, { dependencies?: Record<string, string> }, string, string]
+    >;
     trustedDependencies: string[];
 }
 export interface SetupBunStep { uses: string; with: { 'bun-version-file': string; 'bun-version'?: string } }

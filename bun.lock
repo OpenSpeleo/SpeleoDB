@@ -5,9 +5,9 @@
     "": {
       "name": "speleodb",
       "dependencies": {
-        "@speleodb/map-core": "0.2.0",
-        "@speleodb/map-viewer": "0.2.0",
-        "maplibre-gl": "6.14.0",
+        "@speleodb/map-core": "0.3.0",
+        "@speleodb/map-viewer": "0.3.1",
+        "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch",
       },
       "devDependencies": {
         "@playwright/test": "1.64.1",
@@ -40,7 +40,7 @@
     "fsevents",
   ],
   "overrides": {
-    "@speleodb/map-core": "0.2.0",
+    "@speleodb/map-core": "0.3.0",
   },
   "packages": {
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@7.1.5", "", { "dependencies": { "@csstools/css-calc": "^3.4.3", "@csstools/css-color-parser": "^4.2.6", "@csstools/css-parser-algorithms": "^4.0.2", "@csstools/css-tokenizer": "^4.0.2", "lru-cache": "^11.5.3" } }, "sha512-jCpAvj8apa7SKHZYogk0rbXB3Kb0hLFrpkWF+Ap+vBA5rirItnpv9NKyAyEuDuFizvl0qwnj6JWR70RGJ0rOlw=="],
@@ -163,9 +163,9 @@
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
-    "@speleodb/map-core": ["@speleodb/map-core@0.2.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-0SL3Y2HQm7RUhVkooUDcnZZfHfqIkgzRmhrntq2a9J0S/cX1tvneuz3WpunVTJtp+jQRMj4aFqFmhQtKFBxLxw=="],
+    "@speleodb/map-core": ["@speleodb/map-core@0.3.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-KU1HdMR256bpI6wa+dGw/JQB2kPLSWDTRgFsAZX2cMheL+rNl9GMr8oNdONV2AsfGRaAGKWyArusf0WInX/cTw=="],
 
-    "@speleodb/map-viewer": ["@speleodb/map-viewer@0.2.0", "", { "dependencies": { "@speleodb/map-core": ">=0.2.0 <1.0.0" }, "peerDependencies": { "maplibre-gl": ">=6.10.0 <7.0.0" } }, "sha512-CHLanoO19M1VOJL4ns9FjqJucOsJgU7Qmha2RNi8RJBT3lSbdPxTl4x7r/xOOFS9AFGjkve+voPBnZly3LT0lg=="],
+    "@speleodb/map-viewer": ["@speleodb/map-viewer@0.3.1", "", { "dependencies": { "@speleodb/map-core": ">=0.3.0 <1.0.0" }, "peerDependencies": { "@playwright/test": ">=1.63.0 <2.0.0", "maplibre-gl": ">=6.14.0 <7.0.0" }, "optionalPeers": ["@playwright/test"] }, "sha512-Cbp6MNYngB2TNQN+1hZnuXdbkXbMsej72CAEiFl7FP9Kq3CHOoEWv/aEje1WagmxPfuhTV4hSIJJM1QvRTbyOA=="],
 
     "@tailwindcss/forms": ["@tailwindcss/forms@0.5.11", "", { "dependencies": { "mini-svg-data-uri": "^1.2.3" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1" } }, "sha512-h9wegbZDPurxG22xZSoWtdzc41/OlNEUQERNqI/0fOwa2aVlWGu7C35E/x6LDyD3lgtztFSSjKZyuVM0hxhbgA=="],
 
@@ -459,7 +459,7 @@
 
     "magic-string": ["magic-string@1.4.3", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.6.0" } }, "sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ=="],
 
-    "maplibre-gl": ["maplibre-gl@6.14.0", "", { "dependencies": { "@mapbox/point-geometry": "^1.1.0", "@mapbox/tiny-sdf": "^2.2.0", "@mapbox/unitbezier": "^1.0.0", "@mapbox/vector-tile": "^3.0.0", "@maplibre/geojson-vt": "^6.1.2", "@maplibre/maplibre-gl-style-spec": "^26.4.4", "@maplibre/mlt": "^1.3.0", "@maplibre/vt-pbf": "^4.3.2", "@types/geojson": "^7946.0.16", "bidi-js": "^1.1.0", "earcut": "^3.2.4", "gl-matrix": "^3.4.4", "kdbush": "^4.1.0", "murmurhash-js": "^1.0.0", "pbf": "^5.1.2", "potpack": "^2.1.0", "quickselect": "^3.0.0", "tinyqueue": "^3.0.0" } }, "sha512-L7U9y9TyPJ3P/JJbW+eH+A3FzdPq+3fnZFqqeCwf/S6cRGganHwVI5b/C8/zOYzreUzsloDPZVVaMQA94wOt4A=="],
+    "maplibre-gl": ["maplibre-gl@github:DEKHTIARJonathan/maplibre-gl-js#0566606", { "dependencies": { "@mapbox/point-geometry": "^1.1.0", "@mapbox/tiny-sdf": "^2.2.0", "@mapbox/unitbezier": "^1.0.0", "@mapbox/vector-tile": "^3.0.0", "@maplibre/geojson-vt": "^6.1.2", "@maplibre/maplibre-gl-style-spec": "^26.4.4", "@maplibre/mlt": "^1.3.0", "@maplibre/vt-pbf": "^4.3.2", "@types/geojson": "^7946.0.16", "bidi-js": "^1.1.0", "earcut": "^3.2.4", "gl-matrix": "^3.4.4", "kdbush": "^4.1.0", "murmurhash-js": "^1.0.0", "pbf": "^5.1.2", "potpack": "^2.1.0", "quickselect": "^3.0.0", "tinyqueue": "^3.0.0" } }, "DEKHTIARJonathan-maplibre-gl-js-0566606", "sha512-4+dCQp0zbj50FRrJZTfBPZc7Kq+rRRSUjy/3vFyLKN5P3PblWX05PLnnOw6HPoq+ogeUdmlnqyoqrdjEEQLVww=="],
 
     "mdn-data": ["mdn-data@2.27.1", "", {}, "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ=="],
 

@@ -1,4 +1,4 @@
-import { geoJSONMessages } from './geojson_transport.ts';
+import { geoJSONMessages } from '@speleodb/map-core/geojson-transport';
 import type { GeoJSONWorkerRequest } from '../../../../../../ts-types/worker/geojson.ts';
 
 let messages: ReturnType<typeof geoJSONMessages>;

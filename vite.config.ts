@@ -8,6 +8,7 @@ import { sharedMapResolution } from './scripts/shared-map-packages.ts';
 type EntryRegistry = typeof import('./frontend_common/entries.json');
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
+
 const registryPath = path.join(rootDirectory, 'frontend_common', 'entries.json');
 const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8')) as EntryRegistry;
 const sourceEntries = { ...registry.styles, ...registry.scripts };
