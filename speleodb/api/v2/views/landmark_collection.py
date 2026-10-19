@@ -36,6 +36,9 @@ from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers.api_contract import (
     NonWebViewerPermissionRequestSerializer,
 )
+from speleodb.api.v2.serializers.domain_contract import (
+    LandmarkCollectionUpdateRequestSerializer,
+)
 from speleodb.api.v2.serializers.landmark_collection import LandmarkCollectionSerializer
 from speleodb.api.v2.serializers.landmark_collection import (
     LandmarkCollectionUserPermissionSerializer,
@@ -171,10 +174,15 @@ class LandmarkCollectionSpecificApiView(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(request=LandmarkCollectionUpdateRequestSerializer)
     @extend_schema(operation_id="v2_landmark_collections_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(
+        description="Personal collections accept only color; shared collections "
+        "accept the declared editable fields.",
+    )
     @extend_schema(operation_id="v2_landmark_collections_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self._modify_obj(request=request, partial=True, **kwargs)
@@ -281,6 +289,7 @@ class LandmarkCollectionPermissionApiView(
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             201: response_object(
                 "LandmarkCollectionPermissionApiViewPostResponse",
                 collection=LandmarkCollectionSerializer(),
@@ -347,6 +356,7 @@ class LandmarkCollectionPermissionApiView(
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: LandmarkCollectionUserPermissionSerializer(),
             400: API_ERROR,
             403: API_ERROR,
@@ -392,9 +402,10 @@ class LandmarkCollectionPermissionApiView(
     @extend_schema(
         operation_id="v2_landmark_collections_permissions_destroy",
         responses={
+            401: API_ERROR,
             200: response_object(
                 "LandmarkPermissionDeleted", message=serializers.CharField()
-            )
+            ),
         },
     )
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:

@@ -141,11 +141,13 @@ class StationTagSpecificApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(responses={200: StationTagSerializer(), 404: API_ERROR})
     @extend_schema(operation_id="v2_station_tags_update")
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of a station tag."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
+    @extend_schema(responses={200: StationTagSerializer(), 404: API_ERROR})
     @extend_schema(operation_id="v2_station_tags_partial_update")
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of a station tag."""
@@ -157,6 +159,7 @@ class StationTagSpecificApiView(GenericAPIView[StationTag], SDBAPIViewMixin):
                 "StationTagSpecificApiViewDeleteResponse", id=serializers.UUIDField()
             ),
             403: API_ERROR,
+            404: API_ERROR,
         }
     )
     @extend_schema(operation_id="v2_station_tags_destroy")

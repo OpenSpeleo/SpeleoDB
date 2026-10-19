@@ -334,6 +334,7 @@ class SurfaceMonitoringNetworkPermissionApiView(
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             201: response_object(
                 "SurfaceMonitoringNetworkPermissionApiViewPostResponse",
                 network=SurfaceMonitoringNetworkSerializer(),
@@ -399,6 +400,7 @@ class SurfaceMonitoringNetworkPermissionApiView(
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: response_object(
                 "SurfaceMonitoringNetworkPermissionApiViewPutResponse",
                 network=SurfaceMonitoringNetworkSerializer(),
@@ -447,6 +449,7 @@ class SurfaceMonitoringNetworkPermissionApiView(
     @extend_schema(request=UserRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: response_object(
                 "SurfaceMonitoringNetworkPermissionApiViewDeleteResponse",
                 network=SurfaceMonitoringNetworkSerializer(),

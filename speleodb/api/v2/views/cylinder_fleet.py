@@ -80,6 +80,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+CYLINDER_WRITE_ACCESS_ERROR = response_object(
+    "ErrorMessage", error=serializers.CharField()
+)
+
 
 class CylinderFleetApiView(GenericAPIView[CylinderFleet], SDBAPIViewMixin):
     """
@@ -456,6 +460,7 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             201: response_object(
                 "CylinderFleetPermissionApiViewPostResponse",
                 fleet=CylinderFleetSerializer(),
@@ -517,6 +522,7 @@ class CylinderFleetPermissionApiView(GenericAPIView[CylinderFleet], SDBAPIViewMi
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: response_object(
                 "CylinderFleetPermissionApiViewPutResponse",
                 fleet=CylinderFleetSerializer(),
@@ -764,7 +770,10 @@ class CylinderFleetWatchlistApiView(GenericAPIView[CylinderFleet], SDBAPIViewMix
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "days", int, description="Positive number of days; default 60."
+                "days",
+                {"type": "integer", "minimum": 0},
+                default=60,
+                description="Nonnegative number of days; invalid values return 400.",
             )
         ]
     )
@@ -845,7 +854,11 @@ class CylinderFleetWatchlistExportExcelApiView(
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "days", int, description="Positive number of days; default 60."
+                "days",
+                {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+                default=60,
+                description="Nonnegative number of days. Negative or noninteger "
+                "values fall back to 60.",
             )
         ]
     )
@@ -1218,12 +1231,18 @@ class CylinderInstallSpecificApiView(GenericAPIView[CylinderInstall], SDBAPIView
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    @extend_schema(operation_id="v2_cylinder_installs_update")
+    @extend_schema(
+        operation_id="v2_cylinder_installs_update",
+        responses={200: CylinderInstallSerializer, 403: CYLINDER_WRITE_ACCESS_ERROR},
+    )
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of cylinder install."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
-    @extend_schema(operation_id="v2_cylinder_installs_partial_update")
+    @extend_schema(
+        operation_id="v2_cylinder_installs_partial_update",
+        responses={200: CylinderInstallSerializer, 403: CYLINDER_WRITE_ACCESS_ERROR},
+    )
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of cylinder install."""
         return self._modify_obj(request=request, partial=True, **kwargs)
@@ -1443,12 +1462,24 @@ class CylinderPressureCheckSpecificApiView(
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_update")
+    @extend_schema(
+        operation_id="v2_cylinder_installs_pressure_checks_update",
+        responses={
+            200: CylinderPressureCheckSerializer,
+            403: CYLINDER_WRITE_ACCESS_ERROR,
+        },
+    )
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Full update of pressure check."""
         return self._modify_obj(request=request, partial=False, **kwargs)
 
-    @extend_schema(operation_id="v2_cylinder_installs_pressure_checks_partial_update")
+    @extend_schema(
+        operation_id="v2_cylinder_installs_pressure_checks_partial_update",
+        responses={
+            200: CylinderPressureCheckSerializer,
+            403: CYLINDER_WRITE_ACCESS_ERROR,
+        },
+    )
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Partial update of pressure check."""
         return self._modify_obj(request=request, partial=True, **kwargs)

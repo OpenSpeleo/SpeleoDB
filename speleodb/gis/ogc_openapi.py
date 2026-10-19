@@ -13,9 +13,9 @@ Why a dedicated document
 OGC API - Features 1.0 §7.2.4 (Req 2 ``/req/core/root-success``)
 mandates that every landing page include a ``service-desc`` (or
 ``service-doc``) link pointing to the API definition. The repository's
-global ``/api/schema/`` endpoint is 684 kB and explicitly omits the
-OGC routes (``schema = None`` on every OGC view), so advertising it
-is both wasteful and misleading. This module ships a focused
+global ``/api/schema/`` document includes all API families, so OGC clients
+can use this smaller service description without loading unrelated contracts.
+This module ships a focused
 ~10-30 kB OpenAPI document covering only the OGC route surface.
 
 Why static + shared
@@ -46,6 +46,10 @@ from typing import Final
 import orjson
 
 from speleodb.gis.models import Landmark
+from speleodb.gis.ogc_helpers import CRS84_2D
+from speleodb.gis.ogc_helpers import CRS84_3D
+from speleodb.gis.ogc_helpers import DEFAULT_OGC_LIMIT
+from speleodb.gis.ogc_helpers import MAX_OGC_LIMIT
 from speleodb.gis.ogc_helpers import OGC_CONFORMANCE_CLASSES
 
 # ---------------------------------------------------------------------------
@@ -98,7 +102,7 @@ _FAMILIES: list[dict[str, str]] = [
 _SCHEMAS: dict[str, Any] = {
     "Link": {
         "type": "object",
-        "required": ["href", "rel"],
+        "required": ["href", "rel", "type", "title"],
         "properties": {
             "href": {"type": "string", "format": "uri-reference"},
             "rel": {"type": "string"},
@@ -108,7 +112,7 @@ _SCHEMAS: dict[str, Any] = {
     },
     "LandingPage": {
         "type": "object",
-        "required": ["links"],
+        "required": ["title", "description", "links"],
         "properties": {
             "title": {"type": "string"},
             "description": {"type": "string"},
@@ -124,43 +128,54 @@ _SCHEMAS: dict[str, Any] = {
         "properties": {
             "conformsTo": {
                 "type": "array",
-                "items": {"type": "string", "format": "uri"},
+                "items": {"type": "string", "enum": OGC_CONFORMANCE_CLASSES},
             },
         },
     },
     "Extent": {
         "type": "object",
+        "required": ["spatial"],
         "properties": {
             "spatial": {
                 "type": "object",
+                "required": ["bbox", "crs"],
                 "properties": {
                     "bbox": {
                         "type": "array",
                         "items": {
                             "type": "array",
                             "minItems": 4,
-                            "maxItems": 6,
+                            "maxItems": 4,
                             "items": {"type": "number"},
                         },
                     },
-                    "crs": {"type": "string"},
+                    "crs": {"type": "string", "enum": [CRS84_2D]},
                 },
             },
         },
     },
     "Collection": {
         "type": "object",
-        "required": ["id", "links"],
+        "required": [
+            "id",
+            "title",
+            "description",
+            "itemType",
+            "crs",
+            "storageCrs",
+            "extent",
+            "links",
+        ],
         "properties": {
             "id": {"type": "string"},
             "title": {"type": "string"},
             "description": {"type": "string"},
-            "itemType": {"type": "string", "default": "feature"},
+            "itemType": {"type": "string", "enum": ["feature"]},
             "crs": {
                 "type": "array",
                 "items": {"type": "string", "format": "uri"},
             },
-            "storageCrs": {"type": "string", "format": "uri"},
+            "storageCrs": {"type": "string", "enum": [CRS84_3D]},
             "extent": {"$ref": "#/components/schemas/Extent"},
             "links": {
                 "type": "array",
@@ -193,9 +208,6 @@ _SCHEMAS: dict[str, Any] = {
                     "MultiPoint",
                     "LineString",
                     "MultiLineString",
-                    "Polygon",
-                    "MultiPolygon",
-                    "GeometryCollection",
                 ],
             },
             "coordinates": {},
@@ -203,7 +215,7 @@ _SCHEMAS: dict[str, Any] = {
     },
     "Feature": {
         "type": "object",
-        "required": ["type", "geometry"],
+        "required": ["id", "type", "geometry"],
         "properties": {
             "type": {"type": "string", "enum": ["Feature"]},
             # ``oneOf`` requires exactly one schema to match. ``integer``
@@ -217,10 +229,7 @@ _SCHEMAS: dict[str, Any] = {
                     {"type": "number"},
                 ],
             },
-            "geometry": {
-                "nullable": True,
-                "allOf": [{"$ref": "#/components/schemas/Geometry"}],
-            },
+            "geometry": {"$ref": "#/components/schemas/Geometry"},
             "properties": {
                 "type": "object",
                 "nullable": True,
@@ -276,10 +285,10 @@ _LANDMARK_PROPERTIES: dict[str, Any] = {
     "icon": {"type": "string", "enum": list(Landmark.Icon.values)},
     "collection": {"type": "string", "format": "uuid"},
     "collection_name": {"type": "string"},
-    "collection_type": {"type": "string"},
+    "collection_type": {"type": "string", "enum": ["PERSONAL", "SHARED"]},
     "collection_color": {"type": "string"},
     "is_personal_collection": {"type": "boolean"},
-    "created_by": {"type": "string"},
+    "created_by": {"type": "string", "format": "email"},
     "creation_date": {"type": "string", "format": "date-time", "nullable": True},
     "can_write": {"type": "boolean"},
     "can_delete": {"type": "boolean"},
@@ -402,18 +411,21 @@ _PARAMETERS: dict[str, Any] = {
         "name": "bbox",
         "in": "query",
         "required": False,
+        "allowEmptyValue": True,
         "description": (
             "Only features that have a geometry that intersects the "
             "bounding box are returned. The bounding box is provided "
             "as four (CRS84) or six (CRS84h) numbers separated by "
             "commas: ``min_lon, min_lat, [min_z,] max_lon, max_lat[, "
-            "max_z]``."
+            "max_z]``. Values must be finite, longitude within [-180, 180], "
+            "latitude within [-90, 90], and minimum latitude/height at most "
+            "the maximum. Reversed longitude denotes an antimeridian crossing. "
+            "An empty value applies no spatial filter."
         ),
         "schema": {
             "type": "array",
-            "minItems": 4,
-            "maxItems": 6,
             "items": {"type": "number"},
+            "oneOf": [{"minItems": size, "maxItems": size} for size in (4, 6)],
         },
         "style": "form",
         "explode": False,
@@ -422,10 +434,11 @@ _PARAMETERS: dict[str, Any] = {
         "name": "datetime",
         "in": "query",
         "required": False,
+        "allowEmptyValue": True,
         "description": (
             "Either a date-time or an interval (RFC 3339 §5.6). The "
             "value is validated but cave-survey collections have no "
-            "temporal extent, so all features match."
+            "temporal extent, so all features match. An empty value is ignored."
         ),
         "schema": {"type": "string"},
     },
@@ -433,27 +446,31 @@ _PARAMETERS: dict[str, Any] = {
         "name": "limit",
         "in": "query",
         "required": False,
+        "allowEmptyValue": True,
         "description": (
             "Maximum number of features to return in the response. "
-            "Defaults to unlimited (capped at the server maximum). "
+            "Omitted or empty values default to 10000 features, the server maximum. "
             "When set, the response includes a ``rel:next`` link if "
             "more features exist."
         ),
         "schema": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 10_000,
+            "maximum": MAX_OGC_LIMIT,
+            "default": DEFAULT_OGC_LIMIT,
         },
     },
     "OffsetParam": {
         "name": "offset",
         "in": "query",
         "required": False,
+        "allowEmptyValue": True,
         "description": (
             "Number of features to skip before returning results. "
-            "Combine with ``limit`` for paged retrieval."
+            "Combine with ``limit`` for paged retrieval. "
+            "Omitted or empty values use zero."
         ),
-        "schema": {"type": "integer", "minimum": 0},
+        "schema": {"type": "integer", "minimum": 0, "maximum": 10**9, "default": 0},
     },
 }
 
@@ -509,7 +526,7 @@ _RESPONSES: dict[str, Any] = {
         "description": "OGC API - Features single Feature.",
         "content": {
             "application/geo+json": {
-                "schema": {"$ref": "#/components/schemas/Feature"},
+                "schema": {"$ref": "#/components/schemas/FeatureResponse"},
             },
         },
     },
@@ -549,6 +566,21 @@ _RESPONSES: dict[str, Any] = {
 # below.
 # ---------------------------------------------------------------------------
 
+
+_SCHEMAS["FeatureResponse"] = {
+    "allOf": [
+        {"$ref": "#/components/schemas/Feature"},
+        {"type": "object", "required": ["links"]},
+    ]
+}
+_CACHE_HEADERS = {
+    name: {"schema": {"type": "string"}} for name in ("ETag", "Cache-Control")
+}
+for _response_name in ("Features", "Feature"):
+    _RESPONSES[_response_name]["headers"] = {
+        **deepcopy(_CACHE_HEADERS),
+        "Content-Disposition": {"schema": {"type": "string"}},
+    }
 
 for _name, _base, _schema in (
     ("LandmarkFeatures", "Features", "LandmarkFeatureCollection"),
@@ -671,8 +703,11 @@ def _build_paths_for(family: dict[str, str]) -> dict[str, Any]:
                     "200": {"$ref": f"#/components/responses/{feature_prefix}Features"},
                     "304": {
                         "description": (
-                            "Collection ETag matches If-None-Match; no response body."
-                        )
+                            "Collection ETag matches If-None-Match "
+                            "and no query parameters "
+                            "are present; no response body."
+                        ),
+                        "headers": deepcopy(_CACHE_HEADERS),
                     },
                     "400": {"$ref": "#/components/responses/BadRequest"},
                     "404": {"$ref": "#/components/responses/NotFound"},
@@ -703,6 +738,54 @@ def _build_spec() -> dict[str, Any]:
     paths: dict[str, Any] = {}
     for family in _FAMILIES:
         paths.update(_build_paths_for(family))
+    # Metadata uses JSONRenderer; feature streams accept three machine renderers.
+    # Negotiation/authentication errors happen before handlers and use DRF detail.
+    for path, item in paths.items():
+        operation = item["get"]
+        features = "/items" in path
+        media_types = (
+            ("application/geo+json", "application/geojson", "application/json")
+            if features
+            else ("application/json",)
+        )
+        for code in ("403", "404", "406"):
+            existing = operation["responses"].get(code)
+            if existing and "$ref" in existing:
+                existing = deepcopy(_RESPONSES[existing["$ref"].rsplit("/", 1)[1]])
+            response = existing or {
+                "description": (
+                    "DRF authentication, lookup or content negotiation failed."
+                )
+            }
+            response["content"] = {
+                media: {"schema": {"$ref": "#/components/schemas/Exception"}}
+                for media in (media_types[:1] if code == "406" else media_types)
+            }
+            operation["responses"][code] = response
+        operation["parameters"].append(
+            {
+                "in": "query",
+                "name": "format",
+                "schema": {
+                    "type": "string",
+                    "enum": ["geojson", "geojson-legacy", "json"]
+                    if features
+                    else ["json"],
+                },
+            }
+        )
+        if "landmark" in path and "{feature_id}" in path:
+            operation["parameters"] = [
+                {
+                    "in": "path",
+                    "name": "feature_id",
+                    "required": True,
+                    "schema": {"type": "string", "format": "uuid"},
+                }
+                if parameter.get("$ref") == "#/components/parameters/FeatureIdParam"
+                else parameter
+                for parameter in operation["parameters"]
+            ]
     return {
         "openapi": "3.0.3",
         "info": {

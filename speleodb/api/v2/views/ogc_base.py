@@ -505,10 +505,9 @@ class OGCOpenAPIView(GenericAPIView, SDBAPIViewMixin):  # type: ignore[type-arg]
 
     OGC API - Features 1.0 §7.2.4 (Req 2 ``/req/core/root-success``)
     requires every landing page to advertise a ``rel:service-desc``
-    link. The repository's global ``/api/schema/`` endpoint excludes
-    OGC routes (`schema = None`) and weighs in at ~684 kB; this view
-    serves a focused ~10-30 kB OpenAPI 3.0 document covering only the
-    OGC route surface.
+    link. The global ``/api/schema/`` document includes all API families;
+    this view serves the smaller OGC service description built from the
+    same OGC declarations used by the global schema.
 
     The document, its bytes, and its ETag are pre-computed once at
     import time (see :mod:`speleodb.gis.ogc_openapi`); every request

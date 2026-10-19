@@ -10,8 +10,9 @@ from typing import Any
 import pytest
 from django.core.management import call_command
 from django.urls import reverse
-from drf_spectacular.generators import SchemaGenerator
 from rest_framework import status
+
+from speleodb.api.schema import SpeleoDBSchemaGenerator
 
 if TYPE_CHECKING:
     from django.test.client import Client
@@ -80,37 +81,17 @@ def _collect_operation_ids(schema: dict[str, Any]) -> list[str]:
 
 
 @pytest.mark.django_db
-def test_legacy_v1_paths_excluded_from_schema() -> None:
-    """``speleodb.utils.schema_hooks.exclude_legacy_v1_paths`` is supposed
-    to strip the ``/api/v1/`` mirror routes from the generated schema so
-    they don't collide with the canonical ``/api/v2/`` operations.
-
-    drf-spectacular applies ``SCHEMA_PATH_PREFIX_TRIM`` after preprocessing,
-    so the hook matches on ``/api/v1/...`` while the emitted ``paths`` keys
-    are ``/v1/...``. If a future version of drf-spectacular reorders the
-    pipeline, the hook would silently become a no-op and the ``/v1/``
-    routes would reappear -- this test catches that regression.
-    """
-    generator = SchemaGenerator()
-    schema = generator.get_schema(request=None, public=True)
-
-    v1_paths = [path for path in schema["paths"] if path.startswith("/v1/")]
-    assert v1_paths == [], (
-        "schema should not expose any /v1/ paths; hook exclude_legacy_v1_paths "
-        f"appears broken. Found: {v1_paths[:5]}"
-    )
+def test_legacy_v1_routes_are_outside_the_supported_contract() -> None:
+    schema = SpeleoDBSchemaGenerator().get_schema(request=None, public=True)
+    assert not any(path.startswith("/api/v1/") for path in schema["paths"])
+    assert any(path.startswith("/_allauth/app/v1/") for path in schema["paths"])
+    assert any(path.startswith("/api/auth/app/v1/") for path in schema["paths"])
 
 
 @pytest.mark.django_db
 def test_operation_ids_are_unique() -> None:
-    """Every ``operationId`` in the generated schema must be unique.
-
-    With the ``/api/v1/`` mirror excluded, no shared view class should
-    produce two operations with the same id. If this test fails, either
-    the exclusion hook is broken or a view is emitting duplicate
-    ``@extend_schema(operation_id=...)`` decorators.
-    """
-    generator = SchemaGenerator()
+    """Canonical, auth aliases and protocol APIs have distinct identities."""
+    generator = SpeleoDBSchemaGenerator()
     schema = generator.get_schema(request=None, public=True)
 
     operation_ids = _collect_operation_ids(schema)
@@ -129,7 +110,7 @@ def test_known_v2_operation_id_present_exactly_once() -> None:
     set on the v2 ``ProjectApiView.get`` endpoint via
     ``@extend_schema(operation_id=...)``. If it disappears or duplicates,
     either the hook is over-eager or an import got shadowed."""
-    generator = SchemaGenerator()
+    generator = SpeleoDBSchemaGenerator()
     schema = generator.get_schema(request=None, public=True)
 
     operation_ids = _collect_operation_ids(schema)
@@ -141,16 +122,8 @@ def test_known_v2_operation_id_present_exactly_once() -> None:
 
 
 @pytest.mark.django_db
-def test_no_stale_v1_operation_ids_remain() -> None:
-    """After the v2 unwrap migration no ``operation_id`` in the schema
-    should start with ``v1_``. Catches both (a) a future contributor
-    adding ``@extend_schema(operation_id="v1_...")`` out of muscle memory
-    and (b) a drf-spectacular auto-generated fallback that happens to
-    start with ``v1_`` because of a path prefix. If this ever fires,
-    rename the operation_id to ``v2_...``."""
-    generator = SchemaGenerator()
-    schema = generator.get_schema(request=None, public=True)
-
-    operation_ids = _collect_operation_ids(schema)
-    stale = sorted({op_id for op_id in operation_ids if op_id.startswith("v1_")})
-    assert stale == [], f"stale v1_* operationIds still present in schema: {stale}"
+def test_no_obsolete_speleodb_v1_operation_ids_are_exported() -> None:
+    schema = SpeleoDBSchemaGenerator().get_schema(request=None, public=True)
+    assert not any(
+        identifier.startswith("v1_") for identifier in _collect_operation_ids(schema)
+    )

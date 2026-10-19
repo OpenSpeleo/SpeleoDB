@@ -191,7 +191,7 @@ repos:
         require_serial: true
         files: >-
           (?x)^(OpenAPI\.yaml|pyproject\.toml|uv\.lock|
-          config/.*\.py|speleodb/.*\.py)$
+          config/.*\.py|speleodb/.*\.py|well_known/.*\.py)$
       - id: check-url-config
         name: Check Django URL config consistency
         entry: |

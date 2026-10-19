@@ -501,6 +501,7 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             201: response_object(
                 "SensorFleetPermissionApiViewPostResponse",
                 fleet=SensorFleetSerializer(),
@@ -562,6 +563,7 @@ class SensorFleetPermissionApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin)
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: response_object(
                 "SensorFleetPermissionApiViewPutResponse",
                 fleet=SensorFleetSerializer(),
@@ -810,7 +812,10 @@ class SensorFleetWatchlistApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin):
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "days", int, description="Positive number of days; default 60."
+                "days",
+                {"type": "integer", "minimum": 0},
+                default=60,
+                description="Nonnegative number of days; invalid values return 400.",
             )
         ]
     )
@@ -927,7 +932,11 @@ class SensorFleetWatchlistExportExcelApiView(
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "days", int, description="Positive number of days; default 60."
+                "days",
+                {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+                default=60,
+                description="Nonnegative number of days. Negative or noninteger "
+                "values fall back to 60.",
             )
         ]
     )

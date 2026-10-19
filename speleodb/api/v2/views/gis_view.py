@@ -25,11 +25,13 @@ from typing import ClassVar
 import orjson
 import sentry_sdk
 from django.core.cache import cache
+from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 
+from speleodb.api.schema_errors import API_ERROR_SCHEMA
 from speleodb.api.v2.permissions import GISViewOwnershipPermission
 from speleodb.api.v2.serializers.gis_view import GISViewDataSerializer
 from speleodb.api.v2.serializers.gis_view import PublicGISViewSerializer
@@ -619,7 +621,22 @@ class GISViewDataApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     serializer_class = GISViewDataSerializer
     lookup_field = "id"
 
-    @extend_schema(operation_id="v2_gis_view_retrieve")
+    @extend_schema(
+        operation_id="v2_gis_view_retrieve",
+        parameters=[
+            OpenApiParameter(
+                "expires_in",
+                int,
+                OpenApiParameter.QUERY,
+                default=_EXPIRES_IN_DEFAULT,
+                description=(
+                    "Signed-URL lifetime in seconds. Values are clamped to "
+                    "60..86400; invalid integers use the default 3600."
+                ),
+            )
+        ],
+        responses={200: GISViewDataSerializer, 500: API_ERROR_SCHEMA},
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
 
@@ -722,7 +739,10 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     serializer_class = PublicGISViewSerializer
     lookup_field = "gis_token"
 
-    @extend_schema(operation_id="v2_gis_ogc_view_geojson_retrieve")
+    @extend_schema(
+        operation_id="v2_gis_ogc_view_geojson_retrieve",
+        responses={200: PublicGISViewSerializer, 500: API_ERROR_SCHEMA},
+    )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         gis_view = self.get_object()
         try:

@@ -20,6 +20,7 @@ from django.core.management.base import CommandParser
 from speleodb.api.schema import HTTP_METHODS
 from speleodb.api.schema_inventory import current_api_routes
 from speleodb.testing.api_contract import contract_schema
+from speleodb.testing.api_contract import is_successful_observation
 
 REPORT_FORMAT_VERSION = 2
 
@@ -85,7 +86,7 @@ def operation_contract(document: dict[str, Any], path: str, method: str) -> Any:
 
 
 def disabled_operation_reason(path: str) -> str | None:
-    if not path.startswith("/_allauth/"):
+    if not path.startswith(("/_allauth/", "/api/auth/")):
         return None
     if "/phone" in path and "phone" not in account_settings.SIGNUP_FIELDS:
         return "Phone authentication is not configured (ACCOUNT_SIGNUP_FIELDS)."
@@ -195,7 +196,7 @@ class Command(BaseCommand):
                 for item in observations
                 if item["schema_sha256"] == current_hash
                 and (
-                    HTTPStatus.OK <= item["status"] < HTTPStatus.BAD_REQUEST
+                    is_successful_observation(item)
                     or is_completed_auth_transition(item)
                     or disabled_operation_reason(item["path"])
                 )
@@ -223,11 +224,7 @@ class Command(BaseCommand):
             observed = [
                 item for item in observations if item["operation_id"] == identifier
             ]
-            successful = [
-                item
-                for item in observed
-                if HTTPStatus.OK <= item["status"] < HTTPStatus.BAD_REQUEST
-            ]
+            successful = [item for item in observed if is_successful_observation(item)]
             transitions = [
                 item for item in observed if is_completed_auth_transition(item)
             ]
@@ -254,6 +251,9 @@ class Command(BaseCommand):
                     set(declared) - {str(item["status"]) for item in observed}
                 ),
                 "successful_response_observed": bool(successful),
+                "protocol_rejections_observed": sum(
+                    bool(item.get("protocol_error")) for item in observed
+                ),
                 "completed_auth_transition_observed": bool(transitions),
                 "configured_unavailable_reason": disabled,
                 "request_parameters_validated": any(
@@ -284,11 +284,13 @@ class Command(BaseCommand):
             "canonical_operations": len(operations),
             "resolver_operations": len(current_api_routes()),
             "alias_operations": sum(
-                path.startswith("/_allauth/") for path, _ in operations.values()
+                path.startswith("/api/auth/") for path, _ in operations.values()
             ),
             "scope": (
-                "Current APIs; /api/auth aliases share /_allauth contracts; "
-                "obsolete /api/v1 excluded."
+                "Supported machine APIs: v2, both authentication mounts, "
+                "health, Git smart HTTP, well-known discovery and schema export. "
+                "Each mount requires its own observed HTTP evidence. "
+                "Obsolete SpeleoDB /api/v1 is excluded."
             ),
             "evidence": (
                 "Rendered response validation; parameters and bounded "

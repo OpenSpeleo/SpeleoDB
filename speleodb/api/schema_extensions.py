@@ -11,6 +11,9 @@ from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 
+from speleodb.api.schema_domain import project_domain_request_schema
+from speleodb.api.schema_numeric import FLOAT_EXPONENT_PATTERN
+from speleodb.api.schema_numeric import FLOAT_MANTISSA_PATTERN
 from speleodb.api.v2.serializers.api_contract import ActiveMutexSerializer
 from speleodb.api.v2.serializers.exploration_lead import ExplorationLeadSerializer
 from speleodb.api.v2.serializers.geojson_contract import (
@@ -183,61 +186,63 @@ class ModelRepresentationSchema(OpenApiSerializerExtension):  # type: ignore[no-
                     "experiment's field definitions."
                 ),
             }
+            if direction == "response":
+                properties["data"]["additionalProperties"]["anyOf"].append(
+                    {"type": "array", "minItems": 1, "items": {"type": "string"}}
+                )
+                properties["data"]["description"] += (
+                    " Form-created records preserve text values, including the "
+                    "submitter email, as nonempty arrays. Their preserved submitter "
+                    "array causes subsequent PUT/PATCH validation to fail."
+                )
         if direction != "response":
-            if (
-                isinstance(self.target, BaseStationSerializerMixin)
-                or serializer_name == "ExplorationLeadSerializer"
-            ):
-                for name in ("latitude", "longitude"):
+            if isinstance(self.target, ProjectSerializer):
+                properties.pop("created_by", None)
+                schema["required"] = [
+                    name for name in schema.get("required", []) if name != "created_by"
+                ]
+                if not schema["required"]:
+                    schema.pop("required")
+                for name, directions, limit in (
+                    ("latitude", "NSns", 90),
+                    ("longitude", "EWew", 180),
+                ):
+                    # The latitude serializer rejects E/W before conversion, so
+                    # textual exponent notation is only supported for longitude.
+                    exponent = FLOAT_EXPONENT_PATTERN if name == "longitude" else ""
                     properties[name] = {
                         "oneOf": [
                             {"type": "number"},
                             {
+                                "type": "boolean",
+                                "enum": [True],
+                                "x-drf-form-unrepresentable": True,
+                            },
+                            {
                                 "type": "string",
                                 "pattern": (
-                                    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
-                                    r"(?:[eE][+-]?\d+)?$"
+                                    rf"^[\s°]*(?:[+-]?{FLOAT_MANTISSA_PATTERN}"
+                                    + exponent
+                                    + r'|\d+\s*°\s*\d+\s*\x27\s*\d+(?:\.\d+)?\s*"?\s*['
+                                    + directions
+                                    + r"])[\s°]*$"
                                 ),
                             },
                         ],
+                        "nullable": self.target.fields[name].allow_null,
                         "description": (
-                            "Numeric coordinate; rounded to seven decimal "
-                            "places before validation."
+                            "Decimal degrees or a degrees/minutes/seconds string. "
+                            "Numeric strings accept digit-separating underscores; "
+                            "JSON true converts to 1, while false is rejected. "
+                            "Rounded to seven decimal places, then validated within "
+                            f"[-{limit}, {limit}]. Latitude and longitude must be "
+                            "supplied or cleared together."
                         ),
                     }
             if serializer_name == "SensorFleetCreateRequestSerializer":
                 properties["sensors"]["x-drf-form-unrepresentable"] = True
             if serializer_name == "GISViewCreateUpdateSerializer":
                 properties["projects"]["x-drf-form-unrepresentable"] = True
-            if serializer_name == "ExperimentSerializer":
-                for name in ("start_date", "end_date"):
-                    properties[name] = {
-                        "anyOf": [properties[name], {"type": "string", "maxLength": 0}]
-                    }
-                field_list = properties["experiment_fields"]
-                field_list.pop("nullable", None)
-                definition = field_list["items"]
-                definition["properties"]["uuid"] = {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "Existing-field identifier; id takes precedence.",
-                }
-                definition["properties"]["type"]["enum"] = [
-                    "text",
-                    "number",
-                    "date",
-                    "boolean",
-                    "select",
-                ]
-                definition["required"] = ["name", "type"]
-                properties["experiment_fields"] = {
-                    "anyOf": [
-                        field_list,
-                        {"type": "object", "additionalProperties": definition},
-                        {"type": "string", "nullable": True, "enum": [None]},
-                    ],
-                    "x-drf-form-unrepresentable": True,
-                }
             for name, field in self.target.fields.items():
                 if name in properties and isinstance(field, serializers.JSONField):
                     properties[name]["x-drf-json-form"] = True
@@ -245,7 +250,9 @@ class ModelRepresentationSchema(OpenApiSerializerExtension):  # type: ignore[no-
                     properties[name]["x-drf-null-as-empty"] = not getattr(
                         field, "allow_blank", False
                     )
-            return schema
+            return project_domain_request_schema(
+                self.target, schema, auto_schema.method
+            )
         if serializer_name == "ExperimentSerializer":
             fields = properties["experiment_fields"]
             fields.pop("nullable", None)

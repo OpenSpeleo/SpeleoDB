@@ -34,6 +34,11 @@ from speleodb.api.v2.permissions import SDB_WriteAccess
 from speleodb.api.v2.serializers import ExperimentRecordGISSerializer
 from speleodb.api.v2.serializers import ExperimentRecordSerializer
 from speleodb.api.v2.serializers import ExperimentSerializer
+from speleodb.api.v2.serializers.domain_contract import EXPERIMENT_RECORD_CREATE_REQUEST
+from speleodb.api.v2.serializers.domain_contract import (
+    EXPERIMENT_RECORD_REPLACEMENT_REQUEST,
+)
+from speleodb.api.v2.serializers.domain_contract import EXPERIMENT_RECORD_REQUEST
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models import ExperimentUserPermission
@@ -478,19 +483,7 @@ class ExperimentRecordApiView(GenericAPIView[Station], SDBAPIViewMixin):
                     f"Unexpected type received: {type(experiment_or_response)}"
                 )
 
-    @extend_schema(
-        request={
-            "application/json": {
-                "type": "object",
-                "additionalProperties": True,
-                "description": (
-                    "Experiment field UUIDs mapped to their values. "
-                    "Server-owned submitter identity is restored by the "
-                    "server."
-                ),
-            }
-        }
-    )
+    @extend_schema(request=EXPERIMENT_RECORD_CREATE_REQUEST)
     @extend_schema(
         responses={
             201: ExperimentRecordSerializer(),
@@ -653,17 +646,7 @@ class ExperimentRecordSpecificApiView(
         )
 
     @extend_schema(
-        request={
-            "application/json": {
-                "type": "object",
-                "additionalProperties": True,
-                "description": (
-                    "Experiment field UUIDs mapped to their values. "
-                    "Server-owned submitter identity is restored by the "
-                    "server."
-                ),
-            }
-        },
+        request=EXPERIMENT_RECORD_REPLACEMENT_REQUEST,
         responses={
             200: ExperimentRecordSerializer(),
             400: API_ERROR,
@@ -677,17 +660,7 @@ class ExperimentRecordSpecificApiView(
         return self._update_obj(request, partial=False)
 
     @extend_schema(
-        request={
-            "application/json": {
-                "type": "object",
-                "additionalProperties": True,
-                "description": (
-                    "Experiment field UUIDs mapped to their values. "
-                    "Server-owned submitter identity is restored by the "
-                    "server."
-                ),
-            }
-        },
+        request=EXPERIMENT_RECORD_REQUEST,
         responses={
             200: ExperimentRecordSerializer(),
             400: API_ERROR,

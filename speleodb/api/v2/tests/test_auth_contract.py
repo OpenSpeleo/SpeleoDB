@@ -13,6 +13,7 @@ from allauth.account.models import EmailAddress
 from allauth.account.models import EmailConfirmationHMAC
 from allauth.account.utils import user_pk_to_url_str
 from allauth.headless.internal.sessionkit import authenticate_by_x_session_token
+from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.test import Client
 from django.test import override_settings
@@ -22,6 +23,31 @@ from speleodb.testing.api_contract import assert_api_response
 from speleodb.testing.api_contract import contract_schema
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
+
+
+def _auth_request_headers(
+    client: Client,
+    *,
+    client_kind: str,
+    mount: str,
+    method: str,
+    headers: dict[str, str],
+) -> dict[str, str]:
+    """Use a real browser CSRF cookie, including a token rotated by login."""
+    if client_kind == "app" or method in {"GET", "HEAD", "OPTIONS"}:
+        return dict(headers)
+    if settings.CSRF_COOKIE_NAME not in client.cookies:
+        # allauth.browser_view calls get_token on real GET requests, making
+        # CsrfViewMiddleware set the browser cookie in the config response.
+        response = client.get(f"{mount}browser/v1/config")
+        assert response.status_code == status.HTTP_200_OK
+        assert_api_response(response)
+    assert settings.CSRF_COOKIE_NAME in client.cookies
+    # Read on every unsafe request: successful login rotates the cookie.
+    return {
+        **headers,
+        "X-CSRFToken": client.cookies[settings.CSRF_COOKIE_NAME].value,
+    }
 
 
 @pytest.mark.django_db
@@ -87,7 +113,7 @@ def test_configured_rate_limit_responses(
     }
     rate = "1/m/user" if authenticated else "1/m/ip"
     with override_settings(CACHES=caches, ACCOUNT_RATE_LIMITS={action: rate}):
-        client = Client()
+        client = Client(enforce_csrf_checks=True)
         headers: dict[str, str] = {}
         if authenticated:
             user = cast("User", UserFactory())
@@ -114,7 +140,13 @@ def test_configured_rate_limit_responses(
                 f"{mount}{client_kind}/v1/{suffix}",
                 data=json.dumps(payload) if method != "GET" else "",
                 content_type="application/json",
-                headers=headers,
+                headers=_auth_request_headers(
+                    client,
+                    client_kind=client_kind,
+                    mount=mount,
+                    method=method,
+                    headers=headers,
+                ),
             )
             assert response.status_code == expected, response.content
             assert_api_response(response)
@@ -142,7 +174,7 @@ def test_unthrottled_and_disabled_auth_handlers_do_not_advertise_rate_limits() -
 @pytest.mark.parametrize("client_kind", ["browser", "app"])
 @pytest.mark.parametrize("mount", ["/_allauth/", "/api/auth/"])
 def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
-    client = Client()
+    client = Client(enforce_csrf_checks=True)
     headers: dict[str, str] = {}
     password = "ContractPassword!8394"  # noqa: S105 - Test account only.
     email = f"contract-{client_kind}@example.com"
@@ -160,7 +192,13 @@ def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
             f"{mount}{client_kind}/v1/{suffix}",
             data=json.dumps(payload) if payload is not None else "",
             content_type="application/json",
-            headers={**headers, **(extra or {})},
+            headers=_auth_request_headers(
+                client,
+                client_kind=client_kind,
+                mount=mount,
+                method=method,
+                headers={**headers, **(extra or {})},
+            ),
         )
         if "X-Session-Token" in headers:
             assert (
@@ -200,7 +238,14 @@ def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
     )
     address.refresh_from_db()
     assert address.verified
+    csrf_before_login = (
+        client.cookies[settings.CSRF_COOKIE_NAME].value
+        if client_kind == "browser"
+        else None
+    )
     login = call("POST", "auth/login", {"email": email, "password": password})
+    if client_kind == "browser":
+        assert client.cookies[settings.CSRF_COOKIE_NAME].value != csrf_before_login
     assert login.json()["data"]["user"]["id"] == user.id
     assert login.json()["data"]["user"]["email"] == email
     if client_kind == "app":
@@ -258,7 +303,7 @@ def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
     call("DELETE", "account/email", {"email": third_email})
     call("DELETE", "auth/session", expected=status.HTTP_401_UNAUTHORIZED)
     headers.clear()
-    client = Client()
+    client = Client(enforce_csrf_checks=True)
     call("POST", "auth/login", {"email": second_email, "password": password})
     changed = "ChangedContractPassword!9834"
     call(
@@ -270,7 +315,7 @@ def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
     user.refresh_from_db()
     assert user.check_password(changed)
     headers.clear()
-    client = Client()
+    client = Client(enforce_csrf_checks=True)
     call("POST", "auth/password/request", {"email": second_email})
     reset_token = account_settings.PASSWORD_RESET_TOKEN_GENERATOR().make_token(user)
     reset_key = f"{user_pk_to_url_str(user)}-{reset_token}"
@@ -291,7 +336,7 @@ def test_configured_account_lifecycle(client_kind: str, mount: str) -> None:
 def test_app_session_rejects_cookie_identity_and_invalid_token(mount: str) -> None:
 
     user = cast("User", UserFactory())
-    client = Client()
+    client = Client(enforce_csrf_checks=True)
     client.force_login(user)
     # App authentication must not inherit an authenticated browser cookie.
     response = client.get(f"{mount}app/v1/auth/session")
@@ -310,7 +355,7 @@ def test_app_session_rejects_cookie_identity_and_invalid_token(mount: str) -> No
 def test_browser_session_retains_hijack_metadata(mount: str) -> None:
 
     user = cast("User", UserFactory())
-    client = Client()
+    client = Client(enforce_csrf_checks=True)
     client.force_login(user)
     session = client.session
     session["hijack_history"] = ["original-administrator"]
@@ -320,3 +365,97 @@ def test_browser_session_retains_hijack_metadata(mount: str) -> None:
     assert response.json()["data"]["user"]["id"] == user.pk
     assert getattr(response.wsgi_request.user, "is_hijacked", False)
     assert_api_response(response)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("mount", ["/_allauth/", "/api/auth/"])
+@pytest.mark.parametrize("client_kind", ["browser", "app"])
+@pytest.mark.parametrize("payload", [b"{", b"[]", b"\xff"])
+@pytest.mark.parametrize(
+    ("method", "suffix"), [("POST", "auth/login"), ("DELETE", "auth/session")]
+)
+def test_malformed_auth_json_has_an_empty_html_error(
+    mount: str, client_kind: str, payload: bytes, method: str, suffix: str
+) -> None:
+    client = Client(enforce_csrf_checks=True)
+    with override_settings(ACCOUNT_RATE_LIMITS={}):
+        response = client.generic(
+            method,
+            f"{mount}{client_kind}/v1/{suffix}",
+            data=payload,
+            content_type="application/json",
+            headers=_auth_request_headers(
+                client,
+                client_kind=client_kind,
+                mount=mount,
+                method=method,
+                headers={},
+            ),
+        )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.content == b""
+    assert response["Content-Type"].startswith("text/html")
+    assert_api_response(response)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("mount", ["/_allauth/", "/api/auth/"])
+def test_browser_csrf_and_app_session_transports_are_distinct(mount: str) -> None:
+    client = Client(enforce_csrf_checks=True)
+    config = client.get(f"{mount}browser/v1/config")
+    assert config.status_code == status.HTTP_200_OK
+    rejected = client.post(
+        f"{mount}browser/v1/auth/login", data="{}", content_type="application/json"
+    )
+    assert rejected.status_code == status.HTTP_403_FORBIDDEN
+    assert rejected["Content-Type"].startswith("text/html")
+    assert_api_response(rejected)
+    # App endpoints are CSRF exempt; malformed account input reaches JSON
+    # validation.
+    app = client.post(
+        f"{mount}app/v1/auth/login", data="{}", content_type="application/json"
+    )
+    assert app.status_code == status.HTTP_400_BAD_REQUEST
+    assert app["Content-Type"].startswith("application/json")
+    assert_api_response(app)
+    for kind, expected in (
+        ("browser", status.HTTP_200_OK),
+        ("app", status.HTTP_410_GONE),
+    ):
+        response = client.get(
+            f"{mount}{kind}/v1/config",
+            headers={"X-Session-Token": "expired-contract-session"},
+        )
+        assert response.status_code == expected
+        assert_api_response(response)
+
+
+def test_configured_auth_inputs_and_security_are_described() -> None:
+    document = contract_schema()
+    components = document["components"]
+    login = components["schemas"]["AuthLogin"]
+    assert set(login["properties"]) == {"email", "password"}
+    assert set(login["required"]) == {"email", "password"}
+    for path, item in document["paths"].items():
+        if not path.startswith(("/_allauth/", "/api/auth/")):
+            continue
+        for method, operation in item.items():
+            body = operation.get("requestBody")
+            if body:
+                if "$ref" in body:
+                    body = components["requestBodies"][body["$ref"].rsplit("/", 1)[1]]
+                assert body["required"] is True
+            header_references = {
+                parameter.get("$ref") for parameter in operation.get("parameters", [])
+            }
+            disabled_phone = "/phone" in path
+            if "/app/" in path and not disabled_phone:
+                assert "#/components/parameters/AuthSessionToken" in header_references
+                assert {"AuthSessionToken": []} in operation["security"]
+            if "/browser/" in path:
+                assert (
+                    "#/components/parameters/AuthSessionToken" not in header_references
+                )
+                assert {"AuthBrowserSession": []} in operation["security"]
+                if method != "get":
+                    assert "text/html" in operation["responses"]["403"]["content"]

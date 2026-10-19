@@ -11,8 +11,13 @@ from allauth.headless import app_settings as headless_settings
 from allauth.headless.spec.internal.schema import get_schema as get_auth_schema
 from allauth.headless.tokens.strategies.sessions import SessionTokenStrategy
 from django.test import override_settings
+from django.urls import resolve
 from drf_spectacular.generators import SchemaGenerator
 
+from speleodb.api.schema_auth import adapt_auth_transport
+from speleodb.api.schema_auto import drf_transport_parameters
+from speleodb.api.schema_auto import project_drf_responses
+from speleodb.api.schema_protocol import protocol_schema
 from speleodb.gis.ogc_openapi import OGC_OPENAPI_DOC
 
 if TYPE_CHECKING:
@@ -84,6 +89,11 @@ def namespace_components(document: dict[str, Any], prefix: str) -> dict[str, Any
             if isinstance(reference, str) and reference.startswith("#/components/"):
                 parts = reference.split("/", 3)
                 value["$ref"] = "/".join([*parts[:3], prefix + parts[3]])
+            if "security" in value:
+                value["security"] = [
+                    {prefix + name: scopes for name, scopes in requirement.items()}
+                    for requirement in value["security"]
+                ]
             for child in value.values():
                 rewrite(child)
         elif isinstance(value, list):
@@ -142,6 +152,9 @@ def configured_auth_schema() -> dict[str, Any]:
                             },
                         }
                     }
+                    adapt_auth_transport(
+                        schema, operation, client, relative_path, method
+                    )
                     continue
                 if (
                     relative_path == "auth/code/confirm"
@@ -183,7 +196,16 @@ def configured_auth_schema() -> dict[str, Any]:
                     operation["responses"].setdefault(
                         "401", {"$ref": "#/components/responses/Authentication"}
                     )
+                adapt_auth_transport(schema, operation, client, relative_path, method)
             paths[path] = path_item
+    for path, item in list(paths.items()):
+        alias = copy.deepcopy(item)
+        for method, operation in alias.items():
+            if method in HTTP_METHODS:
+                operation["operationId"] = operation["operationId"].replace(
+                    "auth_", "auth_alias_", 1
+                )
+        paths[path.replace("/_allauth/", "/api/auth/", 1)] = alias
     schema["paths"] = paths
     # App responses can expose a newly established session token even when
     # throttled. APIResponse adds this metadata; browser responses omit it.
@@ -285,6 +307,9 @@ def ogc_schema() -> dict[str, Any]:
                     "headers": {
                         "ETag": {"schema": {"type": "string"}},
                         "Cache-Control": {"schema": {"type": "string"}},
+                        "Content-Disposition": {
+                            "schema": {"type": "string", "enum": ["inline"]}
+                        },
                     },
                     "content": {
                         "application/vnd.oai.openapi+json": {
@@ -292,10 +317,58 @@ def ogc_schema() -> dict[str, Any]:
                         }
                     },
                 },
-                "304": {"description": "Document unchanged"},
+                "304": {
+                    "description": "Document unchanged",
+                    "headers": {
+                        "ETag": {"schema": {"type": "string"}},
+                        "Cache-Control": {"schema": {"type": "string"}},
+                    },
+                },
             },
         }
     }
+    for path, item in schema["paths"].items():
+        sample_path = path.replace("{gis_token}", "a" * 40).replace("{key}", "a" * 40)
+        collection = (
+            "landmarks"
+            if "/landmark-collection/" in path
+            else "00000000-0000-0000-0000-000000000001"
+            if "/landmark-collections/" in path
+            else "a" * 40 + "_points"
+        )
+        sample_path = sample_path.replace("{collection_id}", collection).replace(
+            "{feature_id}", "00000000-0000-0000-0000-000000000001"
+        )
+        # DRF adds these attributes to the callable returned by as_view().
+        callback: Any = resolve(sample_path).func
+        view = callback.cls(**callback.initkwargs)
+        operation = item["get"]
+        responses = {}
+        for code, response in operation["responses"].items():
+            resolved_response = (
+                schema["components"]["responses"][response["$ref"].rsplit("/", 1)[1]]
+                if "$ref" in response
+                else response
+            )
+            responses[code] = copy.deepcopy(resolved_response)
+        operation["responses"] = project_drf_responses(responses, view, "GET")
+        parameters = {
+            (
+                parameter.get("in"),
+                parameter.get("name"),
+                parameter.get("$ref"),
+            ): parameter
+            for parameter in operation.get("parameters", [])
+        }
+        for parameter in drf_transport_parameters(view, "GET"):
+            parameters[(parameter["in"], parameter["name"], None)] = parameter
+        operation["parameters"] = list(parameters.values())
+        operation["security"] = [
+            {"cookieAuth": []},
+            {"tokenAuth": []},
+            {"bearerAuth": []},
+            {},
+        ]
     return schema
 
 
@@ -329,5 +402,6 @@ class SpeleoDBSchemaGenerator(SchemaGenerator):
         schema["servers"] = [{"url": "/", "description": "SpeleoDB server origin"}]
         merge_document(schema, configured_auth_schema())
         merge_document(schema, ogc_schema())
+        merge_document(schema, protocol_schema())
         normalize_nullable_references(schema)
         return schema

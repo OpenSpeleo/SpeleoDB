@@ -285,6 +285,7 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             201: response_object(
                 "GISLayerPermissionAPIViewPostResponse",
                 gis_layer=GISLayerSerializer(),
@@ -337,6 +338,7 @@ class GISLayerPermissionAPIView(GenericAPIView[GISLayer], SDBAPIViewMixin):
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: GISLayerUserPermissionSerializer(),
             403: API_ERROR,
             404: API_ERROR,

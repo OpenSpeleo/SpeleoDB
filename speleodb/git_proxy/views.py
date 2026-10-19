@@ -253,6 +253,7 @@ class GitErrorRenderer(BaseRenderer):
 
 
 class BaseGitProxyAPIView(GenericAPIView[Project]):
+    # Packet media and protocol errors are declared in api.schema_protocol.
     schema = None
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer

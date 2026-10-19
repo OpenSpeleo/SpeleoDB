@@ -44,8 +44,10 @@ def api_contract_observer(request: pytest.FixtureRequest) -> Generator[None]:
         return
     with override_settings(
         MIDDLEWARE=[
-            *settings.MIDDLEWARE,
+            # Observe the final wire response after CSRF/auth middleware,
+            # including responses that never reach a handler.
             "speleodb.testing.api_contract.APIContractMiddleware",
+            *settings.MIDDLEWARE,
         ]
     ):
         yield

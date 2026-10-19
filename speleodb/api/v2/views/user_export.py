@@ -170,7 +170,31 @@ class UserExportDownloadView(UserExportBaseView):
             410: API_ERROR,
             403: API_ERROR,
             404: API_ERROR,
-        }
+        },
+        parameters=[
+            OpenApiParameter(
+                "Location",
+                {"type": "string", "format": "uri"},
+                OpenApiParameter.HEADER,
+                response=[302],
+                required=True,
+                description="Short-lived signed archive URL.",
+            ),
+            OpenApiParameter(
+                "Cache-Control",
+                {"type": "string", "enum": ["private, no-store"]},
+                OpenApiParameter.HEADER,
+                response=[302],
+                required=True,
+            ),
+            OpenApiParameter(
+                "Referrer-Policy",
+                {"type": "string", "enum": ["no-referrer"]},
+                OpenApiParameter.HEADER,
+                response=[302],
+                required=True,
+            ),
+        ],
     )
     @extend_schema(operation_id="v2_user_exports_download_retrieve")
     def get(

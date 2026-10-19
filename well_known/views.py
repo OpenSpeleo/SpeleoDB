@@ -2,11 +2,10 @@
 
 """RFC 5785 ``.well-known`` views.
 
-These endpoints are consumed by operating systems (iOS universal links,
-Android app links, browser password managers), not by API clients.
-They are excluded from the OpenAPI schema with ``@extend_schema(exclude=True)``
-because they are infrastructure/protocol-discovery endpoints, not part of
-the REST API contract.
+These JSON discovery APIs are consumed by operating systems and password
+managers. Their schemas are explicitly composed by schema_protocol.py because
+Django JsonResponse bypasses DRF success rendering. The password-change URL is
+an HTML navigation redirect and is not an API operation.
 """
 
 from __future__ import annotations

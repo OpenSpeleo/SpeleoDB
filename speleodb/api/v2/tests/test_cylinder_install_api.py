@@ -629,11 +629,13 @@ class TestCylinderInstallRetrieveUpdateDelete:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Cannot change status" in str(response.data["errors"])
 
+    @pytest.mark.parametrize("method", ["put", "patch"])
     def test_update_status_without_write_permission(
         self,
         api_client: APIClient,
         cylinder_fleet_with_read: CylinderFleet,
         user: User,
+        method: str,
     ) -> None:
         """Read-only user cannot update install status."""
         cylinder = CylinderFactory.create(fleet=cylinder_fleet_with_read)
@@ -641,7 +643,7 @@ class TestCylinderInstallRetrieveUpdateDelete:
 
         data = {"status": InstallStatus.LOST}
 
-        response = api_client.patch(
+        response = getattr(api_client, method)(
             reverse(
                 "api:v2:cylinder-install-detail",
                 kwargs={"install_id": install.id},
@@ -652,6 +654,10 @@ class TestCylinderInstallRetrieveUpdateDelete:
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {
+            "error": "You do not have write access to this cylinder install."
+        }
+        assert_api_response(response)
 
     def test_update_location_name(
         self,

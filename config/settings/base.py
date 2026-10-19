@@ -656,8 +656,8 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX_TRIM": False,
     "SORT_OPERATION_PARAMETERS": True,
     "PERSIST_AUTH": False,
-    # Drop the legacy /api/v1/ mirror routes from the generated schema so they
-    # don't collide with the canonical /api/v2/ operationIds. See
+    # Exclude obsolete SpeleoDB v1 from the supported SDK contract while
+    # retaining allauth protocol v1 on both supported auth mounts. See
     # `speleodb.utils.schema_hooks.exclude_legacy_v1_paths`.
     "PREPROCESSING_HOOKS": [
         "speleodb.utils.schema_hooks.exclude_legacy_v1_paths",

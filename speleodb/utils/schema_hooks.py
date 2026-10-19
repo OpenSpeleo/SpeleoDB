@@ -19,15 +19,10 @@ def exclude_legacy_v1_paths(
     endpoints: list[tuple[str, str, str, Callable[..., Any]]],
     **_kwargs: Any,
 ) -> list[tuple[str, str, str, Callable[..., Any]]]:
-    """Drop the legacy ``/api/v1/`` mirror routes from the OpenAPI schema.
+    """Exclude obsolete SpeleoDB v1 routes from the supported SDK contract.
 
-    ``/api/v1/`` is a backward-compatibility alias that reuses the same v2
-    view classes (see ``speleodb/api_router.py``) but is wrapped by
-    ``DRFWrapResponseMiddleware``. Because the two namespaces share
-    identical callables, drf-spectacular would emit ``operationId``
-    collision warnings for every shared endpoint. The canonical
-    documented surface is ``/api/v2/``, so the legacy mirror is excluded
-    from the schema entirely.
+    The backend retains its legacy middleware and mounts for compatibility.
+    Authentication's /v1 protocol routes are supported and remain documented.
     """
     return [
         endpoint for endpoint in endpoints if not endpoint[0].startswith("/api/v1/")

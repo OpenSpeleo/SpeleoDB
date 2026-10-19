@@ -192,6 +192,14 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
     @extend_schema(
         operation_id="v2_projects_upload",
+        description=(
+            "Upload repeated artifact file parts with a commit message. Compass ZIP "
+            "format accepts exactly one .zip file. At most "
+            f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} files are accepted; each "
+            f"file is limited to {settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} "
+            "MiB. The current combined-byte limit is "
+            f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT * 1024 * 1204} bytes."
+        ),
         request={"multipart/form-data": ProjectUploadRequestSerializer},
         responses={
             200: ProjectUploadResponseSerializer,

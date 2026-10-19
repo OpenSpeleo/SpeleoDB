@@ -100,7 +100,7 @@ def test_revision_download_declares_all_shared_response_branches() -> None:
     revision = paths["/api/v2/projects/{id}/download/{fileformat}/{hexsha}/"]["get"][
         "responses"
     ]
-    assert set(revision) == {"200", "400", "403", "404", "422", "500"}
+    assert set(revision) == {"200", "400", "403", "404", "406", "422", "500"}
     assert revision == latest
 
 

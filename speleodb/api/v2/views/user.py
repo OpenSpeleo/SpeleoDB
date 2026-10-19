@@ -10,6 +10,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -262,17 +263,19 @@ class UserAutocompleteView(GenericAPIView[User]):
         parameters=[
             OpenApiParameter(
                 name="query",
-                type=OpenApiTypes.STR,
+                type={"type": "string", "minLength": MINIMUM_QUERY_LEN},
                 location=OpenApiParameter.QUERY,
                 required=True,
                 description=(
                     "Case-insensitive substring to match on user email or name "
-                    "(minimum 3 characters)"
+                    "after trimming surrounding whitespace (minimum 3 characters)."
                 ),
             ),
         ],
         responses={
-            200: UserAutocompleteSerializer(many=True),
+            200: serializers.ListSerializer(
+                child=UserAutocompleteSerializer(), max_length=MAXIMUM_RESULTS
+            ),
             400: API_ERROR,
             403: API_ERROR,
         },

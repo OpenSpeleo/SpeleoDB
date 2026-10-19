@@ -227,6 +227,7 @@ class GPSTrackPermissionAPIView(GenericAPIView[GPSTrack], SDBAPIViewMixin):
     @extend_schema(request=NonWebViewerPermissionRequestSerializer)
     @extend_schema(
         responses={
+            401: API_ERROR,
             200: GPSTrackUserPermissionSerializer(),
             403: API_ERROR,
             404: API_ERROR,

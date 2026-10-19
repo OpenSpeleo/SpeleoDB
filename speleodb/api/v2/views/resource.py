@@ -19,6 +19,9 @@ from speleodb.api.v2.permissions import IsReadOnly
 from speleodb.api.v2.permissions import SDB_AdminAccess
 from speleodb.api.v2.permissions import SDB_ReadAccess
 from speleodb.api.v2.permissions import SDB_WriteAccess
+from speleodb.api.v2.serializers.domain_contract import (
+    StationResourceCreateRequestSerializer,
+)
 from speleodb.api.v2.serializers.station import StationResourceSerializer
 from speleodb.gis.models import Station
 from speleodb.gis.models import StationResource
@@ -52,6 +55,7 @@ class StationResourceApiView(GenericAPIView[Station], SDBAPIViewMixin):
     @extend_schema(
         responses={201: StationResourceSerializer(), 400: API_ERROR, 403: API_ERROR}
     )
+    @extend_schema(request=StationResourceCreateRequestSerializer)
     @extend_schema(operation_id="v2_stations_resources_create")
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new resource."""

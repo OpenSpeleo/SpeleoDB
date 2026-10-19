@@ -211,6 +211,7 @@ class KMLKMZInspectView(GenericAPIView[Landmark], SDBAPIViewMixin):
         request=KML_UPLOAD_REQUEST,
         responses={
             200: KML_INSPECTION_SCHEMA,
+            500: API_ERROR,
             422: GISProcessingErrorSerializer,
             403: API_ERROR,
         },

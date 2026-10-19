@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from rest_framework import serializers
 
 from speleodb.api.v2.serializers.cylinder_fleet import CylinderInstallSerializer
@@ -75,7 +76,12 @@ class AuthTokenResponseSerializer(serializers.Serializer[dict[str, Any]]):
 
 
 class ProjectUploadRequestSerializer(serializers.Serializer[dict[str, Any]]):
-    artifact = serializers.ListField(child=serializers.FileField(), min_length=1)
+    artifact = serializers.ListField(
+        child=serializers.FileField(),
+        min_length=1,
+        max_length=settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT,
+        help_text="Compass ZIP uploads accept exactly one .zip file.",
+    )
     message = serializers.CharField()
 
 

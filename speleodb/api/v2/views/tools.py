@@ -25,10 +25,12 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import permissions
+from rest_framework import serializers
 from rest_framework import status
 from rest_framework.views import APIView
 
 from speleodb.api.schema_errors import API_ERROR
+from speleodb.api.v2.serializers.tool_contract import JSONTextField
 from speleodb.api.v2.serializers.tool_contract import spreadsheet_input
 from speleodb.api.v2.views.tmp_utils import SurveyData
 from speleodb.utils.pydantic_utils import NotFutureDate  # noqa: TC001
@@ -312,20 +314,28 @@ class DMPDoctorQuery(BaseModel):
     depth_offset_unit: Literal["feet", "meters"]
 
 
+class DMPDoctorRequestSerializer(serializers.Serializer[dict[str, Any]]):
+    file = serializers.FileField(help_text="A .dmp file.")
+    # Schema-only wire field; DRF's generic stubs reserve `data` for output.
+    data = JSONTextField(  # type: ignore[assignment]
+        model=DMPDoctorQuery,
+        example={
+            "fix_dmp": False,
+            "survey_date": None,
+            "length_scaling": 1,
+            "compass_offset": 0,
+            "reverse_direction": False,
+            "depth_offset": 0,
+            "depth_offset_unit": "meters",
+        },
+    )
+
+
 class ToolDMPDoctor(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
-        request={
-            "multipart/form-data": {
-                "type": "object",
-                "properties": {
-                    "file": {"type": "string", "format": "binary"},
-                    "data": {"type": "string"},
-                },
-                "required": ["file", "data"],
-            }
-        },
+        request={"multipart/form-data": DMPDoctorRequestSerializer},
         responses={
             (200, "application/octet-stream"): OpenApiTypes.BINARY,
             400: API_ERROR,

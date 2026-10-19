@@ -17,21 +17,24 @@ including how to establish that declarations match real HTTP behavior.
 
 ## Scope and source ownership
 
-The composed contract contains current `/api/v2/` endpoints, `/api/health/`, the
-configured `/_allauth/browser/v1/` and `/_allauth/app/v1/` authentication
-endpoints, and the four OGC API Features families under `/api/v2/gis-ogc/`. The
-authentication `v1` is allauth's current protocol version. The obsolete
-application mirror `/api/v1/` is deliberately excluded.
+The composed contract contains current `/api/v2/` endpoints (including the four
+OGC API Features families), `/api/health/`, both configured allauth mounts
+(`/_allauth/` and `/api/auth/`), Git smart HTTP under `/git/`, the three
+`/.well-known/` discovery endpoints, and `/api/schema/`. Authentication's `v1`
+is allauth's current protocol version. The obsolete SpeleoDB application mirror
+`/api/v1/` is deliberately excluded and must not generate SDK operations.
 
-Authentication's `/api/auth/` compatibility mount resolves to the same views. It
-is tested against the canonical mount but does not generate a duplicate set of
-SDK functions. HTML account pages, admin pages, static assets, presigned storage
-URLs, and external downloads are not application API operations. A signed URL
-returned by an API remains a URL; it is not rewritten to a generated endpoint.
-The operation inventory counts explicitly implemented GET/POST/PUT/PATCH/DELETE
-handlers. Framework-provided HEAD/OPTIONS negotiation does not produce
-additional SDK functions; no separately implemented business handler is excluded
-by that rule.
+Authentication's `/api/auth/` compatibility mount resolves to the same views,
+but its operations have distinct `auth_alias_` identifiers and require actual
+requests at that mount as coverage evidence. HTML account pages, DRF's HTML
+API-browser representation, admin pages, documentation UI, static assets,
+presigned storage URLs, and external downloads are outside the machine API
+contract. HTML errors that machine clients can receive, such as browser CSRF
+failures, are included. A signed URL returned by an API remains a URL; it is not
+rewritten to a generated endpoint. The operation inventory counts explicitly
+implemented GET/POST/PUT/PATCH/DELETE handlers. Framework-provided HEAD/OPTIONS
+negotiation does not produce additional SDK functions; no separately implemented
+business handler is excluded by that rule.
 
 OGC's six old bare-SHA collection routes return `410 Gone` with replacement
 `Link` headers. Their URL templates collide with the current geometry-specific
@@ -41,17 +44,18 @@ explain the deprecated converter variant. They are not silently dropped and the
 current operation is not marked deprecated. The OGC service document itself has
 its own `200`/`304` operation.
 
-| Concern                                                        | Authoritative source                                                                                                      |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Paths, converters and supported methods                        | Django URL modules and actual view methods                                                                                |
-| First-party requests, successes and errors                     | View `extend_schema` declarations, serializers, `schema_auto.py`, and `schema_extensions.py`                              |
-| Configured authentication routes and DTOs                      | Installed django-allauth exporter under current application settings, with explicit documented corrections in `schema.py` |
-| OGC discovery, collections, features and parameters            | `speleodb/gis/ogc_openapi.py`                                                                                             |
-| Composition, namespacing, origin and nullable references       | `speleodb/api/schema.py`                                                                                                  |
-| Canonical artifact generation/checking                         | `export_api_schema` management command                                                                                    |
-| Independent route coverage                                     | `speleodb/api/schema_inventory.py` and `test_api_contract.py`                                                             |
-| Actual rendered response validation                            | `speleodb/testing/api_contract.py` and pytest contract plugin                                                             |
-| Required operation evidence and observed status/media branches | `verify_api_contract_coverage` and `docs/api-contract-coverage.json`                                                      |
+| Concern                                                        | Authoritative source                                                                                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Paths, converters and supported methods                        | Django URL modules and actual view methods                                                                              |
+| First-party requests, successes and errors                     | View `extend_schema` declarations, serializers, `schema_auto.py`, `schema_extensions.py`, and `schema_domain.py`        |
+| Configured authentication routes and DTOs                      | Installed django-allauth exporter under current settings, with explicit corrections in `schema.py` and `schema_auth.py` |
+| OGC discovery, collections, features and parameters            | `speleodb/gis/ogc_openapi.py`                                                                                           |
+| Git protocol, well-known discovery and schema export           | `speleodb/api/schema_protocol.py`, checked against their actual handlers                                                |
+| Composition, namespacing, origin and nullable references       | `speleodb/api/schema.py`                                                                                                |
+| Canonical artifact generation/checking                         | `export_api_schema` management command                                                                                  |
+| Independent route coverage                                     | `speleodb/api/schema_inventory.py` and `test_api_contract.py`                                                           |
+| Actual rendered response validation                            | `speleodb/testing/api_contract.py` and pytest contract plugin                                                           |
+| Required operation evidence and observed status/media branches | `verify_api_contract_coverage` and `docs/api-contract-coverage.json`                                                    |
 
 ## Environment and reproducible export
 
@@ -167,10 +171,10 @@ response. Do not work around nullable failures by dropping required properties.
    inspect rendered responses. Include the new success and relevant failure
    branches. Check missing fields, null values, empty arrays, and permission
    denial.
-5. Run the endpoint tests with contract enforcement, inspect coverage,
-   regenerate the artifact, and update the SDK source record and generated
-   client together. Compile both consumers to expose assumptions that no longer
-   match the contract.
+5. Regenerate and review the artifact, then run endpoint tests with contract
+   enforcement and inspect coverage. Update the SDK source record and generated
+   client together after the backend revision is available upstream. Compile
+   both consumers to expose assumptions that no longer match the contract.
 
 For explicit response envelopes, use concrete serializer fields and the helpers
 in `schema_helpers.py`. A list response needs `many=True`; a GeoJSON response
@@ -218,6 +222,13 @@ them. DRF JSONField values in HTML forms are JSON-encoded strings; JSON request
 bodies contain JSON values. Do not copy the same binary schema across every
 default parser media type.
 
+Required uploaded files make JSON and URL-encoded representations unavailable;
+they do not become optional merely because those parsers are installed. A
+resource creation declaration separates note text from the required file for
+photos, videos and documents. A body is required only when every supported input
+variant requires it. Required geometry revisions remain required on PATCH even
+though ordinary partial serializers omit other required fields.
+
 HTML forms have no native null value. A form property marked
 `x-drf-null-as-empty: true` accepts an empty value as DRF `None`; the SDK
 serializes an explicit `null` that way. A nullable text field that also allows
@@ -227,6 +238,12 @@ omitted, especially on PATCH. JSONField form values are already JSON strings:
 send `"null"` to represent JSON null, without encoding that string a second
 time. File fields expose only binary multipart uploads or the supported
 empty/null clear representation in other media.
+
+For JSON encoded inside a text field, `x-json-schema` documents the decoded
+structure while the wire schema remains a string. This applies to form JSON
+fields and the DMP doctor configuration. `x-normalized-schema` describes the
+internal validated representation when spreadsheet inputs undergo conversion; it
+must not replace the original row shape sent by callers.
 
 Do not infer support for nested values from a view's parser list. Initial sensor
 arrays are accepted in JSON; ordinary repeated form strings are not nested
@@ -240,13 +257,15 @@ computed station pairs and magnetic declination. Compass input requires latitude
 and longitude. Cross-row and date-relative rules remain runtime validation, with
 descriptions in the schema.
 
-File extension validators constrain uploaded filenames. Download responses
-contain signed URLs, often with query strings, so those filename regexes do not
-constrain the returned URL. A binary response needs its actual content type and
-a binary schema. Some Excel endpoints intentionally return
-`application/octet-stream` while others return the spreadsheet MIME type.
-Preserve those distinctions and verify Content-Disposition, filenames and
-empty/not-modified branches.
+File extension validators constrain uploaded filenames. Their patterns and
+filename length limits are recorded as `x-filename-pattern`,
+`x-filename-minLength`, and `x-filename-maxLength`, never as constraints on
+binary file contents. Download responses contain signed URLs, often with query
+strings, so those filename regexes do not constrain the returned URL. A binary
+response needs its actual content type and a binary schema. Some Excel endpoints
+intentionally return `application/octet-stream` while others return the
+spreadsheet MIME type. Preserve those distinctions and verify
+Content-Disposition, filenames and empty/not-modified branches.
 
 Experiment records have dynamically configured field UUIDs as keys. Their values
 are constrained by the selected experiment at runtime. Geometry schemas describe
@@ -260,6 +279,13 @@ validator registers JSON deserializers for those media types and the OpenAPI
 service document. Media parameters such as charset/version are preserved by HTTP
 and do not change JSON syntax. Stream inspection must leave the stream
 consumable by the test.
+
+Git POST operations accept raw protocol bytes, not JSON or form fields. Their
+responses can report a protocol rejection with HTTP 200; the Git client must
+interpret the packet stream. Keep the declared packet MIME types and binary body
+semantics. The validator accepts empty bytes only through the normal media
+deserializer and schema validation: an empty text or binary representation can
+be valid, while empty JSON remains invalid.
 
 ## Contract verification
 
@@ -279,11 +305,14 @@ docker exec -w /app speleodb-monorepo-django pytest \
   --api-contract-report=/tmp/user-contract.json --api-contract-enforce
 ```
 
-The independent resolver matrix checks that every current path/method has
+The independent resolver matrix checks that every supported path/method has
 exactly one generated operation, instantiates every route with valid converter
 values, and validates its real anonymous response. Authentication aliases
 resolve to the same views and return the same response status/media as their
-canonical paths:
+canonical paths, but observations retain their actual paths and operation IDs.
+Inventory follows DRF/allauth handler classes wherever mounted, with explicit
+exclusions for the obsolete SpeleoDB v1 mirror and HTML documentation UI; it
+does not infer completeness from a list of expected API prefixes:
 
 ```sh
 docker exec -w /app speleodb-monorepo-django pytest \
@@ -298,7 +327,7 @@ domain-specific failure cases:
 
 ```sh
 docker exec -w /app speleodb-monorepo-django pytest \
-  speleodb/api/v2/tests speleodb/users/tests \
+  speleodb/api/v2/tests speleodb/users/tests speleodb/git_proxy \
   --api-contract-report=/tmp/api-contract.json --api-contract-enforce
 ```
 
@@ -322,6 +351,17 @@ accuracy. Resolver coverage proves endpoint inclusion, not successful business
 behavior. An anonymous 403 does not establish the authenticated 200 shape. Keep
 those forms of evidence distinct when reviewing an update.
 
+The observer surrounds application middleware so it validates final responses,
+including browser CSRF failures that never reach an auth handler. It selects
+operations through the resolver and exported contract, without rewriting an
+alias to another mount. Both auth mounts need their own successful workflows or
+documented configured-unavailable evidence.
+
+OGC declares `allowEmptyValue` only for query fields where the parser treats an
+explicit empty value as omission/default. The observer honors those declarations
+before numeric/CSV casting to accommodate openapi-core's casting order; nonempty
+values and parameters without that flag retain their normal schema validation.
+
 After a passing audit run, enforce operation coverage and refresh the durable
 evidence registry from the observed report:
 
@@ -335,7 +375,7 @@ When an intentional schema update has made the existing registry stale, run that
 audit with only its snapshot guard deselected:
 
 ```sh
-uv run pytest speleodb/api/v2/tests speleodb/users/tests \
+uv run pytest speleodb/api/v2/tests speleodb/users/tests speleodb/git_proxy \
   --deselect=speleodb/api/v2/tests/test_api_contract.py::test_durable_evidence_matches_current_contract \
   --api-contract-report=/tmp/api-contract.json --api-contract-enforce
 uv run python manage.py verify_api_contract_coverage /tmp/api-contract.json \
@@ -356,10 +396,11 @@ rejects unknown operations, contract violations, missing observations, and
 operations with only admission/error evidence. The registry records actual test
 names, statuses, media, request validation flags, and **unobserved declared
 statuses**. It is evidence of executed branches, not a claim that every
-conceivable input or failure condition has been exercised. Tests may exercise
-multiple aliases of one canonical operation; the independent alias test
-additionally proves matching view classes and initialization arguments for all
-47 mounted aliases.
+conceivable input or failure condition has been exercised. Each mounted alias
+has its own operation and observations; the independent alias test additionally
+proves matching view classes and initialization arguments for all 47 auth
+aliases. Git packet-line rejections are recorded even when their HTTP status is
+200, but cannot satisfy the successful-operation evidence requirement.
 
 When combining runs made before and after a schema refinement, supply the exact
 previous YAML with `--baseline-schema`. The coverage command checks its hash
@@ -370,17 +411,17 @@ operation, and the changed operations that were revalidated. It never implies
 that an older response was revalidated against a newer schema. A full run on the
 current snapshot needs no baseline argument.
 
-The configured contract has 322 canonical operations representing 328 resolver
-operations plus those 47 aliases. Successful 2xx/3xx responses are observed for
-299 operations. Ten allauth operations complete a verified account transition
-with a 401 flow response: signup, email verification, password reset, password
-change and logout for both clients. Their tests verify account/session changes
-as well as response bytes. Thirteen other allauth operations are configured
-unavailable: phone authentication, login by code, email-code resend, and token
-refresh under SessionTokenStrategy. Their schemas omit unreachable upstream
-success responses and retain real error evidence; the coverage command derives
-those exceptions from current settings. Enabling one of those features requires
-successful fixtures, rather than a permanent exemption.
+The resolver and generated contract must agree on every supported operation; the
+durable registry records the current counts and evidence. Some allauth
+operations complete a verified account transition with a 401 flow response:
+signup, email verification, password reset, password change and logout for both
+clients on both mounts. Their tests verify account/session changes as well as
+response bytes. Other allauth operations are configured unavailable: phone
+authentication, login by code, email-code resend, and token refresh under
+SessionTokenStrategy. Their schemas omit unreachable upstream success responses
+and retain real error evidence; the coverage command derives those exceptions
+from current settings. Enabling one of those features requires successful
+fixtures, rather than a permanent exemption.
 
 The observer validates parameters and bounded JSON/URL-encoded bodies on
 successful requests and rendered responses on every observed status. It does not
