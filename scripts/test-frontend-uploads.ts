@@ -1,4 +1,4 @@
-import { browserTransport, createApiClient, getV2GisLayersListUrl, v2GisLayersCreateWithFormData, v2GisLayersList, v2GisLayersPartialUpdateWithJson } from '@speleodb/api';
+import { browserTransport, createApiClient, getV2GisLayersListUrl, v2GisLayersCreate, v2GisLayersList, v2GisLayersPartialUpdateWithJson } from '@speleodb/api';
 import { ApiRequestError, apiData, webApiOptions } from '../frontend_common/api/client.ts';
 import type { UploadOperation } from '../ts-types/domain/upload.ts';
 import type { DOMWindow } from 'jsdom';
@@ -105,7 +105,7 @@ function form(name: string, contents = source, filename = `${name}.geojson`) {
 }
 
 function createLayer(name: string, contents = source, filename = `${name}.geojson`): UploadOperation<UploadRecord> {
-    return options => apiData(v2GisLayersCreateWithFormData(form(name, contents, filename), webApiOptions(options)));
+    return options => apiData(v2GisLayersCreate(form(name, contents, filename), undefined, webApiOptions(options)));
 }
 
 function request(operation: UploadOperation<UploadRecord | undefined>, options: UploadOptions<UploadRecord | undefined> = {}) {
@@ -199,7 +199,7 @@ try {
     stored.push({ id: response!.id, name: 'browser-helper-renamed', contents: source });
     checks.push('upload-helper-success-and-progress');
 
-    const edited = request(options => apiData(v2GisLayersPartialUpdateWithJson(response!.id, { name: 'browser-helper-renamed' }, webApiOptions(options))));
+    const edited = request(options => apiData(v2GisLayersPartialUpdateWithJson(response!.id, { name: 'browser-helper-renamed' }, undefined, webApiOptions(options))));
     const editedResult = await edited.done;
     assert.equal(editedResult.response!.name, 'browser-helper-renamed');
     checks.push('upload-helper-custom-method');
@@ -221,7 +221,7 @@ try {
     // transport probes are deliberately outside the generated API operation set.
     async function probe(method: string, url: string, options: Parameters<UploadOperation<undefined>>[0]) {
         const response = await browserTransport({
-            ...options, signal: options.signal!, method,
+            ...options, body: null, signal: options.signal!, method,
             url: new URL(url, configuration.url).href, headers: new Headers(),
             timeoutMs: 10_000, credentials: 'same-origin',
             operation: { operationId: 'test-runtime-probe', responses: { '200': { content: method === 'HEAD' ? {} : { 'application/json': 'json' } } } },
@@ -238,7 +238,7 @@ try {
         baseUrl: new URL(configuration.url).origin,
         transport: transportRequest => browserTransport({ ...transportRequest, url: configuration.url }),
     });
-    const html = request(options => apiData(v2GisLayersList({ ...options, client: htmlClient })).then(() => undefined));
+    const html = request(options => apiData(v2GisLayersList(undefined, { ...options, client: htmlClient })).then(() => undefined));
     const htmlError = (await html.done).error!;
     assert.match(htmlError.message, /unreadable response/);
     assert.equal(htmlError.ambiguous, true);
@@ -256,7 +256,7 @@ try {
     assert.ok(Array.isArray((nameError.payload as {errors: {name: unknown}}).errors.name));
     checks.push('upload-helper-server-error');
 
-    const unavailable = request(options => apiData(v2GisLayersCreateWithFormData(form('offline'), { ...options, client: createApiClient({ baseUrl: new URL(configuration.unavailableUrl).origin }) })));
+    const unavailable = request(options => apiData(v2GisLayersCreate(form('offline'), undefined, { ...options, client: createApiClient({ baseUrl: new URL(configuration.unavailableUrl).origin }) })));
     const networkError = (await unavailable.done).error!;
     assert.equal(networkError.message, 'Network error during upload');
     assert.equal(networkError.status, 0);

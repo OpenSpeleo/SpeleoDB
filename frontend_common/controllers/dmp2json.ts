@@ -42,7 +42,7 @@ export function init() {
 
 
             // Convert DMP to JSON
-            apiData(v2ToolsDmp2jsonCreate({ file: selectedFile }, webApiOptions())).then(response => response.text()).then(response => {
+            apiData(v2ToolsDmp2jsonCreate({ file: selectedFile }, undefined, webApiOptions())).then(response => response.text()).then(response => {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $downloadBtn.prop('disabled', false);

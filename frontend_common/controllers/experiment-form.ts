@@ -9,30 +9,35 @@ import { FormModals } from '../../frontend_private/static/private/ts/forms/modal
 import type { ExperimentFormContext, ExperimentFormField } from '../../ts-types/controllers/experiment-form.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
 
+function fieldInput(
+    name: string,
+    type: ExperimentFormField['type'],
+    required: boolean,
+    options: string[] = [],
+    id?: string,
+): ExperimentFormField {
+    const field = { name, required, ...(id ? { id } : {}) };
+    return type === 'select' ? { ...field, type, options } : { ...field, type };
+}
+
 function collectNewFields() {
     const fields: ExperimentFormField[] = [];
     $('#all_fields_container').children().each(function () {
         const $element = $(this);
         if ($element.hasClass('mandatory-field-item')) {
-            fields.push({
-                name: $element.data('field-name') as string,
-                type: choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
-                required: $element.data('field-required') as boolean,
-            });
+            fields.push(fieldInput(
+                $element.data('field-name') as string,
+                choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
+                $element.data('field-required') as boolean,
+            ));
         } else if ($element.hasClass('field-item')) {
             const name = ($element.find('.field-name').val() as string).trim();
             const type = $element.find('.field-type').val() as string;
             if (!name || !type) return;
-            const field: ExperimentFormField = {
-                name,
-                type: choice(ExperimentExperimentFieldsItemType, type),
-                required: $element.find('.field-required').is(':checked'),
-            };
-            if (type === 'select') {
-                field.options = $element.find('.field-tags-container .tag-text')
-                    .map(function () { return $(this).text(); }).get();
-            }
-            fields.push(field);
+            const options = $element.find('.field-tags-container .tag-text')
+                .map(function () { return $(this).text(); }).get();
+            fields.push(fieldInput(name, choice(ExperimentExperimentFieldsItemType, type),
+                $element.find('.field-required').is(':checked'), options));
         }
     });
     return fields;
@@ -45,36 +50,28 @@ function collectExistingAndNewFields() {
         if ($element.hasClass('existing-field-item')) {
             const name = ($element.find('.existing-field-name').val() as string).trim();
             if (!name) return;
-            const field: ExperimentFormField = {
-                id: String($element.data('field-id')),
-                name,
-                type: choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
-                required: $element.data('field-required') === true || $element.data('field-required') === 'true',
-            };
+            let options: string[] = [];
             const rawOptions: unknown = $element.data('field-options');
             if (rawOptions) {
                 try {
-                    const options: unknown = typeof rawOptions === 'string' ? JSON.parse(rawOptions) : rawOptions;
-                    if (Array.isArray(options) && options.length) field.options = options as string[];
+                    const parsed: unknown = typeof rawOptions === 'string' ? JSON.parse(rawOptions) : rawOptions;
+                    if (Array.isArray(parsed)) options = parsed.filter((value): value is string => typeof value === 'string');
                 } catch (error) {
                     console.warn('Failed to parse field options:', error);
                 }
             }
-            fields.push(field);
+            fields.push(fieldInput(name,
+                choice(ExperimentExperimentFieldsItemType, $element.data('field-type')),
+                $element.data('field-required') === true || $element.data('field-required') === 'true',
+                options, String($element.data('field-id'))));
         } else if ($element.hasClass('field-item')) {
             const name = ($element.find('.field-name').val() as string).trim();
             const type = $element.find('.field-type').val() as string;
             if (!name || !type) return;
-            const field: ExperimentFormField = {
-                name,
-                type: choice(ExperimentExperimentFieldsItemType, type),
-                required: $element.find('.field-required').is(':checked'),
-            };
-            if (type === 'select') {
-                field.options = $element.find('.field-tags-container .tag-text')
-                    .map(function () { return $(this).text(); }).get();
-            }
-            fields.push(field);
+            const options = $element.find('.field-tags-container .tag-text')
+                .map(function () { return $(this).text(); }).get();
+            fields.push(fieldInput(name, choice(ExperimentExperimentFieldsItemType, type),
+                $element.find('.field-required').is(':checked'), options));
         }
     });
     return fields;
@@ -132,8 +129,8 @@ export async function init(context: ExperimentFormContext) {
             ...((context.mode === 'create' || fields.length > 0) ? { experiment_fields: fields } : {}),
         };
         const request = context.mode === 'create'
-            ? apiData(v2ExperimentsCreateWithJson(payload, webApiOptions()))
-            : apiData(v2ExperimentsUpdateWithJson(context.experimentId!, payload, webApiOptions()));
+            ? apiData(v2ExperimentsCreateWithJson(payload, undefined, webApiOptions()))
+            : apiData(v2ExperimentsUpdateWithJson(context.experimentId!, payload, undefined, webApiOptions()));
         request.then(data => {
             FormModals.showSuccess(context.successMessage);
             window.setTimeout(() => {

@@ -1,4 +1,4 @@
-import { DEFAULTS } from '../config.ts';
+import { DEFAULTS } from '../defaults.ts';
 import { calculateDistanceInMeters as distance } from '@speleodb/map-core/geo';
 
 /** Direct spherical distance; ignores elevation and any rendered annotation. */

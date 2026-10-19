@@ -70,7 +70,7 @@ function hydrateLandmarks(value: unknown) {
 
 async function loadCollections() {
     try {
-        const collections = await apiData(v2LandmarkCollectionsList(webApiOptions()));
+        const collections = await apiData(v2LandmarkCollectionsList(undefined, webApiOptions()));
         return collections.map(c => ({
             ...c,
             id: String(c.id),

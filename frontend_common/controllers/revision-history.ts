@@ -13,7 +13,7 @@ export async function init(context: RevisionHistoryContext) {
         $("#loading_spinner").show();
 
         try {
-            const data = await apiData(v2ProjectsRevisionsRetrieve(context.projectId, webApiOptions()));
+            const data = await apiData(v2ProjectsRevisionsRetrieve(context.projectId, undefined, webApiOptions()));
                 if (data && data.commits) {
 
                     // Iterate over each commit and append a new row to the table

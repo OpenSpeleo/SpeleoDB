@@ -1,4 +1,4 @@
-import { v2GisLayersList, v2GisLayersCreateWithFormData } from '@speleodb/api';
+import { v2GisLayersList, v2GisLayersCreate } from '@speleodb/api';
 import { apiData, ApiRequestError, webApiOptions } from '../api/client.ts';
 import type { GISListRecord, GISUploadListContext, GISUploadErrorDetails, GISUploadErrorBody } from '../../ts-types/controllers/gis-lists.ts';
 import { initColorPicker } from '../../frontend_private/static/private/ts/color-picker.ts';
@@ -51,7 +51,7 @@ export function attachGISLayerList(context: GISUploadListContext) {
     });
 
     const listApi = attachTaggedEntityList<GISListRecord>({
-        list: () => apiData(v2GisLayersList(webApiOptions())),
+        list: () => apiData(v2GisLayersList(undefined, webApiOptions())),
         renderList: renderLayers,
         entityLabel: 'GIS Layer',
         loadFailedMessage: 'Error loading GIS Layers',
@@ -164,7 +164,7 @@ export function attachGISLayerList(context: GISUploadListContext) {
         setUploadDismissDisabled(true);
 
         uploadRequest = new AbortController();
-        apiData(v2GisLayersCreateWithFormData(data, webApiOptions({
+        apiData(v2GisLayersCreate(data, undefined, webApiOptions({
             signal: uploadRequest.signal,
             onUploadProgress: progressEvent => {
             if (!progressEvent.lengthComputable || !progressEvent.total) return;

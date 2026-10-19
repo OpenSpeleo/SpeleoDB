@@ -122,7 +122,7 @@ export async function init(context: GISGeometryDetailsContext) {
             name: name.value.trim(), alias: alias.value.trim(), description: description.value.trim(), color: color.value,
             expected_revision: revision,
             ...(textarea.value !== baseline.text ? { geojson: parseGeometryText(textarea.value).geometry } : {}),
-        }, webApiOptions())),
+        }, undefined, webApiOptions())),
         submitOnForm: true,
         showSuccessModal: false,
         beforeSubmit(payload) {

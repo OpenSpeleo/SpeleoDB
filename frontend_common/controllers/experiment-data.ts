@@ -24,7 +24,7 @@ export async function init(context: ExperimentDataContext) {
                 showLoading();
 
                 // First, fetch experiment details to get field definitions
-                const experimentData = await apiData(v2ExperimentsRetrieve(String(experimentId), webApiOptions()));
+                const experimentData = await apiData(v2ExperimentsRetrieve(String(experimentId), undefined, webApiOptions()));
                 experimentFields = experimentData.experiment_fields;
 
                 // Sort fields by order parameter
@@ -37,7 +37,7 @@ export async function init(context: ExperimentDataContext) {
                 }
 
                 // Fetch GeoJSON data from the API
-                const geojsonData = await apiData(v2GisOgcExperimentRetrieve(context.gisToken, webApiOptions()));
+                const geojsonData = await apiData(v2GisOgcExperimentRetrieve(context.gisToken, undefined, webApiOptions()));
 
                 if (!geojsonData || !geojsonData.features || !Array.isArray(geojsonData.features)) {
                     throw new Error('Invalid GeoJSON data format');
@@ -211,7 +211,7 @@ export async function init(context: ExperimentDataContext) {
                 `);
 
                 // Call export API
-                const response = await v2ExperimentsExportExcelRetrieve(String(experimentId), webApiOptions());
+                const response = await v2ExperimentsExportExcelRetrieve(String(experimentId), undefined, webApiOptions());
                 if (response.kind !== 'documented' || response.status !== 200) throw new ApiRequestError(response);
 
                 // Get filename from Content-Disposition header

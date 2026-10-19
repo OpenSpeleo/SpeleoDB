@@ -1,6 +1,6 @@
 import { MANDATORY_FIELD_UUIDS, sortExperimentFields, getEditableExperimentFields, validateExperimentField, formatDateDisplay, normalizeDateInputValue, normalizeFieldValueForInput, parseFieldInputValue } from './experiment_fields.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
-import type { ExperimentValue, ExperimentValues } from '../../../../../../ts-types/domain/experiment-records.ts';
+import type { ExperimentReadValue, ExperimentValues } from '../../../../../../ts-types/domain/experiment-records.ts';
 import type { ViewerExperimentField, ViewerExperiment, ViewerExperimentRow, StationExperimentState, ExperimentValidation, ExperimentOperationError, RecordModalOptions } from '../../../../../../ts-types/domain/station-experiments.ts';
 import { getMapOverlayHost } from '../components/overlay_host.ts';
 import { API } from '../api.ts';
@@ -359,7 +359,7 @@ function renderExperimentSummary(experiment: ViewerExperiment | null) {
     `;
 }
 
-function renderFieldDisplayValue(field: ViewerExperimentField, value: ExperimentValue | undefined) {
+function renderFieldDisplayValue(field: ViewerExperimentField, value: ExperimentReadValue | undefined) {
     if (value === null || value === undefined) {
         return '<span class="text-slate-500 italic">—</span>';
     }
@@ -762,7 +762,7 @@ function closeModal(modalId: string) {
     }
 }
 
-function renderFieldInput(field: ViewerExperimentField, initialValue: ExperimentValue | undefined) {
+function renderFieldInput(field: ViewerExperimentField, initialValue: ExperimentReadValue | undefined) {
     const fieldInputId = getFieldInputId(field.id);
     const value = normalizeFieldValueForInput(field, initialValue);
     const requiredAttribute = field.required ? 'required' : '';

@@ -62,18 +62,18 @@ function clearInlineError(errorEl: HTMLElement | null) {
 // ---------- Direct API calls (no state, no map dependency) ----------
 
 const LandmarkApi = {
-    create: (payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksCreateWithJson(payload, webApiOptions())),
-    update: (id: EntityId, payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksPartialUpdateWithJson(String(id), payload, webApiOptions())),
-    remove: (id: EntityId) => apiData(sdk.v2LandmarksDestroy(String(id), webApiOptions())),
+    create: (payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksCreateWithJson(payload, undefined, webApiOptions())),
+    update: (id: EntityId, payload: LandmarkFormPayload) => apiData(sdk.v2LandmarksPartialUpdateWithJson(String(id), payload, undefined, webApiOptions())),
+    remove: (id: EntityId) => apiData(sdk.v2LandmarksDestroy(String(id), undefined, webApiOptions())),
     bulkTransfer: (sourceId: EntityId, payload: LandmarkBulkPayload) => {
         if (!payload.target_collection) throw new Error('Select a destination collection.');
         return apiData(sdk.v2LandmarkCollectionsLandmarksTransferCreate(String(sourceId), {
             landmark_ids: payload.landmark_ids.map(String), target_collection: String(payload.target_collection),
-        }, webApiOptions()));
+        }, undefined, webApiOptions()));
     },
     bulkDelete: (sourceId: EntityId, payload: LandmarkBulkPayload) => apiData(sdk.v2LandmarkCollectionsLandmarksBulkDeleteCreate(String(sourceId), {
         landmark_ids: payload.landmark_ids.map(String),
-    }, webApiOptions())),
+    }, undefined, webApiOptions())),
 };
 
 // ---------- Modal entrypoints ----------

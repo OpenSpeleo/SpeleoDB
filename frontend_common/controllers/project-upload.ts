@@ -145,7 +145,7 @@ export async function init(context: ProjectUploadContext) {
               v2ProjectsUpload(context.projectId, 'auto', {
                 artifact: filesArray,
                 message: $('#message').val() as string,
-              }, webApiOptions()).then(response => {
+              }, undefined, webApiOptions()).then(response => {
                 if (response.kind !== 'documented') throw new ApiRequestError(response);
                 if (response.status === 304) {
                   $("#modal_error_txt").text("The file(s) uploaded is/are identical to the one(s) currently stored.");

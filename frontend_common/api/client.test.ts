@@ -35,7 +35,7 @@ describe.each(['fetch', 'xhr'] as const)('browser %s deadline policy', transport
     it('completes requests after the SDK default deadline without timing out', async () => {
         const held = holdResponse();
         let outcome = 'pending';
-        const pending = apiData(v2ProjectsList(webApiOptions(options)));
+        const pending = apiData(v2ProjectsList(undefined, webApiOptions(options)));
         void pending.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
         try {
             await held.admitted;
@@ -53,7 +53,7 @@ describe.each(['fetch', 'xhr'] as const)('browser %s deadline policy', transport
     it('still cancels an active request with no deadline and ignores its late response', async () => {
         const held = holdResponse();
         const controller = new AbortController();
-        const pending = apiData(v2ProjectsList(webApiOptions({ ...options, signal: controller.signal })));
+        const pending = apiData(v2ProjectsList(undefined, webApiOptions({ ...options, signal: controller.signal })));
         // Consume a premature failure too, so regression output is the assertion
         // below rather than an unhandled rejection during the real delay.
         const outcome = pending.then(value => ({ value }), error => ({ error: error as Error }));
@@ -73,7 +73,7 @@ describe.each(['fetch', 'xhr'] as const)('browser %s deadline policy', transport
 
 it('retains an explicit finite deadline for a caller that supplies one', async () => {
     const held = holdResponse();
-    const pending = apiData(v2ProjectsList(webApiOptions({ timeoutMs: 1_000 })));
+    const pending = apiData(v2ProjectsList(undefined, webApiOptions({ timeoutMs: 1_000 })));
     const rejected = expect(pending).rejects.toMatchObject({ name: 'TimeoutError' });
     try {
         await held.admitted;

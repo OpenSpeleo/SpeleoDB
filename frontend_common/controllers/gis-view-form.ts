@@ -15,11 +15,11 @@ export async function init(context: GisViewFormContext) {
     await afterWindowLoad();
     attachGisViewForm<GisViewSaved>({
         ...context,
-        loadProjects: () => apiData(v2ProjectsList(webApiOptions())),
-        loadCommits: projectId => apiData(v2ProjectsGeojsonRetrieve(projectId, webApiOptions())),
+        loadProjects: () => apiData(v2ProjectsList(undefined, webApiOptions())),
+        loadCommits: projectId => apiData(v2ProjectsGeojsonRetrieve(projectId, undefined, webApiOptions())),
         save: payload => context.viewId
-            ? apiData(v2UserGisViewsPartialUpdateWithJson(context.viewId, payload, webApiOptions()))
-            : apiData(v2UserGisViewsCreate(payload, webApiOptions())),
+            ? apiData(v2UserGisViewsPartialUpdateWithJson(context.viewId, payload, undefined, webApiOptions()))
+            : apiData(v2UserGisViewsCreate(payload, undefined, webApiOptions())),
         onSuccess: context.redirectRoute
             ? data => { window.location.href = route(context.redirectRoute!, data.id); }
             : undefined,

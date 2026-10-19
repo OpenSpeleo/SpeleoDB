@@ -83,7 +83,7 @@ export async function initPublicGISViewer() {
     }
 
     async function fetchPublicViewData() {
-        return apiData(v2GisOgcViewGeojsonRetrieve(context.gisToken!, webApiOptions()));
+        return apiData(v2GisOgcViewGeojsonRetrieve(context.gisToken!, undefined, webApiOptions()));
     }
 
     async function loadPublicMapData(options: PublicViewerLoadOptions = {}) {

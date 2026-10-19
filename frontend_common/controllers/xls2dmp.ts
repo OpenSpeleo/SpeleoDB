@@ -109,7 +109,7 @@ export function init() {
 
             $("#loading_spinner").show();
 
-            apiData(v2ToolsXls2dmpCreate({ shots: rows, survey_date: surveyDate, unit: currentUnit, direction: surveyDirection }, webApiOptions())).then(response => {
+            apiData(v2ToolsXls2dmpCreate({ shots: rows, survey_date: surveyDate, unit: currentUnit, direction: surveyDirection }, undefined, webApiOptions())).then(response => {
                     const blob = response;
                     const a = document.createElement('a');
                     document.body.appendChild(a);

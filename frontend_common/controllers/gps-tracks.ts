@@ -154,7 +154,7 @@ export function init(context: GISUploadListContext) {
     }
 
     const listApi = attachTaggedEntityList<GISListRecord>({
-        list: () => apiData(v2GpsTracksList(webApiOptions())),
+        list: () => apiData(v2GpsTracksList(undefined, webApiOptions())),
         renderList: renderTracks,
         entityLabel: 'GPS track',
         loadFailedMessage: 'Error loading GPS tracks',

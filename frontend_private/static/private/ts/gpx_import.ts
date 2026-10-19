@@ -143,7 +143,7 @@ export const GPXImport = (function() {
         document.getElementById('gpx-error-message')!.classList.add('hidden');
 
         try {
-            const data = await apiData(v2ImportGpxUpdate({ file: selectedFile }, webApiOptions()));
+            const data = await apiData(v2ImportGpxUpdate({ file: selectedFile }, undefined, webApiOptions()));
 
             const landmarksCreated = data?.landmarks_created || 0;
             const tracksCreated = data?.gps_tracks_created || 0;

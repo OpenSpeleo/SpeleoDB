@@ -755,14 +755,13 @@ export const GeometryEditor: GeometryEditorFacade = {
             this.refreshUI();
             return false;
         }
-        const payload: { name: string; alias: string; description: string; color: string; geojson: EditableGeometry; expected_revision?: number } = { name: session.name.trim(), alias: session.alias.trim(), description: session.description.trim(), color: session.color, geojson };
-        if (session.record) payload.expected_revision = session.record.revision;
+        const payload = { name: session.name.trim(), alias: session.alias.trim(), description: session.description.trim(), color: session.color, geojson };
         session.saving = true;
         session.error = '';
         this.refreshUI();
         try {
             const record = session.record
-                ? await API.updateGISGeometry(session.record.id, payload)
+                ? await API.updateGISGeometry(session.record.id, { ...payload, expected_revision: session.record.revision })
                 : await API.createGISGeometry(payload);
             // Persistence succeeded even if the display callback fails. Never invite
             // a retry that would create a duplicate record after a rendering error.

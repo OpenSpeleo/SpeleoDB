@@ -1,11 +1,11 @@
 import type { EntityId } from './identifiers.ts';
-import type { ExperimentDefinition, ExperimentField, ExperimentValues } from './experiment-records.ts';
+import type { ExperimentDefinition, ExperimentField, ExperimentRecord } from './experiment-records.ts';
 
 /** Existing viewer accepts both serialized arrays and UUID-keyed field definitions. */
 export type ViewerExperimentField = Omit<ExperimentField, 'order'> & { order?: number };
 export type ViewerExperimentFields = ViewerExperimentField[] | Record<string, Omit<ViewerExperimentField, 'id'> & { id?: string }>;
 export type ViewerExperiment = Omit<ExperimentDefinition, 'experiment_fields'> & { experiment_fields: ViewerExperimentFields };
-export interface ViewerExperimentRow { id?: EntityId; _id?: EntityId; data?: ExperimentValues }
+export interface ViewerExperimentRow { id?: EntityId; _id?: EntityId; data?: ExperimentRecord['data'] }
 export interface ExperimentAccess { write: boolean; delete: boolean }
 export interface StationExperimentState {
     selectedExperimentId: EntityId | null;

@@ -376,7 +376,7 @@ export function init() {
                     row[col] = $(this).text().trim();
                 });
                 if (Object.keys(row).length > 0) {
-                    rows.push({ ...row, station: row.station ?? '', depth: row.depth ?? '' });
+                    rows.push({ ...row, station: row.station ?? '', depth: row.depth ?? '', length: row.length ?? '', azimuth: row.azimuth ?? '' });
                 }
             });
 
@@ -398,7 +398,7 @@ export function init() {
             };
 
             // Submit all survey data
-            apiData(v2ToolsXls2compassCreate(payload, webApiOptions())).then(async response => {
+            apiData(v2ToolsXls2compassCreate(payload, undefined, webApiOptions())).then(async response => {
                     // Hide spinner
                     $("#loading_spinner").hide();
                     $('#downloadBtn').prop('disabled', false);

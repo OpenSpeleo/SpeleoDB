@@ -8,7 +8,7 @@ export { buildGISGeometryListMarkup } from '../presentation/gis-overlays.ts';
 
 export function init(context: GISListContext) {
     return attachTaggedEntityList<GISListRecord>({
-        list: () => apiData(v2GisGeometriesList(webApiOptions())),
+        list: () => apiData(v2GisGeometriesList(undefined, webApiOptions())),
         entityLabel: 'GIS Geometry',
         loadFailedMessage: 'Unable to load GIS Geometries. Refresh the page to try again.',
         renderList(geometries) {

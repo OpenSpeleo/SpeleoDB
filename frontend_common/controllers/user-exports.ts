@@ -374,7 +374,7 @@ export async function init() {
             const options: RequestInit = { credentials: 'same-origin', signal: controller.signal };
             const [pageResult, linkedResult] = await Promise.allSettled([
                 loadExportPage(currentUrl, endpoint.href, options),
-                linkedId ? fetchExportData(signal => apiData(v2UserExportsRetrieve(linkedId!, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), options) : Promise.resolve(null),
+                linkedId ? fetchExportData(signal => apiData(v2UserExportsRetrieve(linkedId!, undefined, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), options) : Promise.resolve(null),
             ]);
             if (controller.signal.aborted) return;
             if (refreshFailures) message.textContent = '';
@@ -435,8 +435,8 @@ export async function init() {
         redraw();
         try {
             const requested = await fetchExportData(signal => retryId
-                ? apiData(v2UserExportsRetryCreate(retryId, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS })))
-                : apiData(v2UserExportsCreate(webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), { signal: controller.signal });
+                ? apiData(v2UserExportsRetryCreate(retryId, undefined, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS })))
+                : apiData(v2UserExportsCreate(undefined, webApiOptions({ signal, timeoutMs: REQUEST_TIMEOUT_MS }))), { signal: controller.signal });
             if (UUID_PATTERN.test(requested.id)) {
                 linkedId = requested.id;
                 linkedJob = requested;

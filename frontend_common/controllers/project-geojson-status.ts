@@ -69,7 +69,7 @@ export async function init(context: ProjectGeoJSONStatusContext) {
         }, REQUEST_TIMEOUT_MS);
         root!.setAttribute('aria-busy', 'true');
         try {
-            const payload = await apiData(v2ProjectGeojsonStatus(context.projectId, webApiOptions({ signal: controller.signal, timeoutMs: REQUEST_TIMEOUT_MS })));
+            const payload = await apiData(v2ProjectGeojsonStatus(context.projectId, undefined, webApiOptions({ signal: controller.signal, timeoutMs: REQUEST_TIMEOUT_MS })));
             if (controller.signal.aborted) return;
             if (!Object.hasOwn(STATE_MESSAGES, payload?.state)) {
                 throw new Error('Invalid map status');

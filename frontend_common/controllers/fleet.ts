@@ -63,8 +63,8 @@ export async function init(context: FleetContext) {
     if (context.settings) {
         attachFleetSettingsForm({
             save: payload => context.kind === 'cylinder'
-                ? apiData(sdk.v2CylinderFleetsUpdateWithJson(String(context.fleetId), payload, webApiOptions()))
-                : apiData(sdk.v2SensorFleetsUpdateWithJson(String(context.fleetId), payload, webApiOptions())),
+                ? apiData(sdk.v2CylinderFleetsUpdateWithJson(String(context.fleetId), payload, undefined, webApiOptions()))
+                : apiData(sdk.v2SensorFleetsUpdateWithJson(String(context.fleetId), payload, undefined, webApiOptions())),
             successMessage: context.settingsMessage,
         });
     }
@@ -74,16 +74,16 @@ export async function init(context: FleetContext) {
         if (context.kind === 'cylinder') {
             attachFleetEntityCrud({ ...shared,
                 resetForCreate: cylinderResetForCreate, populateForEdit: cylinderPopulateForEdit, collectPayload: cylinderCollectPayload,
-                create: payload => apiData(sdk.v2CylinderFleetsCylindersCreateWithJson(String(context.fleetId), payload, webApiOptions())),
-                update: (id, payload) => apiData(sdk.v2CylindersUpdateWithJson(String(id), payload, webApiOptions())),
-                remove: id => apiData(sdk.v2CylindersDestroy(String(id), webApiOptions())),
+                create: payload => apiData(sdk.v2CylinderFleetsCylindersCreateWithJson(String(context.fleetId), payload, undefined, webApiOptions())),
+                update: (id, payload) => apiData(sdk.v2CylindersUpdateWithJson(String(id), payload, undefined, webApiOptions())),
+                remove: id => apiData(sdk.v2CylindersDestroy(String(id), undefined, webApiOptions())),
             });
         } else {
             attachFleetEntityCrud({ ...shared,
                 resetForCreate: sensorResetForCreate, populateForEdit: sensorPopulateForEdit, collectPayload: sensorCollectPayload,
-                create: payload => apiData(sdk.v2SensorFleetsSensorsCreateWithJson(String(context.fleetId), payload, webApiOptions())),
-                update: (id, payload) => apiData(sdk.v2SensorsUpdateWithJson(String(id), payload, webApiOptions())),
-                remove: id => apiData(sdk.v2SensorsDestroy(String(id), webApiOptions())),
+                create: payload => apiData(sdk.v2SensorFleetsSensorsCreateWithJson(String(context.fleetId), payload, undefined, webApiOptions())),
+                update: (id, payload) => apiData(sdk.v2SensorsUpdateWithJson(String(id), payload, undefined, webApiOptions())),
+                remove: id => apiData(sdk.v2SensorsDestroy(String(id), undefined, webApiOptions())),
             });
         }
     }
@@ -91,7 +91,7 @@ export async function init(context: FleetContext) {
     if (context.kind === 'sensor' && context.mode === 'details') {
         $(document).on('click', '.toggle-sensor-btn', function () {
             const sensorId = $(this as HTMLElement).data('sensor-id') as EntityId;
-            apiData(sdk.v2SensorsToggleFunctionalPartialUpdate(String(sensorId), webApiOptions()))
+            apiData(sdk.v2SensorsToggleFunctionalPartialUpdate(String(sensorId), undefined, webApiOptions()))
                 .then(() => window.location.reload()).catch(showApiErrorModal);
         });
     }

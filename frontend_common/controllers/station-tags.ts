@@ -213,10 +213,10 @@ export function init() {
         $('#custom-color-input').on('change', useCustomColor);
 
         const listApi = attachTaggedEntityList<StationTag, StationTagRequest>({
-            list: () => apiData(v2StationTagsList(webApiOptions())),
-            create: payload => apiData(v2StationTagsCreateWithJson(payload, webApiOptions())),
-            update: (id, payload) => apiData(v2StationTagsUpdateWithJson(String(id), payload, webApiOptions())),
-            remove: id => apiData(v2StationTagsDestroy(String(id), webApiOptions())),
+            list: () => apiData(v2StationTagsList(undefined, webApiOptions())),
+            create: payload => apiData(v2StationTagsCreateWithJson(payload, undefined, webApiOptions())),
+            update: (id, payload) => apiData(v2StationTagsUpdateWithJson(String(id), payload, undefined, webApiOptions())),
+            remove: id => apiData(v2StationTagsDestroy(String(id), undefined, webApiOptions())),
 
             renderList: renderTags,
 

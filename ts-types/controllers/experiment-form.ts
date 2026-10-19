@@ -9,4 +9,4 @@ export interface ExperimentFormContext {
 }
 
 /** The form builds the ordered-list branch of the generated experiment input. */
-export type ExperimentFormField = Extract<NonNullable<ExperimentRequest['experiment_fields']>, unknown[]>[number];
+export type ExperimentFormField = Extract<Extract<NonNullable<ExperimentRequest['experiment_fields']>, unknown[]>[number], { type: string }>;

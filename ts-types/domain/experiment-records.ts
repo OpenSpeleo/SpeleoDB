@@ -6,4 +6,5 @@ export type ExperimentValue = string | number | boolean | null;
 export type ExperimentValues = Record<string, ExperimentValue>;
 export type ExperimentField = ExperimentExperimentFieldsItem;
 export type ExperimentRecord = ApiExperimentRecord;
+export type ExperimentReadValue = ApiExperimentRecord['data'][string];
 export type ExperimentDefinition = ApiExperiment;

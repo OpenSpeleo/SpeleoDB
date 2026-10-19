@@ -82,8 +82,8 @@ describe('project mutex actions over HTTP', () => {
             headers: () => ({ 'X-CSRFToken': document.querySelector<HTMLInputElement>('input[name=csrfmiddlewaretoken]')!.value }),
         });
         return {
-            acquire: () => apiData(v2ProjectsAcquireCreate('test', { client })),
-            release: () => apiData(v2ProjectsReleaseCreateWithJson('test', {}, { client })),
+            acquire: () => apiData(v2ProjectsAcquireCreate('test', undefined, { client })),
+            release: () => apiData(v2ProjectsReleaseCreateWithJson('test', {}, undefined, { client })),
         };
     }
 

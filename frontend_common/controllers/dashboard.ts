@@ -310,7 +310,7 @@ export function init() {
             container.innerHTML = html;
         }
 
-        void apiData(v2UserDashboardStatsRetrieve(webApiOptions())).then(function(response) {
+        void apiData(v2UserDashboardStatsRetrieve(undefined, webApiOptions())).then(function(response) {
                 populateStatCards(response.summary);
                 initCommitsChart(response.commits_over_time);
                 initProjectsChart(response.projects_by_type);

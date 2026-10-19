@@ -26,12 +26,14 @@ does not capture an old token during module initialization.
 import { v2ProjectsList } from "@speleodb/api";
 import { apiData, webApiOptions } from "../api/client.ts";
 
-const projects = await apiData(v2ProjectsList(webApiOptions()));
+const projects = await apiData(v2ProjectsList(undefined, webApiOptions()));
 ```
 
-Use the actual generated signature for the selected release. Some list
-operations accept a query object before options; operations without query
-parameters do not. Generated functions always receive `webApiOptions()` in the
+Use the actual generated signature for the selected release. DRF operations
+declare their optional `format` query parameter, so their query object precedes
+request options even when the caller does not need a query. Pass `undefined` in
+that position. Other operations retain the signature generated from their own
+declared parameters. Generated functions always receive `webApiOptions()` in the
 options position. Controllers supply callbacks to shared forms instead of
 passing endpoint strings. Template context contains resource identity and UI
 configuration, not API transport instructions.
@@ -52,11 +54,12 @@ the base operation name. Form helpers convert DOM values into the generated
 request type; a DOM `FormData` is not an untyped escape hatch.
 
 Creation and PATCH forms have different required fields. Resource creation uses
-`StationResourceRequest`; resource editing uses `PatchedStationResourceRequest`
-and preserves fields omitted from the form. Disabled controls are absent from
-`FormData(form)`, so an edit form's disabled resource-type selector must not
-become a required creation field. Empty text inputs remain explicit updates;
-absent file inputs preserve existing files.
+the selected operation's generated body union: a note requires nonempty text and
+forbids uploaded files; a photo, video, or document requires a file. Resource
+editing uses `PatchedStationResourceRequest` and preserves fields omitted from
+the form. Disabled controls are absent from `FormData(form)`, so an edit form's
+disabled resource-type selector must not become a required creation field. Empty
+text inputs remain explicit updates; absent file inputs preserve existing files.
 
 JSON operations receive typed objects. Multipart operations receive typed
 objects containing `File`/`Blob` values. The generated client constructs the
@@ -205,6 +208,44 @@ For a consumer upgrade:
 5. Verify a standalone frozen install against the published exact release and
    the monorepo integration graph. An unpublished package is a release gate;
    workspace success does not prove that a standalone clone can install it.
+
+### Updating from 0.2 to 0.3
+
+The corrected contract introduces an optional query position before request
+options for DRF operations. Preserve the full argument order: path arguments,
+body when present, query, then options. Use `undefined` for an unused query;
+otherwise keep existing filters in the query object. This applies to GET and
+DELETE as well as request-body methods. Passing `webApiOptions()` in the query
+position can lose the browser client, CSRF, cancellation, or progress behavior.
+Typecheck each caller rather than inserting arguments into authentication or OGC
+operations whose signatures differ.
+
+Two media declarations also change the web imports:
+
+- GIS-layer creation now uses `v2GisLayersCreate`, replacing
+  `v2GisLayersCreateWithFormData`, because its required file permits only
+  multipart input.
+- Experiment-record JSON creation now uses
+  `v2StationsExperimentRecordsCreateWithJson`, replacing
+  `v2StationsExperimentRecordsCreate`, because the contract separately describes
+  JSON and form input.
+
+Full experiment-record writes require a measurement-date string; build that
+field explicitly instead of casting a generic dynamic object to the generated
+body. Continue sending scalar values through the JSON variant. Form-created
+records can return nonempty string arrays, including the submitter email, so
+read/display types derive from `ExperimentRecord['data']`. Keep the scalar
+`ExperimentValues` write type separate from `ExperimentReadValue`. Existing
+form-created records can reject subsequent PUT/PATCH because the server
+preserves that submitter array; do not imply that accepting an array response
+makes it a valid write value.
+
+Review the other newly expressed input requirements at their owning form
+boundary: geometry updates require `expected_revision`, resource creation must
+satisfy its note/file union, and select experiment fields require options.
+Preserve existing revision conflict handling and partial-edit omission
+semantics. Do not relax these generated requirements with casts or optional DTO
+copies.
 
 Run web checks from `/app` in the existing application container, following
 `AGENTS.md`, for example `bun run typecheck`, `bun run lint:frontend`,

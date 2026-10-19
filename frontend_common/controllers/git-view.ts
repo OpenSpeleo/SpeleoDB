@@ -10,7 +10,7 @@ export async function init(context: GitViewContext) {
 
        /** Load the generated Git-tree operation without blocking the browser. */
        async function fetch_git_tree() {
-           const data = await apiData(v2ProjectsGitExplorerRetrieve(context.projectId, context.commit, webApiOptions()));
+           const data = await apiData(v2ProjectsGitExplorerRetrieve(context.projectId, context.commit, undefined, webApiOptions()));
            $('#commit-author').text(data.commit.author_name + ': ');
            $('#commit-message').text(data.commit.message);
            $('#commit-hexsha_short').text(data.commit.hexsha_short);

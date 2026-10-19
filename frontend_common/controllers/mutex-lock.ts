@@ -7,7 +7,7 @@ import { attachMutexLock } from '../../frontend_private/static/private/ts/forms/
 export async function init(context: MutexLockContext) {
     await afterWindowLoad();
     attachMutexLock({ ...context,
-        acquire: context.canAcquire ? () => apiData(v2ProjectsAcquireCreate(context.projectId, webApiOptions())) : undefined,
-        release: context.canRelease ? () => apiData(v2ProjectsReleaseCreateWithJson(context.projectId, {}, webApiOptions())) : undefined,
+        acquire: context.canAcquire ? () => apiData(v2ProjectsAcquireCreate(context.projectId, undefined, webApiOptions())) : undefined,
+        release: context.canRelease ? () => apiData(v2ProjectsReleaseCreateWithJson(context.projectId, {}, undefined, webApiOptions())) : undefined,
     });
 }

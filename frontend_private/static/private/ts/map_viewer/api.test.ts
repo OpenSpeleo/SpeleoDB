@@ -1,4 +1,5 @@
 import { API } from './api.ts';
+import { MANDATORY_FIELD_UUIDS } from './stations/experiment_fields.ts';
 import { ApiRequestError } from '../../../../../frontend_common/api/client.ts';
 import { setBrowserUrl, startApiServer, useNativeFetchBodyConstructors } from '../../../../../frontend_common/test/api-server.ts';
 
@@ -79,8 +80,8 @@ const mutations: RouteCase[] = [
     { name: 'set station tag', call: () => API.setStationTag('station', 'tag'), method: 'POST', path: 'stations/station/tags/', body: { tag_id: 'tag' } },
     { name: 'remove station tag', call: () => API.removeStationTag('station'), method: 'DELETE', path: 'stations/station/tags/', empty: true },
     { name: 'delete log', call: () => API.deleteStationLog('log'), method: 'DELETE', path: 'logs/log/' },
-    { name: 'create experiment record', call: () => API.createExperimentRecord('station', 'experiment', { field: 'value' }), method: 'POST', path: 'stations/station/experiment/experiment/records/', status: 201, body: { field: 'value' } },
-    { name: 'update experiment record', call: () => API.updateExperimentRecord('record', { field: 'updated' }), method: 'PUT', path: 'experiment_records/record/', body: { field: 'updated' } },
+    { name: 'create experiment record', call: () => API.createExperimentRecord('station', 'experiment', { [MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE]: '2026-10-01', field: 'value' }), method: 'POST', path: 'stations/station/experiment/experiment/records/', status: 201, body: { [MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE]: '2026-10-01', field: 'value' } },
+    { name: 'update experiment record', call: () => API.updateExperimentRecord('record', { [MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE]: '2026-10-01', field: 'updated' }), method: 'PUT', path: 'experiment_records/record/', body: { [MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE]: '2026-10-01', field: 'updated' } },
     { name: 'delete experiment record', call: () => API.deleteExperimentRecord('record'), method: 'DELETE', path: 'experiment_records/record/' },
     { name: 'delete resource', call: () => API.deleteStationResource('resource'), method: 'DELETE', path: 'resources/resource/' },
     { name: 'create lead', call: () => API.createExplorationLead('project', { description: 'Lead', latitude: 1, longitude: 2 }), method: 'POST', path: 'projects/project/exploration-leads/', status: 201, body: { description: 'Lead', latitude: 1, longitude: 2 } },
@@ -214,5 +215,37 @@ it('rejects missing files and unknown resource/status choices before sending HTT
     expect(() => API.updateStationResource('resource', resource)).toThrow('Choose a resource type.');
     const data = new FormData(); data.set('status', 'unknown');
     expect(() => API.updateStationSensorInstalls('station', 'install', data)).toThrow('Choose a sensor installation status.');
+    expect(server.requests).toHaveLength(0);
+});
+
+
+it.each([undefined, null, '', '   ', 123])('requires a textual measurement date for complete record writes (%s)', measurementDate => {
+    const values: Record<string, string | number | null> = {};
+    if (measurementDate !== undefined) values[MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE] = measurementDate;
+    expect(() => API.createExperimentRecord('station', 'experiment', values)).toThrow('Enter a measurement date.');
+    expect(() => API.updateExperimentRecord('record', values)).toThrow('Enter a measurement date.');
+    expect(server.requests).toHaveLength(0);
+});
+
+it('creates note resources without inventing a file field', async () => {
+    const restore = useNativeFetchBodyConstructors();
+    try {
+        server.reply({ status: 201, json: {} });
+        const data = new FormData();
+        data.set('title', 'Observation'); data.set('resource_type', 'note'); data.set('text_content', 'Survey observation');
+        await API.createStationResource('station', data);
+        expect(server.requests[0]!.body).toContain('name="text_content"\r\n\r\nSurvey observation');
+        expect(server.requests[0]!.body).not.toContain('name="file"');
+        expect(server.requests[0]!.body).not.toContain('name="miniature"');
+    } finally { restore(); }
+});
+
+it('requires resource content and rejects note attachments before sending HTTP', () => {
+    const data = new FormData(); data.set('title', 'Observation'); data.set('resource_type', 'photo');
+    expect(() => API.createStationResource('station', data)).toThrow('Choose a resource file.');
+    data.set('resource_type', 'note');
+    expect(() => API.createStationResource('station', data)).toThrow('Enter text for the note.');
+    data.set('text_content', 'Survey observation'); data.set('file', new File(['attachment'], 'survey.txt'));
+    expect(() => API.createStationResource('station', data)).toThrow('Notes cannot contain uploaded files.');
     expect(server.requests).toHaveLength(0);
 });

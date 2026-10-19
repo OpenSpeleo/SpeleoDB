@@ -224,7 +224,7 @@ export function init() {
             });
 
             // Process DMP file
-            apiData(v2ToolsDmpDoctorCreate({ file: selectedFile, data: adjustments }, webApiOptions())).then(response => {
+            apiData(v2ToolsDmpDoctorCreate({ file: selectedFile, data: adjustments }, undefined, webApiOptions())).then(response => {
                     const blob = response;
                     const a = document.createElement('a');
                     document.body.appendChild(a);

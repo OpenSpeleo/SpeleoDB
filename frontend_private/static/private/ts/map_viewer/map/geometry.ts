@@ -3,7 +3,7 @@ import { findNearestGeographicCandidate } from '@speleodb/map-core/nearest';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
 import { isProjectEffectivelyVisible } from './project_visibility.ts';
-import { DEFAULTS } from '../config.ts';
+import { DEFAULTS } from '../defaults.ts';
 import { calculateDistanceInMeters } from './geodesy.ts';
 
 let MAGNETIC_SNAP_RADIUS = DEFAULTS.SNAP.RADIUS_METERS;

@@ -1,4 +1,4 @@
-import { v2GisLayersCreateWithFormData } from '@speleodb/api';
+import { v2GisLayersCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../../../../../../frontend_common/api/client.ts';
 import { startApiServer, setBrowserUrl } from '../../../../../../frontend_common/test/api-server.ts';
 import type { UploadOperation } from '../../../../../../ts-types/domain/upload.ts';
@@ -204,9 +204,9 @@ describe('upload generated operation boundary', () => {
     afterEach(() => { document.body.replaceChildren(); });
     afterAll(async () => { await server.close(); });
 
-    const operation: UploadOperation<unknown> = options => apiData(v2GisLayersCreateWithFormData({
+    const operation: UploadOperation<unknown> = options => apiData(v2GisLayersCreate({
         name: 'Layer', source_file: new File(['<kml/>'], 'cave.kml'),
-    }, webApiOptions(options)));
+    }, undefined, webApiOptions(options)));
 
     it('sends generated multipart headers and forwards progress and completion', async () => {
         server.reply({ status: 201, json: { id: 'layer', name: 'Layer' } });

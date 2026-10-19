@@ -1,5 +1,5 @@
 import { StationResourceRequestResourceType, PatchedStationResourceRequestResourceType, PatchedSensorInstallRequestStatus } from '@speleodb/api';
-import type { StationLogEntryRequest, StationResourceRequest, PatchedStationResourceRequest, PatchedSensorInstallRequest, V2ImportGpxUpdateBody } from '@speleodb/api';
+import type { StationLogEntryRequest, V2StationsResourcesCreateBodyThree, PatchedStationResourceRequest, PatchedSensorInstallRequest, V2ImportGpxUpdateBody } from '@speleodb/api';
 
 /** HTML form values become typed SDK inputs before the generator serializes them. */
 export function formText(data: FormData, key: string): string {
@@ -17,19 +17,23 @@ export function logBody(data: FormData): StationLogEntryRequest {
     return { title: formText(data, 'title'), notes: formText(data, 'notes'), ...(attachment ? { attachment } : {}) };
 }
 
-export function resourceBody(data: FormData): StationResourceRequest {
+export function resourceBody(data: FormData): V2StationsResourcesCreateBodyThree {
     const resourceType = Object.values(StationResourceRequestResourceType).find(value => value === formText(data, 'resource_type'));
     if (!resourceType) throw new Error('Choose a resource type.');
     const file = formFile(data, 'file');
     const miniature = formFile(data, 'miniature');
-    return {
+    const content = {
         title: formText(data, 'title'),
         description: formText(data, 'description'),
-        resource_type: resourceType,
         text_content: formText(data, 'text_content'),
-        ...(file ? { file } : {}),
-        ...(miniature ? { miniature } : {}),
     };
+    if (resourceType === 'note') {
+        if (!content.text_content.trim()) throw new Error('Enter text for the note.');
+        if (file || miniature) throw new Error('Notes cannot contain uploaded files.');
+        return { ...content, resource_type: resourceType };
+    }
+    if (!file) throw new Error('Choose a resource file.');
+    return { ...content, resource_type: resourceType, file, ...(miniature ? { miniature } : {}) };
 }
 
 /** Disabled edit controls are absent from FormData and must stay absent in PATCH. */

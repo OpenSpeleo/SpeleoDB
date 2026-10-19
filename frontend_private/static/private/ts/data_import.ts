@@ -1,5 +1,5 @@
 import type { FlatBounds } from '../../../../ts-types/domain/map-geometry.ts';
-import { v2ImportGpxUpdate, v2ImportKmlKmzUpdate, v2ImportKmlKmzInspectCreate, v2GisLayersCreateWithFormData } from '@speleodb/api';
+import { v2ImportGpxUpdate, v2ImportKmlKmzUpdate, v2ImportKmlKmzInspectCreate, v2GisLayersCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../../../../frontend_common/api/client.ts';
 import { count, canImportKML, validReport } from './import_model.ts';
 import { renderImportCollections, applySuggestedLayerName, renderImportProgress, renderImportDialog } from './import_presentation.ts';
@@ -215,7 +215,7 @@ export const DataImport = (() => {
         const isCurrent = () => generation === requestGeneration;
         try {
             const report = await new Promise<unknown>((resolve, reject) => {
-                inspection = uploadWithProgress(options => apiData(v2ImportKmlKmzInspectCreate({ file }, webApiOptions(options))), {
+                inspection = uploadWithProgress(options => apiData(v2ImportKmlKmzInspectCreate({ file }, undefined, webApiOptions(options))), {
                     onSuccess: resolve, onError: reject,
                     onProgress: percent => {
                         if (!isCurrent()) return;
@@ -277,10 +277,10 @@ export const DataImport = (() => {
         try {
             const response = await new Promise<ImportResultFields>((resolve, reject) => {
                 uploadWithProgress<ImportResultFields>(options => overlay
-                    ? apiData(v2GisLayersCreateWithFormData({ source_file: file!, name }, webApiOptions(options)))
+                    ? apiData(v2GisLayersCreate({ source_file: file!, name }, undefined, webApiOptions(options)))
                     : kind === 'gpx'
-                        ? apiData(v2ImportGpxUpdate({ file: file!, collection }, webApiOptions(options)))
-                        : apiData(v2ImportKmlKmzUpdate({ file: file!, collection }, webApiOptions(options))), {
+                        ? apiData(v2ImportGpxUpdate({ file: file!, collection }, undefined, webApiOptions(options)))
+                        : apiData(v2ImportKmlKmzUpdate({ file: file!, collection }, undefined, webApiOptions(options))), {
                     onSuccess: resolve, onError: reject,
                     onProgress: percent => {
                         session!.progress = percent;

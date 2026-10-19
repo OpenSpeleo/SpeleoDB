@@ -1,10 +1,9 @@
-import type { ExperimentValue } from '../../../../../../ts-types/domain/experiment-records.ts';
+import type { ExperimentReadValue } from '../../../../../../ts-types/domain/experiment-records.ts';
 import type { ViewerExperimentField, ViewerExperimentFields, ViewerExperiment, ExperimentValidation } from '../../../../../../ts-types/domain/station-experiments.ts';
 
-export const MANDATORY_FIELD_UUIDS = {
-    MEASUREMENT_DATE: '00000000-0000-0000-0000-000000000001',
-    SUBMITTER_EMAIL: '00000000-0000-0000-0000-000000000002'
-};
+import { MANDATORY_FIELD_UUIDS } from '../../../../../../frontend_common/api/experiment-values.ts';
+
+export { MANDATORY_FIELD_UUIDS };
 
 export function isSubmitterEmailField(field: ViewerExperimentField) {
     return Boolean(field) && field.id === MANDATORY_FIELD_UUIDS.SUBMITTER_EMAIL;
@@ -77,7 +76,7 @@ export function validateExperimentField(value: string | null | undefined, fieldT
     }
 }
 
-export function formatDateDisplay(value: ExperimentValue | undefined) {
+export function formatDateDisplay(value: ExperimentReadValue | undefined) {
     if (!value) {
         return '';
     }
@@ -89,7 +88,7 @@ export function formatDateDisplay(value: ExperimentValue | undefined) {
     }
 }
 
-export function normalizeDateInputValue(value: ExperimentValue) {
+export function normalizeDateInputValue(value: ExperimentReadValue) {
     if (!value) {
         return '';
     }
@@ -108,7 +107,7 @@ export function normalizeDateInputValue(value: ExperimentValue) {
     return parsedDate.toISOString().split('T')[0];
 }
 
-export function normalizeFieldValueForInput(field: ViewerExperimentField, value: ExperimentValue | undefined) {
+export function normalizeFieldValueForInput(field: ViewerExperimentField, value: ExperimentReadValue | undefined) {
     if (value === null || value === undefined) {
         return '';
     }

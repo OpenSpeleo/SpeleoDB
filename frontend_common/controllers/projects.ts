@@ -30,7 +30,7 @@ export function init(context: ProjectsContext) {
             $("#success_div").hide();
             $("#modal_confirmation_mass_unlock").hide();
 
-            void apiData(v2UserReleaseAllLocksDestroy(webApiOptions())).then(function () {
+            void apiData(v2UserReleaseAllLocksDestroy(undefined, webApiOptions())).then(function () {
                     $("#modal_success_txt").html("All the projects have been unlocked.");
                     $("#modal_success").css('display', 'flex');
 
@@ -54,7 +54,7 @@ export function init(context: ProjectsContext) {
             $("#success_div").hide();
             $("#modal_confirmation_unlock").hide();
 
-            void apiData(v2ProjectsReleaseCreateWithJson(String($(this).data('project_id')), {}, webApiOptions())).then(function () {
+            void apiData(v2ProjectsReleaseCreateWithJson(String($(this).data('project_id')), {}, undefined, webApiOptions())).then(function () {
                     $("#modal_success_txt").html("The project has been unlocked for edition.");
                     $("#modal_success").css('display', 'flex');
 
@@ -67,7 +67,7 @@ export function init(context: ProjectsContext) {
         });
 
         // Fetch all projects at once and update revision counts
-        void apiData(v2ProjectsList(webApiOptions())).then(function(data) {
+        void apiData(v2ProjectsList(undefined, webApiOptions())).then(function(data) {
                 if (Array.isArray(data)) {
                     // Create a map of project_id -> commit_count for quick lookup
                     var commitCounts: Record<string, number> = {};
