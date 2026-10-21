@@ -198,6 +198,11 @@ edits.
 
 ### Typed framework and test boundaries
 
+Create test users with `UserFactory` or the shared user fixture. Use
+`VerifiedUserFactory` from `speleodb.users.tests.factories` when setup requires
+a verified primary email; it creates the user and matching allauth email record
+together. Keep unverified-email scenarios explicit in authentication tests.
+
 Run mypy after model ownership/field changes and after the final fixture edit.
 Fix stale queryset fields and attributes instead of hiding drift with broad
 ignores. Narrow nullable values before ORM use, framework response types before

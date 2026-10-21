@@ -174,19 +174,22 @@ low-level request primitive from a controller.
 
 ## Updating the package and consumers
 
-The package maintainer guide owns schema export, route inventory, contract
-coverage, generation, package tests, and release packaging. In a standalone
-checkout, use the published package's README and maintainer documentation. In
-the monorepo these live under `packages/typescript/api/docs/`. The Django
-contract remains the source of truth; if implementation and export disagree,
-correct the owning view/serializer and its contract test before regenerating. Do
-not edit generated operation or model files in the installed package. Web's root
-`OpenAPI.yaml` is the sole checked-in schema. The SDK exports
-`openapi-source.json` with its producer revision and SHA-256; neither consumers
-nor the npm package need another YAML copy. See
-[the backend contract guide](api-contract.md) for export freshness and
-provenance comparison, and the SDK maintenance guide for pinned remote or
-explicit local generation inputs.
+The backend contract guide owns schema export, route inventory, and contract
+coverage. The package maintainer guide owns snapshot imports, generation,
+package tests, and release packaging. In a standalone checkout, use the
+published package's README and maintainer documentation. In the monorepo these
+live under `packages/typescript/api/docs/`. The Django contract remains the
+source of truth; if implementation and export disagree, correct the owning
+view/serializer and its contract test before regenerating. Do not edit generated
+operation or model files in the installed package. Web's root `OpenAPI.yaml` is
+the backend export. The SDK owns a separate checked-in `OpenAPI.yaml` snapshot
+with a SHA-256 record, and generates entirely from its local files. Maintainers
+explicitly import a reviewed backend export when updating the SDK; standalone CI
+and releases do not fetch or compare another repository. The monorepo's root
+integration unit test separately requires the checked-out backend export, SDK
+snapshot, and recorded SDK SHA-256 to agree. See
+[the backend contract guide](api-contract.md) for export freshness and the SDK
+maintenance guide for snapshot updates.
 
 For a consumer upgrade:
 
@@ -273,3 +276,12 @@ behavior against real endpoints.
 Generated operations do not automatically introduce retries or caching. Keep
 existing request coalescing, state caches, bulk list reads, and explicit refresh
 behavior in their owning UI modules to avoid extra network work.
+
+## Geographic Bound contract
+
+GIS View management payloads include an optional nullable bound UUID. Public
+metadata includes the nullable Polygon configuration consumed by the web viewer.
+Import the reviewed backend export into the SDK's local schema snapshot and
+regenerate these DTOs; do not hand-author parallel DTOs or edit generated files.
+Generation requires no published backend commit or sibling checkout. See
+[Geographic Bound](gis-view-geographic-bound.md).

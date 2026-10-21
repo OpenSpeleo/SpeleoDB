@@ -23,6 +23,7 @@ from speleodb.testing.api_contract import assert_api_response
 from speleodb.testing.api_contract import contract_schema
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 
 
 def _auth_request_headers(
@@ -116,10 +117,7 @@ def test_configured_rate_limit_responses(
         client = Client(enforce_csrf_checks=True)
         headers: dict[str, str] = {}
         if authenticated:
-            user = cast("User", UserFactory())
-            EmailAddress.objects.create(
-                user=user, email=user.email, verified=True, primary=True
-            )
+            user = VerifiedUserFactory.create()
             client.force_login(user)
             if client_kind == "app":
                 token = client.session.session_key

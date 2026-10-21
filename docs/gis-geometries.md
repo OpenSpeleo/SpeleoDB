@@ -183,9 +183,12 @@ READ_AND_WRITE edits, and ADMIN edits, shares, and soft-deletes. Team and
 WEB_VIEWER access are not part of this feature.
 
 Soft deletion preserves the document and permission history and deactivates
-access. The Django admin preserves its established administrative authorization
-while using the same validators and mutation services. Admin creation assigns
-creator provenance and an ADMIN grant; hard deletion is unavailable.
+access. It is blocked while a GIS View uses the geometry as its Geographic
+Bound. Geometry type is immutable after creation: editing coordinates cannot
+convert a LineString to a Polygon or vice versa. The Django admin preserves its
+established administrative authorization while using the same validators and
+mutation services. Admin creation assigns creator provenance and an ADMIN grant;
+hard deletion is unavailable.
 
 Updates require the last-read `expected_revision`. The service locks the record,
 checks current authorization and revision, validates the complete candidate, and
@@ -255,9 +258,12 @@ switching preserves overlays; genuine style resets restore the draft.
 
 Shared settings templates, list markup, forms, permissions, color palette, and
 notifications preserve familiar product behavior. No new drawing library or
-generic overlay runtime is needed. Geometry is not imported or fetched by the
-public viewer. Querysets annotate permissions in bulk and metadata listings
-defer the GeoJSON field. Validation work is bounded by the 100-vertex cap.
+generic overlay runtime is needed. The public viewer does not load the private
+Geometry collection or its authoring tools. It receives only the selected
+Polygon coordinates when a GIS View has a
+[Geographic Bound](gis-view-geographic-bound.md). Querysets annotate permissions
+in bulk and metadata listings defer the GeoJSON field. Validation work is
+bounded by the 100-vertex cap.
 
 ## Verification
 

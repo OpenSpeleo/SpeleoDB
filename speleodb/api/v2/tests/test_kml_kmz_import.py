@@ -10,7 +10,6 @@ from typing import Any
 
 import orjson
 import pytest
-from allauth.account.models import EmailAddress
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -24,7 +23,7 @@ from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 from speleodb.utils.s3_storages import GISLayerStorage
 from speleodb.utils.s3_storages import GPSTrackStorage
 
@@ -76,11 +75,7 @@ def _source(content: str = POINTS, *, kmz: bool = False) -> SimpleUploadedFile:
 
 @pytest.fixture
 def import_user() -> User:
-    user: User = UserFactory.create()
-    EmailAddress.objects.create(
-        user=user, email=user.email, primary=True, verified=True
-    )
-    return user
+    return VerifiedUserFactory.create()
 
 
 @pytest.fixture

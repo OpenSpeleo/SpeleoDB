@@ -10,6 +10,7 @@ from django.core.management.base import CommandError
 from django.test import override_settings
 
 from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 LOCAL_SUPERUSER_EMAIL = "contact@speleodb.org"
 LOCAL_SUPERUSER_PASSWORD = "contact"  # noqa: S105
@@ -44,7 +45,7 @@ def test_ensure_local_superuser_is_verified_and_idempotent() -> None:
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
 def test_ensure_local_superuser_repairs_existing_account() -> None:
-    user = User.objects.create_user(
+    user = UserFactory.create(
         email=LOCAL_SUPERUSER_EMAIL,
         password="different-password",  # noqa: S106
         name="Existing Administrator",
@@ -76,7 +77,7 @@ def test_ensure_local_superuser_repairs_existing_account() -> None:
 @pytest.mark.parametrize("name", ["", " \t\n ", "\u00a0\u2003"])
 @override_settings(DEBUG=True)
 def test_ensure_local_superuser_repairs_legacy_blank_name(name: str) -> None:
-    user: User = User.objects.create_user(
+    user: User = UserFactory.create(
         email=LOCAL_SUPERUSER_EMAIL,
         name="Existing Administrator",
         country=LOCAL_SUPERUSER_COUNTRY_CODE,

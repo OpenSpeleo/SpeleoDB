@@ -13,6 +13,7 @@ import { GPSTracksPanel } from '../../frontend_private/static/private/ts/map_vie
 import { GISLayersPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gis_layers_panel.ts';
 import { GISGeometriesPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gis_geometries_panel.ts';
 import { Config } from '../../frontend_private/static/private/ts/map_viewer/config.ts';
+import { Layers } from '../../frontend_private/static/private/ts/map_viewer/map/layers.ts';
 import { State } from '../../frontend_private/static/private/ts/map_viewer/state.ts';
 import { DisplayPreferences } from '../../frontend_private/static/private/ts/map_viewer/display_preferences.ts';
 import { ViewerUpdates } from '../../frontend_private/static/private/ts/map_viewer/viewer_updates.ts';
@@ -272,4 +273,176 @@ it('consumes a failed public prefetch and retries through the real source-change
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(Config.projects.map(item => item.id)).toEqual(['project']);
     expect(map.fits).toEqual([]);
+});
+
+it('clips public surveys before rendering, depth and navigation and retains full inputs across style changes', async () => {
+    const bound = { id: 'bound', revision: 1, color: '#a855f7', alias: 'Boundary label', geojson: {
+        type: 'Polygon', coordinates: [[[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]],
+    } };
+    const outsideProject = { ...project, id: 'outside', name: 'Outside survey', geojson_file: `${server.origin}/outside.geojson` };
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: {
+        projects: [project, outsideProject], view_name: 'Bounded', geographic_bound: bound,
+    } });
+    responses.set('/survey.geojson', { json: { type: 'FeatureCollection', bbox: [-100, -80, 100, 80], features: [
+        { type: 'Feature', properties: { depth: 8 }, geometry: { type: 'LineString', coordinates: [[-0.01, 0.005, 2], [0.02, 0.005, 8]] } },
+        { type: 'Feature', properties: { depth: 12, section_name: 'Inside' }, geometry: { type: 'Point', coordinates: [0.005, 0.005] } },
+        { type: 'Feature', properties: { depth: 999, section_name: 'Outside' }, geometry: { type: 'Point', coordinates: [1, 1] } },
+    ] } });
+    responses.set('/outside.geojson', { json: { type: 'FeatureCollection', features: [
+        { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [1, 1] } },
+    ] } });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    await map.fire('load');
+    await ViewerUpdates.whenIdle();
+
+    const clipped = map.getSource('project-geojson-project')?.data;
+    expect(clipped).toMatchObject({ type: 'FeatureCollection', features: [
+        { geometry: { type: 'LineString', coordinates: [[expect.closeTo(0), 0.005, 0], [expect.closeTo(0.01), 0.005, 0]] } },
+        { geometry: { type: 'Point', coordinates: [0.005, 0.005] } },
+    ] });
+    expect(clipped).not.toHaveProperty('bbox');
+    expect(map.getSource('project-geojson-outside')).toBeUndefined();
+    expect(Config.projects.map(item => item.id)).toEqual(['project']);
+    expect(document.getElementById('project-list')?.textContent).not.toContain('Outside survey');
+    expect(State.projectDepthDomains.get('project')).toEqual({ min: 0, max: 12 });
+    expect(State.projectBounds.get('project')).toMatchObject({ points: [[expect.closeTo(0), 0.005], [expect.closeTo(0.01), 0.005]] });
+    expect(map.getSource('gis-geometry-source-bound')?.data).toMatchObject({ type: 'Feature', geometry: bound.geojson });
+    expect(map.getLayer('gis-geometry-bound-outline')).toMatchObject({ type: 'line', layout: { visibility: 'visible' } });
+    expect((map.fits[0]?.bounds as VendorBounds).points).toContainEqual([0, 0]);
+    expect((map.fits[0]?.bounds as VendorBounds).points).toContainEqual([0.01, 0.01]);
+    expect(State.gisGeometryStates.get('bound')).toBe(true);
+    expect(map.getLayer('gis-geometry-bound-fill')?.paint?.['fill-color']).toBe(bound.color);
+    expect(map.getSource('gis-geometry-label-source-bound')?.data).toMatchObject({ properties: { alias: bound.alias, color: bound.color } });
+    await Layers.setProjectVisibilityBatch([{ projectId: 'project', visible: false }]);
+    await Layers.setGeometryLabelsVisible(false);
+    await Layers.setColorMode('depth');
+    Layers.setDepthLimit(1, 'ft');
+    await ViewerUpdates.whenIdle();
+    expect(map.getLayer('gis-geometry-bound-outline')?.layout?.visibility).toBe('visible');
+    expect(map.getLayer('gis-geometry-bound-fill')?.layout?.visibility).toBe('visible');
+
+
+    map.setStyle();
+    await map.fire('style.load');
+    await sourceChanged(true);
+    expect(map.getSource('project-geojson-project')?.data).toEqual(clipped);
+    expect(map.getSource('gis-geometry-source-bound')?.data).toMatchObject({ type: 'Feature', geometry: bound.geojson });
+    expect(map.getLayer('gis-geometry-bound-outline')?.layout?.visibility).toBe('visible');
+    expect(map.getSource('project-geojson-outside')).toBeUndefined();
+    expect(requests.filter(url => url === '/outside.geojson')).toHaveLength(2);
+    expect(requests.filter(url => url === '/api/v2/gis-ogc/view/shared/geojson')).toHaveLength(1);
+    expect(Config.projects.map(item => item.id)).toEqual(['project']);
+});
+
+it.each([false, true])('displays and frames the boundary with no visible surveys (outside project: %s)', async includeOutside => {
+    const polygon = { type: 'Polygon', coordinates: [[[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]] };
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: {
+        projects: includeOutside ? [project] : [], view_name: 'Empty bound',
+        geographic_bound: { id: 'bound', revision: 1, geojson: polygon },
+    } });
+    responses.set('/survey.geojson', { json: survey });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    await map.fire('load');
+    await ViewerUpdates.whenIdle();
+    expect(Config.projects).toEqual([]);
+    expect(State.projectBounds.size).toBe(0);
+    expect(State.projectDepthDomains.size).toBe(0);
+    expect(State.gisGeometryStates.get('bound')).toBe(true);
+    expect(map.getSource('gis-geometry-source-bound')?.data).toMatchObject({ type: 'Feature', geometry: polygon });
+    expect(map.getLayer('gis-geometry-bound-outline')?.layout?.visibility).toBe('visible');
+    expect(map.fits[0]?.bounds).toMatchObject({ points: [[0, 0], [0.01, 0.01]] });
+});
+
+it('reports one visible error without rendering full surveys when the public geographic bound is invalid', async () => {
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: {
+        projects: [project, { ...project, id: 'second' }], view_name: 'Invalid bound',
+        geographic_bound: { id: 'bound', revision: 1, geojson: { type: 'LineString', coordinates: [[0, 0], [0.01, 0.01]] } },
+    } });
+    responses.set('/survey.geojson', { json: survey });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    await map.fire('load');
+    await ViewerUpdates.whenIdle();
+    expect(requests).toContain('/survey.geojson');
+    expect(map.getSource('project-geojson-project')).toBeUndefined();
+    expect(Config.projects).toEqual([]);
+    expect(State.projectDepthDomains.size).toBe(0);
+    expect(State.projectBounds.size).toBe(0);
+    expect(document.body.textContent?.split('Some survey data could not be displayed within the geographic bound.')).toHaveLength(2);
+});
+
+it('ignores stale public metadata after a newer style reload has completed', async () => {
+    let releaseMetadata!: (reply: ApiTestReply) => void;
+    const delayedMetadata = new Promise<ApiTestReply>(resolve => { releaseMetadata = resolve; });
+    let metadataRequests = 0;
+    const bound = { id: 'bound', revision: 2, geojson: {
+        type: 'Polygon', coordinates: [[[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]],
+    } };
+    server.handle(request => {
+        requests.push(request.path);
+        if (request.path === '/api/v2/gis-ogc/view/shared/geojson') {
+            metadataRequests += 1;
+            if (metadataRequests === 1) return delayedMetadata;
+            return { json: { projects: [], view_name: 'Current', geographic_bound: bound } };
+        }
+        return { json: survey };
+    });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    const initialLoad = map.fire('load');
+    try {
+        await vi.waitFor(() => expect(metadataRequests).toBe(1));
+        map.setStyle();
+        await map.fire('style.load');
+        await sourceChanged(true);
+        expect(metadataRequests).toBe(2);
+        expect(Config.projects).toEqual([]);
+    } finally {
+        releaseMetadata({ json: { projects: [project], view_name: 'Stale', geographic_bound: null } });
+        await initialLoad;
+    }
+    expect(Config.projects).toEqual([]);
+    expect(map.getSource('project-geojson-project')).toBeUndefined();
+    expect(requests).not.toContain('/survey.geojson');
+    expect(document.getElementById('project-list')?.textContent).not.toContain('Survey');
+    expect(document.getElementById('loading-overlay')?.classList.contains('pointer-events-none')).toBe(true);
+});
+
+it('does not let a stale unbounded source overwrite a newer style reload', async () => {
+    let releaseSurvey!: (reply: ApiTestReply) => void;
+    const delayedSurvey = new Promise<ApiTestReply>(resolve => { releaseSurvey = resolve; });
+    let surveyRequests = 0;
+    server.handle(request => {
+        requests.push(request.path);
+        if (request.path === '/api/v2/gis-ogc/view/shared/geojson') {
+            return { json: { projects: [project], view_name: 'Public', geographic_bound: null } };
+        }
+        if (request.path === '/survey.geojson' && ++surveyRequests === 1) return delayedSurvey;
+        return { json: survey };
+    });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    const initialLoad = map.fire('load');
+    try {
+        await vi.waitFor(() => expect(surveyRequests).toBe(1));
+        map.setStyle();
+        await map.fire('style.load');
+        await sourceChanged(true);
+        expect(surveyRequests).toBe(2);
+        expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    } finally {
+        releaseSurvey({ json: { type: 'FeatureCollection', features: [
+            { type: 'Feature', properties: { depth: 999 }, geometry: { type: 'LineString', coordinates: [[1, 1], [2, 2]] } },
+        ] } });
+        await initialLoad;
+    }
+    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(State.projectDepthDomains.get('project')).toEqual({ min: 0, max: 12 });
 });

@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
 from rest_framework import serializers
@@ -45,6 +46,7 @@ class GISViewManagementListApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         user = self.get_user()
         return (
             GISView.objects.filter(owner=user)
+            .select_related("geographic_bound")
             .prefetch_related("project_views__project")
             .order_by("-modified_date")
         )
@@ -75,7 +77,17 @@ class GISViewManagementListApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
+            except ValidationError as exc:
+                return ErrorResponse(
+                    {
+                        "errors": exc.message_dict
+                        if hasattr(exc, "message_dict")
+                        else exc.messages
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return SuccessResponse(serializer.data, status=status.HTTP_201_CREATED)
 
         return ErrorResponse(
@@ -101,8 +113,10 @@ class GISViewManagementDetailApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     def get_queryset(self) -> Any:
         """Filter to only views owned by the current user."""
         user = self.get_user()
-        return GISView.objects.filter(owner=user).prefetch_related(
-            "project_views__project"
+        return (
+            GISView.objects.filter(owner=user)
+            .select_related("geographic_bound")
+            .prefetch_related("project_views__project")
         )
 
     @extend_schema(responses={200: GISViewSerializer(), 403: API_ERROR})
@@ -128,7 +142,17 @@ class GISViewManagementDetailApiView(GenericAPIView[GISView], SDBAPIViewMixin):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            try:
+                serializer.save()
+            except ValidationError as exc:
+                return ErrorResponse(
+                    {
+                        "errors": exc.message_dict
+                        if hasattr(exc, "message_dict")
+                        else exc.messages
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return SuccessResponse(serializer.data)
 
         return ErrorResponse(

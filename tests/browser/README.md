@@ -13,15 +13,16 @@ pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
 The responsiveness fixtures use Chromium and WebKit with the real MapLibre
 renderer, a minimal local style, deterministic intercepted viewer APIs, and the
 normal login form and its generated allauth operation. They do not create,
-change, or delete project records. Authenticated cases reuse the initial real
-login's storage state within each Playwright worker instead of repeatedly
-consuming the production login rate limit. The snapshot stays in memory; each
-test still gets a fresh browser context and independent preferences. Anonymous
-cases do not apply it. The stress case loads 60 projects and 120,000 segments.
-Other cases isolate a 100,000-vertex GPS geometry and nested GIS geometry types.
-The harness observes the imported engine instance through `speleo:map-created`
-and intercepts provider HTTP data. Native engine worker behavior, all fixtures,
-production application work and real rendering remain enabled.
+change, or delete project records. Authenticated cases reuse each account's
+initial real login storage state within each Playwright worker instead of
+repeatedly consuming the production login rate limit. The snapshots stay in
+memory; each test still gets a fresh browser context and independent
+preferences. Anonymous cases do not apply them. The stress case loads 60
+projects and 120,000 segments. Other cases isolate a 100,000-vertex GPS geometry
+and nested GIS geometry types. The harness observes the imported engine instance
+through `speleo:map-created` and intercepts provider HTTP data. Native engine
+worker behavior, all fixtures, production application work and real rendering
+remain enabled.
 
 `viewer-gestures.spec.ts` independently exercises real private/public viewer
 initialization, provider HTTP and application APIs without interception or
@@ -293,3 +294,22 @@ test-name regular expression. The wrapper passes it as a separate `--grep`
 argument. Final acceptance runs without this filter. CI always retains the JSON
 report, attachments and failure screenshots, including failed runs; trace
 recording remains disabled.
+
+## GIS View Geographic Bound
+
+`gis-view-bound.spec.ts` uses `geographic_bound_records` from the Django wrapper
+and its `VIEWER_BROWSER_BOUND_RECORDS` environment value. Each browser receives
+independent GIS View/Polygon records, a crossing survey and a wholly outside
+project, with actual GeoJSON uploads to the test storage namespace. A dedicated
+owner created by `VerifiedUserFactory` keeps these surveys and geometries out of
+other private viewer fixtures. The factory creates its verified primary email.
+Its securely generated password is passed only through the fixture environment
+records; the dashboard test uses the normal login form and the shared login
+helper caches sessions separately for each account. No API or renderer methods
+are replaced. The test checks clipped source coordinates and outside-project
+omission and the forced-visible bound rendered through the same GIS Geometry
+layers, color, fill and alias label as the private map, clears the bound through
+the real dashboard form, and verifies that the unbounded project content
+returns. The wrapper's test transaction isolates database records, and fixture
+cleanup deletes only its own uploaded objects. These cases require the
+configured map provider and test storage to be reachable by the browsers.

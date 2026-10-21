@@ -6,6 +6,7 @@ import random
 from typing import TYPE_CHECKING
 from typing import Any
 
+from allauth.account.models import EmailAddress
 from django_countries import countries
 from factory.django import DjangoModelFactory
 from factory.faker import Faker
@@ -55,3 +56,23 @@ class UserFactory(DjangoModelFactory[User]):
         if create and results and not cls._meta.skip_postgeneration_save:  # type: ignore[attr-defined]
             # Some post-generation hooks ran, and may have modified us.
             instance.save()  # type: ignore[union-attr]
+
+
+class VerifiedUserFactory(UserFactory):
+    """Create a user with a verified primary email for real web authentication."""
+
+    @classmethod
+    def _after_postgeneration(
+        cls,
+        instance: User | StubObject,
+        create: bool,
+        results: dict[str, Any] | None = None,
+    ) -> None:
+        super()._after_postgeneration(instance, create, results)
+        if create:
+            assert isinstance(instance, User)
+            EmailAddress.objects.update_or_create(
+                user=instance,
+                email=instance.email,
+                defaults={"verified": True, "primary": True},
+            )

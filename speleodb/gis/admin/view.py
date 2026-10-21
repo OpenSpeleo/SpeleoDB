@@ -6,16 +6,79 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
+from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.html import format_html
 
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import GISGeometry
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
+
+
+class GISViewAdminForm(forms.ModelForm):  # type: ignore[type-arg]
+    class Meta:
+        model = GISView
+        fields = (
+            "name",
+            "description",
+            "allow_precise_zoom",
+            "owner",
+            "geographic_bound",
+        )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        owner_id: int | None = self.instance.owner_id
+        if self.is_bound:
+            try:
+                owner_id = int(self.data.get("owner", ""))
+            except ValueError, TypeError:
+                owner_id = None
+        allowed = Q(
+            permissions__user_id=owner_id,
+            permissions__is_active=True,
+            permissions__level__gte=PermissionLevel.READ_ONLY,
+        )
+        if owner_id == self.instance.owner_id and self.instance.geographic_bound_id:
+            allowed |= Q(pk=self.instance.geographic_bound_id)
+        field = cast(
+            "forms.ModelChoiceField[GISGeometry]", self.fields["geographic_bound"]
+        )
+        field.queryset = GISGeometry.objects.filter(
+            allowed, is_active=True, geojson__type="Polygon"
+        ).distinct()
+        if not self.is_bound and self.instance._state.adding:  # noqa: SLF001
+            field.queryset = GISGeometry.objects.filter(
+                is_active=True, geojson__type="Polygon"
+            )
+        field.help_text = (
+            "Public web display only; downloads and OGC remain unrestricted. "
+            "The view owner must have read access to a newly selected Polygon."
+        )
+
+    def clean(self) -> dict[str, Any]:
+        data: dict[str, Any] = super().clean() or {}
+        geometry: GISGeometry | None = data.get("geographic_bound")
+        if geometry is not None:
+            # The admin POST transaction retains this lock through save_model.
+            try:
+                data["geographic_bound"] = GISGeometry.objects.select_for_update().get(
+                    pk=geometry.pk
+                )
+            except GISGeometry.DoesNotExist as exc:
+                raise ValidationError(
+                    {"geographic_bound": "The selected Polygon no longer exists."}
+                ) from exc
+        return data
 
 
 class GISProjectViewInline(admin.TabularInline):  # type: ignore[type-arg]
@@ -40,11 +103,14 @@ class GISProjectViewInline(admin.TabularInline):  # type: ignore[type-arg]
 class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     """Admin interface for managing GIS Views."""
 
+    form = GISViewAdminForm
+
     list_display = [
         "name",
         "owner",
         "token_preview",
         "allow_precise_zoom",
+        "geographic_bound",
         "project_count",
         "creation_date",
     ]
@@ -74,6 +140,7 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         "name",
         "description",
         "allow_precise_zoom",
+        "geographic_bound",
         "owner",
         "id",
         "gis_token",
@@ -103,7 +170,13 @@ class GISViewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def get_fields(self, request: HttpRequest, obj: GISView | None = None) -> list[str]:  # type: ignore[override]
         """Hide readonly metadata fields when creating a new view."""
         if obj is None:
-            return ["name", "description", "allow_precise_zoom", "owner"]
+            return [
+                "name",
+                "description",
+                "allow_precise_zoom",
+                "owner",
+                "geographic_bound",
+            ]
 
         fields: list[str] = list(super().get_fields(request, obj))  # type: ignore[arg-type]
         if not request.user.is_superuser:

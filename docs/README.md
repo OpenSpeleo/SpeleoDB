@@ -52,6 +52,9 @@ Unlike product docs, these files prioritize:
 - `gis-geometries.md`
   - private line/polygon authoring, shared access, map/GPS editing, 100-vertex
     and 30 km² bounding-box limits, atomic saves, and verification
+- [GIS View Geographic Bound](gis-view-geographic-bound.md)
+  - Public GIS View polygon selection, browser clipping, lifecycle and
+    validation.
 - `gis-geometry-read-api.md`
   - agent-facing GET-only integration specification: geometry contract,
     authentication, metadata/detail/permission responses, transparency

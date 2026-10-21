@@ -26,7 +26,6 @@ import orjson
 import psycopg
 import pytest
 import requests
-from allauth.account.models import EmailAddress
 from botocore.exceptions import ClientError
 from celery import Celery
 from celery._state import get_current_app
@@ -47,7 +46,7 @@ from speleodb.testing.celery import isolated_test_broker_url
 from speleodb.testing.database import postgres_test_database_url
 from speleodb.users.models import User
 from speleodb.users.tasks import get_users_count
-from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 from speleodb.utils.s3_storages import ExportStorage
 
 if TYPE_CHECKING:
@@ -264,14 +263,6 @@ def live_worker(
                 delete_archive(key=attempt.object_key)
 
 
-def _verified_user() -> User:
-    user: User = UserFactory.create()
-    EmailAddress.objects.update_or_create(
-        user=user, email=user.email, defaults={"verified": True, "primary": True}
-    )
-    return user
-
-
 def _publish_scheduled_task(
     live_worker: LiveWorker, task_name: str, task_id: str
 ) -> None:
@@ -335,7 +326,7 @@ def _publish_scheduled_task(
 def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     live_worker: LiveWorker,
 ) -> None:
-    _verified_user()
+    VerifiedUserFactory.create()
     expected_count: int = get_users_count()
     task_id: str = str(uuid.uuid4())
     task_name: str = "speleodb.users.tasks.get_users_count"
@@ -494,7 +485,7 @@ def test_live_beat_publication_preserves_worker_result_recording(
 def test_live_export_download_notification_and_expiration(
     live_worker: LiveWorker,
 ) -> None:
-    user: User = _verified_user()
+    user: User = VerifiedUserFactory.create()
     job: BackgroundJob
     created: bool
     job, created = request_export(user)
@@ -563,7 +554,7 @@ def test_live_export_download_notification_and_expiration(
 
 def test_live_duplicate_delivery_preserves_success(live_worker: LiveWorker) -> None:
     job: BackgroundJob
-    job, _ = request_export(_verified_user())
+    job, _ = request_export(VerifiedUserFactory.create())
     attempt: JobAttempt = live_worker.wait_ready(job)
     artifact: JobArtifact = JobArtifact.objects.get(job=job)
     result: TaskResult = TaskResult.objects.get(task_id=str(attempt.task_id))
@@ -592,7 +583,7 @@ def test_live_duplicate_delivery_preserves_success(live_worker: LiveWorker) -> N
 def test_live_broker_failure_keeps_request_for_maintenance(
     live_worker: LiveWorker,
 ) -> None:
-    user: User = _verified_user()
+    user: User = VerifiedUserFactory.create()
     job: BackgroundJob
     created: bool
     # Reserve, but do not listen on, an unused local port. The request experiences
@@ -616,7 +607,7 @@ def test_live_broker_failure_keeps_request_for_maintenance(
 
 
 def test_live_worker_death_recovers_with_a_new_attempt(live_worker: LiveWorker) -> None:
-    user: User = _verified_user()
+    user: User = VerifiedUserFactory.create()
     job: BackgroundJob
     # An actual database lock holds the worker immediately after its durable
     # claim. This makes the process-death boundary deterministic without mocks

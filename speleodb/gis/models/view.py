@@ -10,10 +10,14 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db import transaction
 from django.db.models import Prefetch
 from django.db.models import Q
 
+from speleodb.common.enums import PermissionLevel
+from speleodb.gis.geometry_validation import validate_gis_geometry
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.models.gis_geometry import GISGeometry
 from speleodb.gis.models.utils import generate_random_token
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
@@ -86,6 +90,19 @@ class GISView(models.Model):
         help_text="Projects included in this view",
     )
 
+    geographic_bound = models.ForeignKey(
+        GISGeometry,
+        related_name="bounded_gis_views",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        default=None,
+        help_text=(
+            "Optional Polygon restricting the public web viewer display only. "
+            "Raw GeoJSON downloads and OGC access remain unrestricted."
+        ),
+    )
+
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
 
@@ -110,14 +127,67 @@ class GISView(models.Model):
         **kwargs: Any,
     ) -> None:
         """Validate before saving."""
-        self.full_clean()
-        super().save(
-            force_insert=force_insert,
-            force_update=force_update,
-            using=using,
-            update_fields=update_fields,
-            **kwargs,
+        with transaction.atomic(using=using):
+            if self.geographic_bound_id is not None:
+                # Share the geometry lock with soft deletion and permission edits.
+                # Re-read after locking rather than trusting a cached FK instance.
+                try:
+                    self.geographic_bound = GISGeometry.objects.select_for_update().get(
+                        pk=self.geographic_bound_id
+                    )
+                except GISGeometry.DoesNotExist as exc:
+                    raise ValidationError(
+                        {"geographic_bound": "The selected Polygon no longer exists."}
+                    ) from exc
+            self.full_clean()
+            super().save(
+                force_insert=force_insert,
+                force_update=force_update,
+                using=using,
+                update_fields=update_fields,
+                **kwargs,
+            )
+
+    def clean(self) -> None:
+        super().clean()
+        if self.geographic_bound_id is None:
+            return
+        try:
+            geometry = self.geographic_bound
+        except GISGeometry.DoesNotExist:
+            return  # The foreign-key field reports a nonexistent selection.
+        if geometry is None:
+            return
+        if not geometry.is_active or geometry.geometry_type != "Polygon":
+            raise ValidationError(
+                {"geographic_bound": "Choose an active Polygon GIS Geometry."}
+            )
+        validate_gis_geometry(geometry.geojson)
+        unchanged: bool = (
+            not self._state.adding
+            and type(self)
+            .objects.filter(
+                pk=self.pk,
+                owner_id=self.owner_id,
+                geographic_bound_id=self.geographic_bound_id,
+            )
+            .exists()
         )
+        if (
+            not unchanged
+            and not geometry.permissions.filter(
+                user_id=self.owner_id,
+                is_active=True,
+                level__gte=PermissionLevel.READ_ONLY,
+            ).exists()
+        ):
+            raise ValidationError(
+                {
+                    "geographic_bound": (
+                        "The view owner must have read access to this Polygon."
+                    )
+                }
+            )
 
     def regenerate_token(self) -> None:
         """Generate a new access token for this view."""

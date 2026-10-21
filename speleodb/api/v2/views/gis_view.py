@@ -734,7 +734,7 @@ class PublicGISViewGeoJSONApiView(GenericAPIView[GISView], SDBAPIViewMixin):
     Usage: Public SpeleoDB map viewer at /view/<gis_token>/.
     """
 
-    queryset = GISView.objects.all()
+    queryset = GISView.objects.select_related("geographic_bound")
     permission_classes = [permissions.AllowAny]
     serializer_class = PublicGISViewSerializer
     lookup_field = "gis_token"

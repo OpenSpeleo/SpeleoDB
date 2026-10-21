@@ -18,21 +18,44 @@ interface SurveyLayerOwner {
 }
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
-export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode' | 'applyProjectLayerVisibility' | 'scheduleDisplayUpdate'>, projectId: EntityId, url: string) {
+interface ProjectGeoJSONLoadOptions {
+    transformData?: (data: ViewerGeoJSON, isCurrent: () => boolean) => Promise<ViewerGeoJSON>;
+    isCurrent?: () => boolean;
+}
+
+export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode' | 'applyProjectLayerVisibility' | 'scheduleDisplayUpdate'>, projectId: EntityId, url: string, options: ProjectGeoJSONLoadOptions = {}) {
     const map = State.map;
     if (!map) return;
 
     const sourceId = `project-geojson-${projectId}`;
     const generation = State.layerGeneration;
-    const isCurrent = () => State.map === map && State.layerGeneration === generation;
+    const isCurrent = () => State.map === map && State.layerGeneration === generation && (options.isCurrent?.() ?? true);
 
     try {
+        if (options.transformData) {
+            // A failed or empty bounded reload must not leave previously rendered data.
+            const id = String(projectId);
+            for (const layerId of State.allProjectLayers.get(id) ?? []) {
+                if (map.getLayer(layerId)) map.removeLayer(layerId);
+            }
+            if (map.getSource(sourceId)) map.removeSource(sourceId);
+            State.allProjectLayers.delete(id);
+            State.projectBounds.delete(id);
+            State.projectDepthDomains.delete(id);
+            State.effectiveProjectVisibility.delete(id);
+            Geometry.cachePreparedSnapPoints(projectId, []);
+        }
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const rawData = await readViewerGeoJSON(response, { isCurrent }) as unknown as ViewerGeoJSON;
-        const prepared = await prepareProjectGeoJSON(rawData, { isCurrent });
+        const displayData = options.transformData ? await options.transformData(rawData, isCurrent) : rawData;
+        const prepared = await prepareProjectGeoJSON(displayData, { isCurrent });
         if (!isCurrent()) return;
         const { data, domain, snapPoints, boundsCoordinates } = prepared;
+        if (options.transformData && !boundsCoordinates) {
+            await this.scheduleDisplayUpdate('depth');
+            return;
+        }
         State.projectDepthDomains.set(String(projectId), domain);
         Geometry.cachePreparedSnapPoints(projectId, snapPoints);
 
@@ -130,6 +153,12 @@ export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode'
         await this.scheduleDisplayUpdate('depth');
 
     } catch (e) {
-        if (isCurrent()) console.error(`Error loading GeoJSON for project ${projectId}`, e);
+        if (isCurrent() && !(e instanceof Error && e.name === 'AbortError')) {
+            console.error(`Error loading GeoJSON for project ${projectId}`, e);
+            if (options.transformData) {
+                await this.scheduleDisplayUpdate('depth');
+                throw e;
+            }
+        }
     }
 }

@@ -156,13 +156,17 @@ class GISGeometrySpecificAPIView(GenericAPIView[GISGeometry], SDBAPIViewMixin):
                 id=serializers.UUIDField(),
                 message=serializers.CharField(),
             ),
+            400: API_ERROR,
             403: API_ERROR,
         }
     )
     @extend_schema(operation_id="v2_gis_geometries_destroy")
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         geometry: GISGeometry = self.get_object()
-        geometry.deactivate(self.get_user())
+        try:
+            geometry.deactivate(self.get_user())
+        except ValidationError as exc:
+            return _validation_error(exc)
         return SuccessResponse(
             {"id": str(geometry.id), "message": "GIS Geometry deleted successfully"}
         )

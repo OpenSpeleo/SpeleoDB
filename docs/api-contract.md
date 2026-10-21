@@ -1,12 +1,13 @@
 # Maintaining the SpeleoDB API contract
 
 `OpenAPI.yaml` at the repository root is the canonical public HTTP contract used
-by `@speleodb/api`. It is generated from this Django application and is the sole
-checked-in schema. The TypeScript SDK repository,
+by `@speleodb/api`. It is generated from this Django application. The TypeScript
+SDK repository,
 [OpenSpeleo/SpeleoDB-TS-API](https://github.com/OpenSpeleo/SpeleoDB-TS-API),
-records the backend revision and exact SHA-256 in `openapi-source.json`, then
-generates its client and DTOs from that verified source. It contains no second
-YAML file. Do not independently serialize, format, or hand-edit the canonical
+owns a checked-in `OpenAPI.yaml` snapshot and its SHA-256 record. Its client and
+DTOs are generated entirely from that local snapshot. Schema updates are an
+explicit maintainer import; neither repository's CI reads or fetches the other
+repository. Do not serialize, format, or hand-edit the canonical backend
 artifact. Fix the backend declarations and regenerate.
 
 The SDK's
@@ -88,8 +89,7 @@ docker exec -w /app speleodb-monorepo-django \
   python manage.py export_api_schema
 
 docker exec -w /app speleodb-monorepo-django \
-  python manage.py export_api_schema --check \
-  --compare-source /workspace/packages/typescript/api/openapi-source.json
+  python manage.py export_api_schema --check
 ```
 
 For a reviewable draft outside the checkout:
@@ -103,20 +103,13 @@ docker cp speleodb-monorepo-django:/tmp/OpenAPI.yaml /tmp/OpenAPI.yaml
 
 `--output` changes only the destination. `--check` regenerates into an OS
 temporary directory and fails when the destination is missing or differs,
-without rewriting it. `--compare-source PATH` reads the SDK's JSON provenance
-record and requires its `sha256` to equal the hash of the freshly generated
-bytes. It does not hash a possibly stale destination instead. The record must
-contain a 64-character lowercase SHA-256 and `revision`, either a full
-40-character lowercase backend commit or `null` during unpublished work. This
-comparison checks the digest; it does not fetch or prove availability of that
-revision. Standalone SDK generation and release require the real published
-revision and verify its downloaded bytes separately.
+without rewriting it. The command reads only this application's declarations and
+the requested local destination; it does not inspect an SDK checkout or source
+record.
 
-Whitespace, line endings, and terminal newlines affect the digest. Missing,
-malformed or mismatched source records fail without rewriting the destination or
-the record. The command prints a SHA-256 digest for review and always enables
-schema validation, warning-as-error behavior, and English schema text. It runs
-the equivalent of:
+Whitespace, line endings, and terminal newlines affect the digest. The command
+prints a SHA-256 digest for review and always enables schema validation,
+warning-as-error behavior, and English schema text. It runs the equivalent of:
 
 ```sh
 python manage.py spectacular --format openapi --lang en \
@@ -172,9 +165,10 @@ response. Do not work around nullable failures by dropping required properties.
    branches. Check missing fields, null values, empty arrays, and permission
    denial.
 5. Regenerate and review the artifact, then run endpoint tests with contract
-   enforcement and inspect coverage. Update the SDK source record and generated
-   client together after the backend revision is available upstream. Compile
-   both consumers to expose assumptions that no longer match the contract.
+   enforcement and inspect coverage. When updating the SDK, explicitly import
+   the reviewed export into its local snapshot and regenerate its client.
+   Compile the consumers to expose assumptions that no longer match the
+   contract.
 
 For explicit response envelopes, use concrete serializer fields and the helpers
 in `schema_helpers.py`. A list response needs `many=True`; a GeoJSON response
@@ -503,7 +497,7 @@ and alias mounts are covered. The configured export describes this unavailable
 operation explicitly; it does not advertise a successful phone-management
 response for the disabled feature.
 
-## Automation and synchronized changes
+## Independent automation and schema updates
 
 The web `export-api-schema` prek hook regenerates `OpenAPI.yaml` when the
 artifact, Python backend/configuration, Python manifest or lock changes. It uses
@@ -511,77 +505,52 @@ artifact, Python backend/configuration, Python manifest or lock changes. It uses
 application, not from individual input filenames. Prek reports a modified
 artifact for review. No hook installation or staging is part of generation.
 
-Web CI's independent `api-contract` job checks local export drift and compares
-the fresh export's SHA-256 with `openapi-source.json` from
-`OpenSpeleo/SpeleoDB-TS-API`. Its default counterpart ref is `master`; the
-repository variable `API_SCHEMA_REF` can pin a reviewed SDK commit for a
-coordinated change. The sparse checkout retrieves only the source record and
-does not publish or modify either repository. A missing or invalid record or
-changed schema byte fails validation. This job also runs for Dependabot and fork
-pull requests with nonsecret export settings; dependency changes cannot bypass
-schema freshness or cross-repository equality because a service-backed test job
-is unavailable. For a coordinated breaking change, make the counterpart commit
-available and configure the reviewed ref before expecting the web CI comparison
-to pass; do not weaken the comparison to semantic YAML equality.
+Web CI's independent `api-contract` job checks local export drift with
+`export_api_schema --check`. This job also runs for Dependabot and fork pull
+requests with nonsecret export settings. It requires only this repository;
+backend schema changes do not wait for an SDK commit or release.
 
 The ordinary backend CI pytest invocation enables `--api-contract-enforce` and
 writes a report. CI then requires operation coverage with
 `verify_api_contract_coverage` and uploads the observations even on failure.
 Generated YAML is excluded from style-only yamllint rewriting; exporter
-validation, parser checks and byte comparisons remain mandatory.
+validation, parser checks and local byte comparisons remain mandatory.
 
-The monorepo's `openapi-contract-match` prek hook and CI run the parent utility
-`utilities/openapi-contract/check.mjs`. That utility hashes the sole checked-out
-web schema and compares the digest with the SDK source record; it does not
-regenerate, synchronize, stage, or commit files. Web's export check owns
-freshness against backend declarations. No second schema is stored in the SDK
-repository or its published package.
+The SDK independently checks its own committed `OpenAPI.yaml` snapshot, its
+SHA-256 record, and generated outputs. It does not fetch the backend, require a
+published backend revision, discover sibling checkouts, or compare repositories
+in its standalone CI. Backend and SDK releases can therefore proceed
+independently.
 
-An exported backend correction can be ahead of the published SDK. The existing
-SDK provenance must continue identifying the backend commit that produced that
-release. In this state, the cross-repository digest comparison correctly fails;
-do not edit the published release's source pin, fabricate a revision, or weaken
-the gate. Completing synchronization requires the reviewed backend commit to be
-available upstream, followed by SDK regeneration from its real commit and
-digest, a new SDK release, and consumer version/lock updates.
+The monorepo owns a separate integration unit test and its root CI/prek gate. It
+requires the checked-out backend `OpenAPI.yaml`, the SDK's checked-in
+`OpenAPI.yaml`, and the SDK snapshot's recorded SHA-256 to agree. This local
+integration check catches mismatched submodule combinations without adding a
+cross-repository dependency to either standalone child. It reads the checked-out
+files without fetching or rewriting them; backend export freshness and SDK
+generation freshness remain each child's responsibility.
 
-For draft generation before that coordinated release, use an isolated SDK
-checkout, update that draft's `sha256` to the exported file's digest, and set
-its `revision` to `null`. Supply the canonical file explicitly; the SDK never
-discovers sibling repositories:
+To adopt a schema change in the SDK, first export and review the backend schema.
+Then explicitly copy those exact bytes into the SDK's `OpenAPI.yaml`, update
+that snapshot's `sha256` in `openapi-source.json`, and regenerate the SDK. This
+is a deliberate source update, not an automatic dependency between builds. Use
+the SDK's maintenance guide and current package scripts for generation, checks,
+packaging, and release.
 
-```sh
-export SPELEODB_OPENAPI_PATH="/absolute/path/to/web/OpenAPI.yaml"
-cd /absolute/path/to/isolated-sdk-checkout
-bun run generate
-bun run generate:check
-bun run typecheck
-bun run test
-```
-
-The SDK copies the verified input only into its process-owned temporary
-generation directory, which is removed afterwards. For standalone regeneration,
-publish the reviewed backend commit, record its actual immutable revision in
-`openapi-source.json`, and unset `SPELEODB_OPENAPI_PATH`. The default SDK loader
-then fetches `OpenAPI.yaml` from that exact backend revision and rejects changed
-bytes, redirects and download failures. A null revision is a local maintenance
-state that requires the explicit local input for every generation/check command,
-not a release-ready source pin. Keep it out of the released SDK checkout. Follow
-the SDK maintenance guide for trusted publishing and consumer release order.
-
-Use the SDK's current package scripts and maintenance guide as the authority for
-its checks. Review the generated diff, including removals, operation names,
-required fields, nullable unions, content types and status unions. Then run web
-and mobile checks in their owning repositories. Refresh standalone and
-integration locks when package dependencies change. Committing, publishing or
-releasing any repository requires its normal explicit authorization; export and
-validation do not perform those operations.
+Review the generated diff, including removals, operation names, required fields,
+nullable unions, content types and status unions. Then run web and mobile checks
+in their owning repositories when upgrading those consumers. Refresh standalone
+and integration locks when package dependencies change. Committing, publishing
+or releasing any repository requires its normal explicit authorization; export
+and validation do not perform those operations.
 
 ## Troubleshooting
 
-- **Different hashes but equivalent YAML:** review the canonical export and
-  update the SDK source digest deliberately. Check line endings and formatter
-  rules; do not round-trip the file through another YAML tool.
+- **SDK snapshot hash mismatch:** review the snapshot and its intentional
+  changes, then update its local digest. Check line endings and formatter rules;
+  do not round-trip the file through another YAML tool. The backend and SDK
+  snapshots may differ between explicit SDK updates, but the monorepo
+  integration equality test requires matching snapshots before integration.
 - **Export warnings or duplicate IDs:** identify the source view, imported
   schema or renamed operation. Fix declarations instead of disabling warning
   failures.
@@ -603,3 +572,12 @@ validation do not perform those operations.
 - **CI counterpart drift:** confirm the intended SDK repository/ref and review
   its source record against the fresh backend export. Updating a package version
   alone cannot synchronize the contract.
+
+## GIS View Geographic Bound
+
+Management serializers expose nullable `geographic_bound` UUIDs; omission during
+updates preserves the selection and explicit null clears it. The public web
+metadata serializer exposes a nullable `{id, revision, geojson, color, alias}`
+object whose geometry type is Polygon. Private data/OGC payloads are unchanged.
+Schema and SDK generation must preserve both nullable representations. See
+[Geographic Bound](gis-view-geographic-bound.md) for semantics and tests.

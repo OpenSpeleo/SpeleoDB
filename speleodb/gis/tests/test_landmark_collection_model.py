@@ -13,13 +13,13 @@ from speleodb.gis.landmark_collections import get_or_create_personal_landmark_co
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 
 @pytest.mark.django_db
 class TestLandmarkCollectionModel:
     def test_collection_generates_gis_token(self) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Creator", email="creator@example.com"
         )
         collection = LandmarkCollection.objects.create(
@@ -48,7 +48,7 @@ class TestLandmarkCollectionModel:
     def test_personal_collection_helper_creates_single_admin_collection(
         self,
     ) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Creator", email="creator@example.com"
         )
 
@@ -75,7 +75,7 @@ class TestLandmarkCollectionModel:
         )
 
     def test_personal_collection_constraints(self) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Creator", email="creator@example.com"
         )
         LandmarkCollection.objects.create(
@@ -108,7 +108,7 @@ class TestLandmarkCollectionModel:
             )
 
     def test_landmark_collection_hard_delete_removes_member_landmarks(self) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Creator", email="creator@example.com"
         )
         collection = LandmarkCollection.objects.create(
@@ -130,7 +130,7 @@ class TestLandmarkCollectionModel:
     def test_landmark_coordinate_uniqueness_is_scoped_to_collection(
         self,
     ) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Creator", email="creator@example.com"
         )
         collection = LandmarkCollection.objects.create(
@@ -179,9 +179,7 @@ class TestLandmarkCollectionModel:
             )
 
     def test_collection_user_permission_unique(self) -> None:
-        user = User.objects.create_user(
-            name="Collection Reader", email="reader@example.com"
-        )
+        user = UserFactory.create(name="Collection Reader", email="reader@example.com")
         collection = LandmarkCollection.objects.create(
             name="Benchmarks",
             created_by="creator@example.com",
@@ -200,10 +198,8 @@ class TestLandmarkCollectionModel:
             )
 
     def test_deactivate_and_reactivate_permission(self) -> None:
-        owner = User.objects.create_user(
-            name="Collection Owner", email="owner@example.com"
-        )
-        reader = User.objects.create_user(
+        owner = UserFactory.create(name="Collection Owner", email="owner@example.com")
+        reader = UserFactory.create(
             name="Collection Reader", email="reader@example.com"
         )
         collection = LandmarkCollection.objects.create(

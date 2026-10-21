@@ -7,9 +7,12 @@ import re
 from typing import Any
 from typing import ClassVar
 
+from django.db import transaction
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from speleodb.api.v2.gis_geometry_access import user_has_gis_geometry_access
+from speleodb.gis.models import GISGeometry
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 from speleodb.surveys.models import Project
@@ -93,6 +96,7 @@ class GISViewSerializer(serializers.ModelSerializer[GISView]):
             "name",
             "description",
             "allow_precise_zoom",
+            "geographic_bound",
             "gis_token",
             "owner_email",
             "project_count",
@@ -122,6 +126,11 @@ class GISViewCreateUpdateSerializer(
     sanitized_fields: ClassVar[list[str]] = ["name", "description"]
 
     projects = GISProjectViewInputSerializer(many=True, write_only=True)
+    geographic_bound = serializers.PrimaryKeyRelatedField(
+        queryset=GISGeometry.objects.filter(is_active=True, geojson__type="Polygon"),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = GISView
@@ -129,8 +138,23 @@ class GISViewCreateUpdateSerializer(
             "name",
             "description",
             "allow_precise_zoom",
+            "geographic_bound",
             "projects",
         ]
+
+    def validate_geographic_bound(
+        self, value: GISGeometry | None
+    ) -> GISGeometry | None:
+        if value is None:
+            return None
+        if self.instance is not None and self.instance.geographic_bound_id == value.pk:
+            return value
+        user = self.context.get("user")
+        if user is None or not user_has_gis_geometry_access(user, value):
+            raise serializers.ValidationError(
+                "You must have read access to the selected Polygon."
+            )
+        return value
 
     def validate_projects(
         self, projects_data: list[dict[str, Any]]
@@ -170,6 +194,7 @@ class GISViewCreateUpdateSerializer(
 
         return validated_projects
 
+    @transaction.atomic
     def create(self, validated_data: dict[str, Any]) -> GISView:
         """Create a new GIS view with associated projects."""
         projects_data = validated_data.pop("projects", [])
@@ -194,6 +219,7 @@ class GISViewCreateUpdateSerializer(
 
         return gis_view
 
+    @transaction.atomic
     def update(self, instance: GISView, validated_data: dict[str, Any]) -> GISView:
         """Update GIS view and replace project associations."""
         projects_data = validated_data.pop("projects", None)
@@ -203,6 +229,9 @@ class GISViewCreateUpdateSerializer(
         instance.description = validated_data.get("description", instance.description)
         instance.allow_precise_zoom = validated_data.get(
             "allow_precise_zoom", instance.allow_precise_zoom
+        )
+        instance.geographic_bound = validated_data.get(
+            "geographic_bound", instance.geographic_bound
         )
         instance.save()
 
@@ -263,6 +292,26 @@ class PublicGISProjectViewSerializer(serializers.Serializer[dict[str, Any]]):
                 return None
 
 
+class GeographicBoundPolygonSerializer(serializers.Serializer[Any]):
+    type = serializers.ChoiceField(choices=["Polygon"])
+    coordinates = serializers.ListField(
+        child=serializers.ListField(
+            child=serializers.ListField(
+                child=serializers.FloatField(), min_length=2, max_length=2
+            ),
+        ),
+    )
+
+
+class PublicGISGeographicBoundSerializer(serializers.ModelSerializer[GISGeometry]):
+    geojson = GeographicBoundPolygonSerializer()
+
+    class Meta:
+        model = GISGeometry
+        fields = ["id", "revision", "geojson", "color", "alias"]
+        read_only_fields = fields
+
+
 class PublicGISViewSerializer(serializers.Serializer[GISView]):
     """
     Serializer for the public GIS view frontend map viewer response.
@@ -274,6 +323,9 @@ class PublicGISViewSerializer(serializers.Serializer[GISView]):
     view_name = serializers.CharField(source="name")
     view_description = serializers.CharField(source="description")
     allow_precise_zoom = serializers.BooleanField()
+    geographic_bound = PublicGISGeographicBoundSerializer(
+        read_only=True, allow_null=True
+    )
     projects = serializers.SerializerMethodField()
 
     @extend_schema_field(PublicGISProjectViewSerializer(many=True))

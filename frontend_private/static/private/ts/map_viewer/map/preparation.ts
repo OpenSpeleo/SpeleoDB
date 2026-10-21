@@ -1,6 +1,7 @@
 import { createCoordinateBounds, decodeGeoJSONBBox } from '@speleodb/map-core/coordinate-bounds';
 import type { CoordinateBounds, CoordinateBoundsAccumulator } from '@speleodb/map-core/coordinate-bounds';
 import { createPreparationRunner, transformGeometrySteps } from '@speleodb/map-core/preparation';
+import { clipSurveyGeoJSONSteps } from '@speleodb/map-core/survey-clipping';
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
 import type { BoundsPreparationOptions, PreparationOptions, PreparedProject, PreparedSnapPoint } from '../../../../../../ts-types/domain/map-preparation.ts';
@@ -10,6 +11,11 @@ import { DepthUtils, resolveLineDepthValue } from './depth.ts';
 import { GEOMETRY_TYPES, GIS_GEOMETRY_TYPE_PROPERTY } from './gis_layer_geometry.ts';
 
 const runPreparation = createPreparationRunner({ budgetMs: DEFAULTS.VIEWER_WORK.BUDGET_MS });
+
+/** Public-view opt-in; clipping precedes all derived survey metadata. */
+export function clipProjectGeoJSON(data: ViewerGeoJSON, bound: unknown, options: PreparationOptions = {}): Promise<ViewerGeoJSON> {
+    return runPreparation(clipSurveyGeoJSONSteps(data, bound), options);
+}
 
 function* prepareGeometry<G extends Geometry | null | undefined>(geometry: G, bounds: CoordinateBoundsAccumulator, flatten: boolean): Generator<void, G, unknown> {
     return yield* transformGeometrySteps(geometry, {

@@ -232,28 +232,30 @@ bun run build
 Standalone production builds consume exact npm releases of
 [`@speleodb/map-core`](https://www.npmjs.com/package/@speleodb/map-core) and
 [`@speleodb/map-viewer`](https://www.npmjs.com/package/@speleodb/map-viewer).
-Both currently use `0.2.0`. The application manifest and Bun lock pin those
-versions and archive integrity. The matching `map-core` override keeps the
-viewer's compatible core dependency on the same installed version.
-`bun run check:shared-packages` rejects local paths, Git dependencies, version
-ranges and inconsistent core overrides before standalone CI or Railway installs.
-Both npm installs and monorepo development consume package TypeScript sources.
-Vite compiles that code as part of the application build; no package
-installation script or checked-in `dist/` is required. Type checking and ESLint
-use the same source exports, and the runtime import audit follows their
-implementation.
+The application manifest and Bun lock pin their versions and archive integrity.
+The matching `map-core` override keeps the viewer's compatible core dependency
+on the same installed version. `bun run check:shared-packages` rejects local
+paths, Git dependencies, version ranges and inconsistent core overrides before
+standalone CI or Railway installs. Both npm installs and monorepo development
+consume package TypeScript sources. Vite compiles that code as part of the
+application build; no package installation script or checked-in `dist/` is
+required. Type checking and ESLint use the same source exports, and the runtime
+import audit follows their implementation.
 
 The `speleodb-source` condition remains enabled for compatibility with older
 source-enabled package revisions; npm releases export source by default.
 
 The monorepo overlay links the same source and asset directories without
-rewriting exports. `SPELEODB_LOCAL_PACKAGES=1` verifies that both packages came
-from this overlay and rejects missing local packages. Canonical TypeScript, Vite
-and Vitest resolution preserve installed symlink paths so shared sources resolve
-dependencies from the application's installation. Package code stays independent
-of Django and application globals; browser scheduling uses explicit cancellable
-ports and detects animation-frame availability. See the monorepo TypeScript
-package documentation for packaging, local overlays and publication sequencing.
+rewriting exports. Its installer owns validation of local source links. Web's
+Vite and Vitest configuration consumes ordinary package exports without
+requiring monorepo metadata, environment flags, or sibling repositories, so
+standalone npm installs and native workspace links both work. Canonical
+TypeScript, Vite and Vitest resolution preserve installed symlink paths so
+shared sources resolve dependencies from the application's installation. Package
+code stays independent of Django and application globals; browser scheduling
+uses explicit cancellable ports and detects animation-frame availability. See
+the monorepo TypeScript package documentation for packaging, local overlays and
+publication sequencing.
 
 The live renderer/provider smoke is opt-in. With a valid configured provider
 token, run it through the Django browser wrapper so the ordinary isolated user

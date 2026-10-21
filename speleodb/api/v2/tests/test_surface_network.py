@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -10,7 +12,10 @@ from rest_framework.test import APIClient
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import SurfaceMonitoringNetwork
 from speleodb.gis.models import SurfaceMonitoringNetworkUserPermission
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 pytestmark = pytest.mark.django_db
 
@@ -146,7 +151,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_grant_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(name="Other User", email="other@example.com")
+        other_user = UserFactory.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )
@@ -170,7 +175,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_update_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(name="Other User", email="other@example.com")
+        other_user = UserFactory.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )
@@ -198,7 +203,7 @@ class TestSurfaceMonitoringNetworkPermissionsApi:
     def test_delete_permission(
         self, user: User, authenticated_client: APIClient
     ) -> None:
-        other_user = User.objects.create(name="Other User", email="other@example.com")
+        other_user = UserFactory.create(name="Other User", email="other@example.com")
         network = SurfaceMonitoringNetwork.objects.create(
             name="Network 1", created_by=user.email
         )

@@ -22,10 +22,12 @@ from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.testing.api_contract import assert_api_response
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+    from speleodb.users.models import User
 
 
 class _StreamingResponse(Protocol):
@@ -73,9 +75,7 @@ class TestLandmarkCollectionOGC:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(
-            name="Collection Owner", email="owner@example.com"
-        )
+        return UserFactory.create(name="Collection Owner", email="owner@example.com")
 
     @pytest.fixture
     def collection(self, owner: User) -> LandmarkCollection:
@@ -571,9 +571,7 @@ class TestLandmarkCollectionOGC:
         owner: User,
         user_token: Token,
     ) -> None:
-        other_user = User.objects.create_user(
-            name="Other User", email="other@example.com"
-        )
+        other_user = UserFactory.create(name="Other User", email="other@example.com")
         unknown_collection_id = "00000000-0000-0000-0000-000000000001"
         inaccessible_collection = LandmarkCollection.objects.create(
             name="Private",

@@ -1,0 +1,21 @@
+<div class="mt-4">
+  <label class="block text-sm font-medium mb-1" for="geographic_bound">Geographic Bound:</label>
+  <select id="geographic_bound"
+          name="geographic_bound"
+          class="form-select w-full">
+    <option value="">No geographic bound</option>
+    {% if unavailable_geographic_bound %}
+      <option value="{{ gis_view.geographic_bound_id }}"
+              selected>Current geographic bound (access unavailable)</option>
+    {% endif %}
+    {% for geometry in geographic_bounds %}
+      <option value="{{ geometry.id }}"
+              {% if geometry.id == gis_view.geographic_bound_id %}selected{% endif %}>{{ geometry.name }}</option>
+    {% endfor %}
+  </select>
+  <p class="text-xs text-slate-400 mt-1">
+    Select a polygon to show only survey data inside it on the public web map.
+    Polygon edits update the bound when the viewer reloads. This is a visual filter:
+    the browser still downloads the full survey data, and OGC access is unchanged.
+  </p>
+</div>

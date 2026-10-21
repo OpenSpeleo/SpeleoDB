@@ -607,3 +607,12 @@ provide the write/admin flags and model color used by assignment dropdowns and
 collection group headers; Landmark GeoJSON provides per-feature `can_write`,
 `can_delete`, and `collection_color` flags used by the manager, map layer,
 context menu, and drag confirmation path.
+
+## Public GIS View Geographic Bound
+
+The public metadata response optionally supplies a live Polygon bound. The web
+composition uses map-core clipping through the survey loader transform hook,
+after raw GeoJSON parsing and before preparation. Only retained features drive
+map sources, extents, depth calculations and the visible project list. Complete
+project inputs remain available for style reloads. Raw downloads and OGC remain
+unrestricted. See [Geographic Bound](../gis-view-geographic-bound.md).

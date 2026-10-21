@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from speleodb.api.v2.serializers import ExperimentSerializer
 from speleodb.api.v2.tests.factories import ExperimentFactory
 from speleodb.gis.models import Experiment
 from speleodb.gis.models.experiment import FieldType
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 @pytest.fixture
 def user() -> User:
     """Create a test user."""
-    return User.objects.create_user(
+    return UserFactory.create(
         name="Test User",
         email="testuser@example.com",
         password="testpass123",  # noqa: S106

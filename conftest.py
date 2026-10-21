@@ -12,6 +12,8 @@ from django.core.cache import cache
 from django.core.management import call_command
 from django.test import override_settings
 
+from speleodb.users.tests.factories import UserFactory
+
 if TYPE_CHECKING:
     from collections.abc import Generator
     from collections.abc import Mapping
@@ -77,10 +79,12 @@ def admin_user(db: None, django_user_model: type[User]) -> User:
     try:
         return django_user_model.objects.get_by_natural_key("admin@example.com")
     except django_user_model.DoesNotExist:
-        return django_user_model.objects.create_superuser(
+        return UserFactory.create(
             email="admin@example.com",
             password="password",  # noqa: S106
             name="Test Administrator",
+            is_staff=True,
+            is_superuser=True,
         )
 
 

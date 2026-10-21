@@ -22,6 +22,7 @@ from speleodb.users.adapters import AccountAdapter
 from speleodb.users.models import AccountEvent
 from speleodb.users.models import User
 from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 
 if TYPE_CHECKING:
     from django.test.client import Client
@@ -216,13 +217,7 @@ class TestAccountAdapterSendMail:
             at speleodb/users/adapters.py in send_mail
         """
         password = "Sup3r-S3cur3-P@ssw0rd!"  # noqa: S105
-        user = UserFactory.create(password=password)
-        EmailAddress.objects.create(
-            user=user,
-            email=user.email,
-            verified=True,
-            primary=True,
-        )
+        user = VerifiedUserFactory.create(password=password)
 
         api_client = APIClient()
         api_client.force_authenticate(user=user)

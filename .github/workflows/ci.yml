@@ -56,22 +56,8 @@ jobs:
       - name: Install Dependencies
         run: uv sync --extra local --frozen
 
-      - name: Checkout TypeScript API source provenance
-        uses: actions/checkout@v7
-        with:
-          repository: OpenSpeleo/SpeleoDB-TS-API
-          # Set API_SCHEMA_REF to a reviewed SDK commit for coordinated changes.
-          # Otherwise the published development contract on master is enforced.
-          ref: ${{ vars.API_SCHEMA_REF || 'master' }}
-          path: .api-contract-sdk
-          sparse-checkout: openapi-source.json
-          sparse-checkout-cone-mode: false
-          persist-credentials: false
-
-      - name: Verify backend export and SDK source digest
-        run: >-
-          python manage.py export_api_schema --check
-          --compare-source .api-contract-sdk/openapi-source.json
+      - name: Verify backend export
+        run: python manage.py export_api_schema --check
         env:
           DJANGO_DEBUG: True
 

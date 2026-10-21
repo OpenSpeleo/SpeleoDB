@@ -35,7 +35,7 @@ it('loads projects immediately and serializes selected rows with trimmed form va
     expect(document.querySelector('.project-select cave')).toBeNull();
     $('.project-select').val('p1').trigger('change');
     $('#btn_submit').trigger('click');
-    expect(save.mock.calls[0]?.[0]).toEqual({ name: 'GIS', description: 'Desc', allow_precise_zoom: true, projects: [{ project_id: 'p1', use_latest: true, commit_sha: '' }] });
+    expect(save.mock.calls[0]?.[0]).toEqual({ name: 'GIS', description: 'Desc', allow_precise_zoom: true, geographic_bound: null, projects: [{ project_id: 'p1', use_latest: true, commit_sha: '' }] });
 });
 
 it('rejects empty selection before submission without changing load-error settlement', async () => {

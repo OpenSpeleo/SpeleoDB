@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import uuid
 from typing import TYPE_CHECKING
+from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db import transaction
@@ -22,9 +24,12 @@ from speleodb.users.models import User
 if TYPE_CHECKING:
     from django_stubs_ext import StrOrPromise
 
+    from speleodb.gis.models.view import GISView
+
 
 class GISGeometry(models.Model):
     permissions: models.QuerySet[GISGeometryUserPermission]
+    bounded_gis_views: models.QuerySet[GISView]
 
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     name = models.CharField(
@@ -72,6 +77,32 @@ class GISGeometry(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        if self._state.adding:
+            return
+        original_type: str | None = (
+            type(self)
+            .objects.filter(pk=self.pk)
+            .values_list("geojson__type", flat=True)
+            .first()
+        )
+        if original_type is not None and (
+            not isinstance(self.geojson, dict)
+            or self.geojson.get("type") != original_type
+        ):
+            raise ValidationError(
+                {
+                    "geojson": (
+                        "Geometry type cannot change. Create a new geometry instead."
+                    )
+                }
+            )
+
     @property
     def geometry_type(self) -> str:
         return str(self.geojson["type"])
@@ -88,6 +119,11 @@ class GISGeometry(models.Model):
         """Retain the shape and access history while serializing with edits."""
         with transaction.atomic():
             type(self).objects.select_for_update().get(pk=self.pk)
+            if self.bounded_gis_views.exists():
+                raise ValidationError(
+                    "This Polygon is used as a GIS View geographic bound. "
+                    "Remove it from those views before deleting it."
+                )
             timestamp = timezone.now()
             self.permissions.filter(is_active=True).update(
                 is_active=False,

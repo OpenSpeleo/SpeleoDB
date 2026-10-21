@@ -662,3 +662,12 @@ restores transient position and original gesture settings before clearing it.
 Source/control, bootstrap lifecycle, and interaction suites exercise real owner
 methods with finite map fakes; no additional source reload or geometry scan is
 introduced by these type boundaries.
+
+## Geographic Bound ownership
+
+Optional GIS View clipping is enabled exclusively by the public web composition.
+The reusable polygon algorithm lives in `@speleodb/map-core`; the shared web
+loader accepts an optional transform before preparation. Private callers omit
+it, and renderer specifications remain unchanged. See
+[Geographic Bound](../gis-view-geographic-bound.md) for lifecycle and
+performance.

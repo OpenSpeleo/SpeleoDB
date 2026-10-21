@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 import pytest
-from allauth.account.models import EmailAddress
 from django.test import modify_settings
 from django.test import override_settings
 from django.urls import resolve
@@ -37,6 +36,8 @@ from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
+from speleodb.users.tests.factories import VerifiedUserFactory
+from tests.browser.geographic_bound_fixtures import geographic_bound_records
 from tests.browser.resource_fixtures import resource_edit_records
 from tests.browser.urls import revision_fixture
 from tests.browser.urls import tree_fixture
@@ -148,7 +149,6 @@ def controller_routes(user: User) -> dict[str, str]:
 )
 def test_viewer_browser_workloads(
     request: pytest.FixtureRequest,
-    django_user_model: type[User],
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     """Keep browser timing separate from the serial backend suite and its load."""
@@ -161,13 +161,10 @@ def test_viewer_browser_workloads(
     )
     assert manifest.is_file()
     password: str = secrets.token_urlsafe(32)
-    user: User = django_user_model.objects.create_user(
+    user: User = VerifiedUserFactory.create(
         email="viewer-browser@example.test",
         name="Viewer Browser",
         password=password,
-    )
-    EmailAddress.objects.create(
-        user=user, email=user.email, verified=True, primary=True
     )
     public_view: GISView = GISView.objects.create(
         owner=user,
@@ -200,6 +197,7 @@ def test_viewer_browser_workloads(
         # host helper runs earlier; configure the chosen host through Django.
         modify_settings(ALLOWED_HOSTS={"append": server_host}),
         resource_edit_records(user) as resource_records,
+        geographic_bound_records() as bound_records,
         capfd.disabled(),
         subprocess.Popen(  # noqa: S603 - fixed root script
             command,
@@ -207,6 +205,7 @@ def test_viewer_browser_workloads(
             env={
                 **browser_environment,
                 "VIEWER_BROWSER_RESOURCE_RECORDS": json.dumps(resource_records),
+                "VIEWER_BROWSER_BOUND_RECORDS": json.dumps(bound_records),
             },
             text=True,
             start_new_session=True,

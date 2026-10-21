@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -13,7 +14,10 @@ from django.db import transaction
 from speleodb.gis.landmark_collections import get_or_create_personal_landmark_collection
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 @pytest.mark.django_db
@@ -23,7 +27,7 @@ class TestLandmarkModel:
     @pytest.fixture
     def user(self) -> User:
         """Create a test user."""
-        return User.objects.create_user(
+        return UserFactory.create(
             name="Test User",
             email="testuser@example.com",
             password="testpass123",  # noqa: S106

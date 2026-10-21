@@ -11,6 +11,7 @@ from django.test.client import Client
 from dotenv import load_dotenv
 
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
+from speleodb.gis.models import GISView
 from speleodb.gis.models import Station
 from speleodb.gis.models import SubSurfaceStation
 from speleodb.gis.models import SurfaceStation
@@ -102,6 +103,9 @@ def cleanup_database(db: None) -> Generator[None]:
     SurfaceStation.objects.non_polymorphic().all().delete()
     Station.objects.non_polymorphic().all().delete()
 
+    # Views protect their geographic bounds; remove references before geometries.
+    GISView.objects.all().delete()
+
     # Delete all other models, excluding ContentType (managed by Django)
     # and polymorphic Station models (already deleted above)
     excluded_labels = {
@@ -109,6 +113,7 @@ def cleanup_database(db: None) -> Generator[None]:
         "gis.Station",
         "gis.SubSurfaceStation",
         "gis.SurfaceStation",
+        "gis.GISView",
     }
     for model in apps.get_models():
         if model._meta.label not in excluded_labels:  # noqa: SLF001

@@ -7,7 +7,6 @@ from typing import Any
 
 import orjson
 import pytest
-from allauth.account.models import EmailAddress
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.db import models
@@ -24,7 +23,7 @@ from speleodb.gis.gis_layer_processing import GISLayerProcessingError
 from speleodb.gis.models import GPSTrack
 from speleodb.gis.models import GPSTrackUserPermission
 from speleodb.gis.models import LandmarkCollection
-from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 from speleodb.utils.s3_storages import GPSTrackStorage
 
 if TYPE_CHECKING:
@@ -55,11 +54,8 @@ class GPXTrackPublicationTests(SentryEventTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.user = UserFactory.create()
+        self.user = VerifiedUserFactory.create()
         token = TokenFactory.create(user=self.user)
-        EmailAddress.objects.create(
-            user=self.user, email=self.user.email, verified=True, primary=True
-        )
         self.client = APIClient()
         self.auth = f"Token {token.key}"
         field = GPSTrack._meta.get_field("file")  # noqa: SLF001

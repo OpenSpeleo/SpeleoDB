@@ -91,10 +91,12 @@ from speleodb.gis.ogc_helpers import parse_ogc_query
 from speleodb.gis.ogc_openapi import OGC_OPENAPI_DOC
 from speleodb.surveys.models import ProjectCommit
 from speleodb.testing.api_contract import assert_api_response
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+    from speleodb.users.models import User
 
 # RFC 3339 instants accept either 'Z' or numeric offset; assert it parses.
 _RFC3339_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -1349,9 +1351,7 @@ class TestProjectViewOGCCompliance(BaseAPITestCase):
 
 @pytest.fixture
 def landmark_owner() -> User:
-    return User.objects.create_user(
-        name="Landmark Owner", email="landmark-owner@example.com"
-    )
+    return UserFactory.create(name="Landmark Owner", email="landmark-owner@example.com")
 
 
 @pytest.fixture
@@ -1512,8 +1512,8 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner_a = User.objects.create_user(name="Owner A", email="owner-a@example.com")
-        owner_b = User.objects.create_user(name="Owner B", email="owner-b@example.com")
+        owner_a = UserFactory.create(name="Owner A", email="owner-a@example.com")
+        owner_b = UserFactory.create(name="Owner B", email="owner-b@example.com")
         coll_a = LandmarkCollection.objects.create(name="A", created_by=owner_a.email)
         LandmarkCollectionUserPermission.objects.create(
             collection=coll_a,
@@ -1546,7 +1546,7 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner = User.objects.create_user(
+        owner = UserFactory.create(
             name="Latest Owner", email="latest-owner@example.com"
         )
         project = ProjectFactory.create(created_by=owner.email)
@@ -1619,10 +1619,10 @@ class TestOGCCrossTenantSecurity:
         self,
         api_client: APIClient,
     ) -> None:
-        owner_a = User.objects.create_user(
+        owner_a = UserFactory.create(
             name="Project Owner A", email="project-owner-a@example.com"
         )
-        owner_b = User.objects.create_user(
+        owner_b = UserFactory.create(
             name="Project Owner B", email="project-owner-b@example.com"
         )
         project_b = ProjectFactory.create(created_by=owner_b.email)

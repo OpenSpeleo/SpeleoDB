@@ -261,6 +261,7 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
             name: ($('#name').val() as string).trim(),
             description: ($('#description').val() as string).trim(),
             allow_precise_zoom: $('#allow_precise_zoom').is(':checked'),
+            geographic_bound: ($('#geographic_bound').val() as string | undefined) || null,
             projects: projects,
         };
     }

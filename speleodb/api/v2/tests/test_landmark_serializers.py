@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -14,13 +15,16 @@ from speleodb.gis.landmark_collections import get_or_create_personal_landmark_co
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 @pytest.fixture
 def user() -> User:
     """Create a test user."""
-    return User.objects.create_user(
+    return UserFactory.create(
         name="Test User",
         email="testuser@example.com",
         password="testpass123",  # noqa: S106

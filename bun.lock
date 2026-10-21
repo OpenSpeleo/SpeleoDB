@@ -5,8 +5,8 @@
     "": {
       "name": "speleodb",
       "dependencies": {
-        "@speleodb/api": "0.3.0",
-        "@speleodb/map-core": "0.3.0",
+        "@speleodb/api": "0.4.0",
+        "@speleodb/map-core": "0.4.0",
         "@speleodb/map-viewer": "0.3.1",
         "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch",
       },
@@ -41,7 +41,7 @@
     "fsevents",
   ],
   "overrides": {
-    "@speleodb/map-core": "0.3.0",
+    "@speleodb/map-core": "0.4.0",
   },
   "packages": {
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@7.1.5", "", { "dependencies": { "@csstools/css-calc": "^3.4.3", "@csstools/css-color-parser": "^4.2.6", "@csstools/css-parser-algorithms": "^4.0.2", "@csstools/css-tokenizer": "^4.0.2", "lru-cache": "^11.5.3" } }, "sha512-jCpAvj8apa7SKHZYogk0rbXB3Kb0hLFrpkWF+Ap+vBA5rirItnpv9NKyAyEuDuFizvl0qwnj6JWR70RGJ0rOlw=="],
@@ -164,9 +164,9 @@
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
-    "@speleodb/api": ["@speleodb/api@0.3.0", "", {}, "sha512-vX/62+IWghOOlbgvWRNqbT7op7JOBLuMW81NlpifxC98BjaldafleLYoAu8xk3GljzpUG+gX/yd96nNEr+MISg=="],
+    "@speleodb/api": ["@speleodb/api@0.4.0", "", {}, "sha512-HCgPvF4P5ZGbFFgWDdXKZwY3jhkqiCiU+FfJh9iyK7dqWTx3mQyS4LK4XIv6SCIWs62oPGX2fTdgPw81HfXpvQ=="],
 
-    "@speleodb/map-core": ["@speleodb/map-core@0.3.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-KU1HdMR256bpI6wa+dGw/JQB2kPLSWDTRgFsAZX2cMheL+rNl9GMr8oNdONV2AsfGRaAGKWyArusf0WInX/cTw=="],
+    "@speleodb/map-core": ["@speleodb/map-core@0.4.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-dvkKlkpvWCWegsE3gA+H4+OQvbB8ECsizmVU5RVcfP0O+iU3bodP1OV5STmT7Bx30xmmoPz/u4kusYeynp7YGA=="],
 
     "@speleodb/map-viewer": ["@speleodb/map-viewer@0.3.1", "", { "dependencies": { "@speleodb/map-core": ">=0.3.0 <1.0.0" }, "peerDependencies": { "@playwright/test": ">=1.63.0 <2.0.0", "maplibre-gl": ">=6.14.0 <7.0.0" }, "optionalPeers": ["@playwright/test"] }, "sha512-Cbp6MNYngB2TNQN+1hZnuXdbkXbMsej72CAEiFl7FP9Kq3CHOoEWv/aEje1WagmxPfuhTV4hSIJJM1QvRTbyOA=="],
 

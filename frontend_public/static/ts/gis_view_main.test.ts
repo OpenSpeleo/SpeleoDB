@@ -138,6 +138,7 @@ describe('frontend_public gis_view_main', () => {
     let originalDocumentAddEventListener: typeof document.addEventListener;
     let consoleLogSpy: MockInstance<typeof console.log>;
     let consoleErrorSpy: MockInstance<typeof console.error>;
+    let windowListeners: { type: string; handler: EventListenerOrEventListenerObject; options?: boolean | AddEventListenerOptions | undefined }[];
 
     async function importModuleAndGetDomReadyHandler() {
         const context = testWindow.MAPVIEWER_CONTEXT;
@@ -198,11 +199,22 @@ describe('frontend_public gis_view_main', () => {
             }
             return originalDocumentAddEventListener(eventName, handler, options);
         });
+        windowListeners = [];
+        const addWindowListener = window.addEventListener.bind(window);
+        // EventTarget cannot enumerate listeners for teardown. Observe registration
+        // while forwarding unchanged so every test releases its actual listeners.
+        vi.spyOn(window, 'addEventListener').mockImplementation((type, handler, options) => {
+            windowListeners.push({ type, handler, options });
+            addWindowListener(type, handler, options);
+        });
     });
 
     afterEach(async () => {
         // Consume admitted prefetches before replacing the fixture's origin and DOM.
         if (!loadConsumed) await mapHandlers.load?.();
+        for (const { type, handler, options } of windowListeners) {
+            window.removeEventListener(type, handler, options);
+        }
         addEventListenerSpy.mockRestore();
         consoleLogSpy.mockRestore();
         consoleErrorSpy.mockRestore();
@@ -292,8 +304,8 @@ describe('frontend_public gis_view_main', () => {
         ]);
         expect(projectPanelMock.init).toHaveBeenCalledTimes(1);
         expect(layersMock.addProjectGeoJSON).toHaveBeenCalledTimes(2);
-        expect(layersMock.addProjectGeoJSON).toHaveBeenNthCalledWith(1, 'p1', '/g1.geojson');
-        expect(layersMock.addProjectGeoJSON).toHaveBeenNthCalledWith(2, 'p2', '/g2.geojson');
+        expect(layersMock.addProjectGeoJSON).toHaveBeenNthCalledWith(1, 'p1', '/g1.geojson', { isCurrent: expect.any(Function) as () => boolean });
+        expect(layersMock.addProjectGeoJSON).toHaveBeenNthCalledWith(2, 'p2', '/g2.geojson', { isCurrent: expect.any(Function) as () => boolean });
         expect(layersMock.reorderLayers).toHaveBeenCalledTimes(1);
         expect(mapMock.fitBounds).toHaveBeenCalledTimes(1);
 
@@ -374,7 +386,7 @@ describe('frontend_public gis_view_main', () => {
 
         // The load handler consumes the prefetch instead of issuing a 2nd request.
         await vi.waitFor(() => expect(server.requests).toHaveLength(1));
-        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson');
+        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson', { isCurrent: expect.any(Function) as () => boolean });
     });
 
     it('uses precise zoom limits when allowPreciseZoom is enabled', async () => {
@@ -477,16 +489,6 @@ describe('frontend_public gis_view_main', () => {
     });
 
     it('retries a failed public prefetch on the next empty-project reload', async () => {
-        let sourceChangeHandler!: (event: Event) => Promise<void>;
-        const originalWindowAddEventListener = window.addEventListener.bind(window);
-        const windowAddEventListenerSpy = vi.spyOn(window, 'addEventListener').mockImplementation((eventName, handler, options) => {
-            if (eventName === 'speleo:map-source-changed') {
-                sourceChangeHandler = handler as (event: Event) => Promise<void>;
-                return;
-            }
-            return originalWindowAddEventListener(eventName, handler, options);
-        });
-
         testWindow.MAPVIEWER_CONTEXT = {
             viewMode: 'public',
             gisToken: 'public-token',
@@ -503,7 +505,7 @@ describe('frontend_public gis_view_main', () => {
 
         const onDomReady = await importModuleAndGetDomReadyHandler();
         await onDomReady();
-        windowAddEventListenerSpy.mockRestore();
+        const sourceChangeHandler = windowListeners.find(listener => listener.type === 'speleo:map-source-changed')?.handler as (event: Event) => Promise<void>;
 
         await mapHandlers.load!();
 
@@ -517,7 +519,7 @@ describe('frontend_public gis_view_main', () => {
         }));
 
         expect(server.requests).toHaveLength(2);
-        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/recovered.geojson');
+        expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/recovered.geojson', { isCurrent: expect.any(Function) as () => boolean });
         expect(configMock._projects).toEqual([
             { id: 'p1', name: 'Recovered Project', color: undefined, permissions: 'READ_ONLY', geojson_url: '/recovered.geojson' }
         ]);
@@ -594,7 +596,7 @@ describe('frontend_public gis_view_main', () => {
         }));
 
         await vi.waitFor(() => {
-            expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson');
+            expect(layersMock.addProjectGeoJSON).toHaveBeenCalledWith('p1', '/g1.geojson', { isCurrent: expect.any(Function) as () => boolean });
             expect(layersMock.reorderLayers).toHaveBeenCalled();
         });
         expect(projectPanelMock.refreshList).toHaveBeenCalled();

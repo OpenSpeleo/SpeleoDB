@@ -1,6 +1,8 @@
 import { v2GisOgcViewGeojsonRetrieve } from '@speleodb/api';
 import { apiData, webApiOptions } from '../../../frontend_common/api/client.ts';
 import { Renderer } from '../../../frontend_private/static/private/ts/map_viewer/map/renderer.ts';
+import { computeGeoJSONBounds } from '../../../frontend_private/static/private/ts/map_viewer/map/geojson.ts';
+import { clipProjectGeoJSON } from '../../../frontend_private/static/private/ts/map_viewer/map/preparation.ts';
 import type { MapSourceChangeEvent } from '../../../ts-types/domain/map-sources.ts';
 import type { PublicViewerData, PublicViewerLoadOptions, PublicViewerMap } from '../../../ts-types/domain/viewer-composition.ts';
 import type { ProjectMapInput, ViewerProject } from '../../../ts-types/domain/map-config.ts';
@@ -61,13 +63,19 @@ export async function initPublicGISViewer() {
     // Prefetch the GIS View GeoJSON concurrently with the Renderer style/tile
     // load so the (single) network request overlaps map init instead of only
     // starting once the map 'load' event fires. The result is consumed once in
-    // loadPublicMapData; later reloads reuse Config.projects unless the list is
-    // empty or fresh project data is explicitly requested (original behavior).
+    // loadPublicMapData; later reloads reuse the complete source-project list
+    // unless unbounded data is empty or fresh data is explicitly requested.
+    // Keep that list separate from Config, which contains only the projects
+    // surviving a geographic bound.
     let pendingViewData: Promise<PublicViewerData> | null = fetchPublicViewData();
     // Attach a no-op rejection handler so a failed prefetch is not reported as
     // an unhandled rejection. Real error handling still happens on consume,
     // where `await` rethrows into loadPublicMapData's try/catch.
     void pendingViewData.catch(() => { });
+    let sourceProjects: (ViewerProject | ProjectMapInput)[] | null = null;
+    let geographicBound: PublicViewerData['geographic_bound'] = null;
+    let dataLoadGeneration = 0;
+    let pendingHideOverlay = false;
 
     // Simple function to set map height
     const setMapHeight = createMapHeightUpdater();
@@ -87,25 +95,33 @@ export async function initPublicGISViewer() {
     }
 
     async function loadPublicMapData(options: PublicViewerLoadOptions = {}) {
+        const loadGeneration = ++dataLoadGeneration;
+        const layerGeneration = State.layerGeneration;
+        const mapAtLoad = State.map;
+        const isCurrentLoad = () => loadGeneration === dataLoadGeneration && layerGeneration === State.layerGeneration && mapAtLoad === State.map;
         const {
             fetchProjects = false,
             fitCamera = false,
             hideOverlay = false,
         } = options;
+        pendingHideOverlay ||= hideOverlay;
 
         try {
-            let projects: (ViewerProject | ProjectMapInput)[] = Config.projects;
+            let projects: (ViewerProject | ProjectMapInput)[] = sourceProjects ?? Config.projects;
 
-            if (fetchProjects || projects.length === 0) {
+            if (fetchProjects || sourceProjects === null || (!geographicBound && projects.length === 0)) {
                 console.log('🔄 Fetching GIS View GeoJSON data...');
                 // Consume the prefetched request started during init, if still
                 // available; otherwise fetch fresh. Swap to null first so a
                 // failed prefetch can be retried by the next entry while
-                // Config.projects is still empty.
+                // sourceProjects has not yet been initialized.
                 const pending = pendingViewData;
                 pendingViewData = null;
                 const viewData = await (pending ?? fetchPublicViewData());
+                if (!isCurrentLoad()) return;
                 projects = [...viewData.projects];
+                sourceProjects = projects;
+                geographicBound = viewData.geographic_bound ?? null;
 
                 console.log(`✅ Received ${projects.length} projects from GIS View "${viewData.view_name}"`);
 
@@ -118,33 +134,62 @@ export async function initPublicGISViewer() {
                 projects = Config.projects;
 
                 // Initialize Project Panel (shows projects from the view)
-                ProjectPanel.init();
+                if (!geographicBound) ProjectPanel.init();
             } else {
-                ProjectPanel.refreshList();
+                Config.setPublicProjects(projects);
+                if (!geographicBound) ProjectPanel.refreshList();
             }
 
             // Load GeoJSON for each project
+            let boundedLoadFailed = false;
             const loadPromises = Config.projects.map(async (project) => {
                 const geojsonUrl = project.geojson_url;
 
                 if (geojsonUrl) {
                     try {
-                        await Layers.addProjectGeoJSON(project.id, geojsonUrl);
-                        console.log(`✅ Loaded GeoJSON for project: ${project.name}`);
+                        if (geographicBound) {
+                            const polygon = geographicBound.geojson;
+                            await Layers.addProjectGeoJSON(project.id, geojsonUrl, {
+                                isCurrent: isCurrentLoad,
+                                transformData: (data, isCurrent) => clipProjectGeoJSON(data, polygon, { isCurrent }),
+                            });
+                        } else {
+                            await Layers.addProjectGeoJSON(project.id, geojsonUrl, { isCurrent: isCurrentLoad });
+                        }
+                        if (isCurrentLoad()) console.log(`✅ Loaded GeoJSON for project: ${project.name}`);
                     } catch (e) {
+                        if (!isCurrentLoad() || (e instanceof Error && e.name === 'AbortError')) return;
+                        boundedLoadFailed = true;
                         console.error(`❌ Error loading GeoJSON for ${project.name}:`, e);
                     }
                 }
             });
 
             await Promise.all(loadPromises);
+            if (!isCurrentLoad()) return;
+
+            if (boundedLoadFailed) {
+                Utils.showNotification('error', 'Some survey data could not be displayed within the geographic bound.');
+            }
+
+            if (geographicBound) {
+                Config.setPublicProjects(Config.projects.filter(project => State.projectBounds.has(String(project.id))));
+                ProjectPanel.init();
+            }
+
+            if (geographicBound?.geojson.type === 'Polygon') {
+                State.gisGeometryStates.set(String(geographicBound.id), true);
+                Layers.addGISGeometry(geographicBound);
+            }
 
             // Reorder layers for proper stacking
             void Layers.reorderLayers();
 
-            // Auto-zoom to fit all project bounds
-            if (fitCamera && State.projectBounds.size > 0) {
-                const allBounds = new Renderer.LngLatBounds();
+            // Auto-zoom includes the boundary even when every survey clips to empty.
+            if (fitCamera && (State.projectBounds.size > 0 || geographicBound?.geojson.type === 'Polygon')) {
+                const allBounds = geographicBound?.geojson.type === 'Polygon'
+                    ? computeGeoJSONBounds(geographicBound.geojson, { wrapLongitude: false })
+                    : new Renderer.LngLatBounds();
                 State.projectBounds.forEach(bounds => {
                     allBounds.extend(bounds);
                 });
@@ -155,14 +200,16 @@ export async function initPublicGISViewer() {
                 }
             }
 
-            console.log('✅ Public GIS View Map Data Loaded');
+            if (!boundedLoadFailed) console.log('✅ Public GIS View Map Data Loaded');
 
         } catch (error) {
+            if (!isCurrentLoad()) return;
             console.error('❌ Failed to load GIS View data:', error);
             Utils.showNotification('error', 'Failed to load map data');
         }
 
-        if (hideOverlay) {
+        if (pendingHideOverlay) {
+            pendingHideOverlay = false;
             const overlay = document.getElementById('loading-overlay');
             if (overlay) {
                 overlay.classList.add('opacity-0', 'pointer-events-none');

@@ -6,6 +6,7 @@ import io
 import logging
 import zipfile
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from typing import Any
 
 import gpxpy
@@ -27,7 +28,10 @@ from speleodb.gis.landmark_collections import get_or_create_personal_landmark_co
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 def _streaming_bytes(response: Any) -> bytes:
@@ -50,7 +54,7 @@ class TestLandmarkCollectionAPI:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(
+        return UserFactory.create(
             name="Collection Owner",
             email="owner@example.com",
             password="pass",  # noqa: S106
@@ -58,7 +62,7 @@ class TestLandmarkCollectionAPI:
 
     @pytest.fixture
     def reader(self) -> User:
-        return User.objects.create_user(
+        return UserFactory.create(
             name="Collection Reader",
             email="reader@example.com",
             password="pass",  # noqa: S106
@@ -66,7 +70,7 @@ class TestLandmarkCollectionAPI:
 
     @pytest.fixture
     def writer(self) -> User:
-        return User.objects.create_user(
+        return UserFactory.create(
             name="Collection Writer",
             email="writer@example.com",
             password="pass",  # noqa: S106
@@ -435,15 +439,9 @@ class TestLandmarkCollectionAPI:
         owner: User,
         collection: LandmarkCollection,
     ) -> None:
-        admin_user = User.objects.create_user(
-            name="Z Admin", email="z-admin@example.com"
-        )
-        writer_user = User.objects.create_user(
-            name="A Writer", email="a-writer@example.com"
-        )
-        reader_user = User.objects.create_user(
-            name="M Reader", email="m-reader@example.com"
-        )
+        admin_user = UserFactory.create(name="Z Admin", email="z-admin@example.com")
+        writer_user = UserFactory.create(name="A Writer", email="a-writer@example.com")
+        reader_user = UserFactory.create(name="M Reader", email="m-reader@example.com")
         LandmarkCollectionUserPermission.objects.create(
             collection=collection,
             user=reader_user,
@@ -932,7 +930,7 @@ class TestLandmarkCollectionLandmarkExports:
 
     @pytest.fixture
     def owner(self) -> User:
-        return User.objects.create_user(
+        return UserFactory.create(
             name="Collection Owner",
             email="owner@example.com",
             password="pass",  # noqa: S106
@@ -1000,7 +998,7 @@ class TestLandmarkCollectionLandmarkExports:
         expected_content_type: str,
         extension: str,
     ) -> None:
-        user = User.objects.create_user(
+        user = UserFactory.create(
             name="Collection Member", email=f"user-{level}@example.com"
         )
         LandmarkCollectionUserPermission.objects.create(
@@ -1034,9 +1032,7 @@ class TestLandmarkCollectionLandmarkExports:
         collection: LandmarkCollection,
         url_name: str,
     ) -> None:
-        user = User.objects.create_user(
-            name="Unrelated User", email="stranger@example.com"
-        )
+        user = UserFactory.create(name="Unrelated User", email="stranger@example.com")
         api_client.force_authenticate(user=user)
 
         response = api_client.get(

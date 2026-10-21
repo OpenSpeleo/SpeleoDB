@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
@@ -13,12 +14,15 @@ from speleodb.api.v2.tests.test_project_geojson_commits_api import sha1_hash
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 @pytest.fixture
 def user(db: None) -> User:
-    return User.objects.create_user(
+    return UserFactory.create(
         name="Test Admin",
         email="admin@test.org",
         password="x",  # noqa: S106

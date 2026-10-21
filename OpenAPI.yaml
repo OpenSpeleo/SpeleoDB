@@ -10786,6 +10786,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/GISGeometrySpecificAPIViewDeleteResponse'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - type: object
+                  minProperties: 1
+                  additionalProperties:
+                    oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                - type: object
+                  required:
+                  - error
+                  properties:
+                    error:
+                      type: string
+                - type: object
+                  required:
+                  - detail
+                  properties:
+                    detail:
+                      type: string
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      oneOf:
+                      - type: object
+                        additionalProperties: true
+                      - type: array
+                        items:
+                          type: string
+          description: API request failed.
         '403':
           content:
             application/json:
@@ -41908,6 +41945,10 @@ paths:
                   type: boolean
                   description: If True, allows users to zoom to the precise location
                     of the cave
+                geographic_bound:
+                  type: string
+                  format: uuid
+                  nullable: true
                 projects:
                   type: array
                   items:
@@ -42176,6 +42217,10 @@ paths:
                   type: boolean
                   description: If True, allows users to zoom to the precise location
                     of the cave
+                geographic_bound:
+                  type: string
+                  format: uuid
+                  nullable: true
                 projects:
                   type: array
                   items:
@@ -42327,6 +42372,10 @@ paths:
                   type: boolean
                   description: If True, allows users to zoom to the precise location
                     of the cave
+                geographic_bound:
+                  type: string
+                  format: uuid
+                  nullable: true
                 projects:
                   type: array
                   items:
@@ -42349,6 +42398,14 @@ paths:
                   type: boolean
                   description: If True, allows users to zoom to the precise location
                     of the cave
+                geographic_bound:
+                  anyOf:
+                  - type: string
+                    format: uuid
+                    nullable: true
+                  - type: string
+                    maxLength: 0
+                  x-drf-null-as-empty: true
           multipart/form-data:
             schema:
               type: object
@@ -42366,6 +42423,14 @@ paths:
                   type: boolean
                   description: If True, allows users to zoom to the precise location
                     of the cave
+                geographic_bound:
+                  anyOf:
+                  - type: string
+                    format: uuid
+                    nullable: true
+                  - type: string
+                    maxLength: 0
+                  x-drf-null-as-empty: true
         required: false
       security:
       - cookieAuth: []
@@ -52539,6 +52604,12 @@ components:
           type: boolean
           description: If True, allows users to zoom to the precise location of the
             cave
+        geographic_bound:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional Polygon restricting the public web viewer display
+            only. Raw GeoJSON downloads and OGC access remain unrestricted.
         gis_token:
           type: string
           readOnly: true
@@ -52569,6 +52640,7 @@ components:
       - allow_precise_zoom
       - creation_date
       - description
+      - geographic_bound
       - gis_token
       - id
       - modified_date
@@ -52596,6 +52668,12 @@ components:
           type: boolean
           description: If True, allows users to zoom to the precise location of the
             cave
+        geographic_bound:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional Polygon restricting the public web viewer display
+            only. Raw GeoJSON downloads and OGC access remain unrestricted.
         gis_token:
           type: string
           readOnly: true
@@ -52626,6 +52704,7 @@ components:
       - allow_precise_zoom
       - creation_date
       - description
+      - geographic_bound
       - gis_token
       - id
       - modified_date
@@ -52650,6 +52729,11 @@ components:
           type: boolean
           description: If True, allows users to zoom to the precise location of the
             cave
+        geographic_bound:
+          type: string
+          format: uuid
+          nullable: true
+          x-drf-null-as-empty: true
         projects:
           type: array
           items:
@@ -52940,6 +53024,29 @@ components:
       - user_permission_level
       - user_permission_level_label
       additionalProperties: false
+    GeographicBoundPolygon:
+      type: object
+      properties:
+        type:
+          enum:
+          - Polygon
+          type: string
+          description: '* `Polygon` - Polygon'
+          x-spec-enum-id: a2e12d8f58f37bca
+        coordinates:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+                format: double
+              maxItems: 2
+              minItems: 2
+      required:
+      - coordinates
+      - type
     GitCommit:
       type: object
       description: Serializer for Git Commit objects.
@@ -54445,6 +54552,11 @@ components:
           type: boolean
           description: If True, allows users to zoom to the precise location of the
             cave
+        geographic_bound:
+          type: string
+          format: uuid
+          nullable: true
+          x-drf-null-as-empty: true
         projects:
           type: array
           items:
@@ -57378,6 +57490,32 @@ components:
       - uuid
       - version
       additionalProperties: false
+    PublicGISGeographicBound:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        revision:
+          type: integer
+          readOnly: true
+        geojson:
+          $ref: '#/components/schemas/GeographicBoundPolygon'
+        color:
+          type: string
+          readOnly: true
+        alias:
+          type: string
+          readOnly: true
+          description: Optional short label displayed on the map.
+      required:
+      - alias
+      - color
+      - geojson
+      - id
+      - revision
+      additionalProperties: false
     PublicGISProjectView:
       type: object
       description: Serializer for individual project in public GIS view frontend response.
@@ -57422,6 +57560,15 @@ components:
           type: string
         allow_precise_zoom:
           type: boolean
+        geographic_bound:
+          anyOf:
+          - allOf:
+            - $ref: '#/components/schemas/PublicGISGeographicBound'
+            readOnly: true
+          - type: string
+            nullable: true
+            enum:
+            - null
         projects:
           type: array
           items:
@@ -57429,6 +57576,7 @@ components:
           readOnly: true
       required:
       - allow_precise_zoom
+      - geographic_bound
       - projects
       - view_description
       - view_name

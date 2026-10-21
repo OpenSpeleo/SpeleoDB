@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db import connections
 from django.db import transaction
@@ -19,6 +20,7 @@ from speleodb.gis.geometry_services import GISGeometryConflictError
 from speleodb.gis.geometry_services import create_gis_geometry
 from speleodb.gis.geometry_services import update_gis_geometry
 from speleodb.gis.models import GISGeometry
+from speleodb.gis.models import GISView
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -29,6 +31,11 @@ LINE: dict[str, Any] = {
     "coordinates": [[-87.5, 20.1], [-87.499, 20.1]],
 }
 WAIT_SECONDS = 5
+
+POLYGON: dict[str, Any] = {
+    "type": "Polygon",
+    "coordinates": [[[-87.5, 20.1], [-87.499, 20.1], [-87.499, 20.101], [-87.5, 20.1]]],
+}
 
 
 def _wait_for_blocked_writer(writer_pid: int, writer: Future[GISGeometry]) -> None:
@@ -105,3 +112,52 @@ def test_queued_author_rechecks_committed_revision_and_access(
     assert geometry.revision == (2 if transition == "edit" else 1)
     assert geometry.is_active is (transition != "delete")
     assert geometry.permissions.get(user=creator).is_active is (transition == "edit")
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("queued_operation", ["select", "delete"])
+def test_bound_selection_and_deletion_share_the_geometry_lock(
+    queued_operation: str,
+) -> None:
+    if connection.vendor != "postgresql":
+        pytest.skip("Concurrent bound selection requires PostgreSQL row locks.")
+    owner = UserFactory.create()
+    geometry = create_gis_geometry(GISGeometry(name="Boundary", geojson=POLYGON), owner)
+    backend_pids: Queue[int] = Queue()
+
+    def select_bound() -> None:
+        GISView.objects.create(
+            owner=owner,
+            name="Bounded",
+            allow_precise_zoom=False,
+            geographic_bound=geometry,
+        )
+
+    def write_from_another_connection() -> GISGeometry:
+        try:
+            with connections["default"].cursor() as cursor:
+                cursor.execute("SELECT pg_backend_pid()")
+                backend_pids.put(cursor.fetchone()[0])
+            if queued_operation == "select":
+                select_bound()
+            else:
+                geometry.deactivate(owner)
+            return geometry
+        finally:
+            connections["default"].close()
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        with transaction.atomic():
+            GISGeometry.objects.select_for_update().get(pk=geometry.pk)
+            writer = executor.submit(write_from_another_connection)
+            _wait_for_blocked_writer(backend_pids.get(timeout=WAIT_SECONDS), writer)
+            if queued_operation == "select":
+                geometry.deactivate(owner)
+            else:
+                select_bound()
+        with pytest.raises(ValidationError):
+            writer.result(timeout=WAIT_SECONDS)
+
+    geometry.refresh_from_db()
+    assert geometry.is_active is (queued_operation == "delete")
+    assert geometry.bounded_gis_views.exists() is (queued_operation == "delete")

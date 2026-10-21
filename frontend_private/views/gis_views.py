@@ -12,13 +12,16 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.api.v2.gis_geometry_access import accessible_gis_geometries_queryset
 from speleodb.gis.models import GISProjectView
 from speleodb.gis.models import GISView
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django.http import HttpResponse
     from django.http.response import HttpResponseRedirectBase
 
+    from speleodb.gis.models import GISGeometry
     from speleodb.users.models import User
     from speleodb.utils.requests import AuthenticatedHttpRequest
 
@@ -56,6 +59,21 @@ class NewGISViewView(AuthenticatedTemplateView):
 
     template_name = "pages/gis_view/new.html"
 
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        return super().get(
+            request,
+            *args,
+            geographic_bounds=accessible_gis_geometries_queryset(user=request.user)
+            .filter(geojson__type="Polygon")
+            .order_by("name", "id"),
+            **kwargs,
+        )
+
 
 class _BaseGISViewView(AuthenticatedTemplateView):
     """Base class for GIS view detail pages."""
@@ -74,9 +92,21 @@ class _BaseGISViewView(AuthenticatedTemplateView):
             owner=user,
         )
 
+        geographic_bounds: QuerySet[GISGeometry] = (
+            accessible_gis_geometries_queryset(user=user)
+            .filter(geojson__type="Polygon")
+            .order_by("name", "id")
+        )
         return {
             "gis_view": gis_view,
             "is_owner": True,  # Always true if we get here
+            "geographic_bounds": geographic_bounds,
+            "unavailable_geographic_bound": (
+                gis_view.geographic_bound_id is not None
+                and not geographic_bounds.filter(
+                    pk=gis_view.geographic_bound_id
+                ).exists()
+            ),
         }
 
 

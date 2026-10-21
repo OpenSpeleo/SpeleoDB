@@ -135,3 +135,11 @@ When touching permission code:
    - `READ_ONLY`
    - `READ_AND_WRITE`
    - `ADMIN`
+
+## Geographic Bound is display-only
+
+A GIS View may reference a Polygon to clip its public web presentation. This
+does not restrict downloaded data or OGC access. Initial selection requires the
+view owner to read the active Polygon; later permission revocation leaves the
+existing selection effective. See
+[Geographic Bound](../gis-view-geographic-bound.md).

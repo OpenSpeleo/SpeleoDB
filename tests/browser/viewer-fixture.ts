@@ -36,22 +36,30 @@ const gis = collection([{ type: 'Feature', properties: { name: 'Mixed overlay' }
     ],
 } }]);
 
-let authenticatedState: Awaited<ReturnType<BrowserContext['storageState']>> | undefined;
+interface BrowserLoginCredentials { email: string; password: string }
+const authenticatedStates = new Map<string, Awaited<ReturnType<BrowserContext['storageState']>>>();
 
-/** Normal login creates only an authenticated browser session. All viewer data is intercepted. */
-export async function login(page: Page) {
-    // Reuse the initial real session within this Playwright worker. A new browser
+/** Normal login creates only an authenticated browser session for the selected account. */
+export async function login(page: Page, credentials: BrowserLoginCredentials = {
+    email: process.env.VIEWER_BROWSER_EMAIL || 'contact@speleodb.org',
+    password: process.env.VIEWER_BROWSER_PASSWORD || 'contact',
+}) {
+    // Reuse each account's initial real session within this Playwright worker. A new browser
     // context still keeps viewer preferences isolated between tests.
+    const authenticatedState = authenticatedStates.get(credentials.email);
     if (authenticatedState) {
         await page.context().setStorageState(authenticatedState);
         return;
     }
+    // An uncached account must reach the login form even after another account
+    // authenticated in this context; otherwise Django redirects the existing session.
+    await page.context().clearCookies();
     await page.goto('/login/');
-    await page.locator('#email').fill(process.env.VIEWER_BROWSER_EMAIL || 'contact@speleodb.org');
-    await page.locator('#password').fill(process.env.VIEWER_BROWSER_PASSWORD || 'contact');
+    await page.locator('#email').fill(credentials.email);
+    await page.locator('#password').fill(credentials.password);
     await page.locator('#btn_submit').click();
     await page.waitForURL('**/private/**');
-    authenticatedState = await page.context().storageState();
+    authenticatedStates.set(credentials.email, await page.context().storageState());
 }
 
 interface ViewerFixtureOptions {
