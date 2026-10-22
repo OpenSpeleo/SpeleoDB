@@ -94,6 +94,12 @@ def _write_name_without_model_validation(
                 )
 
 
+@pytest.mark.parametrize("name", [None, "", "\u00a0\u3000"])
+def test_model_field_rejects_blank_names(name: str | None) -> None:
+    with pytest.raises(ValidationError):
+        User._meta.get_field("name").clean(name, None)  # noqa: SLF001
+
+
 @pytest.mark.django_db
 class TestUserNameWrites:
     def test_missing_name_cannot_be_saved(self) -> None:
@@ -102,7 +108,7 @@ class TestUserNameWrites:
         assert "name" in error.value.message_dict
         assert not User.objects.filter(email="unnamed@example.com").exists()
 
-    @pytest.mark.parametrize("name", INVALID_NAMES)
+    @pytest.mark.parametrize("name", [None, "", " \t\r\n ", "\u00a0\u3000"])
     def test_invalid_names_cannot_be_saved(self, name: str | None) -> None:
         unnamed_user: User = User(email="unnamed@example.com")
         setattr(unnamed_user, "name", name)  # noqa: B010
@@ -111,24 +117,16 @@ class TestUserNameWrites:
         assert "name" in error.value.message_dict
         assert not User.objects.filter(email="unnamed@example.com").exists()
 
-    @pytest.mark.parametrize("name", INVALID_NAMES)
-    def test_model_field_rejects_blank_names(self, name: str | None) -> None:
-        with pytest.raises(ValidationError):
-            User._meta.get_field("name").clean(name, None)  # noqa: SLF001
-
-    @pytest.mark.parametrize("name", VALID_NAMES)
+    @pytest.mark.parametrize("name", ["李明", " \tRenée\u3000"])
     def test_valid_names_round_trip_unchanged(self, name: str) -> None:
         user: User = User.objects.create(email="named@example.com", name=name)
         user.refresh_from_db()
         assert user.name == name
 
     @pytest.mark.parametrize("partial", [False, True])
-    @pytest.mark.parametrize("name", [None, "", " \t\n", PYTHON_WHITESPACE])
-    def test_name_changes_are_validated(
-        self, user: User, name: str | None, *, partial: bool
-    ) -> None:
+    def test_name_changes_are_validated(self, user: User, *, partial: bool) -> None:
         original_name: str = user.name
-        setattr(user, "name", name)  # noqa: B010
+        user.name = "\u00a0\u3000"
         with pytest.raises(ValidationError) as error:
             user.save(update_fields=iter(["name"]) if partial else None)
         assert "name" in error.value.message_dict
@@ -174,9 +172,14 @@ class TestUserNameWrites:
         with pytest.raises(ValidationError):
             deferred_user.save()
 
-    @pytest.mark.parametrize("name", [None, "", " \t\n", PYTHON_WHITESPACE])
     @pytest.mark.parametrize(
-        "operation", ["update", "bulk_create", "bulk_update", "sql"]
+        ("operation", "name"),
+        [
+            ("update", ""),
+            ("bulk_create", "\u00a0\u3000"),
+            ("bulk_update", " \t\n"),
+            ("sql", None),
+        ],
     )
     def test_database_rejects_writes_bypassing_model_validation(
         self,

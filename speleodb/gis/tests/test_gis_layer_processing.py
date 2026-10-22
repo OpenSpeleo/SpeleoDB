@@ -49,6 +49,10 @@ def _assert_renderable_feature_collection(data: Any) -> None:
     assert isinstance(features, list)
     assert features
 
+    minimum_length: MinLengthValidator = MinLengthValidator(2)
+    maximum_length: MaxLengthValidator = MaxLengthValidator(3)
+    longitude: LongitudeValidator = LongitudeValidator()
+    latitude: LatitudeValidator = LatitudeValidator()
     position_count = 0
     for feature in features:
         assert isinstance(feature, dict)
@@ -65,12 +69,12 @@ def _assert_renderable_feature_collection(data: Any) -> None:
             "GeometryCollection",
         }
         for position in iter_coordinate_positions(geometry):
-            MinLengthValidator(2)(position)
-            MaxLengthValidator(3)(position)
+            minimum_length(position)
+            maximum_length(position)
             assert all(isinstance(value, int | float) for value in position)
             assert all(math.isfinite(value) for value in position)
-            LongitudeValidator()(position[0])
-            LatitudeValidator()(position[1])
+            longitude(position[0])
+            latitude(position[1])
             position_count += 1
     assert position_count > 0
 

@@ -24,9 +24,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.parametrize("legacy_path", [False, True])
 def test_upload_download_and_delete_preserve_exact_key_and_metadata(
-    tmp_path: Path, *, legacy_path: bool
+    tmp_path: Path,
 ) -> None:
     assert settings.AWS_STORAGE_BUCKET_NAME == "speleodb-user-artifacts-test"
     assert urlsplit(settings.AWS_S3_ENDPOINT_URL).hostname in {
@@ -35,7 +34,7 @@ def test_upload_download_and_delete_preserve_exact_key_and_metadata(
         "rustfs",
     }
     filename: str = f"storage-test-{uuid.uuid4()}.zip"
-    key: str = f"exports/{'3/job/attempt/' if legacy_path else ''}{filename}"
+    key: str = f"exports/3/job/attempt/{filename}"
     path: Path = tmp_path / filename
     # Cross the multipart threshold using the same bounded transfer as exports.
     data: bytes = b"shared storage test\n" * (1024 * 1024)

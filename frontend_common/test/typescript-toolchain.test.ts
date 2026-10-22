@@ -50,7 +50,7 @@ describe('TypeScript toolchain boundaries', () => {
         expect(projects[2]!.compilerOptions.lib).toEqual(['DOM', 'DOM.Iterable', 'ES2023']);
         expect(projects[2]!.include).toEqual(expect.arrayContaining([
             '.railway/railway.ts', 'vite.config.ts', 'vitest.config.ts', 'eslint.config.ts',
-            'scripts/test-frontend-uploads.ts', 'playwright.config.ts',
+            'playwright.config.ts',
             'tests/browser/**/*.ts', 'ts-types/testing/browser/**/*.ts', 'ts-types/testing/vitest/**/*.ts',
         ]));
         for (const project of projects.slice(1)) expect(project.extends).toBe('./tsconfig.json');

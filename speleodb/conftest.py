@@ -6,21 +6,14 @@ import pathlib
 from typing import TYPE_CHECKING
 
 import pytest
-from django.apps import apps
 from django.test.client import Client
 from dotenv import load_dotenv
 
 from speleodb.api.v2.tests.factories import SurveyTeamFactory
-from speleodb.gis.models import GISView
-from speleodb.gis.models import Station
-from speleodb.gis.models import SubSurfaceStation
-from speleodb.gis.models import SurfaceStation
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from _pytest.compat import LEGACY_PATH
     from pytest_django.fixtures import Settings
 
@@ -85,36 +78,3 @@ def project(db: None, user: User) -> Project:
 @pytest.fixture
 def team(db: None) -> SurveyTeam:
     return SurveyTeamFactory.create()
-
-
-@pytest.fixture(autouse=True)
-def cleanup_database(db: None) -> Generator[None]:
-    """
-    Cleanup fixture that deletes all objects from the database after each test.
-    Automatically applied to all tests that use the database.
-    """
-    yield  # Let the test run
-
-    # Import polymorphic station models for proper cleanup order
-
-    # Delete polymorphic children first to avoid FK constraint violations
-    # Use non_polymorphic() to avoid ContentType lookups during deletion
-    SubSurfaceStation.objects.non_polymorphic().all().delete()
-    SurfaceStation.objects.non_polymorphic().all().delete()
-    Station.objects.non_polymorphic().all().delete()
-
-    # Views protect their geographic bounds; remove references before geometries.
-    GISView.objects.all().delete()
-
-    # Delete all other models, excluding ContentType (managed by Django)
-    # and polymorphic Station models (already deleted above)
-    excluded_labels = {
-        "contenttypes.ContentType",
-        "gis.Station",
-        "gis.SubSurfaceStation",
-        "gis.SurfaceStation",
-        "gis.GISView",
-    }
-    for model in apps.get_models():
-        if model._meta.label not in excluded_labels:  # noqa: SLF001
-            model.objects.all().delete()  # type: ignore[attr-defined]

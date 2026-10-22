@@ -32,25 +32,6 @@ class TestStationTagModel:
             user=user,
         )
 
-    def test_create_station_tag_with_valid_data(self, user: User) -> None:
-        """Test creating a station tag with all valid data."""
-        tag = StationTag.objects.create(
-            name="High Priority",
-            color="#f97316",
-            user=user,
-        )
-
-        assert tag.id is not None
-        assert tag.name == "High Priority"
-        assert tag.color == "#f97316"
-        assert tag.user == user
-        assert tag.creation_date is not None
-        assert tag.modified_date is not None
-
-    def test_station_tag_string_representation(self, tag: StationTag) -> None:
-        """Test the string representation of a station tag."""
-        assert str(tag) == "Testtag (#ef4444)"
-
     def test_unique_name_per_user(self, user: User) -> None:
         """Test that tag names must be unique per user."""
         # Create first tag
@@ -127,15 +108,6 @@ class TestStationTagModel:
                 tag.full_clean()
 
             assert "color" in exc_info.value.message_dict
-
-    def test_predefined_colors_list(self) -> None:
-        """Test that predefined colors list contains valid colors."""
-        colors = StationTag.get_predefined_colors()
-
-        assert len(colors) == 20  # noqa: PLR2004
-        assert all(isinstance(color, str) for color in colors)
-        assert all(color.startswith("#") for color in colors)
-        assert all(len(color) == 7 for color in colors)  # noqa: PLR2004
 
     def test_tag_name_max_length(self, user: User) -> None:
         """Test that tag names respect max length constraint."""

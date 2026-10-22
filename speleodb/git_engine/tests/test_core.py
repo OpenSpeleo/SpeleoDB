@@ -1,67 +1,58 @@
-# -*- coding: utf-8 -*-
+"""Exercise Git wrappers with deterministic local repository histories."""
 
 from __future__ import annotations
 
-import pathlib
-import shutil
-import tempfile
-import types
-import unittest
-from unittest import TestCase
+from typing import TYPE_CHECKING
 
 import git
 import pytest
 
+from speleodb.git_engine.core import GIT_COMMITTER
 from speleodb.git_engine.core import GitRepo
 
-
-class NewRepoTest(TestCase):
-    def test_initialization(self) -> None:
-        with tempfile.TemporaryDirectory() as _dir:
-            git_path = pathlib.Path(_dir) / "torch"
-
-            repo = GitRepo.init(path=git_path)
-
-            # Resolve both paths to handle macOS /var -> /private/var symlink
-            assert repo.path.resolve() == git_path.resolve()
-
-            with pytest.raises(ValueError):  # noqa: PT011
-                _ = repo.head.commit
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-@pytest.mark.skip_if_offline
-class CloneRepoTest(TestCase):
-    def setUp(self) -> None:
-        self.git_dir = tempfile.TemporaryDirectory(delete=False)
-
-        self.git_path = pathlib.Path(self.git_dir.name) / "wheel"
-
-        self.repo = GitRepo.clone_from(
-            url="https://github.com/pypa/wheel.git",
-            to_path=self.git_path,
-            branch="main",
-        )
-
-        return super().setUp()
-
-    def tearDown(self) -> None:
-        shutil.rmtree(self.git_dir.name)
-        return super().tearDown()
-
-    def test_clone(self) -> None:
-        assert self.repo.path == self.git_path
-
-        hexsha = self.repo.head.commit.hexsha
-        assert isinstance(hexsha, str)
-        assert hexsha != ""
-
-    def test_read_changes(self) -> None:
-        changes = self.repo.head.commit.changes
-        assert isinstance(changes, types.GeneratorType)
-
-        for diff in changes:
-            assert isinstance(diff, git.Diff), type(diff)
+def test_initialization(tmp_path: Path) -> None:
+    path = tmp_path / "new"
+    repository = GitRepo.init(path)
+    with repository:
+        # Resolve both paths to handle macOS /var -> /private/var symlink
+        assert repository.path.resolve() == path.resolve()
+        with pytest.raises(ValueError):  # noqa: PT011
+            _ = repository.head.commit
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_clone_preserves_history_and_exposes_changed_blobs(tmp_path: Path) -> None:
+    source_path = tmp_path / "source"
+    with GitRepo.init(source_path) as source:
+        survey = source_path / "survey.dat"
+        survey.write_bytes(b"original survey")
+        source.index.add(["survey.dat"])
+        first = source.index.commit("Original survey", author=GIT_COMMITTER)
+        survey.write_bytes(b"updated survey")
+        source.index.add(["survey.dat"])
+        latest = source.index.commit("Updated survey", author=GIT_COMMITTER)
+        remote_path = tmp_path / "remote.git"
+        with git.Repo.clone_from(source_path, remote_path, bare=True):
+            cloned = GitRepo.clone_from(str(remote_path), tmp_path / "clone")
+            with cloned:
+                assert cloned.path == tmp_path / "clone"
+                assert cloned.head.commit.hexsha == latest.hexsha
+                assert [commit.hexsha for commit in cloned.iter_commits()] == [
+                    latest.hexsha,
+                    first.hexsha,
+                ]
+                changes = [
+                    diff
+                    for diff in cloned.head.commit.changes
+                    if diff.change_type == "M"
+                ]
+                assert len(changes) == 1
+                change = changes[0]
+                assert change.a_path == change.b_path == "survey.dat"
+                assert change.a_blob is not None
+                assert change.b_blob is not None
+                assert change.a_blob.data_stream.read() == b"original survey"
+                assert change.b_blob.data_stream.read() == b"updated survey"

@@ -172,13 +172,15 @@ def assert_group_cleanup_lifecycle(
     client: Gitlab, group: Group, remote: RemoteProject
 ) -> None:
     """Preserve a remote through rejected confirmations, then delete it once."""
-    for answer in ("\nY\n", "N\nY\n", "invalid\nY\n", "yes\nY\n", ""):
-        result: subprocess.CompletedProcess[str] = run_group_cleanup(
-            group, answer=answer
-        )
-        assert result.returncode == 0, result.stderr
-        assert result.stdout.count("Is this the correct group?") == 1
-        assert client.projects.get(remote.id).id == remote.id
+    # The standalone confirm_command stdin tests cover every accepted/rejected
+    # spelling and EOF. Keep one real Django command case proving a rejected
+    # answer cannot consume a later Y and delete the remote.
+    result: subprocess.CompletedProcess[str] = run_group_cleanup(
+        group, answer="invalid\nY\n"
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.count("Is this the correct group?") == 1
+    assert client.projects.get(remote.id).id == remote.id
 
     result = run_group_cleanup(group, answer="Y\n", delete=False)
     assert result.returncode == 0, result.stderr

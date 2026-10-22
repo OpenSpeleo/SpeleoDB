@@ -211,11 +211,10 @@ before transferring ownership. Keep annotations at genuinely untyped library
 boundaries narrow and explain upstream stub gaps.
 
 Include new untracked files in direct lint/type checks: Git-based hook
-inventories may omit them. Follow the strict no-avoidable-mocks rule in
-`AGENTS.md`, including for read-only properties: use real objects and supported
-configuration unless testing without a replacement is technically impossible.
-Keep setup outside `pytest.raises` so only the intended failing operation is
-covered.
+inventories may omit them. Follow the controlled-test-boundaries guidance in
+`AGENTS.md`: use real objects and supported configuration, and substitute only
+unrelated work while preserving the behavior the test claims to prove. Keep
+setup outside `pytest.raises` so only the intended failing operation is covered.
 
 Annotate a fixture that yields without a value as `Generator[None, None, None]`,
 not `None`. Give heterogeneous nested fixture mappings an explicit mapping type

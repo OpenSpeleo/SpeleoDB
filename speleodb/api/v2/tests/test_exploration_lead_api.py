@@ -108,8 +108,8 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
             reverse("api:v2:project-exploration-leads", kwargs={"id": self.project.id}),
             headers={"authorization": self.auth},
         )
-        assert (
-            response.status_code == status.HTTP_200_OK
+        assert response.status_code == (
+            status.HTTP_200_OK
             if self.level != PermissionLevel.WEB_VIEWER
             else status.HTTP_403_FORBIDDEN
         )
@@ -120,8 +120,8 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
             reverse("api:v2:exploration-lead-detail", kwargs={"id": self.lead.id}),
             headers={"authorization": self.auth},
         )
-        assert (
-            response.status_code == status.HTTP_200_OK
+        assert response.status_code == (
+            status.HTTP_200_OK
             if self.level != PermissionLevel.WEB_VIEWER
             else status.HTTP_403_FORBIDDEN
         )
@@ -141,8 +141,8 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
-        assert (
-            response.status_code == status.HTTP_201_CREATED
+        assert response.status_code == (
+            status.HTTP_201_CREATED
             if self.level >= PermissionLevel.READ_AND_WRITE
             else status.HTTP_403_FORBIDDEN
         )
@@ -158,8 +158,8 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
             content_type="application/json",
         )
 
-        assert (
-            response.status_code == status.HTTP_200_OK
+        assert response.status_code == (
+            status.HTTP_200_OK
             if self.level >= PermissionLevel.READ_AND_WRITE
             else status.HTTP_403_FORBIDDEN
         )
@@ -171,8 +171,8 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
             headers={"authorization": self.auth},
         )
 
-        assert (
-            response.status_code == status.HTTP_200_OK
+        assert response.status_code == (
+            status.HTTP_200_OK
             if self.level == PermissionLevel.ADMIN
             else status.HTTP_403_FORBIDDEN
         )

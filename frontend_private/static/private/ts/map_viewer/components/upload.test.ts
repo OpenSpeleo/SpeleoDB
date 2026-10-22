@@ -1,11 +1,11 @@
-import { v2GisLayersCreate } from '@speleodb/api';
+import { v2GisLayersCreate, v2GisLayersPartialUpdateWithJson } from '@speleodb/api';
 import { apiData, webApiOptions } from '../../../../../../frontend_common/api/client.ts';
 import { startApiServer, setBrowserUrl } from '../../../../../../frontend_common/test/api-server.ts';
 import type { UploadOperation } from '../../../../../../ts-types/domain/upload.ts';
 import { uploadWithProgress, createProgressBarHTML, getUploadErrorMessage, UploadProgressController } from './upload.ts';
 
-// Real transport, cancellation and promise results run against Django in
-// speleodb/api/v2/tests/test_frontend_upload_integration.py.
+// Exercise frontend transport and lifecycle policy through real local HTTP.
+// Django session/CSRF enforcement and storage readback remain in pytest.
 
 describe('getUploadErrorMessage', () => {
     it('preserves existing messages and exposes serializer field errors', () => {
@@ -237,6 +237,69 @@ describe('upload generated operation boundary', () => {
             uploadWithProgress(operation, { onError: resolve });
         });
         expect(failure).toMatchObject({ status, ambiguous, message, payload: json });
+    });
+
+    it('preserves the generated method and JSON body for updates', async () => {
+        server.reply({ json: { id: 'layer', name: 'Renamed' } });
+        const result = await new Promise<unknown>((resolve, reject) => {
+            uploadWithProgress(options => apiData(v2GisLayersPartialUpdateWithJson(
+                'layer', { name: 'Renamed' }, undefined, webApiOptions(options),
+            )), { onSuccess: resolve, onError: reject });
+        });
+        expect(result).toMatchObject({ name: 'Renamed' });
+        expect(server.requests[0]).toMatchObject({
+            method: 'PATCH', path: '/api/v2/gis-layers/layer/',
+            body: JSON.stringify({ name: 'Renamed' }),
+        });
+    });
+
+    it('treats successful HTML as an ambiguous upload, so callers avoid a blind retry', async () => {
+        server.reply({ status: 201, text: '<html>Login required</html>', headers: { 'Content-Type': 'text/html' } });
+        const failure = await new Promise<unknown>(resolve => {
+            uploadWithProgress(operation, { onError: resolve });
+        });
+        expect(failure).toMatchObject({
+            status: 201, ambiguous: true,
+            message: 'The server returned an unreadable response. Check whether the upload was saved before retrying.',
+        });
+    });
+
+    it('distinguishes a failed connection from a server validation response', async () => {
+        const unavailable = await startApiServer();
+        await unavailable.close();
+        setBrowserUrl(unavailable.origin);
+        const failure = await new Promise<unknown>(resolve => {
+            uploadWithProgress(operation, { onError: resolve });
+        });
+        expect(failure).toMatchObject({ status: 0, ambiguous: true, message: 'Network error during upload' });
+    });
+
+    it('rejects the controller promise and clears its request after server validation fails', async () => {
+        server.reply({ status: 422, json: { error: 'Invalid topology' } });
+        document.body.innerHTML += createProgressBarHTML('transport');
+        const controller = new UploadProgressController('transport');
+        await expect(controller.upload(operation)).rejects.toMatchObject({
+            status: 422, ambiguous: false, message: 'Invalid topology',
+        });
+        expect(controller.request).toBeNull();
+        expect(document.getElementById('transport-bar')!.classList.contains('bg-red-500')).toBe(true);
+        expect(document.getElementById('transport-status')!.textContent).toBe('Invalid topology');
+    });
+
+    it('cancels the controller promise once and hides it before the request starts', async () => {
+        document.body.innerHTML += createProgressBarHTML('transport');
+        const controller = new UploadProgressController('transport');
+        const pending = controller.upload(operation);
+        const request = controller.request!;
+        let aborts = 0;
+        request.signal.addEventListener('abort', () => { aborts += 1; });
+        controller.cancel();
+        controller.cancel();
+        await expect(pending).rejects.toMatchObject({ name: 'AbortError', message: 'Upload cancelled', ambiguous: false });
+        expect(aborts).toBe(1);
+        expect(controller.request).toBeNull();
+        expect(server.requests).toHaveLength(0);
+        expect(document.getElementById('transport-container')!.classList.contains('hidden')).toBe(true);
     });
 
     it('cancels the real request and reports AbortError once', async () => {

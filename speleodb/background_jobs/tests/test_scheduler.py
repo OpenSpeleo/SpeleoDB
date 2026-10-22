@@ -13,9 +13,9 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from itertools import pairwise
 from pathlib import Path
 from threading import Timer
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -35,6 +35,7 @@ from kombu import Queue
 from kombu.exceptions import OperationalError
 from redis import Redis
 
+from speleodb.background_jobs import lease as lease_module
 from speleodb.background_jobs.lease import BEAT_LOCK_ID
 from speleodb.background_jobs.lease import LOCK_MAX_ATTEMPTS
 from speleodb.background_jobs.lease import LOCK_WAIT_SECONDS
@@ -227,21 +228,28 @@ def test_standby_acquires_lock_after_previous_scheduler_exits(
 
 
 @pytest.mark.parametrize(
-    ("task_name", "ignore_result", "task_args"),
+    ("task_name", "ignore_result", "task_args", "advance"),
     [
-        ("speleodb.background_jobs.tasks.maintain_background_jobs", True, []),
-        ("speleodb.background_jobs.tasks.delete_expired_artifacts", True, []),
-        ("celery.backend_cleanup", True, []),
-        ("speleodb.users.tasks.get_users_count", False, []),
+        ("speleodb.background_jobs.tasks.maintain_background_jobs", True, [], False),
+        ("speleodb.background_jobs.tasks.maintain_background_jobs", True, [], True),
+        ("speleodb.background_jobs.tasks.delete_expired_artifacts", True, [], True),
+        ("celery.backend_cleanup", True, [], False),
+        ("speleodb.users.tasks.get_users_count", False, [], False),
+        ("speleodb.users.tasks.get_users_count", False, [], True),
         (
             "speleodb.gis.tasks.generate_project_geojson",
             False,
             ["a" * 40, str(uuid.uuid4())],
+            True,
         ),
-        ("speleodb.surveys.tasks.refresh_project_geojson", False, [str(uuid.uuid4())]),
+        (
+            "speleodb.surveys.tasks.refresh_project_geojson",
+            False,
+            [str(uuid.uuid4())],
+            False,
+        ),
     ],
 )
-@pytest.mark.parametrize("advance", [False, True])
 def test_scheduler_result_policy_preserves_original_entry_options(
     runtime: SchedulerRuntime,
     task_name: str,
@@ -551,31 +559,25 @@ def test_sync_skips_unowned_and_lazy_schedulers(
         scheduler.close()
 
 
-def test_standby_exhausts_real_finite_lock_budget(
+def test_standby_exhausts_finite_lock_budget(
     lease: SchedulerLease,
-    tmp_path: Path,
+    postgres_parameters: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    with beat_process(tmp_path) as (process, log_path, application_name):
-        observed_queries: list[Any] = []
-        deadline = time.monotonic() + 180
-        while process.poll() is None and time.monotonic() < deadline:
-            for _, query, _, query_start in _activity(application_name):
-                if (
-                    "pg_try_advisory_lock" in query
-                    and query_start not in observed_queries
-                ):
-                    observed_queries.append(query_start)
-            time.sleep(0.1)
-        assert process.wait(timeout=PROCESS_TIMEOUT_SECONDS) != 0
-        assert f"after {LOCK_MAX_ATTEMPTS} attempts" in log_path.read_text()
-        # The final query can finish and disconnect between observations. The
-        # first five stable idle sessions expose the actual exponential waits.
-        assert len(observed_queries) >= LOCK_MAX_ATTEMPTS - 1
-        for index, (before, after) in enumerate(pairwise(observed_queries)):
-            assert (after - before).total_seconds() == pytest.approx(
-                LOCK_WAIT_SECONDS * 2**index, abs=2
-            )
-    lease.assert_owned()
+    delays: list[float] = []
+    # Keep actual competing PostgreSQL sessions; elapsed waiting does not change
+    # the exhausted-budget path. Signal interruption and real lock handoff are
+    # exercised separately without replacing their clocks.
+    monkeypatch.setattr(lease_module, "time", SimpleNamespace(sleep=delays.append))
+    replacement = SchedulerLease(postgres_parameters)
+    try:
+        with pytest.raises(RuntimeError, match=f"after {LOCK_MAX_ATTEMPTS} attempts"):
+            replacement.acquire()
+        assert delays == [5, 10, 20, 40, 80]
+        assert not replacement.active
+        lease.assert_owned()
+    finally:
+        replacement.close()
 
 
 def test_sigterm_interrupts_standby_wait_without_releasing_previous_owner(

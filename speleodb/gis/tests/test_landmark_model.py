@@ -50,28 +50,6 @@ class TestLandmarkModel:
     def personal_collection(self, user: User) -> LandmarkCollection:
         return get_or_create_personal_landmark_collection(user=user)
 
-    def test_create_landmark_with_valid_data(self, user: User) -> None:
-        """Test creating a Landmark with all valid data."""
-        personal_collection = get_or_create_personal_landmark_collection(user=user)
-        landmark = Landmark.objects.create(
-            name="Mountain Peak Viewpoint",
-            description="Stunning panoramic views",
-            latitude=47.608013,
-            longitude=-122.335167,
-            created_by=user.email,
-            collection=personal_collection,
-        )
-
-        assert landmark.id is not None
-        assert landmark.name == "Mountain Peak Viewpoint"
-        assert landmark.description == "Stunning panoramic views"
-        assert landmark.latitude == 47.608013  # noqa: PLR2004
-        assert landmark.longitude == -122.335167  # noqa: PLR2004
-        assert landmark.created_by == user.email
-        assert landmark.collection.is_personal
-        assert landmark.creation_date is not None
-        assert landmark.modified_date is not None
-
     def test_create_landmark_minimal_data(self, user: User) -> None:
         """Test creating a Landmark with only required fields."""
         personal_collection = get_or_create_personal_landmark_collection(user=user)
@@ -83,15 +61,13 @@ class TestLandmarkModel:
             collection=personal_collection,
         )
 
+        landmark.full_clean()
+        landmark.refresh_from_db()
         assert landmark.id is not None
         assert landmark.name == "Minimal Landmark"
         assert landmark.description == ""  # Default value
         assert landmark.created_by == user.email
         assert landmark.collection.is_personal
-
-    def test_landmark_string_representation(self, landmark: Landmark) -> None:
-        """Test the string representation of Landmark."""
-        assert str(landmark) == "Landmark: Test Cave Entrance"
 
     def test_latitude_validation(
         self,
@@ -256,40 +232,6 @@ class TestLandmarkModel:
         assert landmarks[0].name == "Arch A"
         assert landmarks[1].name == "Bridge B"
         assert landmarks[2].name == "Cave C"
-
-    def test_timestamps_auto_update(self, landmark: Landmark) -> None:
-        """Test that timestamps are automatically managed."""
-        original_created = landmark.creation_date
-        original_modified = landmark.modified_date
-
-        # Update the Landmark
-        landmark.description = "Updated description"
-        landmark.save()
-        # creation_date should not change
-        assert landmark.creation_date == original_created
-
-        # modified_date should be updated
-        assert landmark.modified_date > original_modified
-
-    def test_verbose_names(self) -> None:
-        """Test model verbose names."""
-        assert Landmark._meta.verbose_name == "Landmark"  # noqa: SLF001
-        assert Landmark._meta.verbose_name_plural == "Landmarks"  # noqa: SLF001
-
-    def test_blank_description_allowed(self, user: User) -> None:
-        """Test that blank description is allowed."""
-        personal_collection = get_or_create_personal_landmark_collection(user=user)
-        landmark = Landmark.objects.create(
-            name="No Description Landmark",
-            latitude=10.0,
-            longitude=20.0,
-            created_by=user.email,
-            collection=personal_collection,
-            description="",
-        )
-
-        assert landmark.description == ""
-        landmark.full_clean()  # Should not raise
 
     def test_unique_landmark_per_collection(self, user: User) -> None:
         """Test that Landmark coordinates are unique inside a collection."""

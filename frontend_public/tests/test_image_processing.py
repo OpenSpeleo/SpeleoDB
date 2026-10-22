@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from typing import TYPE_CHECKING
+from typing import cast
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -38,26 +39,6 @@ def create_test_image(
 @pytest.mark.django_db
 class TestImageProcessing:
     """Test image processing functionality."""
-
-    def test_thumbnail_creation(self, db: None) -> None:
-        """Test that a 200x200 thumbnail is created from uploaded image."""
-        # Create a large test image
-        original_image = create_test_image(width=1200, height=800)
-
-        # Create a person with the image
-        person = BoardMember.objects.create(
-            full_name="Test Person",
-            title="Test Title",
-            description="Test Description",
-            photo=original_image,
-        )
-
-        # Open the saved photo
-        person.photo.open()
-        saved_img = Image.open(person.photo)
-
-        # Check dimensions - should be 200x200
-        assert saved_img.size == (200, 200)
 
     def test_square_crop_from_landscape(self, db: None) -> None:
         """Test that landscape images are center-cropped to square."""
@@ -221,3 +202,30 @@ class TestImageProcessing:
             person.photo.open()
             saved_img = Image.open(person.photo)
             assert saved_img.size == (200, 200)
+
+    def test_photo_save_applies_exif_orientation_before_thumbnail_crop(self) -> None:
+        image = Image.new("RGB", (400, 400), "blue")
+        image.paste("red", (0, 0, 400, 200))
+        orientation = image.getexif()
+        orientation[274] = 6
+        content = BytesIO()
+        image.save(content, format="JPEG", exif=orientation)
+        person = BoardMember.objects.create(
+            full_name="Oriented portrait",
+            photo=SimpleUploadedFile(
+                "oriented.jpg", content.getvalue(), content_type="image/jpeg"
+            ),
+        )
+        with person.photo.open(), Image.open(person.photo) as thumbnail:
+            assert thumbnail.size == (200, 200)
+            # Orientation 6 rotates the red upper half to the right, blue to the left.
+            red_left, _, blue_left = cast(
+                "tuple[int, int, int]", thumbnail.convert("RGB").getpixel((40, 100))
+            )
+            red_right, _, blue_right = cast(
+                "tuple[int, int, int]", thumbnail.convert("RGB").getpixel((160, 100))
+            )
+            assert blue_left > 200  # noqa: PLR2004
+            assert red_left < 40  # noqa: PLR2004
+            assert red_right > 200  # noqa: PLR2004
+            assert blue_right < 40  # noqa: PLR2004

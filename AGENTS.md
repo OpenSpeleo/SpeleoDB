@@ -36,8 +36,9 @@ required; this rule only specifies where an authorized commit must run.
   heavy compute.
 - **Refactor as necessary**: Prefer centralized logic over duplicated
   conditionals or per-call custom checks.
-- **Tests are cheap**: Every behavior should be tested. Untested code is broken
-  code.
+- **Tests protect behavior**: Prioritize consequential failures and likely
+  regressions. Test count and assertions about obvious implementation details
+  are not quality goals.
 
 ## Legacy and backward compatibility
 
@@ -387,25 +388,54 @@ Backend/API changes should also run relevant `pytest` targets:
 - Full suite: `docker exec -w /app speleodb-monorepo-django make test-py`
 - Focused suite: `docker exec -w /app speleodb-monorepo-django pytest <targets>`
 
-New tests should respects coding existing structures
+### Targeted backend coverage
 
-### No avoidable mocks or monkeypatching
+- `make test-py` is the complete default backend suite; `make test` also runs
+  frontend tests. Preserve CI's API-contract enforcement and observed operation
+  coverage when consolidating endpoint tests. Optional `--light`/`--offline`
+  runs and the separately invoked browser suite do not replace this validation.
+- Backend behavior belongs in pytest, frontend logic in Vitest, and browser
+  tests exclusively in UI/UX verification. Do not move backend assertions into
+  browser tests to reduce pytest time.
+- Choose the narrowest useful layer. Keep real database checks for constraints,
+  query behavior, transactions, and permissions, plus a small set of real
+  storage/repository/worker integrations. Use local bare repositories for
+  Git-only behavior; pure parsing and validation should not request a database.
+- Keep authorization matrices where grant source and access level change
+  behavior. Test unrelated validation, serialization, and file handling with a
+  representative authorized user instead of multiplying them by that matrix.
+- Before deleting or consolidating tests, inspect production behavior and name
+  the concrete failure covered by a retained test. Similar names alone do not
+  prove redundancy. Remove framework, factory-echo, source-formatting, and
+  private-implementation assertions that provide no useful application contract.
+- Build the smallest object graph that exposes the regression. Use deterministic
+  boundary cases; do not repeat randomized inputs or large fixtures without a
+  failure they distinguish. A query-count regression must assert that the
+  requested records are actually visible and returned.
+- Let pytest-django/Django own database rollback and transactional flushes.
+  Declare database use explicitly on tests or fixtures that need it. Never add
+  autouse database access or whole-database deletion to support pure tests, and
+  do not widen mutable fixture scope to trade away isolation.
+- Compare timing with the same command, workers, database creation/reuse, and
+  service conditions. Report setup/call/teardown separately, attribute shared
+  fixture costs separately, and distinguish summed durations from suite wall
+  time. Investigate slow tests; do not delete important coverage just to meet a
+  timing threshold or hide costs behind skips, retries, or more workers.
 
-**Monkeypatching in tests is permitted ONLY when it is STRICTLY IMPOSSIBLE to
-test the behavior without it.** Convenience, execution speed, setup complexity,
-or difficulty reproducing a failure do not qualify as impossibility.
+### Controlled test boundaries
 
-Use real constructors, supported public APIs, normal test configuration, and
-isolated real databases, brokers, files, and subprocesses. Do not bypass
-initialization, replace framework internals, fabricate SDK responses, or install
-fake executables when the behavior can be exercised through the real interface.
-Mocks and other test doubles must likewise be removed wherever a real test is
-possible. Normal configuration through a supported API is not monkeypatching.
+Prefer real constructors, supported configuration, and small real local inputs.
+A controlled substitute may isolate unrelated external work or elapsed waiting,
+but must not replace the behavior the test claims to prove. Document that
+boundary next to the replacement and assert observable results rather than
+values supplied by the substitute itself.
 
-This rule covers `pytest.monkeypatch`, `unittest.mock.patch`, manual runtime
-replacement of attributes or functions, and equivalent mechanisms. Every
-unavoidable exception must document the specific technical impossibility next to
-the patch and limit the replacement to the smallest necessary boundary.
+Keep real PostgreSQL contention, rollback, storage readback, repository
+restoration, and worker lifecycle tests where a substitute would hide the
+failure. For retry policy, record requested waits while exercising real bounded
+attempts; retain a real contention/recovery test separately. Keep substitutes
+function-scoped and automatically restored, including clocks and environment. Do
+not fabricate success responses in a test advertised as an integration test.
 
 ### Django GitLab repository contract
 

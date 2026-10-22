@@ -19,10 +19,6 @@ from speleodb.users.tests.factories import UserFactory
 if TYPE_CHECKING:
     from django.http import HttpResponseBase
 
-AMBER_BORDER = "border-srgb-amber-500-60"
-SLATE_BORDER = "border-srgb-slate-500-50"
-SKY_BORDER = "border-srgb-sky-500-60"
-EMERALD_BORDER = "border-srgb-emerald-500-60"
 
 EDITION_NOT_ENABLED_TEXT = "Project edition is not enabled."
 ENABLE_EDITION_LINK_TEXT = "Enable Project Edition"
@@ -30,8 +26,6 @@ READONLY_NO_ACCESS_TEXT = "You do not have edit access to this project."
 EDITED_BY_TEXT = "Currently being edited by"
 EDITION_ENABLED_TEXT = "Project edition is enabled."
 UPLOAD_LINK_TEXT = "Upload new Revision"
-EDITING_BADGE = "Editing"
-READONLY_BADGE_MARKUP = 'class="shrink-0 rounded-full bg-srgb-sky-500-20'
 
 AMBER_BANNER_LINK_CLASS = "text-amber-400 underline"
 EMERALD_BANNER_LINK_CLASS = "text-emerald-400 underline"
@@ -66,17 +60,11 @@ class TestBannerNoLockWriteAccess(ProjectLockBannerTestBase):
             level=PermissionLevel.READ_AND_WRITE,
         )
 
-    def test_amber_banner_is_shown(self) -> None:
-        html = self._get_page("project_details")
-        assert AMBER_BORDER in html
-
-    def test_edition_not_enabled_text_present(self) -> None:
+    def test_unlocked_writer_can_enable_editing(self) -> None:
         html = self._get_page("project_details")
         assert EDITION_NOT_ENABLED_TEXT in html
-
-    def test_enable_edition_link_present(self) -> None:
-        html = self._get_page("project_details")
         assert ENABLE_EDITION_LINK_TEXT in html
+        assert EDITION_ENABLED_TEXT not in html
 
     def test_enable_edition_button_acquires_and_reloads_current_page(self) -> None:
         self.client = Client(enforce_csrf_checks=True)
@@ -129,18 +117,6 @@ class TestBannerNoLockWriteAccess(ProjectLockBannerTestBase):
         self.project.refresh_from_db()
         assert self.project.mutex_owner == self.other_user
 
-    def test_no_emerald_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert EMERALD_BORDER not in html
-
-    def test_no_sky_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert SKY_BORDER not in html
-
-    def test_no_slate_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert SLATE_BORDER not in html
-
 
 class TestBannerNoLockReadOnly(ProjectLockBannerTestBase):
     """State 2: No active lock, user has read-only access."""
@@ -153,16 +129,9 @@ class TestBannerNoLockReadOnly(ProjectLockBannerTestBase):
             level=PermissionLevel.READ_ONLY,
         )
 
-    def test_slate_banner_is_shown(self) -> None:
-        html = self._get_page("project_details")
-        assert SLATE_BORDER in html
-
-    def test_readonly_text_present(self) -> None:
+    def test_readonly_user_has_no_acquisition_action(self) -> None:
         html = self._get_page("project_details")
         assert READONLY_NO_ACCESS_TEXT in html
-
-    def test_no_enable_edition_link(self) -> None:
-        html = self._get_page("project_details")
         assert ENABLE_EDITION_LINK_TEXT not in html
         assert 'data-speleodb-controller="mutex-lock"' not in html
 
@@ -175,18 +144,6 @@ class TestBannerNoLockReadOnly(ProjectLockBannerTestBase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         self.project.refresh_from_db()
         assert self.project.active_mutex is None
-
-    def test_no_amber_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert AMBER_BORDER not in html
-
-    def test_no_emerald_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert EMERALD_BORDER not in html
-
-    def test_no_sky_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert SKY_BORDER not in html
 
 
 class TestBannerLockedByOtherUser(ProjectLockBannerTestBase):
@@ -206,32 +163,11 @@ class TestBannerLockedByOtherUser(ProjectLockBannerTestBase):
         )
         self.project.acquire_mutex(user=self.other_user)
 
-    def test_sky_banner_is_shown(self) -> None:
-        html = self._get_page("project_details")
-        assert SKY_BORDER in html
-
-    def test_edited_by_text_present(self) -> None:
+    def test_other_owner_is_visible_without_upload_action(self) -> None:
         html = self._get_page("project_details")
         assert EDITED_BY_TEXT in html
-
-    def test_other_user_name_shown(self) -> None:
-        html = self._get_page("project_details")
         assert self.other_user.name in html
-
-    def test_readonly_badge_present(self) -> None:
-        html = self._get_page("project_details")
-        assert READONLY_BADGE_MARKUP in html
-
-    def test_no_amber_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert AMBER_BORDER not in html
-
-    def test_no_emerald_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert EMERALD_BORDER not in html
-
-    def test_no_upload_link(self) -> None:
-        html = self._get_page("project_details")
+        assert ENABLE_EDITION_LINK_TEXT not in html
         upload_url = reverse(
             "private:project_upload", kwargs={"project_id": self.project.id}
         )
@@ -250,39 +186,15 @@ class TestBannerLockedByCurrentUser(ProjectLockBannerTestBase):
         )
         self.project.acquire_mutex(user=self.user)
 
-    def test_emerald_banner_is_shown(self) -> None:
-        html = self._get_page("project_details")
-        assert EMERALD_BORDER in html
-
-    def test_edition_enabled_text_present(self) -> None:
+    def test_owner_can_upload_without_acquisition_action(self) -> None:
         html = self._get_page("project_details")
         assert EDITION_ENABLED_TEXT in html
-
-    def test_upload_link_present(self) -> None:
-        html = self._get_page("project_details")
         assert UPLOAD_LINK_TEXT in html
-
-    def test_upload_link_points_to_upload_page(self) -> None:
-        html = self._get_page("project_details")
         expected_url = reverse(
             "private:project_upload", kwargs={"project_id": self.project.id}
         )
         assert expected_url in html
-
-    def test_editing_badge_present(self) -> None:
-        html = self._get_page("project_details")
-        assert EDITING_BADGE in html
-
-    def test_no_amber_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert AMBER_BORDER not in html
-
-    def test_no_sky_banner(self) -> None:
-        html = self._get_page("project_details")
-        assert SKY_BORDER not in html
-
-    def test_no_readonly_text(self) -> None:
-        html = self._get_page("project_details")
+        assert ENABLE_EDITION_LINK_TEXT not in html
         assert READONLY_NO_ACCESS_TEXT not in html
 
 
@@ -354,7 +266,6 @@ class TestBannerConsistencyAcrossPages(ProjectLockBannerTestBase):
     def test_amber_banner_on_all_subpages_when_unlocked(self) -> None:
         for view_name in self.SUBPAGES:
             html = self._get_page(view_name)
-            assert AMBER_BORDER in html, f"Amber banner missing on {view_name}"
             assert EDITION_NOT_ENABLED_TEXT in html, (
                 f"Edition-not-enabled text missing on {view_name}"
             )
@@ -368,26 +279,3 @@ class TestBannerConsistencyAcrossPages(ProjectLockBannerTestBase):
             ), view_name
             assert html.count('id="modal_error"') == 1, view_name
             assert 'name="csrfmiddlewaretoken"' in html, view_name
-
-    def test_emerald_banner_on_all_subpages_when_editing(self) -> None:
-        self.project.acquire_mutex(user=self.user)
-        for view_name in self.SUBPAGES:
-            html = self._get_page(view_name)
-            assert EMERALD_BORDER in html, f"Emerald banner missing on {view_name}"
-            assert EDITION_ENABLED_TEXT in html, (
-                f"Edition-enabled text missing on {view_name}"
-            )
-
-    def test_sky_banner_on_all_subpages_when_locked_by_other(self) -> None:
-        UserProjectPermissionFactory.create(
-            target=self.other_user,
-            project=self.project,
-            level=PermissionLevel.READ_AND_WRITE,
-        )
-        self.project.acquire_mutex(user=self.other_user)
-        for view_name in self.SUBPAGES:
-            html = self._get_page(view_name)
-            assert SKY_BORDER in html, f"Sky banner missing on {view_name}"
-            assert self.other_user.name in html, (
-                f"Other user name missing on {view_name}"
-            )

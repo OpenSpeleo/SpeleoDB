@@ -1,222 +1,50 @@
-# -*- coding: utf-8 -*-
+"""Serialize real Git trees without unrelated API uploads or remote provisioning."""
 
 from __future__ import annotations
 
-import pathlib
+from typing import TYPE_CHECKING
 
-import pytest
-from django.urls import reverse
-from rest_framework import status
+from speleodb.git_engine.core import GIT_COMMITTER
+from speleodb.git_engine.core import GitRepo
 
-from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v2.tests.base_testcase import PermissionType
-from speleodb.common.enums import PermissionLevel
-from speleodb.surveys.models import FileFormat
-from speleodb.testing.gitlab_pool import get_pool
+if TYPE_CHECKING:
+    from pathlib import Path
 
-TEST_FILE = (
-    pathlib.Path(__file__).parent.parent.parent
-    / "api/v2/tests/artifacts"
-    / "test_simple.tml"
-)
+EXECUTABLE_MODE = 0o755
 
 
-@pytest.mark.skip_if_lighttest
-class TestTreeToJson(BaseAPIProjectTestCase):
-    """Test suite for GitCommit.tree_to_json() method."""
+def test_tree_to_json_preserves_nested_paths_modes_and_object_ids(
+    tmp_path: Path,
+) -> None:
+    repository = GitRepo.init(tmp_path / "tree")
+    with repository:
+        files: dict[str, tuple[str, int]] = {
+            "readme.txt": ("survey notes", 0o644),
+            "nested/a survey.dat": ("survey measurements", 0o644),
+            "nested/tools/export.sh": ("#!/bin/sh\nexit 0\n", EXECUTABLE_MODE),
+        }
+        for name, (contents, mode) in files.items():
+            path = repository.path / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(contents)
+            path.chmod(mode)
+        repository.index.add(list(files))
+        repository.index.commit("Survey tree", author=GIT_COMMITTER)
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.ADMIN,
-            permission_type=PermissionType.USER,
-        )
-        get_pool().prepare(self.project)
+        assert sorted(
+            repository.head.commit.tree_to_json(), key=lambda row: row["path"]
+        ) == [
+            {
+                "mode": "100755" if files[name][1] == EXECUTABLE_MODE else "100644",
+                "type": "blob",
+                "object": repository.index.entries[(name, 0)].hexsha,
+                "path": name,
+            }
+            for name in sorted(files)
+        ]
 
-    def test_tree_to_json_basic_structure(self) -> None:
-        """Test that tree_to_json returns correct structure."""
 
-        assert TEST_FILE.exists()
-
-        self.project.acquire_mutex(self.user)
-
-        # Upload a file to create a commit
-        with TEST_FILE.open(mode="rb") as file_data:
-            response = self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": self.project.id,
-                        "fileformat": FileFormat.ARIANE_TML.label.lower(),
-                    },
-                ),
-                {"artifact": file_data, "message": "Test commit"},
-                format="multipart",
-                headers={"authorization": self.auth},
-            )
-
-        assert response.status_code == status.HTTP_200_OK
-
-        # Get the git repo and latest commit
-        git_repo = self.project.git_repo
-        commits = list(git_repo.iter_commits("HEAD"))
-        assert len(commits) > 0
-
-        latest_commit = commits[0]
-
-        # Call tree_to_json
-        tree_json = latest_commit.tree_to_json()
-
-        # Verify it's a list
-        assert isinstance(tree_json, list)
-
-        # Verify each entry has correct structure
-        for entry in tree_json:
-            assert "mode" in entry
-            assert "type" in entry
-            assert "object" in entry
-            assert "path" in entry
-
-            # Mode should be 6-digit octal string
-            assert isinstance(entry["mode"], str)
-            assert len(entry["mode"]) == 6  # noqa: PLR2004
-            assert all(c in "01234567" for c in entry["mode"])
-
-            # Type should be 'blob' for files
-            assert entry["type"] in ["blob", "tree"]
-
-            # Object should be 40-char SHA
-            assert isinstance(entry["object"], str)
-            assert len(entry["object"]) == 40  # noqa: PLR2004
-            assert all(c in "0123456789abcdef" for c in entry["object"].lower())
-
-            # Path should be a string
-            assert isinstance(entry["path"], str)
-
-    def test_tree_to_json_file_paths(self) -> None:
-        """Test that file paths are correct in tree_to_json output."""
-
-        assert TEST_FILE.exists()
-
-        self.project.acquire_mutex(self.user)
-
-        with TEST_FILE.open(mode="rb") as file_data:
-            response = self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": self.project.id,
-                        "fileformat": FileFormat.ARIANE_TML.label.lower(),
-                    },
-                ),
-                {"artifact": file_data, "message": "Test commit"},
-                format="multipart",
-                headers={"authorization": self.auth},
-            )
-
-        assert response.status_code == status.HTTP_200_OK
-
-        git_repo = self.project.git_repo
-        latest_commit = next(iter(git_repo.iter_commits("HEAD")))
-        tree_json = latest_commit.tree_to_json()
-
-        # At least one entry should exist
-        assert len(tree_json) > 0
-
-        # File paths should not start with '/'
-        for entry in tree_json:
-            assert not entry["path"].startswith("/")
-
-    def test_tree_to_json_multiple_files(self) -> None:
-        """Test tree_to_json with multiple commits to verify all files are listed."""
-
-        assert TEST_FILE.exists()
-
-        self.project.acquire_mutex(self.user)
-
-        # Upload multiple times to ensure we have files
-        for i in range(2):
-            with TEST_FILE.open(mode="rb") as file_data:
-                response = self.client.put(
-                    reverse(
-                        "api:v2:project-upload",
-                        kwargs={
-                            "id": self.project.id,
-                            "fileformat": FileFormat.ARIANE_TML.label.lower(),
-                        },
-                    ),
-                    {"artifact": file_data, "message": f"Commit {i}"},
-                    format="multipart",
-                    headers={"authorization": self.auth},
-                )
-
-            # Accept both 200 OK and 304 Not Modified
-            assert response.status_code in [
-                status.HTTP_200_OK,
-                status.HTTP_304_NOT_MODIFIED,
-            ], response.content
-
-        git_repo = self.project.git_repo
-        latest_commit = next(iter(git_repo.iter_commits("HEAD")))
-        tree_json = latest_commit.tree_to_json()
-
-        # Should have at least one file
-        assert len(tree_json) >= 1
-
-        # All entries should be blobs (files)
-        for entry in tree_json:
-            # In a flat structure, all should be blobs
-            assert entry["type"] in ["blob", "tree"]
-
-    def test_tree_to_json_empty_commit(self) -> None:
-        """Test tree_to_json on initial/empty commit."""
-        # The pool restores this project's empty initial commit between tests.
-        git_repo = self.project.git_repo
-
-        # Try to get commits - may be empty for new repo
-        commits = list(git_repo.iter_commits("HEAD"))
-
-        assert len(commits) == 1
-
-        initial_commit = commits[0]  # Oldest commit
-        tree_json = initial_commit.tree_to_json()
-
-        # Initial commit must have 0 files
-        assert isinstance(tree_json, list)
-        assert len(tree_json) == 0
-
-    def test_tree_to_json_consistency(self) -> None:
-        """Test that calling tree_to_json twice on same commit gives same result."""
-
-        assert TEST_FILE.exists()
-
-        self.project.acquire_mutex(self.user)
-
-        with TEST_FILE.open(mode="rb") as file_data:
-            response = self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": self.project.id,
-                        "fileformat": FileFormat.ARIANE_TML.label.lower(),
-                    },
-                ),
-                data={
-                    "artifact": file_data,
-                    "message": "Test commit",
-                },
-                format="multipart",
-                headers={"authorization": self.auth},
-            )
-
-        assert response.status_code == status.HTTP_200_OK, response.data
-
-        git_repo = self.project.git_repo
-        commit = next(iter(git_repo.iter_commits("HEAD")))
-
-        # Call tree_to_json twice
-        tree_json1 = commit.tree_to_json()
-        tree_json2 = commit.tree_to_json()
-
-        # Should be identical
-        assert tree_json1 == tree_json2
+def test_tree_to_json_empty_initial_commit(tmp_path: Path) -> None:
+    with GitRepo.init(tmp_path / "empty") as repository:
+        repository.index.commit("Initial empty commit", author=GIT_COMMITTER)
+        assert repository.head.commit.tree_to_json() == []

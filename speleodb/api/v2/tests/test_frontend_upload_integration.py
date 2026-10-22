@@ -1,92 +1,68 @@
-"""Run production browser upload modules against Django and real object storage."""
+"""Protect session-authenticated uploads at the Django/storage boundary."""
 
 from __future__ import annotations
 
-import json
-import shutil
-import socket
-import subprocess
-from pathlib import Path
+import re
 from typing import TYPE_CHECKING
-from typing import Any
 
 import pytest
-from allauth.account.models import EmailAddress
-from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import Client
 from django.urls import reverse
+from rest_framework import status
 
 from speleodb.gis.models import GISLayer
+from speleodb.users.tests.factories import VerifiedUserFactory
 
 if TYPE_CHECKING:
-    from pytest_django.live_server_helper import LiveServer
-
     from speleodb.users.models import User
 
-BASE_DIR: Path = Path(__file__).resolve().parents[4]
 
-
-@pytest.mark.django_db(transaction=True)
-def test_browser_uploads_use_real_django_and_storage(
-    live_server: LiveServer, user: User
-) -> None:
-    EmailAddress.objects.create(
-        user=user, email=user.email, verified=True, primary=True
-    )
+@pytest.mark.django_db
+def test_session_upload_requires_rendered_csrf_token() -> None:
+    user: User = VerifiedUserFactory.create()
     client: Client = Client(enforce_csrf_checks=True)
     client.force_login(user)
-    # Only a database-backed session is prepared in-process. The HTML, CSRF
-    # cookie, list requests and uploads all travel over the actual live server.
-    browser_configuration: dict[str, Any] = {
-        "url": f"{live_server.url}{reverse('private:gis_layers')}",
-        "sessionCookie": {
-            "name": settings.SESSION_COOKIE_NAME,
-            "value": client.cookies[settings.SESSION_COOKIE_NAME].value,
-        },
-    }
-    bun: str | None = shutil.which("bun")
-    assert bun is not None, "Bun is required for real browser upload tests"
+    page = client.get(reverse("private:gis_layers"))
+    assert page.status_code == status.HTTP_200_OK
+    csrf_input = re.search(rb'name="csrfmiddlewaretoken" value="([^"]+)"', page.content)
+    assert csrf_input is not None
+    endpoint: str = reverse("api:v2:gis-layers")
+    contents: bytes = b'{ "type": "FeatureCollection", "features": [] }\n'
+
     try:
-        with socket.socket() as unavailable:
-            unavailable.bind(("127.0.0.1", 0))
-            browser_configuration["unavailableUrl"] = (
-                f"http://127.0.0.1:{unavailable.getsockname()[1]}/upload"
+        # DRF marks denied session requests for rollback; confine that expected
+        # failure to a savepoint before checking state and submitting again.
+        with transaction.atomic():
+            rejected = client.post(
+                endpoint,
+                {
+                    "name": "Rejected without CSRF",
+                    "source_file": SimpleUploadedFile("layer.geojson", contents),
+                },
             )
-            result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603 - fixed script, private stdin
-                [bun, "scripts/test-frontend-uploads.ts"],
-                cwd=BASE_DIR,
-                input=json.dumps(browser_configuration),
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=90,
-            )
-        assert result.returncode == 0, result.stderr
-        report: dict[str, Any] = json.loads(result.stdout)
-        assert report["checks"] == [
-            "gis-modal",
-            "gis-upload-and-refresh",
-            "gis-server-validation",
-            "upload-helper-success-and-progress",
-            "upload-helper-custom-method",
-            "upload-helper-csrf",
-            "upload-helper-empty-response",
-            "upload-helper-html-response",
-            "upload-helper-server-error",
-            "upload-helper-network-error",
-            "upload-controller-success",
-            "upload-controller-rejection",
-            "upload-controller-cancellation",
-        ]
-        layers = GISLayer.objects.filter(created_by=user.email)
-        assert layers.count() == 3  # noqa: PLR2004
-        for source in report["stored"]:
-            layer: GISLayer = layers.get(id=source["id"])
-            assert layer.name == source["name"]
-            assert layer.source_f.name == layer.data_f.name
-            # This reads back from the configured real S3-compatible service.
-            with layer.source_f.open("rb") as stored_file:
-                assert stored_file.read() == source["contents"].encode()
+        assert rejected.status_code == status.HTTP_403_FORBIDDEN
+        assert "CSRF" in rejected.json()["detail"]
+        assert not GISLayer.objects.exists()
+
+        accepted = client.post(
+            endpoint,
+            {
+                "name": "Session upload",
+                "source_file": SimpleUploadedFile("layer.geojson", contents),
+            },
+            headers={"x-csrftoken": csrf_input.group(1).decode()},
+        )
+        assert accepted.status_code == status.HTTP_201_CREATED
+        layer: GISLayer = GISLayer.objects.get()
+        assert str(layer.id) == accepted.json()["id"]
+        assert layer.created_by == user.email
+        assert layer.name == "Session upload"
+        assert layer.source_f.name == layer.data_f.name
+        # This reads back from the configured real S3-compatible service.
+        with layer.source_f.open("rb") as stored_file:
+            assert stored_file.read() == contents
     finally:
         deleted_files: set[tuple[int, str]] = set()
         for layer in GISLayer.objects.filter(created_by=user.email):

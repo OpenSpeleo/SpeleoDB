@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
-from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from parameterized.parameterized import parameterized
@@ -533,37 +532,42 @@ class TestProjectListLatestCommit(BaseAPITestCase):
         # Verify parents is a list
         assert isinstance(latest_commit_data["parent_ids"], list)
 
-    def test_project_list_no_n_plus_1_with_commits(self) -> None:
-        """Test that fetching projects with latest_commit doesn't cause N+1 queries."""
-        # Create multiple projects with commits
-        n_projects = 5
-        n_commits = 3
-        for i in range(n_projects):
+    def test_latest_commit_queries_do_not_grow_with_accessible_projects(self) -> None:
+        """Exercise nonempty result sets so a missing commit prefetch cannot hide."""
+        query_counts = []
+        expected_commits = {}
+        commit_table = ProjectCommit._meta.db_table  # noqa: SLF001
+        for index in range(3):
             project = ProjectFactory.create(created_by=self.user.email)
-            for j in range(n_commits):
-                ProjectCommit.objects.create(
-                    id=f"{i:02d}{j:02d}" + "0" * 36,
-                    project=project,
-                    author_name=f"Author {i}",
-                    author_email=f"author{i}@test.com",
-                    authored_date=timezone.now() - dt.timedelta(days=2 - j),
-                    message=f"Commit {j}",
-                )
-
-        # Test with query counting
-        with override_settings(DEBUG=True):
-            with CaptureQueriesContext(connection) as context:
+            UserProjectPermissionFactory.create(
+                target=self.user, project=project, level=PermissionLevel.ADMIN
+            )
+            commit = ProjectCommit.objects.create(
+                id=f"{index:040x}",
+                project=project,
+                author_name="Author",
+                author_email=self.user.email,
+                authored_date=timezone.now(),
+                message=f"Commit {index}",
+            )
+            expected_commits[str(project.id)] = commit.id
+            with CaptureQueriesContext(connection) as queries:
                 response = self.client.get(
                     reverse("api:v2:projects"),
                     headers={"authorization": self.auth},
                 )
-
             assert response.status_code == status.HTTP_200_OK
-
-            # Query count should be constant regardless of number of projects
-            # Should be: 1 for user permissions, 1 for projects, 1 prefetch for commits
-            # Total should be relatively constant (< 10 queries)
-            assert len(context.captured_queries) < n_projects * n_commits, (
-                f"Too many queries: {len(context.captured_queries)}. "
-                f"Possible N+1 issue."
+            assert {
+                row["id"]: row["latest_commit"]["id"] for row in response.data
+            } == expected_commits
+            # Permission serialization currently performs per-project queries;
+            # this contract measures the independent commit prefetch behavior.
+            query_counts.append(
+                sum(
+                    query["sql"].lstrip().upper().startswith("SELECT")
+                    and commit_table in query["sql"]
+                    for query in queries
+                )
             )
+        assert query_counts[0] > 0
+        assert query_counts[1:] == [query_counts[0]] * 2

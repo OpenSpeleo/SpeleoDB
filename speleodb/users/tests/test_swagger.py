@@ -81,15 +81,7 @@ def _collect_operation_ids(schema: dict[str, Any]) -> list[str]:
 
 
 @pytest.mark.django_db
-def test_legacy_v1_routes_are_outside_the_supported_contract() -> None:
-    schema = SpeleoDBSchemaGenerator().get_schema(request=None, public=True)
-    assert not any(path.startswith("/api/v1/") for path in schema["paths"])
-    assert any(path.startswith("/_allauth/app/v1/") for path in schema["paths"])
-    assert any(path.startswith("/api/auth/app/v1/") for path in schema["paths"])
-
-
-@pytest.mark.django_db
-def test_operation_ids_are_unique() -> None:
+def test_schema_exports_only_supported_paths_and_unique_operation_ids() -> None:
     """Canonical, auth aliases and protocol APIs have distinct identities."""
     generator = SpeleoDBSchemaGenerator()
     schema = generator.get_schema(request=None, public=True)
@@ -102,28 +94,8 @@ def test_operation_ids_are_unique() -> None:
         f"duplicate operationIds found in generated schema: {duplicates}"
     )
 
-
-@pytest.mark.django_db
-def test_known_v2_operation_id_present_exactly_once() -> None:
-    """Sanity-check that the exclusion hook didn't also eat the canonical
-    v2 surface. ``v2_projects_list`` is a stable operationId explicitly
-    set on the v2 ``ProjectApiView.get`` endpoint via
-    ``@extend_schema(operation_id=...)``. If it disappears or duplicates,
-    either the hook is over-eager or an import got shadowed."""
-    generator = SpeleoDBSchemaGenerator()
-    schema = generator.get_schema(request=None, public=True)
-
-    operation_ids = _collect_operation_ids(schema)
-    occurrences = [op_id for op_id in operation_ids if op_id == "v2_projects_list"]
-    assert len(occurrences) == 1, (
-        "Expected v2_projects_list to appear exactly once in the schema, "
-        f"found {len(occurrences)}. operation_ids sample: {operation_ids[:10]}"
-    )
-
-
-@pytest.mark.django_db
-def test_no_obsolete_speleodb_v1_operation_ids_are_exported() -> None:
-    schema = SpeleoDBSchemaGenerator().get_schema(request=None, public=True)
-    assert not any(
-        identifier.startswith("v1_") for identifier in _collect_operation_ids(schema)
-    )
+    assert operation_ids.count("v2_projects_list") == 1
+    assert not any(identifier.startswith("v1_") for identifier in operation_ids)
+    assert not any(path.startswith("/api/v1/") for path in schema["paths"])
+    assert any(path.startswith("/_allauth/app/v1/") for path in schema["paths"])
+    assert any(path.startswith("/api/auth/app/v1/") for path in schema["paths"])

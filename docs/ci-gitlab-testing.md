@@ -303,30 +303,25 @@ The existing real bootstrap test checks the configured policy, and real upload
 and lease restoration tests verify normal pushes and history resets. No extra
 repositories are allocated for this coverage.
 
-## Browser upload transport
+## Upload test boundaries
 
-`test_frontend_upload_integration.py` starts Django's real live server with a
-database-backed authenticated session, then invokes
-`scripts/test-frontend-uploads.ts`. The script loads the rendered GIS-layer
-page, uses its actual CSRF token and the vendored jQuery library, and imports
-the production upload modules and generated SDK operations. JSDOM supplies its
-unmodified XMLHttpRequest and FormData implementations; requests reach Django
-and persist files in the configured S3-compatible service. Python reads those
-files back to verify exact bytes and checks the database for unexpected writes.
+`test_frontend_upload_integration.py` protects the Django session/CSRF and
+storage contract with the CSRF-enforcing test client. It obtains the token from
+the rendered GIS-layer page, rejects an upload without that token and checks
+that no layer was created, then uploads with the token and reads back the exact
+bytes from the configured S3-compatible storage. It uses normal database
+rollback because there is no second server connection requiring committed rows.
 
-The integration observes real progress events, DOM mutations, and completed list
-requests. It covers modal dismissal while uploading, one successful list
-refresh, processor rejection, CSRF rejection, alternate HTTP methods, empty HEAD
-responses, HTML response parsing, connection refusal, and native cancellation.
-It does not synthesize HTTP status codes or replace upload callbacks. Empty HEAD
-responses exercise the no-content behavior without claiming a real 204 outcome.
-Pure progress rendering remains in Vitest with the actual upload component.
-
-Bun and the root locked dependencies are required in the pytest job. Missing
-Bun, an unavailable server, a failed upload, or an unreadable stored file fails
-the test; none of these conditions silently removes coverage. Session
-credentials travel through the child process's stdin and are never printed or
-put in its command arguments.
+Frontend transport and controller behavior belongs in Vitest. The GIS-layer
+controller tests exercise multipart serialization, upload errors, modal state,
+and successful list refreshes through a real local HTTP server. The upload
+component tests cover progress, generated methods, cancellation, controller
+promise settlement, and the distinction between server rejection and ambiguous
+network or unreadable responses. These tests use the actual generated SDK and
+JSDOM XMLHttpRequest; the local server supplies controlled responses to exercise
+frontend policy, without claiming to verify Django behavior. Backend format
+validation, permissions, and storage integration remain in pytest. The separate
+browser suite is reserved for UI/UX verification.
 
 ## Running and validating tests
 

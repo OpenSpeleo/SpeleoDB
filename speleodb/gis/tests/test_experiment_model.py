@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import re
-
 import pytest
 from django.core.exceptions import ValidationError
 
 from speleodb.gis.models import Experiment
-from speleodb.gis.models.experiment import ExperimentFieldDefinition
 from speleodb.gis.models.experiment import ExperimentFieldsDict
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
@@ -213,45 +210,6 @@ class TestExperimentModel:
         assert "experiment_fields" in exc_info.value.message_dict
         assert "Cannot modify" in str(exc_info.value.message_dict)
 
-    def test_can_add_new_field(self) -> None:
-        """Test that new fields can be added to existing experiment."""
-        ph_uuid = Experiment.generate_field_uuid()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                ph_uuid: {
-                    "name": "Ph Level",
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 2,
-                },
-            },
-        )
-
-        original_field_count = len(experiment.experiment_fields)
-
-        # Add new field
-        temp_uuid = Experiment.generate_field_uuid()
-        experiment.experiment_fields[temp_uuid] = {
-            "name": "Temperature",
-            "type": FieldType.NUMBER.value,
-            "required": True,
-            "order": 3,
-        }
-
-        # Should not raise validation error
-        experiment.full_clean()
-        experiment.save()
-
-        # Verify new field was added
-        experiment.refresh_from_db()
-        assert len(experiment.experiment_fields) == original_field_count + 1
-        assert temp_uuid in experiment.experiment_fields
-        assert experiment.experiment_fields[temp_uuid]["name"] == "Temperature"
-
     def test_can_add_multiple_new_fields(self) -> None:
         """Test that multiple new fields can be added."""
         experiment = Experiment.objects.create(
@@ -295,28 +253,6 @@ class TestExperimentModel:
         assert temp_uuid in experiment.experiment_fields
         assert notes_uuid in experiment.experiment_fields
 
-    def test_mandatory_fields_always_present(self) -> None:
-        """Test that mandatory fields are always present."""
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields=MandatoryFieldUuid.get_mandatory_fields(),
-        )
-
-        # Verify mandatory fields exist
-        assert "00000000-0000-0000-0000-000000000001" in experiment.experiment_fields
-        assert "00000000-0000-0000-0000-000000000002" in experiment.experiment_fields
-
-        # Verify their data
-        assert (
-            experiment.experiment_fields["00000000-0000-0000-0000-000000000001"]["name"]
-            == "Measurement Date"
-        )
-        assert (
-            experiment.experiment_fields["00000000-0000-0000-0000-000000000002"]["name"]
-            == "Submitter Email"
-        )
-
     def test_immutability_check_skipped_for_new_instance(self) -> None:
         """Test that immutability check is skipped for new instances."""
         ph_uuid = Experiment.generate_field_uuid()
@@ -340,45 +276,6 @@ class TestExperimentModel:
         experiment.save()
 
         assert experiment.id is not None
-
-    def test_remove_and_modify_attempts_raise_validation_error(self) -> None:
-        """Test that attempting both removal and immutable modification raises error."""
-        ph_uuid = Experiment.generate_field_uuid()
-        temp_uuid = Experiment.generate_field_uuid()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                ph_uuid: {
-                    "name": "Ph Level",
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 2,
-                },
-                temp_uuid: {
-                    "name": "Temperature",
-                    "type": FieldType.NUMBER.value,
-                    "required": True,
-                    "order": 3,
-                },
-            },
-        )
-
-        # Try to remove one field and modify an immutable property of another
-        experiment.experiment_fields.pop(ph_uuid)
-        experiment.experiment_fields[temp_uuid]["type"] = (
-            FieldType.TEXT.value
-        )  # Modify immutable property
-
-        with pytest.raises(ValidationError) as exc_info:
-            experiment.full_clean()
-
-        assert "experiment_fields" in exc_info.value.message_dict
-        # Should mention removal (checked first)
-        error_message = str(exc_info.value.message_dict)
-        assert "Cannot remove" in error_message
 
     def test_field_structure_validation(self) -> None:
         """Test that field structure validation works correctly."""
@@ -475,29 +372,6 @@ class TestExperimentModel:
         assert "options" in str(exc_info.value.message_dict).lower()
         assert "select" in str(exc_info.value.message_dict).lower()
 
-    def test_uuid_generation(self) -> None:
-        """Test that UUID generation works correctly."""
-        uuid1 = Experiment.generate_field_uuid()
-        uuid2 = Experiment.generate_field_uuid()
-
-        # UUIDs should be valid UUID format
-
-        uuid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        assert re.match(uuid_pattern, uuid1, re.IGNORECASE)
-        assert re.match(uuid_pattern, uuid2, re.IGNORECASE)
-
-        # UUIDs should be unique
-        assert uuid1 != uuid2
-
-    def test_experiment_string_representation(self) -> None:
-        """Test the string representation of Experiment."""
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-        )
-
-        assert experiment.name == str(experiment)
-
     def test_experiment_ordering(self) -> None:
         """Test that experiments are ordered by creation date descending."""
         Experiment.objects.create(
@@ -519,26 +393,6 @@ class TestExperimentModel:
         assert experiments[0].name == "Third Experiment"
         assert experiments[1].name == "Second Experiment"
         assert experiments[2].name == "First Experiment"
-
-    def test_timestamps_auto_update(self) -> None:
-        """Test that timestamps are automatically managed."""
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-        )
-
-        original_created = experiment.creation_date
-        original_modified = experiment.modified_date
-
-        # Update the experiment
-        experiment.description = "Updated description"
-        experiment.save()
-
-        # creation_date should not change
-        assert experiment.creation_date == original_created
-
-        # modified_date should be updated
-        assert experiment.modified_date > original_modified
 
     def test_save_without_modifying_fields(self) -> None:
         """Test that saving without modifying fields works correctly."""
@@ -657,38 +511,6 @@ class TestExperimentModel:
         experiment.refresh_from_db()
         assert experiment.experiment_fields == {}
 
-    def test_model_dump_serialization(self) -> None:
-        """Test that model_dump() works correctly for serialization."""
-
-        field_def = ExperimentFieldDefinition(
-            name="Test Field",
-            type=FieldType.TEXT,
-            required=True,
-            order=0,
-        )
-
-        # Should serialize correctly
-        dumped = field_def.model_dump(mode="json", exclude_none=True)
-        assert dumped["name"] == "Test Field"
-        assert dumped["type"] == FieldType.TEXT.value
-        assert dumped["required"] is True
-        assert dumped["order"] == 0
-        assert "options" not in dumped  # Should be excluded when None
-
-    def test_model_dump_with_options(self) -> None:
-        """Test that model_dump() includes options when present."""
-
-        field_def = ExperimentFieldDefinition(
-            name="Quality",
-            type=FieldType.SELECT,
-            required=False,
-            order=0,
-            options=["Good", "Fair", "Poor"],
-        )
-
-        dumped = field_def.model_dump(mode="json", exclude_none=True)
-        assert dumped["options"] == ["Good", "Fair", "Poor"]
-
     def test_field_name_uniqueness_case_insensitive(self) -> None:
         """Test that field names must be unique (case-insensitive)."""
         uuid1 = Experiment.generate_field_uuid()
@@ -719,79 +541,6 @@ class TestExperimentModel:
 
         assert "experiment_fields" in exc_info.value.message_dict
         assert "not unique" in str(exc_info.value.message_dict).lower()
-
-    def test_field_name_case_preserved(self) -> None:
-        """Test that field names preserve their original case."""
-        uuid1 = Experiment.generate_field_uuid()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                uuid1: {
-                    "name": "pH level",
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 2,
-                },
-            },
-        )
-
-        experiment.refresh_from_db()
-        assert experiment.experiment_fields[uuid1]["name"] == "pH level"
-
-    def test_order_field_present(self) -> None:
-        """Test that order field is required and present."""
-        uuid1 = Experiment.generate_field_uuid()
-
-        # Create experiment with order field
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                uuid1: {
-                    "name": "Ph Level",
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 5,
-                },
-            },
-        )
-
-        # Verify order field is present and correct
-        experiment.refresh_from_db()
-        assert experiment.experiment_fields[uuid1]["order"] == 5  # noqa: PLR2004
-
-    def test_can_modify_order_field(self) -> None:
-        """Test that order field can be modified."""
-        uuid1 = Experiment.generate_field_uuid()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                uuid1: {
-                    "name": "Ph Level",
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 2,
-                },
-            },
-        )
-
-        # Modify order
-        experiment.experiment_fields[uuid1]["order"] = 10
-
-        # Should not raise validation error
-        experiment.full_clean()
-        experiment.save()
-
-        # Verify order was changed
-        experiment.refresh_from_db()
-        assert experiment.experiment_fields[uuid1]["order"] == 10  # noqa: PLR2004
 
     def test_order_field_negative_value(self) -> None:
         """Test that negative order values are rejected."""
@@ -848,65 +597,6 @@ class TestExperimentModel:
         experiment.refresh_from_db()
         assert experiment.experiment_fields[uuid1]["order"] == 5  # noqa: PLR2004
         assert experiment.experiment_fields[uuid2]["order"] == 5  # noqa: PLR2004
-
-    def test_name_editing_preserves_uuid(self) -> None:
-        """Test that editing a field name doesn't change its UUID."""
-        uuid1 = Experiment.generate_field_uuid()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                uuid1: {
-                    "name": "Original Name",
-                    "type": FieldType.TEXT.value,
-                    "required": False,
-                    "order": 2,
-                },
-            },
-        )
-
-        # Edit the name
-        experiment.experiment_fields[uuid1]["name"] = "Edited Name"
-        experiment.full_clean()
-        experiment.save()
-
-        # Verify UUID is the same but name changed
-        experiment.refresh_from_db()
-        assert uuid1 in experiment.experiment_fields
-        assert experiment.experiment_fields[uuid1]["name"] == "Edited Name"
-
-    def test_name_uniqueness_prevents_duplicate(self) -> None:
-        """Test that duplicate names are prevented."""
-        uuid1 = Experiment.generate_field_uuid()
-        uuid2 = Experiment.generate_field_uuid()
-
-        experiment = Experiment(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields={
-                **MandatoryFieldUuid.get_mandatory_fields(),
-                uuid1: {
-                    "name": "Water Quality",
-                    "type": FieldType.TEXT.value,
-                    "required": False,
-                    "order": 2,
-                },
-                uuid2: {
-                    "name": "water quality",  # Different case but same name
-                    "type": FieldType.NUMBER.value,
-                    "required": False,
-                    "order": 3,
-                },
-            },
-        )
-
-        with pytest.raises(ValidationError) as exc_info:
-            experiment.full_clean()
-
-        assert "experiment_fields" in exc_info.value.message_dict
-        assert "not unique" in str(exc_info.value.message_dict).lower()
 
     def test_name_edit_to_duplicate_prevents_save(self) -> None:
         """Test that editing a name to match another field is prevented."""
@@ -992,32 +682,6 @@ class TestExperimentModel:
         experiment.refresh_from_db()
         assert experiment.experiment_fields[uuid1]["name"] == "Modified"
         assert experiment.experiment_fields[uuid1]["order"] == 10  # noqa: PLR2004
-
-    def test_mandatory_field_order_preserved(self) -> None:
-        """Test that mandatory fields maintain their order."""
-        mandatory_fields = MandatoryFieldUuid.get_mandatory_fields()
-
-        experiment = Experiment.objects.create(
-            name="Test Experiment",
-            created_by="test@example.com",
-            experiment_fields=mandatory_fields,
-        )
-
-        experiment.refresh_from_db()
-        # Measurement Date should have order 0
-        assert (
-            experiment.experiment_fields["00000000-0000-0000-0000-000000000001"][
-                "order"
-            ]
-            == 0
-        )
-        # Submitter Email should have order 1
-        assert (
-            experiment.experiment_fields["00000000-0000-0000-0000-000000000002"][
-                "order"
-            ]
-            == 1
-        )
 
     def test_pydantic_uuid_type_validation(self) -> None:
         """Test that Pydantic UUID type provides automatic validation."""

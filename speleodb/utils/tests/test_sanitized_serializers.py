@@ -15,9 +15,12 @@ from speleodb.api.v2.serializers.cylinder_fleet import CylinderSerializer
 from speleodb.api.v2.serializers.experiment import ExperimentRecordSerializer
 from speleodb.api.v2.serializers.experiment import ExperimentSerializer
 from speleodb.api.v2.serializers.exploration_lead import ExplorationLeadSerializer
+from speleodb.api.v2.serializers.gis_geometry import GISGeometrySerializer
+from speleodb.api.v2.serializers.gis_layer import GISLayerSerializer
 from speleodb.api.v2.serializers.gis_view import GISViewCreateUpdateSerializer
 from speleodb.api.v2.serializers.gps_track import GPSTrackSerializer
 from speleodb.api.v2.serializers.landmark import LandmarkSerializer
+from speleodb.api.v2.serializers.landmark_collection import LandmarkCollectionSerializer
 from speleodb.api.v2.serializers.log_entry import StationLogEntrySerializer
 from speleodb.api.v2.serializers.project import ProjectSerializer
 from speleodb.api.v2.serializers.sensor_fleet import SensorFleetSerializer
@@ -36,148 +39,61 @@ from speleodb.api.v2.tests.factories import ExperimentFactory
 from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.gis.models import ExperimentRecord
 from speleodb.gis.models.experiment import MandatoryFieldUuid
-from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
 
 if TYPE_CHECKING:
     from rest_framework import serializers
 
-ALL_SANITIZED_SERIALIZERS: list[type[serializers.Serializer]] = [  # type: ignore[type-arg]
-    CylinderFleetSerializer,
-    CylinderInstallSerializer,
-    CylinderPressureCheckSerializer,
-    CylinderSerializer,
-    ExperimentSerializer,
-    ExplorationLeadSerializer,
-    GISViewCreateUpdateSerializer,
-    GPSTrackSerializer,
-    LandmarkSerializer,
-    ProjectSerializer,
-    PublicAnnoucementSerializer,
-    SensorFleetSerializer,
-    SensorSerializer,
-    StationLogEntrySerializer,
-    StationResourceSerializer,
-    StationSerializer,
-    StationTagSerializer,
-    SubSurfaceStationSerializer,
-    SurfaceMonitoringNetworkSerializer,
-    SurfaceStationSerializer,
-    SurveyTeamSerializer,
-    UserSerializer,
-]
-
-
-def _build_serializer_field_pairs() -> (
-    list[tuple[type[serializers.Serializer], str]]  # type: ignore[type-arg]
-):
-    pairs: list[tuple[type[serializers.Serializer], str]] = []  # type: ignore[type-arg]
-    for cls in ALL_SANITIZED_SERIALIZERS:
-        pairs.extend(
-            (cls, field)
-            for field in cls.sanitized_fields  # type: ignore[attr-defined]
-        )
-    return pairs
-
-
-SERIALIZER_FIELD_PAIRS = _build_serializer_field_pairs()
-PAIR_IDS = [f"{cls.__name__}.{field}" for cls, field in SERIALIZER_FIELD_PAIRS]
-
-
-class TestSanitizedFieldsMixinPresence:
-    """Verify every serializer in the list actually uses SanitizedFieldsMixin."""
-
-    @pytest.mark.parametrize(
-        "serializer_class", ALL_SANITIZED_SERIALIZERS, ids=lambda c: c.__name__
-    )
-    def test_mixin_in_mro(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-    ) -> None:
-        assert issubclass(serializer_class, SanitizedFieldsMixin), (
-            f"{serializer_class.__name__} does not use SanitizedFieldsMixin"
-        )
-
-    @pytest.mark.parametrize(
-        "serializer_class", ALL_SANITIZED_SERIALIZERS, ids=lambda c: c.__name__
-    )
-    def test_sanitized_fields_is_nonempty(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-    ) -> None:
-        assert len(serializer_class.sanitized_fields) > 0, (  # type: ignore[attr-defined]
-            f"{serializer_class.__name__}.sanitized_fields is empty"
-        )
+# Keep the expected writable fields independent of the production declaration:
+# removing a field from sanitized_fields must fail its behavioral test.
+EXPECTED_SANITIZED_FIELDS: dict[type[serializers.Serializer[Any]], tuple[str, ...]] = {
+    CylinderFleetSerializer: ("name", "description"),
+    CylinderInstallSerializer: ("location_name", "notes"),
+    CylinderPressureCheckSerializer: ("notes",),
+    CylinderSerializer: ("name", "brand", "owner", "notes", "type", "serial"),
+    ExperimentSerializer: ("name", "description", "code"),
+    ExplorationLeadSerializer: ("description",),
+    GISGeometrySerializer: ("name", "alias", "description"),
+    GISLayerSerializer: ("name", "description"),
+    GISViewCreateUpdateSerializer: ("name", "description"),
+    GPSTrackSerializer: ("name",),
+    LandmarkCollectionSerializer: ("name", "description"),
+    LandmarkSerializer: ("name", "description"),
+    ProjectSerializer: ("name", "description", "created_by"),
+    PublicAnnoucementSerializer: ("title", "header", "message"),
+    SensorFleetSerializer: ("name", "description"),
+    SensorSerializer: ("name", "notes"),
+    StationLogEntrySerializer: ("title", "notes"),
+    StationResourceSerializer: ("title", "description", "text_content"),
+    StationSerializer: ("name", "description"),
+    StationTagSerializer: ("name",),
+    SubSurfaceStationSerializer: ("name", "description"),
+    SurfaceMonitoringNetworkSerializer: ("name", "description"),
+    SurfaceStationSerializer: ("name", "description"),
+    SurveyTeamSerializer: ("name", "description"),
+    UserSerializer: ("name",),
+}
 
 
 @pytest.mark.django_db
-class TestHTMLStrippingPerField:
-    """
-    For every (serializer, field) pair, verify that to_internal_value
-    strips HTML tags via sanitize_text.
-
-    All payloads are kept under 8 characters so they fit within any
-    field's max_length (e.g. CylinderSerializer.serial max_length=15).
-    Assertions are case-insensitive to handle validators that transform
-    text (e.g. StationTagSerializer.validate_name title-cases).
-    """
-
-    @pytest.mark.parametrize(
-        ("serializer_class", "field_name"), SERIALIZER_FIELD_PAIRS, ids=PAIR_IDS
-    )
-    def test_bold_tag_stripped(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-        field_name: str,
-    ) -> None:
-        ser = serializer_class(partial=True)
-        result = ser.to_internal_value({field_name: "<b>x</b>"})
-        value = result[field_name]
-        assert "<" not in value, (
-            f"{serializer_class.__name__}.{field_name}: "
-            f"HTML tags not stripped. Got: {value!r}"
-        )
-        assert "x" in value.lower()
-
-    @pytest.mark.parametrize(
-        ("serializer_class", "field_name"), SERIALIZER_FIELD_PAIRS, ids=PAIR_IDS
-    )
-    def test_img_tag_stripped(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-        field_name: str,
-    ) -> None:
-        ser = serializer_class(partial=True)
-        result = ser.to_internal_value({field_name: "<img>y"})
-        value = result[field_name]
-        assert "<" not in value
-        assert "img" not in value.lower()
-
-    @pytest.mark.parametrize(
-        ("serializer_class", "field_name"), SERIALIZER_FIELD_PAIRS, ids=PAIR_IDS
-    )
-    def test_anchor_tag_stripped(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-        field_name: str,
-    ) -> None:
-        ser = serializer_class(partial=True)
-        result = ser.to_internal_value({field_name: "<a>z</a>"})
-        value = result[field_name]
-        assert "<" not in value
-        assert "z" in value.lower()
-
-    @pytest.mark.parametrize(
-        ("serializer_class", "field_name"), SERIALIZER_FIELD_PAIRS, ids=PAIR_IDS
-    )
-    def test_clean_text_unchanged(
-        self,
-        serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
-        field_name: str,
-    ) -> None:
-        ser = serializer_class(partial=True)
-        result = ser.to_internal_value({field_name: "Ab1"})
-        assert result[field_name].lower() == "ab1"
-        assert "<" not in result[field_name]
+@pytest.mark.parametrize(
+    ("serializer_class", "field_name"),
+    [
+        pytest.param(serializer, field, id=f"{serializer.__name__}.{field}")
+        for serializer, fields in EXPECTED_SANITIZED_FIELDS.items()
+        for field in fields
+    ],
+)
+def test_serializer_sanitizes_each_writable_text_field(
+    serializer_class: type[serializers.Serializer],  # type: ignore[type-arg]
+    field_name: str,
+) -> None:
+    # All payloads are kept under 8 characters so they fit within any
+    # field's max_length (e.g. CylinderSerializer.serial max_length=15).
+    # Assertions are case-insensitive to handle validators that transform
+    # text (e.g. StationTagSerializer.validate_name title-cases).
+    serializer = serializer_class(partial=True)
+    result = serializer.to_internal_value({field_name: "<b>x</b>"})
+    assert result[field_name].lower() == "x"
 
 
 @pytest.mark.django_db

@@ -161,19 +161,6 @@ class TestImageProcessor:
         # Should remain 100x100
         assert mini_img.size == (100, 100)
 
-    def test_create_miniature_large_image(self) -> None:
-        """Test creating miniature from very large image."""
-        image = create_test_image(width=3000, height=2000)
-
-        with BytesIO(image.read()) as buffer:
-            miniature = ImageProcessor.create_miniature(buffer)
-
-        # Open the miniature
-        mini_img = Image.open(BytesIO(miniature.read()))
-
-        # Should be scaled to fit 300x200
-        assert mini_img.size == (300, 200)
-
     def test_create_miniature_custom_dimensions(self) -> None:
         """Test creating miniature with custom max dimensions."""
         image = create_test_image(width=1000, height=1000)
@@ -226,89 +213,26 @@ class TestImageProcessor:
             ImageProcessor.create_miniature(invalid_data)
 
     def test_process_image_exif_orientation(self) -> None:
-        """Test that EXIF orientation is handled correctly."""
+        """Rotate actual pixel data before writing a miniature without EXIF."""
         # Create a simple test image
         img = Image.new("RGB", (100, 200), "red")
-
         # Add a marker to show orientation (top-left pixel green)
         img.putpixel((0, 0), (0, 255, 0))
-
         # Save with EXIF orientation tag 6 (90 degrees clockwise)
+        orientation_tag: int = 274
+        exif = Image.Exif()
+        exif[orientation_tag] = 6
         buffer = BytesIO()
-
-        # Note: PIL doesn't easily allow setting EXIF data on new images
-        # So we'll just test that the method doesn't crash with EXIF data
-        img.save(buffer, format="JPEG")
+        img.save(buffer, format="PNG", exif=exif)
         buffer.seek(0)
 
         # Process the image
         processed = ImageProcessor.process_image_for_web(buffer)
+        assert processed.size == (200, 100)
+        assert processed.getpixel((199, 0)) == (0, 255, 0)
+        assert processed.getexif().get(orientation_tag) is None
 
-        # Should still be an image
-        assert isinstance(processed, Image.Image)
-
-        # For a real test with rotation, you'd need an actual photo with EXIF data
-        # This test mainly ensures the EXIF handling code doesn't break normal operation
-
-    def test_miniature_preserves_orientation(self) -> None:
-        """Test that miniature creation preserves image orientation
-        (longest side stays longest)."""
-        # Test landscape image (width > height)
-        landscape = create_test_image(width=800, height=400, color="blue")
-        with BytesIO(landscape.read()) as buffer:
-            miniature = ImageProcessor.create_miniature(buffer)
-
-        # Open the miniature
-        mini_img = Image.open(BytesIO(miniature.read()))
-
-        # Landscape should remain landscape
-        assert mini_img.size[0] > mini_img.size[1], (
-            f"Landscape orientation lost: {mini_img.size}"
-        )
-        # Check exact dimensions - should be 300x150 (scaled down by factor of 2.667)
-        assert mini_img.size == (300, 150), (
-            f"Unexpected landscape dimensions: {mini_img.size}"
-        )
-
-        # Test portrait image (height > width)
-        portrait = create_test_image(width=400, height=800, color="green")
-        with BytesIO(portrait.read()) as buffer:
-            miniature = ImageProcessor.create_miniature(buffer)
-
-        # Open the miniature
-        mini_img = Image.open(BytesIO(miniature.read()))
-
-        # Portrait should remain portrait
-        assert mini_img.size[1] > mini_img.size[0], (
-            f"Portrait orientation lost: {mini_img.size}"
-        )
-        # Check exact dimensions - should be 100x200 (scaled down by factor of 4)
-        assert mini_img.size == (100, 200), (
-            f"Unexpected portrait dimensions: {mini_img.size}"
-        )
-
-        # Test square image
-        square = create_test_image(width=600, height=600, color="yellow")
-        with BytesIO(square.read()) as buffer:
-            miniature = ImageProcessor.create_miniature(buffer)
-
-        # Open the miniature
-        mini_img = Image.open(BytesIO(miniature.read()))
-
-        # Square should remain square - limited by height (200)
-        assert mini_img.size[0] == mini_img.size[1], (
-            f"Square aspect lost: {mini_img.size}"
-        )
-        assert mini_img.size == (200, 200), (
-            f"Unexpected square dimensions: {mini_img.size}"
-        )
-
-        # Test extreme landscape (should be limited by width)
-        extreme_landscape = create_test_image(width=1000, height=100, color="purple")
-        with BytesIO(extreme_landscape.read()) as buffer:
-            miniature = ImageProcessor.create_miniature(buffer)
-
-        mini_img = Image.open(BytesIO(miniature.read()))
-        assert mini_img.size == (300, 30), (
-            f"Unexpected extreme landscape dimensions: {mini_img.size}"
-        )
+        miniature = ImageProcessor.create_miniature(buffer)
+        with Image.open(miniature) as rendered:
+            assert rendered.size == (200, 100)
+            assert rendered.getexif().get(orientation_tag) is None

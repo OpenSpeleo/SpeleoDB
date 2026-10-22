@@ -147,7 +147,7 @@ def test_gis_view_inputs_describe_nested_project_writes(path: str, method: str) 
             )
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "route", ROUTES, ids=lambda route: route["method"].upper() + " " + route["route"]
 )

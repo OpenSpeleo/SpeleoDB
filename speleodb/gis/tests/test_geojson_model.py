@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from typing import Any
 from uuid import UUID
 
-import boto3
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -105,43 +104,3 @@ class TestGeoJSONModel:
 
         with pytest.raises(ValidationError):
             obj.save()
-
-    def test_signed_url_generation(
-        self, settings: Any, project: Project, monkeypatch: Any
-    ) -> None:
-        payload = {"type": "FeatureCollection", "features": []}
-        upload = make_uploaded("map.geojson", payload)
-
-        commit_sha = sha1_hash()
-        commit = ProjectCommit.objects.create(
-            id=commit_sha,
-            project=project,
-            author_name="John Doe",
-            author_email="john.doe@example.com",
-            authored_date=timezone.now(),
-            message="Initial commit",
-        )
-
-        obj = ProjectGeoJSON(
-            commit=commit,
-            project=project,
-            file=upload,
-        )
-        obj.save()
-
-        # Stub boto3 client
-        client = boto3.client(
-            "s3", region_name=getattr(settings, "AWS_S3_REGION_NAME", "us-east-1")
-        )
-
-        # generate_presigned_url is local method; instead patch boto3.client to return
-        # our client
-        def fake_client(*args: Any, **kwargs: Any) -> Any:
-            return client
-
-        monkeypatch.setattr("boto3.client", fake_client)
-
-        url = obj.get_signed_download_url()
-
-        assert isinstance(url, str)
-        assert len(url) > 0

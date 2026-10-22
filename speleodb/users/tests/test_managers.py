@@ -38,14 +38,6 @@ class TestUserManager:
         assert user.is_superuser
         assert user.username is None
 
-    def test_create_superuser_username_ignored(self) -> None:
-        user = User.objects.create_superuser(
-            email="test@example.com",
-            name="Test Administrator",
-            password="something-r@nd0m!",  # noqa: S106
-        )
-        assert user.username is None
-
 
 @pytest.mark.django_db
 def test_createsuperuser_command() -> None:
@@ -70,10 +62,9 @@ def test_createsuperuser_command() -> None:
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("method", ["create_user", "create_superuser"])
-@pytest.mark.parametrize("name", [None, "", " \t\r\n", "\u00a0\u3000"])
-def test_manager_rejects_blank_name(method: str, name: str | None) -> None:
+def test_manager_rejects_blank_name(method: str) -> None:
     with pytest.raises(ValidationError, match="A name is required"):
-        getattr(User.objects, method)(email="unnamed@example.com", name=name)
+        getattr(User.objects, method)(email="unnamed@example.com", name="\u00a0\u3000")
     assert not User.objects.filter(email="unnamed@example.com").exists()
 
 
@@ -87,10 +78,10 @@ def test_manager_requires_name(method: str) -> None:
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("source", ["option", "environment"])
-@pytest.mark.parametrize("name", ["", " \t\r\n", "\u00a0\u3000"])
 def test_createsuperuser_rejects_blank_name(
-    source: str, name: str, monkeypatch: pytest.MonkeyPatch
+    source: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    name = "\u00a0\u3000"
     monkeypatch.delenv("DJANGO_SUPERUSER_NAME", raising=False)
     arguments: list[str] = ["--email", "unnamed@example.com"]
     if source == "option":

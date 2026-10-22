@@ -191,6 +191,7 @@ def test_finder_listing_preserves_storage_and_ignore_patterns(
     assert not static_locations.collected.exists()
 
 
+@pytest.mark.django_db  # The configured request handler uses ATOMIC_REQUESTS.
 @pytest.mark.parametrize("filename", SOURCE_FILES)
 def test_static_view_returns_404_for_typescript_sources(
     static_locations: StaticLocations, filename: str
@@ -203,6 +204,7 @@ def test_static_view_returns_404_for_typescript_sources(
     assert not static_locations.collected.exists()
 
 
+@pytest.mark.django_db  # The configured request handler uses ATOMIC_REQUESTS.
 @pytest.mark.parametrize("filename", DELIVERED_FILES)
 def test_emitted_scripts_workers_vendors_and_styles_remain_deliverable(
     static_locations: StaticLocations, filename: str
