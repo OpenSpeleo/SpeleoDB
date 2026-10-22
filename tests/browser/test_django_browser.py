@@ -20,7 +20,6 @@ from django.urls import resolve
 from django.urls import reverse
 
 from speleodb.common.enums import PermissionLevel
-from speleodb.common.enums import SurveyTeamMembershipRole
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderFleetUserPermission
 from speleodb.gis.models import Experiment
@@ -29,17 +28,12 @@ from speleodb.gis.models import GISView
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.gis.models import SensorFleet
-from speleodb.gis.models import SensorFleetUserPermission
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectMutex
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import canonical_project
-from speleodb.users.models import SurveyTeam
-from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.tests.factories import VerifiedUserFactory
 from tests.browser.geographic_bound_fixtures import geographic_bound_records
-from tests.browser.resource_fixtures import resource_edit_records
 from tests.browser.urls import revision_fixture
 from tests.browser.urls import tree_fixture
 
@@ -62,12 +56,6 @@ def controller_routes(user: User) -> dict[str, str]:
         project=readonly, target=user, level=PermissionLevel.READ_ONLY
     )
     ProjectMutex.objects.create(project=project, user=user)
-    team: SurveyTeam = SurveyTeam.objects.create(
-        name="Browser permission team", description="Browser fixture", country="MX"
-    )
-    SurveyTeamMembership.objects.create(
-        team=team, user=user, role=SurveyTeamMembershipRole.LEADER
-    )
     routes: dict[str, str] = {
         "project": reverse(
             "private:project_details", kwargs={"project_id": project.id}
@@ -76,24 +64,6 @@ def controller_routes(user: User) -> dict[str, str]:
             "private:project_details", kwargs={"project_id": readonly.id}
         ),
     }
-    cylinder: CylinderFleet = CylinderFleet.objects.create(
-        name="Browser cylinders", created_by=user.email
-    )
-    CylinderFleetUserPermission.objects.create(
-        cylinder_fleet=cylinder, user=user, level=PermissionLevel.ADMIN
-    )
-    routes["cylinder"] = reverse(
-        "private:cylinder_fleet_details", kwargs={"fleet_id": cylinder.id}
-    )
-    sensor: SensorFleet = SensorFleet.objects.create(
-        name="Browser sensors", created_by=user.email
-    )
-    SensorFleetUserPermission.objects.create(
-        sensor_fleet=sensor, user=user, level=PermissionLevel.ADMIN
-    )
-    routes["sensor"] = reverse(
-        "private:sensor_fleet_details", kwargs={"fleet_id": sensor.id}
-    )
     readonly_fleet: CylinderFleet = CylinderFleet.objects.create(
         name="Read-only browser cylinders", created_by=user.email
     )
@@ -158,11 +128,6 @@ def controller_routes(user: User) -> dict[str, str]:
 
 
 @pytest.mark.django_db(transaction=True)
-@modify_settings(
-    MIDDLEWARE={
-        "append": "tests.browser.resource_fixtures.ResourcePatchCaptureMiddleware"
-    }
-)
 @override_settings(
     VITE_ALLOW_MISSING_MANIFEST=False,
     ROOT_URLCONF="tests.browser.urls",
@@ -172,7 +137,6 @@ def test_viewer_browser_workloads(
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     """Keep browser timing separate from the serial backend suite and its load."""
-    # Construct the handler only after this test's middleware settings apply.
     live_server: LiveServer = request.getfixturevalue("live_server")
     server_host: str | None = urlsplit(live_server.url).hostname
     assert server_host is not None
@@ -216,7 +180,6 @@ def test_viewer_browser_workloads(
         # Dynamic fixture lookup retains its normal lifecycle, but its autouse
         # host helper runs earlier; configure the chosen host through Django.
         modify_settings(ALLOWED_HOSTS={"append": server_host}),
-        resource_edit_records(user) as resource_records,
         geographic_bound_records() as bound_records,
         capfd.disabled(),
         subprocess.Popen(  # noqa: S603 - fixed root script
@@ -224,7 +187,6 @@ def test_viewer_browser_workloads(
             cwd=BASE_DIR,
             env={
                 **browser_environment,
-                "VIEWER_BROWSER_RESOURCE_RECORDS": json.dumps(resource_records),
                 "VIEWER_BROWSER_BOUND_RECORDS": json.dumps(bound_records),
             },
             text=True,

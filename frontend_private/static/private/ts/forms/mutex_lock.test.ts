@@ -142,30 +142,27 @@ describe('project mutex actions over HTTP', () => {
     });
 
     it('recovers from a release conflict and retries the same endpoint with CSRF', async () => {
-        attachMutexLock({ unlockUrl: '/release/', reloadDelayMs: 0 });
+        attachMutexLock({ release: operations().release, reloadDelayMs: 0 });
         const button = document.querySelector<HTMLButtonElement>('.btn_unlock')!;
         let received = once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>;
-        let completed = ajaxComplete();
         button.click();
         const [request, failureResponse] = await received;
         expect(request.method).toBe('POST');
-        expect(request.url).toBe('/release/');
+        expect(request.url).toBe('/api/v2/projects/test/release/');
         expect(request.headers['x-csrftoken']).toBe('mutex-csrf-token');
         respond(failureResponse, 409, { detail: 'Lock ownership changed.' });
-        await completed;
-        expect(events).toEqual(['complete']);
+        await vi.waitFor(() => expect(button.disabled).toBe(false));
+        expect(events).toEqual([]);
         expect(button.disabled).toBe(false);
         expect(document.getElementById('modal_error_txt')!.textContent).toBe('Lock ownership changed.');
 
         received = once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>;
-        completed = ajaxComplete();
         button.click();
         const [retry, successResponse] = await received;
-        expect(retry.url).toBe('/release/');
+        expect(retry.url).toBe('/api/v2/projects/test/release/');
         expect(retry.headers['x-csrftoken']).toBe('mutex-csrf-token');
         respond(successResponse, 200, { success: true });
-        await completed;
-        expect(events).toEqual(['complete', 'reload', 'complete']);
+        await vi.waitFor(() => expect(events).toEqual(['reload']));
         expect(requests).toHaveLength(2);
     });
 

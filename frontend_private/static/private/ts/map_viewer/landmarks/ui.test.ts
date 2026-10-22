@@ -279,7 +279,7 @@ describe('LandmarkUI form lifecycle', () => {
         expect(Modal.close).toHaveBeenCalledWith('create-landmark-modal');
     });
     it('forwards a selected UNKNOWN icon from the map coordinate creation handler', async () => {
-        LandmarkManager.createLandmark.mockResolvedValue({ id: 'created' });
+        LandmarkManager.createLandmark.mockResolvedValue(landmarkFixture({ id: 'created' }));
         State.allLandmarks.set('created', { id: 'created', name: 'Unexplored', latitude: 46.5, longitude: 6.5, icon: 'UNKNOWN' });
         LandmarkUI.openCreateModal([6.5, 46.5]);
         field('landmark-name', 'Unexplored');

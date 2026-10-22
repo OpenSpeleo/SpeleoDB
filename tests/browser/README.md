@@ -67,16 +67,16 @@ requests cannot safely share an in-memory SQLite connection.
 The harness starts Django through pytest's live-server fixture, creates a
 verified database-only user, and passes generated credentials through the child
 environment. Standard `collectstatic` collects the compiled assets into a
-temporary local root. Canonical project rows, explicit permissions, a mutex,
-fleets, an experiment, and read-only/writable landmark collections supply actual
-Django route fixtures without opening remote repositories. The writable
-collection has one independently seeded landmark for its edit form.
+temporary local root. Canonical project rows, explicit permissions, a mutex, a
+read-only fleet, an experiment, and read-only/writable landmark collections
+supply actual Django route fixtures without opening remote repositories. The
+writable collection has one independently seeded landmark for its edit form.
 
-The wrapper uses `tests.browser.urls`: two explicit revision/tree HTTP fixtures precede the
-application URLconf, enforce project permission, and return deterministic JSON.
-The wrapper verifies URL resolution before launch. The browser exercises the
-actual revision menus and Git tree navigation; transport fixture headers and
-request-count contracts belong outside browser assertions.
+The wrapper uses `tests.browser.urls`: two explicit revision/tree HTTP fixtures
+precede the application URLconf, enforce project permission, and return
+deterministic JSON. The wrapper verifies URL resolution before launch. The
+browser exercises the actual revision menus and Git tree navigation; transport
+fixture headers and request-count contracts belong outside browser assertions.
 
 For map cases that do not need database-backed route fixtures, a running
 application can also be targeted directly:
@@ -108,11 +108,14 @@ Use ordinary subsequent CI runs to check repeatability rather than adding CI
 load solely to collect timing samples.
 
 `controllers-parity.spec.ts` covers actual public/private menus, preference
-toggles, feedback reset, custom field validation, fleet dialogs, upload removal,
-permission dialogs, deletion confirmation, mutex recovery, revision menus, Git
-tree navigation, country collapse, tags, exports, experiment retry, and
-read-only forms. Spreadsheet tools retain contenteditable keyboard interaction;
-DMP tools retain visible file rejection and server-error recovery.
+toggles, feedback reset, custom field validation, upload removal, deletion
+confirmation, mutex recovery, revision menus, Git tree navigation, country
+collapse, exports, experiment retry, and read-only forms. Spreadsheet tools
+retain contenteditable keyboard interaction; DMP tools retain visible file
+rejection and server-error recovery. Basic Git instructions, fleet and
+permission modal open/close/reset wiring belongs to existing controller/template
+tests; tag cancellation does not warrant a separate browser startup. Prioritize
+consequential regressions over exhaustive variants of the same shared dialog.
 
 `viewer-parity.spec.ts` covers public/read-only composition, visibility changes,
 unavailable mutation controls, settings focus, Escape restoration and supported
@@ -127,11 +130,13 @@ Collection forms use a seeded row and intercepted mutations; completion reloads
 test navigation, not persistence. Renderer image registration policy and API
 persistence are covered by Vitest and pytest respectively.
 
-`viewer-assets.spec.ts` checks the real context menu and station, lead and
-cylinder dialogs, shared icon decoding and provider attribution. Build graph,
-raw TypeScript protection and absence of reload polling are checked under
-`make test`, without browser-only metadata/network assertions. Live provider
-checks remain opt-in.
+`viewer-assets.spec.ts` decodes every shared icon in the real manager/context
+menu and checks one representative station dialog plus the separate lead and
+cylinder dialogs. This exercises the shared dialog template without repeating
+its native interactions for every station type. The browser also checks provider
+attribution. Build graph, raw TypeScript protection and absence of reload
+polling are checked under `make test`, without browser-only metadata/network
+assertions. Live provider checks remain opt-in.
 
 The report and failure screenshots go to the OS temporary directory, overridable
 with `VIEWER_BROWSER_ARTIFACTS`. Network traces remain disabled to keep session
@@ -146,7 +151,22 @@ own PostgreSQL service, locked dependencies and checked asset build. It needs no
 GitLab token, S3 or Redis service. Keep this ownership boundary: `make test`
 validates application logic; browser CI validates UI/UX.
 
-Additional UI regression suites introduced upstream cover projection-crossing
-gestures, resource edit forms and GIS View geographic bounds. Their browser
-coverage must retain real input and visible output while application processing,
-request bodies and persistence remain owned by pytest and Vitest.
+`viewer-gestures.spec.ts` uses real wheel, pointer and touch input to protect
+projection-crossing anchor stability and paused-pinch handoff in private and
+public viewers. Small shared geometry replaces the former large-source matrix.
+The normal/reduced-motion cases retain natural gesture completion and visible
+screen-space stability; source updates and projection configuration remain in
+Vitest.
+
+`resource-edit.spec.ts` uses independently seeded note/document responses for
+fixed types, native file selection, filename previews, retained input after
+errors, retry and completion. It needs no storage service. DOM form
+serialization and multipart transport are verified by Vitest; pytest verifies
+permissions, immutable types, persisted Unicode/empty values and replacement
+file bytes.
+
+`gis-view-bound.spec.ts` checks actual polygon fill, outline and local CJK
+labels across style changes, plus the dashboard selector's initial selection,
+clear, error recovery and completion feedback. Its database-only fixture creates
+no survey artifacts. Vitest verifies clipping, sources and request payloads;
+pytest verifies selection, permissions, persistence and public metadata.

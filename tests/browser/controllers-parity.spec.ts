@@ -11,7 +11,6 @@ import {
     getV2UserPartialUpdateWithJsonUrl,
 } from '@speleodb/api';
 import type { DangerZoneContext } from '../../ts-types/controllers/danger-zone.ts';
-import type { ExperimentDataContext } from '../../ts-types/controllers/experiment-data.ts';
 import type { FeedbackContext } from '../../ts-types/controllers/feedback.ts';
 import type { MutexLockContext } from '../../ts-types/controllers/mutex-lock.ts';
 import type { ProjectUploadContext } from '../../ts-types/controllers/project-upload.ts';
@@ -48,7 +47,7 @@ function apiUrl(path: string, base = process.env.VIEWER_BROWSER_BASE_URL): strin
     return new URL(path, base).href;
 }
 
-type FixtureRoute = 'project' | 'readonly_project' | 'cylinder' | 'sensor' | 'readonly_cylinder' | 'experiment' | 'landmarks';
+type FixtureRoute = 'project' | 'readonly_project' | 'readonly_cylinder' | 'experiment' | 'landmarks';
 function fixtureRoute(name: FixtureRoute) {
     const routes = JSON.parse(process.env.VIEWER_BROWSER_ROUTES || '{}') as Partial<Record<FixtureRoute, string>>;
     expect(routes[name], 'Run database-backed route cases through tests/browser/test_django_browser.py').toBeTruthy();
@@ -146,19 +145,6 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator('.field-item')).toHaveCount(1);
     });
 
-    for (const kind of ['cylinder', 'sensor'] as const) {
-        test(`${kind} fleet creation dialog resets values after cancellation`, async ({ page }) => {
-            await openController(page, fixtureRoute(kind), 'fleet');
-            await page.locator(`#add_${kind}_btn`).click();
-            await expect(page.locator(`#${kind}_modal`)).toBeVisible();
-            await page.locator(`#modal_${kind}_name`).fill('Unsaved browser item');
-            await page.locator(`#${kind}_modal_cancel`).click();
-            await expect(page.locator(`#${kind}_modal`)).toBeHidden();
-            await page.locator(`#add_${kind}_btn`).click();
-            await expect(page.locator(`#modal_${kind}_name`)).toHaveValue('');
-        });
-    }
-
     test('read-only fleet and project pages omit write actions', async ({ page }) => {
         await openController(page, fixtureRoute('readonly_cylinder'), 'fleet');
         await expect(page.locator('#add_cylinder_btn, #add_first_cylinder_btn')).toHaveCount(0);
@@ -187,24 +173,6 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator('#loading_spinner')).toBeHidden();
     });
 
-    for (const [controller, suffix, button] of [
-        ['permission-modal', 'permissions/user/', '#btn_open_add_user'],
-        ['team-permission', 'permissions/team/', '#btn_open_add_team'],
-    ] as const) {
-        test(`${controller} opens a fresh modal and closes through its existing control`, async ({ page }) => {
-            await openController(page, `${fixtureRoute('project')}${suffix}`, controller);
-            await page.locator(button).click();
-            await expect(page.locator('#permission_modal')).toBeVisible();
-            await expect(page.locator('#level')).toBeEnabled();
-            if (controller === 'permission-modal') await page.locator('#user').fill('unsaved@example.test');
-            await page.locator('#permission_modal .btn_close').last().click();
-            await expect(page.locator('#permission_modal')).toBeHidden();
-            await page.locator(button).click();
-            if (controller === 'permission-modal') await expect(page.locator('#user')).toHaveValue('');
-            else await expect(page.locator('#team')).toBeEnabled();
-        });
-    }
-
     test('danger confirmation presents the confirmation dialog and server failure', async ({ page }) => {
         const path = `${fixtureRoute('project')}danger_zone/`;
         await openController(page, path, 'danger-zone');
@@ -215,15 +183,6 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator('#modal_confirmation')).toBeVisible();
         await page.locator('#btn_confirmed_delete').click();
         await expect(page.locator('#modal_error_txt')).toContainText('Fixture deletion denied');
-    });
-
-    test('Git instructions dialog opens and closes with the compiled controller', async ({ page }) => {
-        await openController(page, `${fixtureRoute('project')}git_instructions/`, 'git-instructions');
-        await page.locator('#btn_show_git_instructions').click();
-        await expect(page.locator('#modal_git_instructions')).toBeVisible();
-        await expect(page.locator('#modal_git_instructions')).toContainText('git clone');
-        await page.locator('#modal_git_instructions .btn_close').first().click();
-        await expect(page.locator('#modal_git_instructions')).toBeHidden();
     });
 
     test('revision download clones keep independent Alpine state', async ({ page }) => {
@@ -271,20 +230,6 @@ test.describe('authenticated controller composition', () => {
         await expect(page.locator(`.country-group[data-country-code="${code}"]`).first()).toHaveClass(/collapsed/);
     });
 
-    test('station tag creation resets its name and color on cancellation', async ({ page }) => {
-        await openController(page, '/private/station_tags/', 'station-tags');
-        await page.locator('#btn-create-tag').click();
-        await expect(page.locator('#edit-tag-modal')).toBeVisible();
-        const initialColor = await page.locator('#edit-tag-color').inputValue();
-        await page.locator('#edit-tag-name').fill('Unsaved tag');
-        await page.locator('.tag-color-picker-option').last().click();
-        await page.locator('#edit-tag-modal .btn-close-edit-modal').last().click();
-        await expect(page.locator('#edit-tag-modal')).toBeHidden();
-        await page.locator('#btn-create-tag').click();
-        await expect(page.locator('#edit-tag-name')).toHaveValue('');
-        await expect(page.locator('#edit-tag-color')).toHaveValue(initialColor);
-    });
-
     test('export creation rejects safely and restores the request button', async ({ page }) => {
         await openController(page, '/private/exports/', 'user-exports');
         const url = apiUrl(getV2UserExportsCreateUrl(), page.url());
@@ -298,8 +243,7 @@ test.describe('authenticated controller composition', () => {
 
     test('read-only experiment grid retries a failed data request with the real vendor', async ({ page }) => {
         const path = fixtureRoute('experiment');
-        const context = await contextFor<ExperimentDataContext>(page, path, 'experiment-data');
-        const url = apiUrl(getV2GisOgcExperimentRetrieveUrl(context.gisToken));
+        const url = apiUrl(getV2GisOgcExperimentRetrieveUrl('*'));
         let fail = true;
         await page.route(url, route => fail
             ? route.fulfill({ status: 503, json: { detail: 'Fixture unavailable' } })

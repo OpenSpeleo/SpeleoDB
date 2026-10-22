@@ -41,44 +41,44 @@ transition. A final center assertion alone can miss sideways motion or jumps
 within a gesture.
 
 The tests observe the existing `speleo:map-created` event and use public
-MapLibre APIs to measure the grabbed point. Authentication, route controllers,
-application APIs, renderer construction, workers, provider HTTP, and input
-handlers remain real; this suite does not use `installFixture`, HTTP
-interception, private camera fields, or method replacement. The existing Django
-browser wrapper supplies an isolated database user and public GIS view. The
-tests need the configured basemap provider to be reachable.
+MapLibre APIs to measure the grabbed point. The Django entrypoints, renderer
+construction, workers and input handlers remain real. The shared browser fixture
+supplies small, deterministic survey and provider-style HTTP responses; these
+tests do not depend on the external basemap service, modify renderer methods, or
+generate source-processing workloads. The Django browser wrapper supplies an
+isolated database user and public GIS view.
 
-Each viewer runs with normal and reduced motion, with and without twelve
-browser-only GeoJSON sources containing 24,000 generated line features. Those
-sources are added and revised through `addSource`, `addLayer`, and `setData`;
-they do not create persistent project records. Worker updates overlap the drags,
-and the test checks source completion before ending. This covers renderer/source
-contention, not every asynchronous project-download or authorization-revocation
-race.
+The four scenarios run in both engines, for eight executions. Each entrypoint
+has one wheel/pan scenario at the original regression latitude, 20.1 degrees,
+with normal motion. Real wheel input crosses from zoom 12.3 into the transition
+band, back above zoom 12, then into the transition band again. One horizontal
+and one vertical pan follow each crossing without resetting the camera or its
+input history. The return crossing uses opposite directions, covering all four
+cardinal directions across the sequence. Each scenario has six pans and 72
+sampled positions, rather than repeating the renderer's latitude/direction
+matrix. Every 48-pixel pan keeps twelve intermediate observations and the one
+CSS pixel axis limit, with unchanged bearing and pitch. Zoom is not fixed during
+globe pans because latitude compensation is valid engine behavior.
 
-At latitude 20.1 degrees with normal motion and latitude 46.6 degrees with
-reduced motion, real wheel input crosses from zoom 12.3 into the transition
-band, back above zoom 12, then into the transition band again. Pairing these
-conditions keeps the serial browser suite bounded while exercising both modes
-for each entrypoint, browser and source workload. Four consecutive cardinal pans
-follow each crossing, retaining the camera's input history. Every pan supplies
-48 CSS pixels in twelve steps and asserts that both projected axes stay within
-one CSS pixel of the pointer at every step, while bearing and pitch remain
-unchanged. Zoom is deliberately not fixed during globe pans: latitude
-compensation is valid engine behavior. Input-event assertions ensure that
-programmatic setup has not accidentally replaced wheel or drag coverage. JSON
-attachments retain every sampled path.
-
-Eight additional touch cases cover both entrypoints and motion preferences in
-both browsers. They pinch from zoom 12.3 into the transition band, lift one
-finger, and wait for actual camera motion to finish without a camera setter or
-new touch. Public `dragPan.isActive()` must remain true while that finger is
-held. Its next 48-pixel drag is sampled in twelve steps, with concurrent GeoJSON
-revisions and the same one-pixel axis limit. Full release must deactivate the
-handler. This pause catches MapLibre 6.14's partial-release inertia resetting a
-live contact; immediate dragging alone can pass before the faulty cleanup runs.
-The pinned fork's engine corrections are described in
+Two touch scenarios pair the private viewer with normal motion and the public
+viewer with reduced motion. Both entrypoints initialize the same `MapCore`
+renderer and touch handlers, so this covers both motion policies without a
+Cartesian product of identical handler paths. They pinch from zoom 12.3 into the
+transition band, lift one finger, and wait for actual camera motion to finish
+without a camera setter or new touch. The held finger's next 48-pixel drag must
+move the geographic anchor along its twelve-step path with the same one-pixel
+axis limit. Full release must allow camera motion to finish. The pause catches
+MapLibre 6.14's partial-release inertia resetting a live contact; immediate
+dragging alone can pass before the faulty cleanup runs. Engine-owned unit tests
+cover the underlying corrections; these browser cases protect their integration
+into the application's UI. See
 [MapLibre integration](shared-packages.md#web-renderer-and-providers).
+
+Named Playwright steps separate viewer startup, wheel crossings, sampled pans,
+pinch and contact completion so timing reports can identify avoidable setup or
+harness costs. JSON attachments retain the sampled paths. Broaden these
+representative cases only when a distinct application regression justifies the
+extra combinations.
 
 Chromium receives trusted CDP touch input and waits for the matching DOM contact
 event before paint observation. WebKit replays browser `TouchEvent` contact
@@ -86,6 +86,17 @@ lists because Playwright does not expose native multi-touch there; it verifies
 engine contact handling but does not certify native iOS delivery. Neither path
 uses fixed sleeps, retries, geometric tolerance expansion or private handler
 mutation. Touch-path JSON attachments retain the before state and every sample.
+
+The former duplicate source-load matrix and 24,000-feature revisions are absent
+from UI/UX coverage. Source installation, asynchronous updates, cancellation and
+retry contracts belong in the existing Vitest map-layer suites; provider
+projection configuration is covered by `map/mapbox_provider.test.ts`. The
+browser scenarios retain actual wheel, pointer and touch delivery because a
+DOM-only test cannot establish the rendered camera's response. Their duration
+includes real render frames and natural gesture completion. Investigate runs
+over five seconds using measured step durations. Prefer fewer representative
+scenarios to exhaustive renderer matrices while retaining the original failure
+conditions, meaningful intermediate screen positions and actual native input.
 
 Run this coverage through the existing application container, after building
 assets, with PostgreSQL configured as described in

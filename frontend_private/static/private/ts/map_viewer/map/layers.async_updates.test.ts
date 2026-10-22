@@ -113,7 +113,7 @@ it('deduplicates GPS loads while allowing off/on and prevents obsolete completio
 
 it('honors off/on after download while GPS installation is still pending', async () => {
     const data: FixtureCollection = { type: 'FeatureCollection', features: [] };
-    vi.spyOn(API, 'getGPSTrackDetails').mockResolvedValue({ id: 't', file: '/track' });
+    vi.spyOn(API, 'getGPSTrackDetails').mockResolvedValue(assetFixture({ id: 't', file: '/track' }));
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => data }));
     const install = vi.spyOn(Layers, 'addGPSTrackLayer').mockImplementation(async () => {
         State.allGPSTrackLayers.set('t', ['gps-track-line-t']);

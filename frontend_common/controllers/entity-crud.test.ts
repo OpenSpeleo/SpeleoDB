@@ -27,6 +27,8 @@ it('serializes checked and unchecked preferences as JSON booleans', async () => 
     page(); await init({ resource: 'preferences', formId: 'entity', serializeCheckboxes: true });
     $('#btn_submit').trigger('click'); await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     expect(server.requests[0]).toMatchObject({ method: 'PATCH', path: '/api/v2/user/' });
+    expect(server.requests[0]!.headers['x-csrftoken']).toBe('csrf');
+    expect(server.requests[0]!.headers['content-type']).toContain('application/json');
     expect(JSON.parse(server.requests[0]!.body)).toEqual({ email_on_projects_updates: true, email_on_speleodb_updates: false });
 });
 

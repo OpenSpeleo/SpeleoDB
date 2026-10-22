@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 
     from django.http import HttpRequest
 
-_tree_reads: dict[UUID, int] = {}
-
 
 def permitted(request: HttpRequest, project_id: UUID) -> bool:
     return (
@@ -63,7 +61,6 @@ def tree_fixture(request: HttpRequest, project_id: UUID, hexsha: str) -> JsonRes
     """Serve deterministic repository presentation without opening a repository."""
     if not permitted(request, project_id):
         return JsonResponse({"detail": "Browser fixture access denied"}, status=403)
-    _tree_reads[project_id] = _tree_reads.get(project_id, 0) + 1
     response: JsonResponse = JsonResponse(
         {
             "commit": {
@@ -90,7 +87,6 @@ def tree_fixture(request: HttpRequest, project_id: UUID, hexsha: str) -> JsonRes
         }
     )
     response["X-SpeleoDB-Browser-Fixture"] = "tree"
-    response["X-SpeleoDB-Fixture-Reads"] = str(_tree_reads[project_id])
     return response
 
 

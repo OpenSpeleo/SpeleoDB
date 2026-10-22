@@ -468,6 +468,11 @@ and to new tests as well as changes to existing tests:
   logic, request payloads/counts, caching, scheduling, workers and renderer
   configuration belong in the existing **Vitest** suite. Both are covered by
   **`make test`**.
+- Prioritize consequential, likely-to-break interactions and known regressions.
+  Use representative cases for shared components; avoid Cartesian input matrices
+  and repeated basic open/close/reset checks already covered below browsers.
+  Exhaustive browser variants require a distinct failure mode, not merely
+  another value or template using the same interaction.
 - Before adding a browser test, identify its browser-specific regression and
   inspect lower-layer coverage. Before removing an application-logic assertion,
   verify its pytest/Vitest replacement or add the missing test. Do not retain

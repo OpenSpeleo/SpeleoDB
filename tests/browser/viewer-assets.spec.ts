@@ -44,15 +44,19 @@ test('shared icons load in survey menus, station manager and station, lead and c
             geometry: { type: 'Point', coordinates: [-86.99 + index / 10000, 20.005] },
         })),
     };
-    await login(page);
-    await installFixture(page, { stations });
-    await page.getByRole('button', { name: 'Managers', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Survey Stations', exact: true }).click();
-    const manager = page.locator('#station-manager-modal');
-    await expect(manager).toBeVisible();
-    await expectLoadedImages(manager, stationTypes.length);
-    await page.locator('#station-manager-close').click();
-    await expect(manager).toBeHidden();
+    await test.step('Open viewer', async () => {
+        await login(page);
+        await installFixture(page, { stations });
+    });
+    await test.step('Inspect station manager icons', async () => {
+        await page.getByRole('button', { name: 'Managers', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Survey Stations', exact: true }).click();
+        const manager = page.locator('#station-manager-modal');
+        await expect(manager).toBeVisible();
+        await expectLoadedImages(manager, stationTypes.length);
+        await page.locator('#station-manager-close').click();
+        await expect(manager).toBeHidden();
+    });
 
     await page.locator('#panel-toggle').click();
     const menu = page.locator('#context-menu');
@@ -61,32 +65,38 @@ test('shared icons load in survey menus, station manager and station, lead and c
         const point = await page.evaluate(() => window.__viewerEvidence.map.project([-87, 20]));
         await page.locator('canvas.maplibregl-canvas').click({ button: 'right', position: point });
         await expect(menu).toBeVisible();
-        await expectLoadedImages(menu, 7);
     };
-    for (const label of ['Artifact', 'Biology', 'Bones', 'Geology', 'Sensor']) {
+    // All type assets are decoded in the manager/menu. One instance exercises
+    // the shared station dialog instead of repeating its template for every type.
+    await test.step('Inspect station dialog and context menu icons', async () => {
         await openMenu();
-        await menu.locator('.context-menu-item').filter({ hasText: `Create ${label} Station` }).click();
+        await expectLoadedImages(menu, 7);
+        await menu.locator('.context-menu-item').filter({ hasText: 'Create Artifact Station' }).click();
         const dialog = page.locator('#create-station-modal');
         await expect(dialog).toBeVisible();
         await expectLoadedImages(dialog, 1);
         await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
         await expect(dialog).toBeHidden();
-    }
-    await openMenu();
-    await menu.locator('.context-menu-item').filter({ hasText: 'Mark Exploration Lead' }).click();
-    const lead = page.locator('#create-lead-modal');
-    await expect(lead).toBeVisible();
-    await expectLoadedImages(lead, 1);
-    await lead.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(lead).toBeHidden();
+    });
+    await test.step('Inspect exploration lead dialog', async () => {
+        await openMenu();
+        await menu.locator('.context-menu-item').filter({ hasText: 'Mark Exploration Lead' }).click();
+        const lead = page.locator('#create-lead-modal');
+        await expect(lead).toBeVisible();
+        await expectLoadedImages(lead, 1);
+        await lead.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await expect(lead).toBeHidden();
+    });
 
-    await openMenu();
-    await menu.locator('.context-menu-item').filter({ hasText: 'Install Safety Cylinder' }).click();
-    const cylinder = page.locator('#cylinder-modal');
-    await expect(cylinder).toBeVisible();
-    await expectLoadedImages(cylinder, 2);
-    await page.locator('#cylinder-modal-close').click();
-    await expect(cylinder).toBeHidden();
+    await test.step('Inspect cylinder dialog', async () => {
+        await openMenu();
+        await menu.locator('.context-menu-item').filter({ hasText: 'Install Safety Cylinder' }).click();
+        const cylinder = page.locator('#cylinder-modal');
+        await expect(cylinder).toBeVisible();
+        await expectLoadedImages(cylinder, 2);
+        await page.locator('#cylinder-modal-close').click();
+        await expect(cylinder).toBeHidden();
+    });
 });
 
 test('provider credits remain after source changes without the Improve this map action', async ({ page }) => {

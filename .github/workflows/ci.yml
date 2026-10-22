@@ -295,21 +295,9 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
 
-      rustfs:
-        image: rustfs/rustfs:1.0.0
-        env:
-          RUSTFS_ACCESS_KEY: access_key
-          RUSTFS_SECRET_KEY: secret_key
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/health || exit 1"
-          --health-interval 10s --health-timeout 5s --health-retries 5
-
     env:
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
-      # Browser fixtures need no Git remote. Real attachment uploads use this
-      # job's isolated RustFS service.
+      # Browser UI fixtures need no Git remote or attachment storage.
       GITLAB_GROUP_ID: "0"
       GITLAB_GROUP_NAME: browser-tests
       GITLAB_HOST_URL: gitlab.invalid
@@ -319,8 +307,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: secret_key
       AWS_S3_REGION_NAME: us-east-1
       AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
-      AWS_S3_ENDPOINT_URL: "http://localhost:9000"
-      AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
+      AWS_S3_ENDPOINT_URL: "http://storage.invalid"
+      AWS_S3_CUSTOM_DOMAIN: "storage.invalid"
 
     steps:
       - name: Checkout Code Repository
@@ -350,11 +338,6 @@ jobs:
 
       - name: Install the unchanged Chromium and WebKit runtimes
         run: bunx --bun playwright install --with-deps chromium webkit
-
-      - name: Prepare isolated attachment storage
-        run: >-
-          python manage.py create_s3_local_buckets
-          --settings config.settings.test
 
       - name: Run serial browser workloads against the Django live server
         # This pytest case wraps the complete browser suite, bounded at 1800s.

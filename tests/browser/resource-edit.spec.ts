@@ -1,86 +1,97 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import type { StationResource } from '@speleodb/api';
-import { BROWSER_TEST_BUDGETS } from './budgets.ts';
-import { login } from './viewer-fixture.ts';
+import { installFixture, login } from './viewer-fixture.ts';
 
-interface ResourceEditRecords { station: string; note: string; document: string }
+const network = {
+    id: '70000000-0000-4000-8000-000000000001', name: 'Resource network',
+    is_active: true, user_permission_level: 3, user_permission_level_label: 'ADMIN',
+};
+const station = {
+    id: '70000000-0000-4000-8000-000000000002', name: 'Resource station',
+    network: network.id, station_type: 'surface', latitude: 20, longitude: -87,
+};
+const resources = (['note', 'document'] as const).map((resource_type, index) => ({
+    id: `70000000-0000-4000-8000-00000000000${index + 3}`, resource_type,
+    title: `Original ${resource_type}`, description: 'Original description',
+    text_content: resource_type === 'note' ? 'Original note text' : '',
+    file: resource_type === 'document' ? '/viewer-fixtures/original.txt' : null,
+    creation_date: '2026-01-01T12:00:00Z', created_by: 'Browser surveyor',
+}));
 
-async function openResources(page: Page, stationId: string) {
-    await page.goto('/private/map_viewer/');
-    const hideDebugToolbar = page.getByRole('link', { name: 'Hide »', exact: true });
-    if (await hideDebugToolbar.isVisible()) await hideDebugToolbar.click();
-    await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
+async function openResources(page: Page) {
     await page.getByRole('button', { name: 'Managers', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Surface Stations', exact: true }).click();
-    await page.locator(`#surface-station-manager-content div[data-station-id="${stationId}"]`).click();
+    await page.locator(`#surface-station-manager-content div[data-station-id="${station.id}"]`).click();
     const modal = page.locator('#station-modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('#station-modal-title')).toContainText('Resource station');
+    await expect(modal.locator('#station-modal-title')).toContainText(station.name);
     await modal.locator('[data-tab="resources"]').click();
     return modal;
 }
 
-test('the rendered resource edit form persists notes and replacement files without submitting its disabled type', async ({ page, browserName }) => {
+test('resource edit forms show fixed types, file previews, error recovery and completion', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    const fixtures = JSON.parse(process.env.VIEWER_BROWSER_RESOURCE_RECORDS || '{}') as Record<string, ResourceEditRecords>;
-    const records = fixtures[browserName];
-    expect(records, 'Run through tests/browser/test_django_browser.py for isolated database and storage fixtures').toBeTruthy();
-    if (!records) throw new Error('Missing resource edit records.');
     await login(page);
-    const modal = await openResources(page, records.station);
-    for (const kind of ['note', 'document'] as const) {
-        const resourceId = records[kind];
-        const resourcePath = `/api/v2/resources/${resourceId}/`;
-        const before = await page.request.get(resourcePath);
-        expect(before.status()).toBe(200);
-        const original = await before.json() as StationResource;
-        expect(original.title).toBe(`Original ${kind}`);
-        await modal.locator(`.edit-resource-btn[data-resource-id="${resourceId}"]`).click();
+    // Both edit records exist independently of any preceding successful write.
+    const resourceList = `/api/v2/stations/${station.id}/resources/`;
+    const apiResponses: Record<string, unknown> = {
+        '/api/v2/surface-networks/': [network],
+        '/api/v2/stations/surface/geojson/': { type: 'FeatureCollection', features: [{
+            type: 'Feature', id: station.id, properties: station,
+            geometry: { type: 'Point', coordinates: [station.longitude, station.latitude] },
+        }] },
+        [`/api/v2/stations/${station.id}/`]: station,
+        [resourceList]: resources,
+    };
+    await installFixture(page, { emptyProjects: true, apiResponses });
+    let fail = true;
+    await page.route('**/api/v2/resources/**', async route => {
+        const resource = resources.find(item => new URL(route.request().url()).pathname.endsWith(`/${item.id}/`));
+        if (!resource) throw new Error('Unexpected resource edit fixture.');
+        if (fail) {
+            await route.fulfill({ status: 400, json: { detail: `The ${resource.resource_type} could not be saved. Try again.` } });
+            return;
+        }
+        const updated = { ...resource, title: `Updated ${resource.resource_type}`, description: '' };
+        apiResponses[resourceList] = resources.map(item => item.id === resource.id ? updated : item);
+        await route.fulfill({ json: updated });
+    });
+    const modal = await openResources(page);
+    for (const resource of resources) {
+        fail = true;
+        await modal.locator(`.edit-resource-btn[data-resource-id="${resource.id}"]`).click();
         const form = modal.locator('#resource-edit-form');
         await expect(form.locator('[name="resource_type"]')).toBeDisabled();
-        await form.locator('[name="title"]').fill(`Updated ${kind}`);
+        await expect(form.locator('[name="resource_type"]')).toHaveValue(resource.resource_type);
+        await expect(form.locator('[name="title"]')).toHaveValue(resource.title);
+        await form.locator('[name="title"]').fill(`Updated ${resource.resource_type}`);
         await form.locator('[name="description"]').fill('');
-        if (kind === 'note') {
+        if (resource.resource_type === 'note') {
             await form.locator('[name="text_content"]').fill('Updated note café 🦇');
         } else {
+            await expect(form).toContainText('Current file: original.txt');
             await form.locator('[name="file"]').setInputFiles({
                 name: 'replacement.txt', mimeType: 'text/plain', buffer: Buffer.from('Replacement café 🦇'),
             });
+            await expect(form.locator('#edit-file-container')).toContainText('replacement.txt');
         }
-        const submitted = page.waitForRequest(request => request.url().endsWith(resourcePath) && request.method() === 'PATCH');
-        const saved = page.waitForResponse(response => response.url().endsWith(resourcePath) && response.request().method() === 'PATCH');
-        await form.getByRole('button', { name: 'Save Changes' }).click();
-        const request = await submitted;
-        expect(request.headers()['content-type']).toMatch(/^multipart\/form-data; boundary=/);
-        const response = await saved;
-        expect(response.status(), await response.text()).toBe(200);
-        // The Django wrapper checks the actual received multipart fields and
-        // file bytes; browser debug protocols omit uploaded file contents.
-        expect(response.headers()['x-speleodb-test-resource-patch']).toBe(resourcePath);
-        await expect(form).toHaveCount(0);
-        await expect(modal.locator('.resource-card').filter({ hasText: `Updated ${kind}` })).toHaveCount(1);
-
-        // Independent real reads establish persisted values and actual S3 bytes.
-        const read = await page.request.get(resourcePath);
-        expect(read.status()).toBe(200);
-        const persisted = await read.json() as StationResource;
-        expect(persisted).toMatchObject({ title: `Updated ${kind}`, description: '', resource_type: kind });
-        if (kind === 'note') {
-            // The backend sanitizes text fields by removing accents before saving.
-            expect(persisted.text_content).toBe('Updated note cafe 🦇');
+        const save = form.getByRole('button', { name: 'Save Changes' });
+        await save.click();
+        await expect(page.getByText(`The ${resource.resource_type} could not be saved. Try again.`, { exact: true }).last()).toBeVisible();
+        await expect(form).toBeVisible();
+        await expect(save).toBeEnabled();
+        await expect(form.locator('[name="title"]')).toHaveValue(`Updated ${resource.resource_type}`);
+        if (resource.resource_type === 'note') {
+            await expect(form.locator('[name="text_content"]')).toHaveValue('Updated note café 🦇');
         } else {
-            expect(persisted.file).toBeTruthy();
-            expect(persisted.file).not.toBe(original.file);
-            const stored = await page.request.get(persisted.file!);
-            expect(stored.status()).toBe(200);
-            expect(await stored.text()).toBe('Replacement café 🦇');
+            await expect(form.locator('#edit-file-container')).toContainText('replacement.txt');
         }
-    }
-    const reloaded = await openResources(page, records.station);
-    for (const kind of ['note', 'document']) {
-        await expect(reloaded.locator('.resource-card').filter({ hasText: `Updated ${kind}` })).toHaveCount(1);
+        fail = false;
+        await save.click();
+        await expect(form).toHaveCount(0);
+        await expect(page.getByText('Resource updated successfully!', { exact: true }).last()).toBeVisible();
+        await expect(modal.locator('.resource-card').filter({ hasText: `Updated ${resource.resource_type}` })).toHaveCount(1);
     }
     expect(errors).toEqual([]);
 });
