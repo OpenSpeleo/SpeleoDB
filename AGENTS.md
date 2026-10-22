@@ -453,7 +453,51 @@ Backend/API changes should also run relevant `pytest` targets:
   time. Investigate slow tests; do not delete important coverage just to meet a
   timing threshold or hide costs behind skips, retries, or more workers.
 
+### Browser tests are exclusively UI/UX tests
+
+This boundary applies to **all browser engines**, including Chromium and WebKit,
+and to new tests as well as changes to existing tests:
+
+- Browser tests protect observable behavior requiring a real browser: rendered
+  maps/icons, native input, keyboard/focus behavior, dialogs, fullscreen,
+  previews, visible validation, loading feedback, and recovery from errors. Keep
+  the real compiled templates, controllers, vendor libraries, renderer and image
+  decoding.
+- Backend validation, permissions enforcement, persistence, serialization, API
+  contracts and data processing belong in **pytest**. Frontend application
+  logic, request payloads/counts, caching, scheduling, workers and renderer
+  configuration belong in the existing **Vitest** suite. Both are covered by
+  **`make test`**.
+- Before adding a browser test, identify its browser-specific regression and
+  inspect lower-layer coverage. Before removing an application-logic assertion,
+  verify its pytest/Vitest replacement or add the missing test. Do not retain
+  duplicate logic coverage in browsers to avoid this verification.
+- Use small deterministic fixtures and controlled HTTP responses/loading gates.
+  This is the supported browser UI fixture boundary: simulate the server result
+  to exercise the real UI, without replacing application functions or renderer
+  methods. Large processing inputs, worker/internal counters, repeated timing
+  samples, and source-configuration assertions belong outside default UI CI.
+- Minimal database/authentication fixtures may render real application pages.
+  Seed editing independently. Do not use browser write/readback/reload chains to
+  prove backend persistence; intercept mutations and assert visible completion.
+  Reload/navigation remains valid when it is itself the UI behavior under test.
+- Investigate executions over five seconds; five seconds is not a ceiling. Keep
+  justified rendering and interaction costs, and do not weaken coverage to meet
+  a number. Reduce unnecessary work before adding compute. Retain one worker,
+  zero retries and both engines unless the user explicitly authorizes a change.
+- Adding a scale/performance benchmark requires explicit user authorization.
+  Keep an authorized opt-in benchmark separate from default UI/UX CI; do not
+  silently reintroduce stress fixtures. Unit yielding tests do not establish
+  real-browser scale/latency guarantees.
+
+Keep `tests/browser/README.md` aligned with this contract. Record timing reports
+outside the repository, not in these durable instructions.
+
 ### Controlled test boundaries
+
+Browser UI/UX tests may control HTTP responses and loading gates at the network
+boundary. Keep the real application functions, native input, image decoding,
+and renderer methods.
 
 Prefer real constructors, supported configuration, and small real local inputs.
 A controlled substitute may isolate unrelated external work or elapsed waiting,

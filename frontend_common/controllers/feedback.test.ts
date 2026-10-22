@@ -17,7 +17,7 @@ beforeEach(() => {
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
     document.body.innerHTML = `
         <form id="feedback_form" method="post">
-            <input name="score" value="1">
+            <input type="hidden" name="score" value="1">
             <textarea name="message">Initial feedback</textarea>
             <button id="btn_submit">Submit</button>
         </form>
@@ -82,7 +82,9 @@ it('submits native FormData with the form method, resets on success and shows th
     expect(Object.keys(options)).toEqual(['method', 'body', 'headers']);
     expect(options.body).toBeInstanceOf(FormData);
     expect([...(options.body as FormData).entries()]).toEqual([['score', '5'], ['message', 'New feedback']]);
-    expect(document.querySelector<HTMLInputElement>('[name="score"]')!.value).toBe('1');
+    // A hidden input's value updates its default too, so resetting the actual
+    // production field retains the selected score while resetting the message.
+    expect(document.querySelector<HTMLInputElement>('[name="score"]')!.value).toBe('5');
     expect(document.querySelector<HTMLTextAreaElement>('[name="message"]')!.value).toBe('Initial feedback');
     expect(document.getElementById('modal_success')!.style.display).toBe('flex');
     expect(document.getElementById('modal_success_txt')!.textContent).toBe('Thanks for your feedback. We appreciate a lot!');

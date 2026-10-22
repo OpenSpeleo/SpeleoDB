@@ -166,22 +166,25 @@ preparation and large coordinates; worker transfer, errors and cancellation. The
 asset graph test includes worker bundles so workers cannot silently fall out of
 the production graph.
 
-Run the complete JavaScript suite, lint, clean production build and browser
-tests inside the existing application container. Browser checks use actual
-rendering, large deterministic inputs, a second interaction during work, and
-final-state assertions. Record input-to-control-paint separately from map
-completion and renderer long tasks. The target is p95 control feedback within
-100 ms on the recorded workload, with application work slices around 8 ms. These
-are measured workload targets, not guarantees for arbitrarily large payloads or
-every device.
+Run the complete JavaScript suite, lint, checked production build and browser
+tests inside the existing application container. `make test` owns application
+correctness through pytest and Vitest. Browser checks own UI/UX: real rendering,
+control state, interaction during a gated response, visible error/retry
+behavior, and the final displayed result. Use small deterministic surveys and
+overlays; large preparation and worker-transfer inputs remain in the lower-layer
+suites.
 
-Sequential settings latency samples begin after MapLibre reports idle, its
-sources/style are loaded, camera movement has stopped, and an intervening paint
-opportunity has cleared submitted renderer work. Each trace records and asserts
-that settled starting state. Completing application setters alone does not mean
-the renderer has finished, especially under CI software rendering. The separate
-rapid GPS-toggle workload exercises inputs during a gated download, then settles
-initial viewer rendering before releasing that response and measuring
-preparation. Further inputs occur during preparation without idle waits. Both
-workloads retain the real renderer and their existing data sizes and timing
-budgets.
+The former repeated settings latency samples and large GPS browser workload are
+intentionally retired from default UI CI. This removes their real-browser
+scale/latency guarantee. Unit scheduling, cancellation and cooperative-yield
+tests remain valuable but do not provide an equivalent latency measurement. A
+separate performance benchmark requires explicit authorization and must remain
+opt-in.
+
+Wait for actual renderer readiness when projecting pointer targets or asserting
+visible map output. A controlled response gate exercises rapid input during
+loading without manufacturing delays or replacing renderer methods. Investigate
+individual browser executions over five seconds, preserve justified UI coverage,
+and keep one worker with zero retries. See
+[browser checks](../../tests/browser/README.md) for the durable boundary,
+fixtures and measurement procedure.

@@ -208,7 +208,91 @@ class TestLandmarkEndpoints:
         assert response.status_code == status.HTTP_201_CREATED
         landmark = Landmark.objects.get(name="Minimal Landmark")
         assert landmark.description == ""
+        assert landmark.icon == Landmark.Icon.DEFAULT
+        assert response.json()["landmark"]["icon"] == Landmark.Icon.DEFAULT
         assert landmark.collection.is_personal
+
+    @pytest.mark.parametrize("icon", Landmark.Icon.values)
+    def test_icon_round_trip_through_endpoints(
+        self, api_client: APIClient, user: User, icon: str
+    ) -> None:
+        """Creation exposes the persisted icon in every map/list read path."""
+        api_client.force_authenticate(user=user)
+        response = api_client.post(
+            reverse("api:v2:landmarks"),
+            {"name": "Icon landmark", "latitude": 1, "longitude": 2, "icon": icon},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["landmark"]["icon"] == icon
+        landmark = Landmark.objects.get(id=response.json()["landmark"]["id"])
+        assert landmark.icon == icon
+
+        detail = api_client.get(
+            reverse("api:v2:landmark-detail", kwargs={"id": landmark.id})
+        )
+        listing = api_client.get(reverse("api:v2:landmarks"))
+        geojson = api_client.get(reverse("api:v2:landmarks-geojson"))
+        assert detail.status_code == status.HTTP_200_OK
+        assert listing.status_code == status.HTTP_200_OK
+        assert geojson.status_code == status.HTTP_200_OK
+        assert detail.json()["landmark"]["icon"] == icon
+        assert [item["icon"] for item in listing.json()["landmarks"]] == [icon]
+        assert [
+            feature["properties"]["icon"] for feature in geojson.json()["features"]
+        ] == [icon]
+
+    def test_patch_preserves_omitted_icon_and_persists_replacement(
+        self, api_client: APIClient, user: User, landmark: Landmark
+    ) -> None:
+        """Renaming must not reset a custom icon; an explicit change must persist."""
+        landmark.icon = Landmark.Icon.ATTENTION
+        landmark.save(update_fields=["icon"])
+        api_client.force_authenticate(user=user)
+        url = reverse("api:v2:landmark-detail", kwargs={"id": landmark.id})
+
+        renamed = api_client.patch(url, {"name": "Renamed"}, format="json")
+        assert renamed.status_code == status.HTTP_200_OK
+        landmark.refresh_from_db()
+        assert landmark.name == "Renamed"
+        assert landmark.icon == Landmark.Icon.ATTENTION
+        assert renamed.json()["landmark"]["icon"] == Landmark.Icon.ATTENTION
+
+        changed = api_client.patch(url, {"icon": Landmark.Icon.NOGO}, format="json")
+        assert changed.status_code == status.HTTP_200_OK
+        updated = Landmark.objects.get(pk=landmark.pk)
+        assert updated.icon == Landmark.Icon.NOGO
+        assert updated.name == "Renamed"
+        assert api_client.get(url).json()["landmark"]["icon"] == Landmark.Icon.NOGO
+
+    @pytest.mark.parametrize("icon", [None, "", "cave", "OTHER", "<svg>"])
+    def test_invalid_icon_does_not_create_or_partially_update(
+        self, api_client: APIClient, user: User, landmark: Landmark, icon: str | None
+    ) -> None:
+        """Endpoint validation leaves both row counts and existing fields intact."""
+        landmark.icon = Landmark.Icon.CAVE
+        landmark.save(update_fields=["icon"])
+        api_client.force_authenticate(user=user)
+        count = Landmark.objects.count()
+        created = api_client.post(
+            reverse("api:v2:landmarks"),
+            {"name": "Rejected", "latitude": 1, "longitude": 2, "icon": icon},
+            format="json",
+        )
+        assert created.status_code == status.HTTP_400_BAD_REQUEST
+        assert "icon" in created.json()["errors"]
+        assert Landmark.objects.count() == count
+
+        changed = api_client.patch(
+            reverse("api:v2:landmark-detail", kwargs={"id": landmark.id}),
+            {"name": "Should not persist", "icon": icon},
+            format="json",
+        )
+        assert changed.status_code == status.HTTP_400_BAD_REQUEST
+        assert "icon" in changed.json()["errors"]
+        landmark.refresh_from_db()
+        assert landmark.name == "Test Landmark"
+        assert landmark.icon == Landmark.Icon.CAVE
 
     def test_create_landmark_missing_latitude(
         self, api_client: APIClient, user: User

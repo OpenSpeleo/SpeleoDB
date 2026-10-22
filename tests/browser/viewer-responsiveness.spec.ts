@@ -1,147 +1,82 @@
-import type { Page, TestInfo } from '@playwright/test';
-import { writeFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
-import { gisId, installFixture, login, projectId, toggleLabel, trackId, waitForViewerIdle } from './viewer-fixture.ts';
-import { BROWSER_TEST_BUDGETS } from './budgets.ts';
+import { expectRenderedFeatures, gisId, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel, trackId } from './viewer-fixture.ts';
 
 test.beforeEach(async ({ page }) => { await login(page); });
 
-async function attachJSON(testInfo: TestInfo, name: string, data: unknown) {
-    const path = testInfo.outputPath(name);
-    await writeFile(path, JSON.stringify(data, null, 2));
-    await testInfo.attach(name, { path, contentType: 'application/json' });
-}
-
-async function verifySettings(page: Page, testInfo: TestInfo, stress: boolean) {
-    const { requests } = await installFixture(page, { stress });
+test('settings reflect selection and update the visible survey colors', async ({ page }) => {
+    await installFixture(page, { captureCanvasFrames: true });
+    const initialFrame = await expectGreenSurveyPixels(page, true);
     await page.locator('#map-settings-button').click();
+    const dialog = page.locator('#map-settings-dialog');
     const entrances = page.locator('[data-category="caveEntrances"]');
-    const baseline = await page.evaluate(() => {
-        const evidence = window.__viewerEvidence;
-        evidence.traces = [];
-        evidence.longTasks = [];
-        return { sourceAdds: evidence.sourceAdds, sourceUpdates: evidence.sourceUpdates };
-    });
-    const downloads = new Map(requests);
-    for (let iteration = 0; iteration < 12; iteration++) {
-        await waitForViewerIdle(page);
-        await toggleLabel(entrances);
-        await expect(page.locator('#map-settings-dialog')).not.toHaveAttribute('aria-busy', 'true');
-    }
-    await waitForViewerIdle(page);
-    await page.locator('input[name="map-settings-color-mode"][value="depth"]').locator('..').click();
-    await expect(page.locator('#map-settings-dialog')).not.toHaveAttribute('aria-busy', 'true');
-    await expect.poll(() => page.evaluate(() => window.__viewerEvidence.traces
-        .filter(trace => Number.isFinite(trace.feedbackFrameMs)).length)).toBe(13);
-    const evidence = await page.evaluate(() => {
-        const { traces, sourceAdds, sourceUpdates, longTasks, map } = window.__viewerEvidence;
-        return { traces, sourceAdds, sourceUpdates, longTasks, color: map.getPaintProperty(`project-layer-${'10000000-0000-4000-8000-000000000000'}`, 'line-color') };
-    });
-    expect(evidence.sourceAdds).toBe(baseline.sourceAdds);
-    expect(evidence.sourceUpdates).toBe(baseline.sourceUpdates);
-    expect(requests).toEqual(downloads);
-    expect((evidence.color as [unknown, unknown, [string]])[2][0]).toBe('interpolate');
-    expect(evidence.traces).toHaveLength(13);
-    const durations = evidence.traces.map(trace => trace.feedbackFrameMs!).sort((a, b) => a - b);
-    const p95 = durations[Math.ceil(durations.length * .95) - 1];
-    await attachJSON(testInfo, 'viewer-latency.json', { budgets: BROWSER_TEST_BUDGETS, p95FeedbackFrameMs: p95, ...evidence });
-    for (const trace of evidence.traces) {
-        expect(trace.rendererSettledAtInput).toBe(true);
-        expect(trace.mutationsBeforeFrame).toBe(0);
-        expect(trace.firstFrameChecked).toBe(trace.checked);
-    }
-    expect(p95).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
-    await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible();
-}
-
-test('settings acknowledge intent before rendering and display changes reuse 120,000 survey segments', async ({ page }, testInfo) => {
-    await verifySettings(page, testInfo, true);
+    await expect(entrances).toBeChecked();
+    await toggleLabel(entrances);
+    await expect(entrances).not.toBeChecked();
+    await expect(dialog).not.toHaveAttribute('aria-busy', 'true');
+    await toggleLabel(entrances);
+    await expect(entrances).toBeChecked();
+    const depth = page.locator('input[name="map-settings-color-mode"][value="depth"]');
+    await toggleLabel(depth);
+    await expect(depth).toBeChecked();
+    await expect(page.locator('#map-settings-depth-limit')).toBeVisible();
+    await expect(dialog).not.toHaveAttribute('aria-busy', 'true');
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expectRenderedFeatures(page, `project-layer-${projectId(0)}`, true);
+    await expectGreenSurveyPixels(page, false, initialFrame);
 });
 
-test('settings baseline acknowledges intent and reuses 4,000 survey segments', async ({ page }, testInfo) => {
-    await verifySettings(page, testInfo, false);
-});
-
-test('a second GPS toggle stays available during loading and final intent wins without duplicate downloads', async ({ page }, testInfo) => {
-    const { gates, requests } = await installFixture(page);
+test('GPS loading keeps the toggle usable and displays the final selection', async ({ page }) => {
+    const { gates } = await installFixture(page);
     let release!: () => void;
     gates.set('/viewer-fixtures/track.geojson', new Promise<void>(resolve => { release = resolve; }));
     await page.locator('#gps-panel-expand').click();
-    const input = page.getByLabel('Show Large GPS track', { exact: true });
-    await toggleLabel(input);
-    await expect(input).toBeChecked();
-    await expect.poll(() => requests.get('/viewer-fixtures/track.geojson') || 0).toBe(1);
-    await expect(input).toBeEnabled();
-    await toggleLabel(input);
-    await expect(input).not.toBeChecked();
-    await toggleLabel(input);
-    await expect(input).toBeChecked();
-    // Settle initial map rendering while the GPS response is still gated.
-    // Inputs after release continue to exercise active source preparation.
-    await waitForViewerIdle(page);
-    expect(await page.evaluate(id => Boolean(window.__viewerEvidence.map.getSource(`gps-track-source-${id}`)), trackId)).toBe(false);
-    const preparationStartedSettled = await page.evaluate(id => {
-        const evidence = window.__viewerEvidence;
-        evidence.traces = [];
-        evidence.preparationGaps = [];
-        let last = performance.now();
-        evidence.preparationTimer = setInterval(() => {
-            const now = performance.now();
-            if (evidence.map.getSource(`gps-track-source-${id}`)) {
-                clearInterval(evidence.preparationTimer);
-                return;
-            }
-            evidence.preparationGaps!.push(now - last);
-            last = now;
-        }, 0);
-        return evidence.rendererIdle && evidence.map.loaded() && !evidence.map.isMoving();
-    }, trackId);
-    expect(preparationStartedSettled).toBe(true);
-    release();
-    // The large single feature is now being parsed/transferred/prepared, rather
-    // than merely waiting for its network response.
-    await expect.poll(() => page.evaluate(() => window.__viewerEvidence.workerMessages)).toBeGreaterThan(1);
-    expect(await page.evaluate(id => Boolean(window.__viewerEvidence.map.getSource(`gps-track-source-${id}`)), trackId)).toBe(false);
+    const input = page.getByLabel('Show GPS route', { exact: true });
+    const row = page.locator(`[data-track-id="${trackId}"]`);
+    const spinner = row.locator('.gps-track-loading-spinner');
+    try {
+        await toggleLabel(input);
+        await expect(input).toBeChecked();
+        await expect(spinner).toBeVisible();
+        await expect(row).toHaveAttribute('aria-busy', 'true');
+        await expect(input).toBeEnabled();
+        await toggleLabel(input);
+        await expect(input).not.toBeChecked();
+        await toggleLabel(input);
+        await expect(input).toBeChecked();
+    } finally {
+        release();
+    }
+    await expect(spinner).toBeHidden();
+    await expect(row).not.toHaveAttribute('aria-busy', 'true');
+    await expectRenderedFeatures(page, `gps-track-line-${trackId}`, true);
     await toggleLabel(input);
     await expect(input).not.toBeChecked();
-    await toggleLabel(input);
-    await expect(input).toBeChecked();
-    await expect.poll(() => page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(`gps-track-line-${id}`, 'visibility'), trackId)).toBe('visible');
-    await expect.poll(() => page.evaluate(() => window.__viewerEvidence.traces
-        .filter(trace => Number.isFinite(trace.feedbackFrameMs)).length)).toBe(2);
-    const preparation = await page.evaluate(() => ({
-        gaps: window.__viewerEvidence.preparationGaps,
-        traces: window.__viewerEvidence.traces,
-        messages: window.__viewerEvidence.workerMessages,
-    }));
-    await attachJSON(testInfo, 'single-feature-preparation.json', { budgets: BROWSER_TEST_BUDGETS, preparationStartedSettled, ...preparation });
-    expect(preparation.messages).toBeGreaterThan(2);
-    expect(preparation.traces).toHaveLength(2);
-    expect(requests.get('/viewer-fixtures/track.geojson')).toBe(1);
-    await toggleLabel(input);
-    await expect.poll(() => page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(`gps-track-line-${id}`, 'visibility'), trackId)).toBe('none');
-    await testInfo.attach('gps-final-state.png', { body: await page.screenshot(), contentType: 'image/png' });
-    expect(Math.max(...preparation.gaps!)).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.preparationGapMs);
-    for (const trace of preparation.traces) expect(trace.feedbackFrameMs).toBeLessThanOrEqual(BROWSER_TEST_BUDGETS.feedbackFrameMs);
+    await expectRenderedFeatures(page, `gps-track-line-${trackId}`, false);
 });
 
-test('GIS load failure permits retry and mixed geometry toggles preserve sources', async ({ page }) => {
-    const { failures, requests } = await installFixture(page);
+test('GIS load failure permits retry and geometry toggles change the visible map', async ({ page }) => {
+    const { failures } = await installFixture(page);
     failures.add('/viewer-fixtures/gis.geojson');
     await page.locator('#gis-panel-expand').click();
     const input = page.getByLabel('Show Mixed GIS layer', { exact: true });
+    const row = page.locator(`[data-layer-id="${gisId}"]`);
     await toggleLabel(input);
     await expect(input).not.toBeChecked();
     await expect(input).toBeEnabled();
+    await expect(row).not.toHaveAttribute('aria-busy', 'true');
     failures.delete('/viewer-fixtures/gis.geojson');
     await toggleLabel(input);
-    await expect.poll(() => page.evaluate(id => Boolean(window.__viewerEvidence.map.getSource(`gis-layer-source-${id}`)), gisId)).toBe(true);
+    await expect(input).toBeChecked();
+    await expectRenderedFeatures(page, `gis-layer-${gisId}-fill`, true);
+    await expectRenderedFeatures(page, `gis-layer-${gisId}-point`, true);
     const polygon = page.getByLabel('Show Polygon in Mixed GIS layer', { exact: true });
-    const before = await page.evaluate(() => window.__viewerEvidence.sourceUpdates);
     await toggleLabel(polygon);
     await expect(polygon).not.toBeChecked();
-    await expect.poll(() => page.evaluate(id => (window.__viewerEvidence.map.getFilter(`gis-layer-${id}-fill`) as [unknown, unknown, [unknown, unknown, [unknown, string[]]]])[2][2][1], gisId)).not.toContain('Polygon');
-    expect(await page.evaluate(() => window.__viewerEvidence.sourceUpdates)).toBe(before);
-    expect(requests.get('/viewer-fixtures/gis.geojson')).toBe(2);
-    expect(await page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(`project-layer-${id}`, 'visibility'), projectId(0))).toBe('visible');
+    await expectRenderedFeatures(page, `gis-layer-${gisId}-fill`, false);
+    await expectRenderedFeatures(page, `gis-layer-${gisId}-point`, true);
+    await expectRenderedFeatures(page, `project-layer-${projectId(0)}`, true);
+    await toggleLabel(polygon);
+    await expect(polygon).toBeChecked();
+    await expectRenderedFeatures(page, `gis-layer-${gisId}-fill`, true);
 });

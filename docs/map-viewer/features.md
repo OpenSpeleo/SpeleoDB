@@ -522,10 +522,19 @@ and CRUD workflows. Modals are rendered as fixed overlays with backdrop blur.
 
 `dialog_lifecycle.ts` owns nested-dialog isolation, live dismissal guards,
 keyboard capture, and return focus. `dialog_focus.ts` computes the visible
-keyboard order, including disclosure summaries. The HTML-accepting `Modal`
-facade retains content ownership and delayed `onOpen` callbacks; callers escape
-untrusted values before building its markup. `ts-types/domain/map-dialog.ts`
-describes these capabilities without changing DOM timing or singleton identity.
+keyboard order, including disclosure summaries and one Tab stop per radio group.
+It advances both Tab and Shift+Tab explicitly: Safari's reduced native tab order
+can otherwise skip controls and leave a dialog before reaching its last DOM
+control. Arrow keys retain native radio selection, and focus movement scrolls
+controls into view. Colocated tests cover radio groups and traversal; both
+browser engines exercise containment and return focus with real input. The
+HTML-accepting `Modal` facade retains content ownership and delayed `onOpen`
+callbacks; callers escape untrusted values before building its markup.
+`ts-types/domain/map-dialog.ts` describes these capabilities without changing
+DOM timing or singleton identity. Landmark detail actions remain disabled until
+delayed setup attaches their handlers, so a visible Edit/Delete control cannot
+accept a click before it is ready. Browser checks wait for the enabled control
+rather than inspecting its event-handler implementation.
 
 `panel_stack.ts` owns overlay-menu registration and disclosure. CSS flex flow
 positions the menus without cross-panel observers or measured anchor offsets.

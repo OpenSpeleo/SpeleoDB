@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { installFixture, login, projectId, toggleLabel } from './viewer-fixture.ts';
+import { expectRenderedFeatures, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel } from './viewer-fixture.ts';
 
 const browserErrors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -12,10 +12,6 @@ test.afterEach(({ page }) => { expect(browserErrors.get(page)).toEqual([]); });
 
 const lineId = `project-layer-${projectId(0)}`;
 
-async function visibility(page: Page) {
-    return page.evaluate(id => window.__viewerEvidence.map.getLayoutProperty(id, 'visibility'), lineId);
-}
-
 async function changeSource(page: Page) {
     await page.getByRole('button', { name: 'Map Source', exact: true }).click();
     const radios = page.locator('#map-source-menu input[type="radio"]');
@@ -25,59 +21,48 @@ async function changeSource(page: Page) {
     await expect(page.locator('#map-source-button')).not.toHaveAttribute('aria-busy', 'true');
 }
 
-test('public GIS loads real shared layers, limits zoom and changes display without exposing private tools', async ({ page }) => {
+test('public GIS changes the visible map without exposing private tools', async ({ page }) => {
     const publicUrl = process.env.VIEWER_BROWSER_PUBLIC_URL;
     expect(publicUrl, 'The Django browser wrapper provides a database-only public GIS view').toBeTruthy();
-    const mutations: string[] = [];
-    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method())) mutations.push(request.url()); });
-    const { requests } = await installFixture(page, { publicUrl: publicUrl! });
+    await installFixture(page, { publicUrl: publicUrl!, captureCanvasFrames: true });
     await expect(page.locator('.welcome-modal-backdrop')).toBeVisible();
     await page.getByRole('button', { name: 'Close modal', exact: true }).click();
     await expect(page.locator('.welcome-modal-backdrop')).not.toBeVisible();
-    expect(await page.evaluate(() => window.__viewerEvidence.map.getMaxZoom())).toBe(13);
     await expect(page.locator('#map-settings-button, #create-geometry-btn, #import-data-button, #map-managers-button, .measurement-control')).toHaveCount(0);
-    expect([...requests.keys()].filter(path => path.startsWith('/api/'))).toEqual([expect.stringMatching(/^\/api\/v2\/gis-ogc\/view\/[^/]+\/geojson$/)]);
-
-    const downloads = new Map(requests);
     const input = page.locator(`[data-project-id="${projectId(0)}"] input[type="checkbox"]`);
     await toggleLabel(input);
     await expect(input).not.toBeChecked();
-    await expect.poll(() => visibility(page)).toBe('none');
+    await expectRenderedFeatures(page, lineId, false);
     await toggleLabel(input);
-    await expect.poll(() => visibility(page)).toBe('visible');
+    await expectRenderedFeatures(page, lineId, true);
+    const initialFrame = await expectGreenSurveyPixels(page, true);
     await page.locator('#color-mode-button').click();
     await expect(page.locator('#color-mode-toggle')).toBeChecked();
-    await expect.poll(() => page.evaluate(id => JSON.stringify(window.__viewerEvidence.map.getPaintProperty(id, 'line-color')), lineId)).toContain('"interpolate"');
+    await expectGreenSurveyPixels(page, false, initialFrame);
     await changeSource(page);
-    await expect.poll(() => visibility(page)).toBe('visible');
-    expect(requests).toEqual(downloads);
+    await expectRenderedFeatures(page, lineId, true);
     // Uncover the canvas point normally occupied by the project panel.
     await page.locator('#panel-toggle').click();
     await page.locator('canvas.maplibregl-canvas').click({ button: 'right', position: { x: 100, y: 100 } });
     await expect(page.locator('#context-menu')).toHaveCount(0);
-    expect(mutations).toEqual([]);
-    const authoredSource = await page.request.get('/static/private/ts/map_viewer/main.ts');
-    expect(authoredSource.status()).toBe(404);
 });
 
 test('read-only projects retain separate country and project visibility and disable mutation actions', async ({ page }) => {
     await login(page);
-    const mutations: string[] = [];
-    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method())) mutations.push(request.url()); });
     await installFixture(page, { readOnly: true });
     const country = page.locator('[data-country="US"] .country-toggle');
     const project = page.locator(`[data-project-id="${projectId(0)}"] input[type="checkbox"]`);
     await toggleLabel(country);
     await expect(country).not.toBeChecked();
     await expect(project).toBeChecked();
-    await expect.poll(() => visibility(page)).toBe('none');
+    await expectRenderedFeatures(page, lineId, false);
     await toggleLabel(country);
-    await expect.poll(() => visibility(page)).toBe('visible');
+    await expectRenderedFeatures(page, lineId, true);
     await toggleLabel(project);
     await expect(country).toBeChecked();
-    await expect.poll(() => visibility(page)).toBe('none');
+    await expectRenderedFeatures(page, lineId, false);
     await toggleLabel(project);
-    await expect.poll(() => visibility(page)).toBe('visible');
+    await expectRenderedFeatures(page, lineId, true);
 
     await page.locator('#panel-toggle').click();
     await expect.poll(() => page.evaluate(() => window.__viewerEvidence.map.isMoving())).toBe(false);
@@ -90,7 +75,6 @@ test('read-only projects retain separate country and project visibility and disa
     await expect(create).toContainText('No write access');
     await create.click();
     await expect(page.locator('#create-station-modal')).toHaveCount(0);
-    expect(mutations).toEqual([]);
 });
 
 test('map settings contain keyboard focus, restore the trigger and remain usable in fullscreen', async ({ page, browserName }) => {
@@ -107,6 +91,19 @@ test('map settings contain keyboard focus, restore the trigger and remain usable
         await page.keyboard.press('Tab');
         expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
     }
+    for (let count = 0; count < 12; count++) {
+        await page.keyboard.press('Shift+Tab');
+        expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
+    }
+    const first = dialog.getByRole('button', { name: 'Close settings', exact: true });
+    const last = dialog.getByRole('button', { name: 'Close', exact: true });
+    await first.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(last).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(first).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(dialog.locator('input[name="map-settings-color-mode"]:checked')).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     await expect(trigger).toBeFocused();
@@ -182,8 +179,6 @@ test('geometry drawing preserves keyboard history and draft state until explicit
     // Canvas clicks stop camera animations. Finish the initial fit before drawing
     // so these pixel offsets describe a local draft within the 30 km² limit.
     await expect.poll(() => page.evaluate(() => window.__viewerEvidence.map.isMoving())).toBe(false);
-    const mutations: string[] = [];
-    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method())) mutations.push(request.url()); });
     const trigger = page.locator('#create-geometry-btn');
     await trigger.focus();
     await page.keyboard.press('Enter');
@@ -221,5 +216,4 @@ test('geometry drawing preserves keyboard history and draft state until explicit
     await expect(editor).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expect(page.getByRole('button', { name: 'Measure distance', exact: true })).toBeEnabled();
-    expect(mutations).toEqual([]);
 });

@@ -106,6 +106,34 @@ it('deduplicates GPS loads while allowing off/on and prevents obsolete completio
     expect(await off).toBe(false);
     expect(await last).toBe(true);
     expect(install).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(show).toHaveBeenLastCalledWith('t', true);
+    expect(State.gpsTrackLoadingStates.get('t')).toBe(false);
+});
+
+it('honors off/on after download while GPS installation is still pending', async () => {
+    const data: FixtureCollection = { type: 'FeatureCollection', features: [] };
+    vi.spyOn(API, 'getGPSTrackDetails').mockResolvedValue({ id: 't', file: '/track' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => data }));
+    const install = vi.spyOn(Layers, 'addGPSTrackLayer').mockImplementation(async () => {
+        State.allGPSTrackLayers.set('t', ['gps-track-line-t']);
+    });
+    const show = vi.spyOn(Layers, 'showGPSTrackLayers');
+    const first = Layers.toggleGPSTrackVisibility('t', true);
+    // Observe the completed download before its scheduled renderer installation.
+    // Keep the real preparation and viewer queues active for the reversal.
+    await vi.waitFor(() => expect(State.gpsTrackCache.get('t')).toBe(data), { interval: 0 });
+    expect(install).not.toHaveBeenCalled();
+    expect(State.gpsTrackLoadingStates.get('t')).toBe(true);
+    const off = Layers.toggleGPSTrackVisibility('t', false);
+    const last = Layers.toggleGPSTrackVisibility('t', true);
+    await apply();
+    expect(await first).toBe(false);
+    expect(await off).toBe(false);
+    expect(await last).toBe(true);
+    expect(API.getGPSTrackDetails).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(install).toHaveBeenCalledOnce();
     expect(show).toHaveBeenLastCalledWith('t', true);
     expect(State.gpsTrackLoadingStates.get('t')).toBe(false);
 });

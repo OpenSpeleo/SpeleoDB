@@ -278,6 +278,17 @@ describe('LandmarkUI form lifecycle', () => {
         expect(details).toHaveBeenCalledWith('created', true); expect(details.mock.contexts[0]).toBe(LandmarkUI);
         expect(Modal.close).toHaveBeenCalledWith('create-landmark-modal');
     });
+    it('forwards a selected UNKNOWN icon from the map coordinate creation handler', async () => {
+        LandmarkManager.createLandmark.mockResolvedValue({ id: 'created' });
+        State.allLandmarks.set('created', { id: 'created', name: 'Unexplored', latitude: 46.5, longitude: 6.5, icon: 'UNKNOWN' });
+        LandmarkUI.openCreateModal([6.5, 46.5]);
+        field('landmark-name', 'Unexplored');
+        (document.querySelector('#create-landmark-form input[value="UNKNOWN"]') as HTMLInputElement).click();
+        await submit('create-landmark-form');
+        expect(LandmarkManager.createLandmark).toHaveBeenCalledExactlyOnceWith({
+            icon: 'UNKNOWN', name: 'Unexplored', description: '', collection: null, latitude: 46.5, longitude: 6.5,
+        });
+    });
     it.each([['', '0', '0', 'Please enter a landmark name.'], ['Name', '91', '0', 'Latitude'], ['Name', '0', '-181', 'Longitude']])('validates manual fields (%s,%s,%s)', async (name, lat, lon, error) => {
         LandmarkUI.openCreateModalManual(); field('landmark-name-manual', name); field('landmark-latitude-manual', lat); field('landmark-longitude-manual', lon);
         await submit('create-landmark-manual-form'); expect(LandmarkManager.createLandmark).not.toHaveBeenCalled();
@@ -299,6 +310,16 @@ describe('LandmarkUI form lifecycle', () => {
         expect(LandmarkManager.updateLandmark).toHaveBeenCalledWith('lm', { icon: 'CAVE', name: 'New', description: '', latitude: 1, longitude: 2, collection: null });
         expect(Modal.close.mock.calls).toEqual([['edit-landmark-modal'], ['landmark-details-modal']]);
         expect(goToLandmark).toHaveBeenCalledWith('lm', 1, 2);
+    });
+    it('forwards a changed CAVE to NOGO icon from the map edit handler', async () => {
+        State.allLandmarks.set('lm', { id: 'lm', name: 'Cave', icon: 'CAVE', latitude: 1, longitude: 2, can_write: true });
+        LandmarkUI.openEditModal('lm');
+        expect((document.querySelector('#edit-landmark-form input[name="icon"]:checked') as HTMLInputElement).value).toBe('CAVE');
+        (document.querySelector('#edit-landmark-form input[value="NOGO"]') as HTMLInputElement).click();
+        await submit('edit-landmark-form');
+        expect(LandmarkManager.updateLandmark).toHaveBeenCalledExactlyOnceWith('lm', {
+            icon: 'NOGO', name: 'Cave', description: '', latitude: 1, longitude: 2, collection: null,
+        });
     });
     it('contains errors at each form and keeps the generic delete failure message', async () => {
         LandmarkManager.createLandmark.mockRejectedValueOnce({ message: 'Create denied' });

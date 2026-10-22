@@ -212,13 +212,15 @@ paths and credential boundaries; raster protocol tests cover missing-data
 hashes, abort propagation and cache metadata. Existing marker mutation tests
 verify source/record identity using registered app-owned data.
 
-The Playwright fixture observes `speleo:map-created` and instruments the actual
-imported MapLibre instance, intercepting provider data at the network boundary.
-It retains real source updates, rendered features and engine workers. Private
-and public scenarios cover basemap switching, source identity, tools, zoom
-restrictions and responsiveness. Live provider verification additionally needs a
-valid Mapbox token and provider network access; deterministic fixtures alone do
-not establish live imagery and city-label availability.
+The Playwright fixture observes `speleo:map-created` and actual rendered output
+without replacing MapLibre methods, and intercepts provider data at the network
+boundary. Small deterministic fixtures retain real rendering and native input.
+Private and public UI/UX scenarios cover basemap switching, visible attribution,
+tools, zoom restrictions, loading feedback and error recovery. Source identity,
+worker behavior and processing belong in the suites run by `make test`. Live
+provider verification additionally needs a valid Mapbox token and provider
+network access; deterministic fixtures alone do not establish live imagery and
+city-label availability.
 
 Run checks inside the running application container from `/app`:
 

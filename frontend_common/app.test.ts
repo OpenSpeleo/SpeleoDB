@@ -19,11 +19,35 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     document.body.innerHTML = '';
 });
 
 describe('Vite application bootstrap', () => {
+    it('does not schedule asset polling or request reload clients after lifecycle events', async () => {
+        vi.resetModules();
+        vi.useFakeTimers();
+        const fetch = vi.spyOn(globalThis, 'fetch');
+        const xhr = vi.spyOn(XMLHttpRequest.prototype, 'open');
+        const timeout = vi.spyOn(globalThis, 'setTimeout');
+        const interval = vi.spyOn(globalThis, 'setInterval');
+
+        await import('./app.ts');
+        await vi.advanceTimersByTimeAsync(300_000);
+        document.dispatchEvent(new Event('visibilitychange'));
+        for (const event of ['focus', 'online', 'pageshow']) {
+            window.dispatchEvent(new Event(event));
+        }
+        await vi.advanceTimersByTimeAsync(300_000);
+
+        expect(timeout).not.toHaveBeenCalled();
+        expect(interval).not.toHaveBeenCalled();
+        expect(fetch).not.toHaveBeenCalled();
+        expect(xhr).not.toHaveBeenCalled();
+        expect(document.querySelector('script[src]')).toBeNull();
+    });
+
     it('parses inert JSON controller context', () => {
         const element = document.createElement('script');
         element.dataset.speleodbController = 'example';

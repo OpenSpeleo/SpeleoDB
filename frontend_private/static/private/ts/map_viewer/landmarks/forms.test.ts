@@ -287,6 +287,30 @@ describe('landmark generated operations and modal lifecycle', () => {
         expect(JSON.parse(server.requests[0]!.body)).toEqual({ name: 'New landmark', description: '', icon: 'DEFAULT', collection: null, latitude: 12, longitude: 34 });
         expect(document.getElementById('create-landmark-modal')).toBeNull();
     });
+    it.each(['create', 'edit'] as const)('submits the selected icon from the %s modal handler', async mode => {
+        server.reply({ json: { landmark: { id: 'one', name: 'Existing', icon: 'NOGO' } } });
+        if (mode === 'create') {
+            openLandmarkCreateModal({ lockedCollectionId: 'collection' });
+        } else {
+            openLandmarkEditModal({
+                landmark: { id: 'one', name: 'Existing', icon: 'CAVE', collection: 'collection', latitude: 12, longitude: 34 },
+                lockedCollectionId: 'collection',
+            });
+        }
+        const form = document.getElementById(`landmark-${mode}-form`)!;
+        await vi.waitFor(() => { expect(form.onsubmit).toBeTypeOf('function'); });
+        expect((form.querySelector('input[name="icon"]:checked') as HTMLInputElement).value)
+            .toBe(mode === 'create' ? 'DEFAULT' : 'CAVE');
+        (form.querySelector('input[value="NOGO"]') as HTMLInputElement).click();
+        if (mode === 'create') await submitCreate();
+        else await (form.onsubmit as unknown as (event: Event) => Promise<void>)(new Event('submit', { cancelable: true }));
+        expect(server.requests).toHaveLength(1);
+        expect(server.requests[0]).toMatchObject({
+            path: mode === 'create' ? '/api/v2/landmarks/' : '/api/v2/landmarks/one/',
+            method: mode === 'create' ? 'POST' : 'PATCH',
+        });
+        expect(JSON.parse(server.requests[0]!.body)).toMatchObject({ icon: 'NOGO', collection: 'collection' });
+    });
     it('renders serializer errors as text and omits the DELETE body/content-type', async () => {
         server.reply({ status: 400, json: { errors: { name: ['<img src=x>'] } } });
         openLandmarkCreateModal();

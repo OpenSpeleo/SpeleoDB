@@ -60,6 +60,28 @@ it.each(['form submission', 'Upload Revision button'])('uploads the title and se
     expect(window.location.pathname).toBe('/upload/');
 });
 
+it('omits a removed file from the multipart upload while retaining the other file', async () => {
+    const input = document.getElementById('artifact') as HTMLInputElement;
+    // JSDOM has no native file picker or DataTransfer; only the browser-owned
+    // FileList boundary is supplied. Submission uses the real AJAX transport.
+    Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [new File(['keep these bytes'], 'keep.dat'), new File(['removed bytes'], 'remove.dat')],
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    expect($('.remove-file')).toHaveLength(2);
+    $('.remove-file').eq(1).trigger('click');
+    $('#message').val('Only the remaining survey');
+    (document.getElementById('file_upload_form') as HTMLFormElement).requestSubmit();
+
+    await vi.waitFor(() => expect($('#modal_error_txt').text()).toContain('identical'));
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.body).toContain('name="artifact"; filename="keep.dat"');
+    expect(requests[0]!.body).toContain('keep these bytes');
+    expect(requests[0]!.body).not.toContain('remove.dat');
+    expect(requests[0]!.body).not.toContain('removed bytes');
+});
+
 it.each([
     ['   ', 'The revision title cannot be empty.'],
     ['x'.repeat(126), 'Maximum 125 characters.'],

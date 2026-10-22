@@ -315,6 +315,35 @@ describe('GIS Layer display', () => {
         expect(Layers.isGISLayerLoading('layer-1')).toBe(false);
     });
 
+    it('clears a failed download and retries the same layer without touching a survey', async () => {
+        const data: ViewerGeoJSON = { type: 'FeatureCollection', features: [] };
+        const surveySource = { setData: vi.fn() };
+        map.getSource.mockImplementation(id => id === 'project-geojson-survey' ? surveySource : undefined);
+        State.allProjectLayers.set('survey', ['project-layer-survey']);
+        mocks.getGISLayerDetails.mockResolvedValue({ file: '/retry.geojson' });
+        vi.mocked(fetch)
+            .mockResolvedValueOnce(new Response('Unavailable', { status: 503 }))
+            .mockResolvedValueOnce(new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } }));
+
+        await expect(Layers.toggleGISLayerVisibility('retry', true)).resolves.toBe(false);
+        expect(Layers.isGISLayerLoading('retry')).toBe(false);
+        expect(Layers.isGISLayerVisible('retry')).toBe(false);
+        expect(State.gisLayerCache.has('retry')).toBe(false);
+        expect(State.allGISLayerLayers.has('retry')).toBe(false);
+        expect(map.addSource).not.toHaveBeenCalled();
+
+        await expect(Layers.toggleGISLayerVisibility('retry', true)).resolves.toBe(true);
+        expect(mocks.getGISLayerDetails).toHaveBeenCalledTimes(2);
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(State.gisLayerCache.get('retry')).toEqual(data);
+        expect(Layers.isGISLayerLoading('retry')).toBe(false);
+        expect(map.addSource).toHaveBeenCalledOnce();
+        expect(surveySource.setData).not.toHaveBeenCalled();
+        expect(map.removeSource).not.toHaveBeenCalledWith('project-geojson-survey');
+        expect(map.removeLayer).not.toHaveBeenCalledWith('project-layer-survey');
+        expect(State.allProjectLayers.get('survey')).toEqual(['project-layer-survey']);
+    });
+
     it('filters exact geometry types without downloading or replacing the source', async () => {
         const types: DisplayGeometryType[] = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'];
         const geojson: ViewerGeoJSON = { type: 'FeatureCollection', features: types.map(type => ({
@@ -323,6 +352,8 @@ describe('GIS Layer display', () => {
         State.gisLayerCache.set('layer-1', geojson);
         await Layers.toggleGISLayerVisibility('layer-1', true);
         map.getLayer.mockReturnValue({});
+        const setData = vi.fn();
+        map.getSource.mockReturnValue({ setData });
 
         await Layers.setGISLayerGeometryTypeVisibility('layer-1', 'Polygon', false);
 
@@ -335,6 +366,7 @@ describe('GIS Layer display', () => {
             `gis-layer-layer-1-${role}`, gisLayerGeometryFilter(family, enabledTypes)
         ]));
         expect(map.addSource).toHaveBeenCalledTimes(1);
+        expect(setData).not.toHaveBeenCalled();
         expect(fetch).not.toHaveBeenCalled();
 
         // Master visibility is a separate gate and keeps the chosen type filters.

@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Locator } from '@playwright/test';
 import type { Feature, FeatureCollection } from 'geojson';
 import type { StyleSpecification } from 'maplibre-gl';
-import type { EvidenceMap, ViewerEvidence, ViewerTrace } from '../../ts-types/testing/browser/viewer.ts';
+import type { EvidenceMap, ViewerEvidence } from '../../ts-types/testing/browser/viewer.ts';
 import type { StationFeatureCollection } from '../../ts-types/domain/map-entities.ts';
 import { expect } from '@playwright/test';
 import { BROWSER_TEST_BUDGETS } from './budgets.ts';
@@ -9,29 +9,29 @@ import { BROWSER_TEST_BUDGETS } from './budgets.ts';
 export const projectId = (index: number) => `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
 export const trackId = '20000000-0000-4000-8000-000000000001';
 export const gisId = '30000000-0000-4000-8000-000000000001';
-export const projects = Array.from({ length: 60 }, (_, index) => ({
+export const projects = Array.from({ length: 2 }, (_, index) => ({
     id: projectId(index), name: `Survey ${String(index).padStart(2, '0')}`, color: '#22c55e',
-    permission: 'ADMIN', country: index < 30 ? 'US' : 'MX',
+    permission: 'ADMIN', country: index === 0 ? 'US' : 'MX',
     geojson_url: `/viewer-fixtures/project-${index}.geojson`,
 }));
 const collection = (features: Feature[]): FeatureCollection => ({ type: 'FeatureCollection', features });
 const empty = collection([]);
 
 function survey(index: number) {
-    return collection(Array.from({ length: 2000 }, (_, line) => {
-        const lng = -87 + index / 100 + line / 100000;
-        const lat = 20 + line % 100 / 10000;
-        return { type: 'Feature', properties: { depth: line % 200, color: '#ff00ff' },
-            geometry: { type: 'LineString', coordinates: [[lng, lat, -5], [lng + .00005, lat + .00005, -10]] } };
+    return collection(Array.from({ length: 20 }, (_, line) => {
+        const lng = -87 + index / 100 + (line % 5) / 1000;
+        const lat = 20 + Math.floor(line / 5) / 1000;
+        return { type: 'Feature', properties: { depth: line * 10, color: '#ff00ff' },
+            geometry: { type: 'LineString', coordinates: [[lng, lat, -5], [lng + .0005, lat + .0005, -10]] } };
     }));
 }
 
 const track = collection([{ type: 'Feature', properties: {}, geometry: {
-    type: 'LineString', coordinates: Array.from({ length: 100_000 }, (_, index) => [-87 + index / 1000000, 20 + Math.sin(index / 1000) / 100, -123.456789012345]),
+    type: 'LineString', coordinates: [[-87.001, 20.001], [-86.994, 20.002], [-86.986, 20.003]],
 } }]);
 const gis = collection([{ type: 'Feature', properties: { name: 'Mixed overlay' }, geometry: {
     type: 'GeometryCollection', geometries: [
-        { type: 'Polygon', coordinates: [[[-87, 20], [-86.95, 20], [-86.95, 20.05], [-87, 20]]] },
+        { type: 'Polygon', coordinates: [[[-87, 20], [-86.985, 20], [-86.985, 20.005], [-87, 20]]] },
         { type: 'GeometryCollection', geometries: [{ type: 'Point', coordinates: [-87, 20] }, track.features[0]!.geometry] },
     ],
 } }]);
@@ -63,7 +63,6 @@ export async function login(page: Page, credentials: BrowserLoginCredentials = {
 }
 
 interface ViewerFixtureOptions {
-    stress?: boolean;
     readOnly?: boolean;
     publicUrl?: string;
     liveProvider?: boolean;
@@ -71,69 +70,34 @@ interface ViewerFixtureOptions {
     providerCamera?: Pick<StyleSpecification, 'center' | 'zoom' | 'bearing' | 'pitch' | 'roll'>;
     providerAttribution?: string;
     stations?: StationFeatureCollection;
+    apiResponses?: Record<string, unknown>;
+    captureCanvasFrames?: boolean;
 }
 
-/** Test-only instrumentation retains the production MapLibre renderer and map methods. */
-export async function installFixture(page: Page, { stress = false, readOnly = false, publicUrl = '', liveProvider = false, emptyProjects = false, providerCamera, providerAttribution, stations }: ViewerFixtureOptions = {}) {
-    const selectedProjects = (emptyProjects ? [] : stress ? projects : projects.slice(0, 2))
+/** Small deterministic responses exercise real pages, controls, and MapLibre rendering. */
+export async function installFixture(page: Page, { readOnly = false, publicUrl = '', liveProvider = false, emptyProjects = false, providerCamera, providerAttribution, stations, apiResponses = {}, captureCanvasFrames = false }: ViewerFixtureOptions = {}) {
+    const selectedProjects = (emptyProjects ? [] : projects)
         .map(project => readOnly ? { ...project, permission: 'READ_ONLY' } : project);
-    const requests = new Map<string, number>();
     const gates = new Map<string, Promise<void>>();
     const failures = new Set<string>();
-    await page.addInitScript(() => {
-        const OriginalWorker = window.Worker;
-        window.Worker = class extends OriginalWorker {
-            constructor(url: string | URL, options?: WorkerOptions) {
-                super(url, options);
-                if (String(url).includes('geojson_worker')) this.addEventListener('message', () => {
-                    if (window.__viewerEvidence) window.__viewerEvidence.workerMessages++;
-                });
-            }
-        };
+    // Observe the normal map-created event; never replace renderer or Worker methods.
+    await page.addInitScript(captureFrames => {
         window.addEventListener('speleo:map-created', event => {
             const { map } = (event as CustomEvent<{ map: EvidenceMap }>).detail;
-            const stats: ViewerEvidence = { map: map, mutations: 0, sourceUpdates: 0, sourceAdds: 0, traces: [], longTasks: [], workerMessages: 0, rendererIdle: false };
-            window.__viewerEvidence = stats;
-            map.on('render', () => { stats.rendererIdle = false; });
-            map.on('idle', () => { stats.rendererIdle = true; });
-            for (const name of ['setLayoutProperty', 'setPaintProperty', 'setFilter', 'moveLayer'] as const) {
-                const original = map[name];
-                map[name] = (...args) => { stats.mutations++; stats.rendererIdle = false; return original.apply(map, args); };
-            }
-            const addSource = map.addSource;
-            map.addSource = (id: string, source: unknown) => {
-                stats.sourceAdds++;
-                const result = addSource.call(map, id, source);
-                const instance = map.getSource(id);
-                if (instance?.setData) {
-                    const setData = instance.setData;
-                    instance.setData = (...args) => { stats.sourceUpdates++; return setData.apply(instance, args); };
-                }
-                return result;
-            };
-            if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
-                new PerformanceObserver(list => stats.longTasks.push(...list.getEntries().map(entry => ({ duration: entry.duration, start: entry.startTime }))))
-                    .observe({ type: 'longtask' });
-            }
-            document.addEventListener('change', event => {
-                if (!(event.target instanceof HTMLInputElement)) return;
-                const trace: ViewerTrace = { key: event.target.dataset.category || event.target.name || event.target.getAttribute('aria-label'), checked: event.target.checked,
-                    start: performance.now(), mutations: stats.mutations,
-                    rendererSettledAtInput: stats.rendererIdle && map.loaded() && !map.isMoving() };
-                stats.traces.push(trace);
-                requestAnimationFrame(() => {
-                    trace.firstFrameMs = performance.now() - trace.start;
-                    trace.firstFrameChecked = (event.target as HTMLInputElement).checked;
-                    trace.mutationsBeforeFrame = stats.mutations - trace.mutations;
-                    // A second frame follows an intervening paint opportunity;
-                    // the first rAF alone runs before that opportunity.
-                    requestAnimationFrame(() => {
-                        trace.feedbackFrameMs = performance.now() - trace.start;
-                    });
-                });
-            }, true);
+            const evidence: ViewerEvidence = { map, rendererIdle: false };
+            let sequence = 0;
+            window.__viewerEvidence = evidence;
+            map.on('render', () => { evidence.rendererIdle = false; });
+            map.on('idle', () => {
+                evidence.rendererIdle = true;
+                // Read the real GPU raster while its framebuffer is valid. WebKit's
+                // page screenshots can retain an older composited canvas after a
+                // paint-only update, even after MapLibre renders the correct pixels.
+                // Only the color scenarios opt in; other tests incur no readback.
+                if (captureFrames) evidence.canvasFrame = { dataUrl: map.getCanvas().toDataURL(), sequence: ++sequence };
+            });
         });
-    });
+    }, captureCanvasFrames);
     if (!liveProvider) await page.route('https://api.mapbox.com/styles/v1/**', route => route.fulfill({ json: {
         version: 8, glyphs: `${new URL(page.url()).origin}/viewer-fixtures/fonts/{fontstack}/{range}.pbf`,
         ...providerCamera,
@@ -145,7 +109,6 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
     } }));
     await page.route('**/viewer-fixtures/**', async route => {
         const path = new URL(route.request().url()).pathname;
-        requests.set(path, (requests.get(path) || 0) + 1);
         if (gates.has(path)) await gates.get(path);
         if (failures.has(path)) { await route.fulfill({ status: 503, body: 'Fixture unavailable' }); return; }
         if (path.includes('/fonts/')) { await route.fulfill({ body: Buffer.alloc(0), contentType: 'application/x-protobuf' }); return; }
@@ -154,12 +117,12 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
     });
     await page.route('**/api/v2/**', async route => {
         const path = new URL(route.request().url()).pathname;
-        requests.set(path, (requests.get(path) || 0) + 1);
         let data: unknown = [];
-        if (path.startsWith('/api/v2/gis-ogc/view/') && path.endsWith('/geojson')) data = { view_name: 'Browser public view', projects: selectedProjects.map(project => ({ ...project, geojson_file: project.geojson_url })) };
+        if (Object.hasOwn(apiResponses, path)) data = apiResponses[path];
+        else if (path.startsWith('/api/v2/gis-ogc/view/') && path.endsWith('/geojson')) data = { view_name: 'Browser public view', projects: selectedProjects.map(project => ({ ...project, geojson_file: project.geojson_url })) };
         else if (path === '/api/v2/projects/') data = selectedProjects;
         else if (path === '/api/v2/projects/geojson/') data = selectedProjects.map(project => ({ id: project.id, geojson_file: project.geojson_url }));
-        else if (path === '/api/v2/gps_tracks/') data = [{ id: trackId, name: 'Large GPS track', color: '#f59e0b' }];
+        else if (path === '/api/v2/gps_tracks/') data = [{ id: trackId, name: 'GPS route', color: '#f59e0b' }];
         else if (path === `/api/v2/gps_tracks/${trackId}/`) data = { id: trackId, file: '/viewer-fixtures/track.geojson' };
         else if (path === '/api/v2/gis-layers/') data = [{ id: gisId, name: 'Mixed GIS layer', color: '#6366f1' }];
         else if (path === `/api/v2/gis-layers/${gisId}/`) data = { id: gisId, file: '/viewer-fixtures/gis.geojson' };
@@ -172,13 +135,12 @@ export async function installFixture(page: Page, { stress = false, readOnly = fa
     const hideDebugToolbar = page.getByRole('link', { name: 'Hide »', exact: true });
     if (await hideDebugToolbar.isVisible()) await hideDebugToolbar.click();
     await expect(page.locator(publicUrl ? '#color-mode-button' : '#map-settings-button')).toBeVisible();
-    await expect.poll(() => page.evaluate(ids => ids.filter(id => window.__viewerEvidence?.map.getSource(`project-geojson-${id}`)).length, selectedProjects.map(project => project.id)), { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs }).toBe(selectedProjects.length);
     await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     await page.waitForFunction(() => window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
-    return { requests, failures, gates };
+    return { failures, gates };
 }
 
-/** Isolate sequential feedback samples from a previous update's renderer work. */
+/** Wait for actual map rendering before inspecting pixels or targeting canvas features. */
 export async function waitForViewerIdle(page: Page) {
     await expect.poll(() => page.evaluate(async () => {
         const evidence = window.__viewerEvidence;
@@ -193,4 +155,52 @@ export async function waitForViewerIdle(page: Page) {
 
 export async function toggleLabel(input: Locator) {
     await input.locator('..').click();
+}
+
+/** Query rendered features, not source data or renderer configuration. */
+export async function expectRenderedFeatures(page: Page, layerId: string, visible: boolean) {
+    await expect.poll(() => page.evaluate(id => {
+        const { map } = window.__viewerEvidence;
+        if (!map.loaded() || map.isMoving()) return null;
+        return Boolean(map.getLayer(id) && map.queryRenderedFeatures({ layers: [id] }).length);
+    }, layerId)).toBe(visible);
+}
+
+/** Assert the real rendered survey color, optionally requiring a newer completed frame. */
+export async function expectGreenSurveyPixels(page: Page, visible: boolean, afterSequence = 0) {
+    let sequence = afterSequence;
+    const pixels = expect.poll(async () => {
+        const sample = await page.evaluate(async previous => {
+            const evidence = window.__viewerEvidence;
+            const { map } = evidence;
+            if (!evidence.rendererIdle || !map.loaded() || map.isMoving()) return null;
+            const frame = evidence.canvasFrame;
+            if (!frame || frame.sequence <= previous) return null;
+            // Capture this immutable sample before decoding so a later idle frame
+            // cannot associate an older image with a newer sequence number.
+            const { dataUrl, sequence } = frame;
+            const image = new Image(); image.src = dataUrl; await image.decode();
+            const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+            const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+            const values = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            let green = 0; let depth = 0;
+            for (let index = 0; index < values.length; index += 4) {
+                if (Math.abs(values[index]! - 34) < 25 && Math.abs(values[index + 1]! - 197) < 25
+                    && Math.abs(values[index + 2]! - 94) < 25) green++;
+                if ((Math.abs(values[index]! - 69) < 25 && Math.abs(values[index + 1]! - 117) < 25
+                    && Math.abs(values[index + 2]! - 180) < 25)
+                    || (Math.abs(values[index]! - 215) < 25 && Math.abs(values[index + 1]! - 48) < 25
+                    && Math.abs(values[index + 2]! - 39) < 25)) depth++;
+            }
+            if (!evidence.rendererIdle || !map.loaded() || map.isMoving() || evidence.canvasFrame !== frame) return null;
+            return { green, depth, sequence };
+        }, afterSequence);
+        if (sample) sequence = sample.sequence;
+        // A blank framebuffer must not pass merely because it contains no green.
+        if (!visible && (!sample || sample.depth <= 5)) return undefined;
+        return sample?.green;
+    });
+    if (visible) await pixels.toBeGreaterThan(5);
+    else await pixels.toBe(0);
+    return sequence;
 }

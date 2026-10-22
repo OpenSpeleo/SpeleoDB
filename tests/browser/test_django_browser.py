@@ -1,4 +1,4 @@
-"""Run the browser workloads against pytest's real Django server."""
+"""Run browser UI/UX checks against pytest's real Django server."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from speleodb.gis.models import CylinderFleetUserPermission
 from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import GISView
+from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import SensorFleet
@@ -119,6 +120,25 @@ def controller_routes(user: User) -> dict[str, str]:
     )
     routes["landmarks"] = reverse(
         "private:landmark_collection_details", kwargs={"collection_id": collection.id}
+    )
+    writable_collection: LandmarkCollection = LandmarkCollection.objects.create(
+        name="Browser editable landmarks", color="#38bdf8", created_by=user.email
+    )
+    LandmarkCollectionUserPermission.objects.create(
+        collection=writable_collection, user=user, level=PermissionLevel.ADMIN
+    )
+    # An independent row renders the edit form; browser writes are intercepted.
+    Landmark.objects.create(
+        collection=writable_collection,
+        name="Existing cave landmark",
+        icon=Landmark.Icon.CAVE,
+        latitude=20,
+        longitude=-87,
+        created_by=user.email,
+    )
+    routes["writable_landmarks"] = reverse(
+        "private:landmark_collection_details",
+        kwargs={"collection_id": writable_collection.id},
     )
     # Fail before browser launch if either synchronous request could reach Git.
     assert (

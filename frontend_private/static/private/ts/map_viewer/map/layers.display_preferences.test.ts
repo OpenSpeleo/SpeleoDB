@@ -388,11 +388,13 @@ it('changes all survey modes using paint only, with each project fallback and no
     const map = currentMap();
     Config._projects!.push({ id: 'p2', color: '#abcdef' });
     for (const id of ['p1', 'p2']) {
+        map.addSource(`project-geojson-${id}`, { data: surveyCollection() });
         map.addLayer({ id: `project-layer-${id}`, type: 'line' });
         map.addLayer({ id: `project-points-${id}`, type: 'symbol' });
         State.allProjectLayers.set(id, [`project-layer-${id}`, `project-points-${id}`]);
         State.projectDepthDomains.set(id, { min: 0, max: 100 });
     }
+    map.addSource.mockClear();
     map.addLayer({ id: 'gps-track', type: 'line' });
     map.addLayer({ id: 'gis-outline', type: 'line' });
     vi.stubGlobal('fetch', vi.fn());
@@ -406,6 +408,9 @@ it('changes all survey modes using paint only, with each project fallback and no
                 `project-layer-${id}`, 'line-color', Colors.getSurveyPaint(id, mode, { min: 0, max: 100 }),
             );
         }
+    }
+    for (const id of ['p1', 'p2']) {
+        expect(map.getSource(`project-geojson-${id}`).setData).not.toHaveBeenCalled();
     }
     expect(map.setPaintProperty).toHaveBeenCalledWith('project-layer-p1', 'line-color', ['to-color', ['get', 'color'], '#123456']);
     expect(map.setPaintProperty).toHaveBeenCalledWith('project-layer-p2', 'line-color', ['to-color', ['get', 'color'], '#abcdef']);

@@ -231,13 +231,17 @@ Before finalizing changes:
 
 ## Boundary evidence
 
-Use real API requests and database rows for authorization/mutation assertions,
-real rendered Django templates for route contracts, and configured storage for
-storage/rollback evidence. Pure frontend rendering should be directly callable
-with its real helpers so capability and XSS checks do not replace the behavior
-under test. A mocked HTTP failure is unit-level control-flow evidence; it does
-not establish real transaction, transport, storage compensation, or browser
-behavior. Use the real integration paths for those claims, following the shared
+Use pytest with real API requests and database rows for authorization/mutation
+assertions, real rendered Django templates for route contracts, and configured
+storage for storage/rollback evidence. Browser tests are exclusively UI/UX: use
+small deterministic fixtures and controlled server responses to exercise the
+real renderer, forms, native input, focus, loading feedback and error recovery.
+Verify frontend logic with Vitest. Both lower layers run under `make test`. Pure
+frontend rendering should be directly callable with its real helpers so
+capability and XSS checks do not replace the behavior under test. A mocked HTTP
+failure is unit-level control-flow evidence; it does not establish real
+transaction, transport, storage compensation, or browser behavior. Use the real
+integration paths for those claims, following the shared
 [GitLab test contract](../ci-gitlab-testing.md) where applicable.
 
 ### Viewer startup composition
@@ -248,8 +252,10 @@ boundaries are simulated. These cases check startup before the MapLibre `load`
 event: request overlap, source-control mounting, private measurement/control
 registration, and separate public display persistence. Root-specific suites
 exercise asynchronous loading and style-change callbacks. Browser verification
-remains responsible for rendering, gesture timing, and performance budgets; the
-startup fixture does not model MapLibre rendering.
+remains responsible for actual rendering and native gestures; the startup
+fixture does not model MapLibre rendering. Scale/latency benchmarks are outside
+default UI/UX CI and require explicit authorization. See the
+[browser testing boundary](../../tests/browser/README.md).
 
 The composition renderer double implements the shared `GlobeAtmosphereMap`
 contract, including style readiness, sky state, and custom-layer storage. Its

@@ -339,6 +339,18 @@ describe('native GIS geometry editor', () => {
         expect(existing.geojson.coordinates[1]).toEqual([0.001, 0.001]);
     });
 
+    it('discards a new unsaved draft without creating or updating a geometry', async () => {
+        await GeometryEditor.create();
+        inputName('Unsaved geometry');
+        GeometryEditor.handleClick(event(0, 0));
+        GeometryEditor.handleClick(event(0.001, 0.001));
+        expect(GeometryEditor.requestClose()).toBe(false);
+        action('discard').click();
+        expect(GeometryEditor.isActive()).toBe(false);
+        expect(API.createGISGeometry).not.toHaveBeenCalled();
+        expect(API.updateGISGeometry).not.toHaveBeenCalled();
+    });
+
     it('preserves a draft after a conflict and prevents duplicate submissions', async () => {
         await GeometryEditor.edit(existing);
         inputName('Modified line');

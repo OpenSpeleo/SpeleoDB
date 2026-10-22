@@ -313,16 +313,16 @@ export const LandmarkUI = {
         const canWriteLandmark = landmark?.can_write === true;
         const canDeleteLandmark = landmark?.can_delete === true;
         const footer = landmark && (canWriteLandmark || canDeleteLandmark) ? `
-            ${canWriteLandmark ? '<button id="edit-landmark-btn" class="btn-secondary" style="min-width: 120px;">Edit</button>' : ''}
-            ${canDeleteLandmark ? '<button id="delete-landmark-btn" class="btn-danger" style="min-width: 120px;">Delete</button>' : ''}
+            ${canWriteLandmark ? '<button id="edit-landmark-btn" disabled class="btn-secondary" style="min-width: 120px;">Edit</button>' : ''}
+            ${canDeleteLandmark ? '<button id="delete-landmark-btn" disabled class="btn-danger" style="min-width: 120px;">Delete</button>' : ''}
         ` : '';
 
         const html = Modal.base('landmark-details-modal', title + extraTitle, content, footer);
 
         Modal.open('landmark-details-modal', html, () => {
             if (landmark) {
-                const editBtn = (document.getElementById('edit-landmark-btn') as HTMLElement);
-                const deleteBtn = (document.getElementById('delete-landmark-btn') as HTMLElement);
+                const editBtn = (document.getElementById('edit-landmark-btn') as HTMLButtonElement);
+                const deleteBtn = (document.getElementById('delete-landmark-btn') as HTMLButtonElement);
                 if (editBtn) {
                     editBtn.onclick = () => {
                         if (landmark.can_write !== true) {
@@ -331,9 +331,11 @@ export const LandmarkUI = {
                         }
                         this.openEditModal(landmarkId!);
                     };
+                    editBtn.disabled = false;
                 }
                 if (deleteBtn) {
                     deleteBtn.onclick = () => this.showDeleteConfirmModal(landmark);
+                    deleteBtn.disabled = false;
                 }
             }
         });
