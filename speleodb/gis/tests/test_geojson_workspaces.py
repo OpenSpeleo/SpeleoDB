@@ -6,15 +6,16 @@ import os
 import stat
 import subprocess
 import sys
-import tracemalloc
 from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pytest
 from celery.exceptions import SoftTimeLimitExceeded
 from django.utils import timezone
 from git import Actor
+from gitdb.base import OStream
 
 from speleodb.common.enums import ProjectType
 from speleodb.gis.geojson_sources import materialize_geojson_source
@@ -133,39 +134,53 @@ def test_sweep_recovers_process_death_before_lock_creation(
     assert not directory.exists()
 
 
-def test_ariane_materialization_streams_large_blob_at_exact_revision(
-    tmp_path: Path,
+def test_ariane_materialization_streams_blob_at_exact_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = tmp_path / "source"
     with closing(GitRepo.init(source)) as repository:
         original = source / "ariane.tml"
-        block = b"survey-data\n" * 8192
-        with original.open("wb") as output:
-            for _ in range(128):
-                output.write(block)
+        contents = b"survey-data\n" * 8
+        original.write_bytes(contents)
         repository.index.add(["ariane.tml"])
         actor = Actor("Surveyor", "surveyor@example.test")
         commit = repository.index.commit(
-            "Large immutable source", author=actor, committer=actor
+            "Immutable source", author=actor, committer=actor
         )
         original.write_text("changed after commit")
         destination = tmp_path / "materialized"
         destination.mkdir()
-        tracemalloc.start()
-        try:
-            result = materialize_geojson_source(
-                Project(type=ProjectType.ARIANE),
-                repository.commit(commit.hexsha),
-                destination,
-            )
-            _, peak = tracemalloc.get_traced_memory()
-        finally:
-            tracemalloc.stop()
+        committed = repository.commit(commit.hexsha)
+        source_sha = (committed.tree / "ariane.tml").binsha
+        original_stream = repository.odb.stream
+        read_sizes: list[int] = []
+
+        class BoundedReader:
+            def __init__(self, stream: Any) -> None:
+                self.stream = stream
+
+            def read(self, size: int = -1) -> bytes:
+                # Reject whole-blob reads without allocating a large blob or
+                # measuring process memory; retain the real Git stream contract.
+                assert 0 < size <= 512 * 1024
+                read_sizes.append(size)
+                return self.stream.read(size)  # type: ignore[no-any-return]
+
+        def guarded_stream(binsha: bytes) -> Any:
+            stream = original_stream(binsha)
+            if binsha == source_sha:
+                return OStream(
+                    stream.binsha,
+                    stream.type,
+                    stream.size,
+                    BoundedReader(stream.stream),
+                )
+            return stream
+
+        monkeypatch.setattr(repository.odb, "stream", guarded_stream)
+        result = materialize_geojson_source(
+            Project(type=ProjectType.ARIANE), committed, destination
+        )
         assert result == destination / "ariane.tml"
-        assert result.stat().st_size == len(block) * 128
-        # GitPython copies 512 KiB chunks. A full BytesIO/blob copy would exceed
-        # this bound by several times for the source above.
-        assert peak < 3 * 1024 * 1024
-        with result.open("rb") as output:
-            for _ in range(128):
-                assert output.read(len(block)) == block
+        assert result.read_bytes() == contents
+        assert read_sizes

@@ -31,8 +31,6 @@ print(
     json.dumps(
         {
             "installed": "debug_toolbar" in settings.INSTALLED_APPS,
-            "s3_custom_domain": settings.AWS_S3_CUSTOM_DOMAIN,
-            "s3_endpoint_url": settings.AWS_S3_ENDPOINT_URL,
             "middleware": (
                 "debug_toolbar.middleware.DebugToolbarMiddleware"
                 in settings.MIDDLEWARE
@@ -65,11 +63,20 @@ print(
 )
 """
 
+STORAGE_SETTINGS_PROBE = """
+import json
+
+from django.conf import settings
+
+print(json.dumps({
+    "s3_endpoint_url": settings.AWS_S3_ENDPOINT_URL,
+    "s3_custom_domain": settings.AWS_S3_CUSTOM_DOMAIN,
+}))
+"""
+
 
 class DebugToolbarState(TypedDict):
     installed: bool
-    s3_custom_domain: str
-    s3_endpoint_url: str
     middleware: bool
     route: bool
     rendered: bool
@@ -84,7 +91,7 @@ class DebugToolbarState(TypedDict):
     show_toolbar_callback: str
 
 
-def probe_local_settings() -> DebugToolbarState:
+def run_local_settings_probe(probe: str) -> dict[str, object]:
     child_environment = os.environ.copy()
     child_environment.update(
         {
@@ -107,7 +114,7 @@ def probe_local_settings() -> DebugToolbarState:
     )
 
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", SETTINGS_PROBE],
+        [sys.executable, "-c", probe],
         cwd=BASE_DIR,
         env=child_environment,
         check=False,
@@ -120,26 +127,27 @@ def probe_local_settings() -> DebugToolbarState:
             f"{result.stderr}"
         )
     payload: object = json.loads(result.stdout)
+    if not isinstance(payload, dict):
+        raise TypeError("Settings probe did not return a JSON object")
+    return payload
+
+
+def probe_local_settings() -> DebugToolbarState:
+    payload = run_local_settings_probe(SETTINGS_PROBE)
 
     def require_bool(key: str) -> bool:
-        if not isinstance(payload, dict):
-            raise TypeError("Settings probe did not return a JSON object")
         value = payload.get(key)
         if not isinstance(value, bool):
             raise TypeError(f"Settings probe field {key!r} is not a boolean")
         return value
 
     def require_string(key: str) -> str:
-        if not isinstance(payload, dict):
-            raise TypeError("Settings probe did not return a JSON object")
         value = payload.get(key)
         if not isinstance(value, str):
             raise TypeError(f"Settings probe field {key!r} is not a string")
         return value
 
     def require_string_list(key: str) -> list[str]:
-        if not isinstance(payload, dict):
-            raise TypeError("Settings probe did not return a JSON object")
         value = payload.get(key)
         if not isinstance(value, list) or not all(
             isinstance(item, str) for item in value
@@ -149,8 +157,6 @@ def probe_local_settings() -> DebugToolbarState:
 
     return DebugToolbarState(
         installed=require_bool("installed"),
-        s3_custom_domain=require_string("s3_custom_domain"),
-        s3_endpoint_url=require_string("s3_endpoint_url"),
         middleware=require_bool("middleware"),
         route=require_bool("route"),
         rendered=require_bool("rendered"),
@@ -185,7 +191,9 @@ def test_local_debug_toolbar_is_present_with_all_panels_disabled() -> None:
 
 
 def test_local_storage_keeps_internal_and_browser_endpoints_separate() -> None:
-    state = probe_local_settings()
+    # Endpoint configuration needs a fresh settings import, not app startup or
+    # toolbar rendering. The toolbar integration above retains those checks.
+    state = run_local_settings_probe(STORAGE_SETTINGS_PROBE)
 
     assert state["s3_endpoint_url"] == "http://rustfs:9000"
     assert state["s3_custom_domain"] == "localhost:9000/test-bucket"

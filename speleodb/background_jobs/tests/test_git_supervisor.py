@@ -25,9 +25,12 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-pytestmark = pytest.mark.skipif(
-    sys.platform != "linux", reason="Production process containment runs in Linux."
-)
+@pytest.fixture(autouse=True)
+def _require_linux() -> None:
+    assert sys.platform == "linux", (
+        "Process containment tests require the application Linux container."
+    )
+
 
 OWNER_SCRIPT: str = """
 import sys
@@ -76,7 +79,11 @@ def test_supervisor_rejects_unbounded_deadline(timeout: float, tmp_path: Path) -
     assert not marker.exists()
 
 
-def test_group_cleanup_escalates_when_real_process_ignores_term(tmp_path: Path) -> None:
+def test_group_cleanup_escalates_when_real_process_ignores_term(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Keep real TERM/KILL delivery and reaping; only shorten the idle grace.
+    monkeypatch.setattr(git_supervisor, "TERMINATE_SECONDS", 0.5)
     marker: Path = tmp_path / "ready"
     command: str = (
         "import signal; from pathlib import Path; "
@@ -107,7 +114,15 @@ def test_group_cleanup_escalates_when_real_process_ignores_term(tmp_path: Path) 
             _cleanup(process, [])
 
 
-def test_export_bounds_reaping_of_a_real_stalled_supervisor() -> None:
+def test_export_bounds_reaping_of_a_real_stalled_supervisor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # These constants are imported into archive_sources. Exercise its actual
+    # timed wait and kill path without spending the production cleanup grace.
+    terminate_seconds: float = 0.5
+    poll_seconds: float = 0.05
+    monkeypatch.setattr(archive_sources, "TERMINATE_SECONDS", terminate_seconds)
+    monkeypatch.setattr(archive_sources, "GIT_POLL_SECONDS", poll_seconds)
     with subprocess.Popen(
         [sys.executable, "-c", "import signal; signal.pause()"],
         stdout=subprocess.DEVNULL,
@@ -120,12 +135,9 @@ def test_export_bounds_reaping_of_a_real_stalled_supervisor() -> None:
             elapsed: float = time.monotonic() - started
             assert process.returncode == -signal.SIGKILL
             assert (
-                (
-                    2 * git_supervisor.TERMINATE_SECONDS
-                    + 2 * archive_sources.GIT_POLL_SECONDS
-                )
+                (2 * terminate_seconds + 2 * poll_seconds)
                 <= elapsed
-                < 3 * git_supervisor.TERMINATE_SECONDS + WAIT_SECONDS
+                < 3 * terminate_seconds + WAIT_SECONDS
             )
         finally:
             _cleanup(process, [])

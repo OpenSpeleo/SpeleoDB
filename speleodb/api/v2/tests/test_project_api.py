@@ -7,7 +7,6 @@ import random
 from typing import TYPE_CHECKING
 from typing import Any
 
-import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -17,6 +16,7 @@ from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
 from speleodb.api.v2.serializers import ProjectSerializer
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
@@ -26,7 +26,6 @@ from speleodb.api.v2.tests.utils import is_subset
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.surveys.models import ProjectCommit
-from speleodb.utils.test_utils import named_product
 
 if TYPE_CHECKING:
     from speleodb.surveys.models import ProjectMutex
@@ -37,15 +36,7 @@ if TYPE_CHECKING:
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestProjectInteraction(BaseAPIProjectTestCase):
     level: PermissionLevel
@@ -237,16 +228,24 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         assert mutex.closing_user == self.user.email, (mutex, self.user)
         assert not mutex.is_active
 
+
+@parameterized_class(
+    ["level", "permission_type"],
+    [case for case in PROJECT_PERMISSION_CASES if case[0] <= PermissionLevel.READ_ONLY],
+)
+class TestReadOnlyProjectInteraction(BaseAPIProjectTestCase):
+    level: PermissionLevel
+    permission_type: PermissionType
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.set_test_project_permission(self.level, self.permission_type)
+
     def test_fail_acquire_readonly_project(self) -> None:
         """
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-
-        if self.level > PermissionLevel.READ_ONLY:
-            pytest.skip(
-                "This test is only for READ_ONLY or WEB_VIEWER permission level."
-            )
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(
@@ -261,11 +260,6 @@ class TestProjectInteraction(BaseAPIProjectTestCase):
         Ensure POSTing json over token auth with correct
         credentials passes and does not require CSRF
         """
-
-        if self.level > PermissionLevel.READ_ONLY:
-            pytest.skip(
-                "This test is only for READ_ONLY or WEB_VIEWER permission level."
-            )
 
         auth = self.header_prefix + self.token.key
         response = self.client.post(

@@ -281,8 +281,10 @@ viewer, and shared form tests guard the reused contracts.
 PostgreSQL concurrency regressions use two real connections and observe blocked
 database writers. They prove that a waiting edit rechecks the committed
 revision, revoked access, and soft deletion after acquiring the geometry lock.
-These checks require the PostgreSQL test database; SQLite runs skip them because
-it does not implement row-level `SELECT FOR UPDATE` locking.
+These existing checks require a PostgreSQL test database. Missing prerequisites
+must fail clearly rather than silently skip coverage. New race-condition tests
+require an explicit user request; consider concurrency safeguards during
+implementation and review regardless of test coverage.
 
 Visual checks exercise desktop/mobile, fullscreen, keyboard/GPS-only authoring,
 touch, oversize correction, Save/Revert, raw JSON, and retained failed drafts.

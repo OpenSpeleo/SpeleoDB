@@ -73,12 +73,14 @@ recover which blank string a repaired account previously contained.
 
 ## Verification
 
-Run tests only inside the existing `speleodb_local_django` container. Coverage
-includes model/manager validation; admin, CLI, headless signup, and sanitized
-profile updates; direct and bulk database writes; migration repair and
-rollback/reapply; deferred/partial-save query behavior; and real local Git
-commits/pushes with preserved authorship. Repeat database-sensitive tests on
-SQLite and PostgreSQL via `TEST_DATABASE_URL`.
+Run tests only inside the existing application container. Coverage includes
+model/manager validation; admin, CLI, headless signup, and sanitized profile
+updates; direct and bulk database writes; migration repair and rollback/reapply;
+deferred/partial-save query behavior; and real local Git commits/pushes with
+preserved authorship. The complete suite uses an isolated PostgreSQL test
+database, including real constraint and rollback checks. Configure its
+connection explicitly in the test environment; development database contents are
+never test fixtures.
 
 A real Ariane regression uses a repaired database user plus a stale unnamed
 in-memory user to verify successful upload and correct remote/stored authorship.

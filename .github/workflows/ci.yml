@@ -158,10 +158,13 @@ jobs:
       cancel-in-progress: false
 
     services:
-      redis:
+      celery-test-redis:
         image: redis:8-alpine
         ports:
-          - 6379:6379
+          - 6381:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
 
       postgres:
         image: postgres:16-alpine
@@ -182,7 +185,8 @@ jobs:
           --health-interval 10s --health-timeout 5s --health-retries 5
 
     env:
-      CELERY_BROKER_URL: "redis://localhost:6379/0"
+      CELERY_BROKER_URL: "memory://"
+      TEST_CELERY_BROKER_URL: "redis://localhost:6381/0"
       # postgres://user:password@host:port/database
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/postgres"
       # Provisioning tests connect directly; service env is not inherited here.
@@ -238,6 +242,8 @@ jobs:
           python manage.py validate_templates --settings config.settings.test \
             --ignore-app allauth
           # Keep normal output capture, hang diagnostics, and the slowest tests.
+          # Explicit opt-out: five local GitLab routing/admin-bootstrap cases
+          # cannot run against GitLab.com. Default local pytest includes them.
           make test-py
           python manage.py verify_api_contract_coverage \
             .artifacts/api-contract/observations.json \
@@ -246,6 +252,7 @@ jobs:
           PYTEST_ADDOPTS: >-
             --api-contract-enforce
             --api-contract-report=.artifacts/api-contract/observations.json
+            -m "not local_infrastructure"
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}

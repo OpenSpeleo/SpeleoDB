@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -234,8 +235,19 @@ def test_empty_query_exception_preserves_normal_parameter_constraints(
     request = DjangoOpenAPIRequest(
         RequestFactory().get("/parameter", {} if value is None else {"value": value})
     )
-    if valid:
-        validator.validate(request)
-    else:
-        with pytest.raises(ParameterValidationError):
+    # Allowed empty values use our exception; other values deliberately reach
+    # openapi-core's deprecated allowEmptyValue path and normal constraints.
+    expected_warning = (
+        pytest.warns(
+            DeprecationWarning,
+            match=r"^Use of allowEmptyValue property is deprecated$",
+        )
+        if allow_empty and value != ""
+        else nullcontext()
+    )
+    with expected_warning:
+        if valid:
             validator.validate(request)
+        else:
+            with pytest.raises(ParameterValidationError):
+                validator.validate(request)

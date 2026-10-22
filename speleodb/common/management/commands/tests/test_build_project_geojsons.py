@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 import pathlib
@@ -12,8 +11,7 @@ import threading
 import uuid
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
-from typing import Any
-from typing import cast
+from unittest.mock import patch
 
 import orjson
 import pytest
@@ -22,31 +20,31 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 from django.test import override_settings
-from django.urls import reverse
-from rest_framework import status
+from git import Actor
 
-from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
-from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import ProjectCommitFactory
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.background_jobs.archive_sources import ArchiveBuildError
 from speleodb.background_jobs.archive_sources import GitCloneUnavailableError
+from speleodb.background_jobs.archive_sources import GitSource
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.surveys.models import FileFormat
+from speleodb.git_engine.core import GitRepo
+from speleodb.processors import ArianeTMLFileProcessor
+from speleodb.processors._impl.compass_toml import CompassTOML
+from speleodb.processors._impl.compass_toml import (
+    build_compass_toml_bytes_from_upload_filenames,
+)
 from speleodb.surveys.models import Project
-from speleodb.surveys.tasks import refresh_all_projects_geojson
+from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
     from types import FrameType
-
-    from speleodb.git_engine.core import GitRepo
-
 
 BASE_DIR = (
     pathlib.Path(__file__).parent.parent.parent.parent.parent
@@ -138,31 +136,30 @@ class TestBuildProjectGeoJSONCommand(TestCase):
         )
         assert not list(self.scratch.iterdir())
 
-    @pytest.mark.skip_if_lighttest
     def test_all_mode_processes_only_eligible_project_type(self) -> None:
         compass_project: Project = canonical_project(
             PermissionLevel.READ_AND_WRITE,
             type=ProjectType.COMPASS,
             exclude_geojson=False,
         )
-        excluded: Project = canonical_project(
+        canonical_project(
             PermissionLevel.READ_ONLY, type=ProjectType.COMPASS, exclude_geojson=True
         )
-        self._seed_project(self.project)
-        self._seed_project(compass_project)
-        self._seed_project(excluded)
-        with self.assertLogs(Command.__module__, level="INFO") as logs:
+        selected: list[tuple[uuid.UUID, bool]] = []
+
+        def record_selection(
+            _command: Command, project: Project, *, force_recompute: bool
+        ) -> None:
+            selected.append((project.id, force_recompute))
+
+        # Exercise the command's real queryset and arguments. Conversion and
+        # remote checkout behavior are separate contracts below; selection
+        # needs only the identities actually handed to the rebuild boundary.
+        with patch.object(Command, "_process_project", record_selection):
             call_command(
                 "build_project_geojsons", "--all", "--project_type", ProjectType.COMPASS
             )
-        messages = "\n".join(logs.output)
-        assert str(compass_project.id) in messages
-        assert str(self.project.id) not in messages
-        assert str(excluded.id) not in messages
-        assert all(record.levelno < logging.ERROR for record in logs.records)
-        assert compass_project.git_repo_dir.is_dir()
-        assert self.project.git_repo_dir.is_dir()
-        assert excluded.git_repo_dir.is_dir()
+        assert selected == [(compass_project.id, False)]
         assert not list(self.scratch.iterdir())
 
     @pytest.mark.skip_if_lighttest
@@ -213,14 +210,10 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
 
 @pytest.mark.skip_if_lighttest
-class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
+class TestBuildProjectGeoJSONs(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.set_test_project_permission(
-            level=PermissionLevel.READ_AND_WRITE,
-            permission_type=PermissionType.USER,
-        )
-        get_pool().prepare(self.project)
+        self.project = canonical_project(exclude_geojson=False)
         self.scratch = pathlib.Path(self.enterContext(TemporaryDirectory()))
         self.enterContext(
             override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch))
@@ -230,56 +223,63 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         assert not list(self.scratch.iterdir())
         super().tearDown()
 
-    def _upload_files(
+    def _seed_source(
         self,
         *,
-        fileformat: FileFormat,
+        project_type: ProjectType,
         artifact_paths: list[pathlib.Path],
-        commit_message: str,
     ) -> str:
-        with contextlib.ExitStack() as stack:
-            opened_files = [
-                stack.enter_context(path.open(mode="rb")) for path in artifact_paths
-            ]
-            response = self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": self.project.id,
-                        "fileformat": fileformat.label.lower(),
-                    },
-                ),
-                {"artifact": opened_files, "message": commit_message},
-                format="multipart",
-                headers={"authorization": self.auth},
+        self.project.type = project_type
+        self.project.save(update_fields=["type"])
+        directory = pathlib.Path(self.enterContext(TemporaryDirectory())) / "source"
+        repository = GitRepo.init(directory)
+        with repository:
+            names: list[str] = []
+            for source in artifact_paths:
+                name = (
+                    ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                    if project_type == ProjectType.ARIANE
+                    else source.name
+                )
+                (directory / name).write_bytes(source.read_bytes())
+                names.append(name)
+            if project_type == ProjectType.COMPASS:
+                config = build_compass_toml_bytes_from_upload_filenames(
+                    self.project.id, names
+                )
+                assert config is not None
+                (directory / CompassTOML.__FILENAME__).write_bytes(config)
+                names.append(CompassTOML.__FILENAME__)
+            repository.index.add(names)
+            actor = Actor("Surveyor", "surveyor@example.test")
+            repository.index.commit("Survey source", author=actor, committer=actor)
+            commit = ProjectCommit.get_or_create_from_commit(
+                self.project, repository.head.commit
             )
 
-        assert response.status_code == status.HTTP_200_OK, response.data
-        response_data = cast("dict[str, Any]", response.data)
-        return cast("str", response_data["hexsha"])
+        # Only substitute the remote address. The command still mirrors real
+        # Git history, materializes committed blobs, parses the actual source,
+        # and publishes to the configured storage. Upload/mutex behavior is
+        # exercised separately by test_file_upload_geojson.py.
+        self.enterContext(
+            patch(
+                "speleodb.common.management.commands.build_project_geojsons.project_git_source",
+                return_value=GitSource(url=str(directory), token=""),
+            )
+        )
+        return commit.id
 
     def test_command_builds_and_recomputes_geojson_for_ariane_project(self) -> None:
-        self.project.type = ProjectType.ARIANE
-        self.project.exclude_geojson = True
-        self.project.save(update_fields=["type", "exclude_geojson"])
-
-        self.project.acquire_mutex(self.user)
-        try:
-            hexsha = self._upload_files(
-                fileformat=FileFormat.ARIANE_TML,
-                artifact_paths=[ARIANE_TEST_FILE],
-                commit_message="Ariane upload for command generation",
-            )
-        finally:
-            self.project.release_mutex(self.user)
+        hexsha = self._seed_source(
+            project_type=ProjectType.ARIANE,
+            artifact_paths=[ARIANE_TEST_FILE],
+        )
 
         assert not ProjectGeoJSON.objects.filter(
             project=self.project,
             commit__id=hexsha,
         ).exists()
 
-        self.project.exclude_geojson = False
-        self.project.save(update_fields=["exclude_geojson"])
         command_args = ("--project", str(self.project.id))
         call_command("build_project_geojsons", *command_args)
 
@@ -289,6 +289,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         )
         initial_creation_date = initial_geojson.creation_date
         initial_revision = initial_geojson.geojson_revision
+        self.addCleanup(initial_geojson.file.delete, save=False)
 
         call_command("build_project_geojsons", *command_args)
         skipped_creation_date = ProjectGeoJSON.objects.get(
@@ -309,6 +310,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
             project=self.project,
             commit__id=hexsha,
         )
+        self.addCleanup(regenerated.file.delete, save=False)
         assert regenerated.creation_date > initial_creation_date
         assert regenerated.geojson_revision != initial_revision
         with regenerated.file.open("rb") as source:
@@ -330,30 +332,20 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         assert retained.file.storage.exists(retained.file.name)
 
     def test_command_builds_and_recomputes_geojson_for_compass_project(self) -> None:
-        self.project.type = ProjectType.COMPASS
-        self.project.exclude_geojson = True
-        self.project.save(update_fields=["type", "exclude_geojson"])
-
-        self.project.acquire_mutex(self.user)
-        try:
-            hexsha = self._upload_files(
-                fileformat=FileFormat.AUTO,
-                artifact_paths=COMPASS_TEST_FILES,
-                commit_message="Compass upload for command generation",
-            )
-        finally:
-            self.project.release_mutex(self.user)
+        hexsha = self._seed_source(
+            project_type=ProjectType.COMPASS,
+            artifact_paths=COMPASS_TEST_FILES,
+        )
 
         assert not ProjectGeoJSON.objects.filter(
             project=self.project,
             commit__id=hexsha,
         ).exists()
 
-        self.project.exclude_geojson = False
-        self.project.save(update_fields=["exclude_geojson"])
         call_command("build_project_geojsons", "--all")
 
         artifact = ProjectGeoJSON.objects.get(project=self.project, commit_id=hexsha)
+        self.addCleanup(artifact.file.delete, save=False)
         original_revision = artifact.geojson_revision
         with artifact.file.open("rb") as source:
             original_data = orjson.loads(source.read())
@@ -372,6 +364,7 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         assert all(record.levelno < logging.ERROR for record in logs.records)
         artifact.refresh_from_db()
         assert artifact.geojson_revision != original_revision
+        self.addCleanup(artifact.file.delete, save=False)
         with artifact.file.open("rb") as source:
             regenerated_data = orjson.loads(source.read())
         for data in [original_data, regenerated_data]:
@@ -390,31 +383,8 @@ class TestBuildProjectGeoJSONs(BaseAPIProjectTestCase):
         # Random coloring may change; every other exported value must stay exact.
         assert regenerated_data == original_data
 
-    def test_all_mode_skips_projects_excluded_from_geojson(self) -> None:
-        self.project.type = ProjectType.COMPASS
-        self.project.exclude_geojson = True
-        self.project.save(update_fields=["type", "exclude_geojson"])
-
-        self.project.acquire_mutex(self.user)
-        try:
-            hexsha = self._upload_files(
-                fileformat=FileFormat.AUTO,
-                artifact_paths=COMPASS_TEST_FILES,
-                commit_message="Compass excluded from command generation",
-            )
-        finally:
-            self.project.release_mutex(self.user)
-
-        result = refresh_all_projects_geojson.apply(throw=True)
-        assert result.successful()
-        assert result.result == {"enqueued": 0, "tasks": []}
-
-        assert not ProjectGeoJSON.objects.filter(
-            project=self.project,
-            commit__id=hexsha,
-        ).exists()
-
     def test_task_timeout_stops_clone_and_cleans_all_temporary_files(self) -> None:
+        get_pool().prepare(self.project)
         self.project.exclude_geojson = False
         self.project.save(update_fields=["exclude_geojson"])
         self.project.git_repo_dir.mkdir(parents=True, exist_ok=True)

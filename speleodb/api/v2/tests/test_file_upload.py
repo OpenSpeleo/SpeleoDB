@@ -19,6 +19,7 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v2.serializers import ProjectSerializer
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.utils import is_subset
@@ -106,14 +107,12 @@ class FileViewTests(BaseAPIProjectTestCase):
         )
 
     @parameterized.expand(
-        named_product(
-            testfile=TEST_FILES,
-            level=[
-                PermissionLevel.ADMIN,
-                PermissionLevel.READ_AND_WRITE,
-            ],
-            permission_type=[PermissionType.USER, PermissionType.TEAM],
-        )
+        [
+            (testfile, level, permission_type)
+            for testfile in TEST_FILES
+            for level, permission_type in PROJECT_PERMISSION_CASES
+            if level >= PermissionLevel.READ_AND_WRITE
+        ]
     )
     def test_upload_valid_file(
         self,
@@ -192,14 +191,12 @@ class FileViewTests(BaseAPIProjectTestCase):
         }
 
     @parameterized.expand(
-        named_product(
-            testfile=TEST_FILES,
-            level=[
-                PermissionLevel.ADMIN,
-                PermissionLevel.READ_AND_WRITE,
-            ],
-            permission_type=[PermissionType.USER, PermissionType.TEAM],
-        )
+        [
+            (testfile, level, permission_type)
+            for testfile in TEST_FILES
+            for level, permission_type in PROJECT_PERMISSION_CASES
+            if level >= PermissionLevel.READ_AND_WRITE
+        ]
     )
     def test_upload_file_error_without_mutex(
         self,

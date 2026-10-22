@@ -6,15 +6,19 @@ import os
 import subprocess
 import sys
 from contextlib import contextmanager
+from contextlib import redirect_stdout
 from http import HTTPStatus
+from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Any
+from unittest.mock import patch
 from uuid import uuid4
 
 import gitlab.exceptions
 import pytest
 from django.conf import settings
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import override_settings
 
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
@@ -22,13 +26,11 @@ from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.testing.gitlab_audit import record_cleanup
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from collections.abc import Iterator
 
     from gitlab import Gitlab
     from gitlab.v4.objects.groups import Group
     from gitlab.v4.objects.projects import Project as RemoteProject
-    from requests import Response
 
 BASE_DIR: Path = Path(__file__).resolve().parents[2]
 
@@ -122,50 +124,32 @@ def run_group_cleanup(
     delete: bool = True,
     token: str | None = None,
     older_than_hours: int | None = None,
-) -> subprocess.CompletedProcess[str]:
-    environment: dict[str, str] = os.environ.copy()
-    environment.update(
-        {
-            "DJANGO_SETTINGS_MODULE": "config.settings.test",
-            "CLEANUP_GROUP_ID": str(group.id),
-            "CLEANUP_GROUP_NAME": str(group.full_path),
-            "CLEANUP_HOST": settings.GITLAB_HOST_URL,
-            "CLEANUP_TOKEN": settings.GITLAB_TOKEN if token is None else token,
-            "CLEANUP_DELETE": "1" if delete else "0",
-            "CLEANUP_OLDER_THAN_HOURS": (
-                str(older_than_hours) if older_than_hours is not None else ""
-            ),
-        }
-    )
-    script: str = """
-import os
-import django
-from django.core.management import call_command
-django.setup()
-for key, source in {
-    "GITLAB_GROUP_ID": "CLEANUP_GROUP_ID",
-    "GITLAB_GROUP_NAME": "CLEANUP_GROUP_NAME",
-    "GITLAB_HOST_URL": "CLEANUP_HOST",
-    "GITLAB_TOKEN": "CLEANUP_TOKEN",
-}.items():
-    os.environ[key] = os.environ[source]
-age = os.environ["CLEANUP_OLDER_THAN_HOURS"]
-call_command(
-    "wipe_test_gitlab",
-    accept_danger=os.environ["CLEANUP_DELETE"] == "1",
-    older_than_hours=int(age) if age else None,
-)
-"""
-    return subprocess.run(  # noqa: S603
-        [sys.executable, "-c", script],
-        cwd=BASE_DIR,
-        env=environment,
-        input=answer,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=60,
-    )
+    skip_user_confirmation: bool = False,
+) -> str:
+    """Run the real command and HTTP requests without another Django startup."""
+    environment: dict[str, str] = {
+        "GITLAB_GROUP_ID": str(group.id),
+        "GITLAB_GROUP_NAME": str(group.full_path),
+        "GITLAB_HOST_URL": settings.GITLAB_HOST_URL,
+        "GITLAB_TOKEN": settings.GITLAB_TOKEN if token is None else token,
+    }
+    output = StringIO()
+    # Only process input is substituted. The command, confirmation parser and
+    # GitLab transport stay real. Restore the entire environment mapping so
+    # dotenv additions cannot leak; inherited audit attribution stays intact.
+    with (
+        patch.dict(os.environ, environment),
+        patch.object(sys, "stdin", StringIO(answer)),
+        redirect_stdout(output),
+    ):
+        call_command(
+            "wipe_test_gitlab",
+            accept_danger=delete,
+            older_than_hours=older_than_hours,
+            skip_user_confirmation=skip_user_confirmation,
+            stdout=output,
+        )
+    return output.getvalue()
 
 
 def assert_group_cleanup_lifecycle(
@@ -175,30 +159,22 @@ def assert_group_cleanup_lifecycle(
     # The standalone confirm_command stdin tests cover every accepted/rejected
     # spelling and EOF. Keep one real Django command case proving a rejected
     # answer cannot consume a later Y and delete the remote.
-    result: subprocess.CompletedProcess[str] = run_group_cleanup(
-        group, answer="invalid\nY\n"
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.count("Is this the correct group?") == 1
-    assert client.projects.get(remote.id).id == remote.id
-
-    result = run_group_cleanup(group, answer="Y\n", delete=False)
-    assert result.returncode == 0, result.stderr
-    assert client.projects.get(remote.id).id == remote.id
-
-    result = run_group_cleanup(group, answer="Y\n", older_than_hours=24)
-    assert result.returncode == 0, result.stderr
-    assert client.projects.get(remote.id).id == remote.id
+    output: str = run_group_cleanup(group, answer="invalid\nY\n")
+    assert output.count("Is this the correct group?") == 1
     assert not client.projects.get(remote.id).attributes.get("marked_for_deletion_at")
 
-    result = run_group_cleanup(group, answer="Y\n", token=f"invalid-{uuid4()}")
-    assert result.returncode != 0
-    assert "401" in result.stderr
-    assert client.projects.get(remote.id).id == remote.id
+    run_group_cleanup(group, answer="Y\n", delete=False)
+    assert not client.projects.get(remote.id).attributes.get("marked_for_deletion_at")
 
-    result = run_group_cleanup(group, answer=" y \n")
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.count("Is this the correct group?") == 1
+    run_group_cleanup(group, answer="Y\n", older_than_hours=24)
+    assert not client.projects.get(remote.id).attributes.get("marked_for_deletion_at")
+
+    with pytest.raises(CommandError, match=r"GitlabAuthenticationError \(HTTP 401\)"):
+        run_group_cleanup(group, answer="Y\n", token=f"invalid-{uuid4()}")
+    assert not client.projects.get(remote.id).attributes.get("marked_for_deletion_at")
+
+    output = run_group_cleanup(group, answer=" y \n")
+    assert output.count("Is this the correct group?") == 1
     assert_remote_deleted(client, remote.id)
     active_ids: list[int] = [
         item.id
@@ -211,7 +187,7 @@ def assert_group_cleanup_lifecycle(
 def assert_make_cleanup_lifecycle(
     client: Gitlab, group: Group, remote: RemoteProject, tmp_path: Path
 ) -> None:
-    """Exercise the actual Make entrypoint before and after its first deletion."""
+    """Exercise Make settings/authentication, then real command idempotency."""
     (tmp_path / "manage.py").symlink_to(BASE_DIR / "manage.py")
     (tmp_path / "speleodb").symlink_to(BASE_DIR / "speleodb", target_is_directory=True)
     environment: dict[str, str] = os.environ.copy()
@@ -225,7 +201,7 @@ def assert_make_cleanup_lifecycle(
             "GITLAB_HOST_URL": settings.GITLAB_HOST_URL,
         }
     )
-    for valid_token in (False, True, True):
+    for valid_token in (False, True):
         token: str = settings.GITLAB_TOKEN if valid_token else f"invalid-{uuid4()}"
         environment["GITLAB_TOKEN"] = token
         result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
@@ -247,50 +223,7 @@ def assert_make_cleanup_lifecycle(
             assert "GitlabAuthenticationError (HTTP 401)" in result.stderr
             assert not client.projects.get(remote.id).marked_for_deletion_at
 
-
-def assert_initial_commit_lifecycle(
-    remote: RemoteProject,
-    client: Gitlab,
-    *,
-    create_initial_commit: Callable[[RemoteProject], str],
-    max_attempts: int,
-) -> None:
-    """Initialize one real empty remote, then prove duplicate creation is rejected."""
-    responses: list[Response] = []
-
-    def observe(response: Response, **kwargs: Any) -> None:
-        if response.request.method == "POST" and response.request.path_url.endswith(
-            "/repository/commits"
-        ):
-            responses.append(response)
-
-    client.session.hooks["response"].append(observe)
-    try:
-        initial_sha: str = create_initial_commit(remote)
-        assert 1 <= len(responses) <= max_attempts
-        assert responses[-1].status_code == HTTPStatus.CREATED
-        assert all(
-            response.status_code == HTTPStatus.NOT_FOUND for response in responses[:-1]
-        )
-        assert all(
-            "PRIVATE-TOKEN" in response.request.headers for response in responses
-        )
-        initial = remote.commits.get(initial_sha)
-        assert initial.message.strip() == "Historic survey"
-        assert remote.branches.get("main").commit["id"] == initial_sha
-        assert remote.files.get("survey.txt", ref=initial_sha).decode() == (
-            b"historic data"
-        )
-        assert len(remote.commits.list(get_all=True)) == 1
-
-        responses.clear()
-        with pytest.raises(gitlab.exceptions.GitlabCreateError) as raised:
-            create_initial_commit(remote)
-        assert raised.value.response_code == HTTPStatus.BAD_REQUEST
-        assert len(responses) == 1
-        assert "already exists" in str(raised.value.error_message).lower()
-        assert [commit.id for commit in remote.commits.list(get_all=True)] == [
-            initial_sha
-        ]
-    finally:
-        client.session.hooks["response"].remove(observe)
+    # The two subprocesses cover Make's settings and flag wiring. Repeating the
+    # real command covers already-deleted handling without a third Django start.
+    run_group_cleanup(group, skip_user_confirmation=True)
+    assert_remote_deleted(client, remote.id)

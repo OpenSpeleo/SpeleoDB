@@ -166,6 +166,10 @@ RSS would double-count those pages.
 | After conversions: execution child RSS |       248.5 |  226.9 |
 | After conversions: combined PSS        |       366.1 |  326.7 |
 
+The historical profile used the original, larger shapefile corpus; that fixture
+has since been reduced to two representative features for backend tests. These
+measurements do not describe the current small fixture.
+
 Each profile executed three real conversions of the checked-in `sample.mak`
 Compass survey plus `gis_layers/us_states/us_states_5m.zip`, using
 `Project.build_geojson()` and `compile_gis_layer_bytes()` in its prefork child.
@@ -356,35 +360,37 @@ docker compose -f local.yml exec -T django bun run lint:frontend
 docker compose -f local.yml exec -T django bun run build
 ```
 
-Enable the dedicated ephemeral broker for real-worker integration tests:
+Real-worker integrations run by default in `make test-py`. The normal Compose
+service graph includes the dedicated ephemeral `celery-test-redis` broker and
+waits for its health during setup. A focused invocation needs no enable flag:
 
 ```bash
-docker compose -f local.yml --profile integration-test up -d celery-test-redis
-docker compose -f local.yml exec -T django python compose/run_live_worker_tests.py -q
+docker exec -w /app speleodb-monorepo-django pytest speleodb/background_jobs/tests/test_live_worker.py -q
 ```
 
-`TEST_CELERY_BROKER_URL=redis://localhost:6381/0` identifies that broker to
-host-networked integration test processes. Ordinary tests use in-memory
-transport. Never point real-worker tests at the development broker. Redis
-Pub/Sub spans logical databases, so a different database number is insufficient
-isolation. Use an isolated PostgreSQL test database, test storage bucket, and
-test GitLab resources alongside that broker. External worker connections cannot
-share an in-memory SQLite test database or an uncommitted test transaction.
+`TEST_CELERY_BROKER_URL` configures the service address, not whether tests run.
+Standalone host-networked execution defaults to `redis://localhost:6381/0`;
+monorepo Compose uses `redis://celery-test-redis:6379/0`. Ordinary tests use
+in-memory transport. Real-worker children use `config.settings.test_celery` to
+select the dedicated broker. Never point these tests at the development broker:
+Redis Pub/Sub spans logical databases, so another database number is
+insufficient isolation. A separate ephemeral server on `redis:6381` is also
+accepted.
 
-The runner builds the PostgreSQL connection URL from the container's existing
-`POSTGRES_*` variables without printing credentials. Pytest creates its isolated
-`test_` database; the worker receives that exact database address through
-`TEST_DATABASE_URL`. The suite refuses the development broker, a non-test
-database, a nonlocal storage endpoint, and any bucket other than
-`speleodb-user-artifacts-test`. Run it without parallel test processes. The test
-bucket must already exist with the local test credentials from `.envs/test.env`.
+The complete backend suite uses PostgreSQL. Test settings honor the test
+environment's `DATABASE_URL` independently of the container's development
+connection. Worker helpers require pytest's isolated `test_` database and pass
+that exact address through `TEST_DATABASE_URL`. The suite refuses development
+brokers, non-test worker databases, nonlocal storage endpoints, and buckets
+other than `speleodb-user-artifacts-test`. Missing required services fail
+clearly. Run serially; the configured test bucket must exist with the test
+credentials.
 
-PostgreSQL tests create their schema from the pristine `template0`, avoiding
-developer objects and stale libc collation metadata in `template1`. SQLite test
-configuration is unchanged. This does not alter either shared template or the
-development database. A separate ephemeral Redis server on `redis:6381` is also
-accepted for tests inside the existing container network; `redis:6379` remains
-refused.
+Tests create their PostgreSQL schema from pristine `template0`, avoiding
+developer objects and stale libc collation metadata. This changes neither shared
+templates nor the development database. SQLite cannot exercise the retained
+PostgreSQL advisory-lock and immediate-constraint contracts and is rejected at
+settings load with a configuration error.
 
 These tests start and stop their own Celery subprocess. They exercise real
 request dispatch, an empty-account archive, a signed S3 download, notification
@@ -410,31 +416,32 @@ graph, one OS thread and a 100,000,000-byte RSS high-water limit, and publish
 through an in-memory broker without importing task implementations. Database
 scheduler tests exercise due, disabled, and one-off entries, edited schedules,
 timezone behavior, stored counters, queue routing, and unchanged managed result
-cleanup. Lease tests use separate real PostgreSQL sessions for contention,
-handover, and ownership loss. Signal and retry tests cover interrupted scheduler
-construction, terminal failure propagation, and finalizer safety. Worker tests
-cover its profile, failed preflight, explicit native-thread overrides, and
-actual prefork timeouts/recovery.
+cleanup. Lease tests cover finite acquisition budgets and ownership loss. Signal
+and retry tests cover interrupted scheduler construction, terminal failure
+propagation, and finalizer safety. Worker tests cover its profile, failed
+preflight, explicit native-thread overrides, and actual prefork
+timeouts/recovery.
 
 Run the complete focused checks inside the already-running application
-container, with the dedicated test broker available on `redis:6381`:
+container, with the configured dedicated test broker available:
 
 ```bash
-docker exec -e TEST_CELERY_BROKER_URL=redis://redis:6381/0 -w /app speleodb-monorepo-django python compose/run_live_worker_tests.py compose/tests/test_celery_runtime.py compose/tests/test_celery_result_backend.py compose/tests/test_runtime_settings.py compose/tests/test_background_services.py speleodb/background_jobs/tests/test_scheduler.py speleodb/background_jobs/tests/test_consumer.py -q
+docker exec -w /app speleodb-monorepo-django pytest speleodb/background_jobs/tests/test_live_worker.py compose/tests/test_celery_runtime.py compose/tests/test_celery_result_backend.py compose/tests/test_runtime_settings.py compose/tests/test_background_services.py speleodb/background_jobs/tests/test_scheduler.py speleodb/background_jobs/tests/test_consumer.py -q
 ```
 
-The runner configures PostgreSQL from the container credentials, enables real
-worker tests, and includes the live-worker module automatically. Pytest creates
-its isolated `test_` database. Bare pytest runs using SQLite skip lease tests;
-they do not substitute for this integration run. Compare service memory and
-per-process RSS/PSS, parent/child membership, thread count, and startup high
-water in the same environment. For Linux subprocess probes, read
-`/proc/<pid>/status` (`VmRSS`, `VmHWM`, `Threads`) and
-`/proc/<pid>/smaps_rollup` (`Pss`). `getrusage().ru_maxrss` can retain the
-launching process's high water across exec and misrepresent a fresh lightweight
-runtime. Exercise at least 15 minutes of real scheduling, and sample worker
-memory before, during, and after representative tasks. Keep startup-preflight
-memory separate from the long-lived worker parent and its execution child.
+The same tests are collected in the default backend suite; no opt-in runner is
+required. Missing database or service prerequisites fail clearly; they never
+change the configured connection or skip tests. For a deliberately partial
+development run, `-m 'not live_services'` explicitly deselects real
+worker/broker checks. Compare service memory and per-process RSS/PSS,
+parent/child membership, thread count, and startup high water in the same
+environment. For Linux subprocess probes, read `/proc/<pid>/status` (`VmRSS`,
+`VmHWM`, `Threads`) and `/proc/<pid>/smaps_rollup` (`Pss`).
+`getrusage().ru_maxrss` can retain the launching process's high water across
+exec and misrepresent a fresh lightweight runtime. Exercise at least 15 minutes
+of real scheduling, and sample worker memory before, during, and after
+representative tasks. Keep startup-preflight memory separate from the long-lived
+worker parent and its execution child.
 
 The CI pytest job supplies Django's `DATABASE_URL` and `POSTGRES_HOST`,
 `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`, all

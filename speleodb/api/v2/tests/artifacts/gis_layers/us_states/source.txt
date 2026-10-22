@@ -10,3 +10,9 @@ U.S. Census Bureau. 2010 Census Production Settings Redistricting Data (P.L. 94-
 Demonstration Noisy Measurement File,
 <https://aws.amazon.com/marketplace/pp/prodview-krnfluihbyhqi?sr=0-1&ref_=beagle&applicationId=AWSMPContessa>,
 accessed on November 15, 2024
+
+Test subset: Delaware and the District of Columbia only. Original geometry and
+properties are retained across KML, KMZ, GeoJSON, TopoJSON, and shapefile formats.
+The two features include a three-part MultiPolygon and a single Polygon (four
+polygon parts). TopoJSON arc references are remapped to the retained arcs.
+Every artifact, including its extracted contents, is below 100,000 bytes.

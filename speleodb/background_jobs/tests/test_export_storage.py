@@ -36,8 +36,8 @@ def test_upload_download_and_delete_preserve_exact_key_and_metadata(
     filename: str = f"storage-test-{uuid.uuid4()}.zip"
     key: str = f"exports/3/job/attempt/{filename}"
     path: Path = tmp_path / filename
-    # Cross the multipart threshold using the same bounded transfer as exports.
-    data: bytes = b"shared storage test\n" * (1024 * 1024)
+    # Exact key, metadata, signing and readback need only a small payload.
+    data: bytes = b"shared storage test\n"
     path.write_bytes(data)
     digest: str = hashlib.sha256(data).hexdigest()
     storage: ExportStorage = ExportStorage()

@@ -113,10 +113,9 @@ def test_pruned_jobs_return_a_controlled_unavailable_error(
 
 @pytest.mark.django_db(transaction=True)
 def test_retention_holds_the_job_lock_until_cascade_deletion_finishes() -> None:
-    if connection.vendor != "postgresql":
-        pytest.skip(
-            "Concurrent retention requires the PostgreSQL integration database."
-        )
+    assert connection.vendor == "postgresql", (
+        "Concurrent retention requires the PostgreSQL integration database."
+    )
     user = UserFactory.create()
     job = _old_failed_job(user)
     backend_pids: Queue[int] = Queue()

@@ -1,4 +1,4 @@
-"""Opt-in PostgreSQL/Redis/RustFS tests with an actual Celery subprocess."""
+"""PostgreSQL/Redis/RustFS tests with an actual Celery subprocess."""
 
 from __future__ import annotations
 
@@ -59,10 +59,7 @@ if TYPE_CHECKING:
 
 pytestmark = [
     pytest.mark.django_db(transaction=True),
-    pytest.mark.skipif(
-        os.environ.get("EXPORTS_LIVE_WORKER_TESTS") != "1",
-        reason="Set EXPORTS_LIVE_WORKER_TESTS=1 to use isolated live services.",
-    ),
+    pytest.mark.live_services,
 ]
 
 WAIT_SECONDS: int = 45
@@ -186,7 +183,7 @@ def live_worker(
     environment: dict[str, str] = os.environ.copy()
     environment.update(
         {
-            "DJANGO_SETTINGS_MODULE": "config.settings.test",
+            "DJANGO_SETTINGS_MODULE": "config.settings.test_celery",
             "TEST_DATABASE_URL": database_url,
             "TEST_CELERY_BROKER_URL": broker_url,
             "CELERY_BROKER_URL": broker_url,

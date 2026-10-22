@@ -10,12 +10,12 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import ExplorationLeadFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import ExplorationLead
-from speleodb.utils.test_utils import named_product
 
 
 class TestUnauthenticatedExplorationLeadAPIAuthentication(BaseAPIProjectTestCase):
@@ -75,15 +75,7 @@ class TestUnauthenticatedExplorationLeadAPIAuthentication(BaseAPIProjectTestCase
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
     """Test permission requirements for exploration lead API endpoints."""
@@ -183,15 +175,7 @@ class TestExplorationLeadAPIPermissions(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadCRUDOperations(BaseAPIProjectTestCase):
     """Test CRUD operations for exploration leads."""
@@ -349,15 +333,7 @@ class TestExplorationLeadCRUDOperations(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadValidation(BaseAPIProjectTestCase):
     """Test validation rules for exploration lead data."""
@@ -419,15 +395,7 @@ class TestExplorationLeadValidation(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadEdgeCases(BaseAPIProjectTestCase):
     """Test edge cases and error handling."""
@@ -522,15 +490,7 @@ class TestExplorationLeadEdgeCases(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadCoordinateRounding(BaseAPIProjectTestCase):
     """Test coordinate rounding functionality."""
@@ -609,15 +569,7 @@ class TestExplorationLeadCoordinateRounding(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestExplorationLeadGeoJSON(BaseAPIProjectTestCase):
     """Test GeoJSON endpoint for exploration leads."""

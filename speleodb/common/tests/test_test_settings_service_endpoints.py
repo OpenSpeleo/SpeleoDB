@@ -22,10 +22,8 @@ def test_test_settings_accept_devcontainer_internal_service_endpoints() -> None:
     )
     probe = """
 import json
-import django
 from django.conf import settings
 
-django.setup()
 print(json.dumps({
     "gitlab_host": settings.GITLAB_HOST_URL,
     "gitlab_protocol": settings.GITLAB_HTTP_PROTOCOL,
@@ -52,26 +50,42 @@ print(json.dumps({
 
 
 @pytest.mark.parametrize(
-    ("database_url", "engine", "template"),
+    ("database_url", "expected_name", "use_template"),
     [
-        (
-            "postgresql://test@db.invalid/runtime-settings-test",
-            "django.db.backends.postgresql",
-            "template0",
-        ),
-        ("sqlite://:memory:", "django.db.backends.sqlite3", None),
+        (None, "configured-tests", False),
+        ("postgresql://test@db.invalid/test_worker", "test_worker", False),
+        ("sqlite://:memory:", None, False),
+        (None, "development", True),
     ],
 )
-def test_test_database_template_is_isolated_only_for_postgresql(
-    database_url: str, engine: str, template: str | None
+def test_test_database_selection_is_explicit_and_postgresql(
+    database_url: str | None,
+    expected_name: str | None,
+    use_template: bool,
+    tmp_path: Path,
 ) -> None:
+    test_environment = tmp_path / ".envs" / "test.env"
+    test_environment.parent.mkdir()
+    test_environment.write_text(
+        (BASE_DIR / ".envs/test.env.dist").read_text()
+        if use_template
+        else "DATABASE_URL=postgresql://test@db.invalid/configured-tests\n"
+    )
     child_environment: dict[str, str] = os.environ.copy()
+    child_environment.pop("TEST_DATABASE_URL", None)
     child_environment.update(
         {
             "DJANGO_SETTINGS_MODULE": "config.settings.test",
-            "TEST_DATABASE_URL": database_url,
+            "USE_DOCKER": "true",
+            "POSTGRES_HOST": "development-db.invalid",
+            "POSTGRES_DB": "development",
+            "POSTGRES_PORT": "5432",
+            "POSTGRES_USER": "unused",
+            "POSTGRES_PASSWORD": "unused",
         }
     )
+    if database_url is not None:
+        child_environment["TEST_DATABASE_URL"] = database_url
     probe: str = """
 import json
 from django.conf import settings
@@ -79,21 +93,30 @@ from django.conf import settings
 database = settings.DATABASES["default"]
 print(json.dumps({
     "engine": database["ENGINE"],
+    "name": database["NAME"],
+    "host": database["HOST"],
     "template": database.get("TEST", {}).get("TEMPLATE"),
     "atomic_requests": database["ATOMIC_REQUESTS"],
 }))
 """
     result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
         [sys.executable, "-c", probe],
-        cwd=BASE_DIR,
+        cwd=tmp_path,
         env=child_environment,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
         timeout=30,
     )
+    if expected_name is None:
+        assert result.returncode != 0
+        assert "The complete backend suite requires PostgreSQL" in result.stderr
+        return
+    assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {
-        "engine": engine,
-        "template": template,
+        "engine": "django.db.backends.postgresql",
+        "name": expected_name,
+        "host": "development-db.invalid" if use_template else "db.invalid",
+        "template": "template0",
         "atomic_requests": True,
     }

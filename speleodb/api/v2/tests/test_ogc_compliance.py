@@ -3525,7 +3525,5 @@ def test_ogc_team_engine_setup_documented() -> None:
     docs reorg.
     """
     api_ref = Path("docs/map-viewer/api-reference.md")
-    if not api_ref.exists():
-        pytest.skip("docs/map-viewer/api-reference.md not present in this checkout")
     text = api_ref.read_text(encoding="utf-8")
     assert "OGC API - Features" in text

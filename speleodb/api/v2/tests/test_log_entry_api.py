@@ -12,6 +12,7 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.file_utils import create_test_image
@@ -129,15 +130,7 @@ class BaseTestStationLogEntryGetAPI(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationLogEntryListAPI(BaseTestStationLogEntryGetAPI):
     def setUp(self) -> None:
@@ -226,15 +219,7 @@ class TestStationLogEntryListAPI(BaseTestStationLogEntryGetAPI):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationLogEntryDetailAPI(BaseTestStationLogEntryGetAPI):
     def setUp(self) -> None:

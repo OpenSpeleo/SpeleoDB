@@ -112,24 +112,16 @@ def rebuild_app() -> Iterator[Celery]:
             previous.set_current()
 
 
-@pytest.mark.django_db(transaction=True)
-def test_geojson_rebuild_is_consumed_asynchronously_and_empty_scope_is_safe(
-    rebuild_app: Celery,
-) -> None:
-    assert not Project.objects.exists()
-    queue = rebuild_app.conf.task_default_queue
-    with start_worker(rebuild_app, queues=[queue], perform_ping_check=False):
-        result = refresh_all_projects_geojson.delay()
-        assert not isinstance(result, EagerResult)
-        assert result.get(timeout=15) == {"enqueued": 0, "tasks": []}
-        assert result.successful()
-    assert not Project.objects.exists()
-
-
 @pytest.mark.django_db
 def test_coordinator_only_enqueues_one_forced_child_per_eligible_project(
     rebuild_app: Celery, tmp_path: Path
 ) -> None:
+    assert not Project.objects.exists()
+    assert refresh_all_projects_geojson.apply(throw=True).get() == {
+        "enqueued": 0,
+        "tasks": [],
+    }
+    assert not Project.objects.exists()
     projects = ProjectFactory.create_batch(3, exclude_geojson=False)
     ProjectFactory.create(exclude_geojson=True)
     expected_ids = {str(project.pk) for project in projects}
@@ -157,7 +149,7 @@ def test_coordinator_only_enqueues_one_forced_child_per_eligible_project(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_children_recheck_scope_and_one_failure_does_not_stop_other_projects(
+def test_async_rebuild_rechecks_scope_isolates_failures_and_handles_empty_scope(
     rebuild_app: Celery, tmp_path: Path
 ) -> None:
     failing: Project = ProjectFactory.create(exclude_geojson=False)
@@ -186,6 +178,19 @@ def test_children_recheck_scope_and_one_failure_does_not_stop_other_projects(
         assert results[deleted_id].get(timeout=15) == "skipped"
         results[str(failing.pk)].get(timeout=15, propagate=False)
         assert results[str(failing.pk)].failed()
+
+        # Reuse this actual worker to prove coordinator delivery with no
+        # eligible projects, after its children have completed independently.
+        Project.objects.filter(pk=failing.pk).update(exclude_geojson=True)
+        empty_result = refresh_all_projects_geojson.delay()
+        assert not isinstance(empty_result, EagerResult)
+        assert empty_result.get(timeout=15) == {"enqueued": 0, "tasks": []}
+        assert empty_result.successful()
+        assert not Project.objects.filter(exclude_geojson=False).exists()
+        assert set(Project.objects.values_list("pk", flat=True)) == {
+            failing.pk,
+            excluded.pk,
+        }
     assert not list(tmp_path.iterdir())
 
 

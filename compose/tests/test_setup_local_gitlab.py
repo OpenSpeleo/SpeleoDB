@@ -28,10 +28,6 @@ if TYPE_CHECKING:
     from requests import Response
 
 PRIVATE_ENV_MODE = 0o600
-LOCAL_GITLAB = pytest.mark.skipif(
-    settings.GITLAB_HOST_URL not in {"localhost:9080", "gitlab:9080"},
-    reason="Local infrastructure provisioning applies to the local GitLab service",
-)
 
 
 @pytest.fixture
@@ -135,9 +131,9 @@ def test_setup_client_returns_none_only_for_real_missing_group(
     assert setup_client.find_group(f"{settings.GITLAB_GROUP_NAME}/{uuid4()}") is None
 
 
-@LOCAL_GITLAB
 @pytest.mark.skip_if_lighttest
 @pytest.mark.parametrize("host", ["localhost:9080", "gitlab:9080"])
+@pytest.mark.local_infrastructure
 def test_local_api_accepts_browser_and_compose_hosts(
     setup_client: PythonGitLabClient, host: str
 ) -> None:
@@ -198,9 +194,13 @@ def test_private_env_update_preserves_user_values_and_is_idempotent(
 @pytest.fixture
 def bootstrap_groups() -> Generator[tuple[PythonGitLabClient, list[str]]]:
     """Use local bootstrap credentials and delete only this test's groups."""
+    bootstrap_token: str = os.environ.get("GITLAB_BOOTSTRAP_TOKEN", "")
+    assert bootstrap_token, (
+        "GitLab provisioning tests require the local service's GITLAB_BOOTSTRAP_TOKEN."
+    )
     client = PythonGitLabClient(
         f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
-        os.environ["GITLAB_BOOTSTRAP_TOKEN"],
+        bootstrap_token,
     )
     names: list[str] = []
     try:
@@ -216,8 +216,8 @@ def bootstrap_groups() -> Generator[tuple[PythonGitLabClient, list[str]]]:
         client.admin.session.close()
 
 
-@LOCAL_GITLAB
 @pytest.mark.skip_if_lighttest
+@pytest.mark.local_infrastructure
 def test_real_group_and_token_are_created_then_reused(
     bootstrap_groups: tuple[PythonGitLabClient, list[str]],
 ) -> None:
@@ -250,8 +250,8 @@ def test_real_group_and_token_are_created_then_reused(
     ]
 
 
-@LOCAL_GITLAB
 @pytest.mark.skip_if_lighttest
+@pytest.mark.local_infrastructure
 def test_invalid_credential_replaces_only_its_named_group_token(
     bootstrap_groups: tuple[PythonGitLabClient, list[str]],
 ) -> None:
@@ -281,8 +281,8 @@ def test_invalid_credential_replaces_only_its_named_group_token(
     assert unrelated["id"] in active_ids
 
 
-@LOCAL_GITLAB
 @pytest.mark.skip_if_lighttest
+@pytest.mark.local_infrastructure
 def test_real_setup_cli_provisions_isolated_dev_and_test_resources(
     bootstrap_groups: tuple[PythonGitLabClient, list[str]], tmp_path: Path
 ) -> None:

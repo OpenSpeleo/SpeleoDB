@@ -153,15 +153,19 @@ def test_live_tests_have_separate_pubsub_broker(
     compose_config: dict[str, Any],
 ) -> None:
     broker: dict[str, Any] = compose_config["services"]["celery-test-redis"]
-    assert broker["profiles"] == ["integration-test"]
+    assert "profiles" not in broker
+    assert compose_config["services"]["setup"]["depends_on"]["celery-test-redis"] == {
+        "condition": "service_healthy"
+    }
     assert broker["ports"] == ["127.0.0.1:6381:6379"]
     assert "volumes" not in broker
 
 
 @pytest.fixture
 def worker_script_environment(transactional_db: None) -> dict[str, str]:
-    if connection.vendor != "postgresql":
-        pytest.skip("Real worker startup requires the isolated PostgreSQL test DB.")
+    assert connection.vendor == "postgresql", (
+        "Real worker startup requires the isolated PostgreSQL test DB."
+    )
     environment: dict[str, str] = os.environ.copy()
     for name in NATIVE_THREAD_VARIABLES:
         environment.pop(name, None)
@@ -236,10 +240,7 @@ def running_script_worker(
                     broker.delete(key)
 
 
-@pytest.mark.skipif(
-    os.environ.get("EXPORTS_LIVE_WORKER_TESTS") != "1",
-    reason="Set EXPORTS_LIVE_WORKER_TESTS=1 to use the isolated real broker.",
-)
+@pytest.mark.live_services
 @pytest.mark.parametrize("explicit_threads", [None, "3"])
 def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limits(
     tmp_path: Path,
@@ -291,10 +292,7 @@ def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limi
                 assert process_environment[name] == (explicit_threads or "1")
 
 
-@pytest.mark.skipif(
-    os.environ.get("EXPORTS_LIVE_WORKER_TESTS") != "1",
-    reason="Set EXPORTS_LIVE_WORKER_TESTS=1 to use the isolated real broker.",
-)
+@pytest.mark.live_services
 def test_worker_script_does_not_start_after_real_django_check_failure(
     worker_script_environment: dict[str, str],
 ) -> None:
@@ -318,8 +316,9 @@ def test_worker_script_does_not_start_after_real_django_check_failure(
 
 @pytest.mark.django_db(transaction=True)
 def test_entrypoint_checks_real_postgres_and_preserves_broker() -> None:
-    if connection.vendor != "postgresql":
-        pytest.skip("The real entrypoint readiness check requires PostgreSQL.")
+    assert connection.vendor == "postgresql", (
+        "The real entrypoint readiness check requires PostgreSQL."
+    )
     postgres_test_database_url()
     database: dict[str, Any] = connection.settings_dict
     environment: dict[str, str] = os.environ.copy()
@@ -359,7 +358,7 @@ def test_test_settings_override_the_inherited_development_broker() -> None:
         {
             "DJANGO_SETTINGS_MODULE": "config.settings.test",
             "CELERY_BROKER_URL": "redis://localhost:6379/1",
-            "TEST_CELERY_BROKER_URL": "memory://",
+            "TEST_CELERY_BROKER_URL": "redis://localhost:6381/0",
         }
     )
     result: subprocess.CompletedProcess[str] = subprocess.run(

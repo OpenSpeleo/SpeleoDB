@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.client import HTTPConnection
@@ -33,8 +32,6 @@ if TYPE_CHECKING:
 
     from pytest_django.fixtures import Settings
     from pytest_django.live_server_helper import LiveServer
-
-    from speleodb.common.templatetags.vite_assets import ManifestEntry
 
 
 FINDERS = [
@@ -110,6 +107,13 @@ def test_application_configures_both_source_protected_finders() -> None:
 
 
 @pytest.fixture
+def collected_static_root(static_locations: StaticLocations) -> str:
+    """Exercise real collection and HTTP serving with tiny compiled assets."""
+    call_command("collectstatic", interactive=False, verbosity=0)
+    return str(static_locations.collected)
+
+
+@pytest.fixture
 def live_server(request: pytest.FixtureRequest, settings: Settings) -> LiveServer:
     # CI starts with a CDN URL; set it before the server captures its static URL.
     settings.STATIC_URL = "https://assets.example.test/staticfiles/"
@@ -119,17 +123,10 @@ def live_server(request: pytest.FixtureRequest, settings: Settings) -> LiveServe
 
 @pytest.mark.django_db(transaction=True)
 def test_live_server_delivers_collected_assets_and_rejects_sources(
-    live_server: LiveServer,
+    live_server: LiveServer, static_locations: StaticLocations
 ) -> None:
-    manifest: dict[str, ManifestEntry] = json.loads(
-        Path(settings.VITE_MANIFEST_PATH).read_text(encoding="utf-8")
-    )
-    asset: str = manifest["frontend_common/app.ts"]["file"]
-    source: Path = (
-        Path(settings.BASE_DIR)
-        / "frontend_private/static/private/ts/map_viewer/main.ts"
-    )
-    assert source.is_file()
+    asset = "speleodb/vite/assets/app-123.js"
+    assert (static_locations.sources[0] / "nested/worker.ts").is_file()
     assert not list(Path(settings.STATIC_ROOT).rglob("*.ts"))
     address: SplitResult = urlsplit(live_server.url)
     assert address.scheme == "http"
@@ -139,15 +136,15 @@ def test_live_server_delivers_collected_assets_and_rejects_sources(
     )
     response: HTTPResponse
     try:
-        connection.request("GET", f"/static/speleodb/vite/{asset}")
+        connection.request("GET", f"/static/{asset}")
         response = connection.getresponse()
         assert response.status == HTTPStatus.OK
-        assert response.read() == (Path(settings.VITE_ASSET_ROOT) / asset).read_bytes()
-        connection.request("GET", "/static/ts/vendors/jquery-3.7.1.js")
+        assert response.read() == (static_locations.collected / asset).read_bytes()
+        connection.request("GET", "/static/private/ts/vendors/library.js")
         response = connection.getresponse()
         assert response.status == HTTPStatus.OK
         assert response.read()
-        connection.request("GET", "/static/private/ts/map_viewer/main.ts")
+        connection.request("GET", "/static/nested/worker.ts")
         response = connection.getresponse()
         assert response.status == HTTPStatus.NOT_FOUND
         response.read()

@@ -38,8 +38,11 @@ pytestmark = pytest.mark.skip_if_lighttest
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures("gitlab_retry_delays")
 def test_new_repository_cache_recovery_and_user_cleanup(
-    live_gitlab: Gitlab, user: User, tmp_path: Path
+    live_gitlab: Gitlab,
+    user: User,
+    tmp_path: Path,
 ) -> None:
     project: Project = ProjectFactory.create(created_by=user.email)
     UserProjectPermissionFactory.create(

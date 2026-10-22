@@ -1,1 +1,8 @@
 Downloaded from: https://sig.conanp.gob.mx/ on September 1st 2026
+
+Test subset: four original placemarks, preserving a point, a single polygon,
+a four-part polygon, and a three-part polygon with a hole. The selected names
+are Alto Golfo de California y Delta del Río Colorado, Reserva de la Biosfera,
+Archipiélago de Revillagigedo, and C.A.D.N.R. 004 Don Martín. Counts are four
+source placemarks, one point and eight polygon parts. Original selected
+coordinates are retained; the extracted KML is below 100,000 bytes.

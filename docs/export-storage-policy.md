@@ -251,26 +251,11 @@ works. If private files were previously cached under public behavior, invalidate
 those cached paths. Repository tests do not prove that the live distribution has
 been updated.
 
-The opt-in large-file test creates a real member larger than 4 GiB in the
-isolated test bucket, verifies ZIP64 streaming and checksums, and removes its
-objects. It needs at least 16 GiB free in Docker's backing filesystem:
-
-```sh
-docker compose -f local.yml exec -T -e SPELEODB_TEST_LARGE_ARCHIVE=1 django \
-  pytest speleodb/background_jobs/tests/test_large_archive.py -q -s
-```
-
-Run it after other database tests finish. Normal pytest runs skip this capacity
-check.
-
-### Recorded local capacity check
-
-The Docker/RustFS run on 2026-09-14 passed with a 4,294,967,313-byte member and
-a 4,294,969,785-byte ZIP. Building took 14.83 seconds; source upload, build,
-artifact upload, and complete artifact download verification took 35.70 seconds.
-Peak process memory was about 405 MiB, an increase of about 130 MiB. Both the
-extracted member and downloaded ZIP matched their SHA256 checksums. All test
-objects and multipart uploads were removed.
-
-This synthetic local test validates ZIP64, streaming, integrity, and bounded
-memory. It does not predict production latency across GitLab and AWS networks.
+Backend archive and storage tests use small fixtures, capped at 100,000 bytes
+including generated payloads and transfers. ZIP64 coverage lowers the format
+threshold for one test and exercises the actual archive builder with a tiny
+local source. Multi-chunk download coverage lowers only the test's chunk size;
+real S3 readback, checksums, metadata, signing, overwrite, and cleanup retain
+small integration inputs. These checks verify application contracts, not
+multi-gigabyte capacity or throughput. Process high-water memory deltas are not
+used as a substitute for testing bounded reads.

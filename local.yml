@@ -115,7 +115,7 @@ services:
   celery-test-redis:
     image: redis:8-alpine
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_test_celery_redis"
-    profiles: ["integration-test"]
+    restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "127.0.0.1:6381:6379"
@@ -193,6 +193,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      celery-test-redis:
         condition: service_healthy
       rustfs:
         condition: service_healthy

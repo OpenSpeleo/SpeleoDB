@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from django.test import override_settings
 
 from speleodb.testing.gitlab_pool import get_pool
+from speleodb.utils import gitlab_client
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -29,3 +31,13 @@ def _gitlab_test_lease(tmp_path: Path) -> Generator[None]:
             yield
         finally:
             pool.release()
+
+
+@pytest.fixture
+def gitlab_retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Record elapsed backoff while keeping real HTTP and bounded attempts."""
+    delays: list[float] = []
+    # Only explicit absent-remote cases opt in. Replace this module's clock
+    # reference, not process-wide time.sleep or any SDK/network response.
+    monkeypatch.setattr(gitlab_client, "time", SimpleNamespace(sleep=delays.append))
+    return delays

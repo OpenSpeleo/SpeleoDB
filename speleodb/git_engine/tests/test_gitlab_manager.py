@@ -71,8 +71,11 @@ def test_existing_remote_is_cloned_without_an_extra_commit(
         cloned.close()
 
 
+@pytest.mark.usefixtures("gitlab_retry_delays")
 def test_invalid_namespace_does_not_create_local_repository(
-    live_gitlab: Gitlab, live_project: Project, tmp_path: Path
+    live_gitlab: Gitlab,
+    live_project: Project,
+    tmp_path: Path,
 ) -> None:
     namespace: str = "-1"
     with override_settings(GITLAB_GROUP_ID=namespace):

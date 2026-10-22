@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -40,10 +41,10 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
         )
         self.station = SubSurfaceStationFactory.create(project=self.project)
 
+    @override_settings(DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT=1 / 1024)
     def test_video_upload_file_size_over_limit(self) -> None:
-        """Test video upload with file size over 5MB limit."""
-        # Create a file slightly over 5MB
-        video_content = b"X" * (5 * 1024 * 1024 + 1000)  # 5MB + 1KB
+        """Exercise the real size validator one byte above a 1 KiB limit."""
+        video_content = b"X" * 1025
         video_file = SimpleUploadedFile(
             "test_large.mp4", video_content, content_type="video/mp4"
         )
@@ -64,6 +65,7 @@ class TestStationResourceVideoUpload(BaseAPIProjectTestCase):
 
         # Should fail with appropriate error
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "File size cannot exceed" in str(response.data["errors"]["file"])
 
     def test_video_update_file_replacement(self) -> None:
         """Test updating a video resource with a new file."""

@@ -7,7 +7,6 @@ from datetime import timedelta
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db import connection
 from django.db import transaction
 from django.utils import timezone
 
@@ -280,10 +279,6 @@ class TestSensorInstallModel:
         due = SensorInstall.objects.due_for_retrieval(days=None)  # pyright: ignore[reportAttributeAccessIssue]
         assert inst not in due
 
-    @pytest.mark.skipif(
-        connection.vendor == "sqlite",
-        reason="Partial unique constraint not supported on SQLite",
-    )
     def test_unique_installed_per_sensor(
         self, sensor: Sensor, station: Station
     ) -> None:

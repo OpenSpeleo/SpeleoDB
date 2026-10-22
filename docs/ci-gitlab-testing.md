@@ -34,13 +34,17 @@ tests reuse four repositories with fresh UUIDs for each invocation:
 commit SHAs, leases, and final cleanup. It retains no session-scoped Django
 model instances. Provisioning delegates to
 `GitlabManager.create_or_clone_project()`, including UUID remote names and
-paths, bounded creation retries, and the application's normal initial commit.
-Canonical role names are Django fixture labels only; using those labels as
-remote names collides across concurrent runs or with repositories awaiting
-deletion. `canonical_user()` and `canonical_project()` materialize database rows
-inside the requesting test's transaction, including after `TransactionTestCase`
-flushes. Database-only tests do not contact GitLab. `project_matrix()`
-explicitly creates the complete A/B ownership and permission matrix.
+paths, bounded creation attempts, ambiguous-response recovery, and the
+application's normal initial commit. During this fixture-only provisioning, only
+elapsed HTTP backoff is omitted with a scoped module clock replacement. Actual
+requests and SDK responses remain real; ordinary borrowed-repository operations
+retain their normal timing and cleanup behavior. Canonical role names are Django
+fixture labels only; using those labels as remote names collides across
+concurrent runs or with repositories awaiting deletion. `canonical_user()` and
+`canonical_project()` materialize database rows inside the requesting test's
+transaction, including after `TransactionTestCase` flushes. Database-only tests
+do not contact GitLab. `project_matrix()` explicitly creates the complete A/B
+ownership and permission matrix.
 
 The base API cases select the canonical project for their tested permission
 level. Grants remain explicit: `canonical_project()` does not silently grant A
@@ -65,9 +69,23 @@ pytest collection order never determines whether a project is ready or deleted.
 | --------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `manager-new`   | Missing lookup, new-project initialization, cache recovery, user cleanup failure and deletion                     |
 | `proxy-new`     | First-404 provisioning and retry, Make cleanup with invalid credentials, successful deletion and repeated cleanup |
-| `empty-archive` | Empty/disabled archive behavior, recorded-history inconsistency, initial API commit and duplicate-file rejection  |
+| `empty-archive` | Empty/disabled archive behavior, recorded-history inconsistency and cleanup after failure                         |
 | `manager-empty` | Initialization of an existing empty remote, subgroup confirmation, dry run, authentication failure and deletion   |
 | `write-check`   | The management command's real authenticated create/delete check                                                   |
+
+The absent-remote manager/proxy tests explicitly request `gitlab_retry_delays`
+to record backoff without elapsed waiting. This function-scoped fixture replaces
+only the bounded client's module clock reference: actual HTTP requests, attempt
+counts, SDK errors and production delay settings remain intact. It never patches
+process-wide `time.sleep`; ordinary propagation/recovery tests keep real
+waiting. The API-policy suite separately asserts the complete requested delay
+sequence.
+
+Destructive command policies run against real GitLab through `call_command` with
+scoped stdin/environment. Two actual Make subprocesses retain successful and
+unauthorized cleanup, settings/flag wiring, exit codes and token secrecy;
+already-deleted idempotency uses the real command without another Django
+startup.
 
 The healthy full-suite target is **nine creations and ten creation POSTs**. The
 tenth POST is the separately authorized invalid-namespace request, which must
@@ -351,12 +369,23 @@ mutation/restoration, transaction flushes, direct SDK guard rejection, inherited
 subprocess accounting, and positive and negative permission paths. Each full
 invocation has its own fresh identifiers and nine-project limit.
 
-Run tests with the normal local SQLite configuration and repeat
-database-sensitive checks against PostgreSQL using `TEST_DATABASE_URL`.
-Verifying only an overridden CI database misses regressions in the supported
-local configuration. Keep suites sharing a database or cleanup namespace serial.
-Never print the database URL, GitLab token, or credential-bearing Git URLs
-during diagnostics.
+The complete backend suite uses PostgreSQL for its retained advisory-lock,
+immediate-constraint, and independent-worker integration contracts. Configure
+`DATABASE_URL` explicitly in `.envs/test.env`; use the reachable PostgreSQL
+service address (`postgres:5432` in the monorepo container, `localhost:5432`
+with standalone host networking). Test settings honor that URL independently of
+development `POSTGRES_*` configuration and reject other engines clearly.
+`TEST_DATABASE_URL` is an explicit connection override. Pytest creates its own
+`test_` database from pristine `template0`; it never tests against development
+data. Keep suites sharing a database or cleanup namespace serial. Never print
+the database URL, GitLab token, or credential-bearing Git URLs during
+diagnostics.
+
+The distributed environment template expands the existing `POSTGRES_*` service
+address and credentials, with standalone defaults. Existing private environment
+files are preserved by setup; replace an old SQLite `DATABASE_URL` explicitly
+when migrating. A literal private URL or explicit `TEST_DATABASE_URL` remains
+authoritative.
 
 Relevant targets include the GitLab API-policy, manager and lifecycle suites,
 upload error handling, proxy, archive initialization, preload history, cleanup
@@ -372,3 +401,30 @@ database fixtures or upload parameters. Lease restoration adds bounded Git/ref
 operations, but prevents unbounded remote history and cross-test contamination.
 The immutable creation allocations provide a stronger regression check than
 counting repositories left in a group after teardown.
+
+### Default test coverage and explicit exclusions
+
+`make test-py` executes all collected backend tests. The selection plugin treats
+collection and runtime skips as failures. Missing services, dependencies,
+fixture files, or privileges must be fixed; the suite must not pass by omitting
+them. The live Celery and storage integrations run without environment opt-ins.
+The local Compose graph includes the dedicated test Redis process; CI reuses its
+Redis service exclusively for these integrations. Ordinary tests retain the
+in-process broker, while real workers explicitly select the dedicated endpoint.
+
+For a deliberately partial development run, `--light` and `--offline` deselect
+their existing marked tests. `-m 'not live_services'` excludes real
+worker/broker checks. Pytest reports these exclusions as deselected cases. All
+marker groups run without these explicit options. The GitHub job explicitly uses
+`-m 'not local_infrastructure'` for exactly five local GitLab routing and
+administrator-bootstrap cases: its hosted GitLab service cannot provide those
+local contracts. Its output must report five deselections; that CI invocation is
+a narrower scope than the complete default local run. It still runs every
+worker, broker, database, signing, and small-artifact storage integration.
+
+Real GitLab bootstrap tests require `GITLAB_BOOTSTRAP_TOKEN` for the configured
+GitLab administrator in addition to the ordinary test-group token. The local
+GitLab endpoint must also support the local browser and Compose Host headers
+checked by its routing tests. Missing credentials or incompatible routing fails
+the suite; it does not skip those contracts. Never use production administrator
+credentials for test provisioning.

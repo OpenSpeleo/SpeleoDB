@@ -121,10 +121,6 @@ class TestToolDMPDoctor(BaseAPITestCase):
 
     # ---- happy path against real artifact ----
 
-    @pytest.mark.skipif(
-        not REAL_DMP_PATH.exists(),
-        reason="reference DMP artifact missing",
-    )
     def test_happy_path_no_modifications(self) -> None:
         with REAL_DMP_PATH.open("rb") as f:
             upload = SimpleUploadedFile(

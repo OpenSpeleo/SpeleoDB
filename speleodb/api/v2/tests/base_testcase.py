@@ -5,7 +5,6 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-import pytest
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -30,6 +29,19 @@ if TYPE_CHECKING:
 class PermissionType(Enum):
     USER = "user"
     TEAM = "team"
+
+
+PROJECT_PERMISSION_CASES: tuple[tuple[PermissionLevel, PermissionType], ...] = tuple(
+    (level, permission_type)
+    for level in (
+        PermissionLevel.ADMIN,
+        PermissionLevel.READ_AND_WRITE,
+        PermissionLevel.READ_ONLY,
+        PermissionLevel.WEB_VIEWER,
+    )
+    for permission_type in PermissionType
+    if (level, permission_type) != (PermissionLevel.ADMIN, PermissionType.TEAM)
+)
 
 
 class BaseUserTestCaseMixin(TestCase):
@@ -68,9 +80,6 @@ class BaseProjectTestCaseMixin(BaseUserTestCaseMixin):
     def set_test_project_permission(
         self, level: PermissionLevel, permission_type: PermissionType
     ) -> None:
-        if level == PermissionLevel.ADMIN and permission_type == PermissionType.TEAM:
-            pytest.skip("Combination not allowed")
-
         match permission_type:
             case PermissionType.USER:
                 UserProjectPermission.objects.update_or_create(

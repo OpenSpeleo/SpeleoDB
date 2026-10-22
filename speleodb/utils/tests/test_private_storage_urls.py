@@ -5,16 +5,18 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from importlib import import_module
 from secrets import token_hex
 from typing import TYPE_CHECKING
-from typing import Any
 from urllib.parse import parse_qs
 from urllib.parse import quote
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
 import pytest
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import override_settings
 from django.utils import timezone
 
@@ -34,7 +36,6 @@ from speleodb.utils.s3_storages import S3StaticStorage
 if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Iterator
-    from types import ModuleType
     from urllib.parse import SplitResult
 
 
@@ -70,22 +71,9 @@ class SigningKey:
 
 @pytest.fixture(scope="module")
 def signing_key() -> SigningKey:
-    # Local installs do not include the already-defined production crypto extra.
-    # Keep local S3 tests active and verify real CloudFront signing when present.
-    pytest.importorskip(
-        "cryptography",
-        reason="CloudFront signing requires the existing production dependency extra.",
-        exc_type=ModuleNotFoundError,
+    key: rsa.RSAPrivateKey = rsa.generate_private_key(
+        public_exponent=65537, key_size=2048
     )
-    rsa: ModuleType = import_module("cryptography.hazmat.primitives.asymmetric.rsa")
-    serialization: ModuleType = import_module(
-        "cryptography.hazmat.primitives.serialization"
-    )
-    padding: ModuleType = import_module(
-        "cryptography.hazmat.primitives.asymmetric.padding"
-    )
-    hashes: ModuleType = import_module("cryptography.hazmat.primitives.hashes")
-    key: Any = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem: str = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -97,7 +85,8 @@ def signing_key() -> SigningKey:
             signature,
             policy,
             padding.PKCS1v15(),
-            hashes.SHA1(),
+            # Verify the SHA-1 signature required by the CloudFront URL protocol.
+            hashes.SHA1(),  # noqa: S303  # nosec B303
         )
 
     return SigningKey(private_pem=pem, verify_signature=verify_signature)

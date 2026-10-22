@@ -16,6 +16,7 @@ from django.utils import timezone
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import TokenFactory
@@ -23,7 +24,6 @@ from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
-from speleodb.utils.test_utils import named_product
 
 EXPECTED_LIST_COMMITS_COUNT = 3
 
@@ -87,14 +87,7 @@ def create_project_geojson(  # noqa: PLR0917
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    [case for case in PROJECT_PERMISSION_CASES if case[0] >= PermissionLevel.READ_ONLY],
 )
 class TestProjectGeoJsonCommitsApiView(BaseAPIProjectTestCase):
     """Test suite for the ProjectGeoJsonCommitsApiView endpoint."""

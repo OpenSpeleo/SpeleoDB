@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from urllib.parse import urlsplit
+
+from django.conf import settings
 
 TEST_BROKER_PORT: int = 6381
 REDIS_PORT: int = 6379
 
 
 def isolated_test_broker_url() -> str:
-    broker_url: str = os.environ.get("TEST_CELERY_BROKER_URL", "")
+    broker_url: str = settings.TEST_CELERY_BROKER_URL
     broker = urlsplit(broker_url)
     allowed: bool = (
         broker.hostname in {"localhost", "127.0.0.1", "redis"}

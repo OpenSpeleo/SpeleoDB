@@ -613,10 +613,12 @@ class TestStaffAdminAccess:
 
 @pytest.mark.django_db
 class TestStaffHijackRestriction:
-    @pytest.mark.skipif(
-        "hijack" not in settings.INSTALLED_APPS,
-        reason="django-hijack not installed",
-    )
+    @pytest.fixture(autouse=True)
+    def _require_hijack(self) -> None:
+        assert "hijack" in settings.INSTALLED_APPS, (
+            "The test settings must install django-hijack to exercise admin access."
+        )
+
     def test_staff_user_changelist_has_no_hijack_column(
         self, staff_client: Client
     ) -> None:
@@ -625,10 +627,6 @@ class TestStaffHijackRestriction:
         body = response.content.decode()
         assert "impersonate user" not in body.lower()
 
-    @pytest.mark.skipif(
-        "hijack" not in settings.INSTALLED_APPS,
-        reason="django-hijack not installed",
-    )
     def test_superuser_changelist_has_hijack_column(self, admin_client: Client) -> None:
         url = reverse("admin:users_user_changelist")
         response = admin_client.get(url)

@@ -119,8 +119,9 @@ def test_beat_loader_and_publication_stay_small_and_do_not_import_tasks(
 def test_minimal_scheduler_publishes_housekeeping_policy_without_task_imports(
     tmp_path: Path,
 ) -> None:
-    if connection.vendor != "postgresql":
-        pytest.skip("Scheduler ownership requires a real PostgreSQL test database.")
+    assert connection.vendor == "postgresql", (
+        "Scheduler ownership requires a real PostgreSQL test database."
+    )
     observed: dict[str, Any] = _run_beat_probe(
         """
         import json
@@ -188,8 +189,9 @@ def test_minimal_scheduler_publishes_housekeeping_policy_without_task_imports(
 
 @pytest.mark.django_db(transaction=True)
 def test_minimal_scheduler_preserves_database_schedule_behavior(tmp_path: Path) -> None:
-    if connection.vendor != "postgresql":
-        pytest.skip("Scheduler ownership requires a real PostgreSQL test database.")
+    assert connection.vendor == "postgresql", (
+        "Scheduler ownership requires a real PostgreSQL test database."
+    )
     observed: dict[str, Any] = _run_beat_probe(
         """
         import json

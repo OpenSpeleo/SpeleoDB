@@ -39,4 +39,5 @@ class Command(BaseCommand):
         with (Path(__file__).parent.parent.parent / "tests/url_config.json").open(
             mode="w"
         ) as fp:
-            json.dump(data, fp, indent=4)
+            json.dump(data, fp, indent=1)
+            fp.write("\n")

@@ -101,13 +101,11 @@ def test_real_unauthorized_response_is_not_retried(live_gitlab: Gitlab) -> None:
 def test_real_missing_project_obeys_opt_in_not_found_retries(
     live_gitlab: Gitlab,
     live_project: Project,
-    monkeypatch: pytest.MonkeyPatch,
+    gitlab_retry_delays: list[float],
     *,
     retry_not_found: bool,
 ) -> None:
     responses: list[Response] = []
-    delays: list[float] = []
-    monkeypatch.setattr("speleodb.utils.gitlab_client.time.sleep", delays.append)
 
     def observe(response: Response, **kwargs: Any) -> None:
         responses.append(response)
@@ -124,7 +122,7 @@ def test_real_missing_project_obeys_opt_in_not_found_retries(
             settings.DJANGO_GIT_RETRY_ATTEMPTS if retry_not_found else 1
         )
         assert len(responses) == expected_attempts
-        assert delays == [
+        assert gitlab_retry_delays == [
             min(
                 settings.DJANGO_GIT_RETRY_BASE_DELAY_SECONDS * 2**attempt,
                 settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS,

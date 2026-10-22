@@ -255,10 +255,15 @@ def test_broker_failure_retains_work_without_consuming_execution_budget(
                 broker_url=broker_url,
                 broker_read_url=broker_url,
                 broker_write_url=broker_url,
-                broker_connection_timeout=0.2,
-                broker_transport_options={
+                # These two keys already exist in namespaced Django settings;
+                # lowercase updates would be shadowed by their CELERY_* values.
+                CELERY_BROKER_CONNECTION_TIMEOUT=0.2,
+                CELERY_BROKER_TRANSPORT_OPTIONS={
                     "socket_timeout": 0.2,
                     "socket_connect_timeout": 0.2,
+                    # One real refused connection exercises application
+                    # recovery; Kombu's own reconnect budget is unrelated.
+                    "max_retries": 0,
                 },
             )
             try:
@@ -786,8 +791,9 @@ def test_worker_consumes_committed_job_asynchronously(
     artifact_storage: FileSystemStorage,
     memory_broker: Celery,
 ) -> None:
-    if connection.vendor != "postgresql":
-        pytest.skip("This integration test uses an independent worker DB connection")
+    assert connection.vendor == "postgresql", (
+        "This integration test uses an independent worker DB connection"
+    )
     commit, _ = local_source
     generation = _queue(commit)
     queue = f"test-geojson-{uuid.uuid4().hex}"

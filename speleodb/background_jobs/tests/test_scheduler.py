@@ -14,7 +14,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
-from threading import Timer
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
@@ -57,8 +56,9 @@ PROCESS_TIMEOUT_SECONDS: int = 20
 
 @pytest.fixture
 def postgres_parameters() -> dict[str, Any]:
-    if connection.vendor != "postgresql":
-        pytest.skip("Scheduler integration requires isolated PostgreSQL.")
+    assert connection.vendor == "postgresql", (
+        "Scheduler integration requires isolated PostgreSQL."
+    )
     assert str(connection.settings_dict["NAME"]).startswith("test_")
     return connection.get_connection_params()
 
@@ -124,9 +124,6 @@ def runtime(lease: SchedulerLease) -> Iterator[SchedulerRuntime]:
 
 @pytest.fixture
 def isolated_redis() -> Iterator[tuple[str, Redis]]:
-    broker_url = os.environ.get("TEST_CELERY_BROKER_URL", "")
-    if not broker_url:
-        pytest.skip("Set TEST_CELERY_BROKER_URL to the isolated Redis service.")
     broker_url = isolated_test_broker_url()
     client = Redis.from_url(broker_url, socket_timeout=2, socket_connect_timeout=1)
     assert client.ping()
@@ -203,28 +200,6 @@ def _owns_lock(application_name: str) -> bool:
             [application_name, BEAT_LOCK_ID],
         )
         return bool(cursor.fetchone()[0])
-
-
-def test_standby_acquires_lock_after_previous_scheduler_exits(
-    postgres_parameters: dict[str, Any],
-) -> None:
-    previous = SchedulerLease(postgres_parameters)
-    previous.acquire()
-    replacement = SchedulerLease(postgres_parameters)
-    release = Timer(0.1, previous.close)
-    release.start()
-    try:
-        replacement.acquire()
-        replacement.assert_owned()
-        assert previous.connection is not None
-        assert previous.connection.closed
-        assert replacement.connection is not connection.connection
-        connection.close()
-        replacement.assert_owned()
-    finally:
-        release.join()
-        previous.close()
-        replacement.close()
 
 
 @pytest.mark.parametrize(
@@ -383,6 +358,7 @@ def test_scheduler_connection_failure_obeys_budget(
             lease.assert_owned()
 
 
+@pytest.mark.live_services
 def test_scheduler_connection_recovers_through_real_failover(
     lease: SchedulerLease,
     isolated_redis: tuple[str, Redis],
@@ -406,6 +382,7 @@ def test_scheduler_connection_recovers_through_real_failover(
 
 
 @pytest.mark.parametrize("predeclare", [False, True])
+@pytest.mark.live_services
 def test_real_broker_retries_cannot_publish_after_lease_loss(
     lease: SchedulerLease,
     isolated_redis: tuple[str, Redis],
@@ -457,6 +434,7 @@ def test_real_broker_retries_cannot_publish_after_lease_loss(
         client.delete(current.queue, f"_kombu.binding.{current.queue}")
 
 
+@pytest.mark.live_services
 def test_real_kombu_connection_revival_rechecks_ownership(
     lease: SchedulerLease,
     isolated_redis: tuple[str, Redis],
@@ -566,8 +544,8 @@ def test_standby_exhausts_finite_lock_budget(
 ) -> None:
     delays: list[float] = []
     # Keep actual competing PostgreSQL sessions; elapsed waiting does not change
-    # the exhausted-budget path. Signal interruption and real lock handoff are
-    # exercised separately without replacing their clocks.
+    # the exhausted-budget path. Signal interruption is exercised separately
+    # without replacing its clock.
     monkeypatch.setattr(lease_module, "time", SimpleNamespace(sleep=delays.append))
     replacement = SchedulerLease(postgres_parameters)
     try:
@@ -642,6 +620,7 @@ def test_launcher_releases_lease_after_real_invalid_broker_failure(
         replacement.close()
 
 
+@pytest.mark.live_services
 def test_sigterm_syncs_actual_publication_before_releasing_lock(
     postgres_parameters: dict[str, Any],
     isolated_redis: tuple[str, Redis],

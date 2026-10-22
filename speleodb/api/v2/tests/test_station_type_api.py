@@ -10,13 +10,13 @@ from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 from rest_framework import status
 
+from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import SubSurfaceStationType
 from speleodb.gis.models import SubSurfaceStation
-from speleodb.utils.test_utils import named_product
 
 
 class TestUnauthenticatedStationTypeAPI(BaseAPIProjectTestCase):
@@ -44,15 +44,7 @@ class TestUnauthenticatedStationTypeAPI(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationTypeCreation(BaseAPIProjectTestCase):
     """Test station creation with different types."""
@@ -155,15 +147,7 @@ class TestStationTypeCreation(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationTypeModification(BaseAPIProjectTestCase):
     """Test that station type cannot be modified after creation."""
@@ -289,15 +273,7 @@ class TestStationTypeModification(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationTypeRetrieval(BaseAPIProjectTestCase):
     """Test that station type is correctly returned in responses."""
@@ -380,15 +356,7 @@ class TestStationTypeRetrieval(BaseAPIProjectTestCase):
         "level",
         "permission_type",
     ],
-    named_product(
-        level=[
-            PermissionLevel.ADMIN,
-            PermissionLevel.READ_AND_WRITE,
-            PermissionLevel.READ_ONLY,
-            PermissionLevel.WEB_VIEWER,
-        ],
-        permission_type=[PermissionType.USER, PermissionType.TEAM],
-    ),
+    PROJECT_PERMISSION_CASES,
 )
 class TestStationTypeGeoJSON(BaseAPIProjectTestCase):
     """Test that station type is correctly returned in GeoJSON responses."""

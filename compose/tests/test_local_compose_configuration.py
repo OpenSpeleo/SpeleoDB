@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import grp
 import os
 import pwd
 import subprocess
 from pathlib import Path
 from typing import Any
 
-import pytest
 import yaml
 
 from compose.setup_local_gitlab import read_env_file
@@ -106,21 +106,27 @@ def _run_ownership_preparation(
     node_modules_dir: Path,
     *,
     owner: str,
+    as_root: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    environment = os.environ.copy()
-    environment.update(
-        {
-            "SPELEODB_NODE_MODULES_DIR": str(node_modules_dir),
-            "SPELEODB_NODE_MODULES_USER": owner,
-            "SPELEODB_NODE_MODULES_GROUP": owner,
-        }
-    )
+    environment: dict[str, str] = {
+        "SPELEODB_NODE_MODULES_DIR": str(node_modules_dir),
+        "SPELEODB_NODE_MODULES_USER": owner,
+        "SPELEODB_NODE_MODULES_GROUP": grp.getgrgid(pwd.getpwnam(owner).pw_gid).gr_name,
+    }
+    command: list[str] = [
+        "/usr/bin/env",
+        *(f"{key}={value}" for key, value in environment.items()),
+        "/bin/bash",
+        str(PREPARE_NODE_MODULES),
+    ]
+    if as_root and os.geteuid() != 0:
+        command = ["sudo", "-n", *command]
     return subprocess.run(  # noqa: S603
-        ["/bin/bash", str(PREPARE_NODE_MODULES)],
+        command,
         check=True,
         capture_output=True,
-        env=environment,
         text=True,
+        timeout=30,
     )
 
 
@@ -147,7 +153,6 @@ def test_node_modules_preparation_is_idempotent_for_current_owner(
     assert sentinel.read_text(encoding="utf-8") == "preserved"
 
 
-@pytest.mark.skipif(os.geteuid() != 0, reason="Ownership migration requires root")
 def test_node_modules_preparation_migrates_legacy_root_volume(
     tmp_path: Path,
 ) -> None:
@@ -156,12 +161,20 @@ def test_node_modules_preparation_migrates_legacy_root_volume(
     vite_temp_dir.mkdir(parents=True)
     config_file = vite_temp_dir / "vite.config.mjs"
     config_file.write_text("export default {};", encoding="utf-8")
-    dev_user = pwd.getpwnam("dev-user")
+    owner = pwd.getpwuid(os.geteuid()) if os.geteuid() != 0 else pwd.getpwnam("nobody")
+    command: list[str] = ["chown", "-R", "root:root", str(node_modules_dir)]
+    if os.geteuid() != 0:
+        command = ["sudo", "-n", *command]
+    # Reproduce the old volume's ownership only on this test's temporary tree.
+    subprocess.run(command, check=True, capture_output=True, timeout=30)  # noqa: S603
+    assert node_modules_dir.stat().st_uid == 0
 
-    result = _run_ownership_preparation(node_modules_dir, owner=dev_user.pw_name)
+    result = _run_ownership_preparation(
+        node_modules_dir, owner=owner.pw_name, as_root=True
+    )
 
     assert "Migrating JavaScript dependency volume ownership" in result.stdout
     for path in (node_modules_dir, vite_temp_dir, config_file):
         path_stat = path.stat()
-        assert path_stat.st_uid == dev_user.pw_uid
-        assert path_stat.st_gid == dev_user.pw_gid
+        assert path_stat.st_uid == owner.pw_uid
+        assert path_stat.st_gid == owner.pw_gid

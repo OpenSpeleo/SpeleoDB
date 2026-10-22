@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from config.settings.test import *  # noqa: F403
+from config.settings.test_celery import *  # noqa: F403
 
 # Celery captures task timeout defaults when it creates request classes.
 # Configure this test's task before startup so no soft signal can mask

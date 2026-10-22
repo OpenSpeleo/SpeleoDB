@@ -11,8 +11,6 @@ from typing import Any
 import orjson
 import pytest
 import shapefile
-from django.core.validators import MaxLengthValidator
-from django.core.validators import MinLengthValidator
 from pyproj import CRS
 
 from speleodb.gis.gis_layer_processing import BaseGISLayerProcessor
@@ -21,11 +19,10 @@ from speleodb.gis.gis_layer_processing import KMLProcessor
 from speleodb.gis.gis_layer_processing import KMZProcessor
 from speleodb.gis.gis_layer_processing import ShapefileProcessor
 from speleodb.gis.gis_layer_processing import TopoJSONProcessor
+from speleodb.gis.gis_layer_processing import analyze_kml_kmz_bytes
 from speleodb.gis.gis_layer_processing import compile_gis_layer_bytes
 from speleodb.gis.gis_layer_processing import processor_for_filename
 from speleodb.gis.gis_layer_processing.common import iter_coordinate_positions
-from speleodb.utils.validators import LatitudeValidator
-from speleodb.utils.validators import LongitudeValidator
 
 GIS_LAYER_ARTIFACTS = (
     Path(__file__).resolve().parents[2]
@@ -39,7 +36,11 @@ KML = (
     b'<kml xmlns="http://www.opengis.net/kml/2.2"><Placemark><name>Entrance</name>'
     b"<Point><coordinates>-87.5,20.1</coordinates></Point></Placemark></kml>"
 )
-US_STATES_FEATURE_COUNT = 52
+US_STATES_FEATURE_COUNT = 2
+MAX_INSPECTION_BYTES = 3000
+POSITION_DIMENSIONS = (2, 3)
+LONGITUDE_LIMIT = 180
+LATITUDE_LIMIT = 90
 
 
 def _assert_renderable_feature_collection(data: Any) -> None:
@@ -49,10 +50,6 @@ def _assert_renderable_feature_collection(data: Any) -> None:
     assert isinstance(features, list)
     assert features
 
-    minimum_length: MinLengthValidator = MinLengthValidator(2)
-    maximum_length: MaxLengthValidator = MaxLengthValidator(3)
-    longitude: LongitudeValidator = LongitudeValidator()
-    latitude: LatitudeValidator = LatitudeValidator()
     position_count = 0
     for feature in features:
         assert isinstance(feature, dict)
@@ -69,12 +66,15 @@ def _assert_renderable_feature_collection(data: Any) -> None:
             "GeometryCollection",
         }
         for position in iter_coordinate_positions(geometry):
-            minimum_length(position)
-            maximum_length(position)
-            assert all(isinstance(value, int | float) for value in position)
-            assert all(math.isfinite(value) for value in position)
-            longitude(position[0])
-            latitude(position[1])
+            # Check every emitted coordinate directly, without constructing
+            # Django min/max validator objects four times per position.
+            assert len(position) in POSITION_DIMENSIONS
+            assert all(
+                isinstance(value, int | float) and math.isfinite(value)
+                for value in position
+            )
+            assert -LONGITUDE_LIMIT <= position[0] <= LONGITUDE_LIMIT
+            assert -LATITUDE_LIMIT <= position[1] <= LATITUDE_LIMIT
             position_count += 1
     assert position_count > 0
 
@@ -183,31 +183,36 @@ def test_zipped_shapefile_is_converted_to_wgs84_geojson() -> None:
 
 
 @pytest.mark.parametrize(
-    ("relative_path", "expected_feature_count"),
+    ("relative_path", "expected_feature_count", "expected_analysis_counts"),
     [
         pytest.param(
             Path("mx_protected_areas") / "Áreas Naturales Protegidas 2018.kmz",
             None,
+            (4, 1, 8),
             id="mexico-protected-areas-kmz",
         ),
         pytest.param(
             Path("us_states/us_states_5m.kml"),
-            52,
+            US_STATES_FEATURE_COUNT,
+            None,
             id="us-states-kml",
         ),
         pytest.param(
             Path("us_states/us_states_5m.kmz"),
-            52,
+            US_STATES_FEATURE_COUNT,
+            None,
             id="us-states-kmz",
         ),
         pytest.param(
             Path("us_states/us_states_5m.topojson"),
-            52,
+            US_STATES_FEATURE_COUNT,
+            None,
             id="us-states-topojson",
         ),
         pytest.param(
             Path("us_states/us_states_5m.zip"),
-            52,
+            US_STATES_FEATURE_COUNT,
+            None,
             id="us-states-shapefile",
         ),
     ],
@@ -215,14 +220,31 @@ def test_zipped_shapefile_is_converted_to_wgs84_geojson() -> None:
 def test_real_world_artifact_is_converted_to_renderable_geojson(
     relative_path: Path,
     expected_feature_count: int | None,
+    expected_analysis_counts: tuple[int, int, int] | None,
 ) -> None:
     source_path = GIS_LAYER_ARTIFACTS / relative_path
 
-    result = compile_gis_layer_bytes(
-        source_path.read_bytes(),
-        filename=source_path.name,
-    )
-    data = orjson.loads(result.display_geojson)
+    if expected_analysis_counts is None:
+        result = compile_gis_layer_bytes(
+            source_path.read_bytes(),
+            filename=source_path.name,
+        )
+        data = orjson.loads(result.display_geojson)
+    else:
+        # Inspect and render the small mixed-geometry sample in one parse.
+        # KMZ publication uses this same analysis; small KMZ and US-state
+        # conversion tests retain the public compiler's dispatch coverage.
+        analysis = analyze_kml_kmz_bytes(
+            source_path.read_bytes(), filename=source_path.name
+        )
+        source_count, point_count, polygon_count = expected_analysis_counts
+        assert analysis.source_placemarks == source_count
+        assert analysis.point_parts == point_count
+        assert analysis.polygon_parts == polygon_count
+        assert analysis.overlay_placemarks == source_count
+        assert len(analysis.landmark_candidates) == point_count
+        assert len(orjson.dumps(analysis.inspection())) < MAX_INSPECTION_BYTES
+        data = orjson.loads(analysis.display_geojson)
 
     _assert_renderable_feature_collection(data)
     if expected_feature_count is not None:

@@ -602,8 +602,9 @@ class ConstructGitHistorySavepointTests(TransactionTestCase):
     """A real foreign-key rejection must not poison the history transaction."""
 
     def test_integrity_error_does_not_break_transaction(self) -> None:
-        if connection.vendor != "postgresql":
-            pytest.skip("This regression exercises PostgreSQL immediate FK constraints")
+        assert connection.vendor == "postgresql", (
+            "This regression exercises PostgreSQL immediate FK constraints"
+        )
         directory: str = self.enterContext(tempfile.TemporaryDirectory())
         repo: GitRepo = GitRepo.init(pathlib.Path(directory) / "history")
         self.addCleanup(repo.close)

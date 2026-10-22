@@ -76,10 +76,8 @@ API requests.
 
 Use PostgreSQL database configuration, as CI does, even though export does not
 connect to the database. DRF derives model integer bounds from the configured
-database backend; SQLite test defaults produce different bounds. When exporting
-with `config.settings.test`, set `TEST_DATABASE_URL` to the PostgreSQL
-connection configuration instead of relying on the test environment's SQLite
-default.
+database backend; SQLite produces different bounds. The complete pytest suite
+also uses PostgreSQL, with its own isolated test database.
 
 In the monorepo, run application commands from `/app` in the existing Django
 container so its pinned environment and mounted sources are used:
@@ -285,13 +283,13 @@ be valid, while empty JSON remains invalid.
 
 Run the owning endpoint suite first. Keep reports in an external temporary path:
 
-Use the configured PostgreSQL backend for the authoritative contract audit. The
-private `.envs/test.env` may select SQLite; set `TEST_DATABASE_URL` in the test
-process to the existing provisioned PostgreSQL connection when needed. Pass that
-value privately and never print its credentials. SQLite behavior checks remain
-useful, but do not export the release contract from its test settings: DRF
-derives some integer bounds from the database backend, and those bounds differ.
-CI supplies PostgreSQL through its configured environment.
+Use the explicitly configured PostgreSQL test connection for the contract audit.
+Test settings honor `DATABASE_URL` from `.envs/test.env`, independently of the
+container's development connection. `TEST_DATABASE_URL` overrides that address
+when needed, including for workers connecting to pytest's isolated database.
+Pass that value privately and never print credentials. Preserve portable
+validation at the application boundary rather than relying on one database
+engine's limits.
 
 ```sh
 docker exec -w /app speleodb-monorepo-django pytest \

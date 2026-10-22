@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import os
 
-from config.settings.test import *  # noqa: F403
-from config.settings.test import CELERY_BROKER_TRANSPORT_OPTIONS
+from config.settings.test_celery import *  # noqa: F403
+from config.settings.test_celery import CELERY_BROKER_TRANSPORT_OPTIONS
 
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     **CELERY_BROKER_TRANSPORT_OPTIONS,

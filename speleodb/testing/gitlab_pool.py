@@ -12,9 +12,11 @@ from functools import cache
 from http import HTTPStatus
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
+from unittest.mock import patch
 from uuid import UUID
 from uuid import uuid4
 
@@ -35,6 +37,7 @@ from speleodb.testing.gitlab_audit import creation_allocation
 from speleodb.testing.gitlab_audit import get_ledger
 from speleodb.testing.gitlab_audit import record_cleanup
 from speleodb.users.models import User
+from speleodb.utils import gitlab_client
 
 if TYPE_CHECKING:
     from gitlab.v4.objects.projects import Project as RemoteProject
@@ -132,8 +135,16 @@ class GitlabPool:
         client: GitlabClient = self.client
         credentials: GitlabCredentials | None = self._credentials
         assert credentials is not None
-        with creation_allocation(
-            ALLOCATION_NAMES[role], credentials.group_id, str(slot.project_id)
+        # Keep the manager's actual discovery, creation and ambiguous-response
+        # recovery. Only elapsed HTTP backoff is irrelevant to fixture setup;
+        # this module-local replacement leaves Git/other process sleeps intact.
+        with (
+            creation_allocation(
+                ALLOCATION_NAMES[role], credentials.group_id, str(slot.project_id)
+            ),
+            patch.object(
+                gitlab_client, "time", SimpleNamespace(sleep=lambda _delay: None)
+            ),
         ):
             repository: GitRepo | None = GitlabManager.create_or_clone_project(
                 self.model(role), base_dir=self._directory.name

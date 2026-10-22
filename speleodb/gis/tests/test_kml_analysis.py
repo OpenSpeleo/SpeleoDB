@@ -367,7 +367,7 @@ def test_invalid_root_reports_original_line_after_namespace_repair(
     ],
 )
 def test_bad_root_aborts_before_scanning_features(root: str) -> None:
-    source = (root + _placemark(POINT) * 1000).encode()
+    source = (root + _placemark(POINT) * 2).encode()
     # A root error must win over a later feature-budget error. This assertion
     # is deterministic and does not rely on machine-dependent timing.
     with (
@@ -390,7 +390,7 @@ def test_namespace_error_aborts_before_processing_later_events() -> None:
     source = (
         '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
         '<Document xmlns:bad="invalid namespace">\n'
-        + _placemark(POINT) * 1000
+        + _placemark(POINT) * 2
         + "</Document></kml>"
     ).encode()
     with (
@@ -685,14 +685,8 @@ def test_geojson_output_is_bounded_before_accumulation(
 @pytest.mark.parametrize(
     ("relative_path", "source_count", "point_count", "polygon_count"),
     [
-        ("sample.kml", 736, 736, 0),
-        ("gis_layers/us_states/us_states_5m.kmz", 52, 0, 288),
-        (
-            "gis_layers/mx_protected_areas/Áreas Naturales Protegidas 2018.kmz",
-            547,
-            366,
-            781,
-        ),
+        ("sample.kml", 2, 2, 0),
+        ("gis_layers/us_states/us_states_5m.kmz", 2, 0, 4),
     ],
 )
 def test_real_files_keep_source_and_geometry_counts_distinct(

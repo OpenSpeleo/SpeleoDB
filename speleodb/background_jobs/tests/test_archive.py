@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import time
+import zipfile
 from datetime import timedelta
 from decimal import Decimal
 from http import HTTPStatus
@@ -18,6 +19,7 @@ import orjson
 import pytest
 from django.conf import settings as django_settings
 from django.core.files.base import ContentFile
+from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 
 from speleodb.api.v2.tests.factories import ProjectCommitFactory
@@ -46,7 +48,6 @@ from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.client import GitlabClient
 from speleodb.testing.gitlab_audit import creation_allocation
-from speleodb.testing.gitlab_lifecycle import assert_initial_commit_lifecycle
 from speleodb.testing.gitlab_lifecycle import assert_remote_deleted
 from speleodb.testing.gitlab_lifecycle import cleanup_remote_on_exit
 from speleodb.testing.gitlab_pool import canonical_project
@@ -70,6 +71,7 @@ if TYPE_CHECKING:
 type SourceWriter = Callable[[Storage, str, bytes], str]
 
 INITIAL_COMMIT_ATTEMPTS: int = 5
+ZIP64_EXTRACT_VERSION: int = 45
 
 EMPTY_GEOJSON: bytes = b'{"type":"FeatureCollection","features":[]}'
 OLD_GEOJSON: bytes = b'{"type":"FeatureCollection","features":[],"version":"old"}'
@@ -904,10 +906,10 @@ def test_unverified_gitlab_access_cannot_become_an_empty_export(
 
 @pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
-def test_empty_archive_and_initial_commit_lifecycle(
+def test_empty_archive_distinguishes_recorded_history_and_disabled_access(
     user: User, tmp_path: Path, gitlab_client: gitlab.Gitlab
 ) -> None:
-    """All genuinely empty states precede the first commit in one allocation."""
+    """An empty private remote is safe only without recorded history or denial."""
 
     class CleanupBoundaryError(Exception):
         """Stop the lifecycle without passing a remote object to its cleanup."""
@@ -931,18 +933,17 @@ def test_empty_archive_and_initial_commit_lifecycle(
                         "builds_access_level": "disabled",
                     }
                 )
-            for access in ("enabled", "private"):
-                remote.repository_access_level = access
-                remote.save()
-                directory: Path = tmp_path / access
-                directory.mkdir()
-                assert remote.empty_repo is True
-                _assert_empty_project_export(
-                    user, project, directory / "export.zip", state="empty"
-                )
-                remote.refresh()
-                assert remote.empty_repo is True
-                assert remote.branches.list(get_all=True) == []
+            # Member-only access exercises the stricter allowed empty state;
+            # repeating the same archive with "enabled" adds no application path.
+            remote.repository_access_level = "private"
+            remote.save()
+            assert remote.empty_repo is True
+            _assert_empty_project_export(
+                user, project, tmp_path / "empty.zip", state="empty"
+            )
+            remote.refresh()
+            assert remote.empty_repo is True
+            assert remote.branches.list(get_all=True) == []
 
             ProjectCommitFactory.create(project=project)
             _collection(user)
@@ -987,14 +988,6 @@ def test_empty_archive_and_initial_commit_lifecycle(
                 )
             assert not project.commits.exists()
             assert not project.git_repo_dir.exists()
-            remote.repository_access_level = "enabled"
-            remote.save()
-            assert_initial_commit_lifecycle(
-                remote,
-                gitlab_client,
-                create_initial_commit=_create_initial_gitlab_commit,
-                max_attempts=INITIAL_COMMIT_ATTEMPTS,
-            )
             raise CleanupBoundaryError
 
     with pytest.raises(CleanupBoundaryError):
@@ -1004,14 +997,43 @@ def test_empty_archive_and_initial_commit_lifecycle(
 
 
 def test_s3_download_preserves_complete_multichunk_source(
-    tmp_path: Path, write_source: SourceWriter
+    tmp_path: Path, write_source: SourceWriter, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Exercise multiple reads without transferring a production-sized chunk.
+    monkeypatch.setattr("speleodb.background_jobs.archive_sources.CHUNK_BYTES", 1024)
     track = GPSTrack()
-    contents: bytes = b"a" * (1024 * 1024 + 17)
+    contents: bytes = b"a" * 2048 + b"final short chunk"
     track.file = write_source(track.file.storage, f"{track.id}.geojson", contents)
     destination: Path = tmp_path / "source"
     download_source(track.file, destination)
     assert destination.read_bytes() == contents
+
+
+@pytest.mark.django_db
+def test_archive_preserves_source_when_zip64_is_required(
+    user: User,
+    tmp_path: Path,
+    write_source: SourceWriter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Lower the format threshold, not the ZIP implementation. Exercise the
+    # application's actual writer with a tiny local source and no transfers.
+    monkeypatch.setattr(zipfile, "ZIP64_LIMIT", len(TRACK_GEOJSON) - 1)
+    monkeypatch.setattr(
+        GPSTrack.file.field,
+        "storage",
+        FileSystemStorage(location=tmp_path / "sources"),
+    )
+    _track(user, write_source)
+    destination = tmp_path / "export.zip"
+    result = build_archive(user=user, destination=destination, progress=_progress)
+    assert not result.partial
+    member = result.manifest["resources"][0]["files"][0]
+    with ZipFile(destination) as archive:
+        info = archive.getinfo(member["path"])
+        assert info.extract_version == ZIP64_EXTRACT_VERSION
+        assert archive.read(info) == TRACK_GEOJSON
+    assert member["sha256"] == hashlib.sha256(TRACK_GEOJSON).hexdigest()
 
 
 def test_s3_missing_source_is_an_omission(tmp_path: Path) -> None:

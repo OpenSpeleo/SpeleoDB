@@ -132,12 +132,12 @@ cleanup retention/admin recovery, and browser cancellation/body timeouts. Use
 real PostgreSQL and the isolated worker broker for database/worker recovery, and
 verify the additive migration path.
 
-Beat regressions also cover real PostgreSQL lock handover, a live session whose
-lock was removed, a closed lock connection, retry callbacks rejecting stale
-ownership, and SIGTERM during scheduler construction. Fresh-interpreter tests
-exercise database schedule behavior without importing application tasks. These
-checks complement the long-running memory probe; unit tests alone do not prove
-production service memory or every possible network failure timing.
+Beat regressions also cover a live PostgreSQL session whose lock was removed, a
+closed lock connection, retry callbacks rejecting stale ownership, and SIGTERM
+during scheduler construction. Fresh-interpreter tests exercise database
+schedule behavior without importing application tasks. These checks complement
+the long-running memory probe; unit tests alone do not prove production service
+memory or every possible network failure timing.
 
 The consumer and scheduler regressions use normal Celery constructors and
 configuration, real Kombu connections, and PostgreSQL advisory locks. Bound,

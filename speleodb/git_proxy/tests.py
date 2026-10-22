@@ -127,6 +127,54 @@ def upstream_stream(response: HttpResponseBase) -> UpstreamResponseStream:
     raise AssertionError("Proxy did not register its upstream stream for cleanup")
 
 
+@pytest.mark.django_db
+@pytest.mark.skip_if_lighttest
+@pytest.mark.usefixtures("gitlab_retry_delays")
+def test_first_404_creates_real_repository_and_retries(
+    user: User, tmp_path: Path
+) -> None:
+    # This missing-repository contract needs no unrelated populated checkout
+    # from TestGitProxyServer.setUp. The actual GitLab/Git/HTTP boundary stays real.
+    token: Token = TokenFactory.create(user=user)
+    EmailAddress.objects.get_or_create(
+        user=user, email=user.email, verified=True, primary=True
+    )
+    api: GitlabClient = get_pool().client
+    with isolated_gitlab_group(api) as group:
+        credentials: GitlabCredentials = GitlabCredentials.get()
+        project: Project = ProjectFactory.create(created_by=user.email)
+        UserProjectPermissionFactory.create(
+            target=user, project=project, level=PermissionLevel.READ_AND_WRITE
+        )
+        with requests.get(
+            f"{settings.GITLAB_HTTP_PROTOCOL}://{credentials.instance}/"
+            f"{credentials.group_name}/{project.id}.git/info/refs",
+            auth=("oauth2", credentials.token),
+            params={"service": GitService.UPLOAD.value},
+            timeout=settings.DJANGO_GITLAB_HTTP_TIMEOUT_SECONDS,
+        ) as missing:
+            assert missing.status_code == status.HTTP_404_NOT_FOUND
+        assert not project.git_repo_dir.exists()
+        with creation_allocation("proxy-new", group.id, str(project.id)):
+            response: HttpResponseBase = APIClient().get(
+                reverse("git_info", kwargs={"id": project.id}),
+                {"service": GitService.UPLOAD.value},
+                headers={"authorization": f"Token {token.key}"},
+            )
+        assert response.status_code == status.HTTP_200_OK
+        body: bytes = response_body(response)
+        remote: GitlabProject = api.projects.get(
+            f"{credentials.group_name}/{project.id}"
+        )
+        with GitRepo(project.git_repo_dir) as local:
+            assert local.head.commit.hexsha.encode() in body
+            assert (
+                remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"]
+                == local.head.commit.hexsha
+            )
+        assert_make_cleanup_lifecycle(api, group, remote, tmp_path)
+
+
 @pytest.mark.skip_if_lighttest
 class TestGitProxyServer(TestCase):
     client: APIClient
@@ -391,41 +439,6 @@ class TestGitProxyServer(TestCase):
         self._assert_no_credentials(diagnostic)
         leaked_invalid_token: bool = invalid_token in diagnostic
         assert not leaked_invalid_token
-
-    def test_first_404_creates_real_repository_and_retries(self) -> None:
-        group = self.enterContext(isolated_gitlab_group(self.api))
-        self.credentials = GitlabCredentials.get()
-        project: Project = ProjectFactory.create(created_by=self.user.email)
-        UserProjectPermissionFactory.create(
-            target=self.user, project=project, level=PermissionLevel.READ_AND_WRITE
-        )
-        missing: requests.Response = self._direct_request(
-            "GET",
-            "info/refs",
-            project=project,
-            params={"service": GitService.UPLOAD.value},
-        )
-        assert missing.status_code == status.HTTP_404_NOT_FOUND
-        assert not project.git_repo_dir.exists()
-        with creation_allocation(
-            "proxy-new", namespace_id=group.id, path=str(project.id)
-        ):
-            response: HttpResponseBase = self.client.get(
-                self._info_url(project), headers={"authorization": self.auth}
-            )
-        assert response.status_code == status.HTTP_200_OK
-        body: bytes = response_body(response)
-        remote: GitlabProject = self.api.projects.get(
-            f"{self.credentials.group_name}/{project.id}"
-        )
-        local: GitRepo = GitRepo(project.git_repo_dir)
-        self.addCleanup(local.close)
-        assert local.head.commit.hexsha.encode() in body
-        assert remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"] == (
-            local.head.commit.hexsha
-        )
-        cleanup_directory: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        assert_make_cleanup_lifecycle(self.api, group, remote, cleanup_directory)
 
     def test_missing_repository_post_is_not_recovered(self) -> None:
         project: Project = ProjectFactory.create(created_by=self.user.email)

@@ -96,6 +96,19 @@ def test_all_backends_serve_stored_headers_and_share_exact_key_transfers(
         bucket_name=backend_bucket,
         custom_domain=f"{urlsplit(browser_endpoint).netloc}/{backend_bucket}",
     )
+    completed_uploads: list[dict[str, Any]] = []
+    if isinstance(storage, ExportStorage):
+        # Keep a genuine completed multipart transfer with one tiny final part.
+        # Only lower its activation threshold; SDK, transport and S3 stay real.
+        storage.transfer_config.multipart_threshold = 1
+
+        def record_completion(parsed: dict[str, Any], **_kwargs: Any) -> None:
+            assert parsed["ResponseMetadata"]["HTTPStatusCode"] == HTTPStatus.OK
+            completed_uploads.append(parsed)
+
+        storage.connection.meta.client.meta.events.register(
+            "after-call.s3.CompleteMultipartUpload", record_completion
+        )
     disposition: str = (
         content_disposition_header(as_attachment=True, filename="survey résumé.dat")
         or "attachment"
@@ -131,6 +144,12 @@ def test_all_backends_serve_stored_headers_and_share_exact_key_transfers(
             assert metadata["ContentDisposition"] == disposition
             assert response.headers["Content-Disposition"] == disposition
             assert response.headers["Content-Type"] == "application/octet-stream"
+
+        if isinstance(storage, ExportStorage):
+            assert [result["Key"] for result in completed_uploads] == [
+                storage.object_key(name),
+                storage.object_key(name),
+            ]
 
         unsigned: str = urlsplit(url)._replace(query="").geturl()
         assert requests.get(unsigned, timeout=10).status_code == (

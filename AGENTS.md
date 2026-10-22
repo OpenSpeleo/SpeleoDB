@@ -390,10 +390,24 @@ Backend/API changes should also run relevant `pytest` targets:
 
 ### Targeted backend coverage
 
+- The complete backend suite uses PostgreSQL, as explicitly authorized by the
+  user, because retained integration contracts use advisory locks, immediate
+  constraints, and independent worker connections. Honor the test environment's
+  `DATABASE_URL` and explicit `TEST_DATABASE_URL` override; never silently
+  inherit the development connection or change the selected database engine.
+  Pytest owns an isolated `test_` database created from `template0`; do not run
+  tests against the development database. This does not authorize new
+  race-condition tests.
 - `make test-py` is the complete default backend suite; `make test` also runs
   frontend tests. Preserve CI's API-contract enforcement and observed operation
-  coverage when consolidating endpoint tests. Optional `--light`/`--offline`
-  runs and the separately invoked browser suite do not replace this validation.
+  coverage when consolidating endpoint tests. Every backend test runs by
+  default, including existing worker and storage integration. Missing services,
+  dependencies, privileges, or fixtures must fail clearly; never add environment
+  opt-ins, `skipif`, `importorskip`, or runtime skips. Explicit
+  `--light`/`--offline`, `-m`, or `--ignore` exclusions are reported as
+  deselection and do not replace complete validation. Invalid parameter
+  combinations belong outside the collected matrix. Browser tests remain a
+  separately invoked UI/UX layer.
 - Backend behavior belongs in pytest, frontend logic in Vitest, and browser
   tests exclusively in UI/UX verification. Do not move backend assertions into
   browser tests to reduce pytest time.
@@ -412,6 +426,23 @@ Backend/API changes should also run relevant `pytest` targets:
   boundary cases; do not repeat randomized inputs or large fixtures without a
   failure they distinguish. A query-count regression must assert that the
   requested records are actually visible and returned.
+- Consider race conditions during implementation and review: transaction
+  boundaries, lock ownership, stale reads, permissions changing during an
+  operation, duplicate delivery, and idempotency. Implement the necessary
+  safeguards, but do not add race-condition tests unless the user explicitly
+  requests them. Do not introduce threaded writers, competing schedulers, forced
+  interleavings, or lock-contention harnesses as routine regression coverage.
+  Use small sequential tests for observable validation, lock rules, state
+  transitions, and recovery. Removing a race-condition test does not authorize
+  removing the production safeguard it exercised.
+- Test fixtures, generated payloads, and uploads/downloads must stay at or below
+  100,000 bytes. Keep compressed fixtures small after extraction too. Preserve
+  behavioral tests by using small representative inputs and lowering test-local
+  size/chunk thresholds; never run capacity or load tests as backend pytest.
+  Keep the existing GIS Station photo, video, and PDF examples unchanged. If a
+  format cannot be safely reduced (for example TML), ask for a smaller valid
+  artifact instead of keeping an oversized fixture or silently dropping
+  coverage.
 - Let pytest-django/Django own database rollback and transactional flushes.
   Declare database use explicitly on tests or fixtures that need it. Never add
   autouse database access or whole-database deletion to support pure tests, and
@@ -430,12 +461,13 @@ but must not replace the behavior the test claims to prove. Document that
 boundary next to the replacement and assert observable results rather than
 values supplied by the substitute itself.
 
-Keep real PostgreSQL contention, rollback, storage readback, repository
-restoration, and worker lifecycle tests where a substitute would hide the
-failure. For retry policy, record requested waits while exercising real bounded
-attempts; retain a real contention/recovery test separately. Keep substitutes
-function-scoped and automatically restored, including clocks and environment. Do
-not fabricate success responses in a test advertised as an integration test.
+Keep real rollback, storage readback, repository restoration, and worker
+lifecycle tests where a substitute would hide the failure. For retry policy,
+record requested waits while exercising real bounded attempts. Concurrency
+concerns require implementation review, not new race-condition tests without the
+user's explicit request. Keep substitutes function-scoped and automatically
+restored, including clocks and environment. Do not fabricate success responses
+in a test advertised as an integration test.
 
 ### Django GitLab repository contract
 

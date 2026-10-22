@@ -263,19 +263,31 @@ def test_exports_are_readable_and_contain_no_request_payload(
     assert all("headers" not in json.loads(line) for line in events)
 
 
-@pytest.mark.parametrize(
-    "script",
-    [
-        "import requests; requests.post('http://127.0.0.1:1/api/v4/projects', "
-        "json={'namespace_id': '42', 'name': 'unexpected'}, timeout=1)",
-        "import gitlab; gitlab.Gitlab('http://127.0.0.1:1', private_token='unused')"
-        ".projects.create({'namespace_id': '42', 'name': 'unexpected'})",
-    ],
-)
 def test_test_settings_install_guard_in_real_management_subprocess(
     ledger: AuditLedger,
-    script: str,
 ) -> None:
+    # Both entrypoints reach the same Requests transport guard. One real Django
+    # startup proves settings installation while each call must fail before I/O.
+    script: str = """
+import gitlab
+import requests
+from speleodb.testing.gitlab_audit import RepositoryBudgetError
+
+for create in (
+    lambda: requests.post(
+        'http://127.0.0.1:1/api/v4/projects',
+        json={'namespace_id': '42', 'name': 'unexpected'},
+        timeout=1,
+    ),
+    lambda: gitlab.Gitlab('http://127.0.0.1:1', private_token='unused')
+        .projects.create({'namespace_id': '42', 'name': 'unexpected'}),
+):
+    try:
+        create()
+    except RepositoryBudgetError:
+        continue
+    raise AssertionError('Unallocated creation was not rejected')
+"""
     environment: dict[str, str] = dict(os.environ)
     environment[LEDGER_ENV] = str(ledger.path)
     environment.pop(ALLOCATION_ENV, None)
@@ -295,10 +307,8 @@ def test_test_settings_install_guard_in_real_management_subprocess(
         check=False,
         timeout=30,
     )
-    assert result.returncode != 0
-    assert "RepositoryBudgetError" in result.stderr
-    assert "ConnectionError" not in result.stderr
-    assert ledger.summary()["violations"] == 1
+    assert result.returncode == 0, result.stderr
+    assert ledger.summary()["violations"] == 2  # noqa: PLR2004
 
 
 def test_child_processes_share_atomic_allocation_state(ledger: AuditLedger) -> None:
@@ -338,6 +348,9 @@ def test_nested_pytest_joins_existing_ledger_without_resetting_budget(
     environment[LEDGER_ENV] = str(ledger.path)
     environment["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[3])
+    # This isolated invocation loads only the audit plugin, not the outer run's
+    # plugins, selection flags, or report destinations.
+    environment.pop("PYTEST_ADDOPTS", None)
     result = subprocess.run(  # noqa: S603
         [
             sys.executable,
