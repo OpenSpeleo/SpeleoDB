@@ -26,6 +26,7 @@ from speleodb.api.v2.tests.factories import ProjectCommitFactory
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.background_jobs.archive_sources import ArchiveBuildError
 from speleodb.background_jobs.archive_sources import GitCloneUnavailableError
+from speleodb.background_jobs.archive_sources import GitMirrorResult
 from speleodb.background_jobs.archive_sources import GitSource
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
@@ -44,6 +45,7 @@ from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import get_pool
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import FrameType
 
 BASE_DIR = (
@@ -257,14 +259,29 @@ class TestBuildProjectGeoJSONs(TestCase):
                 self.project, repository.head.commit
             )
 
-        # Only substitute the remote address. The command still mirrors real
-        # Git history, materializes committed blobs, parses the actual source,
-        # and publishes to the configured storage. Upload/mutex behavior is
-        # exercised separately by test_file_upload_geojson.py.
+        def clone_local_source(
+            _source: GitSource,
+            destination: pathlib.Path,
+            *,
+            heartbeat: Callable[[], None],
+        ) -> GitMirrorResult:
+            heartbeat()
+            with GitRepo.clone_from(str(directory), destination) as clone:
+                return GitMirrorResult(
+                    refs={clone.head.reference.path: clone.head.commit.hexsha},
+                    state="mirrored",
+                    checkout_commit=clone.head.commit.hexsha,
+                )
+
+        # Rebuild policy needs real immutable history, parsing, SQL and storage;
+        # a normal local clone avoids repeating the export supervisor lifecycle.
+        # Shared-checkout preservation and task-timeout tests exercise the
+        # real mirror boundary; test_archive.py protects complete refs/history.
+        # Upload/mutex behavior is exercised by test_file_upload_geojson.py.
         self.enterContext(
             patch(
-                "speleodb.common.management.commands.build_project_geojsons.project_git_source",
-                return_value=GitSource(url=str(directory), token=""),
+                "speleodb.common.management.commands.build_project_geojsons.mirror_project",
+                side_effect=clone_local_source,
             )
         )
         return commit.id

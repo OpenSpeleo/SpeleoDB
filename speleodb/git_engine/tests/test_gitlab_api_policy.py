@@ -16,17 +16,17 @@ from django.conf import settings
 from django.test import override_settings
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
+from speleodb.common.enums import PermissionLevel
 from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
+from speleodb.git_engine.tests.live_gitlab import configured_gitlab_client_fixture  # noqa: F401
 from speleodb.git_engine.tests.live_gitlab import configured_gitlab_fixture  # noqa: F401
-from speleodb.git_engine.tests.live_gitlab import disposable_project_fixture  # noqa: F401
 from speleodb.testing.gitlab_pool import get_pool
 from speleodb.utils.gitlab_client import BoundedGitlabClient
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
     from gitlab import Gitlab
     from requests import Response
@@ -74,9 +74,9 @@ def test_real_api_requests_carry_token_and_authenticated_identity(
 
 
 @pytest.mark.skip_if_lighttest
-def test_real_unauthorized_response_is_not_retried(live_gitlab: Gitlab) -> None:
+def test_real_unauthorized_response_is_not_retried() -> None:
     client: GitlabClient = GitlabClient(
-        live_gitlab.url,
+        f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
         private_token=f"invalid-{uuid4()}",
         keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
     )
@@ -99,8 +99,7 @@ def test_real_unauthorized_response_is_not_retried(live_gitlab: Gitlab) -> None:
 @pytest.mark.skip_if_lighttest
 @pytest.mark.parametrize("retry_not_found", [False, True])
 def test_real_missing_project_obeys_opt_in_not_found_retries(
-    live_gitlab: Gitlab,
-    live_project: Project,
+    gitlab_client: GitlabClient,
     gitlab_retry_delays: list[float],
     *,
     retry_not_found: bool,
@@ -110,11 +109,11 @@ def test_real_missing_project_obeys_opt_in_not_found_retries(
     def observe(response: Response, **kwargs: Any) -> None:
         responses.append(response)
 
-    live_gitlab.session.hooks["response"].append(observe)
+    gitlab_client.session.hooks["response"].append(observe)
     try:
         with pytest.raises(gitlab.exceptions.GitlabGetError) as raised:
-            live_gitlab.projects.get(
-                f"{settings.GITLAB_GROUP_NAME}/{live_project.id}",
+            gitlab_client.projects.get(
+                f"{settings.GITLAB_GROUP_NAME}/{uuid4()}",
                 retry_not_found=retry_not_found,
             )
         assert raised.value.response_code == HTTPStatus.NOT_FOUND
@@ -135,43 +134,33 @@ def test_real_missing_project_obeys_opt_in_not_found_retries(
         assert raised.value.response_body == responses[-1].content
         assert raised.value.error_message == responses[-1].json()["message"]
     finally:
-        live_gitlab.session.hooks["response"].remove(observe)
+        gitlab_client.session.hooks["response"].remove(observe)
 
 
 @pytest.mark.skip_if_lighttest
 def test_real_missing_branch_recovers_after_branch_creation(
-    live_gitlab: Gitlab, tmp_path: Path
+    live_gitlab: Gitlab,
 ) -> None:
     live_project: Project = get_pool().model()
     get_pool().prepare(live_project)
-    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
-    assert repository is not None
-    try:
-        branch_name: str = f"integration-{uuid4()}"
-        with override_settings(DJANGO_GIT_BRANCH_NAME=branch_name):
-            assert GitlabManager.get_last_commit_hash(live_project) is None
-            remote = live_gitlab.projects.get(
-                f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
-            )
-            remote.branches.create(
-                {"branch": branch_name, "ref": repository.head.commit.hexsha}
-            )
-            assert GitlabManager.get_last_commit_hash(live_project) == (
-                repository.head.commit.hexsha
-            )
-    finally:
-        repository.close()
+    baseline: str | None = get_pool().slots[PermissionLevel.ADMIN].baseline_sha
+    assert baseline is not None
+    branch_name: str = f"integration-{uuid4()}"
+    with override_settings(DJANGO_GIT_BRANCH_NAME=branch_name):
+        assert GitlabManager.get_last_commit_hash(live_project) is None
+        remote = live_gitlab.projects.get(
+            f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
+        )
+        remote.branches.create({"branch": branch_name, "ref": baseline})
+        assert GitlabManager.get_last_commit_hash(live_project) == baseline
 
 
 @pytest.mark.skip_if_lighttest
 def test_failed_real_reauthentication_clears_project_cache(
-    live_gitlab: Gitlab, tmp_path: Path
+    live_gitlab: Gitlab,
 ) -> None:
     live_project: Project = get_pool().model()
     get_pool().prepare(live_project)
-    repository = GitlabManager.create_or_clone_project(live_project, tmp_path)
-    assert repository is not None
-    repository.close()
     assert GitlabManager.get_commit_history(live_project)
     assert GitlabManager._get_project.cache_info().currsize == 1  # noqa: SLF001
 

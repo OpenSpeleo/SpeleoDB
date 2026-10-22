@@ -46,7 +46,7 @@ from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.git_engine.client import GitlabClient
+from speleodb.git_engine.tests.live_gitlab import configured_gitlab_client_fixture  # noqa: F401
 from speleodb.testing.gitlab_audit import creation_allocation
 from speleodb.testing.gitlab_lifecycle import assert_remote_deleted
 from speleodb.testing.gitlab_lifecycle import cleanup_remote_on_exit
@@ -165,23 +165,6 @@ def git_repository(tmp_path: Path) -> tuple[Path, str, str]:
 
 
 @pytest.fixture
-def gitlab_client() -> Generator[GitlabClient]:
-    client: GitlabClient = GitlabClient(
-        f"{django_settings.GITLAB_HTTP_PROTOCOL}://{django_settings.GITLAB_HOST_URL}",
-        private_token=django_settings.GITLAB_TOKEN,
-        keep_base_url=django_settings.GITLAB_HTTP_PROTOCOL == "http",
-    )
-    try:
-        client.auth()
-        assert client.user is not None
-        group = client.groups.get(str(django_settings.GITLAB_GROUP_ID))
-        assert group.full_path == django_settings.GITLAB_GROUP_NAME
-        yield client
-    finally:
-        client.session.close()
-
-
-@pytest.fixture
 def gitlab_project(
     user: User, gitlab_client: gitlab.Gitlab
 ) -> tuple[Project, str, str]:
@@ -218,7 +201,9 @@ def gitlab_project(
     return project, historical, str(latest.id)
 
 
-def _create_initial_gitlab_commit(remote: GitlabProject) -> str:
+def _create_initial_gitlab_commit(
+    remote: GitlabProject, *, branch: str = "main"
+) -> str:
     """Allow a newly created project's commit endpoint time to become visible."""
     attempt: int = 0
     while True:
@@ -226,7 +211,7 @@ def _create_initial_gitlab_commit(remote: GitlabProject) -> str:
         try:
             initial: GitlabCommit = remote.commits.create(
                 {
-                    "branch": "main",
+                    "branch": branch,
                     "commit_message": "Historic survey",
                     "actions": [
                         {
@@ -859,9 +844,22 @@ def test_missing_remote_with_recorded_history_remains_an_omission(
 @pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
 def test_remote_history_is_cloned_even_when_database_has_no_recorded_commits(
-    user: User, tmp_path: Path, gitlab_project: tuple[Project, str, str]
+    user: User, tmp_path: Path, gitlab_client: gitlab.Gitlab
 ) -> None:
-    project, historical, current = gitlab_project
+    # A single file commit distinguishes absent DB metadata from an empty remote.
+    # Full branch/tag and historic-content restoration belongs to the complete
+    # archive test above.
+    project: Project = canonical_project(PermissionLevel.READ_ONLY)
+    UserProjectPermissionFactory.create(
+        target=user, project=project, level=PermissionLevel.READ_ONLY
+    )
+    get_pool().prepare(project)
+    remote = gitlab_client.projects.get(
+        f"{django_settings.GITLAB_GROUP_NAME}/{project.id}"
+    )
+    current = _create_initial_gitlab_commit(
+        remote, branch=django_settings.DJANGO_GIT_BRANCH_NAME
+    )
     assert not project.commits.exists()
     assert not project.git_repo_dir.exists()
     destination: Path = tmp_path / "export.zip"
@@ -871,12 +869,10 @@ def test_remote_history_is_cloned_even_when_database_has_no_recorded_commits(
     with ZipFile(destination) as archive:
         archive.extractall(tmp_path / "restored")
     repository = next((tmp_path / "restored" / "projects").glob("*/.git")).parent
-    _restore_and_verify(
-        repository,
-        destination=tmp_path / "working",
-        historical=historical,
-        current=current,
-    )
+    assert _git(repository, "rev-parse", "HEAD") == current
+    assert _git(repository, "status", "--porcelain") == ""
+    assert (repository / "survey.txt").read_text() == "historic data"
+    assert _git(repository, "rev-list", "--all", "--count") == "2"
     assert not project.commits.exists()
     assert not project.git_repo_dir.exists()
 

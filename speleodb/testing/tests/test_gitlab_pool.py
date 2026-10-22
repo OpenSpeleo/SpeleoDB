@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import override
 from uuid import uuid4
 
+import git
 import pytest
 from django.conf import settings
 from django.db import connection
@@ -309,18 +310,24 @@ def test_live_lease_restores_history_branches_tags_and_contents(tmp_path: Path) 
         (repository.path / "scenario.txt").write_text(
             "Only this test may see this content", encoding="utf-8"
         )
-        changed: str | None = repository.commit_and_push_project(
+        author = git.Actor("CI User A", canonical_user("A").email)
+        repository.index.add(["scenario.txt"])
+        changed: str = repository.index.commit(
             "Temporary scenario history",
-            author_name="CI User A",
-            author_email=canonical_user("A").email,
-        )
-        assert changed is not None
+            author=author,
+            committer=author,
+        ).hexsha
         assert changed != baseline
-        repository.git.push("origin", "HEAD:refs/heads/scenario-branch")
-        repository.git.push("origin", "HEAD:refs/tags/scenario-tag")
+        repository.git.push(
+            "origin",
+            f"HEAD:refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}",
+            "HEAD:refs/heads/scenario-branch",
+            "HEAD:refs/tags/scenario-tag",
+        )
 
     assert remote.tags.get("scenario-tag").commit["id"] == changed
     assert remote.branches.get("scenario-branch").commit["id"] == changed
+    assert remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"] == changed
 
     pool.release()
     pool.prepare(project)

@@ -797,6 +797,12 @@ def test_worker_consumes_committed_job_asynchronously(
     commit, _ = local_source
     generation = _queue(commit)
     queue = f"test-geojson-{uuid.uuid4().hex}"
+    # Memory transport otherwise sleeps a full second between deliveries.
+    # Keep actual asynchronous execution without that unrelated polling delay.
+    memory_broker.conf.CELERY_BROKER_TRANSPORT_OPTIONS = {
+        **memory_broker.conf.broker_transport_options,
+        "polling_interval": 0.05,
+    }
     with start_worker(memory_broker, queues=[queue], perform_ping_check=False):
         result = generate_project_geojson.apply_async(
             args=(commit.pk, str(generation.token)),
@@ -804,7 +810,7 @@ def test_worker_consumes_committed_job_asynchronously(
             queue=queue,
         )
         assert not isinstance(result, EagerResult)
-        assert result.get(timeout=30) is None
+        assert result.get(timeout=30, interval=0.05) is None
         assert result.successful()
     generation.refresh_from_db()
     assert generation.state == GeoJSONGenerationState.READY

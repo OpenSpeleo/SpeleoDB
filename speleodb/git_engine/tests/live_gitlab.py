@@ -10,6 +10,7 @@ import gitlab.exceptions
 import pytest
 from django.conf import settings
 
+from speleodb.git_engine.client import GitlabClient
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.surveys.models import Project
@@ -18,6 +19,20 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from gitlab import Gitlab
+
+
+@pytest.fixture(name="gitlab_client")
+def configured_gitlab_client_fixture() -> Generator[GitlabClient]:
+    """Provide real configured transport without unrelated manager initialization."""
+    client = GitlabClient(
+        f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
+        private_token=settings.GITLAB_TOKEN,
+        keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
+    )
+    try:
+        yield client
+    finally:
+        client.session.close()
 
 
 @pytest.fixture(name="live_gitlab")

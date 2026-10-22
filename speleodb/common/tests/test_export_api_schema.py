@@ -9,16 +9,41 @@ from typing import TYPE_CHECKING
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.urls import path
+from drf_spectacular.generators import SchemaGenerator
+from drf_spectacular.settings import spectacular_settings
+
+from speleodb.api.v2.views.user import UserAutocompleteView
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pytest_django.fixtures import Settings
 
-@pytest.fixture(scope="module")
-def exported_schema(tmp_path_factory: pytest.TempPathFactory) -> bytes:
-    destination: Path = tmp_path_factory.mktemp("schema-export") / "OpenAPI.yaml"
+
+MAX_SCHEMA_BYTES: int = 100_000
+urlpatterns = [path("api/v2/users/autocomplete/", UserAutocompleteView.as_view())]
+
+
+@pytest.fixture(autouse=True)
+def small_schema(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
+    # File freshness needs real schema generation, but only one real endpoint.
+    # test_swagger.py separately validates the complete application generator,
+    # including its auth and protocol schemas.
+    settings.ROOT_URLCONF = __name__
+    monkeypatch.setattr(
+        spectacular_settings, "DEFAULT_GENERATOR_CLASS", SchemaGenerator
+    )
+
+
+@pytest.fixture
+def exported_schema(tmp_path: Path) -> bytes:
+    destination = tmp_path / "expected.yaml"
     call_command("export_api_schema", "--output", str(destination), stdout=StringIO())
-    return destination.read_bytes()
+    generated = destination.read_bytes()
+    assert b"v2_user_autocomplete_list" in generated
+    assert len(generated) <= MAX_SCHEMA_BYTES
+    return generated
 
 
 def test_fresh_export_is_checked_without_rewriting(

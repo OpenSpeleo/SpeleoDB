@@ -358,46 +358,43 @@ def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     assert TaskResult.objects.filter(task_id=task_id).count() == 1
 
 
-@pytest.mark.parametrize(
-    "task_name",
-    [
+def test_live_housekeeping_records_only_failures(live_worker: LiveWorker) -> None:
+    for task_name in (
         MAINTENANCE_TASK,
         CLEANUP_TASK,
         "celery.backend_cleanup",
-    ],
-)
-def test_live_housekeeping_records_only_failures(
-    live_worker: LiveWorker, task_name: str
-) -> None:
-    direct_id: str = live_worker.run_control_task(task_name)
-    assert not TaskResult.objects.filter(task_id=direct_id).exists()
+    ):
+        direct_id: str = live_worker.run_control_task(task_name)
+        assert not TaskResult.objects.filter(task_id=direct_id).exists(), task_name
 
-    scheduled_id: str = str(uuid.uuid4())
-    _publish_scheduled_task(live_worker, task_name, scheduled_id)
-    live_worker.wait_task_success(task_name, scheduled_id)
-    assert not TaskResult.objects.filter(task_id=scheduled_id).exists()
+        scheduled_id: str = str(uuid.uuid4())
+        _publish_scheduled_task(live_worker, task_name, scheduled_id)
+        live_worker.wait_task_success(task_name, scheduled_id)
+        assert not TaskResult.objects.filter(task_id=scheduled_id).exists(), task_name
 
-    failed_id: str = str(uuid.uuid4())
-    # Publish a malformed invocation through the broker, bypassing the local
-    # argument check so the actual worker records its unhandled TypeError.
-    live_worker.application.send_task(
-        task_name,
-        kwargs={"unsupported_argument": True},
-        task_id=failed_id,
-        ignore_result=live_worker.application.tasks[task_name].ignore_result,
-    )
-    live_worker.wait_for(
-        lambda: TaskResult.objects.filter(task_id=failed_id, status="FAILURE").exists()
-    )
-    failed: TaskResult = TaskResult.objects.get(task_id=failed_id)
-    metadata: Mapping[str, object] = TaskResult.objects.values(
-        "date_started", "worker"
-    ).get(task_id=failed_id)
-    assert orjson.loads(failed.result or "null")["exc_type"] == "TypeError"
-    assert failed.task_name == task_name
-    assert metadata["worker"] == live_worker.hostname
-    assert metadata["date_started"] is None
-    assert "unsupported_argument" in (failed.traceback or "")
+        failed_id: str = str(uuid.uuid4())
+        # Publish a malformed invocation through the broker, bypassing the local
+        # argument check so the actual worker records its unhandled TypeError.
+        live_worker.application.send_task(
+            task_name,
+            kwargs={"unsupported_argument": True},
+            task_id=failed_id,
+            ignore_result=live_worker.application.tasks[task_name].ignore_result,
+        )
+        live_worker.wait_for(
+            TaskResult.objects.filter(task_id=failed_id, status="FAILURE").exists
+        )
+        failed: TaskResult = TaskResult.objects.get(task_id=failed_id)
+        metadata: Mapping[str, object] = TaskResult.objects.values(
+            "date_started", "worker"
+        ).get(task_id=failed_id)
+        assert orjson.loads(failed.result or "null")["exc_type"] == "TypeError", (
+            task_name
+        )
+        assert failed.task_name == task_name
+        assert metadata["worker"] == live_worker.hostname, task_name
+        assert metadata["date_started"] is None, task_name
+        assert "unsupported_argument" in (failed.traceback or ""), task_name
 
 
 def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
@@ -588,7 +585,13 @@ def test_live_broker_failure_keeps_request_for_maintenance(
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unavailable:
         unavailable.bind(("127.0.0.1", 0))
         address: tuple[str, int] = unavailable.getsockname()
-        with _publisher(f"redis://127.0.0.1:{address[1]}/0"):
+        with _publisher(f"redis://127.0.0.1:{address[1]}/0") as application:
+            # One real refusal exercises durable recovery. Kombu's initial
+            # connection retries are unrelated to the application's retry state.
+            application.conf.CELERY_BROKER_TRANSPORT_OPTIONS = {
+                **application.conf.broker_transport_options,
+                "max_retries": 0,
+            }
             job, created = request_export(user)
     attempt: JobAttempt = job.attempts.get()
     assert created

@@ -211,8 +211,9 @@ def running_script_worker(
             hostname: str | None = None
             while time.monotonic() < deadline:
                 assert process.poll() is None, log_path.read_text()
+                # This broker namespace contains only the worker started here.
                 replies: dict[str, Any] | None = application.control.inspect(
-                    timeout=1
+                    timeout=1, limit=1
                 ).stats()
                 if replies:
                     matches: list[str] = [
@@ -241,17 +242,15 @@ def running_script_worker(
 
 
 @pytest.mark.live_services
-@pytest.mark.parametrize("explicit_threads", [None, "3"])
 def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limits(
     tmp_path: Path,
     worker_script_environment: dict[str, str],
-    explicit_threads: str | None,
 ) -> None:
-    environment: dict[str, str] = worker_script_environment
-    if explicit_threads is not None:
-        environment.update(dict.fromkeys(NATIVE_THREAD_VARIABLES, explicit_threads))
     names: set[str] = set()
-    for _ in range(2):
+    for explicit_threads in (None, "3"):
+        environment: dict[str, str] = worker_script_environment.copy()
+        if explicit_threads is not None:
+            environment.update(dict.fromkeys(NATIVE_THREAD_VARIABLES, explicit_threads))
         with running_script_worker(environment, tmp_path) as (
             process,
             application,

@@ -16,6 +16,7 @@ import tempfile
 import time
 import uuid
 from collections.abc import Iterator
+from contextlib import closing
 from contextlib import contextmanager
 from datetime import timedelta
 from email.utils import format_datetime
@@ -182,7 +183,6 @@ class TestGitProxyServer(TestCase):
     token: Token
     project: Project
     credentials: GitlabCredentials
-    repo: GitRepo
     api: GitlabClient
     remote_project: GitlabProject
     head: str
@@ -204,25 +204,14 @@ class TestGitProxyServer(TestCase):
         get_pool().prepare(self.project)
         self.credentials = GitlabCredentials.get()
         self.api = get_pool().client
-        self.repo = self.project.git_repo
-        self.addCleanup(self.repo.close)
         self.remote_project = self.api.projects.get(
             f"{self.credentials.group_name}/{self.project_id}"
         )
-        file_path: Path = self.repo.path / "binary.bin"
-        file_path.write_bytes(GIT_FILE_CONTENT)
-        head: str | None = self.repo.commit_and_push_project(
-            message="Proxy integration binary blob",
-            author_name="Proxy Integration",
-            author_email="proxy@example.test",
-        )
-        assert head is not None
-        self.head = head
-        assert (
-            self.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
-                "id"
-            ]
-            == self.head
+        self.head = self.remote_project.branches.get(
+            settings.DJANGO_GIT_BRANCH_NAME
+        ).commit["id"]
+        assert self.head == (
+            get_pool().slots[PermissionLevel.READ_AND_WRITE].baseline_sha
         )
 
     @property
@@ -305,6 +294,17 @@ class TestGitProxyServer(TestCase):
         self._assert_no_credentials(str(dict(response.items())))
 
     def test_service_result_stream_contains_a_real_unchanged_git_pack(self) -> None:
+        # Only the pack-integrity case needs blob history; other proxy contracts
+        # use the existing real initial commit without rewriting the remote.
+        with closing(self.project.git_repo) as repository:
+            (repository.path / "binary.bin").write_bytes(GIT_FILE_CONTENT)
+            head: str | None = repository.commit_and_push_project(
+                message="Proxy integration binary blob",
+                author_name="Proxy Integration",
+                author_email="proxy@example.test",
+            )
+            assert head is not None
+            self.head = head
         request_body: bytes = (
             packet_line(f"want {self.head}\n".encode())
             + b"0000"
