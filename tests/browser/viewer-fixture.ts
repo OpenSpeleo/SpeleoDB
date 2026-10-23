@@ -98,15 +98,22 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
             });
         });
     }, captureCanvasFrames);
-    if (!liveProvider) await page.route('https://api.mapbox.com/styles/v1/**', route => route.fulfill({ json: {
-        version: 8, glyphs: `${new URL(page.url()).origin}/viewer-fixtures/fonts/{fontstack}/{range}.pbf`,
-        ...providerCamera,
-        sources: providerAttribution ? { 'fixture-attribution': { type: 'geojson', data: empty, attribution: providerAttribution } } : {},
-        layers: [
-            { id: 'background', type: 'background', paint: { 'background-color': '#16202a' } },
-            ...(providerAttribution ? [{ id: 'fixture-attribution', type: 'circle', source: 'fixture-attribution' }] : []),
-        ],
-    } }));
+    if (!liveProvider) {
+        // The source picker keeps its real raster lifecycle; tile bytes stay local.
+        await page.route(/^https:\/\/(?:services|server)\.arcgisonline\.com\/.*\/tile\//, route => route.fulfill({
+            contentType: 'image/png',
+            body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64'),
+        }));
+        await page.route('https://api.mapbox.com/styles/v1/**', route => route.fulfill({ json: {
+            version: 8, glyphs: `${new URL(page.url()).origin}/viewer-fixtures/fonts/{fontstack}/{range}.pbf`,
+            ...providerCamera,
+            sources: providerAttribution ? { 'fixture-attribution': { type: 'geojson', data: empty, attribution: providerAttribution } } : {},
+            layers: [
+                { id: 'background', type: 'background', paint: { 'background-color': '#16202a' } },
+                ...(providerAttribution ? [{ id: 'fixture-attribution', type: 'circle', source: 'fixture-attribution' }] : []),
+            ],
+        } }));
+    }
     await page.route('**/viewer-fixtures/**', async route => {
         const path = new URL(route.request().url()).pathname;
         if (gates.has(path)) await gates.get(path);

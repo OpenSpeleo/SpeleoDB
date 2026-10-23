@@ -31,14 +31,35 @@ async function appearancePixels(page: import('@playwright/test').Page) {
 }
 
 for (const viewer of ['private', 'public'] as const) {
-    test(`${viewer} globe draws stars and white atmosphere through camera and style changes`, async ({ page }) => {
+    test(`${viewer} globe camera and atmosphere survive provider metadata, navigation and style changes`, async ({ page }) => {
         const errors: string[] = [];
         page.on('pageerror', error => errors.push(error.message));
-        await page.setViewportSize({ width: 1200, height: 1000 });
+        page.on('console', message => {
+            if (message.text().includes('There is no style added to the map.')) errors.push(message.text());
+        });
+        // A viewport taller than a Mercator world tile reproduces the temporary
+        // zoom clamp before the asynchronous globe style arrives.
+        await page.setViewportSize({ width: 1440, height: 1100 });
         if (viewer === 'private') await login(page);
         const publicUrl = viewer === 'public' ? process.env.VIEWER_BROWSER_PUBLIC_URL : '';
         if (viewer === 'public') expect(publicUrl).toBeTruthy();
-        await installFixture(page, { publicUrl: publicUrl || '', emptyProjects: true });
+        await installFixture(page, {
+            publicUrl: publicUrl || '',
+            emptyProjects: true,
+            providerCamera: { center: [55.13, 25.12], zoom: 12, bearing: 30, pitch: 40, roll: 15 },
+        });
+        const camera = await page.evaluate(() => {
+            const map = window.__viewerEvidence.map as unknown as import('maplibre-gl').Map;
+            return { center: map.getCenter().toArray(), zoom: map.getZoom(),
+                bearing: map.getBearing(), pitch: map.getPitch(), roll: map.getRoll(), projection: map.getProjection().type };
+        });
+        expect(camera.center[0]).toBeCloseTo(2.35);
+        expect(camera.center[1]).toBeCloseTo(46.6);
+        expect(camera.zoom).toBeCloseTo(0);
+        expect(camera.bearing).toBeCloseTo(0);
+        expect(camera.pitch).toBeCloseTo(0);
+        expect(camera.roll).toBeCloseTo(0);
+        expect(camera.projection).toBe('globe');
         let initial: Awaited<ReturnType<typeof appearancePixels>> | undefined;
         await expect.poll(async () => {
             initial = await appearancePixels(page);
@@ -47,7 +68,7 @@ for (const viewer of ['private', 'public'] as const) {
         expect(initial!.darkFraction).toBeGreaterThan(0.9);
         expect(initial!.stars).toBeGreaterThan(20);
 
-        await page.evaluate(async id => {
+        const navigated = await page.evaluate(async id => {
             const map = window.__viewerEvidence.map as unknown as import('maplibre-gl').Map;
             map.jumpTo({ center: [-73, 25], zoom: 0.5, bearing: 35, pitch: 25, padding: { left: 120, right: 0, top: 50, bottom: 0 } });
             const style = map.getStyle();
@@ -57,7 +78,11 @@ for (const viewer of ['private', 'public'] as const) {
                 map.once('style.load', () => resolve());
                 map.setStyle(style, { diff: false });
             });
+            return { center: map.getCenter().toArray(), zoom: map.getZoom() };
         }, GLOBE_ATMOSPHERE_LAYER_ID);
+        expect(navigated.center[0]).toBeCloseTo(-73);
+        expect(navigated.center[1]).toBeCloseTo(25);
+        expect(navigated.zoom).toBeCloseTo(0.5);
         await page.setViewportSize({ width: 1000, height: 900 });
         await expect.poll(async () => (await appearancePixels(page)).halo).toBeGreaterThan(100);
         await page.evaluate(() => {

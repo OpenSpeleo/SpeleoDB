@@ -28,10 +28,13 @@ Use small deterministic data and controlled HTTP responses. Shared map fixtures
 contain two small representative surveys, a short GPS line, and tiny nested GIS
 geometry examples. Hold a response behind a gate when testing interaction during
 loading; do not manufacture loading time with large inputs or fixed sleeps.
-Database-only fixtures and real authentication are allowed to render real pages,
-but browser tests must not prove persistence through API write/readback/reload
-chains. Controlled mutations select the UI response without modifying real
-application records. Seed editing independently of creation.
+Ordinary map cases intercept both provider styles and ESRI raster tiles; the
+tiny local PNG still exercises real raster decoding and source changes. Only the
+explicitly requested live-provider check contacts the map service. Database-only
+fixtures and real authentication are allowed to render real pages, but browser
+tests must not prove persistence through API write/readback/reload chains.
+Controlled mutations select the UI response without modifying real application
+records. Seed editing independently of creation.
 
 Actual rendering, image decoding and native interaction remain real. Renderer
 readiness checks are appropriate for pointer targeting and visible map results;
@@ -106,6 +109,15 @@ before increasing workers or runner resources. Keep existing centralized timeout
 limits in `budgets.ts`; a timeout is a hang guard, not an acceptable latency
 measurement or performance guarantee.
 
+Ordinary desktop cases use a 1280×800 viewport, with explicit larger regression
+viewports and mobile cases kept where needed. Both engines render at one device
+pixel per CSS pixel. Safari's default desktop preset doubles each canvas
+dimension, quadrupling software rendering work without protecting a high-DPI
+regression in these scenarios. Ordinary UI cases request reduced motion to avoid
+replaying the initial globe-to-survey flight. Gesture cases explicitly select
+normal or reduced motion and retain natural camera completion, real input and
+their existing assertions.
+
 The JSON report records each execution's duration and status. Sort durations
 descending and assess slow cases individually. Compare equivalent environments,
 commits and browser versions, and report setup/build/install time separately
@@ -126,14 +138,15 @@ consequential regressions over exhaustive variants of the same shared dialog.
 `viewer-parity.spec.ts` covers public/read-only composition, visibility changes,
 unavailable mutation controls, settings focus, Escape restoration and supported
 fullscreen. Measurement and drawing cases exercise keyboard/pointer input,
-history, cancellation, discard and tool ownership. Camera cases preserve the
-original framing regression viewport; globe cases assert real rendered pixels.
-Keyboard measurement first waits for the survey to render and the camera to
-settle, then waits for its keyboard pan to finish before placing the endpoint.
-`map.loaded()` alone does not establish that the initial fit has finished;
-native keyboard input can interrupt it while the map is still at globe scale.
-These checks use the existing renderer-idle helper and retain real key input,
-unchanged assertions, one worker and zero retries.
+history, cancellation, discard and tool ownership. `globe-appearance.spec.ts`
+combines initial camera framing and actual globe pixels in one startup per
+viewer, retaining the tall regression viewport, conflicting provider metadata,
+navigation and style restoration. Keyboard measurement first waits for the
+survey to render and the camera to settle, then waits for its keyboard pan to
+finish before placing the endpoint. `map.loaded()` alone does not establish that
+the initial fit has finished; native keyboard input can interrupt it while the
+map is still at globe scale. These checks use the existing renderer-idle helper
+and retain real key input, unchanged assertions, one worker and zero retries.
 
 `gis-metadata-icons.spec.ts` checks rendered aliases and all landmark icons
 after style changes, decoded colored picker previews, independent edit
@@ -146,9 +159,11 @@ persistence are covered by Vitest and pytest respectively.
 menu and checks one representative station dialog plus the separate lead and
 cylinder dialogs. This exercises the shared dialog template without repeating
 its native interactions for every station type. The browser also checks provider
-attribution. Build graph, raw TypeScript protection and absence of reload
-polling are checked under `make test`, without browser-only metadata/network
-assertions. Live provider checks remain opt-in.
+attribution. Successful image decoding and nonzero dimensions establish visible
+asset readiness; a page-wide HTTP status audit would incorrectly reject valid
+304 cache revalidation responses. Build graph, raw TypeScript protection and
+absence of reload polling are checked under `make test`, without browser-only
+metadata/network assertions. Live provider checks remain opt-in.
 
 The report and failure screenshots go to the OS temporary directory, overridable
 with `VIEWER_BROWSER_ARTIFACTS`. Network traces remain disabled to keep session
@@ -160,8 +175,19 @@ from the backend suite's artifact.
 
 CI's **Chromium and WebKit** job runs independently of backend tests with its
 own PostgreSQL service, locked dependencies and checked asset build. It needs no
-GitLab token, S3 or Redis service. Keep this ownership boundary: `make test`
-validates application logic; browser CI validates UI/UX.
+real GitLab or Mapbox token, S3 or Redis service. Keep this ownership boundary:
+`make test` validates application logic; browser CI validates UI/UX.
+
+The job uses the official Playwright Noble image, with its exact version kept
+equal to `@playwright/test` in `package.json`. Chromium, WebKit and their OS
+libraries are already installed; do not reintroduce
+`playwright install --with-deps` in this job. `setup-bun` needs only the small
+`unzip` package. PostgreSQL is reached by its service hostname inside the job
+container. Caching browser archives does not avoid Linux dependency
+installation, which was the dominant setup cost. The total CI runtime target is
+10–12 minutes, including a 1–2 minute browser environment setup; verify it on
+subsequent CI runs, accounting separately for the cold image pull and test
+execution.
 
 `viewer-gestures.spec.ts` uses real wheel, pointer and touch input to protect
 projection-crossing anchor stability and paused-pinch handoff in private and

@@ -226,6 +226,14 @@ When frontend build scripts, registry entries, or Tailwind sources change:
 ## CI and Automation Context
 
 - JS tests run in GitHub Actions (`js-tests` job in `ci.yml`).
+- Browser UI checks run separately in the version-matched official Playwright
+  image. Preinstalled browser libraries avoid slow per-run OS package downloads.
+  The serial Chromium/WebKit suite uses local provider responses, one device
+  pixel per CSS pixel and reduced motion outside explicit gesture scenarios.
+  These choices remove unrelated network and rendering costs while retaining the
+  real browser, renderer and native input. See the
+  [browser suite guide](../../tests/browser/README.md) for setup, timing targets
+  and the boundaries of this evidence.
 - JS lint is enforced via pre-commit (`lint-map-viewer-js`).
 - Browserslist DB refresh runs in a scheduled workflow:
   - `.github/workflows/update_browserslist_db.yml`

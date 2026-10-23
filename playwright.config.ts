@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { BROWSER_TEST_BUDGETS } from './tests/browser/budgets.ts';
 
 const artifacts = process.env.VIEWER_BROWSER_ARTIFACTS || join(tmpdir(), 'speleodb-viewer-browser');
+const viewport = { width: 1280, height: 800 };
 
 export default defineConfig({
     testDir: './tests/browser',
@@ -17,7 +18,10 @@ export default defineConfig({
     reporter: [['list'], ['json', { outputFile: join(artifacts, 'report.json') }]],
     use: {
         baseURL: process.env.VIEWER_BROWSER_BASE_URL || 'http://127.0.0.1:8000',
-        viewport: { width: 1440, height: 1000 },
+        viewport,
+        // Ordinary UI checks do not need a globe-to-survey flight per startup.
+        // Gesture scenarios explicitly select the motion policy they exercise.
+        reducedMotion: 'reduce',
         ignoreHTTPSErrors: true,
         screenshot: 'only-on-failure',
         // Network traces would retain session cookies and the login payload.
@@ -26,10 +30,12 @@ export default defineConfig({
     projects: [
         {
             name: 'chromium',
-            use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 }, launchOptions: {
+            use: { ...devices['Desktop Chrome'], viewport, launchOptions: {
                 args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
             } },
         },
-        { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 1000 } } },
+        // The Safari preset's DPR 2 quadruples software canvas work. These
+        // scenarios protect CSS geometry and visible output at DPR 1.
+        { name: 'webkit', use: { ...devices['Desktop Safari'], viewport, deviceScaleFactor: 1 } },
     ],
 });

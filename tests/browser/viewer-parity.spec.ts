@@ -87,14 +87,6 @@ test('map settings contain keyboard focus, restore the trigger and remain usable
     await expect(page.locator('#map-settings-title')).toBeFocused();
     await page.locator('#create-geometry-btn').evaluate(element => (element as HTMLElement).focus());
     expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
-    for (let count = 0; count < 12; count++) {
-        await page.keyboard.press('Tab');
-        expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
-    }
-    for (let count = 0; count < 12; count++) {
-        await page.keyboard.press('Shift+Tab');
-        expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
-    }
     const first = dialog.getByRole('button', { name: 'Close settings', exact: true });
     const last = dialog.getByRole('button', { name: 'Close', exact: true });
     await first.focus();

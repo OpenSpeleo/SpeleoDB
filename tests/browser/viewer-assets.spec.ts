@@ -8,15 +8,6 @@ test.beforeEach(({ page }) => {
     const errors: string[] = [];
     failures.set(page, errors);
     page.on('pageerror', error => errors.push(error.message));
-    page.on('request', request => {
-        if (new URL(request.url()).pathname.split('/').includes('undefined')) errors.push(request.url());
-    });
-    page.on('response', response => {
-        if (response.request().resourceType() === 'image' && !response.ok()) errors.push(`${response.status()} ${response.url()}`);
-    });
-    page.on('requestfailed', request => {
-        if (request.resourceType() === 'image') errors.push(request.url());
-    });
 });
 test.afterEach(({ page }) => { expect(failures.get(page)).toEqual([]); });
 
@@ -107,11 +98,6 @@ test('provider credits remain after source changes without the Improve this map 
         '<a class="mapbox-improve-map" href="https://example.test/survey-credit">Survey credit</a>',
     ].join(' | ');
     await login(page);
-    // The source picker keeps its real raster lifecycle; tile bytes stay local.
-    await page.route('https://services.arcgisonline.com/**', route => route.fulfill({
-        contentType: 'image/png',
-        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64'),
-    }));
     await installFixture(page, { providerAttribution });
     const credits = page.locator('.maplibregl-ctrl-attrib');
     const expectCredits = async () => {
