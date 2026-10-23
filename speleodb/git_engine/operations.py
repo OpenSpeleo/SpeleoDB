@@ -59,7 +59,7 @@ class DeadlineGitProcess(Git.AutoInterrupt):
         self._watchdog.daemon = True
         self._watchdog.start()
 
-    def _timeout_error(self) -> GitCommandError:
+    def _deadline_error(self) -> GitCommandError:
         return GitCommandError(
             self.args,
             "timeout",
@@ -104,9 +104,9 @@ class DeadlineGitProcess(Git.AutoInterrupt):
         except subprocess.TimeoutExpired:
             self._expired.set()
             self._terminate()
-            raise self._timeout_error() from None
+            raise self._deadline_error() from None
         if self._expired.is_set():
-            raise self._timeout_error()
+            raise self._deadline_error()
         return result
 
     @override
@@ -123,7 +123,7 @@ class DeadlineGitProcess(Git.AutoInterrupt):
                     timeout=max(0.0, self._deadline - time.monotonic())
                 )
             if self._expired.is_set():
-                raise self._timeout_error()
+                raise self._deadline_error()
             # Callers have already consumed the process streams. Preserve the
             # GitPython return-code check and original stderr diagnostics.
             if with_exceptions:
@@ -133,7 +133,7 @@ class DeadlineGitProcess(Git.AutoInterrupt):
         except subprocess.TimeoutExpired:
             self._expired.set()
             self._terminate()
-            raise self._timeout_error() from None
+            raise self._deadline_error() from None
         finally:
             self._terminate()
 

@@ -299,14 +299,16 @@ domain methods, so the boundary is registration and runtime reachability, not a
 claim that every mutation endpoint string is absent from public assets. The
 test-only runtime import walker checks both public capability boundaries and the
 Config/API dependency cycle through static imports, re-exports, nested dynamic
-imports and module-relative worker URLs. It excludes erased type-only
-declarations while retaining the empty runtime imports emitted for inline `type`
-specifiers under `verbatimModuleSyntax`. Unclassified dynamic or worker paths
-fail the boundary check; registry and glob expansion remain covered by the Vite
-asset graph tests. Visibility selectors own the country-plus-project gates used
-by rendering and snapping. Feature renderers and display scheduling sit beneath
-the stable Layers facade; generation, revision and latest-intent checks remain
-with their owners.
+imports and module-relative worker URLs. Like Vite and the application compiler,
+it preserves package symlinks so linked sources resolve dependencies through the
+application's installed tree rather than the source checkout's dependencies. It
+excludes erased type-only declarations while retaining the empty runtime imports
+emitted for inline `type` specifiers under `verbatimModuleSyntax`. Unclassified
+dynamic or worker paths fail the boundary check; registry and glob expansion
+remain covered by the Vite asset graph tests. Visibility selectors own the
+country-plus-project gates used by rendering and snapping. Feature renderers and
+display scheduling sit beneath the stable Layers facade; generation, revision
+and latest-intent checks remain with their owners.
 
 ## Adding and changing contracts
 

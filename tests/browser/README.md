@@ -40,6 +40,12 @@ assertions. Do not replace meaningful readiness with forced clicks.
 Authentication storage state is reused once per worker, while each test receives
 a fresh browser context and independent preferences.
 
+Controller checks observe both successful initialization and the application's
+controller-error event. A reported initialization error fails immediately with
+its exception instead of waiting for a ready state that cannot arrive. Error
+messages retain URL origins and paths while removing credentials, query strings
+and fragments from diagnostics.
+
 The former large-data settings and GPS latency benchmarks are intentionally
 removed from routine browser CI. Unit tests retain large-data preparation,
 bounded worker transfer, cancellation and cooperative yielding contracts. Those

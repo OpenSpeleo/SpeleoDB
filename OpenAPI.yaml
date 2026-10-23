@@ -2728,6 +2728,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -2822,6 +2823,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -2916,6 +2918,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -3280,6 +3283,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -3380,6 +3384,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -3480,6 +3485,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
               required:
               - cylinder
               - install_date
@@ -3704,6 +3710,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
           application/x-www-form-urlencoded:
             schema:
               type: object
@@ -3798,6 +3805,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
           multipart/form-data:
             schema:
               type: object
@@ -3892,6 +3900,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
         required: false
       security:
       - cookieAuth: []
@@ -33973,6 +33982,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   type: string
                   format: date
@@ -34029,6 +34039,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   anyOf:
                   - type: string
@@ -34093,6 +34104,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   anyOf:
                   - type: string
@@ -34418,6 +34430,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   type: string
                   format: date
@@ -34477,6 +34490,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   anyOf:
                   - type: string
@@ -34544,6 +34558,7 @@ paths:
                     * `lost` - Lost
                     * `abandoned` - Abandoned
                   x-spec-enum-id: b6864bea2fccb91c
+                  default: installed
                 expiracy_memory_date:
                   anyOf:
                   - type: string
@@ -50368,6 +50383,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
         created_by:
           type: string
           format: email
@@ -50496,6 +50512,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
       required:
       - cylinder
       - install_date
@@ -50702,6 +50719,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
       required:
       - cylinder
       - install_date
@@ -53353,6 +53371,7 @@ components:
             * `SHARED` - Shared
           x-spec-enum-id: 2f66870827ed3f1c
           readOnly: true
+          default: SHARED
         personal_owner:
           type: integer
           readOnly: true
@@ -53554,6 +53573,7 @@ components:
             * `SHARED` - Shared
           x-spec-enum-id: 2f66870827ed3f1c
           readOnly: true
+          default: SHARED
         personal_owner:
           type: integer
           readOnly: true
@@ -53987,6 +54007,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
     PatchedCylinderPressureCheckRequest:
       type: object
       description: Serializer for CylinderPressureCheck model.
@@ -55069,6 +55090,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
         expiracy_memory_date:
           type: string
           format: date
@@ -58018,6 +58040,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
         expiracy_memory_date:
           type: string
           format: date
@@ -58105,6 +58128,7 @@ components:
             * `lost` - Lost
             * `abandoned` - Abandoned
           x-spec-enum-id: b6864bea2fccb91c
+          default: installed
         expiracy_memory_date:
           type: string
           format: date

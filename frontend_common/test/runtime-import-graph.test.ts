@@ -80,3 +80,19 @@ it('rejects shared declaration-only exports instead of auditing generated artifa
     });
     expect(() => runtimeClosure('entry.ts', root)).toThrow('First-party runtime import must resolve to source');
 });
+
+it('resolves linked package dependencies through the application installation', () => {
+    fixture({
+        'app/entry.ts': 'import "@speleodb/map-viewer";',
+        'app/node_modules/@speleodb/map-core/package.json': JSON.stringify({ exports: { './landmark-icons': './src/landmark-icons.ts' } }),
+        'app/node_modules/@speleodb/map-core/src/landmark-icons.ts': 'export const icons = [];',
+        'linked/map-viewer/package.json': JSON.stringify({ exports: { '.': './src/index.ts' } }),
+        'linked/map-viewer/src/index.ts': 'export { icons } from "@speleodb/map-core/landmark-icons";',
+    });
+    const appRoot = path.join(root, 'app');
+    fs.symlinkSync(path.join(root, 'linked/map-viewer'), path.join(appRoot, 'node_modules/@speleodb/map-viewer'), 'dir');
+    expect([...runtimeClosure('entry.ts', appRoot)].map(file => path.relative(appRoot, file))).toEqual([
+        'entry.ts', 'node_modules/@speleodb/map-viewer/src/index.ts',
+        'node_modules/@speleodb/map-core/src/landmark-icons.ts',
+    ]);
+});

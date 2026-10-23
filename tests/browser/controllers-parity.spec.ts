@@ -21,10 +21,25 @@ import { login } from './viewer-fixture.ts';
 async function observeControllers(page: Page) {
     await page.addInitScript(() => {
         document.addEventListener('speleodb:controller-ready', event => {
-            if (event.target instanceof HTMLElement) event.target.dataset.browserReady = 'true';
+            if (event.target instanceof HTMLElement) {
+                event.target.dataset.browserReady = 'true';
+                event.target.dataset.browserStatus = 'ready';
+            }
         });
         document.addEventListener('speleodb:controller-error', event => {
-            if (event.target instanceof HTMLElement) event.target.dataset.browserError = 'true';
+            if (!(event.target instanceof HTMLElement)) return;
+            const error = (event as CustomEvent<{ error: unknown }>).detail.error;
+            const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+            // Preserve the failure cause without retaining signed URLs or credentials.
+            event.target.dataset.browserError = message.replace(/https?:\/\/[^\s]+/g, value => {
+                try {
+                    const url = new URL(value);
+                    return `${url.origin}${url.pathname}`;
+                } catch {
+                    return '[URL]';
+                }
+            });
+            event.target.dataset.browserStatus = 'error';
         });
     });
 }
@@ -33,6 +48,8 @@ async function openController(page: Page, path: string, controller: string) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
     const declaration = page.locator(`[data-speleodb-controller="${controller}"]`);
+    await expect(declaration).toHaveAttribute('data-browser-status', /^(ready|error)$/);
+    expect(await declaration.getAttribute('data-browser-error'), `${controller} initialization failed`).toBeNull();
     await expect(declaration).toHaveAttribute('data-browser-ready', 'true');
     await expect(page.locator('[data-browser-error]')).toHaveCount(0);
     return declaration;

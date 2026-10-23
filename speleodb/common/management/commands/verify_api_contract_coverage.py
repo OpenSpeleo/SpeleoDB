@@ -19,7 +19,6 @@ from django.core.management.base import CommandParser
 
 from speleodb.api.schema import HTTP_METHODS
 from speleodb.api.schema_inventory import current_api_routes
-from speleodb.testing.api_contract import contract_schema
 from speleodb.testing.api_contract import is_successful_observation
 
 REPORT_FORMAT_VERSION = 2
@@ -35,54 +34,6 @@ def read_contract_report(report: Path) -> dict[str, Any]:
     if data.get("exit_status") != 0:
         raise CommandError(f"{report} is not from a passing pytest session")
     return data
-
-
-def expanded_schema(
-    value: Any, document: dict[str, Any], seen: tuple[str, ...] = ()
-) -> Any:
-    """Compare operation contracts including all reachable local components."""
-    if isinstance(value, list):
-        return [expanded_schema(item, document, seen) for item in value]
-    if not isinstance(value, dict):
-        return value
-    result = {}
-    for key, item in value.items():
-        if key != "$ref":
-            result[key] = expanded_schema(item, document, seen)
-        elif item in seen:
-            result["$ref"] = item
-        else:
-            if not item.startswith("#/"):
-                raise CommandError(
-                    "Coverage comparison requires local OpenAPI references"
-                )
-            target = document
-            for part in item.removeprefix("#/").split("/"):
-                target = target[part.replace("~1", "/").replace("~0", "~")]
-            result["resolved_reference"] = expanded_schema(
-                target, document, (*seen, item)
-            )
-    return result
-
-
-def operation_contract(document: dict[str, Any], path: str, method: str) -> Any:
-    """Include inherited parameters and global transport/authentication policy."""
-    item = document["paths"].get(path, {})
-    return expanded_schema(
-        {
-            "operation": item.get(method),
-            "path_parameters": item.get("parameters", []),
-            "path_servers": item.get("servers", []),
-            "document_servers": document.get("servers", []),
-            "document_security": document.get("security", []),
-            "security_schemes": document.get("components", {}).get(
-                "securitySchemes", {}
-            ),
-            "openapi": document.get("openapi"),
-            "json_schema_dialect": document.get("jsonSchemaDialect"),
-        },
-        document,
-    )
 
 
 def disabled_operation_reason(path: str) -> str | None:
@@ -122,11 +73,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("reports", nargs="+", type=Path)
         parser.add_argument(
-            "--baseline-schema",
-            type=Path,
-            help="Previous exported YAML when combining reports across a refinement",
-        )
-        parser.add_argument(
             "--write", action="store_true", help="Update durable evidence registry"
         )
         parser.add_argument(
@@ -138,83 +84,33 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         observations: list[dict[str, Any]] = []
         provenance: list[dict[str, Any]] = []
-        current_hash = sha256(
-            (settings.BASE_DIR / "OpenAPI.yaml").read_bytes()
-        ).hexdigest()
+        exported: bytes = (settings.BASE_DIR / "OpenAPI.yaml").read_bytes()
+        current_hash: str = sha256(exported).hexdigest()
         for report in options["reports"]:
             data = read_contract_report(report)
-            report_hash = data["schema_sha256"]
+            if data.get("schema_sha256") != current_hash:
+                raise CommandError(
+                    f"{report} does not validate the current schema snapshot"
+                )
             provenance.append(
                 {
                     "report": report.name,
-                    "schema_sha256": report_hash,
                     "exit_status": data["exit_status"],
                     "test_invocation": data["test_invocation"],
                     "provenance": data.get("provenance", "Captured by test observer"),
                 }
             )
-            observations.extend(
-                {**item, "schema_sha256": report_hash} for item in data["observations"]
-            )
-        if current_hash not in {source["schema_sha256"] for source in provenance}:
-            raise CommandError(
-                "No observed report validates the current schema snapshot"
-            )
+            observations.extend(data["observations"])
         violations = [item for item in observations if "error" in item]
         if violations:
             raise CommandError(f"Reports contain {len(violations)} contract violations")
-        document = contract_schema()
+        document: dict[str, Any] = yaml.safe_load(exported)
         operations = {
             operation["operationId"]: (path, method)
             for path, item in document["paths"].items()
             for method, operation in item.items()
             if method in HTTP_METHODS
         }
-        previous_hashes = {source["schema_sha256"] for source in provenance} - {
-            current_hash
-        }
-        refinement: dict[str, Any] | None = None
-        if previous_hashes:
-            baseline_path = options["baseline_schema"]
-            if baseline_path is None:
-                raise CommandError("Mixed-schema reports require --baseline-schema")
-            baseline_bytes = baseline_path.read_bytes()
-            baseline_hash = sha256(baseline_bytes).hexdigest()
-            if previous_hashes != {baseline_hash}:
-                raise CommandError(
-                    "Baseline YAML does not match previous report hashes"
-                )
-            baseline = yaml.safe_load(baseline_bytes)
-            changed = [
-                identifier
-                for identifier, (path, method) in operations.items()
-                if operation_contract(document, path, method)
-                != operation_contract(baseline, path, method)
-            ]
-            observed_current = {
-                item["operation_id"]
-                for item in observations
-                if item["schema_sha256"] == current_hash
-                and (
-                    is_successful_observation(item)
-                    or is_completed_auth_transition(item)
-                    or disabled_operation_reason(item["path"])
-                )
-            }
-            uncovered = set(changed) - observed_current
-            if uncovered:
-                raise CommandError(
-                    "Changed operations lack current-schema positive evidence: "
-                    + ", ".join(sorted(uncovered))
-                )
-            refinement = {
-                "baseline_schema_sha256": baseline_hash,
-                "comparison": (
-                    "Recursive local-reference expansion per operation, inherited "
-                    "path parameters/servers, and global servers/security/dialect"
-                ),
-                "changed_operations_revalidated": sorted(changed),
-            }
         unknown = {item["operation_id"] for item in observations} - operations.keys()
         if unknown:
             raise CommandError(f"Reports contain unknown operations: {sorted(unknown)}")
@@ -241,9 +137,6 @@ class Command(BaseCommand):
             evidence[identifier] = {
                 "method": method.upper(),
                 "path": path,
-                "observed_schema_sha256": sorted(
-                    {item["schema_sha256"] for item in observed}
-                ),
                 "observed_response_branches": [
                     {"status": code, "media_type": media} for code, media in branches
                 ],
@@ -277,10 +170,9 @@ class Command(BaseCommand):
                 ),
             }
         result = {
-            "format_version": 2,
+            "format_version": 3,
             "schema_sha256": current_hash,
             "source_reports": provenance,
-            "schema_refinement": refinement,
             "canonical_operations": len(operations),
             "resolver_operations": len(current_api_routes()),
             "alias_operations": sum(

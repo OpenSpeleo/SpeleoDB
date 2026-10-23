@@ -31,11 +31,11 @@ from speleodb.api.v2.tests.factories import SubSurfaceStationFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import InstallStatus
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import SensorInstall
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from speleodb.gis.models import Sensor
-    from speleodb.gis.models import SensorInstall
     from speleodb.gis.models import Station
     from speleodb.gis.models import SubSurfaceStation
     from speleodb.users.models.user import User
@@ -286,7 +286,13 @@ class TestStationSensorInstallListCreate:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already installed" in str(response.data).lower()
+        assert "already installed" in str(response.data["errors"]["non_field_errors"])
+        assert (
+            SensorInstall.objects.filter(
+                sensor=sensor_install.sensor, status=InstallStatus.INSTALLED
+            ).count()
+            == 1
+        )
 
     def test_create_sensor_install_missing_required_fields(
         self,

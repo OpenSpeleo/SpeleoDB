@@ -387,7 +387,13 @@ class TestCylinderInstallListCreate:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already installed" in str(response.data).lower()
+        assert "already installed" in str(response.data["errors"]["non_field_errors"])
+        assert (
+            CylinderInstall.objects.filter(
+                cylinder=cylinder_install.cylinder, status=InstallStatus.INSTALLED
+            ).count()
+            == 1
+        )
 
     def test_create_cylinder_install_missing_required_fields(
         self,

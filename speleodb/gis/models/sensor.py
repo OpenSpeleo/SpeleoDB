@@ -349,6 +349,10 @@ class SensorInstall(models.Model):
                 fields=["sensor"],
                 condition=Q(status=InstallStatus.INSTALLED),
                 name="%(app_label)s_%(class)s_installed_per_sensor_unique",
+                violation_error_message=(
+                    "This sensor is already installed. "
+                    "A sensor can only be installed at one station at a time."
+                ),
             ),
             # install_date <= expiracy_memory_date if set
             CheckConstraint(

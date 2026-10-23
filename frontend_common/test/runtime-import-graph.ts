@@ -19,6 +19,9 @@ export function runtimeClosure(entry: string, root = process.cwd()): Set<string>
                 moduleResolution: ts.ModuleResolutionKind.Bundler,
                 customConditions: ['speleodb-source'],
                 allowImportingTsExtensions: true,
+                // Match Vite and the application compiler: linked packages
+                // resolve their imports through this installation's tree.
+                preserveSymlinks: true,
             }, ts.sys).resolvedModule?.resolvedFileName;
             if (!resolved) throw new Error(`Unresolved first-party runtime import ${specifier} in ${file}`);
             if (/\.d\.[cm]?ts$/.test(resolved)) {

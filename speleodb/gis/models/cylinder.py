@@ -421,6 +421,10 @@ class CylinderInstall(models.Model):
                 fields=["cylinder"],
                 condition=Q(status=InstallStatus.INSTALLED),
                 name="%(app_label)s_%(class)s_installed_per_cylinder_unique",
+                violation_error_message=(
+                    "This cylinder is already installed. "
+                    "A cylinder can only be installed at one location at a time."
+                ),
             ),
         ]
 

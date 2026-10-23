@@ -501,8 +501,8 @@ outside the repository, not in these durable instructions.
 ### Controlled test boundaries
 
 Browser UI/UX tests may control HTTP responses and loading gates at the network
-boundary. Keep the real application functions, native input, image decoding,
-and renderer methods.
+boundary. Keep the real application functions, native input, image decoding, and
+renderer methods.
 
 Prefer real constructors, supported configuration, and small real local inputs.
 A controlled substitute may isolate unrelated external work or elapsed waiting,

@@ -61,9 +61,11 @@ def test_every_current_resolver_operation_is_documented() -> None:
 
 
 def test_durable_evidence_matches_current_contract() -> None:
-    registry = json.loads(
-        (settings.BASE_DIR / "docs/api-contract-coverage.json").read_text()
-    )
+    serialized: str = (
+        settings.BASE_DIR / "docs/api-contract-coverage.json"
+    ).read_text()
+    registry = json.loads(serialized)
+    assert registry["format_version"] == 3  # noqa: PLR2004
     assert (
         registry["schema_sha256"]
         == sha256((settings.BASE_DIR / "OpenAPI.yaml").read_bytes()).hexdigest()
@@ -79,14 +81,13 @@ def test_durable_evidence_matches_current_contract() -> None:
     assert set(registry["operations"]) == set(expected)
     assert registry["source_reports"]
     assert all(source["exit_status"] == 0 for source in registry["source_reports"])
-    source_hashes = {source["schema_sha256"] for source in registry["source_reports"]}
-    assert registry["schema_sha256"] in source_hashes
+    assert serialized.count(registry["schema_sha256"]) == 1
+    assert serialized.count('"schema_sha256"') == 1
     for identifier, (path, method) in expected.items():
         evidence = registry["operations"][identifier]
         assert (evidence["path"], evidence["method"]) == (path, method)
         assert evidence["observed_response_branches"]
         assert evidence["tests"]
-        assert set(evidence["observed_schema_sha256"]) <= source_hashes
         assert (
             evidence["successful_response_observed"]
             or evidence["completed_auth_transition_observed"]

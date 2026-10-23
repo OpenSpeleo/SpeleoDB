@@ -265,6 +265,15 @@ the supported LineString/Polygon structure; geographic bounds, polygon closure,
 self-intersection and area limits still need behavioral tests. OpenAPI is not a
 replacement for data-dependent business validation.
 
+Cylinder and sensor installation uniqueness remains a conditional model and
+database constraint. Its model-level violation message gives DRF's generated
+validator useful "already installed" feedback before serializer save hooks run.
+These early validation failures use `errors.non_field_errors`; the later save
+guards retain their field-specific location details. Constraint message changes
+use state-only `AlterConstraint` migrations and do not recreate the database
+indexes. The existing duplicate-install API tests check both the message and
+that the active installation count stays unchanged.
+
 A response observer must validate rendered bytes, not `response.data`: rendering
 changes decimals, dates and files. OGC streams use GeoJSON MIME types; the
 validator registers JSON deserializers for those media types and the OpenAPI
@@ -382,26 +391,36 @@ Normal CI runs the guard with every other test; do not make its exclusion a
 permanent pytest setting or accept a report containing other test failures.
 
 Without `--write`, the command validates coverage without modifying the
-registry. Its schema hash binds the evidence to the exact canonical YAML, and a
-regression test checks that hash and the complete operation set. The command
-rejects unknown operations, contract violations, missing observations, and
-operations with only admission/error evidence. The registry records actual test
-names, statuses, media, request validation flags, and **unobserved declared
-statuses**. It is evidence of executed branches, not a claim that every
-conceivable input or failure condition has been exercised. Each mounted alias
-has its own operation and observations; the independent alias test additionally
-proves matching view classes and initialization arguments for all 47 auth
-aliases. Git packet-line rejections are recorded even when their HTTP status is
-200, but cannot satisfy the successful-operation evidence requirement.
+registry. Durable format 3 stores one top-level `schema_sha256` fingerprint for
+the exact canonical YAML. Every input report must come from a passing session
+against those same bytes; a stale report is rejected even when combined with a
+complete current report. Raw observer reports retain their format 2 provenance.
+A regression test checks the registry fingerprint, its single occurrence, and
+the complete operation set. The command rejects unknown operations, contract
+violations, missing observations, and operations with only admission/error
+evidence. The registry records actual test names, statuses, media, request
+validation flags, and **unobserved declared statuses**. It is evidence of
+executed branches, not a claim that every conceivable input or failure condition
+has been exercised. Each mounted alias has its own operation and observations;
+the independent alias test additionally proves matching view classes and
+initialization arguments for all 47 auth aliases. Git packet-line rejections are
+recorded even when their HTTP status is 200, but cannot satisfy the
+successful-operation evidence requirement.
 
-When combining runs made before and after a schema refinement, supply the exact
-previous YAML with `--baseline-schema`. The coverage command checks its hash
-against the older report, recursively expands local component references for
-each operation, and requires current-schema positive evidence for every changed
-operation. The registry records report provenance, observed hashes per
-operation, and the changed operations that were revalidated. It never implies
-that an older response was revalidated against a newer schema. A full run on the
-current snapshot needs no baseline argument.
+Reports from multiple passing runs may be combined only when all used the
+current snapshot. Their filenames, test invocations, exit statuses and observer
+provenance remain in `source_reports`; operations record their actual observed
+branches and tests without repeating the schema fingerprint. After any schema
+change, rerun the affected coverage against the current snapshot instead of
+carrying evidence across revisions.
+
+The fingerprint binds observations to an artifact; freshness against backend
+code is checked separately by `export_api_schema --check`. That command
+regenerates OpenAPI into a temporary file and compares its bytes with
+`OpenAPI.yaml`, failing on drift without rewriting the snapshot. CI requires
+this regeneration check, so comparing matching registry and snapshot hashes
+cannot hide a stale export. The coverage writer reads and hashes the snapshot
+once and does not repeat schema generation or add per-operation comparison work.
 
 The resolver and generated contract must agree on every supported operation; the
 durable registry records the current counts and evidence. Some allauth
