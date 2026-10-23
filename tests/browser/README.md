@@ -128,6 +128,12 @@ unavailable mutation controls, settings focus, Escape restoration and supported
 fullscreen. Measurement and drawing cases exercise keyboard/pointer input,
 history, cancellation, discard and tool ownership. Camera cases preserve the
 original framing regression viewport; globe cases assert real rendered pixels.
+Keyboard measurement first waits for the survey to render and the camera to
+settle, then waits for its keyboard pan to finish before placing the endpoint.
+`map.loaded()` alone does not establish that the initial fit has finished;
+native keyboard input can interrupt it while the map is still at globe scale.
+These checks use the existing renderer-idle helper and retain real key input,
+unchanged assertions, one worker and zero retries.
 
 `gis-metadata-icons.spec.ts` checks rendered aliases and all landmark icons
 after style changes, decoded colored picker previews, independent edit

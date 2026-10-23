@@ -452,6 +452,28 @@ settings for real entrypoint and isolated-worker tests.
 The reloader subprocess loads `config.settings.local`, which requires an
 explicit `DJANGO_SECRET_KEY`; the default in test settings is not an environment
 variable. Its test supplies a dummy key and disables private dotenv loading.
+Live Beat publication probes likewise pass the parent test settings' resolved
+secret explicitly and disable private dotenv loading. Child failures include
+their captured stderr so a missing setting is visible in CI.
+
+Subprocess probes that change into a temporary directory must also provide the
+checkout root in their child `PYTHONPATH`. The devcontainer includes `/app`
+globally; a standalone CI checkout does not. The temporary-directory settings
+and pytest selection probes configure this path themselves. Reproduce the
+standalone environment inside the existing container with:
+
+```bash
+docker exec -w /app speleodb-monorepo-django \
+  env -u PYTHONPATH -u DJANGO_SECRET_KEY \
+  pytest speleodb/common/tests/test_test_settings_service_endpoints.py \
+  speleodb/testing/tests/test_pytest_selection.py -q
+
+docker exec -w /app speleodb-monorepo-django \
+  env -u PYTHONPATH -u DJANGO_SECRET_KEY DJANGO_READ_DOT_ENV_FILE=false \
+  pytest speleodb/background_jobs/tests/test_live_worker.py::test_live_housekeeping_records_only_failures \
+  speleodb/background_jobs/tests/test_live_worker.py::test_live_beat_publication_preserves_worker_result_recording -q
+```
+
 When verifying CI environment changes, run the Compose tests from a checkout
 without `.env` or `.envs/test.env`, using the workflow's environment. This
 catches missing inputs that local credentials can hide. These settings affect

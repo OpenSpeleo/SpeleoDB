@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import pytest
 
 pytest_plugins = ["pytester"]
+BASE_DIR: Path = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture(autouse=True)
@@ -14,6 +18,8 @@ def isolated_pytest_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
     monkeypatch.delenv("DJANGO_SETTINGS_MODULE", raising=False)
+    # Pytester runs from a temporary directory; the plugin lives in this checkout.
+    monkeypatch.setenv("PYTHONPATH", str(BASE_DIR), prepend=os.pathsep)
 
 
 @pytest.mark.parametrize(

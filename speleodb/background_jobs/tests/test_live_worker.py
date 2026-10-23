@@ -267,6 +267,8 @@ def _publish_scheduled_task(
     environment.update(
         {
             "DJANGO_SETTINGS_MODULE": "config.settings.beat",
+            "DJANGO_READ_DOT_ENV_FILE": "false",
+            "DJANGO_SECRET_KEY": settings.SECRET_KEY,
             "DATABASE_URL": postgres_test_database_url(),
             "USE_DOCKER": "false",
         }
@@ -309,15 +311,16 @@ def _publish_scheduled_task(
             lease.close()
         """
     )
-    subprocess.run(  # noqa: S603
+    result: subprocess.CompletedProcess[str] = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script, task_name, task_id],
         env=environment,
         cwd=settings.BASE_DIR,
         capture_output=True,
         text=True,
         timeout=30,
-        check=True,
+        check=False,
     )
+    assert result.returncode == 0, result.stderr
 
 
 def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(

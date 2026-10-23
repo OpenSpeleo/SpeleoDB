@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { expectRenderedFeatures, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel } from './viewer-fixture.ts';
+import { expectRenderedFeatures, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel, waitForViewerIdle } from './viewer-fixture.ts';
 
 const browserErrors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -141,6 +141,10 @@ test('map settings contain keyboard focus, restore the trigger and remain usable
 test('distance measurement supports keyboard placement, draft cancellation and clearing completed distances', async ({ page }) => {
     await login(page);
     await installFixture(page);
+    // Keyboard input interrupts the initial camera fit. Establish the rendered
+    // survey and settled camera before comparing screen positions after a pan.
+    await expectRenderedFeatures(page, lineId, true);
+    await waitForViewerIdle(page);
     const ruler = page.getByRole('button', { name: 'Measure distance', exact: true });
     const canvas = page.locator('canvas.maplibregl-canvas');
     const distances = page.getByRole('list', { name: 'Completed distances' });
@@ -157,6 +161,7 @@ test('distance measurement supports keyboard placement, draft cancellation and c
     const originalX = await page.evaluate(() => window.__viewerEvidence.map.project([-87, 20]).x);
     await page.keyboard.press('ArrowRight');
     await expect.poll(() => page.evaluate(() => window.__viewerEvidence.map.project([-87, 20]).x)).toBeLessThan(originalX - 1);
+    await waitForViewerIdle(page);
     await page.keyboard.press('Enter');
     await expect(distances.locator('li')).toHaveCount(1);
     await expect(distances.locator('li')).toHaveText(/^Measurement 1: /);

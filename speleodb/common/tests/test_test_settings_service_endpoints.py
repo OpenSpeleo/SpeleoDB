@@ -63,7 +63,10 @@ def test_test_database_selection_is_explicit_and_postgresql(
     expected_name: str | None,
     use_template: bool,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # The temporary cwd selects its dotenv file, while settings stay in this checkout.
+    monkeypatch.setenv("PYTHONPATH", str(BASE_DIR), prepend=os.pathsep)
     test_environment = tmp_path / ".envs" / "test.env"
     test_environment.parent.mkdir()
     test_environment.write_text(
