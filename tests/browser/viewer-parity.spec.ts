@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { expectRenderedFeatures, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel, waitForViewerIdle } from './viewer-fixture.ts';
+import { expectRenderedFeatures, installFixture, login, projectId, toggleLabel, waitForViewerIdle } from './viewer-fixture.ts';
 
 const browserErrors = new WeakMap<Page, string[]>();
 test.beforeEach(({ page }) => {
@@ -24,7 +24,7 @@ async function changeSource(page: Page) {
 test('public GIS changes the visible map without exposing private tools', async ({ page }) => {
     const publicUrl = process.env.VIEWER_BROWSER_PUBLIC_URL;
     expect(publicUrl, 'The Django browser wrapper provides a database-only public GIS view').toBeTruthy();
-    await installFixture(page, { publicUrl: publicUrl!, captureCanvasFrames: true });
+    await installFixture(page, { publicUrl: publicUrl! });
     await expect(page.locator('.welcome-modal-backdrop')).toBeVisible();
     await page.getByRole('button', { name: 'Close modal', exact: true }).click();
     await expect(page.locator('.welcome-modal-backdrop')).not.toBeVisible();
@@ -35,10 +35,6 @@ test('public GIS changes the visible map without exposing private tools', async 
     await expectRenderedFeatures(page, lineId, false);
     await toggleLabel(input);
     await expectRenderedFeatures(page, lineId, true);
-    const initialFrame = await expectGreenSurveyPixels(page, true);
-    await page.locator('#color-mode-button').click();
-    await expect(page.locator('#color-mode-toggle')).toBeChecked();
-    await expectGreenSurveyPixels(page, false, initialFrame);
     await changeSource(page);
     await expectRenderedFeatures(page, lineId, true);
     // Uncover the canvas point normally occupied by the project panel.

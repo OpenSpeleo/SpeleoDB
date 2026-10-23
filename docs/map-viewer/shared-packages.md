@@ -38,13 +38,15 @@ existing owners. Map-height resize handlers and delayed resize work are released
 when the map is removed.
 
 This rendering costs one viewport-sized draw per map frame and no additional
-network requests, feature traversal, texture downloads or animation loop.
-`globe-appearance.spec.ts` checks actual screenshot pixels for dark space, stars
-and the white halo in both private and public viewers, then exercises camera
-padding, rotation, pitch, resize, style replacement and Mercator/globe changes.
-The existing camera and basemap suites retain provider metadata and source
-identity coverage. Build manually inside the application container before
-running browser checks; refresh manually after a successful build.
+network requests, feature traversal, texture downloads or animation loop. The
+shared package's atmosphere tests own resource/projection lifecycle checks; the
+web application's composition, map-core and source tests cover attachment,
+initial camera and source-replacement behavior. Run package tests from their own
+repository; the web suite does not dispatch them. Browser coverage is reserved
+for complex native-input and stateful UI workflows, excluding cosmetic globe
+pixels and direct camera-configuration smoke checks. Build manually inside the
+application container before running browser checks; refresh manually after a
+successful build.
 
 ## Web renderer and providers
 
@@ -258,15 +260,3 @@ code stays independent of Django and application globals; browser scheduling
 uses explicit cancellable ports and detects animation-frame availability. See
 the monorepo TypeScript package documentation for packaging, local overlays and
 publication sequencing.
-
-The live renderer/provider smoke is opt-in. With a valid configured provider
-token, run it through the Django browser wrapper so the ordinary isolated user
-and view fixtures still own application data:
-
-```sh
-VIEWER_BROWSER_LIVE_PROVIDER=1 VIEWER_BROWSER_GREP='retained Mapbox imagery' \
-  pytest tests/browser/test_django_browser.py -s -q
-```
-
-This smoke checks loaded imagery and composite sources, actual rendered vector
-city-label features and visible provider attribution in Chromium and WebKit.

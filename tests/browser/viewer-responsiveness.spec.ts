@@ -1,30 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { expectRenderedFeatures, gisId, expectGreenSurveyPixels, installFixture, login, projectId, toggleLabel, trackId } from './viewer-fixture.ts';
+import { expectRenderedFeatures, gisId, installFixture, login, projectId, toggleLabel, trackId } from './viewer-fixture.ts';
 
 test.beforeEach(async ({ page }) => { await login(page); });
-
-test('settings reflect selection and update the visible survey colors', async ({ page }) => {
-    await installFixture(page, { captureCanvasFrames: true });
-    const initialFrame = await expectGreenSurveyPixels(page, true);
-    await page.locator('#map-settings-button').click();
-    const dialog = page.locator('#map-settings-dialog');
-    const entrances = page.locator('[data-category="caveEntrances"]');
-    await expect(entrances).toBeChecked();
-    await toggleLabel(entrances);
-    await expect(entrances).not.toBeChecked();
-    await expect(dialog).not.toHaveAttribute('aria-busy', 'true');
-    await toggleLabel(entrances);
-    await expect(entrances).toBeChecked();
-    const depth = page.locator('input[name="map-settings-color-mode"][value="depth"]');
-    await toggleLabel(depth);
-    await expect(depth).toBeChecked();
-    await expect(page.locator('#map-settings-depth-limit')).toBeVisible();
-    await expect(dialog).not.toHaveAttribute('aria-busy', 'true');
-    await page.keyboard.press('Escape');
-    await expect(dialog).not.toBeVisible();
-    await expectRenderedFeatures(page, `project-layer-${projectId(0)}`, true);
-    await expectGreenSurveyPixels(page, false, initialFrame);
-});
 
 test('GPS loading keeps the toggle usable and displays the final selection', async ({ page }) => {
     const { gates } = await installFixture(page);

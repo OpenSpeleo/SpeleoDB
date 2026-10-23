@@ -453,16 +453,22 @@ Backend/API changes should also run relevant `pytest` targets:
   time. Investigate slow tests; do not delete important coverage just to meet a
   timing threshold or hide costs behind skips, retries, or more workers.
 
-### Browser tests are exclusively UI/UX tests
+### Browser tests cover complex UI/UX workflows only
 
 This boundary applies to **all browser engines**, including Chromium and WebKit,
 and to new tests as well as changes to existing tests:
 
-- Browser tests protect observable behavior requiring a real browser: rendered
-  maps/icons, native input, keyboard/focus behavior, dialogs, fullscreen,
-  previews, visible validation, loading feedback, and recovery from errors. Keep
-  the real compiled templates, controllers, vendor libraries, renderer and image
-  decoding.
+- Browser tests protect complex workflows requiring a real browser: native
+  gesture handoff, drawing/history/discard, interacting visibility scopes,
+  asynchronous loading/cancellation/recovery, focus/fullscreen interaction, and
+  native editing with retained state after errors. Keep the real compiled
+  templates, controllers, vendor libraries and renderer.
+- Do not add browser checks for icon artwork, asset availability, colors, fonts,
+  attribution, camera configuration, static read-only markup, basic validation,
+  or simple menu/dialog open/close and button feedback. Do not add pixel
+  sampling, screenshot comparisons or GPU-frame capture to cover those
+  properties. Existing Vitest/pytest contracts own their application behavior;
+  screenshots are failure diagnostics only.
 - Backend validation, permissions enforcement, persistence, serialization, API
   contracts and data processing belong in **pytest**. Frontend application
   logic, request payloads/counts, caching, scheduling, workers and renderer

@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { expectRenderedFeatures, installFixture, login, waitForViewerIdle } from './viewer-fixture.ts';
+import { expectRenderedFeatures, installFixture, login } from './viewer-fixture.ts';
 
 interface BoundRecord {
     email: string;
@@ -13,27 +12,6 @@ interface BoundRecord {
     public_url: string;
     public_data_url: string;
     details_url: string;
-}
-
-async function expectPurpleBoundaryPixels(page: Page) {
-    await waitForViewerIdle(page);
-    const screenshot = await page.locator('.maplibregl-canvas').screenshot({
-        scale: 'css',
-        style: 'body * { visibility: hidden !important; } .maplibregl-canvas { visibility: visible !important; }',
-    });
-    const purple = await page.evaluate(async dataUrl => {
-        const image = new Image(); image.src = dataUrl; await image.decode();
-        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-        const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
-        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-        let count = 0;
-        for (let index = 0; index < pixels.length; index += 4) {
-            if (Math.abs(pixels[index]! - 168) < 15 && Math.abs(pixels[index + 1]! - 85) < 15
-                && Math.abs(pixels[index + 2]! - 247) < 15) count++;
-        }
-        return count;
-    }, `data:image/png;base64,${screenshot.toString('base64')}`);
-    expect(purple, 'The configured boundary color is painted on the real canvas').toBeGreaterThan(5);
 }
 
 test('Geographic Bound remains visible across map styles and its dashboard selector shows save feedback', async ({ page, browserName }) => {
@@ -58,8 +36,7 @@ test('Geographic Bound remains visible across map styles and its dashboard selec
         [fixture.public_data_url]: {
             view_name: 'Browser bounded view', projects: [project], geographic_bound: {
                 id: fixture.polygon_id, revision: 1, color: '#a855f7',
-                // Local ideograph glyphs exercise actual labels without a font service.
-                alias: '入口', geojson: { type: 'Polygon', coordinates: [[
+                geojson: { type: 'Polygon', coordinates: [[
                     [-87.5, 20.1], [-87.49, 20.1], [-87.49, 20.11], [-87.5, 20.11], [-87.5, 20.1],
                 ]] },
             },
@@ -67,17 +44,16 @@ test('Geographic Bound remains visible across map styles and its dashboard selec
     } });
     await page.getByRole('button', { name: 'Close modal', exact: true }).click();
     await expect(page.getByText(fixture.project_name, { exact: true })).toBeVisible();
-    for (const suffix of ['fill', 'outline', 'label']) {
+    for (const suffix of ['fill', 'outline']) {
         await expectRenderedFeatures(page, `gis-geometry-${fixture.polygon_id}-${suffix}`, true);
     }
     await expect(page.locator('#create-geometry-btn, #map-managers-button')).toHaveCount(0);
     await page.getByRole('button', { name: 'Map Source', exact: true }).click();
     await page.locator('#map-source-menu input[type="radio"]:not(:checked)').first().locator('..').click();
     await expect(page.locator('#map-source-button')).not.toHaveAttribute('aria-busy', 'true');
-    for (const suffix of ['fill', 'outline', 'label']) {
+    for (const suffix of ['fill', 'outline']) {
         await expectRenderedFeatures(page, `gis-geometry-${fixture.polygon_id}-${suffix}`, true);
     }
-    await expectPurpleBoundaryPixels(page);
 
     // Editing starts from its own seeded record. Controlled responses exercise
     // feedback without making a browser responsible for persistence or payloads.

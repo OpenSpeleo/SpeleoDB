@@ -206,9 +206,9 @@ a React camera wrapper in another application.
 - Settings keyboard input never changes an active geometry draft
 - fullscreen contains toolbar, import, managers, child dialogs, and
   notifications
-- actual authenticated browser evidence at 320/390px, tablet, desktop,
-  landscape, 200% zoom, and reduced motion; inspect bounds and focus as well as
-  screenshots
+- Browser automation covers the complex focus/fullscreen and tool-ownership
+  workflows with representative input settings. Do not add cosmetic screenshot
+  matrices or repeat basic controls across viewport variants.
 
 See [Settings design](settings.md) for the complete behavioral contract.
 
@@ -228,10 +228,12 @@ When frontend build scripts, registry entries, or Tailwind sources change:
 - JS tests run in GitHub Actions (`js-tests` job in `ci.yml`).
 - Browser UI checks run separately in the version-matched official Playwright
   image. Preinstalled browser libraries avoid slow per-run OS package downloads.
-  The serial Chromium/WebKit suite uses local provider responses, one device
-  pixel per CSS pixel and reduced motion outside explicit gesture scenarios.
-  These choices remove unrelated network and rendering costs while retaining the
-  real browser, renderer and native input. See the
+  The serial Chromium/WebKit suite covers complex workflows only, with local
+  provider responses, one device pixel per CSS pixel and reduced motion outside
+  explicit gesture scenarios. Icon, color, asset and camera smoke checks are
+  excluded; failure screenshots are diagnostics, with no pixel sampling. These
+  choices remove unrelated network and rendering costs while retaining the real
+  browser, renderer and native input. See the
   [browser suite guide](../../tests/browser/README.md) for setup, timing targets
   and the boundaries of this evidence.
 - JS lint is enforced via pre-commit (`lint-map-viewer-js`).

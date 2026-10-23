@@ -16,26 +16,16 @@ from urllib.parse import urlsplit
 import pytest
 from django.test import modify_settings
 from django.test import override_settings
-from django.urls import resolve
 from django.urls import reverse
 
 from speleodb.common.enums import PermissionLevel
-from speleodb.gis.models import CylinderFleet
-from speleodb.gis.models import CylinderFleetUserPermission
-from speleodb.gis.models import Experiment
-from speleodb.gis.models import ExperimentUserPermission
 from speleodb.gis.models import GISView
-from speleodb.gis.models import Landmark
-from speleodb.gis.models import LandmarkCollection
-from speleodb.gis.models import LandmarkCollectionUserPermission
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectMutex
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.users.tests.factories import VerifiedUserFactory
 from tests.browser.geographic_bound_fixtures import geographic_bound_records
-from tests.browser.urls import revision_fixture
-from tests.browser.urls import tree_fixture
 
 if TYPE_CHECKING:
     from pytest_django.live_server_helper import LiveServer
@@ -48,90 +38,17 @@ BASE_DIR: Path = Path(__file__).resolve().parents[2]
 def controller_routes(user: User) -> dict[str, str]:
     """Materialize explicit form permissions without preparing any Git remote."""
     project: Project = canonical_project(PermissionLevel.ADMIN)
-    readonly: Project = canonical_project(PermissionLevel.READ_ONLY)
     UserProjectPermission.objects.create(
         project=project, target=user, level=PermissionLevel.ADMIN
     )
-    UserProjectPermission.objects.create(
-        project=readonly, target=user, level=PermissionLevel.READ_ONLY
-    )
     ProjectMutex.objects.create(project=project, user=user)
-    routes: dict[str, str] = {
-        "project": reverse(
-            "private:project_details", kwargs={"project_id": project.id}
-        ),
-        "readonly_project": reverse(
-            "private:project_details", kwargs={"project_id": readonly.id}
-        ),
+    return {
+        "project": reverse("private:project_details", kwargs={"project_id": project.id})
     }
-    readonly_fleet: CylinderFleet = CylinderFleet.objects.create(
-        name="Read-only browser cylinders", created_by=user.email
-    )
-    CylinderFleetUserPermission.objects.create(
-        cylinder_fleet=readonly_fleet, user=user, level=PermissionLevel.READ_ONLY
-    )
-    routes["readonly_cylinder"] = reverse(
-        "private:cylinder_fleet_details", kwargs={"fleet_id": readonly_fleet.id}
-    )
-    experiment: Experiment = Experiment.objects.create(
-        name="Browser experiment", created_by=user.email
-    )
-    ExperimentUserPermission.objects.create(
-        experiment=experiment, user=user, level=PermissionLevel.READ_ONLY
-    )
-    routes["experiment"] = reverse(
-        "private:experiment_data_viewer", kwargs={"experiment_id": experiment.id}
-    )
-    collection: LandmarkCollection = LandmarkCollection.objects.create(
-        name="Browser landmarks", created_by=user.email
-    )
-    LandmarkCollectionUserPermission.objects.create(
-        collection=collection, user=user, level=PermissionLevel.READ_ONLY
-    )
-    routes["landmarks"] = reverse(
-        "private:landmark_collection_details", kwargs={"collection_id": collection.id}
-    )
-    writable_collection: LandmarkCollection = LandmarkCollection.objects.create(
-        name="Browser editable landmarks", color="#38bdf8", created_by=user.email
-    )
-    LandmarkCollectionUserPermission.objects.create(
-        collection=writable_collection, user=user, level=PermissionLevel.ADMIN
-    )
-    # An independent row renders the edit form; browser writes are intercepted.
-    Landmark.objects.create(
-        collection=writable_collection,
-        name="Existing cave landmark",
-        icon=Landmark.Icon.CAVE,
-        latitude=20,
-        longitude=-87,
-        created_by=user.email,
-    )
-    routes["writable_landmarks"] = reverse(
-        "private:landmark_collection_details",
-        kwargs={"collection_id": writable_collection.id},
-    )
-    # Fail before browser launch if either synchronous request could reach Git.
-    assert (
-        resolve(reverse("api:v2:project-revisions", kwargs={"id": project.id})).func
-        is revision_fixture
-    )
-    assert (
-        resolve(
-            reverse(
-                "api:v2:project-gitexplorer",
-                kwargs={"id": project.id, "hexsha": "a" * 40},
-            )
-        ).func
-        is tree_fixture
-    )
-    return routes
 
 
 @pytest.mark.django_db(transaction=True)
-@override_settings(
-    VITE_ALLOW_MISSING_MANIFEST=False,
-    ROOT_URLCONF="tests.browser.urls",
-)
+@override_settings(VITE_ALLOW_MISSING_MANIFEST=False)
 def test_viewer_browser_workloads(
     request: pytest.FixtureRequest,
     capfd: pytest.CaptureFixture[str],

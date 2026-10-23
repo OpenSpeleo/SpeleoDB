@@ -1,18 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-    getAuthBrowserAuthLoginPostUrl,
-    getV2GisOgcExperimentRetrieveUrl,
-    getV2ProjectsDestroyUrl,
-    getV2ProjectsReleaseCreateWithJsonUrl,
-    getV2ProjectsUploadUrl,
-    getV2ToolsDmp2jsonCreateUrl,
-    getV2ToolsDmpDoctorCreateUrl,
-    getV2UserExportsCreateUrl,
-    getV2UserPartialUpdateWithJsonUrl,
-} from '@speleodb/api';
-import type { DangerZoneContext } from '../../ts-types/controllers/danger-zone.ts';
-import type { FeedbackContext } from '../../ts-types/controllers/feedback.ts';
-import type { MutexLockContext } from '../../ts-types/controllers/mutex-lock.ts';
+import { getV2ProjectsUploadUrl } from '@speleodb/api';
 import type { ProjectUploadContext } from '../../ts-types/controllers/project-upload.ts';
 import type { Page } from '@playwright/test';
 import { login } from './viewer-fixture.ts';
@@ -52,271 +39,52 @@ async function openController(page: Page, path: string, controller: string) {
     expect(await declaration.getAttribute('data-browser-error'), `${controller} initialization failed`).toBeNull();
     await expect(declaration).toHaveAttribute('data-browser-ready', 'true');
     await expect(page.locator('[data-browser-error]')).toHaveCount(0);
-    return declaration;
 }
 
-async function pageContext<Context>(page: Page, controller: string): Promise<Context> {
-    const declaration = page.locator(`[data-speleodb-controller="${controller}"]`);
-    return JSON.parse(await declaration.textContent() || '{}') as Context;
-}
-
-function apiUrl(path: string, base = process.env.VIEWER_BROWSER_BASE_URL): string {
-    return new URL(path, base).href;
-}
-
-type FixtureRoute = 'project' | 'readonly_project' | 'readonly_cylinder' | 'experiment' | 'landmarks';
-function fixtureRoute(name: FixtureRoute) {
-    const routes = JSON.parse(process.env.VIEWER_BROWSER_ROUTES || '{}') as Partial<Record<FixtureRoute, string>>;
-    expect(routes[name], 'Run database-backed route cases through tests/browser/test_django_browser.py').toBeTruthy();
-    return routes[name]!;
-}
-
-test.beforeEach(async ({ page }) => { await observeControllers(page); });
-
-test('login validates locally and presents the server authentication error', async ({ page }) => {
-    await openController(page, '/login/', 'auth-form');
-    await page.locator('#btn_submit').click();
-    await expect(page.locator('#error_div')).toContainText('The Email Address is not valid');
-    const url = apiUrl(getAuthBrowserAuthLoginPostUrl(), page.url());
-    await page.route(url, route => route.fulfill({ status: 401, json: { data: { flows: [{ id: 'verify_email' }] } } }));
-    await page.locator('#email').fill('browser@example.test');
-    await page.locator('#password').fill('invalid-password');
-    await page.locator('#btn_submit').click();
-    await expect(page.locator('#error_div')).toContainText('Your email is not verified');
+test.beforeEach(async ({ page }) => {
+    await observeControllers(page);
+    await login(page);
 });
 
-test('public mobile menu retains Escape and outside dismissal with real Alpine', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await openController(page, '/login/', 'public-shell');
-    const toggle = page.locator('[data-speleodb-bind="public-templates-base-2"]');
-    const menu = page.locator('[data-speleodb-bind="public-templates-base-3"]');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(menu).not.toHaveCSS('max-height', '0px');
-    await page.keyboard.press('Escape');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await toggle.click();
-    await page.locator('#email').click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+test('project file selection keeps removal and upload error recovery', async ({ page }) => {
+    const routes = JSON.parse(process.env.VIEWER_BROWSER_ROUTES || '{}') as { project?: string };
+    expect(routes.project, 'Run database-backed route cases through tests/browser/test_django_browser.py').toBeTruthy();
+    await openController(page, `${routes.project!}upload/`, 'project-upload');
+    await page.locator('#artifact').setInputFiles([
+        { name: 'one.dmp', mimeType: 'application/octet-stream', buffer: Buffer.from('one') },
+        { name: 'two.dmp', mimeType: 'application/octet-stream', buffer: Buffer.from('two') },
+    ]);
+    await expect(page.locator('.remove-file')).toHaveCount(2);
+    await page.locator('.remove-file').first().click();
+    await expect(page.locator('#dropzone')).not.toContainText('one.dmp');
+    await expect(page.locator('#dropzone')).toContainText('two.dmp');
+    await page.locator('#message').fill('Browser revision');
+    const declaration = page.locator('[data-speleodb-controller="project-upload"]');
+    const context = JSON.parse(await declaration.textContent() || '{}') as ProjectUploadContext;
+    const url = new URL(getV2ProjectsUploadUrl(context.projectId, 'auto'), page.url()).href;
+    await page.route(url, route => route.fulfill({ status: 400, json: { detail: 'Fixture upload rejected' } }));
+    await page.locator('#btn_submit').click();
+    await expect(page.locator('#modal_error_txt')).toContainText('Fixture upload rejected');
+    await expect(page.locator('#loading_spinner')).toBeHidden();
+    await expect(page.locator('#message')).toHaveValue('Browser revision');
+    await expect(page.locator('#dropzone')).not.toContainText('one.dmp');
+    await expect(page.locator('#dropzone')).toContainText('two.dmp');
 });
 
-test.describe('authenticated controller composition', () => {
-    test.beforeEach(async ({ page }) => { await login(page); });
-
-    test('preferences keep independent toggle scopes, save feedback and menu dismissal', async ({ page }) => {
-        await openController(page, '/private/preferences/', 'entity-crud');
-        const first = page.locator('#email_on_speleodb_updates');
-        const second = page.locator('#email_on_projects_updates');
-        const firstInitial = await first.isChecked();
-        const secondInitial = await second.isChecked();
-        await page.locator('label[for="email_on_speleodb_updates"]').click();
-        expect(await first.isChecked()).toBe(!firstInitial);
-        expect(await second.isChecked()).toBe(secondInitial);
-        await expect(page.locator('[data-speleodb-bind="private-user-preferences-2"]'))
-            .toHaveText(firstInitial ? 'Off' : 'On');
-        const url = apiUrl(getV2UserPartialUpdateWithJsonUrl(), page.url());
-        await page.route(url, route => route.fulfill({ json: {} }));
-        await page.locator('#btn_submit').click();
-        await expect(page.locator('#modal_success')).toBeVisible();
-        await page.locator('#modal_success').click();
-        const menu = page.locator('[data-speleodb-bind="private-templates-base_private-7"]');
-        const panel = page.locator('[data-speleodb-bind="private-templates-base_private-8"]');
-        await menu.click();
-        await expect(menu).toHaveAttribute('aria-expanded', 'true');
-        await expect(panel).toBeVisible();
-        await page.keyboard.press('Escape');
-        await expect(panel).toBeHidden();
-        await expect(menu).toHaveAttribute('aria-expanded', 'false');
-    });
-
-    test('feedback retains score selection, save feedback and reset', async ({ page }) => {
-        await openController(page, '/private/feedback/', 'feedback');
-        const context = await pageContext<FeedbackContext>(page, 'feedback');
-        const url = new URL(context.endpoint, page.url()).href;
-        await page.route(url, route => route.fulfill({ json: {} }));
-        await page.locator('[data-score="5"]').click();
-        await expect(page.locator('[data-score="5"]')).toHaveClass(/bg-indigo-500/);
-        await expect(page.locator('[data-score="1"]')).not.toHaveClass(/bg-indigo-500/);
-        await page.locator('#feedback').fill('Browser feedback');
-        await page.locator('#btn_submit').click();
-        await expect(page.locator('#modal_success')).toBeVisible();
-        await expect(page.locator('#feedback')).toHaveValue('');
-    });
-
-    test('experiment creation validates required custom fields and duplicate names', async ({ page }) => {
-        await openController(page, '/private/experiment/new/', 'experiment-form');
-        await page.locator('#btn_submit').click();
-        await expect(page.locator('#modal_error_txt')).toContainText('at least one custom field');
-        await page.locator('#modal_error').click();
-        await page.locator('#add_field_btn').click();
-        await page.locator('.field-name').fill('pH');
-        await page.locator('.field-type').selectOption('number');
-        await page.locator('#add_field_btn').click();
-        await page.locator('.field-name').nth(1).fill('pH');
-        await page.locator('.field-type').nth(1).selectOption('number');
-        await page.locator('#btn_submit').click();
-        await expect(page.locator('#modal_error_txt')).toContainText('Duplicate field names');
-        await page.locator('#modal_error').click();
-        await page.locator('.remove-field-btn').nth(1).click();
-        await expect(page.locator('.field-item')).toHaveCount(1);
-    });
-
-    test('read-only fleet and project pages omit write actions', async ({ page }) => {
-        await openController(page, fixtureRoute('readonly_cylinder'), 'fleet');
-        await expect(page.locator('#add_cylinder_btn, #add_first_cylinder_btn')).toHaveCount(0);
-        await expect(page.locator('#cylinder_modal_save')).toBeHidden();
-        await page.goto(fixtureRoute('readonly_project'));
-        await expect(page.locator('#btn_submit')).toBeDisabled();
-        await expect(page.locator('#btn_lock_project')).toHaveCount(0);
-    });
-
-    test('project file selection keeps removal and upload error recovery', async ({ page }) => {
-        await openController(page, `${fixtureRoute('project')}upload/`, 'project-upload');
-        await page.locator('#artifact').setInputFiles([
-            { name: 'one.dmp', mimeType: 'application/octet-stream', buffer: Buffer.from('one') },
-            { name: 'two.dmp', mimeType: 'application/octet-stream', buffer: Buffer.from('two') },
-        ]);
-        await expect(page.locator('.remove-file')).toHaveCount(2);
-        await page.locator('.remove-file').first().click();
-        await expect(page.locator('#dropzone')).not.toContainText('one.dmp');
-        await expect(page.locator('#dropzone')).toContainText('two.dmp');
-        await page.locator('#message').fill('Browser revision');
-        const context = await pageContext<ProjectUploadContext>(page, 'project-upload');
-        const url = apiUrl(getV2ProjectsUploadUrl(context.projectId, 'auto'), page.url());
-        await page.route(url, route => route.fulfill({ status: 400, json: { detail: 'Fixture upload rejected' } }));
-        await page.locator('#btn_submit').click();
-        await expect(page.locator('#modal_error_txt')).toContainText('Fixture upload rejected');
-        await expect(page.locator('#loading_spinner')).toBeHidden();
-    });
-
-    test('danger confirmation presents the confirmation dialog and server failure', async ({ page }) => {
-        const path = `${fixtureRoute('project')}danger_zone/`;
-        await openController(page, path, 'danger-zone');
-        const context = await pageContext<DangerZoneContext>(page, 'danger-zone');
-        const url = apiUrl(getV2ProjectsDestroyUrl(context.entityId), page.url());
-        await page.route(url, route => route.fulfill({ status: 403, json: { detail: 'Fixture deletion denied' } }));
-        await page.locator('#btn_delete').click();
-        await expect(page.locator('#modal_confirmation')).toBeVisible();
-        await page.locator('#btn_confirmed_delete').click();
-        await expect(page.locator('#modal_error_txt')).toContainText('Fixture deletion denied');
-    });
-
-    test('revision download clones keep independent Alpine state', async ({ page }) => {
-        const path = `${fixtureRoute('project')}revisions/`;
-        await openController(page, path, 'revision-history');
-        const buttons = page.locator('#commit-table-container tr:not(#commit-template) [data-speleodb-bind="revision-project-revision_history-2"]');
-        await expect(buttons).toHaveCount(2);
-        await buttons.first().click();
-        await expect(buttons.first()).toHaveAttribute('aria-expanded', 'true');
-        await expect(buttons.nth(1)).toHaveAttribute('aria-expanded', 'false');
-        await page.keyboard.press('Escape');
-        await expect(buttons.first()).toHaveAttribute('aria-expanded', 'false');
-    });
-
-    test('Git tree folder navigation displays files and returns to the parent', async ({ page }) => {
-        const path = `${fixtureRoute('project')}browser/${'a'.repeat(40)}/`;
-        await openController(page, path, 'git-view');
-        await expect(page.locator('#commit-message')).toHaveText('Browser tree');
-        await page.locator('#git-viewer-container .gitfolder-link').click();
-        await expect(page.locator('#git-viewer-container .download-file-name')).toHaveText('cave.dmp');
-        await page.locator('#git-viewer-container .gitfolder-link').click();
-        await expect(page.locator('#git-viewer-container .gitfolder-name')).toHaveText('surveys');
-    });
-
-    test('mutex release restores its button after server rejection', async ({ page }) => {
-        const path = `${fixtureRoute('project')}mutexes/`;
-        await openController(page, path, 'mutex-lock');
-        const context = await pageContext<MutexLockContext>(page, 'mutex-lock');
-        const url = apiUrl(getV2ProjectsReleaseCreateWithJsonUrl(context.projectId), page.url());
-        await page.route(url, route => route.fulfill({ status: 409, json: { detail: 'Fixture lock conflict' } }));
-        const button = page.locator('button.btn_unlock');
-        await button.click();
-        await expect(page.locator('#modal_error_txt')).toContainText('Fixture lock conflict');
-        await expect(button).toBeEnabled();
-    });
-
-    test('project country keyboard collapse persists through a fresh page load', async ({ page }) => {
-        await page.setViewportSize({ width: 390, height: 844 });
-        await openController(page, '/private/projects/', 'projects');
-        const group = page.locator('.country-group').filter({ visible: true }).first();
-        const code = await group.getAttribute('data-country-code');
-        await group.locator('.country-group-header').press('Enter');
-        await expect(group).toHaveClass(/collapsed/);
-        await page.reload();
-        await expect(page.locator(`.country-group[data-country-code="${code}"]`).first()).toHaveClass(/collapsed/);
-    });
-
-    test('export creation rejects safely and restores the request button', async ({ page }) => {
-        await openController(page, '/private/exports/', 'user-exports');
-        const url = apiUrl(getV2UserExportsCreateUrl(), page.url());
-        await page.route(url, route => route.request().method() === 'POST'
-            ? route.fulfill({ status: 403, json: { detail: 'Fixture export denied' } })
-            : route.continue());
-        await page.locator('#export-create').click();
-        await expect(page.locator('#export-message')).toContainText('Fixture export denied');
-        await expect(page.locator('#export-create')).toBeEnabled();
-    });
-
-    test('read-only experiment grid retries a failed data request with the real vendor', async ({ page }) => {
-        const path = fixtureRoute('experiment');
-        const url = apiUrl(getV2GisOgcExperimentRetrieveUrl('*'));
-        let fail = true;
-        await page.route(url, route => fail
-            ? route.fulfill({ status: 503, json: { detail: 'Fixture unavailable' } })
-            : route.fulfill({ json: { type: 'FeatureCollection', features: [] } }));
-        await openController(page, path, 'experiment-data');
-        await expect(page.locator('#errorText')).toContainText('Fixture unavailable');
-        fail = false;
-        await page.locator('#refreshDataBtn').click();
-        await expect(page.locator('#dataGridContainer')).toBeVisible();
-        await expect(page.locator('#recordCount')).toHaveText('0');
-        await expect(page.locator('#errorMessage')).toBeHidden();
-    });
-
-    test('read-only landmark collection preserves disabled settings and absent mutation controls', async ({ page }) => {
-        await openController(page, fixtureRoute('landmarks'), 'landmark-details');
-        await expect(page.locator('#name')).toBeDisabled();
-        await expect(page.locator('#add-first-landmark-btn, #landmarks-bulk-delete-btn, .landmark-edit-btn')).toHaveCount(0);
-        await expect(page.getByText('No landmarks', { exact: false }).first()).toBeVisible();
-    });
-
-    for (const [path, controller] of [['dmp_doctor', 'dmp-doctor'], ['dmp_to_json', 'dmp2json']] as const) {
-        test(`${controller} validates files and restores controls after server rejection`, async ({ page }) => {
-            await openController(page, `/private/tools/${path}/`, controller);
-            const file = page.locator('#fileInput');
-            await expect(page.locator('#downloadBtn')).toBeDisabled();
-            await file.setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('invalid') });
-            await expect(page.locator('#fileErrorDisplay')).toContainText('Invalid file type');
-            await expect(page.locator('#downloadBtn')).toBeDisabled();
-            await file.setInputFiles({ name: 'survey.DMP', mimeType: 'application/octet-stream', buffer: Buffer.from('survey') });
-            await expect(page.locator('#fileNameDisplay')).toContainText('survey.DMP');
-            await expect(page.locator('#downloadBtn')).toBeEnabled();
-            const url = apiUrl(controller === 'dmp-doctor' ? getV2ToolsDmpDoctorCreateUrl() : getV2ToolsDmp2jsonCreateUrl(), page.url());
-            await page.route(url, route => route.fulfill({ status: 400, json: { error: 'Fixture conversion rejected' } }));
-            await page.locator('#downloadBtn').click();
-            await expect(page.locator('#modal_error_txt')).toHaveText('Fixture conversion rejected');
-            await expect(page.locator('#downloadBtn')).toBeEnabled();
-        });
-    }
-
-    for (const [path, controller, columns] of [['xls_to_dmp', 'xls2dmp', 7], ['xls_to_compass', 'xls2compass', 10]] as const) {
-        test(`${controller} preserves contenteditable keyboard navigation and row clearing`, async ({ page }) => {
-            await openController(page, `/private/tools/${path}/`, controller);
-            await page.locator('#clearBtn').click();
-            await expect(page.locator('#dataTable tbody tr')).toHaveCount(0);
-            await page.locator('#addRowBtn').click();
-            const cells = page.locator('#dataTable tbody tr').first().locator('[contenteditable="true"]');
-            await expect(cells).toHaveCount(columns);
-            await cells.first().fill('12');
-            await cells.first().press('Tab');
-            await expect(cells.nth(1)).toBeFocused();
-            await page.locator('#addRowBtn').click();
-            await expect(page.locator('#dataTable tbody tr')).toHaveCount(2);
-            await expect(cells.first()).toHaveText('12');
-            await page.locator('#clearBtn').click();
-            await expect(page.locator('#dataTable tbody tr')).toHaveCount(0);
-            await expect(page.locator('#status')).toHaveText('Cleared.');
-        });
-    }
+test('survey table preserves native keyboard navigation and existing rows until clearing', async ({ page }) => {
+    await openController(page, '/private/tools/xls_to_dmp/', 'xls2dmp');
+    await page.locator('#clearBtn').click();
+    await expect(page.locator('#dataTable tbody tr')).toHaveCount(0);
+    await page.locator('#addRowBtn').click();
+    const cells = page.locator('#dataTable tbody tr').first().locator('[contenteditable="true"]');
+    await expect(cells).toHaveCount(7);
+    await cells.first().fill('12');
+    await cells.first().press('Tab');
+    await expect(cells.nth(1)).toBeFocused();
+    await page.locator('#addRowBtn').click();
+    await expect(page.locator('#dataTable tbody tr')).toHaveCount(2);
+    await expect(cells.first()).toHaveText('12');
+    await page.locator('#clearBtn').click();
+    await expect(page.locator('#dataTable tbody tr')).toHaveCount(0);
+    await expect(page.locator('#status')).toHaveText('Cleared.');
 });
