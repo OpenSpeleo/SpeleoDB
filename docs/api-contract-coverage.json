@@ -3110,7 +3110,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "speleodb/api/health/tests/test_healthcheck.py::TestHealthCheckApiViews::test_get_health_details",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract"
       ],
       "undocumented_request_fields": [],
@@ -3137,7 +3136,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "speleodb/api/health/tests/test_healthcheck.py::TestHealthCheckApiViews::test_get_health_status",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract"
       ],
       "undocumented_request_fields": [],
@@ -3334,7 +3332,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "frontend_private/tests/test_views.py::GISViewTemplateOGCURLTest::test_landmark_collection_integration_url_is_routable",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_landmark_collection_ogc.py::TestLandmarkCollectionOGC::test_landing_conformance_and_collection_metadata",
         "speleodb/api/v2/tests/test_landmark_collection_ogc.py::TestLandmarkCollectionOGC::test_legacy_bare_collection_paths_are_404",
@@ -3533,7 +3530,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "frontend_private/tests/test_views.py::GISViewTemplateOGCURLTest::test_landmark_collections_listing_user_landing_is_routable",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_landmark_collection_ogc.py::TestLandmarkCollectionOGC::test_user_token_get_does_not_create_personal_collection",
         "speleodb/api/v2/tests/test_landmark_collection_ogc.py::TestLandmarkCollectionOGC::test_user_token_landing_conformance_and_collections",
@@ -3729,8 +3725,7 @@
       "tests": [
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount",
-        "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_user_token_single_feature_success_contract",
-        "speleodb/gis/tests/test_project_geojson_replacement.py::test_ogc_same_commit_replacement_revalidates_http_etag"
+        "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_user_token_single_feature_success_contract"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -3789,8 +3784,7 @@
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCUserCollectionItems::test_items_returns_only_lines_geometry_types",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCUserDiscoveryFlow::test_full_discovery_chain",
         "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount",
-        "speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCCrossTenantSecurity::test_user_token_cannot_access_other_users_project_commit",
-        "speleodb/gis/tests/test_project_geojson_replacement.py::test_ogc_same_commit_replacement_revalidates_http_etag"
+        "speleodb/api/v2/tests/test_ogc_compliance.py::TestOGCCrossTenantSecurity::test_user_token_cannot_access_other_users_project_commit"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -3818,7 +3812,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "frontend_private/tests/test_views.py::GISViewTemplateOGCURLTest::test_gis_views_listing_renders_user_landing_url",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCUserDiscoveryFlow::test_full_discovery_chain",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCUserLandingPage::test_landing_page_all_links_have_required_fields",
@@ -5905,10 +5898,6 @@
         },
         {
           "media_type": "application/json",
-          "status": 400
-        },
-        {
-          "media_type": "application/json",
           "status": 403
         }
       ],
@@ -5921,11 +5910,11 @@
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_domain_contract_routes.py::test_geometry_lifecycle_and_revision",
         "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_read_write_admin_permission_matrix",
-        "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_unrelated_revoked_inactive_and_anonymous_have_no_access",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_management_api_nullable_selection_and_public_live_contract"
+        "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_unrelated_revoked_inactive_and_anonymous_have_no_access"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
+        "400",
         "404",
         "406"
       ]
@@ -5996,8 +5985,7 @@
         "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_geometry_update_requires_revision_and_rejects_stale_save",
         "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_invalid_raw_geojson_does_not_partially_save_metadata",
         "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_optional_metadata_roundtrips_and_clears_atomically",
-        "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_read_write_admin_permission_matrix",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_geometry_type_is_immutable_through_model_service_and_api"
+        "speleodb/api/v2/tests/test_gis_geometry_api.py::TestGISGeometryAPI::test_read_write_admin_permission_matrix"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -6607,9 +6595,7 @@
         "speleodb/api/v2/tests/test_gis_view_api.py::TestPublicGISViewGeoJSONApi::test_response_structure",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestPublicGISViewGeoJSONApi::test_specific_commit_sha",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestPublicGISViewGeoJSONApi::test_use_latest_flag",
-        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_management_api_nullable_selection_and_public_live_contract",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_public_raw_urls_private_data_and_ogc_remain_unbounded"
+        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -6652,8 +6638,7 @@
         "speleodb/api/v2/tests/test_gis_view_api.py::TestGISViewPublicDataAPI::test_response_structure_with_serializer",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestGISViewPublicDataAPI::test_serializer_with_empty_description",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestGISViewPublicDataAPI::test_view_with_missing_geojson_returns_partial",
-        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_public_raw_urls_private_data_and_ogc_remain_unbounded"
+        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_every_ogc_family_and_gis_feed_through_the_supported_mount"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -8273,7 +8258,10 @@
         "speleodb/api/v2/tests/test_project_api.py::TestProjectInteraction_3::test_get_user_project",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectInteraction_4::test_get_user_project",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectInteraction_5::test_get_user_project",
-        "speleodb/api/v2/tests/test_project_api.py::TestProjectInteraction_6::test_get_user_project"
+        "speleodb/api/v2/tests/test_project_api.py::TestProjectInteraction_6::test_get_user_project",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_0_stalagmight",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_1_STALAGMIGHT",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_2_Stalagmight"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -8293,23 +8281,15 @@
         },
         {
           "media_type": "application/json",
-          "status": 400
-        },
-        {
-          "media_type": "application/json",
           "status": 403
         }
       ],
       "path": "/api/v2/projects/{id}/acquire/",
       "protocol_rejections_observed": 0,
-      "request_body_validated": true,
+      "request_body_validated": false,
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "frontend_private/tests/test_project_lock_banner.py::TestBannerNoLockReadOnly::test_readonly_user_cannot_acquire_via_api",
-        "frontend_private/tests/test_project_lock_banner.py::TestBannerNoLockWriteAccess::test_acquisition_preserves_a_lock_taken_after_page_load",
-        "frontend_private/tests/test_project_lock_banner.py::TestBannerNoLockWriteAccess::test_banner_acquisition_requires_csrf",
-        "frontend_private/tests/test_project_lock_banner.py::TestBannerNoLockWriteAccess::test_enable_edition_button_acquires_and_reloads_current_page",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_permissions.py::TestPermissionsApiView::test_webviewer_cannot_access_other_endpoints_0",
         "speleodb/api/v2/tests/test_permissions.py::TestPermissionsApiView::test_webviewer_cannot_access_other_endpoints_1",
@@ -8335,6 +8315,7 @@
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
+        "400",
         "404",
         "406"
       ]
@@ -8373,7 +8354,11 @@
         "speleodb/api/v2/tests/test_project_api.py::TestProjectCreation::test_create_project_failure_with_non_existing_country",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectCreation::test_create_project_failure_with_only_one_geo_0_longitude",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectCreation::test_create_project_failure_with_only_one_geo_1_latitude",
-        "speleodb/api/v2/tests/test_project_api.py::TestProjectCreation::test_create_project_rejects_array_body"
+        "speleodb/api/v2/tests/test_project_api.py::TestProjectCreation::test_create_project_rejects_array_body",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_0_stalagmight",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_1_STALAGMIGHT",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_2_Stalagmight",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_invalid_software_choice_does_not_create_project"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -8841,7 +8826,10 @@
         "speleodb/api/v2/tests/test_project_api.py::TestProjectListLatestCommit::test_latest_commit_queries_do_not_grow_with_accessible_projects",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectListLatestCommit::test_project_list_includes_latest_commit_field",
         "speleodb/api/v2/tests/test_project_api.py::TestProjectListLatestCommit::test_project_list_latest_commit_none_when_no_commits",
-        "speleodb/api/v2/tests/test_project_api.py::TestProjectListLatestCommit::test_project_list_latest_commit_structure"
+        "speleodb/api/v2/tests/test_project_api.py::TestProjectListLatestCommit::test_project_list_latest_commit_structure",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_0_stalagmight",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_1_STALAGMIGHT",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_create_normalizes_choice_and_serializes_read_responses_2_Stalagmight"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -8878,7 +8866,10 @@
         "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPatch::test_patch_description",
         "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPatch::test_patch_name_happy_path",
         "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPatch::test_patch_rejected_for_read_only",
-        "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPatch::test_requires_authentication"
+        "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPatch::test_requires_authentication",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_invalid_software_update_preserves_project_type",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_read_only_permission_cannot_change_project_type_1_patch",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_update_existing_project_to_stalagmight_1_patch"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -9603,7 +9594,9 @@
       "successful_response_observed": true,
       "tests": [
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
-        "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPut::test_put_replaces"
+        "speleodb/api/v2/tests/test_project_detail_write.py::TestProjectDetailPut::test_put_replaces",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_read_only_permission_cannot_change_project_type_0_put",
+        "speleodb/api/v2/tests/test_project_types.py::TestStalagmightProjectAPI::test_update_existing_project_to_stalagmight_0_put"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -9693,9 +9686,7 @@
         "speleodb/api/v2/tests/test_file_upload_geojson.py::TestFileUploadGeoJSON::test_upload_ariane_skips_geojson_when_excluded",
         "speleodb/api/v2/tests/test_file_upload_geojson.py::TestFileUploadGeoJSON::test_upload_auto_compass_generates_geojson",
         "speleodb/api/v2/tests/test_file_upload_geojson.py::TestFileUploadGeoJSON::test_upload_auto_compass_incomplete_bundle_skips_geojson",
-        "speleodb/api/v2/tests/test_file_upload_geojson.py::TestFileUploadGeoJSON::test_upload_auto_compass_skips_geojson_when_excluded",
-        "speleodb/surveys/tests/test_project_git_history.py::TestConstructGitHistory::test_construct_git_history_after_upload",
-        "speleodb/surveys/tests/test_project_git_history.py::TestGitRepoRemoteConfigurationRepair::test_checkout_recovers_from_broken_remote"
+        "speleodb/api/v2/tests/test_file_upload_geojson.py::TestFileUploadGeoJSON::test_upload_auto_compass_skips_geojson_when_excluded"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -12927,6 +12918,7 @@
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsProjectsByLevel::test_best_permission_wins",
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsProjectsByLevel::test_levels_exclude_web_viewers_but_total_includes_them",
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsProjectsByLevel::test_team_permission_contributes_to_level",
+        "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsProjectsByType::test_stalagmight_counts_only_accessible_projects",
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsProjectsByType::test_type_counts_exclude_inaccessible_projects",
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsRecentActivity::test_recent_activity_is_bounded_ordered_and_scoped_to_accessible_projects",
         "speleodb/api/v2/tests/test_user_dashboard_stats.py::TestDashboardStatsSummaryCounts::test_summary_counts_respect_access_and_ownership"
@@ -13004,8 +12996,7 @@
         "speleodb/api/v2/tests/test_user_exports.py::TestUserExports::test_download_signing_is_short_lived_and_response_is_not_cacheable",
         "speleodb/api/v2/tests/test_user_exports.py::TestUserExports::test_expiry_removes_download_and_returns_gone",
         "speleodb/api/v2/tests/test_user_exports.py::TestUserExports::test_inactive_account_cannot_read_create_retry_or_download",
-        "speleodb/api/v2/tests/test_user_exports.py::TestUserExports::test_other_users_cannot_inspect_retry_or_download",
-        "speleodb/background_jobs/tests/test_live_worker.py::test_live_export_download_notification_and_expiration"
+        "speleodb/api/v2/tests/test_user_exports.py::TestUserExports::test_other_users_cannot_inspect_retry_or_download"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13156,9 +13147,7 @@
         "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewCreate::test_create_rejects_duplicate_projects",
         "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewCreate::test_create_rejects_inaccessible_project",
         "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewCreate::test_create_with_project",
-        "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewCreate::test_requires_authentication",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_management_api_nullable_selection_and_public_live_contract",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_selection_rejects_unavailable_and_nonpolygon_geometries"
+        "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewCreate::test_requires_authentication"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13260,8 +13249,7 @@
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_domain_contract_routes.py::test_gis_view_lifecycle",
         "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewUpdate::test_patch_updates_name",
-        "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewUpdate::test_stranger_cannot_update",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_management_api_nullable_selection_and_public_live_contract"
+        "speleodb/api/v2/tests/test_gis_view_management_api.py::TestGISViewUpdate::test_stranger_cannot_update"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13691,8 +13679,7 @@
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_single_feature_404_for_unknown_id",
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_single_feature_404_when_collection_id_is_wrong_geometry_group",
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_single_feature_resource_returns_feature",
-        "speleodb/api/v2/tests/test_ogc_compliance.py::TestSingleFeatureIndex::test_100_single_feature_requests_use_index",
-        "speleodb/gis/tests/test_project_geojson_replacement.py::test_ogc_same_commit_replacement_revalidates_http_etag"
+        "speleodb/api/v2/tests/test_ogc_compliance.py::TestSingleFeatureIndex::test_100_single_feature_requests_use_index"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13778,9 +13765,7 @@
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_items_response_self_link_is_routable",
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_items_well_formed_datetime_passes_through",
         "speleodb/api/v2/tests/test_ogc_compliance.py::TestProjectViewOGCCompliance::test_lines_collection_items_are_uniform_geometry",
-        "speleodb/api/v2/tests/test_ogc_compliance.py::TestSingleFeatureIndex::test_index_cache_is_populated_after_first_items_request",
-        "speleodb/gis/tests/test_gis_view_geographic_bound.py::test_public_raw_urls_private_data_and_ogc_remain_unbounded",
-        "speleodb/gis/tests/test_project_geojson_replacement.py::test_ogc_same_commit_replacement_revalidates_http_etag"
+        "speleodb/api/v2/tests/test_ogc_compliance.py::TestSingleFeatureIndex::test_index_cache_is_populated_after_first_items_request"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13808,7 +13793,6 @@
       "request_parameters_validated": true,
       "successful_response_observed": true,
       "tests": [
-        "frontend_private/tests/test_views.py::GISViewTemplateOGCURLTest::test_gis_view_integration_renders_view_landing_url",
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCDiscoveryFlow::test_full_discovery_chain",
         "speleodb/api/v2/tests/test_gis_view_api.py::TestOGCLandingPage::test_landing_page_all_links_have_required_fields",
@@ -13852,8 +13836,7 @@
       "successful_response_observed": true,
       "tests": [
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
-        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence",
-        "well_known/tests/test_views.py::test_apple_app_association_contract"
+        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13879,8 +13862,7 @@
       "successful_response_observed": true,
       "tests": [
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
-        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence",
-        "well_known/tests/test_views.py::test_android_asset_links_contract"
+        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13907,8 +13889,7 @@
       "tests": [
         "speleodb/api/v2/tests/test_api_contract.py::test_every_route_anonymous_response_matches_contract",
         "speleodb/api/v2/tests/test_api_contract_observer.py::test_observer_includes_discovery_outside_api_prefix",
-        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence",
-        "well_known/tests/test_views.py::test_passkey_discovery_reports_unsupported"
+        "speleodb/api/v2/tests/test_mounted_api_contract.py::test_discovery_documents_have_real_contract_evidence"
       ],
       "undocumented_request_fields": [],
       "unobserved_declared_statuses": [
@@ -13919,14 +13900,21 @@
     }
   },
   "resolver_operations": 382,
-  "schema_sha256": "750f3a1cddf0342cfef77e52ba8f109fbba2628aaca20caeff83de1559f6d29f",
+  "schema_sha256": "71d26c84ecb43b6e95690091f3b4fed361e3b4c0550598f0a249595f17f1066c",
   "scope": "Supported machine APIs: v2, both authentication mounts, health, Git smart HTTP, well-known discovery and schema export. Each mount requires its own observed HTTP evidence. Obsolete SpeleoDB /api/v1 is excluded.",
   "source_reports": [
     {
       "exit_status": 0,
       "provenance": "Captured by test observer",
-      "report": "sdb-web-final-api-observations.json",
-      "test_invocation": []
+      "report": "api051-contract-passing.json",
+      "test_invocation": [
+        "speleodb/api/v2/tests",
+        "speleodb/users/tests",
+        "speleodb/git_proxy",
+        "--deselect=speleodb/api/v2/tests/test_api_contract.py::test_durable_evidence_matches_current_contract",
+        "--api-contract-report=/tmp/api051-contract-passing.json",
+        "--api-contract-enforce"
+      ]
     }
   ]
 }

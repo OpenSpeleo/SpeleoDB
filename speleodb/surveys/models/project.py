@@ -558,6 +558,11 @@ class Project(models.Model):
             if _format.raw_format not in FileFormat.__excluded_download_formats__
         ]
 
+    @property
+    def supports_geojson(self) -> bool:
+        """Whether the project software has an existing GeoJSON exporter."""
+        return self.type in {ProjectType.ARIANE, ProjectType.COMPASS}
+
     def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
         """Build the GeoJSON from the survey file on disk."""
         match self.type:

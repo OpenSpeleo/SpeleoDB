@@ -328,6 +328,21 @@ class TestDashboardStatsProjectsByType(BaseAPITestCase):
     def test_type_counts_exclude_inaccessible_projects(self) -> None:
         assert self._get_pbt() == {"ariane": 3, "compass": 1}
 
+    def test_stalagmight_counts_only_accessible_projects(self) -> None:
+        project = ProjectFactory.create(
+            created_by=self.user.email, type=ProjectType.STALAGMIGHT
+        )
+        UserProjectPermissionFactory.create(
+            target=self.user, project=project, level=PermissionLevel.READ_ONLY
+        )
+        inaccessible = ProjectFactory.create(
+            created_by=self.other_user.email, type=ProjectType.STALAGMIGHT
+        )
+        UserProjectPermissionFactory.create(
+            target=self.other_user, project=inaccessible, level=PermissionLevel.ADMIN
+        )
+        assert self._get_pbt() == {"ariane": 3, "compass": 1, "stalagmight": 1}
+
 
 # ------------------------------------------------------------------ #
 #  Commits over time

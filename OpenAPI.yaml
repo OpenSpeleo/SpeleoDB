@@ -20032,9 +20032,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -20377,9 +20377,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -20726,9 +20726,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -21352,9 +21352,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -21697,9 +21697,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -22046,9 +22046,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -22519,9 +22519,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -22859,9 +22859,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -23203,9 +23203,9 @@ paths:
                   default: PRIVATE
                 type:
                   type: string
-                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-                  description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS,
-                    THERION, WALLS, OTHER'
+                  pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+                  description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT,
+                    STICKMAPS, THERION, WALLS, OTHER'
                 name:
                   type: string
                   minLength: 1
@@ -54958,9 +54958,9 @@ components:
           default: PRIVATE
         type:
           type: string
-          pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-          description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS, THERION,
-            WALLS, OTHER'
+          pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+          description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT, STICKMAPS,
+            THERION, WALLS, OTHER'
         name:
           type: string
           minLength: 1
@@ -56272,6 +56272,7 @@ components:
           enum:
           - ARIANE
           - COMPASS
+          - STALAGMIGHT
           - STICKMAPS
           - THERION
           - WALLS
@@ -56793,9 +56794,9 @@ components:
           default: PRIVATE
         type:
           type: string
-          pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
-          description: 'Case-insensitive choice: ARIANE, COMPASS, STICKMAPS, THERION,
-            WALLS, OTHER'
+          pattern: ^(?:[Aa][Rr][Ii][Aa][Nn][Ee]|[Cc][Oo][Mm][Pp][Aa][Ss][Ss]|[Ss][Tt][Aa][Ll][Aa][Gg][Mm][Ii][Gg][Hh][Tt]|[Ss][Tt][Ii][Cc][Kk][Mm][Aa][Pp][Ss]|[Tt][Hh][Ee][Rr][Ii][Oo][Nn]|[Ww][Aa][Ll][Ll][Ss]|[Oo][Tt][Hh][Ee][Rr])$
+          description: 'Case-insensitive choice: ARIANE, COMPASS, STALAGMIGHT, STICKMAPS,
+            THERION, WALLS, OTHER'
         name:
           type: string
           minLength: 1
@@ -57379,6 +57380,7 @@ components:
           enum:
           - ARIANE
           - COMPASS
+          - STALAGMIGHT
           - STICKMAPS
           - THERION
           - WALLS

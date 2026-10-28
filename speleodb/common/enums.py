@@ -114,6 +114,7 @@ class PermissionLevel(BaseIntegerChoices):
 class ProjectType(models.TextChoices):
     ARIANE = "ariane", "ARIANE"
     COMPASS = "compass", "COMPASS"
+    STALAGMIGHT = "stalagmight", "STALAGMIGHT"
     STICKMAPS = "stickmaps", "STICKMAPS"
     THERION = "therion", "THERION"
     WALLS = "walls", "WALLS"

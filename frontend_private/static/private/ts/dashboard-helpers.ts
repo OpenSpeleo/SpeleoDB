@@ -119,6 +119,7 @@ export function buildProjectsChartConfig(projectsByType: ProjectTypeCounts): Pro
     var colorMap = {
         ariane:     '#6366f1',
         compass:    '#22d3ee',
+        stalagmight: '#0d9488',
         therion:    '#f59e0b',
         stickmaps:  '#10b981',
         walls:      '#f43f5e',

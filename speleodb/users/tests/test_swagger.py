@@ -13,6 +13,8 @@ from django.urls import reverse
 from rest_framework import status
 
 from speleodb.api.schema import SpeleoDBSchemaGenerator
+from speleodb.common.enums import InstallStatus
+from speleodb.gis.models import LandmarkCollection
 
 if TYPE_CHECKING:
     from django.test.client import Client
@@ -99,3 +101,50 @@ def test_schema_exports_only_supported_paths_and_unique_operation_ids() -> None:
     assert not any(path.startswith("/api/v1/") for path in schema["paths"])
     assert any(path.startswith("/_allauth/app/v1/") for path in schema["paths"])
     assert any(path.startswith("/api/auth/app/v1/") for path in schema["paths"])
+
+    components: dict[str, Any] = schema["components"]["schemas"]
+    for component_name in (
+        "CylinderInstall",
+        "CylinderInstallCreateRequestRequest",
+        "CylinderInstallRequest",
+        "PatchedCylinderInstallRequest",
+        "SensorInstall",
+        "SensorInstallCreateRequestRequest",
+        "PatchedSensorInstallRequest",
+    ):
+        install_status: dict[str, Any] = components[component_name]["properties"][
+            "status"
+        ]
+        assert install_status["default"] == InstallStatus.INSTALLED, component_name
+        assert InstallStatus.RETRIEVED in install_status["enum"], component_name
+        if component_name.endswith("Request"):
+            assert "status" not in components[component_name].get("required", [])
+
+    for endpoint, method in (
+        ("/api/v2/cylinder-installs/", "post"),
+        ("/api/v2/cylinder-installs/{install_id}/", "put"),
+        ("/api/v2/cylinder-installs/{install_id}/", "patch"),
+        ("/api/v2/stations/{id}/sensor-installs/", "post"),
+        ("/api/v2/stations/{id}/sensor-installs/{install_id}/", "patch"),
+    ):
+        request_media: dict[str, Any] = schema["paths"][endpoint][method][
+            "requestBody"
+        ]["content"]
+        for media_type, representation in request_media.items():
+            request_schema: dict[str, Any] = representation["schema"]
+            assert request_schema["properties"]["status"]["default"] == (
+                InstallStatus.INSTALLED
+            ), (endpoint, method, media_type)
+            assert "status" not in request_schema.get("required", [])
+
+    for component_name in ("LandmarkCollection", "LandmarkCollectionWithPerm"):
+        collection_type: dict[str, Any] = components[component_name]["properties"][
+            "collection_type"
+        ]
+        assert collection_type["default"] == (
+            LandmarkCollection.CollectionType.SHARED
+        ), component_name
+        assert collection_type["readOnly"] is True, component_name
+        assert LandmarkCollection.CollectionType.PERSONAL in collection_type["enum"], (
+            component_name
+        )

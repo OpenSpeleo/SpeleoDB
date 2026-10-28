@@ -42,6 +42,10 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- [Project software and conversion capabilities](project-formats.md)
+  - Software choices, Stalagmight storage, exporter eligibility, retained maps,
+    schema/SDK ownership, and verification.
+
 - [Shared frontend forms](frontend-forms.md)
   - Reusable form APIs, Vite controller wiring, shared entity settings, and
     integration boundaries.

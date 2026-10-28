@@ -523,6 +523,22 @@ describe('Dashboard helpers', () => {
             expect(config.data.datasets[0].data).toEqual([3, 2]);
         });
 
+        it('shows Stalagmight with its dedicated color', () => {
+            const config = buildProjectsChartConfig({ stalagmight: 2 });
+            expect(config.data.labels).toEqual(['Stalagmight']);
+            expect(config.data.datasets[0].data).toEqual([2]);
+            expect(config.data.datasets[0].backgroundColor).toEqual(['#0d9488']);
+            expect(config.colors).toEqual(['#0d9488']);
+            expect(config.isEmpty).toBe(false);
+        });
+
+        it('omits Stalagmight when its count is zero', () => {
+            const config = buildProjectsChartConfig({ stalagmight: 0 });
+            expect(config.data.labels).toEqual([]);
+            expect(config.data.datasets[0].data).toEqual([]);
+            expect(config.isEmpty).toBe(true);
+        });
+
         it('skips zero-count types', () => {
             const config = buildProjectsChartConfig({ ariane: 3, compass: 0, therion: 1 });
             expect(config.data.labels).toEqual(['Ariane', 'Therion']);

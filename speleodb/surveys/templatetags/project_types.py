@@ -18,6 +18,7 @@ register = template.Library()
 PROJECT_TYPE_COLORS: dict[str, str] = {
     ProjectType.ARIANE: "bg-sky-600",
     ProjectType.COMPASS: "bg-emerald-600",
+    ProjectType.STALAGMIGHT: "bg-teal-600",
     ProjectType.STICKMAPS: "bg-violet-600",
     ProjectType.THERION: "bg-amber-600",
     ProjectType.WALLS: "bg-red-500",

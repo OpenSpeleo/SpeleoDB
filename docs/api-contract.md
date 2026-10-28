@@ -185,6 +185,15 @@ PUT/PATCH may omit it to preserve the existing association. Test an otherwise
 valid creation with only that field missing, so unrelated validation errors
 cannot hide a database constraint failure.
 
+Preserve defaults exposed by the runtime serializer in the generated contract.
+Installation status defaults to `installed`; landmark collection type defaults
+to `SHARED` and remains read-only. These annotations describe the default
+values, while their enums still allow other states and personal collections.
+They do not make every response use the default or make the SDK inject it into
+requests. In particular, an omitted PATCH field retains the stored value.
+Regeneration and SDK snapshot imports must retain this metadata rather than
+suppressing it.
+
 When a route-specific subclass delegates to a shared handler, retain the whole
 handler's response contract. Project downloads at the current revision and at a
 specified commit share binary success and JSON 400/403/404/422/500 declarations.

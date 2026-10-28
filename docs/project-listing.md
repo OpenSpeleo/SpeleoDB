@@ -149,3 +149,10 @@ would occur if restoration waited for DOMContentLoaded.
 | `speleodb/surveys/templatetags/project_colors.py` | `country_flag` filter, `get_project_color_palette` tag |
 | `speleodb/surveys/models/project.py`              | `Project.color` field                                  |
 | `speleodb/common/enums.py`                        | `ColorPalette` (canonical 20-color palette)            |
+
+## Software badges
+
+Software choices and labels come from `ProjectType`. The project-type template
+tags own badge colors for both desktop rows and mobile cards; Stalagmight uses
+the teal badge. See [project capabilities](project-formats.md) for software,
+file-format, and map-conversion boundaries.

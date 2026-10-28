@@ -19,6 +19,9 @@
              aria-labelledby="project-map-heading">
       <h2 id="project-map-heading"
           class="text-lg font-semibold text-slate-100 mb-2">Project map</h2>
+      {% if not project.supports_geojson %}
+        <p class="text-sm text-slate-400 mb-2">Automatic map generation is not supported for this project type.</p>
+      {% endif %}
       <div role="status" aria-live="polite" aria-atomic="true">
         <p data-geojson-message class="text-sm text-slate-300">Loading map status…</p>
         <p data-geojson-error

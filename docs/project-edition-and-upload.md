@@ -70,3 +70,13 @@ submission flow. Its direct initialization tests cover file count, individual
 and aggregate size limits, removal/reset, escaped filenames, repeated submit
 wiring, delayed missing-context failure and map-status feedback. The wire
 integration cases retain real local HTTP requests through jQuery.
+
+## Software and upload capability
+
+Stalagmight projects use the existing revision upload/storage workflow.
+Successful uploads do not request GeoJSON conversion and report
+`geojson_status: not_requested` unless the independent operator exclusion flag
+is enabled, in which case they report `skipped`. The project details page
+explains the unsupported exporter while retaining any previously published map.
+Software classification does not imply a native file parser; see
+[project capabilities](project-formats.md).

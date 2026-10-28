@@ -135,3 +135,10 @@ calendar layout and partial rendering after missing-DOM failures. Its direct
 initialization suite exercises those boundaries and repeated initialization with
 the real jQuery runtime. Chart declarations describe only the existing
 constructor and configuration use; no Chart runtime package is bundled.
+
+## Project software counts
+
+Project counts by software include Stalagmight through the existing permission-
+scoped database aggregation. The chart displays Stalagmight with its explicit
+teal color rather than the unknown-type fallback. See
+[project capabilities](project-formats.md) for the software choice contract.
