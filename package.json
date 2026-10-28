@@ -43,14 +43,14 @@
     "cross-env": "^10.1.0",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
-    "jsdom": "30.1.2",
+    "jsdom": "30.1.3",
     "railway": "3.16.0",
     "rimraf": "^6.1.3",
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.71.2",
     "vite": "8.3.4",
-    "vitest": "5.0.4"
+    "vitest": "5.0.5"
   },
   "packageManager": "bun@1.4.2",
   "trustedDependencies": [

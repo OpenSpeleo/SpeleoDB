@@ -55,7 +55,7 @@ dependencies = [
     "fastkml[lxml]==1.4.0",  # https://github.com/cleder/fastkml
     "geojson==3.3.0",        # https://github.com/jazzband/geojson
     "gpxpy==1.6.2",          # https://github.com/tkrajina/gpxpy
-    "jsonschema-rs==0.60.0", # https://github.com/Stranger6667/jsonschema
+    "jsonschema-rs==0.60.3", # https://github.com/Stranger6667/jsonschema
     "orjson==3.13.0",        # https://github.com/ijl/orjson
     "pyproj==3.8.0",         # https://github.com/pyproj4/pyproj
     "pyshp==3.1.6",          # https://github.com/GeospatialPython/pyshp
@@ -75,12 +75,12 @@ dependencies = [
     # Django
     # ------------------------------------------------------------------------------
     "django==6.1.2",                   # https://www.djangoproject.com/
-    "django-allauth==65.20.1",         # https://github.com/pennersr/django-allauth
+    "django-allauth==65.21.0",         # https://github.com/pennersr/django-allauth
     "django-countries==9.1.0",         # https://github.com/SmileyChris/django-countries/
     "django-dynamic-raw-id==4.4",      # https://github.com/lincolnloop/django-dynamic-raw-id
     "django-environ==0.14.0",          # https://github.com/joke2k/django-environ
     "django-hijack==3.8.0",            # https://github.com/django-hijack/django-hijack/
-    "django-import-export==4.4.3",     # https://github.com/django-import-export/django-import-export
+    "django-import-export==4.4.4",     # https://github.com/django-import-export/django-import-export
     "django-js-reverse==1.0.0",        # https://github.com/vintasoftware/django-js-reverse
     "django-model-utils==5.0.0",       # https://github.com/jazzband/django-model-utils
     "django-polymorphic==4.11.7",      # https://github.com/jazzband/django-polymorphic
@@ -95,8 +95,8 @@ dependencies = [
 
     # AWS
     # ------------------------------------------------------------------------------
-    "botocore==1.43.118", # https://github.com/boto/botocore
-    "boto3==1.43.118",    # https://github.com/boto/boto3
+    "botocore==1.43.120", # https://github.com/boto/botocore
+    "boto3==1.43.120",    # https://github.com/boto/boto3
 
     # Async Jobs & Workers
     # ------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ local = [
     "openapi-core==0.23.1",  # https://github.com/python-openapi/openapi-core
     "parameterized==0.9.0",  # https://github.com/wolever/parameterized
     "pytest-sugar==1.1.1",   # https://github.com/Frozenball/pytest-sugar
-    "pytest==9.1.1",         # https://github.com/pytest-dev/pytest
+    "pytest==9.2.0",         # https://github.com/pytest-dev/pytest
 
     # Typing
     # ------------------------------------------------------------------------------
@@ -142,9 +142,9 @@ local = [
 
     # Code quality
     # ------------------------------------------------------------------------------
-    "ruff==0.17.2",     # https://github.com/astral-sh/ruff
+    "ruff==0.17.3",     # https://github.com/astral-sh/ruff
     "coverage==7.17.0", # https://github.com/nedbat/coveragepy
-    "djlint==1.47.0",   # https://github.com/Riverside-Healthcare/djLint
+    "djlint==1.47.1",   # https://github.com/Riverside-Healthcare/djLint
     "prek==0.5.7",      # https://github.com/j178/prek
 
     # Django

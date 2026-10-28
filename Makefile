@@ -102,3 +102,6 @@ generate_enc_key:
 update:
 	bun update -i
 	bun run lock --upgrade
+	uv run uv-bump
+	uv lock --upgrade
+	uv tree --outdated --depth 1
