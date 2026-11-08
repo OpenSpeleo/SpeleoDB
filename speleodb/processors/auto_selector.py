@@ -11,6 +11,7 @@ from speleodb.processors._impl.ariane import ArianeTMLUFileProcessor
 from speleodb.processors._impl.compass import CompassManualFileProcessor
 from speleodb.processors._impl.compass import CompassZIPFileProcessor
 from speleodb.processors._impl.dump import DumpProcessor
+from speleodb.processors._impl.stalagmight import StalagmightFileProcessor
 from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import FileFormat
@@ -38,6 +39,9 @@ class AutoSelector:
 
             case FileFormat.COMPASS_MANUAL:
                 return CompassManualFileProcessor
+
+            case FileFormat.STALAGMIGHT:
+                return StalagmightFileProcessor
 
             case FileFormat.AUTO:
                 if artifact is None:

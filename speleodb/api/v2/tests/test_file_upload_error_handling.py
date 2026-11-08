@@ -35,6 +35,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.views.static import serve
 from git.exc import GitCommandError
+from parameterized.parameterized import parameterized
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.exceptions import UnsupportedMediaType
@@ -379,6 +380,104 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         )
         self._assert_no_upload_writes()
         assert not self.repo.is_dirty(untracked_files=True)
+
+    @parameterized.expand([FileFormat.STALAGMIGHT, FileFormat.AUTO])
+    def test_invalid_sqlite_returns_400_and_rolls_back(
+        self, fileformat: FileFormat
+    ) -> None:
+        response = self._do_upload(
+            filename="invalid.stalx",
+            content=b"SQLite format 3\x00",
+            fileformat=fileformat,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert (
+            "Invalid STALAGMIGHT file: expected a valid SQLite database."
+            in response.data["error"]
+        )
+        assert isinstance(self._reported_exception(), ValidationError)
+        self._assert_no_upload_writes()
+        assert not self.repo.is_dirty(untracked_files=True)
+
+    def test_invalid_sqlite_rolls_back_prior_auto_batch_file(self) -> None:
+        response = self.client.put(
+            reverse(
+                "api:v2:project-upload",
+                kwargs={"id": self.project.id, "fileformat": "auto"},
+            ),
+            {
+                "artifact": [
+                    SimpleUploadedFile(
+                        "notes.txt", b"Valid preceding source", "text/plain"
+                    ),
+                    SimpleUploadedFile(
+                        "broken.stalx", b"not SQLite", "application/octet-stream"
+                    ),
+                ],
+                "message": "Batch must roll back as one revision",
+            },
+            format="multipart",
+            headers={"authorization": f"Token {self.token.key}"},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert isinstance(self._reported_exception(), ValidationError)
+        self._assert_no_upload_writes()
+        assert not self.repo.is_dirty(untracked_files=True)
+        assert not list(self.repo.path.rglob("notes.txt"))
+        assert not (self.repo.path / "stalagmight.stalx").exists()
+
+    def test_invalid_sqlite_replacement_preserves_existing_revision(self) -> None:
+        source = (settings.BASE_DIR / "fixtures/project_empty.stalx").read_bytes()
+        uploaded = self._do_upload(
+            filename="source.stalx", content=source, fileformat=FileFormat.STALAGMIGHT
+        )
+        assert uploaded.status_code == status.HTTP_200_OK, uploaded.data
+        original_sha = str(uploaded.data["hexsha"])
+        original_commits = set(
+            ProjectCommit.objects.filter(project=self.project).values_list(
+                "id", flat=True
+            )
+        )
+        original_formats = list(
+            Format.objects.filter(project=self.project).values(
+                "id", "_format", "creation_date"
+            )
+        )
+        self.sentry_events.clear()
+
+        response = self._do_upload(
+            filename="replacement.stalx",
+            content=b"not a database",
+            fileformat=FileFormat.AUTO,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
+        assert isinstance(self._reported_exception(), ValidationError)
+        assert self._remote_head() == original_sha
+        assert self.repo.head.commit.hexsha == original_sha
+        assert not self.repo.is_dirty(untracked_files=True)
+        assert (self.repo.path / "stalagmight.stalx").read_bytes() == source
+        assert (
+            set(
+                ProjectCommit.objects.filter(project=self.project).values_list(
+                    "id", flat=True
+                )
+            )
+            == original_commits
+        )
+        assert (
+            list(
+                Format.objects.filter(project=self.project).values(
+                    "id", "_format", "creation_date"
+                )
+            )
+            == original_formats
+        )
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit__project=self.project
+        ).exists()
+        assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
 
     def test_bad_zip_reports_once_with_sentry_logging_enabled(self) -> None:
         sentry_client: sentry_sdk.Client = sentry_sdk.Client(

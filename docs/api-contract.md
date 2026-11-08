@@ -14,7 +14,7 @@ The SDK's
 [maintenance guide](https://github.com/OpenSpeleo/SpeleoDB-TS-API/blob/master/docs/maintenance.md)
 explains its pinned generator, runtime transport, package versioning, standalone
 checks, and web/mobile updates. This document explains the backend half,
-including how to establish that declarations match real HTTP behavior.
+including schema source ownership and the SHA-256 freshness check.
 
 ## Scope and source ownership
 
@@ -26,16 +26,15 @@ is allauth's current protocol version. The obsolete SpeleoDB application mirror
 `/api/v1/` is deliberately excluded and must not generate SDK operations.
 
 Authentication's `/api/auth/` compatibility mount resolves to the same views,
-but its operations have distinct `auth_alias_` identifiers and require actual
-requests at that mount as coverage evidence. HTML account pages, DRF's HTML
-API-browser representation, admin pages, documentation UI, static assets,
-presigned storage URLs, and external downloads are outside the machine API
-contract. HTML errors that machine clients can receive, such as browser CSRF
-failures, are included. A signed URL returned by an API remains a URL; it is not
-rewritten to a generated endpoint. The operation inventory counts explicitly
-implemented GET/POST/PUT/PATCH/DELETE handlers. Framework-provided HEAD/OPTIONS
-negotiation does not produce additional SDK functions; no separately implemented
-business handler is excluded by that rule.
+but its operations have distinct `auth_alias_` identifiers in the export. HTML
+account pages, DRF's HTML API-browser representation, admin pages, documentation
+UI, static assets, presigned storage URLs, and external downloads are outside
+the machine API contract. HTML errors that machine clients can receive, such as
+browser CSRF failures, are included. A signed URL returned by an API remains a
+URL; it is not rewritten to a generated endpoint. The operation inventory counts
+explicitly implemented GET/POST/PUT/PATCH/DELETE handlers. Framework-provided
+HEAD/OPTIONS negotiation does not produce additional SDK functions; no
+separately implemented business handler is excluded by that rule.
 
 OGC's six old bare-SHA collection routes return `410 Gone` with replacement
 `Link` headers. Their URL templates collide with the current geometry-specific
@@ -45,18 +44,15 @@ explain the deprecated converter variant. They are not silently dropped and the
 current operation is not marked deprecated. The OGC service document itself has
 its own `200`/`304` operation.
 
-| Concern                                                        | Authoritative source                                                                                                    |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Paths, converters and supported methods                        | Django URL modules and actual view methods                                                                              |
-| First-party requests, successes and errors                     | View `extend_schema` declarations, serializers, `schema_auto.py`, `schema_extensions.py`, and `schema_domain.py`        |
-| Configured authentication routes and DTOs                      | Installed django-allauth exporter under current settings, with explicit corrections in `schema.py` and `schema_auth.py` |
-| OGC discovery, collections, features and parameters            | `speleodb/gis/ogc_openapi.py`                                                                                           |
-| Git protocol, well-known discovery and schema export           | `speleodb/api/schema_protocol.py`, checked against their actual handlers                                                |
-| Composition, namespacing, origin and nullable references       | `speleodb/api/schema.py`                                                                                                |
-| Canonical artifact generation/checking                         | `export_api_schema` management command                                                                                  |
-| Independent route coverage                                     | `speleodb/api/schema_inventory.py` and `test_api_contract.py`                                                           |
-| Actual rendered response validation                            | `speleodb/testing/api_contract.py` and pytest contract plugin                                                           |
-| Required operation evidence and observed status/media branches | `verify_api_contract_coverage` and `docs/api-contract-coverage.json`                                                    |
+| Concern                                                  | Authoritative source                                                                                                    |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Paths, converters and supported methods                  | Django URL modules and actual view methods                                                                              |
+| First-party requests, successes and errors               | View `extend_schema` declarations, serializers, `schema_auto.py`, `schema_extensions.py`, and `schema_domain.py`        |
+| Configured authentication routes and DTOs                | Installed django-allauth exporter under current settings, with explicit corrections in `schema.py` and `schema_auth.py` |
+| OGC discovery, collections, features and parameters      | `speleodb/gis/ogc_openapi.py`                                                                                           |
+| Git protocol, well-known discovery and schema export     | `speleodb/api/schema_protocol.py`, checked against their actual handlers                                                |
+| Composition, namespacing, origin and nullable references | `speleodb/api/schema.py`                                                                                                |
+| Canonical artifact generation/checking                   | `export_api_schema` management command                                                                                  |
 
 ## Environment and reproducible export
 
@@ -100,10 +96,10 @@ docker cp speleodb-monorepo-django:/tmp/OpenAPI.yaml /tmp/OpenAPI.yaml
 ```
 
 `--output` changes only the destination. `--check` regenerates into an OS
-temporary directory and fails when the destination is missing or differs,
-without rewriting it. The command reads only this application's declarations and
-the requested local destination; it does not inspect an SDK checkout or source
-record.
+temporary directory and compares its SHA-256 with the checked-in artifact. It
+fails if the destination is missing or the hashes differ, without rewriting it.
+The command reads only this application's declarations and the requested local
+destination; it does not inspect an SDK checkout or source record.
 
 Whitespace, line endings, and terminal newlines affect the digest. The command
 prints a SHA-256 digest for review and always enables schema validation,
@@ -162,11 +158,11 @@ response. Do not work around nullable failures by dropping required properties.
    inspect rendered responses. Include the new success and relevant failure
    branches. Check missing fields, null values, empty arrays, and permission
    denial.
-5. Regenerate and review the artifact, then run endpoint tests with contract
-   enforcement and inspect coverage. When updating the SDK, explicitly import
-   the reviewed export into its local snapshot and regenerate its client.
-   Compile the consumers to expose assumptions that no longer match the
-   contract.
+5. Regenerate and review the artifact, run `export_api_schema --check`, and run
+   the owning endpoint tests independently of the schema. When updating the SDK,
+   explicitly import the reviewed export into its local snapshot and regenerate
+   its client. Compile the consumers to expose assumptions that no longer match
+   the contract.
 
 For explicit response envelopes, use concrete serializer fields and the helpers
 in `schema_helpers.py`. A list response needs `many=True`; a GeoJSON response
@@ -283,178 +279,30 @@ use state-only `AlterConstraint` migrations and do not recreate the database
 indexes. The existing duplicate-install API tests check both the message and
 that the active installation count stays unchanged.
 
-A response observer must validate rendered bytes, not `response.data`: rendering
-changes decimals, dates and files. OGC streams use GeoJSON MIME types; the
-validator registers JSON deserializers for those media types and the OpenAPI
-service document. Media parameters such as charset/version are preserved by HTTP
-and do not change JSON syntax. Stream inspection must leave the stream
-consumable by the test.
-
 Git POST operations accept raw protocol bytes, not JSON or form fields. Their
 responses can report a protocol rejection with HTTP 200; the Git client must
 interpret the packet stream. Keep the declared packet MIME types and binary body
-semantics. The validator accepts empty bytes only through the normal media
-deserializer and schema validation: an empty text or binary representation can
-be valid, while empty JSON remains invalid.
+semantics. An empty text or binary representation can be valid, while empty JSON
+remains invalid.
 
-## Contract verification
+## Schema freshness and endpoint tests
 
-Run the owning endpoint suite first. Keep reports in an external temporary path:
+`OpenAPI.yaml` is the API contract. The only test against it is
+`python manage.py export_api_schema --check`, which compares the SHA-256 of the
+checked-in file with the SHA-256 of a fresh temporary export. The check fails on
+a missing file or mismatched hashes and never modifies the checked-in schema.
 
-Use the explicitly configured PostgreSQL test connection for the contract audit.
-Test settings honor `DATABASE_URL` from `.envs/test.env`, independently of the
-container's development connection. `TEST_DATABASE_URL` overrides that address
-when needed, including for workers connecting to pytest's isolated database.
-Pass that value privately and never print credentials. Preserve portable
-validation at the application boundary rather than relying on one database
-engine's limits.
+Endpoint tests assert application behavior independently of OpenAPI:
 
 ```sh
 docker exec -w /app speleodb-monorepo-django pytest \
-  speleodb/api/v2/tests/test_user.py \
-  --api-contract-report=/tmp/user-contract.json --api-contract-enforce
+  speleodb/api/v2/tests/test_user.py
 ```
 
-The independent resolver matrix checks that every supported path/method has
-exactly one generated operation, instantiates every route with valid converter
-values, and validates its real anonymous response. Authentication aliases
-resolve to the same views and return the same response status/media as their
-canonical paths, but observations retain their actual paths and operation IDs.
-Inventory follows DRF/allauth handler classes wherever mounted, with explicit
-exclusions for the obsolete SpeleoDB v1 mirror and HTML documentation UI; it
-does not infer completeness from a list of expected API prefixes:
-
-```sh
-docker exec -w /app speleodb-monorepo-django pytest \
-  speleodb/api/v2/tests/test_api_contract.py \
-  --api-contract-report=/tmp/route-contract.json --api-contract-enforce
-```
-
-Then run the existing integration suites with the observer enabled. Their
-fixtures provide authenticated CRUD, actual uploads/storage, exports,
-permissions, pagination, OGC filtering and conditional responses, and
-domain-specific failure cases:
-
-```sh
-docker exec -w /app speleodb-monorepo-django pytest \
-  speleodb/api/v2/tests speleodb/users/tests speleodb/git_proxy \
-  --api-contract-report=/tmp/api-contract.json --api-contract-enforce
-```
-
-Do not run concurrent database-backed suites against the same test database.
-Follow [the GitLab testing rules](ci-gitlab-testing.md): use the existing
-canonical fixture pool and retain the audited maximum of nine repository
-creations per invocation. Do not substitute production requests or mock every
-response to make a contract check pass. A skipped integration case is not
-runtime evidence for its branch.
-
-Reports identify the operation, method/path template, actual status and test
-case. Version 2 reports contain `observations`, the schema SHA-256 captured when
-validation initializes, the pytest invocation, and the effective exit status.
-The observer parses the same canonical YAML bytes that it hashes. The separate
-export check detects drift between source declarations and that snapshot. The
-coverage command rejects reports from failed sessions, including ordinary test
-assertion failures, and reports missing their exit status. Violations must be
-fixed at the runtime or schema source, then reproduced with relevant cases.
-Schema validation alone proves document syntax and references, not endpoint
-accuracy. Resolver coverage proves endpoint inclusion, not successful business
-behavior. An anonymous 403 does not establish the authenticated 200 shape. Keep
-those forms of evidence distinct when reviewing an update.
-
-The observer surrounds application middleware so it validates final responses,
-including browser CSRF failures that never reach an auth handler. It selects
-operations through the resolver and exported contract, without rewriting an
-alias to another mount. Both auth mounts need their own successful workflows or
-documented configured-unavailable evidence.
-
-OGC declares `allowEmptyValue` only for query fields where the parser treats an
-explicit empty value as omission/default. The observer honors those declarations
-before numeric/CSV casting to accommodate openapi-core's casting order; nonempty
-values and parameters without that flag retain their normal schema validation.
-
-After a passing audit run, enforce operation coverage and refresh the durable
-evidence registry from the observed report:
-
-```sh
-docker exec -w /app speleodb-monorepo-django \
-  python manage.py verify_api_contract_coverage /tmp/api-contract.json \
-  --settings config.settings.test --write
-```
-
-When an intentional schema update has made the existing registry stale, run that
-audit with only its snapshot guard deselected:
-
-```sh
-uv run pytest speleodb/api/v2/tests speleodb/users/tests speleodb/git_proxy \
-  --deselect=speleodb/api/v2/tests/test_api_contract.py::test_durable_evidence_matches_current_contract \
-  --api-contract-report=/tmp/api-contract.json --api-contract-enforce
-uv run python manage.py verify_api_contract_coverage /tmp/api-contract.json \
-  --settings config.settings.test --write
-uv run pytest \
-  speleodb/api/v2/tests/test_api_contract.py::test_durable_evidence_matches_current_contract
-```
-
-The first command still executes the actual route, request, response and
-business-behavior tests. The final command checks the newly written snapshot.
-Normal CI runs the guard with every other test; do not make its exclusion a
-permanent pytest setting or accept a report containing other test failures.
-
-Without `--write`, the command validates coverage without modifying the
-registry. Durable format 3 stores one top-level `schema_sha256` fingerprint for
-the exact canonical YAML. Every input report must come from a passing session
-against those same bytes; a stale report is rejected even when combined with a
-complete current report. Raw observer reports retain their format 2 provenance.
-A regression test checks the registry fingerprint, its single occurrence, and
-the complete operation set. The command rejects unknown operations, contract
-violations, missing observations, and operations with only admission/error
-evidence. The registry records actual test names, statuses, media, request
-validation flags, and **unobserved declared statuses**. It is evidence of
-executed branches, not a claim that every conceivable input or failure condition
-has been exercised. Each mounted alias has its own operation and observations;
-the independent alias test additionally proves matching view classes and
-initialization arguments for all 47 auth aliases. Git packet-line rejections are
-recorded even when their HTTP status is 200, but cannot satisfy the
-successful-operation evidence requirement.
-
-Reports from multiple passing runs may be combined only when all used the
-current snapshot. Their filenames, test invocations, exit statuses and observer
-provenance remain in `source_reports`; operations record their actual observed
-branches and tests without repeating the schema fingerprint. After any schema
-change, rerun the affected coverage against the current snapshot instead of
-carrying evidence across revisions.
-
-The fingerprint binds observations to an artifact; freshness against backend
-code is checked separately by `export_api_schema --check`. That command
-regenerates OpenAPI into a temporary file and compares its bytes with
-`OpenAPI.yaml`, failing on drift without rewriting the snapshot. CI requires
-this regeneration check, so comparing matching registry and snapshot hashes
-cannot hide a stale export. The coverage writer reads and hashes the snapshot
-once and does not repeat schema generation or add per-operation comparison work.
-
-The resolver and generated contract must agree on every supported operation; the
-durable registry records the current counts and evidence. Some allauth
-operations complete a verified account transition with a 401 flow response:
-signup, email verification, password reset, password change and logout for both
-clients on both mounts. Their tests verify account/session changes as well as
-response bytes. Other allauth operations are configured unavailable: phone
-authentication, login by code, email-code resend, and token refresh under
-SessionTokenStrategy. Their schemas omit unreachable upstream success responses
-and retain real error evidence; the coverage command derives those exceptions
-from current settings. Enabling one of those features requires successful
-fixtures, rather than a permanent exemption.
-
-The observer validates parameters and bounded JSON/URL-encoded bodies on
-successful requests and rendered responses on every observed status. It does not
-authenticate test requests itself: existing middleware and real authentication
-fixtures do that. Multipart file bodies are exercised by integration scenarios
-and real browser XHR; the observer does not preload them into RAM or bypass
-upload limits to revalidate their raw bytes. Dynamic experiment rules,
-geographic topology, and cross-field constraints still require domain tests. For
-successful JSON object requests, the observer also records names of keys absent
-from the declared input properties. Review these diagnostics for missing manual
-inputs; DRF intentionally ignores some extra fields, so these names do not
-automatically fail validation. Values are never recorded. Skipped cases and
-listed unobserved statuses must not be reported as verified branches.
+Use the configured PostgreSQL test connection and follow
+[the GitLab testing rules](ci-gitlab-testing.md). Run one database-backed suite
+at a time against the existing test database. Keep tests for permissions,
+mutations, uploads, downloads, authentication, and other application behavior.
 
 Rate limiting is part of the wire contract. The password-change endpoint returns
 DRF's 429 `detail` object and required `Retry-After` seconds header. Configured
@@ -477,10 +325,9 @@ out-of-range pages return 404. Initial sensor-list validation can return an
 `{"errors":{"0":{"name":["This field is required."]}}}`. DRF 3.18's configured
 dictionary format omits valid rows; it does not emit the older error array with
 empty placeholders. The sensor-create error schema bounds ordinary field errors
-and indexed child errors separately from parser errors. Direct contract
-assertions verify invalid and mixed lists leave both fleet and sensor row counts
-unchanged. Review this shape when upgrading DRF or changing
-`LIST_SERIALIZER_ERRORS_AS_DICT`.
+and indexed child errors separately from parser errors. Endpoint tests verify
+invalid and mixed lists leave both fleet and sensor row counts unchanged. Review
+this shape when upgrading DRF or changing `LIST_SERIALIZER_ERRORS_AS_DICT`.
 
 OpenAPI objects allow extra keys unless `additionalProperties: false` is
 present. Responses using DRF's unchanged model-serializer representation are
@@ -491,7 +338,7 @@ validation of an open object does not establish that every extra key was
 declared. Do not add closure globally to silence this limitation or reject
 legitimate dynamic data.
 
-## Behavior corrections covered by the contract tests
+## Endpoint behavior
 
 Profile PUT updates the authenticated user rather than constructing a new user.
 Creation paths save server-owned audit fields explicitly. Initial sensor rows
@@ -525,22 +372,21 @@ response for the disabled feature.
 
 ## Independent automation and schema updates
 
-The web `export-api-schema` prek hook regenerates `OpenAPI.yaml` when the
+The web `export-api-schema` prek hook runs `export_api_schema --check` when the
 artifact, Python backend/configuration, Python manifest or lock changes. It uses
-`pass_filenames: false`, since a schema is generated from the configured
-application, not from individual input filenames. Prek reports a modified
-artifact for review. No hook installation or staging is part of generation.
+`pass_filenames: false`, since the schema comes from the configured application.
+The hook checks SHA-256 equality without modifying the checked-in file. When the
+check fails, regenerate explicitly and review the YAML diff.
 
 Web CI's independent `api-contract` job checks local export drift with
 `export_api_schema --check`. This job also runs for Dependabot and fork pull
 requests with nonsecret export settings. It requires only this repository;
 backend schema changes do not wait for an SDK commit or release.
 
-The ordinary backend CI pytest invocation enables `--api-contract-enforce` and
-writes a report. CI then requires operation coverage with
-`verify_api_contract_coverage` and uploads the observations even on failure.
-Generated YAML is excluded from style-only yamllint rewriting; exporter
-validation, parser checks and local byte comparisons remain mandatory.
+The ordinary backend CI pytest invocation runs the application tests
+independently of OpenAPI. Generated YAML is excluded from style-only yamllint
+rewriting. The schema check compares the checked-in and regenerated SHA-256
+digests.
 
 The SDK independently checks its own committed `OpenAPI.yaml` snapshot, its
 SHA-256 record, and generated outputs. It does not fetch the backend, require a
@@ -591,7 +437,7 @@ and validation do not perform those operations.
 - **Wrong download parser:** compare the declared media with the actual header
   and stream bytes. An XLSX filename alone does not determine the response MIME
   type.
-- **A new URL is absent from the SDK:** the resolver inventory must fail. Check
+- **A new URL is absent from the SDK:** regenerate the backend schema and check
   explicit `schema=None`, non-DRF views, conditional URL configuration, and
   imported allauth/OGC sources. Add an explicit source adapter rather than
   excluding the URL.

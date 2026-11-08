@@ -11,6 +11,7 @@ from typing import cast
 
 import orjson
 import pytest
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.http import StreamingHttpResponse
@@ -22,7 +23,6 @@ from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.api.v2.tests.base_testcase import PROJECT_PERMISSION_CASES
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
-from speleodb.api.v2.tests.utils import is_subset
 from speleodb.api.v2.tests.utils import is_valid_git_sha
 from speleodb.common.enums import PermissionLevel
 from speleodb.processors._impl.compass_toml import CompassTOML
@@ -34,8 +34,19 @@ BASE_DIR = pathlib.Path(__file__).parent / "artifacts"
 TEST_FILES = [
     BASE_DIR / "test_simple.tml",
     BASE_DIR / "test_simple.tmlu",
+    settings.BASE_DIR / "fixtures/project_empty.stalx",
     # BASE_DIR / "fulford.dat",
 ]
+FILE_FORMATS_BY_EXTENSION = {
+    ".tml": FileFormat.ARIANE_TML,
+    ".tmlu": FileFormat.ARIANE_TMLU,
+    ".stalx": FileFormat.STALAGMIGHT,
+}
+CANONICAL_FILENAMES = {
+    FileFormat.ARIANE_TML: "ariane.tml",
+    FileFormat.ARIANE_TMLU: "ariane.tmlu",
+    FileFormat.STALAGMIGHT: "stalagmight.stalx",
+}
 COMPASS_TEST_FILES = [
     BASE_DIR / "sample.mak",
     BASE_DIR / "sample-1.dat",
@@ -133,16 +144,7 @@ class FileViewTests(BaseAPIProjectTestCase):
         get_pool().prepare(self.project)
         self.project.acquire_mutex(self.user)
 
-        fileformat = None
-        match testfile.suffix.lstrip(".").upper():
-            case "TML":
-                fileformat = FileFormat.ARIANE_TML
-            case "TMLU":
-                fileformat = FileFormat.ARIANE_TMLU
-            case _:
-                raise ValueError(
-                    f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"
-                )
+        fileformat = FILE_FORMATS_BY_EXTENSION[testfile.suffix.lower()]
 
         commit_message = "Valid commit message"
 
@@ -163,21 +165,17 @@ class FileViewTests(BaseAPIProjectTestCase):
 
         assert response.status_code == status.HTTP_200_OK, response.data
 
-        # ArianeTML[U]FileProcessor.TARGET_SAVE_FILENAME forces uploads to be
-        # stored under the canonical filename `ariane.tml` / `ariane.tmlu`
-        # regardless of the client-chosen upload name -- see
-        # speleodb/processors/_impl/ariane.py:181,213. The test fixture is
-        # uploaded as `test_simple.tml`/`test_simple.tmlu` but lands on disk
-        # (and therefore in the view response) as `ariane.<suffix>`.
+        # Native processors store their source under a canonical filename,
+        # regardless of the client-chosen upload name. This also determines the
+        # filename returned by the upload API.
         expected_data = {
-            "files": [f"ariane.{testfile.suffix.lstrip('.').lower()}"],
-            "content_types": ["application/octet-stream"],
+            "files": [CANONICAL_FILENAMES[fileformat]],
             "message": commit_message,
             "hexsha": self.project.git_repo.head.commit.hexsha,
         }
 
         response_data = response.data
-        assert is_subset(expected_data, response_data)
+        assert {key: response_data[key] for key in expected_data} == expected_data
         assert is_valid_git_sha(response_data["hexsha"])
 
         # refresh all project data
@@ -214,16 +212,7 @@ class FileViewTests(BaseAPIProjectTestCase):
             permission_type=permission_type,
         )
 
-        fileformat = None
-        match testfile.suffix.lstrip(".").upper():
-            case "TML":
-                fileformat = FileFormat.ARIANE_TML
-            case "TMLU":
-                fileformat = FileFormat.ARIANE_TMLU
-            case _:
-                raise ValueError(
-                    f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"
-                )
+        fileformat = FILE_FORMATS_BY_EXTENSION[testfile.suffix.lower()]
 
         commit_message = "Valid commit message"
 
@@ -272,16 +261,7 @@ class FileViewTests(BaseAPIProjectTestCase):
         with pytest.raises(PermissionError):
             self.project.acquire_mutex(self.user)
 
-        fileformat = None
-        match testfile.suffix.lstrip(".").upper():
-            case "TML":
-                fileformat = FileFormat.ARIANE_TML
-            case "TMLU":
-                fileformat = FileFormat.ARIANE_TMLU
-            case _:
-                raise ValueError(
-                    f"Unknown value: `{testfile.suffix.lstrip('.').upper()}`"
-                )
+        fileformat = FILE_FORMATS_BY_EXTENSION[testfile.suffix.lower()]
 
         commit_message = "Valid commit message"
 

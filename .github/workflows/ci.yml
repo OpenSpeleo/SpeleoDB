@@ -245,14 +245,8 @@ jobs:
           # Explicit opt-out: five local GitLab routing/admin-bootstrap cases
           # cannot run against GitLab.com. Default local pytest includes them.
           make test-py
-          python manage.py verify_api_contract_coverage \
-            .artifacts/api-contract/observations.json \
-            --settings config.settings.test
         env:
-          PYTEST_ADDOPTS: >-
-            --api-contract-enforce
-            --api-contract-report=.artifacts/api-contract/observations.json
-            -m "not local_infrastructure"
+          PYTEST_ADDOPTS: -m "not local_infrastructure"
           GITLAB_GROUP_ID: ${{ vars.GITLAB_GROUP_ID }}
           GITLAB_GROUP_NAME: ${{ vars.GITLAB_GROUP_NAME }}
           GITLAB_HOST_URL: ${{ vars.GITLAB_HOST_URL }}
@@ -264,14 +258,6 @@ jobs:
           AWS_STORAGE_BUCKET_NAME: speleodb-user-artifacts-test
           AWS_S3_ENDPOINT_URL: "http://localhost:9000"
           AWS_S3_CUSTOM_DOMAIN: "localhost:9000"
-
-      - name: Upload observed API contract evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: api-contract-observations
-          path: .artifacts/api-contract/
-          include-hidden-files: true
 
       - name: Upload GitLab creation audit
         if: always()

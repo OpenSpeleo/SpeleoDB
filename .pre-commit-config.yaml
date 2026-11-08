@@ -184,8 +184,8 @@ repos:
   - repo: local
     hooks:
       - id: export-api-schema
-        name: Regenerate canonical OpenAPI.yaml
-        entry: python manage.py export_api_schema
+        name: Verify OpenAPI SHA-256
+        entry: python manage.py export_api_schema --check
         language: system
         pass_filenames: false
         require_serial: true

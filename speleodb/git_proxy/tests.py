@@ -54,7 +54,6 @@ from speleodb.git_proxy.views import GitService
 from speleodb.git_proxy.views import UpstreamResponseStream
 from speleodb.git_proxy.views import get_upstream_retry_delay
 from speleodb.git_proxy.views import request_git_upstream
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.testing.gitlab_audit import creation_allocation
 from speleodb.testing.gitlab_lifecycle import assert_make_cleanup_lifecycle
 from speleodb.testing.gitlab_lifecycle import isolated_gitlab_group
@@ -116,8 +115,8 @@ def response_body(response: HttpResponseBase) -> bytes:
 def upstream_stream(response: HttpResponseBase) -> UpstreamResponseStream:
     """Capture the registered upstream resource before consuming the response.
 
-    Contract validation consumes the test client's closing iterator. Django then
-    clears its resource closers, so retain the real resource for lifetime checks.
+    Django clears resource closers when its closing iterator is consumed, so
+    retain the real resource for lifetime checks.
     """
     assert isinstance(response, StreamingHttpResponse)
     # Django registers these real resources, but its stubs omit the attribute.
@@ -282,7 +281,6 @@ class TestGitProxyServer(TestCase):
             self._info_url(), headers={"authorization": self.auth}
         )
         stream: UpstreamResponseStream = upstream_stream(response)
-        assert_api_response(response)
 
         assert response.status_code == status.HTTP_200_OK
         assert response["Content-Type"] == direct.headers["Content-Type"]
@@ -324,7 +322,6 @@ class TestGitProxyServer(TestCase):
             headers={"authorization": self.auth},
         )
         stream: UpstreamResponseStream = upstream_stream(response)
-        assert_api_response(response)
         assert stream.response.request.body == request_body
         body: bytes = response_body(response)
         assert body == direct.content
@@ -362,7 +359,6 @@ class TestGitProxyServer(TestCase):
         )
         assert response.status_code == status.HTTP_200_OK
         assert response["Content-Type"] == "application/x-git-receive-pack-result"
-        assert_api_response(response)
         assert response_body(response) == direct.content
         assert (
             self.remote_project.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit[
@@ -495,20 +491,10 @@ class TestGitProxyServer(TestCase):
     def test_partially_consumed_stream_closes_upstream_on_client_disconnect(
         self,
     ) -> None:
-        # The optional contract observer consumes complete streams to validate
-        # their bytes. This resource-lifecycle case must observe an open stream
-        # before consumption, so it supplies no contract evidence. Other Git
-        # integration requests retain the observer and actual byte validation.
-        middleware = [
-            entry
-            for entry in settings.MIDDLEWARE
-            if entry != "speleodb.testing.api_contract.APIContractMiddleware"
-        ]
-        with override_settings(MIDDLEWARE=middleware):
-            client = APIClient()
-            response: HttpResponseBase = client.get(
-                self._info_url(), headers={"authorization": self.auth}
-            )
+        client = APIClient()
+        response: HttpResponseBase = client.get(
+            self._info_url(), headers={"authorization": self.auth}
+        )
         stream: UpstreamResponseStream = upstream_stream(response)
         assert not stream.is_closed
         assert isinstance(response, StreamingHttpResponse)

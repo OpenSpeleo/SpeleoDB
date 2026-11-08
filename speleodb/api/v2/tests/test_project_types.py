@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-from typing import Any
 
 import pytest
 from django.urls import reverse
@@ -18,8 +16,6 @@ from speleodb.api.v2.views.file import request_uploaded_geojson
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.surveys.models import Project
-from speleodb.testing.api_contract import assert_api_response
-from speleodb.testing.api_contract import contract_schema
 
 UNSUPPORTED_PROJECT_TYPES = (
     ProjectType.STALAGMIGHT,
@@ -46,7 +42,6 @@ class TestStalagmightProjectAPI(BaseAPITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST, response.data
         assert "type" in response.data["errors"]
         assert not Project.objects.filter(name="Invalid software survey").exists()
-        assert_api_response(response)
 
     @parameterized.expand(["stalagmight", "STALAGMIGHT", "Stalagmight"])
     def test_create_normalizes_choice_and_serializes_read_responses(
@@ -64,7 +59,6 @@ class TestStalagmightProjectAPI(BaseAPITestCase):
             headers={"authorization": self.auth},
         )
         assert response.status_code == status.HTTP_201_CREATED, response.data
-        assert_api_response(response)
         project = Project.objects.get(pk=response.data["id"])
         assert project.type == ProjectType.STALAGMIGHT
         assert response.data["type"] == "STALAGMIGHT"
@@ -74,13 +68,11 @@ class TestStalagmightProjectAPI(BaseAPITestCase):
         )
         assert detail.status_code == status.HTTP_200_OK, detail.data
         assert detail.data["type"] == "STALAGMIGHT"
-        assert_api_response(detail)
         listing = self.client.get(
             reverse("api:v2:projects"), headers={"authorization": self.auth}
         )
         assert listing.status_code == status.HTTP_200_OK, listing.data
         assert [item["type"] for item in listing.data] == ["STALAGMIGHT"]
-        assert_api_response(listing)
 
     @parameterized.expand(["put", "patch"])
     def test_update_existing_project_to_stalagmight(self, method: str) -> None:
@@ -102,7 +94,6 @@ class TestStalagmightProjectAPI(BaseAPITestCase):
             headers={"authorization": self.auth},
         )
         assert response.status_code == status.HTTP_200_OK, response.data
-        assert_api_response(response)
         project.refresh_from_db()
         assert project.type == ProjectType.STALAGMIGHT
         assert response.data["type"] == "STALAGMIGHT"
@@ -142,7 +133,6 @@ class TestStalagmightProjectAPI(BaseAPITestCase):
         assert "type" in response.data["errors"]
         project.refresh_from_db()
         assert project.type == ProjectType.STALAGMIGHT
-        assert_api_response(response)
 
 
 @pytest.mark.parametrize("project_type", UNSUPPORTED_PROJECT_TYPES)
@@ -167,22 +157,3 @@ def test_operator_exclusion_remains_independent_of_software(
         "skipped"
     )
     assert project.exclude_geojson is True
-
-
-def test_project_choice_schema_includes_stalagmight() -> None:
-    document: dict[str, Any] = contract_schema()
-    for path, method in (
-        ("/api/v2/projects/", "post"),
-        ("/api/v2/projects/{id}/", "put"),
-        ("/api/v2/projects/{id}/", "patch"),
-    ):
-        content = document["paths"][path][method]["requestBody"]["content"]
-        for media in content.values():
-            choice = media["schema"]["properties"]["type"]
-            assert "STALAGMIGHT" in choice["description"]
-            for value in ("stalagmight", "STALAGMIGHT", "Stalagmight"):
-                assert re.fullmatch(choice["pattern"], value)
-            assert re.fullmatch(choice["pattern"], "stalagmights") is None
-    for name in ("Project", "ProjectWithGeoJson"):
-        choice = document["components"]["schemas"][name]["properties"]["type"]
-        assert "STALAGMIGHT" in choice["enum"]

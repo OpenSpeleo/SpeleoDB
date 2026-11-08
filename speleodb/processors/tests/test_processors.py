@@ -5,8 +5,62 @@ from __future__ import annotations
 import unittest
 
 import pytest
+from django.urls import Resolver404
+from django.urls import resolve
 
+from speleodb.processors._impl.dump import DumpProcessor
+from speleodb.processors.auto_selector import AutoSelector
 from speleodb.processors.base import BaseFileProcessor
+from speleodb.surveys.models import FileFormat
+
+
+@pytest.mark.parametrize("excluded", [FileFormat.DUMP, (9999, "DUMP")])
+def test_file_format_exclusions_accept_enum_and_choice_tuple(
+    excluded: FileFormat | tuple[int, str],
+) -> None:
+    choices = FileFormat.filtered_choices(exclude_vals=[excluded])
+    assert (FileFormat.DUMP.value, FileFormat.DUMP.label) not in choices
+    assert (FileFormat.STALAGMIGHT.value, FileFormat.STALAGMIGHT.label) in choices
+
+
+@pytest.mark.parametrize("fileformat", FileFormat.download_choices)
+def test_download_formats_have_an_implemented_download(fileformat: str) -> None:
+    processor = AutoSelector.get_processor(FileFormat.from_str(fileformat.upper()))
+    assert processor is DumpProcessor or processor.TARGET_SAVE_FILENAME is not None
+    route = (
+        f"/api/v2/projects/00000000-0000-0000-0000-000000000001/download/{fileformat}/"
+    )
+    assert resolve(route).url_name == "project-download"
+
+
+@pytest.mark.parametrize(
+    ("operation", "fileformat"),
+    [
+        ("upload", "dump"),
+        ("download", "auto"),
+        ("download", "other"),
+        ("download", "compass_manual"),
+        ("download", "walls_srv"),
+        ("download", "walls_wpj"),
+        ("download", "stickmaps"),
+    ],
+)
+def test_unsupported_file_operations_do_not_resolve(
+    operation: str, fileformat: str
+) -> None:
+    route = (
+        "/api/v2/projects/00000000-0000-0000-0000-000000000001/"
+        f"{operation}/{fileformat}/"
+    )
+    with pytest.raises(Resolver404):
+        resolve(route)
+
+
+def test_pseudo_formats_are_not_persistable_choices() -> None:
+    values = {value for value, _label in FileFormat.db_choices}
+    assert FileFormat.AUTO not in values
+    assert FileFormat.DUMP not in values
+    assert FileFormat.STALAGMIGHT in values
 
 
 @pytest.mark.parametrize(

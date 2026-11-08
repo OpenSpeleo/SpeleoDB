@@ -18,6 +18,7 @@ from speleodb.processors._impl.ariane import ArianeTMLFileProcessor
 from speleodb.processors._impl.ariane import ArianeTMLUFileProcessor
 from speleodb.processors._impl.compass import CompassZIPFileProcessor
 from speleodb.processors._impl.compass import CompassManualFileProcessor
+from speleodb.processors._impl.stalagmight import StalagmightFileProcessor
 
 # Generic File Formats
 from speleodb.processors._impl.database import DatabaseFileProcessor
@@ -39,5 +40,6 @@ __all__ = [
     "GeoDataFileProcessor",
     "ImageFileProcessor",
     "SpreadsheetFileProcessor",
+    "StalagmightFileProcessor",
     "TextFileProcessor",
 ]

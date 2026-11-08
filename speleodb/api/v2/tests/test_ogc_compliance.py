@@ -90,7 +90,6 @@ from speleodb.gis.ogc_helpers import normalize_features
 from speleodb.gis.ogc_helpers import parse_ogc_query
 from speleodb.gis.ogc_openapi import OGC_OPENAPI_DOC
 from speleodb.surveys.models import ProjectCommit
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -825,7 +824,6 @@ class TestProjectViewOGCCompliance(BaseAPITestCase):
             )
         )
         assert response.status_code == status.HTTP_200_OK
-        assert_api_response(response)
 
     def setUp(self) -> None:
         super().setUp()

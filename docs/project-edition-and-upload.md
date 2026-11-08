@@ -71,12 +71,22 @@ and aggregate size limits, removal/reset, escaped filenames, repeated submit
 wiring, delayed missing-context failure and map-status feedback. The wire
 integration cases retain real local HTTP requests through jQuery.
 
-## Software and upload capability
+## File API
 
-Stalagmight projects use the existing revision upload/storage workflow.
-Successful uploads do not request GeoJSON conversion and report
-`geojson_status: not_requested` unless the independent operator exclusion flag
-is enabled, in which case they report `skipped`. The project details page
-explains the unsupported exporter while retaining any previously published map.
-Software classification does not imply a native file parser; see
-[project capabilities](project-formats.md).
+All file processors use the same authenticated routes. Uploads require write
+access and ownership of the edition lock; downloads require read access.
+
+| Operation                | Method | Path                                                                |
+| ------------------------ | ------ | ------------------------------------------------------------------- |
+| Acquire edition lock     | POST   | `/api/v2/projects/{project_id}/acquire/`                            |
+| Upload files             | PUT    | `/api/v2/projects/{project_id}/upload/{fileformat}/`                |
+| Download latest file     | GET    | `/api/v2/projects/{project_id}/download/{fileformat}/`              |
+| Download historical file | GET    | `/api/v2/projects/{project_id}/download/{fileformat}/{commit_sha}/` |
+| Release edition lock     | POST   | `/api/v2/projects/{project_id}/release/`                            |
+
+Use `ariane_tml`, `compass_zip`, or `stalagmight` for the corresponding file
+format, or `auto` for upload detection. Uploads use multipart `artifact` and
+`message` fields. Responses include the stored filenames, revision `hexsha`, and
+`geojson_status`. Downloads return the selected revision's file as an
+attachment. See [project capabilities](project-formats.md) for validation and
+conversion support.

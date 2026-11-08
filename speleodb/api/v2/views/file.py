@@ -194,7 +194,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
         operation_id="v2_projects_upload",
         description=(
             "Upload repeated artifact file parts with a commit message. Compass ZIP "
-            "format accepts exactly one .zip file. At most "
+            "format accepts exactly one .zip file. "
+            f"Accepted fileformat values: {', '.join(FileFormat.upload_choices)}. "
+            "At most "
             f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} files are accepted; each "
             f"file is limited to {settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} "
             "MiB. The current combined-byte limit is "
@@ -567,6 +569,10 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
     @extend_schema(
         operation_id="v2_projects_download_retrieve_by_format",
+        description=(
+            "Download the latest revision in the requested format. "
+            f"Accepted fileformat values: {', '.join(FileFormat.download_choices)}."
+        ),
         responses=_DOWNLOAD_RESPONSES,
     )
     def get(
@@ -732,6 +738,10 @@ class FileDownloadAtHashView(FileDownloadView):
 
     @extend_schema(
         operation_id="v2_projects_download_retrieve_by_format_at_hash",
+        description=(
+            "Download the specified revision in the requested format. "
+            f"Accepted fileformat values: {', '.join(FileFormat.download_choices)}."
+        ),
         responses=_DOWNLOAD_RESPONSES,
     )
     def get(

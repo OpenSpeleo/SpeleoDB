@@ -399,15 +399,16 @@ Backend/API changes should also run relevant `pytest` targets:
   tests against the development database. This does not authorize new
   race-condition tests.
 - `make test-py` is the complete default backend suite; `make test` also runs
-  frontend tests. Preserve CI's API-contract enforcement and observed operation
-  coverage when consolidating endpoint tests. Every backend test runs by
-  default, including existing worker and storage integration. Missing services,
-  dependencies, privileges, or fixtures must fail clearly; never add environment
-  opt-ins, `skipif`, `importorskip`, or runtime skips. Explicit
-  `--light`/`--offline`, `-m`, or `--ignore` exclusions are reported as
-  deselection and do not replace complete validation. Invalid parameter
-  combinations belong outside the collected matrix. Browser tests remain a
-  separately invoked UI/UX layer.
+  frontend tests. Tests against `OpenAPI.yaml` are limited to the
+  `export_api_schema --check` SHA-256 comparison with a fresh temporary export.
+  Endpoint tests assert application behavior independently of the schema. Every
+  backend test runs by default, including existing worker and storage
+  integration. Missing services, dependencies, privileges, or fixtures must fail
+  clearly; never add environment opt-ins, `skipif`, `importorskip`, or runtime
+  skips. Explicit `--light`/`--offline`, `-m`, or `--ignore` exclusions are
+  reported as deselection and do not replace complete validation. Invalid
+  parameter combinations belong outside the collected matrix. Browser tests
+  remain a separately invoked UI/UX layer.
 - Backend behavior belongs in pytest, frontend logic in Vitest, and browser
   tests exclusively in UI/UX verification. Do not move backend assertions into
   browser tests to reduce pytest time.

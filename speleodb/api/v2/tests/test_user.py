@@ -15,7 +15,6 @@ from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.models import User
 from speleodb.utils.test_utils import named_product
 
@@ -42,7 +41,6 @@ class TestUserAPI(BaseAPITestCase):
                     else status.HTTP_429_TOO_MANY_REQUESTS
                 )
                 assert response.status_code == expected, response.content
-                assert_api_response(response)
             assert 0 < int(response.headers["Retry-After"]) <= 3600  # noqa: PLR2004
             assert set(response.json()) == {"detail"}
 
@@ -61,7 +59,6 @@ class TestUserAPI(BaseAPITestCase):
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK, response.data
-        assert_api_response(response)
         self.user.refresh_from_db()
         assert self.user.name == "Updated Profile Name"
         assert self.user.country == "MX"

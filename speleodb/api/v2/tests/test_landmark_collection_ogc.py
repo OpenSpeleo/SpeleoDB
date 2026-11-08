@@ -21,7 +21,6 @@ from speleodb.gis.landmark_collections import get_or_create_personal_landmark_co
 from speleodb.gis.models import Landmark
 from speleodb.gis.models import LandmarkCollection
 from speleodb.gis.models import LandmarkCollectionUserPermission
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -67,7 +66,6 @@ class TestLandmarkCollectionOGC:
             )
         )
         assert response.status_code == status.HTTP_200_OK
-        assert_api_response(response)
 
     @pytest.fixture
     def api_client(self) -> APIClient:

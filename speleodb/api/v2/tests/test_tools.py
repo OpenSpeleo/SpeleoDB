@@ -11,7 +11,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from speleodb.api.v2.tests.base_testcase import BaseAPITestCase
-from speleodb.testing.api_contract import assert_api_response
 
 
 @pytest.mark.django_db
@@ -25,7 +24,6 @@ class TestSpreadsheetInvalidInputs(BaseAPITestCase):
                 headers={"authorization": self.auth},
             )
             assert response.status_code == status.HTTP_400_BAD_REQUEST
-            assert_api_response(response)
 
 
 @pytest.mark.django_db

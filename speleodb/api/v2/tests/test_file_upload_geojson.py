@@ -15,7 +15,9 @@ import pytest
 from celery import Celery
 from celery import current_app
 from celery._state import get_current_app
+from django.conf import settings
 from django.urls import reverse
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
@@ -295,3 +297,39 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         self._run_generation(str(data["hexsha"]))
         generation = ProjectGeoJSONGeneration.objects.get(commit_id=str(data["hexsha"]))
         assert generation.state == "skipped"
+
+    @parameterized.expand(
+        [
+            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, False),
+            (ProjectType.STALAGMIGHT, FileFormat.AUTO, False),
+            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, True),
+            (ProjectType.ARIANE, FileFormat.STALAGMIGHT, False),
+            (ProjectType.COMPASS, FileFormat.AUTO, False),
+        ]
+    )
+    def test_stalagmight_never_requests_geojson(
+        self,
+        project_type: ProjectType,
+        fileformat: FileFormat,
+        exclude_geojson: bool,
+    ) -> None:
+        self.project.type = project_type
+        self.project.exclude_geojson = exclude_geojson
+        self.project.save(update_fields=["type", "exclude_geojson"])
+        self.project.acquire_mutex(self.user)
+        try:
+            data = self._upload_files(
+                fileformat=fileformat,
+                artifact_paths=[settings.BASE_DIR / "fixtures/project_empty.stalx"],
+                commit_message="Native SQLite source without map conversion",
+            )
+        finally:
+            self.project.release_mutex(self.user)
+
+        assert data["geojson_status"] == (
+            "skipped" if exclude_geojson else "not_requested"
+        )
+        assert not ProjectGeoJSONGeneration.objects.filter(
+            commit__project=self.project
+        ).exists()
+        assert not ProjectGeoJSON.objects.filter(project=self.project).exists()

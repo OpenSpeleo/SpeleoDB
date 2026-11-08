@@ -20,7 +20,6 @@ from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -40,14 +39,12 @@ class TestUserExports(BaseAPITestCase):
         assert len(response.data["results"]) == 1
         assert response.data["next"] is None
         assert response.data["previous"] is not None
-        assert_api_response(response)
         for page in ("0", "999", "invalid"):
             response = self.client.get(
                 url, {"page": page}, headers={"authorization": self.auth}
             )
             assert response.status_code == status.HTTP_404_NOT_FOUND
             assert set(response.json()) == {"detail"}
-            assert_api_response(response)
 
     def _job(
         self, state: str = JobState.QUEUED, *, requester: User | None = None

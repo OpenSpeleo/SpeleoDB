@@ -38,7 +38,10 @@ class Command(BaseCommand):
             generated = temporary.read_bytes()
         digest: str = hashlib.sha256(generated).hexdigest()
         if options["check"]:
-            if not destination.is_file() or destination.read_bytes() != generated:
+            if (
+                not destination.is_file()
+                or hashlib.sha256(destination.read_bytes()).hexdigest() != digest
+            ):
                 raise CommandError(
                     f"{destination} differs from the backend. "
                     "Run python manage.py export_api_schema."

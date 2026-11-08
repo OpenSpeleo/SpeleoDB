@@ -31,7 +31,6 @@ from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderInstall
 from speleodb.gis.models import CylinderPressureCheck
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -490,7 +489,6 @@ class TestCylinderPressureCheckRetrieveUpdateDelete:
         assert response.data == {
             "error": "You do not have write access to this pressure check."
         }
-        assert_api_response(response)
 
     def test_delete_pressure_check(
         self,

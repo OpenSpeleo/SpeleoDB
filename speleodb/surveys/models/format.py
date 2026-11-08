@@ -62,6 +62,9 @@ class FileFormat(BaseIntegerChoices):
     # StickMaps
     STICKMAPS = (40, "STICKMAPS")
 
+    # Stalagmight
+    STALAGMIGHT = (50, "STALAGMIGHT")
+
     @property
     def webname(self) -> str:
         return self.label.replace("_", " ")
@@ -72,7 +75,10 @@ class FileFormat(BaseIntegerChoices):
     ) -> list[tuple[int, StrOrPromise]]:
         exclude_vals = exclude_vals if exclude_vals is not None else []
 
-        return [f for f in cls.choices if f not in exclude_vals]
+        excluded_values = {
+            value[0] if isinstance(value, tuple) else value for value in exclude_vals
+        }
+        return [choice for choice in cls.choices if choice[0] not in excluded_values]
 
     @classmethod
     def filtered_choices_as_str(
@@ -96,7 +102,14 @@ class FileFormat(BaseIntegerChoices):
 
     @classproperty
     def __excluded_download_formats__(cls) -> ListFileFormats:  # noqa: N805
-        return [cls.OTHER, cls.AUTO, cls.COMPASS_MANUAL]
+        return [
+            cls.OTHER,
+            cls.AUTO,
+            cls.COMPASS_MANUAL,
+            cls.WALLS_SRV,
+            cls.WALLS_WPJ,
+            cls.STICKMAPS,
+        ]
 
     @classproperty
     def __excluded_upload_formats__(cls) -> ListFileFormats:  # noqa: N805

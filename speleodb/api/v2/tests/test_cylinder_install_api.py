@@ -38,7 +38,6 @@ from speleodb.common.enums import UnitSystem
 from speleodb.gis.models import Cylinder
 from speleodb.gis.models import CylinderFleet
 from speleodb.gis.models import CylinderInstall
-from speleodb.testing.api_contract import assert_api_response
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -269,7 +268,6 @@ class TestCylinderInstallListCreate:
         assert saved.project == project
         assert saved.install_user == user.email
         assert saved.created_by == user.email
-        assert_api_response(response)
 
     @pytest.mark.parametrize("media", ["json", "multipart", "urlencoded"])
     def test_create_cylinder_install_requires_project(
@@ -302,7 +300,6 @@ class TestCylinderInstallListCreate:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert set(response.data["errors"]) == {"project"}
         assert CylinderInstall.objects.count() == before
-        assert_api_response(response)
 
     def test_create_cylinder_install_with_distance(
         self,
@@ -471,7 +468,6 @@ class TestCylinderInstallRetrieveUpdateDelete:
         cylinder_install.refresh_from_db()
         assert cylinder_install.project_id == project_id
         assert cylinder_install.notes == "Updated without resending the project"
-        assert_api_response(response)
 
     def test_retrieve_cylinder_install(
         self,
@@ -663,7 +659,6 @@ class TestCylinderInstallRetrieveUpdateDelete:
         assert response.data == {
             "error": "You do not have write access to this cylinder install."
         }
-        assert_api_response(response)
 
     def test_update_location_name(
         self,

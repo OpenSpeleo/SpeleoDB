@@ -23602,12 +23602,15 @@ paths:
   /api/v2/projects/{id}/download/{fileformat}/:
     get:
       operationId: v2_projects_download_retrieve_by_format
+      description: 'Download the latest revision in the requested format. Accepted
+        fileformat values: dump, ariane_tml, ariane_tmlu, ariane_agr, compass_zip,
+        stalagmight.'
       parameters:
       - in: path
         name: fileformat
         schema:
           type: string
-          pattern: ^other|auto|dump|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|compass_manual|walls_srv|walls_wpj|stickmaps$
+          pattern: ^dump|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|stalagmight$
         required: true
       - in: query
         name: format
@@ -23841,13 +23844,15 @@ paths:
   /api/v2/projects/{id}/download/{fileformat}/{hexsha}/:
     get:
       operationId: v2_projects_download_retrieve_by_format_at_hash
-      description: Dedicated view for hexsha route to provide unique operation_id.
+      description: 'Download the specified revision in the requested format. Accepted
+        fileformat values: dump, ariane_tml, ariane_tmlu, ariane_agr, compass_zip,
+        stalagmight.'
       parameters:
       - in: path
         name: fileformat
         schema:
           type: string
-          pattern: ^other|auto|dump|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|compass_manual|walls_srv|walls_wpj|stickmaps$
+          pattern: ^dump|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|stalagmight$
         required: true
       - in: query
         name: format
@@ -27173,9 +27178,11 @@ paths:
   /api/v2/projects/{id}/upload/{fileformat}/:
     put:
       operationId: v2_projects_upload
-      description: Upload repeated artifact file parts with a commit message. Compass
-        ZIP format accepts exactly one .zip file. At most 20 files are accepted; each
-        file is limited to 150 MiB. The current combined-byte limit is 24657920 bytes.
+      description: 'Upload repeated artifact file parts with a commit message. Compass
+        ZIP format accepts exactly one .zip file. Accepted fileformat values: other,
+        auto, ariane_tml, ariane_tmlu, ariane_agr, compass_zip, compass_manual, walls_srv,
+        walls_wpj, stickmaps, stalagmight. At most 20 files are accepted; each file
+        is limited to 150 MiB. The current combined-byte limit is 24657920 bytes.'
       parameters:
       - in: header
         name: X-CSRFToken
@@ -27188,7 +27195,7 @@ paths:
         name: fileformat
         schema:
           type: string
-          pattern: ^other|auto|dump|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|compass_manual|walls_srv|walls_wpj|stickmaps$
+          pattern: ^other|auto|ariane_tml|ariane_tmlu|ariane_agr|compass_zip|compass_manual|walls_srv|walls_wpj|stickmaps|stalagmight$
         required: true
       - in: query
         name: format
