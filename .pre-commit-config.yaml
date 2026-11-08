@@ -34,7 +34,7 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.2
+    rev: v0.17.4
     hooks:
       # Linter
       - id: ruff
@@ -45,7 +45,7 @@ repos:
         exclude: ^speleodb/api/v2/tests/artifacts/
 
   - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.47.0
+    rev: v1.49.10
     hooks:
       - id: djlint-reformat-django
       - id: djlint-django
@@ -99,7 +99,7 @@ repos:
 
   - repo: https://github.com/shenxianpeng/hadolint-pre-commit
     # This wrapper bundles Hadolint 2.15.1 in prek's isolated environment.
-    rev: v2.15.1.2
+    rev: v2.15.1.3
     hooks:
       - id: hadolint
         # Allow latest image tags and distro-managed APT package versions.
@@ -121,7 +121,7 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.13.5
+    rev: 0.13.7
     hooks:
       - id: uv-lock
         args: ["--check"]
