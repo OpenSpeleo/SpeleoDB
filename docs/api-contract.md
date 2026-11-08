@@ -378,6 +378,13 @@ artifact, Python backend/configuration, Python manifest or lock changes. It uses
 The hook checks SHA-256 equality without modifying the checked-in file. When the
 check fails, regenerate explicitly and review the YAML diff.
 
+Dependency updates can change the export even when application code is
+unchanged: the composed document includes the installed allauth release's schema
+and descriptions. After updating schema-producing dependencies, regenerate and
+review `OpenAPI.yaml` with the updated locked environment, then run the
+freshness check. Documentation-only upstream changes also affect its
+byte-for-byte digest.
+
 Web CI's independent `api-contract` job checks local export drift with
 `export_api_schema --check`. This job also runs for Dependabot and fork pull
 requests with nonsecret export settings. It requires only this repository;
