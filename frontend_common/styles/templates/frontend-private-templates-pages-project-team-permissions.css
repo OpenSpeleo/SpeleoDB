@@ -1,5 +1,5 @@
-/* Mobile card layout for team permissions */
-    @media (max-width: 768px) {
+/* Compact card layout for team permissions */
+    @container settings-panel (max-width: 48rem) {
         .permissions-table {
             display: none;
         }
@@ -55,7 +55,7 @@
         }
     }
 
-    @media (min-width: 769px) {
+    @container settings-panel (width > 48rem) {
         .permissions-table {
             display: block;
         }

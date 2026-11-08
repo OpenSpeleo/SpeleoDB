@@ -157,7 +157,7 @@
                   <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                     <div class="font-semibold text-center">Access Level</div>
                   </th>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                  <th class="settings-table-action px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                     <div class="font-semibold text-center">Actions</div>
                   </th>
                 </tr>
@@ -199,7 +199,7 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+                    <td class="settings-table-action px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center">
                       {% if permission.team %}
                         {% if permission.team|user_has_team_access:user %}
                           {% set can_edit = True %}

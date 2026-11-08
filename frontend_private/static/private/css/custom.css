@@ -1,3 +1,36 @@
+/* Settings content must fit beside its navigation, even with long table values. */
+.settings-layout > .grow {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    container: settings-panel / inline-size;
+}
+
+/* Keep table content in normal flow without requiring a nested scroll area. */
+.settings-layout th,
+.settings-layout td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Action columns fit their header text instead of only the icon below it. */
+.settings-layout .settings-table-action {
+    width: 1%;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.settings-layout > .grow > .p-6 > .flex {
+    flex-wrap: wrap;
+}
+
+/* Cell padding must also fit the smallest settings panels. */
+@container settings-panel (max-width: 32rem) {
+    .settings-layout .table-auto th,
+    .settings-layout .table-auto td {
+        padding-inline: 0.5rem;
+    }
+}
+
 .gold-svg {
     fill: none;
     stroke-width: 1;

@@ -1,5 +1,5 @@
-/* Mobile list layout for revision history */
-    @media (max-width: 768px) {
+/* Compact list layout for revision history */
+    @container settings-panel (max-width: 48rem) {
         .revision-table {
             display: none;
         }
@@ -69,7 +69,7 @@
         }
     }
 
-    @media (min-width: 769px) {
+    @container settings-panel (width > 48rem) {
         .revision-table {
             display: block;
         }

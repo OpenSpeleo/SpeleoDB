@@ -304,7 +304,7 @@ button.tool-action {
         border: 1px solid #ccc;
         border-radius: 6px;
         background: #fff;
-        min-width: 300px;
+        min-width: min(300px, 100%);
         min-height: 90px;
         cursor: text;
     }
@@ -364,7 +364,7 @@ button.tool-action {
         background: #fff;
         color: #474848;
         font-size: 14px;
-        min-width: 300px;
+        min-width: min(300px, 100%);
         resize: vertical;
         font-family: inherit;
     }
@@ -645,5 +645,5 @@ button.tool-action {
 
 .form-group.survey-notes-group {
     flex: 1;
-    min-width: 300px;
+    min-width: min(300px, 100%);
 }

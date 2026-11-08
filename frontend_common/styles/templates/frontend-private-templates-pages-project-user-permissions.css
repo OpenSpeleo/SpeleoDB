@@ -1,5 +1,5 @@
-/* Mobile card layout for user permissions */
-    @media (max-width: 768px) {
+/* Compact card layout for user permissions */
+    @container settings-panel (max-width: 48rem) {
         .permissions-table {
             display: none;
         }
@@ -60,7 +60,7 @@
         }
     }
 
-    @media (min-width: 769px) {
+    @container settings-panel (width > 48rem) {
         .permissions-table {
             display: block;
         }

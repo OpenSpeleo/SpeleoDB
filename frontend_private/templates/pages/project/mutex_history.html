@@ -96,10 +96,10 @@
       <!-- Mobile Timeline View -->
       <div class="mutex-timeline">
         <div class="p-4">
-          {% for mutex in mutexes|slice:":5" %}
+          {% for mutex in mutexes %}
             <div class="timeline-item {% if mutex.is_active %}active{% endif %}">
               <div class="timeline-header">
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                   <div class="timeline-user">{{ mutex.user.email }}</div>
                   {% if mutex.is_active %}
                     <span class="active-badge">Currently Editing</span>
@@ -139,24 +139,19 @@
                     <div><span class="timeline-footer-label">Unlocked by:</span> {{ mutex.closing_user }}</div>
                   {% endif %}
                   {% if mutex.closing_comment %}
-                    <div class="mt-1"><span class="timeline-footer-label">Comment:</span> {{ mutex.closing_comment }}</div>
+                    <div class="mutex-unlock-comment mt-1"><span class="timeline-footer-label">Comment:</span> {{ mutex.closing_comment }}</div>
                   {% endif %}
                 </div>
               {% endif %}
             </div>
           {% endfor %}
-          {% if mutexes|length > 5 %}
-            <div class="text-center text-slate-400 text-sm mt-4 p-4 bg-srgb-slate-700-30 rounded-lg">
-              Showing last 5 entries. View on desktop for full history ({{ mutexes|length }} total).
-            </div>
-          {% endif %}
         </div>
       </div>
       <!-- Desktop Table View -->
       <div class="mutex-table bg-slate-800 shadow-lg rounded-xs border border-slate-200 border-slate-700">
         <div>
           <!-- Table -->
-          <div class="overflow-x-auto">
+          <div>
             <table class="table-auto w-full text-slate-300">
               <!-- Table header -->
               <thead class="text-xs font-semibold uppercase text-slate-400 bg-srgb-slate-900-20 border-t border-b border-slate-700">
@@ -173,10 +168,10 @@
                   <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                     <div class="font-semibold text-center">Unlock by</div>
                   </th>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                  <th class="mutex-unlock-comment px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                     <div class="font-semibold text-center">Unlock Comment</div>
                   </th>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                  <th class="settings-table-action px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                     <div class="font-semibold text-center">Unlock</div>
                   </th>
                 </tr>
@@ -200,10 +195,10 @@
                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                       <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user }}{% endif %}</div>
                     </td>
-                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                    <td class="mutex-unlock-comment px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                       <div class="text-center">{{ mutex.closing_comment }}</div>
                     </td>
-                    <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center w-16">
+                    <td class="settings-table-action px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center">
                       {% if mutex.is_active %}
                         {% if mutex.user == user or is_project_admin %}
                           <a href="#" class="btn_unlock">

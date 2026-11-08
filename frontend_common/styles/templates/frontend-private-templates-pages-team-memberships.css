@@ -1,5 +1,5 @@
-/* Mobile card layout for team memberships */
-    @media (max-width: 768px) {
+/* Compact card layout for team memberships */
+    @container settings-panel (max-width: 48rem) {
         .memberships-table {
             display: none;
         }
@@ -60,7 +60,7 @@
         }
     }
 
-    @media (min-width: 769px) {
+    @container settings-panel (width > 48rem) {
         .memberships-table {
             display: block;
         }

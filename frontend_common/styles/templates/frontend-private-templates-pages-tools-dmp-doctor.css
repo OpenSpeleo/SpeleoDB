@@ -191,6 +191,7 @@ button.tool-action {
 
     .form-row.horizontal {
         display: flex;
+        flex-wrap: wrap;
         gap: 20px;
         padding: 0px 20px;
         align-items: flex-end;
@@ -203,7 +204,7 @@ button.tool-action {
 
     .form-row.horizontal .form-group.compact {
         flex: 0 0 auto;
-        min-width: 200px;
+        min-width: min(200px, 100%);
     }
 
     /* Toggle Switch */

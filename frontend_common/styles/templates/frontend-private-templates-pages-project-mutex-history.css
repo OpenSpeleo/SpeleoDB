@@ -1,5 +1,5 @@
-/* Mobile timeline layout for mutex history */
-    @media (max-width: 768px) {
+/* Compact timeline layout for mutex history */
+    @container settings-panel (max-width: 32rem) {
         .mutex-table {
             display: none;
         }
@@ -89,7 +89,7 @@
         }
     }
 
-    @media (min-width: 769px) {
+    @container settings-panel (width > 32rem) {
         .mutex-table {
             display: block;
         }
@@ -98,3 +98,10 @@
             display: none;
         }
     }
+
+/* Comments are secondary to lock ownership and actions on narrow screens. */
+@media (width < 1800px) {
+    .mutex-unlock-comment {
+        display: none;
+    }
+}

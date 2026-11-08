@@ -139,3 +139,33 @@ build the callback, and cover its DOM-to-HTTP behavior. Run `bun run typecheck`,
 `bun run lint:frontend`, `bun run audit:api`, `bun run test:frontend`, and the
 production build. The AST API audit prevents first-party raw transport calls
 from returning under aliases or new endpoint strings.
+
+## Settings panel sizing
+
+Settings base templates mark the navigation/content flex row with
+`settings-layout`. The shared private stylesheet gives its direct `.grow`
+content panel `min-width: 0`, arbitrary-word wrapping, and the named
+`settings-panel` inline-size container. Keep this class on new settings shells:
+a table's intrinsic width must not expand the panel and push actions off-screen.
+Table cells wrap in normal flow rather than relying on nested scrollbars. Panel
+header action rows can wrap below their titles.
+
+Mutex/revision history, project permissions, and team memberships select their
+existing compact layouts with `settings-panel` container queries. The switch
+uses the available content width, accounting for both navigation sidebars,
+rather than the viewport width. Compact mutex history includes every record. Do
+not add fixed table heights, overflow clipping, or scroll regions to make
+settings content fit; allow content to wrap and the page to grow naturally.
+
+Mutex history hides unlock comments below a 1800px viewport in both table and
+compact views. The table uses the panel layout above 32rem; the other compact
+settings views switch at 48rem.
+
+Small panels reduce table cell padding. The private shell's mobile padding rule
+is restricted to the direct main-content wrapper so it cannot override table
+cells. Profile/password field wrappers may shrink; conversion-tool form rows
+wrap and their minimum field widths remain bounded by the available width.
+
+Action headers and cells use `settings-table-action` to reserve their natural
+label width and prevent wrapping. Apply it to both header and body cells;
+icon-only fixed widths can split labels such as Unlock, Download, and Explorer.
