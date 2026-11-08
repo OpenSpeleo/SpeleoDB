@@ -40,7 +40,7 @@ dependencies = [
 
     # Data Processing & Writing
     # ------------------------------------------------------------------------------
-    "xlsxwriter==3.3.0", # https://github.com/jmcnamara/XlsxWriter
+    "xlsxwriter==3.3.1", # https://github.com/jmcnamara/XlsxWriter
 
     # Media Processing
     # ------------------------------------------------------------------------------
