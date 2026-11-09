@@ -47,6 +47,7 @@ from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors import ArianeTMLFileProcessor
 from speleodb.processors import AutoSelector
 from speleodb.processors import CompassManualFileProcessor
+from speleodb.processors import StalagmightFileProcessor
 from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import (
     build_compass_toml_bytes_from_upload_filenames,
@@ -149,6 +150,10 @@ def request_uploaded_geojson(
         (
             project.type == ProjectType.ARIANE
             and file.name == ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+        )
+        or (
+            project.type == ProjectType.STALAGMIGHT
+            and file.name == StalagmightFileProcessor.TARGET_SAVE_FILENAME
         )
         or (
             project.type == ProjectType.COMPASS

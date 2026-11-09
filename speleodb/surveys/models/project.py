@@ -32,6 +32,7 @@ from openspeleo_lib.errors import EmptySurveyError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
+from openspeleo_lib.interfaces import StalagMightInterface
 
 from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import ProjectType
@@ -561,14 +562,23 @@ class Project(models.Model):
     @property
     def supports_geojson(self) -> bool:
         """Whether the project software has an existing GeoJSON exporter."""
-        return self.type in {ProjectType.ARIANE, ProjectType.COMPASS}
+        return self.type in {
+            ProjectType.ARIANE,
+            ProjectType.COMPASS,
+            ProjectType.STALAGMIGHT,
+        }
 
     def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
         """Build the GeoJSON from the survey file on disk."""
         match self.type:
-            case ProjectType.ARIANE:
+            case ProjectType.ARIANE | ProjectType.STALAGMIGHT:
                 try:
-                    survey: Survey = ArianeInterface.from_file(file)
+                    interface = (
+                        ArianeInterface
+                        if self.type == ProjectType.ARIANE
+                        else StalagMightInterface
+                    )
+                    survey: Survey = interface.from_file(file)
                     return survey_to_geojson(survey)
 
                 except EmptySurveyError as e:
@@ -581,7 +591,7 @@ class Project(models.Model):
 
                 except (OSError, Exception) as e:
                     reraise_task_timeout(e)
-                    logger.error(f"Error processing file `{file}`. Not a valid TML")  # noqa: TRY400
+                    logger.error(f"Error processing {self.type} survey file `{file}`.")  # noqa: TRY400
                     raise GeoJSONGenerationError from e
 
             case ProjectType.COMPASS:

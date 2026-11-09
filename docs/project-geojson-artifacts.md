@@ -1,15 +1,16 @@
 # Survey GeoJSON colors and artifact revisions
 
-Survey source history and rendered artifacts have different lifetimes. Ariane
-and Compass Git commits identify source data; rebuilding their GeoJSON with a
-new exporter can change its rendering properties without changing that commit.
+Survey source history and rendered artifacts have different lifetimes. Ariane,
+Compass, and Stalagmight Git commits identify source data; rebuilding their
+GeoJSON with a new exporter can change its rendering properties without changing
+that commit.
 
 ## Upload and background generation
 
 Uploads save and push source data before recording optional map-generation work.
 Generation runs in Celery after the source database transaction commits. Upload
-success does not require a usable map; the project page shows pending/failed
-status and retains the last successful artifact. See
+success does not require a usable map. The status API reports pending/failed
+generation, and the last successful artifact remains available. See
 [background generation](project-geojson-background.md) for ordering,
 diagnostics, worker recovery, and testing.
 
@@ -103,20 +104,21 @@ responses retain their current cache headers, so external clients may display
 old content until revalidation or their existing cache lifetime expires. Users
 with downloaded offline maps retain survey-color fallback until they refresh.
 
-Verification covers both live upload exporters, historical regeneration,
-unchanged geometry, same-commit revision changes, renewed URLs, null metadata,
-bounded metadata queries, storage/database failures, pinned views and every OGC
-cache family. Backend tests run in the existing application container.
+Verification covers all supported live upload exporters, historical
+regeneration, unchanged geometry, same-commit revision changes, renewed URLs,
+null metadata, bounded metadata queries, storage/database failures, pinned views
+and every OGC cache family. Backend tests run in the existing application
+container.
 
 ## Exporter availability and regeneration
 
-The standalone web application's pinned `compass-lib==0.0.9` and
-`openspeleo-lib==0.0.21` releases include color export. Compass generates
-section colors; Ariane preserves valid colors recorded in the source. Confirm
-the server performing regeneration has these color-capable exporters installed.
-Dependency updates do not add colors to previously stored GeoJSON: artifacts
-without `properties.color` still need explicit regeneration, even when the
-source commit is unchanged.
+The standalone web application's manifest and lock select the published
+exporters. Compass generates section colors; Ariane preserves valid source
+colors; Stalagmight uses OpenSpeleo's normalized native section colors and
+common GeoJSON properties. Confirm the server performing regeneration has the
+pinned exporters installed. Dependency updates do not add colors to previously
+stored GeoJSON: artifacts without `properties.color` still need explicit
+regeneration, even when the source commit is unchanged.
 
 Keep web dependencies resolvable from PyPI in a standalone clone; never add
 monorepo-relative library paths to its manifest. Validate exporter changes with

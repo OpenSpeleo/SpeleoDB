@@ -76,7 +76,6 @@
     "controller-user-exports": "frontend_common/controllers/user-exports.ts",
     "controller-experiment-form": "frontend_common/controllers/experiment-form.ts",
     "controller-dashboard": "frontend_common/controllers/dashboard.ts",
-    "controller-project-geojson-status": "frontend_common/controllers/project-geojson-status.ts",
     "controller-project-upload": "frontend_common/controllers/project-upload.ts",
     "controller-revision-history": "frontend_common/controllers/revision-history.ts",
     "controller-git-instructions": "frontend_common/controllers/git-instructions.ts",

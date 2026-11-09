@@ -9,7 +9,6 @@ import sqlite3
 import zipfile
 
 import pytest
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.http import StreamingHttpResponse
@@ -28,6 +27,7 @@ from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import get_pool
+from speleodb.testing.stalagmight import stalagmight_bytes
 
 MAX_SYNTHETIC_PAYLOAD_BYTES = 100_000
 
@@ -45,9 +45,7 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
         self.project.save(update_fields=["type", "exclude_geojson"])
         get_pool().prepare(self.project)
         self.project.acquire_mutex(self.user)
-        self.source: bytes = (
-            settings.BASE_DIR / "fixtures/project_empty.stalx"
-        ).read_bytes()
+        self.source = stalagmight_bytes()
 
     def _upload(
         self,
@@ -99,7 +97,7 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
         assert isinstance(uploaded, Response)
         assert uploaded.status_code == status.HTTP_200_OK, uploaded.data
         assert uploaded.data["files"] == ["stalagmight.stalx"]
-        assert uploaded.data["geojson_status"] == "not_requested"
+        assert uploaded.data["geojson_status"] == "pending"
         assert uploaded.data["project"]["type"] == "STALAGMIGHT"
         assert (
             Format.objects.get(project=self.project).raw_format

@@ -11,7 +11,7 @@ Exactly one selection mode is required:
 
 ```bash
 python manage.py build_project_geojsons --all
-python manage.py build_project_geojsons --project 01234567-89ab-cdef-0123-456789abcdef
+python manage.py build_project_geojsons --project <project-uuid>
 ```
 
 | Option                                   | Valid mode     | Effect                                                   |
@@ -126,9 +126,12 @@ revision.
 
 The command walks every non-initial commit available from `GitRepo.commits`.
 Ariane materializes its TML source; Compass materializes its TOML-declared
-MAK/DAT bundle. The existing `build_geojson()` processors and `ProjectCommit`
-identity remain authoritative. Neither the command nor worker guesses missing
-coordinates or reads corrections from comments.
+MAK/DAT bundle; Stalagmight materializes the original `stalagmight.stalx` SQLite
+blob at each selected commit. Native conversion uses the same OpenSpeleo adapter
+and common exporter as background generation. The existing `build_geojson()`
+processors and `ProjectCommit` identity remain authoritative. Neither the
+command nor worker guesses missing coordinates or reads corrections from
+comments.
 
 Forced recomputation validates a complete replacement and uploads a new object
 before atomically changing the stored artifact. Generation, validation, upload
@@ -158,12 +161,12 @@ messages, exact fan-out cardinality and force flags, empty scope,
 deleted/excluded projects, and independent child failure. Command integration
 tests in
 `speleodb/common/management/commands/tests/test_build_project_geojsons.py`
-exercise Ariane and Compass history, skip/replacement behavior, read-only source
-access, shared-checkout preservation, and temporary cleanup under success,
-failure and an actual OS soft-timeout signal. GitLab integration reuses the
-bounded canonical repository pool. Run the backend suite and repository checks
-in the application Docker container; never enqueue verification tasks against
-development data.
+exercise Ariane, Compass, and Stalagmight history, skip/replacement behavior,
+read-only source access, shared-checkout preservation, and temporary cleanup
+under success, failure and an actual OS soft-timeout signal. GitLab integration
+reuses the bounded canonical repository pool. Run the backend suite and
+repository checks in the application Docker container; never enqueue
+verification tasks against development data.
 
 Runtime and Git traffic scale with each project's reachable history. Forced
 replacement adds conversion, upload and retained artifact storage for every

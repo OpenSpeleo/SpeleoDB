@@ -8,6 +8,7 @@ import uuid
 from contextlib import closing
 from datetime import timedelta
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from unittest.mock import patch
@@ -30,6 +31,8 @@ from django.utils import timezone
 from django_celery_beat.models import IntervalSchedule
 from django_celery_beat.models import PeriodicTask
 from git import Actor
+from openspeleo_lib.geojson import survey_to_geojson
+from openspeleo_lib.interfaces import StalagMightInterface
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
@@ -56,10 +59,11 @@ from speleodb.gis.tasks import generate_project_geojson
 from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.testing.stalagmight import NATIVE_SHOT_ID
+from speleodb.testing.stalagmight import stalagmight_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
     from pytest_django.fixtures import Settings
 
@@ -393,7 +397,12 @@ def test_ready_state_and_artifact_insert_roll_back_together(
     assert not ProjectGeoJSON.objects.exists()
 
 
-def test_retry_recovers_missing_row_and_terminal_failure(commit: ProjectCommit) -> None:
+@pytest.mark.parametrize("project_type", [ProjectType.ARIANE, ProjectType.STALAGMIGHT])
+def test_retry_recovers_missing_row_and_terminal_failure(
+    commit: ProjectCommit, project_type: ProjectType
+) -> None:
+    commit.project.type = project_type
+    commit.project.save(update_fields=["type"])
     generation = retry_geojson_generation(commit)
     assert generation.state == GeoJSONGenerationState.PENDING
     generation.state = GeoJSONGenerationState.FAILED
@@ -436,16 +445,24 @@ def test_terminal_failure_retains_previous_artifact(
 
 @pytest.fixture
 def local_source(
-    project: Project, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    project: Project,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
 ) -> Generator[tuple[ProjectCommit, GitRepo]]:
-    project.type = ProjectType.ARIANE
+    project.type = getattr(request, "param", ProjectType.ARIANE)
     project.exclude_geojson = False
     project.save(update_fields=["type", "exclude_geojson"])
     directory = tmp_path / "remote"
     fixture = settings.BASE_DIR / "speleodb/api/v2/tests/artifacts/test_simple.tml"
+    filename, payload = (
+        ("stalagmight.stalx", stalagmight_bytes())
+        if project.type == ProjectType.STALAGMIGHT
+        else ("ariane.tml", fixture.read_bytes())
+    )
     with closing(GitRepo.init(directory)) as repository:
-        (directory / "ariane.tml").write_bytes(fixture.read_bytes())
-        repository.index.add(["ariane.tml"])
+        (directory / filename).write_bytes(payload)
+        repository.index.add([filename])
         actor = Actor("Surveyor", "surveyor@example.test")
         repository.index.commit("First survey", author=actor, committer=actor)
         commit = ProjectCommit.get_or_create_from_commit(
@@ -458,14 +475,25 @@ def local_source(
         yield commit, repository
 
 
+@pytest.mark.parametrize(
+    "local_source", [ProjectType.ARIANE, ProjectType.STALAGMIGHT], indirect=True
+)
 def test_task_reads_requested_sha_after_new_upload(
     local_source: tuple[ProjectCommit, GitRepo],
     artifact_storage: FileSystemStorage,
 ) -> None:
     commit, repository = local_source
+    filename = (
+        "stalagmight.stalx"
+        if commit.project.type == ProjectType.STALAGMIGHT
+        else "ariane.tml"
+    )
+    expected = orjson.loads(
+        orjson.dumps(commit.project.build_geojson(repository.path / filename))
+    )
     generation = _queue(commit)
-    (repository.path / "ariane.tml").write_bytes(b"not a survey")
-    repository.index.add(["ariane.tml"])
+    (repository.path / filename).write_bytes(b"not a survey")
+    repository.index.add([filename])
     actor = Actor("Surveyor", "surveyor@example.test")
     repository.index.commit("Later broken survey", author=actor, committer=actor)
 
@@ -479,11 +507,123 @@ def test_task_reads_requested_sha_after_new_upload(
     artifact = ProjectGeoJSON.objects.get(commit=commit)
     assert artifact.file.name is not None
     assert artifact_storage.exists(artifact.file.name)
+    with artifact.file.open("rb") as source:
+        assert orjson.loads(source.read()) == expected
     assert repository.head.commit.hexsha != commit.pk
+    assert (repository.path / filename).read_bytes() == b"not a survey"
+    assert not repository.is_dirty(untracked_files=True)
     revision = artifact.geojson_revision
     generate_project_geojson.run(commit.pk, str(generation.token))
     artifact.refresh_from_db()
     assert artifact.geojson_revision == revision
+
+
+@pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
+def test_native_generation_uses_common_exporter(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+) -> None:
+    commit, repository = local_source
+    source = repository.path / "stalagmight.stalx"
+    expected = orjson.loads(
+        orjson.dumps(survey_to_geojson(StalagMightInterface.from_file(source)))
+    )
+    generation = _queue(commit)
+    generate_project_geojson.run(commit.pk, str(generation.token))
+    generation.refresh_from_db()
+    assert generation.state == GeoJSONGenerationState.READY
+    artifact = ProjectGeoJSON.objects.get(commit=commit)
+    with artifact.file.open("rb") as stored:
+        actual = orjson.loads(stored.read())
+    assert actual == expected
+    anchor, entrance, branch = actual["features"]
+    assert anchor["geometry"]["coordinates"] == [0.0, 0.0]
+    assert entrance["id"] == str(NATIVE_SHOT_ID)
+    assert entrance["properties"] == {
+        "id": 1,
+        "depth": 184,
+        "name": "Entrance",
+        "color": "#aabbcc",
+    }
+    # The hidden jump advances the leg's origin, the native correction points it
+    # east, and the merged section starts exactly at that leg's destination.
+    coordinates = entrance["geometry"]["coordinates"]
+    assert coordinates[0][0] > 0
+    assert coordinates[1][0] > coordinates[0][0]
+    assert coordinates[0][1] == coordinates[1][1] == 0
+    assert branch["geometry"]["coordinates"][0] == coordinates[1]
+    assert branch["properties"]["color"] == "#336699"
+    assert source.read_bytes() == stalagmight_bytes()
+    assert not list(Path(settings.GEOJSON_GENERATION_SCRATCH_DIR).iterdir())
+
+
+@pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
+@pytest.mark.parametrize(
+    ("failure", "expected_state", "expected_code"),
+    [
+        ("unsupported_schema", GeoJSONGenerationState.FAILED, "invalid_survey"),
+        ("missing_anchor", GeoJSONGenerationState.SKIPPED, "no_anchor"),
+        ("impossible_geometry", GeoJSONGenerationState.FAILED, "invalid_survey"),
+        ("missing_source", GeoJSONGenerationState.SKIPPED, "missing_source"),
+    ],
+)
+def test_native_failure_preserves_source_and_previous_artifact(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+    failure: str,
+    expected_state: GeoJSONGenerationState,
+    expected_code: str,
+) -> None:
+    previous, repository = local_source
+    generation = _queue(previous)
+    generate_project_geojson.run(previous.pk, str(generation.token))
+    artifact = ProjectGeoJSON.objects.get(commit=previous)
+    original_revision = artifact.geojson_revision
+    with artifact.file.open("rb") as stored:
+        original_data = orjson.loads(stored.read())
+    source = repository.path / "stalagmight.stalx"
+    payload: bytes | None
+    match failure:
+        case "unsupported_schema":
+            payload = stalagmight_bytes(schema_version=17)
+        case "missing_anchor":
+            payload = stalagmight_bytes(anchored=False)
+        case "impossible_geometry":
+            payload = stalagmight_bytes(length=1.0)
+        case "missing_source":
+            payload = None
+        case _:
+            raise AssertionError(failure)
+    if payload is None:
+        repository.index.remove([source.name], working_tree=True)
+    else:
+        source.write_bytes(payload)
+        repository.index.add([source.name])
+    actor = Actor("Surveyor", "surveyor@example.test")
+    repository.index.commit(
+        "Unconvertible native source", author=actor, committer=actor
+    )
+    commit = ProjectCommit.get_or_create_from_commit(
+        previous.project, repository.head.commit
+    )
+    generation = _queue(commit)
+    generate_project_geojson.run(commit.pk, str(generation.token))
+    generation.refresh_from_db()
+    assert generation.state == expected_state
+    assert generation.last_error_code == expected_code
+    assert generation.attempts == 1
+    assert generation.next_attempt_at is None
+    assert not ProjectGeoJSON.objects.filter(commit=commit).exists()
+    artifact.refresh_from_db()
+    assert artifact.geojson_revision == original_revision
+    with artifact.file.open("rb") as stored:
+        assert orjson.loads(stored.read()) == original_data
+    assert repository.head.commit.hexsha == commit.pk
+    if payload is not None:
+        assert source.read_bytes() == payload
+        blob = repository.commit(commit.pk).tree / source.name
+        assert blob.blob.data_stream.read() == payload
+    assert not list(Path(settings.GEOJSON_GENERATION_SCRATCH_DIR).iterdir())
 
 
 def test_validation_failure_has_bounded_station_notes_without_raw_payload(
@@ -744,6 +884,21 @@ def test_admin_add_validates_excluded_commit(commit: ProjectCommit) -> None:
     form = GeoJSONGenerationForm(data={"commit": commit.pk})
     assert not form.is_valid()
     assert "excluded" in str(form.errors["commit"])
+
+
+@pytest.mark.parametrize(
+    ("project_type", "valid"),
+    [(ProjectType.STALAGMIGHT, True), (ProjectType.THERION, False)],
+)
+def test_admin_generation_form_uses_project_capability(
+    commit: ProjectCommit, project_type: ProjectType, valid: bool
+) -> None:
+    commit.project.type = project_type
+    commit.project.save(update_fields=["type"])
+    form = GeoJSONGenerationForm(data={"commit": commit.pk})
+    assert form.is_valid() is valid, form.errors
+    if not valid:
+        assert "no GeoJSON exporter" in str(form.errors["commit"])
 
 
 def test_existing_artifact_winner_retains_failed_cleanup_journal(

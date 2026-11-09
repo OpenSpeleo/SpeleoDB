@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from speleodb.common.enums import ProjectType
 from speleodb.git_engine.core import GitFile
 from speleodb.processors import ArianeTMLFileProcessor
+from speleodb.processors import StalagmightFileProcessor
 from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import get_compass_mak_filepath
 
@@ -24,8 +25,11 @@ def materialize_geojson_source(
     project: Project, commit: GitCommit, directory: Path
 ) -> Path | None:
     """Read blobs at the supplied SHA; never check out or mutate shared Git state."""
-    if project.type == ProjectType.ARIANE:
-        filename = ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+    single_file_sources: dict[str, str] = {
+        ProjectType.ARIANE: ArianeTMLFileProcessor.TARGET_SAVE_FILENAME,
+        ProjectType.STALAGMIGHT: StalagmightFileProcessor.TARGET_SAVE_FILENAME,
+    }
+    if filename := single_file_sources.get(project.type):
         try:
             source = commit.tree / filename
         except KeyError:

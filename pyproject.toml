@@ -4,7 +4,11 @@
 # openspeleo-lib = { path = ".workdir/test_wheels/openspeleo_lib-0.0.12-py3-none-any.whl" }
 
 [tool.uv]
+required-version = ">=0.12.17"
 override-dependencies = [
+    { package = { name = "deepdiff", version = "9.1.0" }, dependencies = [
+        "cachebox>=6.2.10,<7",
+    ] },
     { package = { name = "django-celery-beat" }, dependencies = [
         "django>=5.2,<6.2",
     ] },
@@ -65,7 +69,7 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "mnemo-lib==0.0.9",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
     "compass-lib==0.0.9",     # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.21", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "openspeleo-lib==0.0.22", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------

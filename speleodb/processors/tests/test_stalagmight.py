@@ -9,7 +9,6 @@ import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadedfile import TemporaryUploadedFile
@@ -18,6 +17,7 @@ from speleodb.processors._impl.stalagmight import StalagmightFileProcessor
 from speleodb.processors.auto_selector import AutoSelector
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
+from speleodb.testing.stalagmight import stalagmight_bytes
 from speleodb.utils.exceptions import FileRejectedError
 
 if TYPE_CHECKING:
@@ -51,15 +51,13 @@ def sqlite_bytes() -> bytes:
 @pytest.mark.parametrize(
     "content_type", ["application/octet-stream", "application/vnd.sqlite3"]
 )
-def test_supplied_stalagmight_file_preserves_exact_bytes(
+def test_native_stalagmight_file_preserves_exact_bytes(
     processor: StalagmightFileProcessor,
     tmp_path: Path,
     temporary_upload: bool,
     content_type: str,
 ) -> None:
-    # This exact, user-supplied real project is explicitly authorized despite its
-    # size; all synthetic databases in this suite remain below 100,000 bytes.
-    payload = (settings.BASE_DIR / "fixtures/project_empty.stalx").read_bytes()
+    payload = stalagmight_bytes()
     upload: SimpleUploadedFile | TemporaryUploadedFile
     if temporary_upload:
         upload = TemporaryUploadedFile(

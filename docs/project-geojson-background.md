@@ -9,11 +9,11 @@ artifact-storage failures must not reject a source upload.
 The upload endpoint first validates and saves the source files, successfully
 commits **and pushes** them to the project's Git remote, and constructs its
 `ProjectCommit` metadata. Only after that does it record a
-`ProjectGeoJSONGeneration` for an eligible Ariane or Compass upload. The record
-is in the request's SQL transaction. A `transaction.on_commit` callback queues
-that specific generation as soon as SQL commits. A failed push, request
-rollback, unchanged upload (HTTP 304), excluded project, or unrelated file
-upload creates no new work.
+`ProjectGeoJSONGeneration` for an eligible Ariane, Compass, or Stalagmight
+upload. The record is in the request's SQL transaction. A
+`transaction.on_commit` callback queues that specific generation as soon as SQL
+commits. A failed push, request rollback, unchanged upload (HTTP 304), excluded
+project, or unrelated file upload creates no new work.
 
 The request never parses a survey for map generation, generates GeoJSON, or
 uploads a map. It makes a bounded broker publication attempt after commit; an
@@ -78,8 +78,8 @@ working copy. A kernel file lock protects a live workspace; maintenance and the
 next task on that host remove abandoned work after the cleanup grace period.
 SIGKILL cannot run Python cleanup, so this later recovery is necessary. Cleanup
 can only inspect the local worker filesystem; stopped workers need their disk
-reclaimed or their service resumed to run a sweep. Ariane and Compass share the
-same source-materialization helpers as historical regeneration.
+reclaimed or their service resumed to run a sweep. All supported formats share
+the same source-materialization helpers as historical regeneration.
 
 The artifact service uploads an immutable object, then publishes its database
 row and the job's ready state in the same transaction. Ownership and deadline
@@ -130,10 +130,10 @@ source read permission and returns a normal raw v2 JSON response:
   update time, or null where unavailable.
 
 Status is read before artifact metadata so a response reporting ready cannot
-capture an artifact snapshot from before that publication. The project page
-polls active jobs every five seconds, pauses while hidden, and stops at terminal
-states. It identifies retained maps from earlier revisions and separates upload
-success from map failure. Diagnostic strings are rendered as text, never HTML.
+capture an artifact snapshot from before that publication. The project settings
+page does not display a map-status panel or poll this endpoint. Generation
+diagnostics remain available through the status API and Django administration;
+source upload success remains independent of map failure.
 
 The all-project GeoJSON metadata endpoint additionally returns
 `geojson_commit_sha` alongside `geojson_file` and `geojson_revision`, all from
@@ -146,6 +146,17 @@ Comments never supply coordinates, UTM zones, or declination. Invalid coordinate
 errors include station and field context supplied by openspeleo-lib's validation
 notes. Unexpected errors receive generic public messages; detailed exceptions
 remain in operator logs. The exporter never guesses coordinate corrections.
+
+Stalagmight conversion reads the immutable native SQLite source through
+OpenSpeleo's adapter and common GeoJSON exporter. Library semantics own recorded
+corrections, zero-coordinate anchors, depth discontinuities, station merges,
+hidden virtual shots, normalized colors, and UUID preservation. The application
+does not repair impossible measurements or add native-only GeoJSON properties.
+Integrity-valid SQLite with an unsupported schema remains a successful source
+upload; its generation fails with the existing invalid-survey status. Missing
+sources or absent usable anchors use the existing explained skips. These cases
+retain the last successful artifact and use the same timeout and workspace
+cleanup.
 
 ## Recovery and verification
 
@@ -190,8 +201,8 @@ Verification covers real push-before-record ordering, post-commit publication,
 rollback without a broker message, idempotent direct requests, SQL savepoint
 failure, exact-SHA source reads, duplicate and ambiguous delivery, timeouts and
 lease recovery, stale-worker fencing, publication failures, retained artifacts,
-permissions, and UI polling/escaping. Backend and frontend tests run inside the
-existing application container. Real GitLab tests reuse the bounded
+and permissions. Backend and frontend tests run inside the existing application
+container. Real GitLab tests reuse the bounded
 [canonical project pool](ci-gitlab-testing.md); generation-unit tests use local
 repositories and storage.
 
@@ -219,8 +230,9 @@ Generation remains on `background_control`; no additional queue or service is
 required. A source commit does not perform this deployment or enqueue work in
 production.
 
-The monorepo uses its editable openspeleo-lib source. Standalone SpeleoDB must
-adopt a published library release containing the aliased-field validation fix
-and station diagnostics, updating its dependency and lock normally. Upload
-isolation works independently of that release; the library change improves early
-validation and the explanation shown for invalid coordinates.
+The monorepo uses its editable openspeleo-lib source. Standalone SpeleoDB uses
+the published library selected by its manifest and lock, including the
+StalagMight adapter, aliased-field validation, and station diagnostics. Verify
+registry dependencies independently of monorepo overlays. Upload isolation works
+independently of that release; the library change improves early validation and
+the explanation shown for invalid coordinates.

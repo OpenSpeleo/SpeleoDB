@@ -9,7 +9,6 @@ from django.contrib import messages
 from django.forms import ModelForm
 from django.forms import ValidationError
 
-from speleodb.common.enums import ProjectType
 from speleodb.gis.geojson_generation import retry_geojson_generation
 from speleodb.gis.models import ProjectGeoJSONGeneration
 
@@ -29,7 +28,7 @@ class GeoJSONGenerationForm(ModelForm):  # type: ignore[type-arg]
         commit: ProjectCommit = self.cleaned_data["commit"]
         if commit.project.exclude_geojson:
             raise ValidationError("This project is excluded from GeoJSON generation.")
-        if commit.project.type not in {ProjectType.ARIANE, ProjectType.COMPASS}:
+        if not commit.project.supports_geojson:
             raise ValidationError("This project type has no GeoJSON exporter.")
         return commit
 

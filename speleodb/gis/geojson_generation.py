@@ -17,7 +17,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from speleodb.common.enums import ProjectType
 from speleodb.gis.geojson_workspaces import cleanup_geojson_workspaces
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.models.project_geojson_generation import GeoJSONGenerationState
@@ -63,10 +62,7 @@ def request_geojson_generation(
     if commit.project_id != project.pk:
         raise ValueError("The source commit belongs to another project.")
     now = timezone.now()
-    skipped = project.exclude_geojson or project.type not in {
-        ProjectType.ARIANE,
-        ProjectType.COMPASS,
-    }
+    skipped = project.exclude_geojson or not project.supports_geojson
     generation, _ = ProjectGeoJSONGeneration.objects.get_or_create(
         commit=commit,
         defaults={
@@ -104,7 +100,7 @@ def retry_geojson_generation(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
             )
         if commit.project.exclude_geojson:
             raise ValueError("This project is excluded from GeoJSON generation.")
-        if commit.project.type not in {ProjectType.ARIANE, ProjectType.COMPASS}:
+        if not commit.project.supports_geojson:
             raise ValueError("This project type has no GeoJSON exporter.")
         now = timezone.now()
         generation.state = GeoJSONGenerationState.PENDING
@@ -363,10 +359,7 @@ def claim_geojson_generation(
         if generation.lease_expires_at is None or generation.lease_expires_at <= now:
             return None
         project = generation.commit.project
-        if project.exclude_geojson or project.type not in {
-            ProjectType.ARIANE,
-            ProjectType.COMPASS,
-        }:
+        if project.exclude_geojson or not project.supports_geojson:
             _finish(
                 generation,
                 GeoJSONGenerationState.SKIPPED,

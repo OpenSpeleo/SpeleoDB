@@ -6,6 +6,7 @@ import contextlib
 import pathlib
 import re
 import uuid
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
@@ -15,7 +16,6 @@ import pytest
 from celery import Celery
 from celery import current_app
 from celery._state import get_current_app
-from django.conf import settings
 from django.urls import reverse
 from parameterized.parameterized import parameterized
 from rest_framework import status
@@ -29,6 +29,7 @@ from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.gis.tasks import generate_project_geojson
 from speleodb.surveys.models import FileFormat
 from speleodb.testing.gitlab_pool import get_pool
+from speleodb.testing.stalagmight import stalagmight_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -300,36 +301,84 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
 
     @parameterized.expand(
         [
-            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, False),
-            (ProjectType.STALAGMIGHT, FileFormat.AUTO, False),
-            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, True),
-            (ProjectType.ARIANE, FileFormat.STALAGMIGHT, False),
-            (ProjectType.COMPASS, FileFormat.AUTO, False),
+            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, False, "pending"),
+            (ProjectType.STALAGMIGHT, FileFormat.AUTO, False, "pending"),
+            (ProjectType.STALAGMIGHT, FileFormat.STALAGMIGHT, True, "skipped"),
+            (ProjectType.ARIANE, FileFormat.STALAGMIGHT, False, "not_requested"),
+            (ProjectType.COMPASS, FileFormat.AUTO, False, "not_requested"),
+            (ProjectType.THERION, FileFormat.STALAGMIGHT, False, "not_requested"),
         ]
     )
-    def test_stalagmight_never_requests_geojson(
+    def test_stalagmight_upload_conversion_eligibility(
         self,
         project_type: ProjectType,
         fileformat: FileFormat,
         exclude_geojson: bool,
+        expected_status: str,
     ) -> None:
         self.project.type = project_type
         self.project.exclude_geojson = exclude_geojson
         self.project.save(update_fields=["type", "exclude_geojson"])
         self.project.acquire_mutex(self.user)
+        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
+        source = directory / "native.stalx"
+        source.write_bytes(stalagmight_bytes())
         try:
             data = self._upload_files(
                 fileformat=fileformat,
-                artifact_paths=[settings.BASE_DIR / "fixtures/project_empty.stalx"],
-                commit_message="Native SQLite source without map conversion",
+                artifact_paths=[source],
+                commit_message="Native SQLite source",
             )
         finally:
             self.project.release_mutex(self.user)
 
-        assert data["geojson_status"] == (
-            "skipped" if exclude_geojson else "not_requested"
-        )
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit__project=self.project
-        ).exists()
-        assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
+        assert data["geojson_status"] == expected_status
+        if expected_status == "pending":
+            self._run_generation(str(data["hexsha"]))
+            generation = ProjectGeoJSONGeneration.objects.get(
+                commit_id=str(data["hexsha"])
+            )
+            assert generation.state == "ready"
+            self._assert_stored_shot_colors(str(data["hexsha"]))
+            artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
+            with artifact.file.open("rb") as stored:
+                assert orjson.loads(stored.read()) == orjson.loads(
+                    orjson.dumps(self.project.build_geojson(source))
+                )
+        else:
+            assert not ProjectGeoJSONGeneration.objects.filter(
+                commit__project=self.project
+            ).exists()
+            assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
+
+    @parameterized.expand([FileFormat.STALAGMIGHT, FileFormat.AUTO])
+    def test_unsupported_native_schema_is_saved_before_generation_fails(
+        self, fileformat: FileFormat
+    ) -> None:
+        self.project.type = ProjectType.STALAGMIGHT
+        self.project.exclude_geojson = False
+        self.project.save(update_fields=["type", "exclude_geojson"])
+        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
+        source = directory / "unsupported.stalx"
+        payload = stalagmight_bytes(schema_version=17)
+        source.write_bytes(payload)
+        self.project.acquire_mutex(self.user)
+        try:
+            data = self._upload_files(
+                fileformat=fileformat,
+                artifact_paths=[source],
+                commit_message="Preserve valid SQLite with unsupported schema",
+            )
+        finally:
+            self.project.release_mutex(self.user)
+        assert data["geojson_status"] == "pending"
+        self._run_generation(str(data["hexsha"]))
+        generation = ProjectGeoJSONGeneration.objects.get(commit_id=str(data["hexsha"]))
+        assert generation.state == "failed"
+        assert generation.last_error_code == "invalid_survey"
+        assert not ProjectGeoJSON.objects.filter(commit_id=str(data["hexsha"])).exists()
+        with self.project.git_repo as repository:
+            source_blob = (
+                repository.commit(str(data["hexsha"])).tree / "stalagmight.stalx"
+            )
+            assert source_blob.blob.data_stream.read() == payload

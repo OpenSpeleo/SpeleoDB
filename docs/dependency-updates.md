@@ -127,6 +127,15 @@ that make the combined graph unsatisfiable are reverted to the newest compatible
 release and recorded as blockers; unrelated constraints are not weakened merely
 to make a candidate version resolve.
 
+The release-specific DeepDiff metadata override in `pyproject.toml` replaces
+only its cachebox requirement with a validated cache implementation that
+provides wheels for the integration Python runtime. It preserves DeepDiff's
+other dependencies and leaves later DeepDiff releases subject to their own
+metadata. Keep the minimum uv requirement aligned with metadata override
+support. Review this override when updating DeepDiff, and verify unordered
+comparisons through the URL configuration and API subset regression tests after
+changing either dependency.
+
 ## Compatibility and performance
 
 The Bun `packageManager` and `engines.bun` mirrors must match `.bun-version`.

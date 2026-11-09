@@ -56,14 +56,8 @@ additional upload requests.
   build inside `speleodb_local_django`. The Django tests are database-only and
   require no GitLab repositories.
 
-Map-generation status is owned by
-`frontend_common/controllers/project-geojson-status.ts`, with endpoint context
-and finite response-state types separated under `ts-types/controllers/` and
-`ts-types/domain/`. Its existing state validation, cancellation, retry
-intervals, and returned cleanup function remain part of the controller contract.
-Tests cover request timeout, page visibility/back navigation, absent
-DOM/context, repeated initialization, and retained artifacts without adding
-network work.
+Project settings do not display or poll map-generation status. Background
+generation and its status API remain independent of this page.
 
 The typed project-upload controller retains its load barrier and multipart
 submission flow. Its direct initialization tests cover file count, individual

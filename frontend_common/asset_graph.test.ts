@@ -68,7 +68,7 @@ describe('first-party Vite graph', () => {
     });
 
     it('retains all logical entries with physical typed script sources', () => {
-        expect(Object.keys(REGISTRY.scripts)).toHaveLength(37);
+        expect(Object.keys(REGISTRY.scripts)).toHaveLength(36);
         expect(Object.keys(REGISTRY.styles)).toHaveLength(54);
         for (const source of Object.values(REGISTRY.scripts)) {
             expect(source).toMatch(/\.ts$/);

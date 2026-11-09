@@ -1,4 +1,4 @@
-"""Software choices and conversion capabilities in project pages."""
+"""Software choices and settings presentation in project pages."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class TestProjectTypePresentation(TestCase):
             response.content.decode()
         )
 
-    def test_details_selects_stalagmight_and_explains_conversion(self) -> None:
+    def test_details_selects_stalagmight(self) -> None:
         response = self.client.get(
             reverse("private:project_details", kwargs={"project_id": self.project.pk})
         )
@@ -46,9 +46,6 @@ class TestProjectTypePresentation(TestCase):
         html = response.content.decode()
         assert re.search(
             r'<option value="STALAGMIGHT"\s+selected\s*>STALAGMIGHT</option>', html
-        )
-        assert "Automatic map generation is not supported for this project type." in (
-            html
         )
 
     def test_stalagmight_badges_render_on_mobile_and_desktop(self) -> None:
@@ -69,8 +66,8 @@ class TestProjectTypePresentation(TestCase):
         if project_type != ProjectType.OTHER:
             assert get_project_type_color(project_type.value) != "bg-slate-500"
 
-    @parameterized.expand([ProjectType.ARIANE, ProjectType.COMPASS])
-    def test_supported_types_do_not_show_conversion_notice(
+    @parameterized.expand([(project_type,) for project_type in ProjectType])
+    def test_details_omit_map_status_for_every_type(
         self, project_type: ProjectType
     ) -> None:
         self.project.type = project_type
@@ -79,6 +76,8 @@ class TestProjectTypePresentation(TestCase):
             reverse("private:project_details", kwargs={"project_id": self.project.pk})
         )
         assert response.status_code == status.HTTP_200_OK
-        assert "Automatic map generation is not supported" not in (
-            response.content.decode()
-        )
+        html = response.content.decode()
+        assert "Project Settings" in html
+        assert "Project map" not in html
+        assert "project-geojson-status" not in html
+        assert "Automatic map generation is not supported" not in html

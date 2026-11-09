@@ -18,12 +18,14 @@ from compass_lib.io import load_project
 from django.conf import settings
 from django.test import override_settings
 from openspeleo_lib.interfaces import ArianeInterface
+from openspeleo_lib.interfaces import StalagMightInterface
 
 from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import ProjectType
 from speleodb.surveys.models import Project
 from speleodb.surveys.tasks import refresh_all_projects_geojson
 from speleodb.surveys.tasks import refresh_project_geojson
+from speleodb.testing.stalagmight import stalagmight_bytes
 from speleodb.utils.exceptions import reraise_task_timeout
 
 if TYPE_CHECKING:
@@ -34,19 +36,26 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize(
     ("project_type", "filename"),
-    [(ProjectType.ARIANE, "test_simple.tml"), (ProjectType.COMPASS, "sample.mak")],
+    [
+        (ProjectType.ARIANE, "test_simple.tml"),
+        (ProjectType.COMPASS, "sample.mak"),
+        (ProjectType.STALAGMIGHT, "native.stalx"),
+    ],
 )
 def test_source_timeout_is_not_treated_as_invalid_survey(
-    project_type: ProjectType, filename: str
+    project_type: ProjectType, filename: str, tmp_path: Path
 ) -> None:
     source = (
         settings.BASE_DIR / "speleodb" / "api" / "v2" / "tests" / "artifacts" / filename
     )
-    loader_code = (
-        ArianeInterface.from_file.__code__
-        if project_type == ProjectType.ARIANE
-        else load_project.__code__
-    )
+    if project_type == ProjectType.STALAGMIGHT:
+        source = tmp_path / filename
+        source.write_bytes(stalagmight_bytes())
+    loader_code = {
+        ProjectType.ARIANE: ArianeInterface.from_file.__code__,
+        ProjectType.COMPASS: load_project.__code__,
+        ProjectType.STALAGMIGHT: StalagMightInterface.from_file.__code__,
+    }[project_type]
     signal_delivered = False
 
     def soft_timeout(_signum: int, _frame: FrameType | None) -> None:

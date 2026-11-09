@@ -27,7 +27,7 @@ separately checks local snapshot agreement.
 | -------------------------------- | ---------------------------- | ------------------------------------------------ |
 | Ariane                           | Yes                          | Supported for recognized survey sources          |
 | Compass                          | Yes                          | Supported for complete recognized survey bundles |
-| Stalagmight                      | Yes                          | Unsupported                                      |
+| Stalagmight                      | Yes                          | Supported for recognized native SQLite surveys   |
 | StickMaps, Therion, Walls, Other | Yes                          | Unsupported                                      |
 
 ## File processing
@@ -40,8 +40,14 @@ content before storing the original file bytes. See the
 
 ## Conversion behavior
 
-Only Ariane and Compass have survey exporters. Stalagmight files are not
-converted to GeoJSON. Uploads without eligible survey sources report
+Ariane, Compass, and Stalagmight support survey conversion. Stalagmight uses
+`StalagMightInterface.from_file()` from `openspeleo_lib.interfaces`, followed by
+the common `survey_to_geojson()` exporter. Explicit STALAGMIGHT and AUTO uploads
+request background generation when the project software matches the source.
+SQLite integrity validation and byte-for-byte storage happen before scheduling;
+a supported survey schema is not required to save a source. Semantic errors fail
+optional generation without rejecting the upload or removing the last usable
+map. Uploads without eligible survey sources report
 `geojson_status: not_requested`; the independent `exclude_geojson` flag produces
 `skipped`. Uploading a file does not change the project's software category.
 
@@ -53,14 +59,14 @@ Existing map artifacts remain readable after a software change. See
 
 Regression coverage exercises case-insensitive API writes and canonical reads,
 invalid choices, admin forms/filtering, selected dropdown options,
-desktop/mobile badges, dashboard counts/colors, and the unsupported conversion
-notice.
+desktop/mobile badges, dashboard counts/colors, and project settings without a
+map-status panel.
 
 File-processing tests cover content validation, explicit/AUTO selection,
 permissions, edition locks, downloads, revision history, unchanged uploads,
 rollback, and conversion eligibility.
 
-Run web tests in the existing application container. Verify schema
-freshness/hash equality, SDK regeneration and build, frontend tests/types/build,
-and Python lint/types. Existing Ariane/Compass conversion tests remain
-regression controls.
+Run web tests in the existing application container. Verify schema freshness,
+frontend tests/types, and Python lint/types. No schema or SDK change is needed
+to enable conversion for an existing software choice. Existing Ariane/Compass
+conversion tests remain regression controls.

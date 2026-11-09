@@ -38,11 +38,13 @@ from speleodb.processors._impl.compass_toml import CompassTOML
 from speleodb.processors._impl.compass_toml import (
     build_compass_toml_bytes_from_upload_filenames,
 )
+from speleodb.processors._impl.stalagmight import StalagmightFileProcessor
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.gitlab_pool import canonical_project
 from speleodb.testing.gitlab_pool import get_pool
+from speleodb.testing.stalagmight import stalagmight_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -234,15 +236,17 @@ class TestBuildProjectGeoJSONs(TestCase):
         self.project.type = project_type
         self.project.save(update_fields=["type"])
         directory = pathlib.Path(self.enterContext(TemporaryDirectory())) / "source"
+        self.source_directory = directory
         repository = GitRepo.init(directory)
         with repository:
             names: list[str] = []
             for source in artifact_paths:
-                name = (
-                    ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
-                    if project_type == ProjectType.ARIANE
-                    else source.name
-                )
+                name = {
+                    ProjectType.ARIANE: ArianeTMLFileProcessor.TARGET_SAVE_FILENAME,
+                    ProjectType.STALAGMIGHT: (
+                        StalagmightFileProcessor.TARGET_SAVE_FILENAME
+                    ),
+                }.get(project_type, source.name)
                 (directory / name).write_bytes(source.read_bytes())
                 names.append(name)
             if project_type == ProjectType.COMPASS:
@@ -399,6 +403,60 @@ class TestBuildProjectGeoJSONs(TestCase):
                 feature["properties"].pop("color", None)
         # Random coloring may change; every other exported value must stay exact.
         assert regenerated_data == original_data
+
+    def test_command_rebuilds_native_history_and_retains_maps_after_failure(
+        self,
+    ) -> None:
+        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
+        native = directory / "client.stalx"
+        native.write_bytes(stalagmight_bytes())
+        hexsha = self._seed_source(
+            project_type=ProjectType.STALAGMIGHT,
+            artifact_paths=[native],
+        )
+        expected = orjson.loads(orjson.dumps(self.project.build_geojson(native)))
+        source = self.source_directory / StalagmightFileProcessor.TARGET_SAVE_FILENAME
+        invalid_payload = stalagmight_bytes(length=1.0)
+        source.write_bytes(invalid_payload)
+        with GitRepo(self.source_directory) as repository:
+            repository.index.add([source.name])
+            actor = Actor("Surveyor", "surveyor@example.test")
+            repository.index.commit(
+                "Later impossible measurements", author=actor, committer=actor
+            )
+            invalid_sha = repository.head.commit.hexsha
+        marker = self.source_directory / "unfinished-upload"
+        marker.write_text("retain", encoding="utf-8")
+        args = ("--project", str(self.project.id))
+
+        call_command("build_project_geojsons", *args)
+
+        artifact = ProjectGeoJSON.objects.get(commit_id=hexsha)
+        self.addCleanup(artifact.file.delete, save=False)
+        original_revision = artifact.geojson_revision
+        with artifact.file.open("rb") as stored:
+            assert orjson.loads(stored.read()) == expected
+        assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
+        call_command("build_project_geojsons", *args)
+        artifact.refresh_from_db()
+        assert artifact.geojson_revision == original_revision
+
+        result = refresh_project_geojson.apply(
+            args=(str(self.project.id),), kwargs={"force_recompute": True}, throw=True
+        )
+
+        assert result.successful()
+        artifact.refresh_from_db()
+        assert artifact.geojson_revision != original_revision
+        self.addCleanup(artifact.file.delete, save=False)
+        with artifact.file.open("rb") as stored:
+            assert orjson.loads(stored.read()) == expected
+        assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
+        assert source.read_bytes() == invalid_payload
+        assert marker.read_text(encoding="utf-8") == "retain"
+        with GitRepo(self.source_directory) as repository:
+            assert repository.head.commit.hexsha == invalid_sha
+        assert not list(self.scratch.iterdir())
 
     def test_task_timeout_stops_clone_and_cleans_all_temporary_files(self) -> None:
         get_pool().prepare(self.project)
