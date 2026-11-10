@@ -49,7 +49,11 @@ def sqlite_bytes() -> bytes:
 
 @pytest.mark.parametrize("temporary_upload", [False, True])
 @pytest.mark.parametrize(
-    "content_type", ["application/octet-stream", "application/vnd.sqlite3"]
+    "content_type", [
+        "application/octet-stream",
+        "application/vnd.sqlite3",
+        "application/vnd.stalagmight.project"
+    ]
 )
 def test_native_stalagmight_file_preserves_exact_bytes(
     processor: StalagmightFileProcessor,

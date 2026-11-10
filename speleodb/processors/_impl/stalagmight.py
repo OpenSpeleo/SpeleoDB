@@ -20,7 +20,11 @@ if TYPE_CHECKING:
 
 class StalagmightFileProcessor(BaseFileProcessor):
     ALLOWED_EXTENSIONS = [".stalx"]
-    ALLOWED_MIMETYPES = ["application/octet-stream", "application/vnd.sqlite3"]
+    ALLOWED_MIMETYPES = [
+        "application/octet-stream",
+        "application/vnd.sqlite3",
+        "application/vnd.stalagmight.project",
+    ]
     ASSOC_FILEFORMAT = FileFormat.STALAGMIGHT
 
     TARGET_FOLDER = None

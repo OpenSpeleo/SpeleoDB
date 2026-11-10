@@ -1,4 +1,4 @@
-.PHONY: reset_db dump_data load_data test test-py test-frontend test-browser deploy wipe_gitlab_test wipe_test_user_projects generate_enc_key update
+.PHONY: reset_db dump_data load_data test test-py test-frontend test-browser deploy wipe_gitlab_test wipe_test_user_projects generate-openapi generate_enc_key update
 
 # =========================================================================== #
 # DATA MANAGEMENT
@@ -21,6 +21,9 @@ load_data:
 	python manage.py loaddata fixtures/common.json
 	python manage.py loaddata fixtures/surveys.json
 	python manage.py loaddata fixtures/emailaddresses.json
+
+generate-openapi:
+	python manage.py export_api_schema
 
 # =========================================================================== #
 # TESTS
