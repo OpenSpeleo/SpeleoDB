@@ -11,17 +11,17 @@ export function registerViewerDataLifecycle(
     window.addEventListener('speleo:map-source-changed', callbacks.sourceChange as unknown as EventListener);
 }
 
-/** Each viewer owns its listener lifetime and supplies its fullscreen policy. */
-export function createMapHeightUpdater(isFullscreen: () => boolean = () => false): () => void {
+/** Each viewer owns its listener lifetime and supplies its viewport-fitting policy. */
+export function createMapHeightUpdater(shouldFitViewport: () => boolean = () => false): () => void {
     return function setMapHeight() {
         const mapElement = document.getElementById('map')!;
         const rect = mapElement.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
         const mapTop = rect.top;
         const isMobile = window.innerWidth <= DEFAULTS.UI.MOBILE_BREAKPOINT;
-        const fullscreen = isFullscreen();
-        const newHeight = isMobile || fullscreen ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
-        mapElement.style.height = newHeight + 'px';
+        const fitsViewport = isMobile || shouldFitViewport();
+        const newHeight = fitsViewport ? (viewportHeight - mapTop) : Math.max(viewportHeight - mapTop - DEFAULTS.UI.MAP_PADDING_OFFSET, DEFAULTS.UI.MIN_MAP_HEIGHT);
+        mapElement.style.height = Math.max(0, newHeight) + 'px';
     };
 }
 

@@ -8,6 +8,23 @@ import geometryContract from '@speleodb/map-core/geometry-contract.json' with { 
 // in the map viewer. No magic numbers anywhere else.
 // ============================================================
 export const DEFAULTS = Object.freeze({
+    HISTORY: {
+        DEFAULT_SPEED: 1,
+        MIN_SPEED: 0.1,
+        MAX_SPEED: 10,
+        SPEED_SCALE_STEP: 0.01,
+        SPEED_LABEL_DIGITS: 3,
+        DWELL_MS: 2000,
+        SLOW_LOAD_MS: 1000,
+        MOBILE_BREAKPOINT: 760,
+        CAMERA_DURATION_MS: 450,
+        CAMERA_SPEED_MULTIPLIER: 0.3,
+        CAMERA_PADDING_PX: 32,
+        CAMERA_MARGIN_RATIO: 0.1,
+        SCALE_CONTROL_MAX_WIDTH: 80,
+        RASTER_FADE_DURATION_MS: 0,
+        SOURCE_READY_TIMEOUT_MS: 30_000,
+    },
     SENSORS: {
         EXPIRY_WARNING_DAYS: 7,
     },

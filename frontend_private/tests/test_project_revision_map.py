@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 from contextlib import closing
+from datetime import UTC
+from datetime import datetime
 from datetime import timedelta
 from http.client import HTTPConnection
 from http.client import HTTPSConnection
@@ -394,3 +396,102 @@ def test_history_supplies_exact_artifacts_for_in_place_switching(
     context = controller_context(response.content.decode(), "project-revision-map")
     assert isinstance(context["project"], dict)
     assert context["project"]["geojson_file"] == rows[1]["geojson_url"]
+
+
+@pytest.mark.django_db
+def test_playback_context_preserves_metadata_availability_and_equal_date_order(
+    client: Client,
+    revisions: tuple[Project, ProjectGeoJSON, ProjectGeoJSON],
+) -> None:
+    project, older, newer = revisions
+    authored_date = datetime(2024, 5, 15, 1, 2, 3, tzinfo=UTC)
+    message = "Extended eastern passage. " * 8 + '</script><script>bad</script>"'
+    author = "A long author name " * 8 + '<div>"&'
+    missing = ProjectCommit.objects.create(
+        id="c" * 40,
+        project=project,
+        authored_date=authored_date,
+        author_name="Diver",
+        author_email="diver@example.com",
+        message="Map not generated",
+    )
+    ProjectCommit.objects.filter(project=project).update(
+        authored_date=authored_date, creation_date=authored_date
+    )
+    ProjectCommit.objects.filter(pk=newer.commit_id).update(
+        message=message, author_name=author
+    )
+    user = UserFactory.create()
+    UserProjectPermissionFactory.create(
+        project=project, target=user, level=PermissionLevel.READ_ONLY
+    )
+    client.force_login(user)
+    with timezone.override("America/Cancun"):
+        response = client.get(
+            reverse(
+                "private:project_revision_map",
+                kwargs={"project_id": project.pk, "hexsha": older.commit_id},
+            )
+        )
+    assert response.status_code == status.HTTP_200_OK
+    html = response.content.decode()
+    context = controller_context(html, "project-revision-map")
+    playback = context["revisions"]
+    assert isinstance(playback, list)
+    assert [row["commitSha"] for row in playback] == [
+        missing.pk,
+        newer.commit_id,
+        older.commit_id,
+    ]
+    unavailable, latest, selected = playback
+    assert unavailable["available"] is False
+    assert unavailable["geojsonUrl"] is None
+    assert unavailable["artifactRevision"] is None
+    assert latest["available"] is True
+    assert latest["message"] == message
+    assert latest["authorName"] == author
+    assert latest["dateLabel"] == "May 14, 2024"
+    assert latest["displayDateLabel"] == "May 14, 2024 at 20:02"
+    assert latest["timestampLabel"] == "May 14, 2024 at 20:02:03 -0500"
+    assert latest["artifactRevision"] == newer.geojson_revision
+    assert newer.file.name is not None
+    assert newer.file.name in urlsplit(latest["geojsonUrl"]).path
+    assert selected["url"] == response.wsgi_request.path
+    assert "</script><script>bad</script>" not in html
+
+
+@pytest.mark.django_db
+def test_initial_revision_metadata_survives_exclusion_from_timeline(
+    client: Client,
+    revisions: tuple[Project, ProjectGeoJSON, ProjectGeoJSON],
+) -> None:
+    project, older, newer = revisions
+    ProjectCommit.objects.filter(pk=older.commit_id).update(
+        author_name="SpeleoDB", message="[Automated] Project Creation"
+    )
+    user = UserFactory.create()
+    UserProjectPermissionFactory.create(
+        project=project, target=user, level=PermissionLevel.READ_ONLY
+    )
+    client.force_login(user)
+    response = client.get(
+        reverse(
+            "private:project_revision_map",
+            kwargs={"project_id": project.pk, "hexsha": older.commit_id},
+        )
+    )
+    assert response.status_code == status.HTTP_200_OK
+    context = controller_context(response.content.decode(), "project-revision-map")
+    selected = context["selectedRevision"]
+    assert isinstance(selected, dict)
+    assert selected["commitSha"] == older.commit_id
+    assert selected["artifactRevision"] == older.geojson_revision
+    assert selected["message"] == "[Automated] Project Creation"
+    assert selected["authorName"] == "SpeleoDB"
+    assert selected["url"] == response.wsgi_request.path
+    assert older.file.name is not None
+    assert isinstance(selected["geojsonUrl"], str)
+    assert older.file.name in urlsplit(selected["geojsonUrl"]).path
+    playback = context["revisions"]
+    assert isinstance(playback, list)
+    assert [row["commitSha"] for row in playback] == [newer.commit_id]

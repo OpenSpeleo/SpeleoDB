@@ -8,7 +8,11 @@ import { Layers } from './layers.ts';
 import { MapSources } from './sources.ts';
 
 export const MapCore = {
-    init: function (accessToken: string, containerId = 'map', { fullscreenContainer }: MapCoreOptions = {}): MapCoreMap {
+    init: function (accessToken: string, containerId = 'map', {
+        fullscreenContainer,
+        showAttribution = true,
+        scaleControlMaxWidth = DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH,
+    }: MapCoreOptions = {}): MapCoreMap {
         MapSources.installCheckedTileProtocol();
         const sourceId = MapSources.getCurrentMapSourceId(accessToken);
 
@@ -24,19 +28,21 @@ export const MapCore = {
             touchPitch: false
         });
         attachGlobeAtmosphere(map);
-        map.addControl(withoutMapboxFeedback(new Renderer.AttributionControl()), 'bottom-right');
+        if (showAttribution) {
+            map.addControl(withoutMapboxFeedback(new Renderer.AttributionControl()), 'bottom-right');
+        }
 
         // Observability hook exposes this instance without installing a renderer global.
         announceMapCreated(map);
 
         // A token means the retained Mapbox base style also supplies overlay glyphs.
-        if (accessToken) map.addControl(createMapboxAttributionControl(), 'bottom-left');
+        if (showAttribution && accessToken) map.addControl(createMapboxAttributionControl(), 'bottom-left');
         map.addControl(new Renderer.NavigationControl(), 'top-right');
         map.addControl(new Renderer.FullscreenControl(
             fullscreenContainer ? { container: fullscreenContainer } : undefined
         ), 'top-right');
-        map.addControl(new Renderer.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'metric' }), 'bottom-right');
-        map.addControl(new Renderer.ScaleControl({ maxWidth: DEFAULTS.MAP.SCALE_CONTROL_MAX_WIDTH, unit: 'imperial' }), 'bottom-right');
+        map.addControl(new Renderer.ScaleControl({ maxWidth: scaleControlMaxWidth, unit: 'metric' }), 'bottom-right');
+        map.addControl(new Renderer.ScaleControl({ maxWidth: scaleControlMaxWidth, unit: 'imperial' }), 'bottom-right');
 
         // Set state
         State.map = map;

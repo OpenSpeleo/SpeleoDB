@@ -4,6 +4,8 @@ import type { MapSourceMap, RasterStyle } from './map-sources.ts';
 
 export interface MapCoreOptions {
     fullscreenContainer?: HTMLElement;
+    showAttribution?: boolean;
+    scaleControlMaxWidth?: number;
 }
 export interface MapCreationOptions {
     container: string;

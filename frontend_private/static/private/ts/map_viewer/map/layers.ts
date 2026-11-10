@@ -222,8 +222,10 @@ export const Layers = {
      *   instead of reading from State.projectLayerStates.  Allows callers
      *   (e.g. country-level gate) to hide a project on the map without
      *   changing its stored individual preference.
+     * @param {string[]} [layerIds] - Candidate layers to prepare before a
+     *   historical replacement becomes the displayed project.
      */
-    applyProjectLayerVisibility: function (projectId: EntityId, visibilityOverride?: boolean) {
+    applyProjectLayerVisibility: function (projectId: EntityId, visibilityOverride?: boolean, layerIds?: string[]) {
         const pid = String(projectId);
         let isVisible;
         if (visibilityOverride !== undefined) {
@@ -242,10 +244,10 @@ export const Layers = {
         const map = State.map;
         if (!map) return;
 
-        const projectLayerIds = State.allProjectLayers.get(pid) || [];
+        const projectLayerIds = layerIds ?? State.allProjectLayers.get(pid) ?? [];
         projectLayerIds.forEach((layerId) => {
             if (layerId.startsWith(`stations-${pid}-`)) return;
-            const categoryVisible = layerId !== `project-points-${pid}`
+            const categoryVisible = !layerId.startsWith(`project-points-${pid}`)
                 || State.displayPreferences.categories.caveEntrances;
             applyLayerVisibility([layerId], isVisible && categoryVisible);
         });

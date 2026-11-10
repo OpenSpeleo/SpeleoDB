@@ -41,15 +41,23 @@ function installedPackages(modulesDirectory: string): PackageManifest[] {
 }
 
 describe('Bun package manager contract', () => {
-    it('starts Django without building or watching frontend assets', () => {
-        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-manual-assets-'));
+    it('builds assets before starting Django and its automatic watcher', () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'speleodb-watched-assets-'));
         try {
             const bin = path.join(directory, 'bin');
             const trace = path.join(directory, 'commands');
             fs.mkdirSync(bin);
             fs.writeFileSync(path.join(directory, 'bun.lock'), '{}\n');
             for (const command of ['bun', 'python']) {
-                fs.writeFileSync(path.join(bin, command), `#!/bin/sh\nprintf '${command} %s\\n' "$*" >> "$SPELEO_TEST_TRACE"\n`, { mode: 0o755 });
+                // The process boundary must not install dependencies or launch a
+                // second application server. Keep both supervised children alive
+                // briefly so startup ordering does not depend on OS scheduling.
+                fs.writeFileSync(path.join(bin, command), `#!/bin/sh
+printf '${command} %s\\n' "$*" >> "$SPELEO_TEST_TRACE"
+case "$*" in
+  'run dev'|'manage.py runserver_plus 0000:8000') sleep 0.1 ;;
+esac
+`, { mode: 0o755 });
             }
             const result = spawnSync('bash', [path.join(ROOT, 'compose/start')], {
                 cwd: directory,
@@ -58,10 +66,15 @@ describe('Bun package manager contract', () => {
             });
             expect(result.error).toBeUndefined();
             expect(result.status).toBe(0);
-            expect(fs.readFileSync(trace, 'utf8').trim().split('\n')).toEqual([
+            const commands = fs.readFileSync(trace, 'utf8').trim().split('\n');
+            expect(commands.slice(0, 4)).toEqual([
                 'python manage.py migrate',
                 'bun scripts/check-shared-package-pins.ts',
                 'bun install --frozen-lockfile',
+                'bun run build:assets --emptyOutDir=false',
+            ]);
+            expect(commands.slice(4).sort()).toEqual([
+                'bun run dev',
                 'python manage.py runserver_plus 0000:8000',
             ]);
         } finally {

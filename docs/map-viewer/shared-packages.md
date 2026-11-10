@@ -100,14 +100,16 @@ APIs using MapLibre's `transformRequest`. Requests to other hosts and protocols
 are unchanged, so provider credentials cannot leak to application downloads or
 ESRI. Do not replace these labels with raster labels or silently drop layers.
 `MAPBOX_API_TOKEN` remains a provider credential. The provider's unmodified
-88×23 logo is retained as a control whenever the Mapbox base style is loaded; it
-remains present on ESRI switches because that style still supplies overlay
-glyphs. Native source attribution retains the TileJSON credits. Its public
-control lifecycle is wrapped to remove only Mapbox's “Improve this map” feedback
-link, including when source credits refresh. A DOM observer is scoped to that
-control and disconnected on removal; copyright credits and the native compact
-toggle are preserved without extra requests or changes to provider metadata. The
-logo artwork comes from the
+88×23 logo is retained as a control whenever the Mapbox base style is loaded in
+the normal private and public viewers; it remains present on ESRI switches
+because that style still supplies overlay glyphs. Native source attribution
+retains the TileJSON credits. Its public control lifecycle is wrapped to remove
+only Mapbox's “Improve this map” feedback link, including when source credits
+refresh. A DOM observer is scoped to that control and disconnected on removal;
+copyright credits and the native compact toggle are preserved without extra
+requests or changes to provider metadata. The historical viewer disables both
+attribution controls through the shared `showAttribution` option so its distance
+scales sit at the bottom edge. The logo artwork comes from the
 [Mapbox GL JS 3.12.0 stylesheet](https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css)
 and follows Mapbox's
 [attribution guidance](https://docs.mapbox.com/help/dive-deeper/attribution/).

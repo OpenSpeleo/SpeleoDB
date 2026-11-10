@@ -1,5 +1,9 @@
+import { initRevisionPlayback } from './revision-playback.ts';
 import type { ProjectRevisionMapContext } from '../../ts-types/controllers/project-revision-map.ts';
 import { configureRuntimeContext } from '../../frontend_private/static/private/ts/map_viewer/runtime_context.ts';
+import { DEFAULTS } from '../../frontend_private/static/private/ts/map_viewer/defaults.ts';
+import { State } from '../../frontend_private/static/private/ts/map_viewer/state.ts';
+import { computeCameraPadding } from '@speleodb/map-viewer/camera-padding';
 
 export async function init(context: ProjectRevisionMapContext) {
     configureRuntimeContext({ mapboxToken: context.mapboxToken });
@@ -8,65 +12,53 @@ export async function init(context: ProjectRevisionMapContext) {
     );
     const { MapSettings } = await import('../../frontend_private/static/private/ts/map_viewer/components/settings.ts');
     const fullscreenContainer = document.getElementById('map-viewer-shell');
+    fullscreenContainer?.style.setProperty('--revision-scale-width', `${DEFAULTS.HISTORY.SCALE_CONTROL_MAX_WIDTH}px`);
+    const dock = document.getElementById('revision-timeline');
+    const mapElement = document.getElementById('map');
+    const panel = document.querySelector<HTMLDetailsElement>('.historical-revisions');
+    const playbackMetadata = document.getElementById('revision-playback-metadata');
+    const bottomControls = '.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right';
     const viewer = await initReadOnlyViewer(context, async () => ({
         view_name: context.project.name,
         projects: [context.project],
-    }), { showProjectPanel: false, ...(fullscreenContainer ? { fullscreenContainer } : {}) });
+    }), {
+        showProjectPanel: false,
+        showDepthLegend: false,
+        showAttribution: false,
+        scaleControlMaxWidth: DEFAULTS.HISTORY.SCALE_CONTROL_MAX_WIDTH,
+        ...(fullscreenContainer ? { fullscreenContainer } : {}),
+        cameraPadding: () => {
+            const margin = DEFAULTS.HISTORY.CAMERA_PADDING_PX;
+            const bounds = mapElement?.getBoundingClientRect();
+            if (!bounds) return margin;
+            const overlays = [
+                dock,
+                panel,
+                playbackMetadata,
+                mapElement?.querySelector<HTMLElement>('.maplibregl-ctrl-top-right'),
+                ...(mapElement?.querySelectorAll<HTMLElement>(bottomControls) ?? []),
+            ];
+            return computeCameraPadding(bounds, {
+                left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight,
+            }, {
+                padding: margin,
+                marginRatio: DEFAULTS.HISTORY.CAMERA_MARGIN_RATIO,
+                obstacles: overlays.filter((element): element is HTMLElement => !!element && !element.hidden && !!element.getClientRects().length)
+                    .map(element => element.getBoundingClientRect()),
+            });
+        },
+    });
     MapSettings.init({ surveyOnly: true });
-
-    const list = document.querySelector<HTMLElement>('.historical-revision-list');
-    const status = document.querySelector<HTMLElement>('.historical-revision-status');
-    let selected = list?.querySelector<HTMLAnchorElement>('a[aria-current="page"]') ?? null;
-    let pending: object | null = null;
-    selected?.scrollIntoView({ block: 'nearest' });
-
-    async function selectRevision(link: HTMLAnchorElement, pushHistory: boolean) {
-        const geojsonUrl = link.dataset.geojsonUrl;
-        if (!geojsonUrl || (selected === link && !pending)) return;
-        const selection = {};
-        pending = selection;
-        list?.setAttribute('aria-busy', 'true');
-        if (status) status.textContent = 'Loading revision…';
-        try {
-            const displayed = await viewer.showProject({ ...context.project, geojson_file: geojsonUrl });
-            if (pending !== selection) return;
-            if (!displayed) {
-                if (status) status.textContent = 'Unable to load this revision. Select it to try again.';
-                if (!pushHistory && selected) history.replaceState(null, '', selected.href);
-                return;
-            }
-            selected?.classList.remove('is-selected');
-            selected?.removeAttribute('aria-current');
-            selected = link;
-            link.classList.add('is-selected');
-            link.setAttribute('aria-current', 'page');
-            if (pushHistory) history.pushState(null, '', link.href);
-            link.scrollIntoView({ block: 'nearest' });
-            if (status) status.textContent = '';
-        } catch (error) {
-            if (pending !== selection) return;
-            console.error('Failed to select historical revision', error);
-            if (status) status.textContent = 'Unable to load this revision. Select it to try again.';
-            if (!pushHistory && selected) history.replaceState(null, '', selected.href);
-        } finally {
-            if (pending === selection) {
-                pending = null;
-                list?.removeAttribute('aria-busy');
-            }
-        }
-    }
-
-    list?.addEventListener('click', event => {
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        const link = event.target instanceof Element
-            ? event.target.closest<HTMLAnchorElement>('a.historical-revision') : null;
-        if (!link || !list.contains(link) || !link.dataset.geojsonUrl) return;
-        event.preventDefault();
-        void selectRevision(link, true);
-    });
-    window.addEventListener('popstate', () => {
-        const link = [...list?.querySelectorAll<HTMLAnchorElement>('a.historical-revision') ?? []]
-            .find(item => new URL(item.href).pathname.toLowerCase() === location.pathname.toLowerCase());
-        if (link) void selectRevision(link, false);
-    });
+    const playback = initRevisionPlayback(context, viewer);
+    const map = State.map;
+    const destroy = () => {
+        playback.destroy();
+        map?.off('remove', destroy);
+        window.removeEventListener('pagehide', pageHidden);
+    };
+    const pageHidden = (event: PageTransitionEvent) => {
+        if (!event.persisted) destroy();
+    };
+    map?.on('remove', destroy);
+    window.addEventListener('pagehide', pageHidden);
 }

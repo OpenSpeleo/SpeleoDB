@@ -28,6 +28,8 @@ export interface GeometryCameraMap {
         bearing?: number;
         pitch?: number;
         retainPadding?: boolean;
+        duration?: number;
+        linear?: boolean;
     }): unknown;
 }
 

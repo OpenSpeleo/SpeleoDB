@@ -36,11 +36,13 @@ export interface RendererLayout {
     'text-pitch-alignment'?: 'viewport';
 }
 export interface RendererPaint {
+    'raster-fade-duration'?: number;
     'fill-color'?: RendererValue;
     'fill-opacity'?: RendererValue;
     'line-color'?: RendererValue;
     'line-width'?: RendererValue;
     'line-opacity'?: RendererValue;
+    'line-opacity-transition'?: { duration: number; delay?: number };
     'line-dasharray'?: number[];
     'circle-radius'?: RendererValue;
     'circle-color'?: RendererValue;
@@ -56,7 +58,7 @@ export interface RendererPaint {
 }
 export interface RendererLayer {
     id: string;
-    type: 'line' | 'fill' | 'circle' | 'symbol';
+    type: 'line' | 'fill' | 'circle' | 'symbol' | 'raster';
     source?: string;
     filter?: RendererValue;
     minzoom?: number;
@@ -92,10 +94,22 @@ export interface RendererPopupOptions {
     maxWidth: string;
 }
 export interface RendererMap extends NavigationMap, GeometryCameraMap {
+    cancelPendingTileRequestsWhileZooming: boolean;
+    on(event: 'render' | 'moveend', handler: () => void): unknown;
+    off(event: 'render' | 'moveend', handler: () => void): unknown;
+    on(event: 'error', handler: (event: { sourceId?: string; error?: Error }) => void): unknown;
+    off(event: 'error', handler: (event: { sourceId?: string; error?: Error }) => void): unknown;
+    isSourceLoaded(id: string): boolean;
+    triggerRepaint(): unknown;
+    getZoom(): number;
+    getBearing(): number;
+    getPitch(): number;
+    stop(): unknown;
     on(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
     on(event: 'remove' | 'style.load', handler: () => void): unknown;
     off(event: 'movestart', handler: (event: NavigationGesture) => void): unknown;
     off(event: 'remove' | 'style.load', handler: () => void): unknown;
+    getLayersOrder(): string[];
     getLayer(id: string): RendererLayer | undefined;
     addLayer(layer: RendererLayer): unknown;
     removeLayer(id: string): unknown;

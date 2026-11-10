@@ -1,0 +1,126 @@
+<section id="revision-timeline"
+         class="revision-timeline"
+         aria-label="Historical map playback"
+         aria-busy="true">
+  <button type="button"
+          id="revision-details"
+          class="revision-details"
+          aria-controls="revision-detail-content"
+          aria-expanded="false"
+          title="View current revision details">
+    <span class="revision-position-label" aria-hidden="true">Revision</span>
+    <span id="revision-position" class="revision-position">Preparing</span>
+    <span class="sr-only">
+      <span id="revision-date">{{ commit.authored_date|date:"M j, Y" }}</span>
+      <span id="revision-message">{{ commit.message }}</span>
+      <span id="revision-author">by {{ commit.author_name }}</span>
+    </span>
+  </button>
+  <div class="revision-transport"
+       role="group"
+       aria-label="Playback controls">
+    <button type="button"
+            id="revision-previous"
+            class="revision-step"
+            aria-label="Previous revision"
+            title="Previous revision"
+            disabled>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="6" y="6" width="2" height="12" rx="1" />
+        <path d="M18 6.8a.8.8 0 0 0-1.2-.7l-7.2 5.2a.8.8 0 0 0 0 1.4l7.2 5.2a.8.8 0 0 0 1.2-.7Z" />
+      </svg>
+    </button>
+    <button type="button"
+            id="revision-play"
+            class="revision-play"
+            aria-label="Play history"
+            title="Play history"
+            disabled>
+      <svg class="revision-play-icon"
+           viewBox="0 0 24 24"
+           fill="currentColor"
+           aria-hidden="true">
+        <path d="M8 5.5a1 1 0 0 1 1.5-.86l10 5.63a2 2 0 0 1 0 3.46l-10 5.63A1 1 0 0 1 8 18.5Z" />
+      </svg>
+      <svg class="revision-pause-icon"
+           viewBox="0 0 24 24"
+           fill="currentColor"
+           aria-hidden="true"
+           hidden>
+        <rect x="6" y="5" width="4" height="14" rx="1" />
+        <rect x="14" y="5" width="4" height="14" rx="1" />
+      </svg>
+      <span id="revision-play-label" class="sr-only">Play</span>
+    </button>
+    <button type="button"
+            id="revision-next"
+            class="revision-step"
+            aria-label="Next revision"
+            title="Next revision"
+            disabled>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="16" y="6" width="2" height="12" rx="1" />
+        <path d="M6 6.8a.8.8 0 0 1 1.2-.7l7.2 5.2a.8.8 0 0 1 0 1.4l-7.2 5.2a.8.8 0 0 1-1.2-.7Z" />
+      </svg>
+    </button>
+  </div>
+  <label class="revision-speed">
+    <span class="sr-only">Playback speed, from 0.1 to 10 times normal, with normal speed in the middle</span>
+    <span class="revision-speed-labels" aria-hidden="true">
+      <span>Slow</span>
+      <output id="revision-speed-value" for="revision-speed">1×</output>
+      <span>Fast</span>
+    </span>
+    <input id="revision-speed"
+           type="range"
+           min="-1"
+           max="1"
+           step="0.01"
+           value="0"
+           aria-label="Playback speed"
+           aria-valuetext="1 times normal speed"
+           disabled />
+  </label>
+  <div class="revision-scrubber">
+    <div class="revision-track">
+      <div class="revision-rail" aria-hidden="true"></div>
+      <input id="revision-seek"
+             type="range"
+             min="0"
+             max="0"
+             value="0"
+             step="1"
+             aria-label="Map revision"
+             aria-describedby="revision-seek-help"
+             disabled />
+      <div id="revision-ticks" class="revision-ticks"></div>
+      <div class="revision-markers" aria-hidden="true">
+        <span id="revision-playhead" class="revision-playhead" hidden></span>
+        <span class="revision-pending-marker"></span>
+      </div>
+      <div id="revision-tooltip" class="revision-tooltip" role="tooltip" hidden></div>
+    </div>
+    <div class="revision-endpoints" aria-hidden="true">
+      <span id="revision-first-date">First map</span>
+      <span id="revision-last-date">Latest map</span>
+    </div>
+    <span id="revision-seek-help" class="sr-only">Select a dot or drag to choose a revision. Arrow keys move between revisions; Home selects the first map and End the latest. Revisions are equally spaced.</span>
+  </div>
+  <div class="revision-feedback">
+    <div class="revision-feedback-copy">
+      <span id="revision-status">Preparing the survey map…</span>
+      <span id="revision-pending" class="revision-pending" hidden></span>
+    </div>
+    <div class="revision-recovery">
+      <button type="button" id="revision-cancel" hidden>Cancel</button>
+      <button type="button" id="revision-retry" hidden>Retry</button>
+      <button type="button" id="revision-reload" hidden>Reload page</button>
+    </div>
+  </div>
+  <span id="revision-summary" class="sr-only"></span>
+</section>
+<span id="revision-announcement"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"></span>

@@ -1,0 +1,46 @@
+{% url 'private:project_revision_map' project_id=project.id hexsha=commit.id as selected_revision_url %}
+<script type="application/json"
+        data-speleodb-controller="project-revision-map">
+  {
+    "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+    "commitSha": "{{ commit.id|escapejs }}",
+    "artifactRevision": "{{ artifact.geojson_revision|escapejs }}",
+    "project": {
+      "id": "{{ project.id }}",
+      "name": "{{ project.name|escapejs }}",
+      "color": "{{ project.color|escapejs }}",
+      "geojson_file": "{{ geojson_url|escapejs }}"
+    },
+    "selectedRevision": {
+      "commitSha": "{{ commit.id|escapejs }}",
+      "artifactRevision": "{{ artifact.geojson_revision|escapejs }}",
+      "url": "{{ selected_revision_url|escapejs }}",
+      "geojsonUrl": "{{ geojson_url|escapejs }}",
+      "dateLabel": "{{ commit.authored_date|date:'M j, Y'|escapejs }}",
+      "displayDateLabel": "{{ commit.authored_date|date:'M j, Y'|escapejs }} at {{ commit.authored_date|date:'H:i'|escapejs }}",
+      "timestampLabel": "{{ commit.authored_date|date:'M j, Y'|escapejs }} at {{ commit.authored_date|date:'H:i:s O'|escapejs }}",
+      "message": "{{ commit.message|escapejs }}",
+      "authorName": "{{ commit.author_name|escapejs }}",
+      "available": true
+    },
+    "revisions": [
+      {% for revision in revisions %}
+      {
+        "commitSha": "{{ revision.commit_sha|escapejs }}",
+        "artifactRevision": {% if revision.artifact_revision %} "{{ revision.artifact_revision|escapejs }}"
+        {% else %}null{% endif %},
+        "url": "{{ revision.url|escapejs }}",
+        "geojsonUrl": {% if revision.geojson_url %} "{{ revision.geojson_url|escapejs }}"
+        {% else %}null{% endif %},
+        "dateLabel": "{{ revision.date|date:'M j, Y'|escapejs }}",
+        "displayDateLabel": "{{ revision.date|date:'M j, Y'|escapejs }} at {{ revision.date|date:'H:i'|escapejs }}",
+        "timestampLabel": "{{ revision.date|date:'M j, Y'|escapejs }} at {{ revision.date|date:'H:i:s O'|escapejs }}",
+        "message": "{{ revision.message|escapejs }}",
+        "authorName": "{{ revision.author_name|escapejs }}",
+        "available": {{ revision.available|yesno:'true,false' }}
+      }
+      {% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    ]
+  }
+</script>

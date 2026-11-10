@@ -236,8 +236,9 @@ export const DepthLegend = {
         if (!indicator || !labelEl) return;
 
         const sourceId = lineFeature.source || lineFeature.layer?.source;
-        const projectId = typeof sourceId === 'string' && sourceId.startsWith('project-geojson-')
-            ? sourceId.slice('project-geojson-'.length) : null;
+        const prefix = typeof sourceId === 'string'
+            ? ['project-geojson-', 'project-history-geojson-'].find(value => sourceId.startsWith(value)) : undefined;
+        const projectId = prefix && sourceId ? sourceId.slice(prefix.length) : null;
         if (projectId && (!State.projectDepthDomains.has(projectId) || !Layers.isProjectEffectivelyVisible(projectId))) {
             this.hideDepthCursor();
             return;

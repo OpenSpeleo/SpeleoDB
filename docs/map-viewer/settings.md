@@ -40,14 +40,16 @@ preferences. The existing map-canvas source picker and its persistence remain
 shared as before; map source is outside Settings.
 
 Historical revision maps reuse the same Settings dialog and trigger snippets,
-with `survey_only=True` omitting the visibility section. Their controller uses
-`MapSettings.init({surveyOnly: true})`: color modes, depth limits and reset
-remain available, while marker categories, geometry labels and manager launchers
-are absent. These pages use non-persistent display preferences so historical
-browsing does not overwrite saved private-viewer settings. The shared read-only
-renderer can omit its Active Projects panel and target the whole historical map
-shell for fullscreen, retaining the Project History panel and toolbar beside the
-map.
+with `survey_only=True` omitting the visibility section. Their single Settings
+button occupies the last column of the same responsive toolbar grid, retaining
+the private viewer's button width, height, spacing, and visual states. Their
+controller uses `MapSettings.init({surveyOnly: true})`: color modes, depth
+limits and reset remain available, while marker categories, geometry labels and
+manager launchers are absent. These pages use non-persistent display preferences
+so historical browsing does not overwrite saved private-viewer settings. The
+shared read-only renderer can omit its Active Projects panel and target the
+whole historical map shell for fullscreen, retaining the Project History panel
+and toolbar beside the map.
 
 The Settings regression exercises survey-only color and depth changes and reset;
 existing private Settings tests retain the full marker and manager contract.

@@ -1,3 +1,4 @@
+import type { ProjectMapRevision, ProjectRevisionMapContext } from '../../ts-types/controllers/project-revision-map.ts';
 import { initReadOnlyViewer } from '../../frontend_private/static/private/ts/map_viewer/read_only_viewer.ts';
 import { init as initProjectRevisionMap } from '../controllers/project-revision-map.ts';
 import { setBrowserUrl, startApiServer } from './api-server.ts';
@@ -33,18 +34,21 @@ class VendorBounds {
     constructor(...points: unknown[]) { this.points = points; }
     extend(point: unknown) { this.points.push(point); return this; }
     isEmpty() { return this.points.length === 0; }
+    toArray(): [[number, number], [number, number]] { return [[-87, 20], [-86.9, 20.1]]; }
 }
 interface VendorSource { data?: unknown; setData(data: unknown): void }
 type VendorLayer = Omit<RendererLayer, 'type'> & { type: RendererLayer['type'] | CustomLayerInterface['type'] };
 // jsdom cannot create WebGL maps. This engine port is the only renderer
 // substitute; viewer startup, state, configuration, layers and UI remain real.
 class VendorMap implements GlobeAtmosphereMap {
+    cancelPendingTileRequestsWhileZooming = true;
     sources = new Map<string, VendorSource>();
     layers = new Map<string, VendorLayer>();
     images = new Set<string>();
     styleLoaded = false;
     sky: SkySpecification | undefined;
     fits: { bounds: unknown; options: unknown }[] = [];
+    cameraDurationMs = 0;
     addSource(id: string, definition: { data?: unknown }) {
         this.sources.set(id, { ...definition, setData(data) { this.data = data; } });
     }
@@ -58,7 +62,12 @@ class VendorMap implements GlobeAtmosphereMap {
     async loadImage(_url: string) { return { data: {} }; }
 
     addImage(id: string) { this.images.add(id); }
-    fitBounds(bounds: unknown, options: unknown) { this.fits.push({ bounds, options }); }
+    fitBounds(bounds: unknown, options: unknown) { this.fits.push({ bounds, options }); setTimeout(() => { void this.fire('moveend'); }, this.cameraDurationMs); }
+    stop() {}
+    getZoom() { return 10; }
+    getBearing() { return 0; }
+    getPitch() { return 0; }
+    project(point: readonly number[]) { return { x: point[0]!, y: point[1]! }; }
 
     handlers = new Map<string, Set<(event: unknown) => unknown>>();
     controls: VendorControl[] = [];
@@ -66,6 +75,10 @@ class VendorMap implements GlobeAtmosphereMap {
     creationOptions: MapCreationOptions | undefined;
     cameraJumps: unknown[] = [];
     resizeCount = 0;
+    renderingBlocked = false;
+    renderedLayers: string[][] = [];
+    isSourceLoaded(id: string) { return this.sources.has(id); }
+    triggerRepaint() { if (!this.renderingBlocked) setTimeout(() => { void this.fire('render'); }, 0); }
     on(name: string, handler: (event: unknown) => unknown) {
         if (!this.handlers.has(name)) this.handlers.set(name, new Set());
         this.handlers.get(name)!.add(handler);
@@ -73,6 +86,8 @@ class VendorMap implements GlobeAtmosphereMap {
     off(name: string, handler: (event: unknown) => unknown) { this.handlers.get(name)?.delete(handler); }
     async fire(name: string) {
         if (name === 'style.load') this.styleLoaded = true;
+        if (name === 'render') this.renderedLayers.push([...this.layers.values()]
+            .filter(layer => layer.layout?.visibility !== 'none').map(layer => layer.id));
         await Promise.all([...this.handlers.get(name) || []].map(handler => handler(undefined)));
     }
     getContainer() { return document.getElementById('map')!; }
@@ -152,6 +167,8 @@ beforeEach(() => {
             : request.path.endsWith('/geojson/') && request.path !== '/api/v2/projects/geojson/' ? emptyGeoJSON : [] };
     });
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    // JSDOM has no native media-query evaluation. Keep actual timers and rendering callbacks.
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
     vi.stubGlobal('__mapRenderer', {
         Map: class extends VendorMap { constructor(options: MapCreationOptions) { super(); this.creationOptions = options; captureMap(this); } },
         AttributionControl: class {
@@ -538,6 +555,21 @@ it.each([
     expect(element.style.height).toBe(height);
 });
 
+it('keeps the historical map and its bottom controls within a tablet viewport as it resizes', async () => {
+    const element = document.getElementById('map')!;
+    // JSDOM has no layout or native viewport size; preserve the actual viewer
+    // height policy while supplying the measured tablet map position.
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 221, 852, 600));
+    vi.stubGlobal('innerWidth', 900);
+    vi.stubGlobal('innerHeight', 800);
+    await initProjectRevisionMap(revisionContext(project.geojson_file));
+    expect(element.style.height).toBe('579px');
+    expect(221 + Number.parseFloat(element.style.height)).toBeLessThanOrEqual(window.innerHeight);
+    vi.stubGlobal('innerHeight', 700);
+    window.dispatchEvent(new Event('resize'));
+    expect(element.style.height).toBe('479px');
+});
+
 it('opens the actual geometry editor from the private top bar after map readiness', async () => {
     document.body.insertAdjacentHTML('beforeend', '<button id="create-geometry-btn">Create Geometry</button>');
     configureRuntimeContext({ icons: {} });
@@ -591,44 +623,49 @@ it('resizes through real timers and stops resize and pending display work on rem
     expect(State.map).toBeNull();
 });
 
+
+function revisionContext(geojsonUrl: string, overrides: Partial<ProjectRevisionMapContext> = {}): ProjectRevisionMapContext {
+    const selectedRevision: ProjectMapRevision = {
+        commitSha: 'a'.repeat(40), artifactRevision: 'stored-artifact', url: `${server.origin}/revision/${'a'.repeat(40)}/`,
+        geojsonUrl, dateLabel: 'Oct 21, 2026', displayDateLabel: 'Oct 21, 2026 at 00:35', timestampLabel: 'Oct 21, 2026 at 00:35',
+        message: 'Initial survey', authorName: 'Diver', available: true,
+    };
+    return { mapboxToken: '', project: { ...project, geojson_file: geojsonUrl }, commitSha: selectedRevision.commitSha,
+        artifactRevision: selectedRevision.artifactRevision!, selectedRevision, revisions: [selectedRevision], ...overrides };
+}
+
+function displayedSurveyData() {
+    const sourceId = (State.allProjectLayers.get('project') ?? []).map(id => map.getLayer(id)?.source).find(Boolean);
+    return sourceId ? map.getSource(sourceId)?.data : undefined;
+}
 it('loads only the historical artifact and retains it after replacing the basemap', async () => {
     responses.set('/old-survey.geojson', { json: survey });
-    const historicalContext = {
-        mapboxToken: '',
-        project: { ...project, geojson_file: `${server.origin}/old-survey.geojson` },
-        commitSha: 'a'.repeat(40),
-        artifactRevision: 'stored-artifact',
-    };
+    const historicalContext = revisionContext(`${server.origin}/old-survey.geojson`);
     await initProjectRevisionMap(historicalContext);
     await map.fire('style.load');
     await map.fire('load');
     await ViewerUpdates.whenIdle();
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(displayedSurveyData()).toMatchObject(survey);
     expect(requests).toEqual(['/old-survey.geojson']);
     expect(map.handlers.has('contextmenu')).toBe(false);
     expect(document.querySelector('.measurement-control')).toBeNull();
     map.setStyle();
     await map.fire('style.load');
     await sourceChanged(true);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(displayedSurveyData()).toMatchObject(survey);
     expect(requests).toEqual(['/old-survey.geojson', '/old-survey.geojson']);
 });
 
 
 it('reports a historical download failure without fetching current survey data', async () => {
     responses.set('/missing-survey.geojson', { status: 404, json: { detail: 'Missing' } });
-    await initProjectRevisionMap({
-        mapboxToken: '',
-        project: { ...project, geojson_file: `${server.origin}/missing-survey.geojson` },
-        commitSha: 'a'.repeat(40),
-        artifactRevision: 'stored-artifact',
-    });
+    const viewer = await initReadOnlyViewer({}, async () => ({ view_name: 'Historical', projects: [{ ...project, geojson_file: `${server.origin}/missing-survey.geojson` }] }), { showProjectPanel: false });
     await map.fire('style.load');
     await map.fire('load');
     await ViewerUpdates.whenIdle();
     expect(requests).toEqual(['/missing-survey.geojson']);
     expect(map.getSource('project-geojson-project')).toBeUndefined();
-    expect(document.body.textContent).toContain('Failed to load survey data');
+    expect(await viewer.ready).toBe(false);
     expect(document.querySelector('#loading-overlay')?.classList.contains('pointer-events-none')).toBe(true);
 });
 
@@ -648,6 +685,37 @@ it('keeps the historical toolbar in fullscreen without an Active Projects panel'
     expect(document.body.textContent).not.toContain('Active Projects');
 });
 
+it('leaves a usable camera viewport when history and playback overlap on a short screen', async () => {
+    const shell = document.getElementById('map-viewer-shell')!;
+    const panel = document.createElement('details');
+    panel.className = 'historical-revisions';
+    panel.open = true;
+    const dock = document.createElement('div');
+    dock.id = 'revision-timeline';
+    shell.append(panel, dock);
+    // JSDOM does not calculate overlay rectangles; supply only this native layout boundary.
+    for (const [element, rect] of [
+        [document.getElementById('map')!, new DOMRect(0, 0, 320, 200)],
+        [panel, new DOMRect(12, 12, 230, 88)],
+        [dock, new DOMRect(8, 94, 304, 106)],
+    ] as const) {
+        vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(rect);
+        vi.spyOn(element, 'getClientRects').mockReturnValue(Object.assign([rect], { item: (index: number) => index === 0 ? rect : null }));
+    }
+    responses.set('/survey.geojson', { json: survey });
+    await initProjectRevisionMap(revisionContext(project.geojson_file));
+    panel.open = true;
+    await map.fire('style.load');
+    await map.fire('load');
+    expect(map.fits).toHaveLength(1);
+    const options = map.fits[0]!.options as { padding: number | { top: number; bottom: number; left: number; right: number } };
+    const padding = typeof options.padding === 'number'
+        ? { top: options.padding, bottom: options.padding, left: options.padding, right: options.padding }
+        : options.padding;
+    expect(padding.top + padding.bottom).toBeLessThan(200);
+    expect(padding.left + padding.right).toBeLessThan(320);
+});
+
 it('changes historical artifacts in the same map and preserves the previous survey after a missing artifact', async () => {
     const otherSurvey = { ...survey, features: [{ ...survey.features[0], geometry: { type: 'LineString', coordinates: [[10, 20], [11, 21]] } }] };
     responses.set('/survey.geojson', { json: survey });
@@ -661,10 +729,11 @@ it('changes historical artifacts in the same map and preserves the previous surv
     expect(await viewer.showProject({ ...project, geojson_file: `${server.origin}/other.geojson` })).toBe(true);
     expect(State.map).toBe(originalMap);
     expect(State.displayPreferences.colorMode).toBe('depth');
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(otherSurvey);
+    expect(displayedSurveyData()).toMatchObject(otherSurvey);
     expect(map.fits).toHaveLength(2);
+    expect(map.fits[1]!.bounds).toMatchObject({ points: [[10, 20], [11, 21]] });
     expect(await viewer.showProject({ ...project, geojson_file: `${server.origin}/missing.geojson` })).toBe(false);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(otherSurvey);
+    expect(displayedSurveyData()).toMatchObject(otherSurvey);
     expect(map.fits).toHaveLength(2);
 });
 
@@ -689,7 +758,7 @@ it('keeps the latest historical selection through a style change and ignores a d
     expect(await latest).toBe(true);
     expect(await older).toBe(false);
     releaseOlder({ json: survey });
-    await vi.waitFor(() => expect(map.getSource('project-geojson-project')?.data).toMatchObject(latestSurvey));
+    await vi.waitFor(() => expect(displayedSurveyData()).toMatchObject(latestSurvey));
     await ViewerUpdates.whenIdle();
     expect(map.fits).toHaveLength(2);
     expect(Config.projects[0]?.geojson_url).toBe(`${server.origin}/latest.geojson`);
@@ -703,7 +772,7 @@ it('accepts a historical selection before the initial map load', async () => {
     await map.fire('load');
     expect(await selected).toBe(true);
     expect(requests).toEqual(['/early.geojson']);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(displayedSurveyData()).toMatchObject(survey);
 });
 
 it('does not reuse old bounds when switching to an empty historical artifact', async () => {
@@ -713,12 +782,28 @@ it('does not reuse old bounds when switching to an empty historical artifact', a
     await map.fire('style.load');
     await map.fire('load');
     expect(await viewer.showProject({ ...project, geojson_file: `${server.origin}/empty.geojson` })).toBe(true);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(emptyGeoJSON);
+    expect(displayedSurveyData()).toMatchObject(emptyGeoJSON);
     expect(State.projectBounds.has('project')).toBe(false);
     expect(map.fits).toHaveLength(1);
 });
 
-it('selects revisions and restores an uppercase initial SHA through Back without replacing the map', async () => {
+it('keeps disabled cave entrances hidden in every rendered historical replacement frame', async () => {
+    const entrances = { ...survey, features: [...survey.features, {
+        type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [-87, 20] },
+    }] };
+    responses.set('/survey.geojson', { json: entrances });
+    responses.set('/next.geojson', { json: entrances });
+    const viewer = await initReadOnlyViewer({}, async () => ({ view_name: 'History', projects: [project] }), { showProjectPanel: false });
+    await map.fire('style.load');
+    await map.fire('load');
+    await Layers.setCategoryVisibility('caveEntrances', false);
+    map.renderedLayers = [];
+    expect(await viewer.showProject({ ...project, geojson_file: `${server.origin}/next.geojson` })).toBe(true);
+    expect(map.renderedLayers.length).toBeGreaterThan(0);
+    expect(map.renderedLayers.flat().filter(id => id.startsWith('project-points-'))).toEqual([]);
+});
+
+it('selects revisions after a cached page return and restores an uppercase initial SHA through Back', async () => {
     const nextSurvey = { ...survey, features: [{ ...survey.features[0], geometry: { type: 'LineString', coordinates: [[4, 5], [6, 7]] } }] };
     responses.set('/survey.geojson', { json: survey });
     responses.set('/next.geojson', { json: nextSurvey });
@@ -728,11 +813,13 @@ it('selects revisions and restores an uppercase initial SHA through Back without
     first.className = 'historical-revision is-selected';
     first.href = `${server.origin}/revision/${'a'.repeat(40)}/`;
     first.dataset.geojsonUrl = `${server.origin}/survey.geojson`;
+    first.dataset.commitSha = 'a'.repeat(40);
     first.setAttribute('aria-current', 'page');
     const next = document.createElement('a');
     next.className = 'historical-revision';
     next.href = `${server.origin}/revision/next/`;
     next.dataset.geojsonUrl = `${server.origin}/next.geojson`;
+    next.dataset.commitSha = 'b'.repeat(40);
     for (const [className, text] of [
         ['historical-revision-date', 'Oct 21, 2026 at 00:35'],
         ['historical-revision-message', 'initial'],
@@ -749,28 +836,37 @@ it('selects revisions and restores an uppercase initial SHA through Back without
     list.append(first, next);
     document.getElementById('map-viewer-shell')!.append(list);
     history.replaceState(null, '', `${server.origin}/revision/${'A'.repeat(40)}/`);
-    await initProjectRevisionMap({ mapboxToken: '', project, commitSha: 'a'.repeat(40), artifactRevision: 'original' });
+    const context = revisionContext(project.geojson_file);
+    context.revisions = [{ ...context.selectedRevision, commitSha: next.dataset.commitSha, url: next.href, geojsonUrl: next.dataset.geojsonUrl, message: 'Next survey' }, context.selectedRevision];
+    await initProjectRevisionMap(context);
     await map.fire('style.load');
     await map.fire('load');
     const originalMap = map;
     await Layers.setColorMode('shot');
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
     next.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(next.getAttribute('aria-current')).toBe('page'));
     expect(first.hasAttribute('aria-current')).toBe(false);
     expect(next.textContent).not.toContain('Viewing');
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(nextSurvey);
+    expect(displayedSurveyData()).toMatchObject(nextSurvey);
     expect(State.map).toBe(originalMap);
     expect(State.displayPreferences.colorMode).toBe('shot');
     expect(location.pathname).toBe('/revision/next/');
-    expect(map.fits).toHaveLength(2);
+    // Metadata publishes on the accepted frame; camera movement follows the
+    // asynchronous display update, so observe that separate completion.
+    await vi.waitFor(() => expect(map.fits).toHaveLength(2));
+    expect(map.fits[1]!.bounds).toMatchObject({ points: [[4, 5], [6, 7]] });
     history.back();
     await vi.waitFor(() => expect(first.getAttribute('aria-current')).toBe('page'));
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(displayedSurveyData()).toMatchObject(survey);
     expect(State.map).toBe(originalMap);
     expect(State.displayPreferences.colorMode).toBe('shot');
     expect(location.pathname).toBe(`/revision/${'A'.repeat(40)}/`);
+    await vi.waitFor(() => expect(map.fits).toHaveLength(3));
+    expect(map.fits[2]!.bounds).toEqual(map.fits[0]!.bounds);
 });
 
 
@@ -782,7 +878,64 @@ it('restores the initial artifact when an early selection fails before any map w
     await map.fire('style.load');
     await map.fire('load');
     expect(await selection).toBe(false);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
+    expect(displayedSurveyData()).toMatchObject(survey);
+});
+
+it.each([false, true])('finishes initial readiness after canceling a superseding selection (initial frame accepted: %s)', async initialDisplayed => {
+    let releaseInitial!: (reply: ApiTestReply) => void;
+    let releaseSelection!: (reply: ApiTestReply) => void;
+    const initialResponse = new Promise<ApiTestReply>(resolve => { releaseInitial = resolve; });
+    const selectionResponse = new Promise<ApiTestReply>(resolve => { releaseSelection = resolve; });
+    server.handle(request => {
+        requests.push(request.path);
+        return request.path === '/next.geojson' ? selectionResponse : initialResponse;
+    });
+    const viewer = await initReadOnlyViewer({}, async () => ({ view_name: 'History', projects: [project] }), { showProjectPanel: false });
+    map.cameraDurationMs = 250;
+    let ready: boolean | undefined;
+    void viewer.ready.then(value => { ready = value; });
+    await map.fire('style.load');
+    const initialLoad = map.fire('load');
+    await vi.waitFor(() => expect(requests).toContain('/survey.geojson'));
+    if (initialDisplayed) {
+        releaseInitial({ json: survey });
+        await vi.waitFor(() => expect(map.fits).toHaveLength(1));
+        expect(ready).toBeUndefined();
+    }
+    const controller = new AbortController();
+    const selection = viewer.showProject({ ...project, geojson_file: `${server.origin}/next.geojson` }, { signal: controller.signal });
+    await vi.waitFor(() => expect(requests).toContain('/next.geojson'));
+    controller.abort();
+    releaseInitial({ json: survey });
+    releaseSelection({ json: emptyGeoJSON });
+    expect(await selection).toBe(false);
+    await initialLoad;
+    await vi.waitFor(() => expect(ready).toBe(true));
+    expect(displayedSurveyData()).toMatchObject(survey);
+    expect(Config.projects[0]?.geojson_url).toBe(project.geojson_file);
+});
+
+it('clears the initial overlay when a cancellation preserves the first accepted frame', async () => {
+    responses.set('/survey.geojson', { json: survey });
+    responses.set('/next.geojson', { json: emptyGeoJSON });
+    const viewer = await initReadOnlyViewer({}, async () => ({ view_name: 'History', projects: [project] }), { showProjectPanel: false });
+    const controller = new AbortController();
+    let selection: Promise<boolean> | undefined;
+    map.on('render', async () => {
+        // Let the native frame publish its geometry before interrupting the
+        // remaining scheduled display update, without advancing a clock.
+        await Promise.resolve();
+        if (!selection && State.allProjectLayers.has('project')) {
+            selection = viewer.showProject({ ...project, geojson_file: `${server.origin}/next.geojson` }, { signal: controller.signal });
+            controller.abort();
+        }
+    });
+    await map.fire('style.load');
+    await map.fire('load');
+    expect(await selection).toBe(false);
+    expect(await viewer.ready).toBe(true);
+    expect(displayedSurveyData()).toMatchObject(survey);
+    expect(document.getElementById('loading-overlay')?.classList.contains('pointer-events-none')).toBe(true);
 });
 
 it('settles a queued historical selection when its map is removed before readiness', async () => {
@@ -793,4 +946,31 @@ it('settles a queued historical selection when its map is removed before readine
     await vi.waitFor(() => expect(outcome).toBe(false));
     await selection;
     expect(requests).toEqual([]);
+});
+
+
+it('keeps the displayed historical geometry when pause cancels a prepared replacement before rendering', async () => {
+    responses.set('/survey.geojson', { json: survey });
+    const nextSurvey = { ...survey, features: [{ ...survey.features[0], geometry: { type: 'LineString', coordinates: [[10, 20], [11, 21]] } }] };
+    responses.set('/next.geojson', { json: nextSurvey });
+    const viewer = await initReadOnlyViewer({}, async () => ({ view_name: 'History', projects: [project] }), { showProjectPanel: false });
+    await map.fire('style.load');
+    await map.fire('load');
+    map.renderingBlocked = true;
+    const abort = new AbortController();
+    let displayed = false;
+    const selecting = viewer.showProject({ ...project, geojson_file: `${server.origin}/next.geojson` }, {
+        signal: abort.signal, camera: 'preserve', onDisplayed() { displayed = true; },
+    });
+    await vi.waitFor(() => expect([...map.sources.values()].some(source => JSON.stringify(source.data).includes('[[10,20],[11,21]]'))).toBe(true));
+    expect(displayedSurveyData()).toMatchObject(survey);
+    expect(displayed).toBe(false);
+    abort.abort();
+    expect(await selecting).toBe(false);
+    map.renderingBlocked = false;
+    await map.fire('render');
+    expect(map.sources.size).toBe(1);
+    expect(displayedSurveyData()).toMatchObject(survey);
+    expect(displayed).toBe(false);
+    expect(map.fits).toHaveLength(1);
 });

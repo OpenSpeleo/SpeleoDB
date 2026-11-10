@@ -26,13 +26,72 @@ data. Style replacement reloads the same selected artifact; no latest-project
 request or private editing tools are initialized. Download failures display an
 error and settle the loading overlay without selecting another revision.
 Revision selection uses the composition's `showProject()` handle to replace the
-survey source and fit the new bounds without recreating the map. Display
+survey source and fit the displayed revision's own bounds without recreating the
+map. Each accepted revision replaces its previous bounds; camera targets do not
+accumulate history extents or inherit a previous revision's zoom limit. Direct
+camera easing preserves bearing and pitch, uses the current overlay padding, and
+allows both zooming out for larger surveys and back in for smaller ones. Display
 settings, basemap and fullscreen state survive selection. The controller updates
 the selected row and browser history only after a successful display;
 Back/Forward uses the same handle and accepts uppercase commit URLs like the
 Django route. Superseded downloads cannot publish geometry or move the camera. A
 failed selection retains the previous survey and selection. Refreshing the
 historical page renews its signed URLs after authorization.
+
+Canceling a pending Back/Forward selection restores the URL of the displayed
+survey. Leaving a page preserved in the browser's navigation cache pauses
+playback while retaining its controls, so returning to it remains interactive.
+
+The historical timeline keeps discrete survey revisions separate from its
+continuous elapsed-time playhead. Playback hides Project History and presents
+the displayed date, message, and author in a centered banner spanning 80% of the
+map. Larger text makes the revision legible while the compact player overlays
+the bottom of the map. Narrow layouts stack this metadata and reserve space for
+the map's navigation controls. The native speed range uses a logarithmic scale:
+0.1× at the left, 1× at the midpoint, and 10× at the right. Its numeric label
+and accessible value report the actual multiplier, while speed changes preserve
+elapsed progress. Playback controls sit above the dot timeline in two fixed
+rows. A single centered slate tray with rounded corners, a fine outline, and a
+restrained shadow groups the controls. Its desktop width is capped so the
+revision counter and speed control remain visually connected to the centered
+Play button. Unboxed step controls and the fine dot rail keep secondary actions
+quiet. The map uses its full height without a reserved footer. The player stays
+at the bottom edge, above only the device safe area, without changing its width.
+Historical maps fit the available viewport at every width, so the shared desktop
+minimum height cannot push the player offscreen. A flexible canvas wrapper keeps
+the map and player aligned in fullscreen. The distance scales sit at the native
+bottom-right edge. Their historical width uses the renderer's native scale
+option, preserving accurate distance labels. On narrow maps, compact scale
+spacing and clearance at the end of the timeline keep both visible without
+moving the player or changing its outer width. The historical viewer omits the
+depth legend and attribution controls, leaving no credit strip below the scales.
+Other viewers retain their attribution. Camera framing uses the shared
+visible-viewport calculation to fit within the available space around overlays,
+including short fullscreen views. Reaching the last revision stops quietly; Play
+restarts from the beginning.
+
+Historical camera motion runs at 30% of its former speed. Its base duration is
+capped by the playback interval before applying that speed multiplier. Playback
+waits for a longer camera move instead of cutting it off to meet the next
+interval. Reduced motion removes camera animation, and pausing or dragging
+interrupts it.
+
+Native map gestures already interrupt camera easing while preserving the active
+drag. The historical movement listener only settles its pending camera wait;
+calling `map.stop()` there would cancel the user's gesture as well. Explicit
+Pause and seek cancellation still stop the camera.
+
+Historical maps retain pending lower-resolution tiles during zoom using
+MapLibre's `cancelPendingTileRequestsWhileZooming` policy and paint ready raster
+tiles without a transparent fade. The policy applies on initial load, style
+replacement, and basemap changes. Native `getLayersOrder()` and `getLayer()`
+inspect only layers, avoiding serialization of survey GeoJSON. HTTP-cached
+images may still need decoding and GPU upload; this is native tile retention,
+not prefetching all future camera positions. Public and normal private viewers
+retain their existing tile policy. See the renderer's
+[tile request option](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/#cancelpendingtilerequestswhilezooming)
+and
+[raster fade property](https://maplibre.org/maplibre-style-spec/layers/#raster-fade-duration).
 
 The composition regression tests load historical geometry through real HTTP
 fixtures, retain it across style changes, and cover failed downloads without a
