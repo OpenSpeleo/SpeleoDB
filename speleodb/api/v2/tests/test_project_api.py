@@ -554,8 +554,8 @@ class TestProjectListLatestCommit(BaseAPITestCase):
             assert {
                 row["id"]: row["latest_commit"]["id"] for row in response.data
             } == expected_commits
-            # Permission serialization currently performs per-project queries;
-            # this contract measures the independent commit prefetch behavior.
+            # Measure commit-table queries separately so this contract protects
+            # commit prefetching independently of permission serialization.
             query_counts.append(
                 sum(
                     query["sql"].lstrip().upper().startswith("SELECT")

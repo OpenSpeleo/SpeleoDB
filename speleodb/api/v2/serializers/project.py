@@ -181,6 +181,10 @@ class ProjectSerializer(SanitizedFieldsMixin, serializers.ModelSerializer[Projec
         if user is None:
             return None
 
+        if "project_permissions" in self.context:
+            project_permissions: dict[str, str] = self.context["project_permissions"]
+            return project_permissions.get(str(obj.pk))
+
         try:
             return str(user.get_best_permission(project=obj).level_label)
 

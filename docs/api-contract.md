@@ -460,3 +460,18 @@ metadata serializer exposes a nullable `{id, revision, geojson, color, alias}`
 object whose geometry type is Polygon. Private data/OGC payloads are unchanged.
 Schema and SDK generation must preserve both nullable representations. See
 [Geographic Bound](gis-view-geographic-bound.md) for semantics and tests.
+
+## Project list permissions
+
+The project list evaluates `User.permissions` once per request and uses its
+canonical best-grant selection both to select projects and to serialize their
+permission labels. The serializer receives a request-local project-ID mapping;
+an explicit mapping with no entry fails closed instead of issuing another
+permission lookup. Detail requests retain their existing individual lookup. No
+permission snapshot survives the request, so revoked grants and inactive team
+memberships take effect on the next request.
+
+This avoids per-project permission queries and cache writes without changing
+response fields or permission precedence. Endpoint regressions in
+`test_list_user_projects.py` verify bounded query counts against returned direct
+and team grants, competing permissions, and revocations between requests.
