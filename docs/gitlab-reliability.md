@@ -126,10 +126,18 @@ clean is performed. A failed fetch or absent remote branch leaves HEAD and files
 unchanged instead of resetting to a stale cached ref.
 
 `Project.checkout_commit_or_reset_default_branch()` owns synchronization
-followed by database-history reconstruction. Upload preparation, the Git
-explorer, blob lookup fallback, latest downloads, preload and clone recovery
-share the same default-branch policy. Explicit historical checkouts still select
-the requested commit, and historical commits already available locally need no
+followed by database-history reconstruction. After a successful default-branch
+reset and complete history traversal, it reconciles cached commits to the
+reachable upstream history in one database transaction. Rewritten or removed
+revisions stop contributing to commit counts, latest-commit metadata and map
+artifact selection. Their artifact rows are retired through the normal cascade;
+stored objects remain until the existing explicit project purge. Explicit
+historical checkouts only populate history and never remove newer cached
+revisions. The default sync adds one local history traversal; it does not add
+network calls or purge project storage. Upload preparation, the Git explorer,
+blob lookup fallback, latest downloads, preload and clone recovery share the
+same default-branch policy. Explicit historical checkouts still select the
+requested commit, and historical commits already available locally need no
 network request.
 
 Download processors use the same rules: a latest-version download resets the

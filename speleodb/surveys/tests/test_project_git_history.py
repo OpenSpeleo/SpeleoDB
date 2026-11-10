@@ -7,15 +7,18 @@ from typing import TYPE_CHECKING
 
 import pytest
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from git.exc import GitCommandError
 from rest_framework import status
 
+from speleodb.api.v2.serializers.project import ProjectWithGeoJsonSerializer
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import BaseProjectTestCaseMixin
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.exceptions import GitBaseError
 from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.surveys.models import FileFormat
@@ -141,6 +144,65 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
                 "id", flat=True
             )
         ) == [self.original_sha]
+
+    def test_default_sync_reconciles_rewritten_history_without_purging_objects(
+        self,
+    ) -> None:
+        self.project.construct_git_history_from_project(self.repo)
+        payload: bytes = b'{"type":"FeatureCollection","features":[]}'
+        artifacts: list[ProjectGeoJSON] = []
+        for commit_id in (self.original_sha, self.latest_sha):
+            artifact = ProjectGeoJSON.objects.create(
+                project=self.project,
+                commit_id=commit_id,
+                file=SimpleUploadedFile(
+                    "map.geojson", payload, content_type="application/geo+json"
+                ),
+            )
+            artifacts.append(artifact)
+            name = artifact.file.name
+            assert name is not None
+            self.addCleanup(artifact.file.storage.delete, name)
+
+        # Reading an older revision must preserve the current remote's cache.
+        self.project.checkout_commit_or_reset_default_branch(hexsha=self.original_sha)
+        assert set(self.project.commits.values_list("id", flat=True)) == {
+            self.original_sha,
+            self.latest_sha,
+        }
+        assert set(self.project.geojsons.values_list("commit_id", flat=True)) == {
+            self.original_sha,
+            self.latest_sha,
+        }
+
+        # The upstream deliberately discards its latest revision.
+        self.repo.git.push(
+            "--force",
+            "origin",
+            f"{self.original_sha}:refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}",
+        )
+        self.project.checkout_commit_or_reset_default_branch()
+
+        assert self.repo.head.commit.hexsha == self.original_sha
+        assert set(self.project.commits.values_list("id", flat=True)) == {
+            self.original_sha
+        }
+        assert self.project.commit_count == 1
+        latest = self.project.latest_commit
+        assert latest is not None
+        assert latest.pk == self.original_sha
+        assert set(self.project.geojsons.values_list("commit_id", flat=True)) == {
+            self.original_sha
+        }
+        serialized = ProjectWithGeoJsonSerializer(self.project).data
+        assert serialized["geojson_commit_sha"] == self.original_sha
+        assert serialized["geojson_revision"] == artifacts[0].geojson_revision
+        # Ordinary synchronization retires stale rows, never immutable objects.
+        for artifact in artifacts:
+            name = artifact.file.name
+            assert name is not None
+            with artifact.file.storage.open(name, "rb") as stored:
+                assert stored.read() == payload
 
     def test_missing_commit_preserves_head_and_does_not_construct_history(self) -> None:
         missing_sha: str = "0" * 40

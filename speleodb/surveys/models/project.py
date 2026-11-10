@@ -25,6 +25,7 @@ from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db import transaction
 from django.db.models import IntegerField
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -653,9 +654,17 @@ class Project(models.Model):
         self.ensure_git_origin(git_repo)
         if hexsha is None:
             git_repo.reset_default_branch_to_remote()
+            # Complete traversal before reconciling the rebuildable history cache.
+            # Historical checkouts must not remove newer remote revisions.
+            reachable: list[str] = [
+                commit.hexsha for commit in git_repo.iter_commits("HEAD")
+            ]
+            with transaction.atomic():
+                self.construct_git_history_from_project(git_repo=git_repo)
+                self.commits.exclude(pk__in=reachable).delete()
         else:
             git_repo.checkout_commit(hexsha=hexsha)
-        self.construct_git_history_from_project(git_repo=git_repo)
+            self.construct_git_history_from_project(git_repo=git_repo)
 
     def ensure_git_origin(self, git_repo: GitRepo) -> None:
         # Configuration drift is repairable without deleting local work. Network
