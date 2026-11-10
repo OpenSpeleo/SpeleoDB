@@ -49,10 +49,10 @@ from speleodb.utils.exceptions import NotAuthorizedError
 from speleodb.utils.response import SuccessResponse
 
 if TYPE_CHECKING:
-    from rest_framework.compat import QuerySet
     from rest_framework.request import Request
     from rest_framework.response import Response
 
+    from speleodb.surveys.models.project import ProjectQuerySet
     from speleodb.users.models import User
 
 
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
 
 class BaseUserProjectGeoJsonApiView(SDBAPIViewMixin):
-    def get_user_projects(self, user: User) -> QuerySet[Project]:
+    def get_user_projects(self, user: User) -> ProjectQuerySet:
         """Return projects the user has access to with their geojsons.
 
         Uses ``select_related("commit", "project")`` on the prefetched
@@ -101,7 +101,13 @@ class ProjectAllProjectGeoJsonApiView(
     )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = self.get_user()
-        projects = self.get_user_projects(user)
+        projects = (
+            self.get_user_projects(user)
+            .with_commits()
+            .with_commit_count()
+            .with_active_mutex()
+            .prefetch_related("_formats")
+        )
         serializer = self.get_serializer(projects, many=True)
         return SuccessResponse(serializer.data)
 

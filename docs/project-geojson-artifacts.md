@@ -134,3 +134,13 @@ Full history reset is an explicit exception to retired-object retention: it
 purges the project namespace, including current, retired and orphaned objects,
 verifies emptiness, and rebuilds from the existing remote. Previously issued
 links may stop working. See [Operations](admin-operations.md).
+
+## Project list metadata loading
+
+The authenticated GeoJSON project list loads commit metadata, commit counts,
+active mutexes with their owners, and file formats in bulk using the existing
+Project queryset helpers. Its inherited serializer must not query these
+relations once per project. Artifact ordering and URL/revision pairing remain
+unchanged. The endpoint query regression asserts actual accessible records and
+mutex/commit values while comparing query counts as projects are added. OGC
+callers do not load these unrelated serializer fields.
