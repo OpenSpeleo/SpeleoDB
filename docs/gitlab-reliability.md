@@ -17,10 +17,10 @@ missing commits can be a symptom of an earlier remote failure.
 ## Creation and retries
 
 Repository acquisition first looks up the configured namespace/project UUID. An
-existing remote is cloned without a creation POST. HTTP 404 immediately permits
-creation; absence is an expected outcome of this existence check.
-Authentication, throttling and other lookup failures propagate before the local
-working directory is changed.
+existing remote is cloned without a creation POST. HTTP 404 permits creation
+after the existing bounded lookup retry policy is exhausted. Authentication,
+throttling and other lookup failures propagate before the local working
+directory is changed.
 
 The create endpoint's `GitlabCreateError` does not mean the repository already
 exists. It can also describe validation, permission, throttling, or server
@@ -39,17 +39,17 @@ cloning, the manager performs an uncached lookup of the exact configured
 namespace/project UUID:
 
 - A successful lookup confirms that cloning is appropriate.
-- HTTP 404 preserves the original create error immediately, including its status
-  and body.
+- HTTP 404 preserves the original create error after bounded confirmation
+  retries, including its status and body.
 - Other lookup failures propagate instead of falling through to clone.
 - Other create failures propagate directly after the client's applicable
   retries.
 
-Both acquisition lookups use the transport's ordinary immediate HTTP 404
-behavior. Transient server errors and connection failures retain their existing
-bounded retry policy. The conflict lookup never restarts creation. This avoids
-waiting through a retry budget for an expected absent repository or concealing
-the original validation failure behind repeated missing-project reads.
+Both acquisition lookups opt into `retry_not_found=True` so temporary missing
+responses can resolve within the transport's bounded retry policy. Transient
+server errors and connection failures retain their existing bounded retry
+policy. The conflict lookup never restarts creation, and preserves the original
+create error if the repository remains absent.
 
 This also handles a create request that succeeded remotely but returned a
 transient error: a subsequent duplicate response can be resolved by confirming
@@ -206,11 +206,12 @@ received an event.
 
 ## Performance and limits
 
-New creation follows one existence GET before the POST, with no missing-project
-backoff after HTTP 404. An existing repository needs one lookup GET and no
-rejected creation POST. Retries add requests and delays for transient failures;
-the API retry budget is separate from the clone budget. These are attempt
-limits, not a total elapsed-time deadline.
+New creation follows the bounded existence lookup before the POST, including
+missing-project backoff after HTTP 404. An existing repository needs one
+successful lookup GET and no rejected creation POST. Retries add requests and
+delays for missing responses and transient failures; the API retry budget is
+separate from the clone budget. These are attempt limits, not a total
+elapsed-time deadline.
 
 Preload and other live integration tests create external repositories. They need
 isolated test resources and must not overlap a group-wide cleanup. The retry

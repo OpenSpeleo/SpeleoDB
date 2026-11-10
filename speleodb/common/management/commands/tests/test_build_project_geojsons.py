@@ -273,12 +273,17 @@ class TestBuildProjectGeoJSONs(TestCase):
         with repository:
             names: list[str] = []
             for source in artifact_paths:
-                name = {
-                    ProjectType.ARIANE: ArianeTMLFileProcessor.TARGET_SAVE_FILENAME,
-                    ProjectType.STALAGMIGHT: (
-                        StalagmightFileProcessor.TARGET_SAVE_FILENAME
-                    ),
-                }.get(project_type, source.name)
+                match project_type:
+                    case ProjectType.ARIANE:
+                        name = ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                    case ProjectType.STALAGMIGHT:
+                        name = StalagmightFileProcessor.TARGET_SAVE_FILENAME
+                    case ProjectType.COMPASS:
+                        name = source.name
+                    case _:
+                        raise ValueError(
+                            f"Unsupported source project type: {project_type}"
+                        )
                 (directory / name).write_bytes(source.read_bytes())
                 names.append(name)
             if project_type == ProjectType.COMPASS:

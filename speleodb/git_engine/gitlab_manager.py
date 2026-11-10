@@ -135,12 +135,12 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
 
     @check_initialized
     def _ensure_remote_project(self, project: Project) -> bool:
-        """Check for the remote once and return whether we created it."""
+        """Confirm remote existence with bounded retries and report creation."""
         if self._gl is None:
             raise ValueError("Gitlab API has not been initialized")
         project_path: str = f"{GitlabCredentials.get().group_name}/{project.id}"
         try:
-            self._gl.projects.get(project_path)
+            self._gl.projects.get(project_path, retry_not_found=True)
         except gitlab.exceptions.GitlabGetError as lookup_error:
             if lookup_error.response_code != HTTPStatus.NOT_FOUND:
                 raise
@@ -160,7 +160,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             }:
                 raise
             try:
-                self._gl.projects.get(project_path)
+                self._gl.projects.get(project_path, retry_not_found=True)
             except gitlab.exceptions.GitlabGetError as lookup_error:
                 if lookup_error.response_code == HTTPStatus.NOT_FOUND:
                     raise create_error from None

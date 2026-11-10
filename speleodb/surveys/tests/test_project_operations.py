@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import closing
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import git
 import pytest
+from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.test import override_settings
@@ -39,7 +40,7 @@ def local_history(tmp_path: Path) -> Generator[tuple[Project, Path, list[str]]]:
             git.Repo.init(
                 remote, bare=True, initial_branch=settings.DJANGO_GIT_BRANCH_NAME
             ) as upstream,
-            closing(seed),
+            seed,
         ):
             seed.create_remote("origin", str(remote))
             initial = seed.index.commit(
@@ -150,16 +151,16 @@ def test_reset_failure_leaves_manual_rerun_starting_from_zero(
     project, _remote, hashes = local_history
     repository = project.git_repo
     project.construct_git_history_from_project(repository)
-    # Simulate unavailable storage at its service boundary. The failure must
-    # escape; a new explicit execution reconstructs history after service repair.
+    # A nonexistent bucket exercises the real purge failure. The failure must
+    # escape; a new explicit execution reconstructs history with valid storage.
     with (
-        patch(
-            "speleodb.surveys.models.project.Project.purge_geojsons",
-            side_effect=OSError("Storage unavailable"),
+        override_settings(
+            AWS_STORAGE_BUCKET_NAME=f"missing-reset-test-{uuid.uuid4().hex}"
         ),
-        pytest.raises(OSError, match="Storage unavailable"),
+        pytest.raises(ClientError) as raised,
     ):
         project.reset_git_history()
+    assert raised.value.response["Error"]["Code"] == "NoSuchBucket"
     project.refresh_from_db()
     assert not project.commits.exists()
     summary = project.reset_git_history()

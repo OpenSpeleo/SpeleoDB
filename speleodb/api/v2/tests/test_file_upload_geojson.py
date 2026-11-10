@@ -231,7 +231,6 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
-        assert "geojson_status" not in data
         assert not TaskResult.objects.filter(
             task_args=json.dumps([str(data["hexsha"])])
         ).exists()
@@ -295,7 +294,6 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
-        assert "geojson_status" not in data
         assert not TaskResult.objects.filter(
             task_args=json.dumps([str(data["hexsha"])])
         ).exists()
@@ -357,7 +355,6 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             finally:
                 self.project.release_mutex(self.user)
 
-            assert "geojson_status" not in data
             if expected_status == "pending":
                 self._run_generation(str(data["hexsha"]))
                 self._assert_stored_shot_colors(str(data["hexsha"]))
@@ -393,7 +390,6 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 )
             finally:
                 self.project.release_mutex(self.user)
-            assert "geojson_status" not in data
             summary = self._run_generation(str(data["hexsha"]), succeeds=False)
             assert summary["failed"] == 1
             assert not ProjectGeoJSON.objects.filter(

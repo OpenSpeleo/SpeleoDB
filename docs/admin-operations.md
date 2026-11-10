@@ -64,6 +64,12 @@ and unusable anchors are explained omissions. Successful revisions remain
 available even when another revision fails. Correct invalid source before
 rerunning it.
 
+Compass materialization validates the project table, MAK string, required DAT
+string list and optional PLT string list before reading referenced blobs. Every
+source path must remain inside the temporary workspace; containment is checked
+for all paths before missing-source handling. Malformed manifests fail their
+revision, while correctly structured manifests with absent sources are skipped.
+
 ## Local checkouts
 
 These actions are intended for the single-admin, low-traffic deployment. Run a
@@ -84,6 +90,17 @@ metadata also travels in Celery headers so failures before task entry retain
 receipts. The admin forms and views use the custom `SpeleoDBAdminSite` while
 workers retain Django's lightweight admin configuration.
 
+Execution failures log their original traceback before failure bookkeeping.
+Bookkeeping errors, including an audit insert after requester deletion, log
+their own traceback and leave the original exception to propagate to Celery.
+This adds no retry or recovery behavior.
+
+Regression coverage uses small local Git histories for manifest materialization
+and mixed conversion outcomes, a sequential PostgreSQL execution after requester
+deletion, and a nonexistent storage bucket followed by an explicit reset rerun.
+Manifest validation adds only a linear pass over the listed source paths and
+does not load the upload processors during model initialization.
+
 `Project.git_repo` opens the local repository, acquiring it when absent.
 `Project.reset_git_history()` owns history reset, storage purge and supervised
 private clone installation. The Celery task then calls
@@ -97,19 +114,12 @@ Drain old GeoJSON executions and inspect pending generation records before
 removing their table. Finish unpublished-object cleanup with the old code and
 retain project/revision identifiers needed for manual resubmission. Apply the
 journal-removal migration, then deploy matching web and worker signatures and
-contract consumers together. The upload response no longer contains
-`geojson_status`.
+contract consumers together.
 
-Removing that required field is blocked for deployment until native client
-adoption is complete. The monorepo's Cargo path override uses the checked-out
-Rust SDK; it does not prove that standalone clients use those bindings. Before
-deploying the field removal, publish the regenerated SDK through its existing
-authorized release process, update the Compass Sidecar and Stalagmight SDK pins
-and lockfiles to that published release, and verify both consumers outside the
-monorepo override. A local SDK edit or regenerated fixture alone does not update
-an installed client. Keep this release/adoption gate separate from
-implementation and local validation; no compatibility response field is
-retained.
+The owner confirmed there are no existing consumers requiring migration for the
+removed `geojson_status` upload-response field. SDK publication and
+native-client adoption therefore do not block this backend deployment. No
+compatibility response field is retained.
 
 Verify a project recomputation, an isolated history reset and a small batch.
 Inspect task results, runtime logs, reconstructed history and stored artifacts.

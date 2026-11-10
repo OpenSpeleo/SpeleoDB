@@ -100,21 +100,26 @@ def operation_execution(task_id: str) -> Iterator[OperationExecution | None]:
     try:
         yield execution
     except Exception as error:
-        summary: Any = getattr(error, "summary", None)
-        if hasattr(summary, "as_dict"):
-            summary = summary.as_dict()
-        execution.progress(
-            "failed",
-            error="The operation failed. Review the task result and worker traceback.",
-            error_type=type(error).__name__,
-            **({"summary": summary} if isinstance(summary, dict) else {}),
-        )
-        # Status and encoded failure must become visible together. A Celery
-        # client can read this row before the worker's final backend write.
-        failure = current_app.backend.prepare_exception(error, serializer="json")
-        TaskResult.objects.filter(task_id=task_id).update(
-            status=TaskResultStatus.FAILURE, result=json.dumps(failure)
-        )
-        execution.audit_outcome()
         logger.exception("Operation %s failed", task_id)
+        try:
+            summary: Any = getattr(error, "summary", None)
+            if hasattr(summary, "as_dict"):
+                summary = summary.as_dict()
+            execution.progress(
+                "failed",
+                error=(
+                    "The operation failed. Review the task result and worker traceback."
+                ),
+                error_type=type(error).__name__,
+                **({"summary": summary} if isinstance(summary, dict) else {}),
+            )
+            # Status and encoded failure must become visible together. A Celery
+            # client can read this row before the worker's final backend write.
+            failure = current_app.backend.prepare_exception(error, serializer="json")
+            TaskResult.objects.filter(task_id=task_id).update(
+                status=TaskResultStatus.FAILURE, result=json.dumps(failure)
+            )
+            execution.audit_outcome()
+        except Exception:
+            logger.exception("Failed to record failure for operation %s", task_id)
         raise

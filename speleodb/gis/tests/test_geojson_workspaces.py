@@ -6,7 +6,6 @@ import os
 import stat
 import subprocess
 import sys
-from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -25,6 +24,8 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from pytest_django.fixtures import Settings
 
 
@@ -138,7 +139,8 @@ def test_ariane_materialization_streams_blob_at_exact_revision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = tmp_path / "source"
-    with closing(GitRepo.init(source)) as repository:
+    repository = GitRepo.init(source)
+    with repository:
         original = source / "ariane.tml"
         contents = b"survey-data\n" * 8
         original.write_bytes(contents)
@@ -184,3 +186,107 @@ def test_ariane_materialization_streams_blob_at_exact_revision(
         assert result == destination / "ariane.tml"
         assert result.read_bytes() == contents
         assert read_sizes
+
+
+@pytest.fixture
+def compass_repository(tmp_path: Path) -> Generator[GitRepo]:
+    repository = GitRepo.init(tmp_path / "compass")
+    with repository:
+        yield repository
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        "",
+        'project = "invalid"',
+        '[project]\nmak_file = ["sample.mak"]\ndat_files = []',
+        '[project]\nmak_file = "sample.mak"',
+        '[project]\nmak_file = "sample.mak"\ndat_files = "sample.dat"',
+        '[project]\nmak_file = "sample.mak"\ndat_files = ["sample.dat", 1]',
+        (
+            '[project]\nmak_file = "sample.mak"\ndat_files = []\n'
+            'plt_files = "sample.plt"'
+        ),
+        '[project]\nmak_file = "sample.mak"\ndat_files = []\nplt_files = false',
+        '[project]\nmak_file = "sample.mak"\ndat_files = []\nplt_files = [1]',
+    ],
+)
+def test_compass_materialization_rejects_malformed_source_fields(
+    compass_repository: GitRepo, tmp_path: Path, manifest: str
+) -> None:
+    (compass_repository.path / "compass.toml").write_text(manifest)
+    compass_repository.index.add(["compass.toml"])
+    actor = Actor("Surveyor", "surveyor@example.test")
+    revision = compass_repository.index.commit(
+        "Malformed manifest", author=actor, committer=actor
+    )
+    destination = tmp_path / "materialized"
+    destination.mkdir()
+    with pytest.raises(TypeError, match="Compass"):
+        materialize_geojson_source(
+            Project(type=ProjectType.COMPASS),
+            compass_repository.commit(revision.hexsha),
+            destination,
+        )
+
+
+def test_compass_materialization_validates_containment_before_missing_sources(
+    compass_repository: GitRepo, tmp_path: Path
+) -> None:
+    (compass_repository.path / "compass.toml").write_text(
+        '[project]\nmak_file = "missing.mak"\n'
+        'dat_files = ["missing.dat"]\nplt_files = ["../outside.plt"]'
+    )
+    compass_repository.index.add(["compass.toml"])
+    actor = Actor("Surveyor", "surveyor@example.test")
+    revision = compass_repository.index.commit(
+        "Escaping source with absent files", author=actor, committer=actor
+    )
+    destination = tmp_path / "materialized"
+    destination.mkdir()
+    with pytest.raises(ValueError, match="escapes"):
+        materialize_geojson_source(
+            Project(type=ProjectType.COMPASS),
+            compass_repository.commit(revision.hexsha),
+            destination,
+        )
+    assert not (tmp_path / "outside.plt").exists()
+
+
+@pytest.mark.parametrize("missing_source", [False, True])
+def test_compass_materialization_supports_nested_paths_and_missing_sources(
+    compass_repository: GitRepo, tmp_path: Path, missing_source: bool
+) -> None:
+    root = compass_repository.path
+    (root / "nested").mkdir()
+    manifest = (
+        '[project]\nmak_file = "nested/sample.mak"\ndat_files = ["nested/sample.dat"]'
+    )
+    (root / "nested/sample.mak").write_text("small mak source")
+    files = ["compass.toml", "nested/sample.mak"]
+    if not missing_source:
+        (root / "nested/sample.dat").write_text("small dat source")
+        (root / "nested/sample.plt").write_text("small plt source")
+        files.extend(["nested/sample.dat", "nested/sample.plt"])
+        manifest += '\nplt_files = ["nested/sample.plt"]'
+    (root / "compass.toml").write_text(manifest)
+    compass_repository.index.add(files)
+    actor = Actor("Surveyor", "surveyor@example.test")
+    revision = compass_repository.index.commit(
+        "Nested Compass sources", author=actor, committer=actor
+    )
+    destination = tmp_path / "materialized"
+    destination.mkdir()
+    result = materialize_geojson_source(
+        Project(type=ProjectType.COMPASS),
+        compass_repository.commit(revision.hexsha),
+        destination,
+    )
+    if missing_source:
+        assert result is None
+    else:
+        assert result == destination / "nested/sample.mak"
+        assert result.read_text() == "small mak source"
+        assert (destination / "nested/sample.dat").read_text() == "small dat source"
+        assert (destination / "nested/sample.plt").read_text() == "small plt source"

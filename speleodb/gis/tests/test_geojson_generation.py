@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import uuid
-from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -27,6 +26,7 @@ from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import StalagMightInterface
 
 from speleodb.background_jobs.archive_sources import GitSource
+from speleodb.background_jobs.operations import schedule_operation
 from speleodb.background_jobs.operations import schedule_uploaded_geojson
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
@@ -36,8 +36,10 @@ from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models.project import ConversionFailedError
+from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.stalagmight import NATIVE_SHOT_ID
 from speleodb.testing.stalagmight import stalagmight_bytes
+from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
@@ -111,15 +113,30 @@ def local_source(
     project.exclude_geojson = False
     project.save(update_fields=["type", "exclude_geojson"])
     directory = tmp_path / "remote"
-    fixture = settings.BASE_DIR / "speleodb/api/v2/tests/artifacts/test_simple.tml"
-    filename, payload = (
-        ("stalagmight.stalx", stalagmight_bytes())
-        if project.type == ProjectType.STALAGMIGHT
-        else ("ariane.tml", fixture.read_bytes())
-    )
-    with closing(GitRepo.init(directory)) as repository:
-        (directory / filename).write_bytes(payload)
-        repository.index.add([filename])
+    artifacts = settings.BASE_DIR / "speleodb/api/v2/tests/artifacts"
+    match project.type:
+        case ProjectType.COMPASS:
+            sources = {
+                name: (artifacts / name).read_bytes()
+                for name in (
+                    "compass.toml",
+                    "sample.mak",
+                    "sample-1.dat",
+                    "sample-2.dat",
+                    "sample.plt",
+                )
+            }
+        case ProjectType.STALAGMIGHT:
+            sources = {"stalagmight.stalx": stalagmight_bytes()}
+        case ProjectType.ARIANE:
+            sources = {"ariane.tml": (artifacts / "test_simple.tml").read_bytes()}
+        case _:
+            raise ValueError(f"Unsupported source project type: {project.type}")
+    repository = GitRepo.init(directory)
+    with repository:
+        for filename, payload in sources.items():
+            (directory / filename).write_bytes(payload)
+        repository.index.add(list(sources))
         actor = Actor("Surveyor", "surveyor@example.test")
         repository.index.commit("First survey", author=actor, committer=actor)
         commit = ProjectCommit.get_or_create_from_commit(
@@ -141,11 +158,13 @@ def test_task_reads_requested_sha_after_new_upload(
     artifact_storage: FileSystemStorage,
 ) -> None:
     commit, repository = local_source
-    filename = (
-        "stalagmight.stalx"
-        if commit.project.type == ProjectType.STALAGMIGHT
-        else "ariane.tml"
-    )
+    match commit.project.type:
+        case ProjectType.STALAGMIGHT:
+            filename = "stalagmight.stalx"
+        case ProjectType.ARIANE:
+            filename = "ariane.tml"
+        case _:
+            raise ValueError(f"Unsupported source project type: {commit.project.type}")
     expected = orjson.loads(
         orjson.dumps(commit.project.build_geojson(repository.path / filename))
     )
@@ -386,3 +405,59 @@ def test_history_continues_independent_revisions_then_fails(
     artifact = ProjectGeoJSON.objects.get(commit=first)
     assert artifact.file.name is not None
     assert artifact_storage.exists(artifact.file.name)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("local_source", [ProjectType.COMPASS], indirect=True)
+def test_malformed_compass_history_fails_task_and_preserves_valid_revision(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+) -> None:
+    first, repository = local_source
+    expected = orjson.loads(
+        orjson.dumps(first.project.build_geojson(repository.path / "sample.mak"))
+    )
+    manifest = repository.path / "compass.toml"
+    manifest.write_text(
+        manifest.read_text().replace(
+            'dat_files = ["sample-1.dat", "sample-2.dat"]',
+            'dat_files = "sample-1.dat"',
+        )
+    )
+    repository.index.add(["compass.toml"])
+    actor = Actor("Surveyor", "surveyor@example.test")
+    failing = repository.index.commit(
+        "Malformed Compass source list", author=actor, committer=actor
+    )
+    requester = UserFactory.create(is_superuser=True)
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        receipt = schedule_operation(
+            "project", requester=requester, project_id=first.project_id
+        )
+    outcome = refresh_project_geojson.apply(
+        args=(str(first.project_id),), task_id=receipt.task_ids[0], throw=False
+    )
+    assert outcome.state == TaskResultStatus.FAILURE
+    assert isinstance(outcome.result, ConversionFailedError)
+    result = TaskResult.objects.get(task_id=receipt.task_ids[0])
+    assert result.status == TaskResultStatus.FAILURE
+    summary = json.loads(result.meta)["summary"]
+    assert summary == {
+        "processed": 2,
+        "generated": 1,
+        "existing": 0,
+        "skipped": 0,
+        "failed": 1,
+    }
+    assert not ProjectGeoJSON.objects.filter(commit_id=failing.hexsha).exists()
+    artifact = ProjectGeoJSON.objects.get(commit=first)
+    assert artifact.file.name is not None
+    assert artifact_storage.exists(artifact.file.name)
+    with artifact.file.open("rb") as stored:
+        actual = orjson.loads(stored.read())
+    # Compass assigns random section colors independently on each conversion.
+    # Compare all stable artifact data without fixing production randomness.
+    for document in (actual, expected):
+        for feature in document["features"]:
+            feature["properties"].pop("color", None)
+    assert actual == expected

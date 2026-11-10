@@ -73,10 +73,11 @@ pytest collection order never determines whether a project is ready or deleted.
 | `write-check`   | The management command's real authenticated create/delete check                                                   |
 
 Absent-remote manager/proxy tests use the normal client with real requests and
-SDK errors. An initial HTTP 404 permits creation immediately. The API-policy
-suite observes real HTTP 404 error propagation and single-attempt failures with
-retries disabled. Do not manufacture missing projects or unavailable endpoints
-solely to exercise a backoff sequence, or replace clocks and sleeping.
+SDK errors. HTTP 404 permits creation after bounded acquisition lookup retries.
+The API-policy suite observes real HTTP 404 error propagation and single-attempt
+failures with retries disabled. Do not manufacture missing projects or
+unavailable endpoints solely to exercise a backoff sequence, or replace clocks
+and sleeping.
 
 Destructive command policies run against real GitLab through `call_command` with
 scoped stdin/environment. Two actual Make subprocesses retain successful and
@@ -233,11 +234,11 @@ value or prove the historical job's identity.
 
 `GitlabManager._ensure_remote_project()` first looks up the exact namespace and
 project UUID. An existing remote requires no creation POST; HTTP 404 permits
-creation immediately. Transient lookup failures retain their bounded retry
-policy. Creation conflicts still require a successful confirming lookup before
-cloning. A confirming HTTP 404 preserves the original creation failure without
-backoff or restarting creation. Authentication, validation and throttling errors
-are never treated as success.
+creation after bounded lookup retries. Transient lookup failures retain their
+bounded retry policy. Creation conflicts still require a successful confirming
+lookup before cloning. A confirming HTTP 404 preserves the original creation
+failure after bounded retries without restarting creation. Authentication,
+validation and throttling errors are never treated as success.
 
 Upload cleanup opens a working copy only if its directory already exists. It
 never accesses the provisioning property. Cleanup failures remain secondary to
@@ -390,14 +391,14 @@ results and measured creation counts belong in the task's review record; this
 document describes the required behavior rather than claiming a particular run
 passed.
 
-The lookup-first path adds one existence GET to new creation and removes a
-rejected POST from existing-remote acquisition. Expected HTTP 404 responses do
-not incur backoff. Four reusable remote identities bound provisioning
-independently of the number of database fixtures or upload parameters. Lease
-restoration adds bounded Git/ref operations, but prevents unbounded remote
-history and cross-test contamination. The immutable creation allocations provide
-a stronger regression check than counting repositories left in a group after
-teardown.
+The lookup-first path adds a bounded existence lookup to new creation and
+removes a rejected POST from existing-remote acquisition. Acquisition HTTP 404
+responses incur the established bounded backoff. Four reusable remote identities
+bound provisioning independently of the number of database fixtures or upload
+parameters. Lease restoration adds bounded Git/ref operations, but prevents
+unbounded remote history and cross-test contamination. The immutable creation
+allocations provide a stronger regression check than counting repositories left
+in a group after teardown.
 
 ### Default test coverage and explicit exclusions
 

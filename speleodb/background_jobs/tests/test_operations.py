@@ -13,6 +13,7 @@ from celery.app.task import Context
 from django.contrib.admin.models import LogEntry
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError
+from django.db import connection
 from django.db import transaction
 from django_celery_results.models import TaskResult
 from kombu.exceptions import OperationalError
@@ -29,6 +30,8 @@ from speleodb.common.enums import TaskResultStatus
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from kombu.simple import SimpleQueue
     from pytest_django.fixtures import DjangoCaptureOnCommitCallbacks
 
@@ -249,6 +252,31 @@ def test_terminal_failure_always_contains_a_celery_decodable_exception() -> None
     error = current_app.backend.exception_to_python(json.loads(result.result))
     assert isinstance(error, ValueError)
     assert str(error) == "conversion refused"
+
+
+@pytest.mark.usefixtures("operation_queue")
+@pytest.mark.django_db(transaction=True)
+def test_deleted_requester_audit_failure_preserves_operation_exception(
+    tmp_path: Path,
+) -> None:
+    assert connection.vendor == "postgresql"
+    user: User = UserFactory.create(is_superuser=True)
+    project: Project = ProjectFactory.create(type=ProjectType.ARIANE)
+    receipt = schedule_operation("project", requester=user, project_id=project.pk)
+    user.delete()
+    missing_source = tmp_path / "missing-survey"
+    with (
+        pytest.raises(FileNotFoundError) as raised,
+        operation_execution(receipt.task_ids[0]),
+    ):
+        missing_source.read_bytes()
+    assert raised.value.filename == str(missing_source)
+    result = TaskResult.objects.get(task_id=receipt.task_ids[0])
+    assert result.status == TaskResultStatus.FAILURE
+    assert json.loads(result.meta)["stage"] == "failed"
+    error = current_app.backend.exception_to_python(json.loads(result.result))
+    assert isinstance(error, FileNotFoundError)
+    assert error.args == raised.value.args
 
 
 @pytest.mark.usefixtures("operation_queue")

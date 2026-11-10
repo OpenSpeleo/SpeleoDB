@@ -16,7 +16,7 @@ from typing import Any
 
 import compass_lib.geojson
 from compass_lib.geojson import project_to_geojson
-from compass_lib.io import load_project
+from compass_lib.interface import CompassInterface
 from compass_lib.solver.sparse import SparseSolver
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -818,28 +818,15 @@ class Project(models.Model):
 
     def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
         """Build the GeoJSON from the survey file on disk."""
+        interface: type[ArianeInterface | StalagMightInterface]
         match self.type:
-            case ProjectType.ARIANE | ProjectType.STALAGMIGHT:
-                try:
-                    interface = (
-                        ArianeInterface
-                        if self.type == ProjectType.ARIANE
-                        else StalagMightInterface
-                    )
-                    survey: Survey = interface.from_file(file)
-                    return survey_to_geojson(survey)
-
-                except EmptySurveyError, NoKnownAnchorError:
-                    raise
-
-                except (OSError, Exception) as e:
-                    reraise_task_timeout(e)
-                    logger.error(f"Error processing {self.type} survey file `{file}`.")  # noqa: TRY400
-                    raise GeoJSONGenerationError from e
-
+            case ProjectType.ARIANE:
+                interface = ArianeInterface
+            case ProjectType.STALAGMIGHT:
+                interface = StalagMightInterface
             case ProjectType.COMPASS:
                 try:
-                    project = load_project(file)
+                    project = CompassInterface.load_project(file)
                     return project_to_geojson(
                         project,
                         include_stations=False,
@@ -868,3 +855,15 @@ class Project(models.Model):
                 raise GeoJSONGenerationError(
                     f"This project type is not supported yet: `{self.type}`."
                 )
+
+        try:
+            survey: Survey = interface.from_file(file)
+            return survey_to_geojson(survey)
+
+        except EmptySurveyError, NoKnownAnchorError:
+            raise
+
+        except Exception as e:
+            reraise_task_timeout(e)
+            logger.error(f"Error processing {self.type} survey file `{file}`.")  # noqa: TRY400
+            raise GeoJSONGenerationError from e

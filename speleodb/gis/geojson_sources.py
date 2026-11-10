@@ -25,11 +25,17 @@ def materialize_geojson_source(
     project: Project, commit: GitCommit, directory: Path
 ) -> Path | None:
     """Read blobs at the supplied SHA; never check out or mutate shared Git state."""
-    single_file_sources: dict[str, str] = {
-        ProjectType.ARIANE: ARIANE_TML_FILENAME,
-        ProjectType.STALAGMIGHT: STALAGMIGHT_FILENAME,
-    }
-    if filename := single_file_sources.get(project.type):
+    filename: str | None
+    match project.type:
+        case ProjectType.ARIANE:
+            filename = ARIANE_TML_FILENAME
+        case ProjectType.STALAGMIGHT:
+            filename = STALAGMIGHT_FILENAME
+        case ProjectType.COMPASS:
+            filename = None
+        case _:
+            return None
+    if filename is not None:
         try:
             source = commit.tree / filename
         except KeyError:
@@ -39,8 +45,6 @@ def materialize_geojson_source(
             source.blob.stream_data(output)
         return destination
 
-    if project.type != ProjectType.COMPASS:
-        return None
     files = {
         str(item.path): item
         for item in commit.tree.traverse()
@@ -55,15 +59,32 @@ def materialize_geojson_source(
     # Only the source paths are needed here. Keep model initialization
     # independent of the upload processor package and its auto-discovery.
     with config_path.open("rb") as source_config:
-        project_files = tomllib.load(source_config)["project"]
-    mak_file: str = project_files["mak_file"]
+        project_files = tomllib.load(source_config).get("project")
+    if not isinstance(project_files, dict):
+        raise TypeError("The Compass project table is required.")
+    mak_file = project_files.get("mak_file")
+    if not isinstance(mak_file, str):
+        raise TypeError("Compass mak_file must be a string.")
+    dat_files = project_files.get("dat_files")
+    if not isinstance(dat_files, list) or not all(
+        isinstance(path, str) for path in dat_files
+    ):
+        raise TypeError("Compass dat_files must be a list of strings.")
+    plt_files = project_files.get("plt_files", [])
+    if not isinstance(plt_files, list) or not all(
+        isinstance(path, str) for path in plt_files
+    ):
+        raise TypeError("Compass plt_files must be a list of strings.")
     source_paths = {
         COMPASS_TOML_FILENAME,
         mak_file,
-        *project_files["dat_files"],
-        *(project_files.get("plt_files") or []),
+        *dat_files,
+        *plt_files,
     }
     root = directory.resolve()
+    for relative_path in source_paths:
+        if not (directory / relative_path).resolve().is_relative_to(root):
+            raise ValueError("A Compass source path escapes its temporary directory.")
     for relative_path in source_paths:
         source = files.get(relative_path)
         if source is None:
@@ -72,8 +93,6 @@ def materialize_geojson_source(
             )
             return None
         destination = directory / relative_path
-        if not destination.resolve().is_relative_to(root):
-            raise ValueError("A Compass source path escapes its temporary directory.")
         destination.parent.mkdir(parents=True, exist_ok=True)
         with destination.open("wb") as output:
             source.blob.stream_data(output)

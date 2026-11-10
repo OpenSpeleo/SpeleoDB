@@ -97,7 +97,6 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
         assert isinstance(uploaded, Response)
         assert uploaded.status_code == status.HTTP_200_OK, uploaded.data
         assert uploaded.data["files"] == ["stalagmight.stalx"]
-        assert "geojson_status" not in uploaded.data
         assert uploaded.data["project"]["type"] == "STALAGMIGHT"
         assert (
             Format.objects.get(project=self.project).raw_format

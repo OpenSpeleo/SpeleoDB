@@ -142,24 +142,25 @@ def request_uploaded_geojson(
     """
     if project.exclude_geojson:
         return
-    eligible = any(
-        (
-            project.type == ProjectType.ARIANE
-            and file.name == ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
-        )
-        or (
-            project.type == ProjectType.STALAGMIGHT
-            and file.name == StalagmightFileProcessor.TARGET_SAVE_FILENAME
-        )
-        or (
-            project.type == ProjectType.COMPASS
-            and (
+    match project.type:
+        case ProjectType.ARIANE:
+            eligible = any(
+                file.name == ArianeTMLFileProcessor.TARGET_SAVE_FILENAME
+                for file in uploaded_files
+            )
+        case ProjectType.STALAGMIGHT:
+            eligible = any(
+                file.name == StalagmightFileProcessor.TARGET_SAVE_FILENAME
+                for file in uploaded_files
+            )
+        case ProjectType.COMPASS:
+            eligible = any(
                 file.name == CompassTOML.__FILENAME__
                 or file.suffix.lower() in {".mak", ".dat", ".plt"}
+                for file in uploaded_files
             )
-        )
-        for file in uploaded_files
-    )
+        case _:
+            return
     if not eligible:
         return
 

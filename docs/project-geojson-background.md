@@ -6,12 +6,11 @@ metadata. After SQL commit an eligible upload schedules its exact committed
 revision on `background_control`. Failed pushes, rolled-back requests, unchanged
 uploads, excluded projects and unrelated file types create no map execution.
 
-HTTP success confirms source-save success. The upload response has no
-`geojson_status` field and the former GeoJSON status endpoint is removed.
-Optional map-scheduling failure is logged and recorded in task results when a
-task row could be created, without rejecting the saved source. SQL bookkeeping
-errors are isolated by a savepoint. Git and SQL remain separate systems: process
-exit between push and SQL commit can leave remote history ahead of metadata.
+HTTP success confirms source-save success. Optional map-scheduling failure is
+logged and recorded in task results when a task row could be created, without
+rejecting the saved source. SQL bookkeeping errors are isolated by a savepoint.
+Git and SQL remain separate systems: process exit between push and SQL commit
+can leave remote history ahead of metadata.
 
 Celery TaskResult is the sole execution record. There is no generation model,
 dispatch lease, automatic retry, recovery callback or periodic map scheduling
@@ -44,10 +43,14 @@ objects for existing signed URLs; only explicit history reset purges them. See
 
 Ariane coordinates come from explicit Latitude/Longitude fields. Comments do not
 supply coordinates or declination. Stalagmight conversion uses OpenSpeleo's
-native SQLite adapter and common exporter. Invalid data does not become guessed
-map coordinates. Missing sources, empty surveys and absent usable anchors are
-skips; invalid surveys fail while preserving earlier artifacts. Solver memory
-requirements are unchanged by disk-backed source workspaces.
+native SQLite adapter and common exporter. Compass loads MAK/DAT projects
+through `compass_lib.interface.CompassInterface.load_project()` and uses its
+existing coordinate solver and GeoJSON exporter. Its project model differs from
+the shared OpenSpeleo `Survey` returned by the Ariane and Stalagmight
+interfaces. Invalid data does not become guessed map coordinates. Missing
+sources, empty surveys and absent usable anchors are skips; invalid surveys fail
+while preserving earlier artifacts. Solver memory requirements are unchanged by
+disk-backed source workspaces.
 
 Deploy matching web and worker code together, draining old generation work and
 cleaning journaled unpublished objects before table removal. The detailed

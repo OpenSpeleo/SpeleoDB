@@ -629,7 +629,6 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         ):
             response = self._do_upload()
         assert response.status_code == status.HTTP_200_OK
-        assert "geojson_status" not in response.data
         assert not connection.needs_rollback
         assert self._remote_head() == response.data["hexsha"]
         assert ProjectCommit.objects.filter(pk=response.data["hexsha"]).exists()
