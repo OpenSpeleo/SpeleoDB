@@ -10,6 +10,21 @@ monitoring service or database is required. Cache and Celery share the existing
 Redis server, using logical databases 0 and 1 respectively. This reuses the
 application's infrastructure and keeps worker scaling straightforward.
 
+`DJANGO_CELERY_USE_IMMEDIATE_BACKEND` defaults to `false`. Enable it for the
+workerless staging deployment to execute submitted tasks in the requesting
+process after the database commit. Production leaves it disabled and continues
+publishing to its worker and Beat services. Both deployments use the same code;
+the setting is an explicit execution choice, independent of environment names.
+
+Immediate execution uses Celery's native task execution and autodiscovery,
+preserves task IDs and database-backed task results, and does not connect to a
+broker. Upload generation, administrator operations, exports and export emails
+share this dispatch behavior. Failed executions retain failed task results even
+when the source upload remains successful. The setting does not start a
+scheduler: periodic maintenance and discovery of pending export notifications
+still require Beat or an explicit invocation. Work runs within the web request's
+time and memory budget, without worker-pool task timeouts.
+
 **Application background tasks use Celery Beat rather than Railway cron.** A
 continuously running Beat process uses `django-celery-beat`'s database
 scheduler. One Celery worker service consumes both archive generation and
@@ -304,6 +319,28 @@ Bootstrap refreshes the token for the chosen group without moving repositories.
 entrypoint must not replace it with the cache `REDIS_URL`. If using an external
 local broker, set `CELERY_BROKER_URL` to the appropriate address for the
 application network namespace.
+
+An absent `CELERY_BROKER_URL` uses the default in `config/settings/celery.py`.
+When immediate execution is disabled, an explicitly empty or whitespace-only
+value stops application startup with `ImproperlyConfigured`: accepting it would
+let Celery select its AMQP transport instead of Redis. Immediate execution
+permits a blank broker URL because submitted tasks do not use a broker. The
+shared settings enforce this without changing worker or scheduler retry
+policies.
+
+When investigating publication failures, inspect the running Celery app's
+effective transport and broker destination in both web and worker processes; do
+not print credentials. A successful HTTP upload response alone does not prove
+that a worker consumed its background task. Check the corresponding task result
+and worker logs. A publication timeout can also follow a committed source
+upload, so confirm persistence before resubmitting it.
+
+`speleodb/common/tests/test_celery_settings.py` exercises fresh WSGI startup,
+rejects blank values in broker mode, verifies Redis selection for configured and
+default URLs, and allows brokerless immediate execution. It constructs
+connections without contacting a broker. Real conversion and export regressions
+verify immediate terminal results, stored artifacts and notification delivery;
+these local tests do not establish deployed configuration or live connectivity.
 
 The worker intentionally has no source auto-reloader: editing a Python file must
 not terminate an archive mid-generation. Restart it explicitly after code

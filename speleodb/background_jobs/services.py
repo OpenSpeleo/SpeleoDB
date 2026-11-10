@@ -9,7 +9,6 @@ from functools import partial
 from typing import TYPE_CHECKING
 from typing import Any
 
-from celery import current_app
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -17,6 +16,7 @@ from django.db.models import Max
 from django.db.models import Q
 from django.utils import timezone
 
+from speleodb.background_jobs.dispatch import dispatch_task
 from speleodb.background_jobs.models import ACTIVE_STATES
 from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
@@ -160,12 +160,11 @@ def dispatch_attempt(attempt_id: uuid.UUID) -> None:
         )
         return
     try:
-        current_app.send_task(
+        dispatch_task(
             GENERATION_TASK,
             args=[str(job_id), str(attempt_id)],
             task_id=str(task_id),
             queue="exports",
-            retry=False,
         )
     except Exception:  # noqa: BLE001 - Persist failed publications in the attempt budget.
         fail_attempt(
@@ -389,11 +388,10 @@ def dispatch_notification(job_id: uuid.UUID) -> None:
         )
         job.save()
     try:
-        current_app.send_task(
+        dispatch_task(
             NOTIFICATION_TASK,
             args=[str(job_id), str(token)],
             queue="background_control",
-            retry=False,
         )
     except Exception:  # noqa: BLE001 - Publication and delivery share a finite budget.
         fail_notification(

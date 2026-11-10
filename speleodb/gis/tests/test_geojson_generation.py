@@ -379,6 +379,50 @@ def test_worker_consumes_committed_job_asynchronously(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
+@pytest.mark.parametrize("invalid_geometry", [False, True])
+def test_immediate_upload_execution_records_conversion_outcome(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+    memory_broker: Celery,
+    invalid_geometry: bool,
+) -> None:
+    commit, repository = local_source
+    if invalid_geometry:
+        source = repository.path / "stalagmight.stalx"
+        source.write_bytes(stalagmight_bytes(length=1.0))
+        repository.index.add([source.name])
+        actor = Actor("Surveyor", "surveyor@example.test")
+        repository.index.commit("Invalid geometry", author=actor, committer=actor)
+        commit = ProjectCommit.get_or_create_from_commit(
+            commit.project, repository.head.commit
+        )
+    memory_broker.conf.update(
+        CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=False
+    )
+    generation = _queue(commit)
+    generation.refresh_from_db()
+    assert generation.status == (
+        TaskResultStatus.FAILURE if invalid_geometry else TaskResultStatus.SUCCESS
+    )
+    assert json.loads(generation.meta or "{}")["publication"] == "confirmed"
+    with (
+        memory_broker.connection_for_write() as broker,
+        broker.SimpleQueue("background_control") as queue,
+    ):
+        assert queue.qsize() == 0
+    if invalid_geometry:
+        error = memory_broker.backend.exception_to_python(json.loads(generation.result))
+        assert isinstance(error, ConversionFailedError)
+        assert error.summary.failed == 1
+        assert not ProjectGeoJSON.objects.filter(commit=commit).exists()
+    else:
+        artifact = ProjectGeoJSON.objects.get(commit=commit)
+        assert artifact.file.name is not None
+        assert artifact_storage.exists(artifact.file.name)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
 def test_history_continues_independent_revisions_then_fails(
     local_source: tuple[ProjectCommit, GitRepo],
     artifact_storage: FileSystemStorage,

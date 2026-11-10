@@ -21,6 +21,7 @@ from django.db import transaction
 from django.utils import timezone
 from django_celery_results.models import TaskResult
 
+from speleodb.background_jobs.dispatch import dispatch_task
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
 from speleodb.surveys.models import Project
@@ -98,14 +99,13 @@ def _publish(task_ids: list[str]) -> None:
             logger.exception("Could not prepare operations publication %s", task_id)
             break
         try:
-            current_app.send_task(
+            dispatch_task(
                 result.task_name,
                 args=json.loads(result.task_args or "[]"),
                 kwargs=kwargs,
                 task_id=task_id,
                 queue="background_control",
                 headers={"meta": {**metadata, "publication": "confirmed"}},
-                retry=False,
             )
         except Exception:
             logger.exception(

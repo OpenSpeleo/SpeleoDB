@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.core.exceptions import ImproperlyConfigured
+
 from config.settings.environment import TIME_ZONE
 from config.settings.environment import USE_TZ
 from config.settings.environment import env
@@ -12,8 +14,14 @@ from config.task_results import HOUSEKEEPING_TASK_NAMES
 if USE_TZ:
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env.bool(
+    "DJANGO_CELERY_USE_IMMEDIATE_BACKEND", default=False
+)
+CELERY_TASK_STORE_EAGER_RESULT = CELERY_TASK_ALWAYS_EAGER
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
 CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default="redis://localhost:6379/1")
+if not CELERY_TASK_ALWAYS_EAGER and not CELERY_BROKER_URL.strip():
+    raise ImproperlyConfigured("CELERY_BROKER_URL must not be blank.")
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND: str | None = "django-db"
 CELERY_TASK_TRACK_STARTED = True
