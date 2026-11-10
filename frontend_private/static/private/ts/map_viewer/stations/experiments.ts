@@ -1,4 +1,5 @@
-import { MANDATORY_FIELD_UUIDS, sortExperimentFields, getEditableExperimentFields, validateExperimentField, formatDateDisplay, normalizeDateInputValue, normalizeFieldValueForInput, parseFieldInputValue } from './experiment_fields.ts';
+import { dateInputValue, formatDate } from '../../../../../../frontend_common/presentation/dates.ts';
+import { MANDATORY_FIELD_UUIDS, sortExperimentFields, getEditableExperimentFields, validateExperimentField, normalizeDateInputValue, normalizeFieldValueForInput, parseFieldInputValue } from './experiment_fields.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ExperimentReadValue, ExperimentValues } from '../../../../../../ts-types/domain/experiment-records.ts';
 import type { ViewerExperimentField, ViewerExperiment, ViewerExperimentRow, StationExperimentState, ExperimentValidation, ExperimentOperationError, RecordModalOptions } from '../../../../../../ts-types/domain/station-experiments.ts';
@@ -344,7 +345,7 @@ function renderExperimentSummary(experiment: ViewerExperiment | null) {
         parts.push(`<p class="mb-2">${Utils.escapeHtml(experiment.description)}</p>`);
     }
     if (experiment.start_date) {
-        const period = `${formatDateDisplay(experiment.start_date)}${experiment.end_date ? ` - ${formatDateDisplay(experiment.end_date)}` : ''}`;
+        const period = `${formatDate(experiment.start_date, '')}${experiment.end_date ? ` - ${formatDate(experiment.end_date, '')}` : ''}`;
         parts.push(`<p>Period: ${Utils.escapeHtml(period)}</p>`);
     }
 
@@ -365,7 +366,7 @@ function renderFieldDisplayValue(field: ViewerExperimentField, value: Experiment
     }
 
     if (field.type === 'date') {
-        return Utils.escapeHtml(formatDateDisplay(value));
+        return Utils.escapeHtml(formatDate(String(value), ''));
     }
 
     if (field.type === 'number') {
@@ -784,7 +785,7 @@ function renderFieldInput(field: ViewerExperimentField, initialValue: Experiment
             `;
             break;
         case 'date': {
-            const today = new Date().toISOString().split('T')[0];
+            const today = dateInputValue();
             const maxDate = field.id === MANDATORY_FIELD_UUIDS.MEASUREMENT_DATE
                 ? `max="${today}"`
                 : '';

@@ -2,18 +2,13 @@ import type {
     CommitsChartConfig, ContributionCalendar, MonthlyContributions,
     ProjectsChartConfig, ProjectTypeCounts,
 } from '../../../../ts-types/domain/dashboard.ts';
+import { formatMonth } from '../../../../frontend_common/presentation/dates.ts';
 
 /**
  * Dashboard pure-logic helpers.
  *
- * Loaded as a regular <script> in pages/dashboard.html.  Tests import
- * the real file (via readFileSync) so production and test code stay
- * in sync — no reimplementation.
+ * Imported by the dashboard route controller and its behavioral tests.
  */
-
-/* exported formatNumber, getHeatmapLevel, getInitials, getAvatarColor,
-            avatarColors, groupTimestampsByLocalDate, computeHeatmapStats,
-            buildCommitsChartConfig, buildProjectsChartConfig */
 
 export function formatNumber(n: number | null | undefined) {
     if (n == null) return '-';
@@ -100,7 +95,7 @@ export function computeHeatmapStats(calendar: ContributionCalendar) {
 }
 
 export function buildCommitsChartConfig(commitsOverTime: MonthlyContributions[]): CommitsChartConfig {
-    var labels = commitsOverTime.map(function(d) { return d.month; });
+    var labels = commitsOverTime.map(function(d) { return formatMonth(d.month); });
     var totalData = commitsOverTime.map(function(d) { return d.total; });
     var userData = commitsOverTime.map(function(d) { return d.user; });
     return {

@@ -10,8 +10,8 @@ from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from frontend_private.templatetags.filter_utils import datetime_since
 from frontend_private.templatetags.filter_utils import format_byte_size
-from frontend_private.templatetags.filter_utils import time_struct_since
 from speleodb.api.v2.serializers.summary_contract import GitCommitFormatSerializer
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitFile
@@ -27,14 +27,14 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
     author_name = serializers.CharField(source="author.name")
     author_email = serializers.CharField(source="author.email")
     authored_date = serializers.DateTimeField(
-        source="authored_datetime", format="%Y/%m/%d %H:%M"
+        source="authored_datetime", format="iso-8601", default_timezone=dt.UTC
     )
 
     committer_name = serializers.CharField(source="committer.name")
     committer_email = serializers.CharField(source="committer.email")
 
     committed_date = serializers.DateTimeField(
-        source="committed_datetime", format="%Y/%m/%d %H:%M"
+        source="committed_datetime", format="iso-8601", default_timezone=dt.UTC
     )
 
     dt_since = serializers.SerializerMethodField()
@@ -114,7 +114,7 @@ class GitCommitSerializer(serializers.Serializer[GitCommit]):
         return None
 
     def get_dt_since(self, obj: GitCommit) -> str:
-        return time_struct_since(obj.date)
+        return datetime_since(obj.committed_datetime)
 
     def to_representation(self, instance: GitCommit) -> dict[str, Any]:
         """

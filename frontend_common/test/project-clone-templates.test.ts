@@ -36,7 +36,7 @@ it('git browser hides its sources while displaying cloned rows across folder nav
     sources.forEach(source => expect(getComputedStyle(source).display).toBe('none'));
     const commit = {
         author_name: 'Surveyor', message: 'Updated survey', hexsha_short: 'abc123',
-        dt_since: '1 day ago', authored_date: '2026/09/15 10:00', url: '/revision/abc123/',
+        dt_since: '1 day ago', authored_date: '2026-09-15T10:00:00Z', url: '/revision/abc123/',
     };
     respondWith({
         commit,
@@ -76,7 +76,7 @@ it('revision history displays commit and download clones after removing source I
     respondWith({
         commits: [
             {
-                id: 'abc123456789', author_name: 'Surveyor', authored_date: '2026/09/15',
+                id: 'abc123456789', author_name: 'Surveyor', authored_date: '2026-09-15T10:00:00Z',
                 message: 'First survey', url: '/revision/abc123/',
                 formats: [
                     { name: 'Compass', download_url: '/download/compass/' },
@@ -84,7 +84,7 @@ it('revision history displays commit and download clones after removing source I
                 ],
             },
             {
-                id: 'def123456789', author_name: 'Surveyor', authored_date: '2026/09/14',
+                id: 'def123456789', author_name: 'Surveyor', authored_date: '2026-09-14T10:00:00Z',
                 message: 'Notes only', url: '/revision/def123/', formats: [],
             },
         ],

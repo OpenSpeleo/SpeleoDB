@@ -138,6 +138,28 @@ an explicit non-null schema alternative plus a null alternative. This retains
 every required field on the non-null object and permits the actual `null`
 response. Do not work around nullable failures by dropping required properties.
 
+## Revision timestamps
+
+Revision `authored_date` and Git explorer `authored_date` / `committed_date`
+responses use ISO 8601 UTC timestamps ending in `Z`. Serialization preserves the
+stored instant and precision, independently of Django's active timezone. These
+properties are OpenAPI `string` / `date-time` values, not presentation strings.
+Cached revision ages use the aware authored datetime; Git explorer ages retain
+their committed-datetime meaning. Genuine future dates remain future dates.
+
+The revision history controller uses the
+[shared frontend date formatter](frontend-dates.md) in the browser's local
+timezone without a visible timezone suffix, sharing the formatted value between
+its mobile and desktop layouts. Folder metadata selects the latest authored
+instant, including seconds, rather than comparing local clock readings. This
+adds no database queries and requires no stored-history migration.
+
+Regression coverage exercises database readback, UTC wire precision, timezone
+and daylight-saving boundaries, real-clock relative ages, and rendered local
+presentation and folder ordering. Schema adoption includes both generated SDK
+snapshots; Rust revision fields deserialize as UTC datetimes. No legacy
+slash-date parser or alternate API field is retained.
+
 ## Changing an endpoint
 
 1. Inspect the Django resolver entry, permission classes, parsers, and every

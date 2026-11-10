@@ -1,3 +1,4 @@
+import { dateInputValue, formatDate, formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import { CylinderInstallRequestUnitSystem, CylinderPressureCheckRequestUnitSystem, PatchedCylinderInstallRequestStatus } from '@speleodb/api';
 import { choice } from '../../../../../../frontend_common/api/entity-forms.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
@@ -139,7 +140,7 @@ async function showInstallModal(coordinates: readonly unknown[], locationName: s
                         Install Date <span class="text-rose-500">*</span>
                     </label>
                     <input type="date" id="install-date"
-                        value="${new Date().toISOString().split('T')[0]}"
+                        value="${dateInputValue()}"
                         class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                 </div>
 
@@ -585,7 +586,7 @@ function renderCylinderInfoTab(install: CylinderInstallDetails) {
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Install Date:</span>
-                        <span class="text-white">${Utils.escapeHtml(install.install_date) || 'N/A'}</span>
+                        <span class="text-white">${formatDate(install.install_date)}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-slate-400">Installed By:</span>
@@ -698,8 +699,8 @@ async function renderPressureChecksTab(installId: EntityId, contentEl: HTMLEleme
                                     const unit = check.unit_system === 'imperial' ? 'PSI' : 'BAR';
                                     // Use check_date if available, fallback to creation_date
                                     const checkDate = check.check_date
-                                        ? new Date(check.check_date).toLocaleDateString()
-                                        : new Date(check.creation_date).toLocaleDateString();
+                                        ? formatDate(check.check_date)
+                                        : formatDateTime(check.creation_date);
                                     // Escape user-controlled fields to prevent XSS
                                     const safeUser = Utils.escapeHtml(check.user) || 'Unknown';
                                     const safeNotes = Utils.escapeHtml(check.notes) || '-';
@@ -754,7 +755,7 @@ function showAddPressureCheck(installId: EntityId) {
     const contentEl = document.getElementById('cylinder-tab-content');
     if (!contentEl) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = dateInputValue();
 
     contentEl.innerHTML = `
         <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">
@@ -870,7 +871,7 @@ async function editPressureCheck(installId: EntityId, checkId: EntityId) {
 
 
         // Get the check_date or fallback to today
-        const checkDateValue = check.check_date || new Date().toISOString().split('T')[0];
+        const checkDateValue = check.check_date || dateInputValue();
 
         contentEl.innerHTML = `
             <div class="bg-srgb-slate-700-50 rounded-lg p-6 flow-y-4">

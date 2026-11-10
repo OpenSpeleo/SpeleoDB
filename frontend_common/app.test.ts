@@ -26,6 +26,26 @@ afterEach(() => {
 });
 
 describe('Vite application bootstrap', () => {
+    it('formats month-only editorial dates without inventing a day', async () => {
+        document.body.innerHTML = '<time data-local-date="month" datetime="2024-06">June, 2024</time>';
+        await initializeControllers();
+        expect(document.querySelector('time')!.textContent).toBe(new Intl.DateTimeFormat(undefined, {
+            year: 'numeric', month: 'short',
+        }).format(new Date(2024, 5, 1)));
+    });
+
+    it('localizes server-rendered timestamps and preserves calendar dates on every route', async () => {
+        document.body.innerHTML = '<time data-local-date="datetime" datetime="2026-11-01T05:30:00Z">2026/11/01 05:30</time><time data-local-date="date" datetime="2026-01-01">2026-01-01</time>';
+        await initializeControllers();
+        const dates = document.querySelectorAll('time');
+        expect(dates[0]!.textContent).toBe(new Intl.DateTimeFormat(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+        }).format(new Date('2026-11-01T05:30:00Z')));
+        expect(dates[1]!.textContent).toBe(new Intl.DateTimeFormat(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+        }).format(new Date(2026, 0, 1)));
+    });
+
     it('does not schedule asset polling or request reload clients after lifecycle events', async () => {
         vi.resetModules();
         const fetch = vi.spyOn(globalThis, 'fetch');

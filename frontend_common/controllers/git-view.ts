@@ -45,12 +45,12 @@ export async function init(context: GitViewContext) {
                 else {
                    const index = result.folders.findIndex(folder => folder.name === folder_name);
                    if (index !== -1) {
-                      // Use moment.js to parse the datetime string with custom format
+                      // Parse ISO timestamps as instants, preserving offsets and seconds.
                       // Let's find if there's a newer commit.
-                      const currentDate = window.moment(result.folders[index]!.datetime, "YYYY/MM/DD HH:mm");
-                      const newDate = window.moment(file.commit.authored_date, "YYYY/MM/DD HH:mm");
+                      const currentDate = Date.parse(result.folders[index]!.datetime!);
+                      const newDate = Date.parse(file.commit.authored_date);
 
-                      if (newDate.isAfter(currentDate)) {
+                      if (newDate > currentDate) {
                          result.folders[index] = {
                             ...result.folders[index]!, // copies all existing properties
                             message: file.commit.message,

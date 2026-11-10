@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import { groupLandmarks } from '@speleodb/map-core/landmarks';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerLandmark, ViewerLandmarkCollection } from '../../../../../../ts-types/domain/map-entities.ts';
@@ -305,7 +306,7 @@ export const LandmarkUI = {
                 <div class="bg-srgb-slate-700-50 rounded-lg p-4 flow-y-2">
                     <p class="text-slate-300"><strong>Coordinates:</strong> ${Number(landmark.latitude).toFixed(7)}, ${Number(landmark.longitude).toFixed(7)}</p>
                     <p class="text-slate-300"><strong>Collection:</strong> ${collectionLabel}</p>
-                    <p class="text-slate-300"><strong>Created:</strong> ${landmark.creation_date ? new Date(landmark.creation_date).toLocaleDateString() : 'Unknown'}</p>
+                    <p class="text-slate-300"><strong>Created:</strong> ${formatDateTime(landmark.creation_date, 'Unknown')}</p>
                 </div>
             </div>` :
             `<div class="text-center py-8"><h3 class="text-white text-lg font-medium mb-2">Landmark Not Found</h3></div>`;

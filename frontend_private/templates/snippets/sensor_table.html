@@ -1,3 +1,5 @@
+{% load filter_utils %}
+
 {% comment %}
 Reusable sensor table snippet.
 
@@ -59,8 +61,8 @@ Parameters:
               <td class="px-4 py-3 text-sm text-slate-300">{{ install.station.longitude|default:"-" }}</td>
             {% endwith %}
             {% with install=sensor.active_installs|first %}
-              <td class="px-4 py-3 text-sm text-slate-300">{{ install.expiracy_memory_date|date:"Y-m-d"|default:"-" }}</td>
-              <td class="px-4 py-3 text-sm text-slate-300">{{ install.expiracy_battery_date|date:"Y-m-d"|default:"-" }}</td>
+              <td class="px-4 py-3 text-sm text-slate-300">{% local_date install.expiracy_memory_date "-" %}</td>
+              <td class="px-4 py-3 text-sm text-slate-300">{% local_date install.expiracy_battery_date "-" %}</td>
             {% endwith %}
             {% if show_actions|default:False and has_write_access|default:False %}
               <td class="px-4 py-3">

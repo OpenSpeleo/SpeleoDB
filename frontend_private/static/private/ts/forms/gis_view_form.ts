@@ -1,4 +1,5 @@
 import type { GisViewCommit, GisViewFormOptions, GisViewProject, GisViewSelectedProject } from '../../../../../ts-types/domain/forms/gis-view.ts';
+import { formatDateTime } from '../../../../../frontend_common/presentation/dates.ts';
 
 /**
  * Shared GIS-view project-picker form used by both the "Create GIS view"
@@ -103,7 +104,7 @@ export function attachGisViewForm<Response = unknown>(options: GisViewFormOption
             if (Array.isArray(data) && data.length > 0) {
                 $select.html('<option value="">Select a commit...</option>');
                 (data).forEach(function (commit) {
-                    var date = (commit.commit_date || '').split('T')[0];
+                    var date = formatDateTime(commit.commit_date, 'Unknown date');
                     var commitSha = commit.commit_sha || '';
                     var shortSha = commitSha.substring(0, 8);
                     var author = commit.commit_author_name || 'Unknown';

@@ -1,3 +1,4 @@
+import { dateInputValue } from '../presentation/dates.ts';
 import { v2ToolsDmpDoctorCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
 
@@ -10,7 +11,7 @@ export function init() {
         let currentTab = 'uncorrupt';
 
         // Set up date inputs - max date is today
-        const today = new Date().toISOString().split('T')[0]!;
+        const today = dateInputValue();
         $('#surveyDate').attr('max', today);
         $('#surveyDateUncorrupt').attr('max', today);
 

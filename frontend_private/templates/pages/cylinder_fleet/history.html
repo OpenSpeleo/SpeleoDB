@@ -1,5 +1,6 @@
 {% extends "pages/cylinder_fleet/base.html" %}
 
+{% load filter_utils %}
 {% load static %}
 
 {% block right_panel %}
@@ -26,7 +27,7 @@
           <tbody class="text-sm row-divide-y row-divide-slate-700">
             {% for install in installs %}
               <tr>
-                <td class="px-4 py-3 text-slate-300">{{ install.date|date:"Y-m-d" }}</td>
+                <td class="px-4 py-3 text-slate-300">{% local_date install.date %}</td>
                 <td class="px-4 py-3">
                   {% if install.event == "installed" %}
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-srgb-emerald-500-20 text-emerald-300 border border-srgb-emerald-500-30">

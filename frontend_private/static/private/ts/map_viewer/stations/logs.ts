@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { StationLogRecord } from '../../../../../../ts-types/domain/station-records.ts';
 import { getMapOverlayHost } from '../components/overlay_host.ts';
@@ -164,7 +165,7 @@ export const StationLogs = {
                 <header class="journal-entry-header">
                     <h4 class="journal-entry-title">${escapedTitle}</h4>
                     <div class="journal-entry-meta">
-                        <span>${Utils.formatJournalDate(log.creation_date)}</span>
+                        <span>${formatDateTime(log.creation_date, '')}</span>
                         <span class="journal-dot"></span>
                         <span>${escapedCreatedBy}</span>
                     </div>

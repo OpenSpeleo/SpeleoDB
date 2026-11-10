@@ -2,8 +2,9 @@ import { v2ExperimentsRetrieve, v2GisOgcExperimentRetrieve, v2ExperimentsExportE
 import { apiData, ApiRequestError, webApiOptions } from '../api/client.ts';
 import type { ExperimentDataContext } from '../../ts-types/controllers/experiment-data.ts';
 import type { ExperimentTableField, ExperimentTableRow, ExperimentTableFeature, ExperimentTableDefinition, ExperimentTableGeoJSON } from '../../ts-types/domain/experiment-table.ts';
-import type { AgGridApi, AgGridOptions } from '../../ts-types/browser/ag-grid.d.ts';
+import type { AgGridApi, AgGridColumn, AgGridOptions } from '../../ts-types/browser/ag-grid.d.ts';
 import { afterWindowLoad } from '../readiness.ts';
+import { formatDate } from '../presentation/dates.ts';
 
 export async function init(context: ExperimentDataContext) {
     await afterWindowLoad();
@@ -160,7 +161,7 @@ export async function init(context: ExperimentDataContext) {
             const firstRow = rows[0];
             const columnDefs = Object.keys(firstRow!)
                 .filter(key => !excludedColumns.includes(key)) // Filter out excluded columns
-                .map(key => ({
+                .map<AgGridColumn>(key => ({
                     field: key,
                     headerName: headerNameMap[key] || key, // Use custom name if mapped, otherwise use original
                     sortable: true,
@@ -168,6 +169,11 @@ export async function init(context: ExperimentDataContext) {
                     resizable: true,
                     minWidth: 150,
                     flex: 1,
+                    // Keep ISO calendar values for chronological sorting; only
+                    // the grid's displayed text uses browser-local formatting.
+                    ...(Array.isArray(experimentFields) && experimentFields.some(field => field.name === key && field.type === 'date')
+                        ? { valueFormatter: ({ value }) => formatDate(typeof value === 'string' ? value : null, '') }
+                        : {}),
                 }));
 
             // Grid options

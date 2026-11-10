@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 
+{% load filter_utils %}
 {% load static vite_assets %}
 {% load countries %}
 {% load set_var %}
@@ -152,7 +153,7 @@
                       </div>
                       <div class="project-card-row">
                         <span class="project-card-label">Last Edit</span>
-                        <span class="project-card-value">{{ proj_data.project.modified_date|date:"Y/m/d" }}</span>
+                        <span class="project-card-value">{% local_date proj_data.project.modified_date %}</span>
                       </div>
                       {% if proj_data.active_mutex.user %}
                         <div class="project-card-row">
@@ -163,7 +164,7 @@
                           <span class="project-card-label">Editing Since</span>
                           <span class="project-card-value">
                             {% if proj_data.active_mutex %}
-                              {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
+                              {% local_date proj_data.active_mutex.creation_date %}
                             {% else %}
                               -
                             {% endif %}
@@ -303,7 +304,7 @@
                         </div>
                       </td>
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
-                        <div class="text-center">{{ proj_data.project.modified_date|date:"Y/m/d" }}</div>
+                        <div class="text-center">{% local_date proj_data.project.modified_date %}</div>
                       </td>
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="text-center">
@@ -317,7 +318,7 @@
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="text-center">
                           {% if proj_data.active_mutex %}
-                            {{ proj_data.active_mutex.created_date|date:"Y/m/d" }}
+                            {% local_date proj_data.active_mutex.creation_date %}
                           {% else %}
                             -
                           {% endif %}

@@ -23,7 +23,6 @@ const Utils = vi.hoisted(() => {
             showNotification: vi.fn(),
             showLoadingOverlay: vi.fn(() => document.createElement('div')),
             hideLoadingOverlay: vi.fn(),
-            formatJournalDate: vi.fn((d: string | undefined) => d || ''),
             filenameFromUrl: vi.fn((url: string | null | undefined) => url?.split('/').pop() || ''),
             escapeHtml: vi.fn(escapeHtml),
             sanitizeUrl: vi.fn((url: string | null | undefined) => {

@@ -27,7 +27,10 @@ function choose(name = 'survey.dmp') {
 
 it('keeps date limits, tab resets, and file reset behavior', () => {
     expect($('#fixDmpSwitch').prop('checked')).toBe(true);
-    expect($('#surveyDate').attr('max')).toBe(new Date().toISOString().split('T')[0]);
+    const today = new Date();
+    const localDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    expect($('#surveyDate').attr('max')).toBe(localDay);
+    expect($('#surveyDateUncorrupt').attr('max')).toBe(localDay);
     choose(); $('#compassOffset').val('45');
     $('[data-tab="adjust"]').trigger('click');
     expect($('#compassOffset').val()).toBe('0');

@@ -497,7 +497,8 @@ For bug fixes and behavior changes, follow test-driven development:
 
 1. Before changing production behavior, add a focused behavioral test that
    reproduces the defect or expresses the required behavior. Run it and confirm
-   that it fails for the intended reason.
+   that it fails for the intended reason. Environment and fixture setup failures
+   do not establish reproduction.
 2. Implement the smallest root-cause correction. Keep the regression's expected
    behavior intact.
 3. Rerun the regression, relevant boundary and state-preservation cases, and
@@ -505,9 +506,10 @@ For bug fixes and behavior changes, follow test-driven development:
 
 Tests must exercise consequential application behavior using the repository's
 established test boundaries. Record the observed failure and passing
-verification. Missing prerequisites and stop requests must be reported; unrun
-checks cannot establish completion. Do not claim broader guarantees than the
-verified scenarios support.
+verification outside the checkout. Preserve the rules for real clocks, minimal
+mocking, and container execution. Missing prerequisites and stop requests must
+be reported; unrun checks cannot establish completion. Do not claim broader
+guarantees than the verified scenarios support.
 
 The owner's stop/resume directives take precedence over every test/check
 requirement in this file. When tests are authorized, run **every test inside the

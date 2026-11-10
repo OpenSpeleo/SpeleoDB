@@ -94,7 +94,8 @@
             Latest version:
             <span class="text-slate-200 font-medium">v{{ compass_sidecar_version }}</span>
             {% if compass_sidecar_pub_date %}
-              <span class="text-slate-500">· {{ compass_sidecar_pub_date|slice:":10" }}</span>
+              <span class="text-slate-500">· <time datetime="{{ compass_sidecar_pub_date }}"
+                                                   data-local-date="datetime">{{ compass_sidecar_pub_date }}</time></span>
             {% endif %}
           </p>
           <p class="text-slate-300 text-sm sm:text-base leading-relaxed sm:leading-[1.5]">

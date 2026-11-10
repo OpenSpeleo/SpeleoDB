@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 
+{% load filter_utils %}
 {% load vite_assets %}
 {% load static %}
 {% load countries %}
@@ -72,7 +73,7 @@
                 </div>
                 <div class="surface-network-card-row">
                   <span class="surface-network-card-label">Created</span>
-                  <span class="surface-network-card-value">{{ network_perm.network.creation_date|date:"Y/m/d" }}</span>
+                  <span class="surface-network-card-value">{% local_date network_perm.network.creation_date %}</span>
                 </div>
               </div>
             </div>
@@ -133,7 +134,7 @@
                       </div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3">
-                      <div class="text-center">{{ network_perm.network.creation_date|date:"Y/m/d" }}</div>
+                      <div class="text-center">{% local_date network_perm.network.creation_date %}</div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3">
                       <div class="flex items-center text-slate-800">

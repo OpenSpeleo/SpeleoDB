@@ -2,6 +2,7 @@ export interface ExperimentTableField {
     id: string;
     name: string;
     order?: number;
+    type?: string;
 }
 /** Backend custom field UUIDs and display names are open keys. */
 export type ExperimentTableRow = Record<string, unknown>;

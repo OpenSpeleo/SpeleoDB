@@ -1,3 +1,4 @@
+import { dateInputValue } from '../presentation/dates.ts';
 import type { V2ToolsXls2compassCreateBody } from '@speleodb/api';
 import { v2ToolsXls2compassCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
@@ -293,7 +294,7 @@ export function init() {
         }
 
         // Set max date to today (no future dates allowed)
-        const today = new Date().toISOString().split('T')[0]!;
+        const today = dateInputValue();
         $('#surveyDate').attr('max', today);
 
         // Unit switch handler

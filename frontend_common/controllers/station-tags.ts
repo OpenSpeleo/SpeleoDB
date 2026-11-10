@@ -1,3 +1,4 @@
+import { formatDateTime } from '../presentation/dates.ts';
 import { v2StationTagsList, v2StationTagsCreateWithJson, v2StationTagsUpdateWithJson, v2StationTagsDestroy } from '@speleodb/api';
 import type { StationTag, StationTagRequest } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
@@ -74,7 +75,7 @@ export function init() {
                         </td>
                         <td class="px-2 first:pl-5 last:pr-5 py-3">
                             <div class="text-center text-slate-400 text-xs">
-                                ${new Date(tag.creation_date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')}
+                                ${escapeHtml(formatDateTime(tag.creation_date))}
                             </div>
                         </td>
                         <td class="px-2 first:pl-5 last:pr-5 py-3">
@@ -130,7 +131,7 @@ export function init() {
                             </div>
                             <div class="tag-card-row">
                                 <span class="tag-card-label">Created</span>
-                                <span class="tag-card-value">${new Date(tag.creation_date).toLocaleDateString()}</span>
+                                <span class="tag-card-value">${escapeHtml(formatDateTime(tag.creation_date))}</span>
                             </div>
                         </div>
                     </div>

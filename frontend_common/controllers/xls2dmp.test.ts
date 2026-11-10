@@ -51,3 +51,9 @@ it('escapes server validation messages and settles the UI', async () => {
     await vi.waitFor(() => { expect($('#modal_error_txt').text()).toBe('<unsafe>'); });
     expect($('#modal_error_txt unsafe')).toHaveLength(0);
 });
+
+it('allows the browser-local current day as the latest survey date', () => {
+    const today = new Date();
+    const localDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    expect($('#surveyDate').attr('max')).toBe(localDay);
+});

@@ -335,6 +335,23 @@ it('keeps landmarks, leads and cylinders gated through creation and project chan
     expect(currentMap().getLayer('exploration-leads-layer').filter).toEqual(Layers.getProjectScopedMarkerFilter());
 });
 
+it('localizes cylinder marker date labels without changing the editable installation date', () => {
+    // The existing map fixture substitutes WebGL, unavailable in JSDOM; source
+    // data and label configuration still come from the real layer builder.
+    const feature = cylinderInstallFixture();
+    feature.properties.install_date = '2026-01-01';
+    Layers.addCylinderInstallsLayer({ type: 'FeatureCollection', features: [feature] });
+    const source = currentMap().getSource('cylinder-installs-source');
+    const displayedDate = source.data.features[0]?.properties?.install_date_display;
+    expect(displayedDate).toBe(new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(2026, 0, 1)));
+    expect(currentMap().getLayer('cylinder-installs-labels').layout?.['text-field'])
+        .toContainEqual(['coalesce', ['get', 'install_date_display'], 'Unknown date']);
+    expect(State.cylinderInstalls.get(feature.id)?.install_date).toBe('2026-01-01');
+    expect(feature.properties.install_date).toBe('2026-01-01');
+});
+
 it('changes every category without fetching, moving the map, rebuilding data, or resetting the style', async () => {
     vi.stubGlobal('fetch', vi.fn());
     for (const { id } of DEFAULTS.DISPLAY.CATEGORIES) {

@@ -205,7 +205,6 @@
         transition: color 0.15s ease;
     }
     .activity-meta a:hover { color: #a5b4fc; }
-    .activity-time-short { display: none; }
 
     .quick-action-btn {
         display: inline-flex;
@@ -248,10 +247,10 @@
             display: none !important;
         }
 
-        /* Activity feed: 3-column compact layout — Who / Project / When */
+        /* Keep full local timestamps below the author and project on mobile. */
         .activity-row {
             display: grid;
-            grid-template-columns: 1fr auto auto;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 6px 10px;
             align-items: center;
             padding: 8px 6px;
@@ -268,12 +267,13 @@
             font-size: 13px;
         }
         .activity-badge-project {
-            max-width: none;
+            max-width: 100%;
+            justify-self: end;
             font-size: 11px;
         }
         .activity-meta {
             font-size: 11px;
+            grid-column: 1 / -1;
+            justify-self: end;
         }
-        .activity-time-full { display: none; }
-        .activity-time-short { display: inline; }
     }

@@ -32,6 +32,27 @@ it('loads generated experiment details before GeoJSON and preserves field order 
     expect($('#dataGridContainer').hasClass('hidden')).toBe(false);
 });
 
+it('formats measurement calendar dates without changing their sortable values or text fields', async () => {
+    const calendarDate = '2026-01-01';
+    server.handle(request => ({ json: request.path === '/api/v2/experiments/experiment/'
+        ? { experiment_fields: [{ id: 'measured', name: 'Measured', type: 'date' }, { id: 'note', name: 'Note', type: 'text' }] }
+        : { type: 'FeatureCollection', features: [{ properties: { measured: calendarDate, note: calendarDate } }] },
+    }));
+    await init(context);
+    await vi.waitFor(() => expect(createGrid).toHaveBeenCalledOnce());
+    const options = createGrid.mock.calls[0]![1];
+    const row = options.rowData[0]!;
+    expect(row.Measured).toBe(calendarDate);
+    expect(row.Note).toBe(calendarDate);
+    const measuredColumn = options.columnDefs.find(column => column.field === 'Measured')!;
+    const formatter = measuredColumn.valueFormatter;
+    const expectedDate = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        .format(new Date(2026, 0, 1));
+    expect(formatter?.({ value: row.Measured }) ?? String(row.Measured)).toBe(expectedDate);
+    expect(formatter?.({ value: '' }) ?? '').toBe('');
+    expect(options.columnDefs.find(column => column.field === 'Note')).not.toHaveProperty('valueFormatter');
+});
+
 it('renders HTTP errors as text and avoids loading GeoJSON after rejected details', async () => {
     server.reply({ status: 403, json: { detail: '<Denied>' } });
     await init(context); await vi.waitFor(() => expect($('#errorText').text()).toBe('<Denied>'));

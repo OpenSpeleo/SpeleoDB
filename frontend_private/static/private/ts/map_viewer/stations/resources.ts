@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { StationResourceRecord } from '../../../../../../ts-types/domain/station-records.ts';
 import type { StationResourcePreview, StationNotePresentation } from '../../../../../../ts-types/domain/station-resources.ts';
@@ -151,7 +152,7 @@ export const StationResources = {
                 ${this.getResourcePreview(resource)}
 
                 <div class="flex justify-between items-center mt-3 text-xs text-slate-400">
-                    <span>${new Date(resource.creation_date as string).toLocaleDateString()}</span>
+                    <span>${formatDateTime(resource.creation_date)}</span>
                     <span>${Utils.escapeHtml(resource.created_by || 'Unknown')}</span>
                 </div>
             </div>
@@ -1000,7 +1001,7 @@ export const StationResources = {
                         <h3 class="text-xl font-bold text-white">${noteData.title || 'Note'}</h3>
                         <div class="flex gap-4 text-sm text-slate-400 mt-2">
                             <span>By ${noteData.author}</span>
-                            <span>${Utils.raw(new Date(noteData.date as string).toLocaleDateString())}</span>
+                            <span>${formatDateTime(noteData.date)}</span>
                         </div>
                         ${Utils.raw(noteData.description ? `<p class="text-slate-300 mt-2 text-sm">${Utils.escapeHtml(noteData.description)}</p>` : '')}
                     </div>

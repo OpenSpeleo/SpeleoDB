@@ -76,18 +76,6 @@ export function validateExperimentField(value: string | null | undefined, fieldT
     }
 }
 
-export function formatDateDisplay(value: ExperimentReadValue | undefined) {
-    if (!value) {
-        return '';
-    }
-
-    try {
-        return new Date(value as string).toLocaleDateString();
-    } catch (error) {
-        return String(value);
-    }
-}
-
 export function normalizeDateInputValue(value: ExperimentReadValue) {
     if (!value) {
         return '';

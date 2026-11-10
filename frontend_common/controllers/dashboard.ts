@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime, formatMonth } from '../presentation/dates.ts';
 import { v2UserDashboardStatsRetrieve } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
 import type { ContributionCalendar, MonthlyContributions, ProjectTypeCounts, DashboardSummary, DashboardActivity, HeatmapDay, HeatmapMonth } from '../../ts-types/domain/dashboard.ts';
@@ -147,9 +148,8 @@ export function init() {
                 var firstDay = weeks[w]![0]!;
                 var mKey = firstDay.date.getFullYear() + '-' + firstDay.date.getMonth();
                 if (mKey !== prevMKey) {
-                    var yr = String(firstDay.date.getFullYear()).slice(-2);
                     monthHeaders.push({
-                        label: firstDay.date.toLocaleString('en', { month: 'short' }) + ' ' + yr,
+                        label: formatMonth(firstDay.date),
                         startCol: w
                     });
                     prevMKey = mKey;
@@ -161,14 +161,6 @@ export function init() {
             }
 
             var dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-            function ordinal(n: number) {
-                var s = ['th','st','nd','rd'];
-                var v = n % 100;
-                return n + (s[(v - 20) % 10] || s[v] || s[0]!);
-            }
-            var tipMonths = ['January','February','March','April','May','June',
-                             'July','August','September','October','November','December'];
 
             var html = '<colgroup><col class="hm-label-col">';
             for (var c = 0; c < totalWeeks; c++) html += '<col>';
@@ -191,7 +183,7 @@ export function init() {
                         var lvl = getHeatmapLevel(cell.count);
                         var cd = cell.date;
                         var tip = cell.count + ' contribution' + (cell.count !== 1 ? 's' : '') +
-                            ' on ' + tipMonths[cd.getMonth()] + ' ' + ordinal(cd.getDate()) + '.';
+                            ' on ' + formatDate(cd) + '.';
                         html += '<td><div class="hm-cell hm-level-' + lvl + '" data-tip="' + tip + '" title="' + tip + '" aria-label="' + tip + '"></div></td>';
                     }
                 }
@@ -215,7 +207,7 @@ export function init() {
             if (busiestEl) {
                 if (stats.busiestDayCount > 0) {
                     var bd = new Date(stats.busiestDay + 'T00:00:00');
-                    busiestEl.textContent = bd.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+                    busiestEl.textContent = formatDate(bd);
                     if (busiestCountEl) busiestCountEl.textContent = stats.busiestDayCount + ' contribution' + (stats.busiestDayCount !== 1 ? 's' : '');
                 } else {
                     busiestEl.textContent = '--';
@@ -265,14 +257,7 @@ export function init() {
                 var color = getAvatarColor(item.author_name);
 
                 var itemDate = new Date(item.authored_date);
-                var localDateTime = itemDate.toLocaleDateString('en', {
-                    month: 'short', day: 'numeric', year: 'numeric'
-                }) + ' at ' + itemDate.toLocaleTimeString('en', {
-                    hour: 'numeric', minute: '2-digit', hour12: true
-                });
-                var localDateOnly = itemDate.toLocaleDateString('en', {
-                    month: 'short', day: 'numeric'
-                });
+                var localDateTime = formatDateTime(itemDate);
 
                 // Date group headers
                 var todayDate = new Date();
@@ -285,7 +270,7 @@ export function init() {
                     if (itemDate.toDateString() === yesterday.toDateString()) {
                         dateLabel = 'Yesterday';
                     } else {
-                        dateLabel = itemDate.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                        dateLabel = formatDate(itemDate);
                     }
                 }
 
@@ -304,7 +289,7 @@ export function init() {
                     '<a href="' + projectUrl + '" class="activity-badge activity-badge-project">' + projectName + '</a>' +
                     '<a href="' + gitUrl + '" class="activity-badge activity-badge-sha" title="Browse commit">' + shortSha + '</a>' +
                     '<span class="activity-msg">' + message + '</span>' +
-                    '<span class="activity-meta"><span class="activity-time-full">' + localDateTime + '</span><span class="activity-time-short">' + localDateOnly + '</span></span>' +
+                    '<time class="activity-meta" datetime="' + escapeHtml(item.authored_date) + '">' + escapeHtml(localDateTime) + '</time>' +
                 '</div>';
             }
             container.innerHTML = html;

@@ -8,7 +8,7 @@ beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixtu
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 let commits: RevisionCommit[];
 beforeEach(() => {
-    commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026/01/01 12:00', author_email: 'diver@example.com', dt_since: '1 day', parent_ids: [], tree: [], url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
+    commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026-01-01T12:00:00Z', author_email: 'diver@example.com', dt_since: '1 day', parent_ids: [], tree: [], url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
     server.handle(() => ({ json: { commits } }));
     document.body.innerHTML = '<div id="loading_spinner"></div><div id="mobile-revision-container"></div><table><tbody id="commit-table-container"><tr id="commit-template" style="display:none"><td><span class="font-medium"></span></td><td><span class="font-medium"></span></td><td><span class="text-center"></span></td><td><span class="font-medium"></span></td><td><a class="revision_explorer"></a><ul id="format-download-container"><li id="format-download-template" style="display:none"><a></a></li></ul></td></tr></tbody></table>';
 });
@@ -39,6 +39,21 @@ it('skips only the exact automated project creation pair', async () => {
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(2);
 });
+it.each(['2026-11-10T08:18:00Z', '2026-07-10T08:18:00Z'])(
+    'displays %s in the browser timezone without a timezone suffix on mobile and desktop', async authoredDate => {
+        commits[0]!.authored_date = authoredDate;
+        await init({ projectId: 'project' });
+        const mobileDate = $('.revision-meta-item').last().find('span').text();
+        const desktopDate = $('#commit-table-container tr').first().find('td').eq(2).text();
+        const date = new Date(authoredDate);
+        const hour = date.getHours();
+        const minute = String(date.getMinutes()).padStart(2, '0');
+        expect(mobileDate).toBe(desktopDate);
+        expect(mobileDate).not.toMatch(/\b(?:GMT|UTC)\b/);
+        expect(mobileDate).toMatch(new RegExp(`\\b0?(?:${hour}|${hour % 12 || 12}):${minute}\\b`));
+        expect(mobileDate).not.toContain(authoredDate);
+    },
+);
 it('repeated initialization appends mobile rows after removing its sole desktop template', async () => {
     await init({ projectId: 'project' });
     vi.spyOn(console, 'error');

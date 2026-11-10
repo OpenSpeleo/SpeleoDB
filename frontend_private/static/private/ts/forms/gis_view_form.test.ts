@@ -49,3 +49,24 @@ it('rejects empty selection before submission without changing load-error settle
     expect(save).not.toHaveBeenCalled();
     expect($('#modal_error_txt').text()).toContain('at least one project');
 });
+
+it('shows the browser-local timestamp when choosing a specific revision', async () => {
+    gisControls();
+    const authoredDate = '2026-01-01T00:15:00Z';
+    attachGisViewForm({
+        loadProjects: async () => [{ id: 'p1', name: 'Cave' }],
+        loadCommits: async () => [{ commit_sha: 'abcdef123456', commit_date: authoredDate, commit_author_name: 'Diver', commit_message: 'Survey' }],
+        save: async () => ({}),
+    });
+    await Promise.resolve();
+    const $ = jqueryHost.jQuery;
+    $('#add_project_btn').trigger('click');
+    $('.project-select').val('p1').trigger('change');
+    $('.commit-mode-radio[value="specific"]').prop('checked', true).trigger('change');
+    await vi.waitFor(() => expect(document.querySelector('.commit-sha-select option[value="abcdef123456"]')).not.toBeNull());
+    const expectedDate = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    }).format(new Date(authoredDate));
+    expect(document.querySelector('.commit-sha-select option[value="abcdef123456"]')!.textContent)
+        .toBe(`[${expectedDate}] Diver: Survey - abcdef12`);
+});

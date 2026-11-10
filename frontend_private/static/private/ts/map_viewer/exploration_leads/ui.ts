@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import { State } from '../state.ts';
 import { Utils } from '../utils.ts';
@@ -134,7 +135,7 @@ export const ExplorationLeadUI = {
                         </div>
                         <div class="flex justify-between mt-1">
                             <span class="text-slate-400">Created:</span>
-                            <span>${lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'Unknown'}</span>
+                            <span>${formatDateTime(lead.createdAt, 'Unknown')}</span>
                         </div>
                         ${lead.createdBy ? `
                         <div class="flex justify-between mt-1">

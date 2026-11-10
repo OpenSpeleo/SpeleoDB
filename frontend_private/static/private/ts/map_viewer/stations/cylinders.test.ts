@@ -256,7 +256,7 @@ describe('CylinderInstalls literal contracts', () => {
         await CylinderInstalls.handleInstall();
         expect(API.createCylinderInstall).toHaveBeenCalledWith({
             project: 'p', cylinder: 'c', latitude: '2.0000000', longitude: '1.0000000',
-            location_name: 'Location', install_date: new Date().toISOString().split('T')[0],
+            location_name: 'Location', install_date: new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()),
             unit_system: 'metric', distance_from_entry: 0, notes: 'Notes',
         });
         expect(eventSpy).toHaveBeenCalledOnce();

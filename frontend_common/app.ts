@@ -1,3 +1,5 @@
+import { formatDateElements } from './presentation/dates.ts';
+
 interface ControllerModule { init?: (context: unknown, element: HTMLElement) => unknown }
 const CONTROLLER_SELECTOR = '[data-speleodb-controller]';
 const controllerModules = import.meta.glob<ControllerModule>([
@@ -72,6 +74,7 @@ export async function initializeController(element: HTMLElement) {
 }
 
 export async function initializeControllers(root: ParentNode = document) {
+    formatDateElements(root);
     const elements = Array.from(root.querySelectorAll<HTMLElement>(CONTROLLER_SELECTOR));
     for (const element of elements) {
         try {

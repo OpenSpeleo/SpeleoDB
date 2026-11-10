@@ -67,22 +67,6 @@ class CustomChoiceSchema(OpenApiSerializerFieldExtension):  # type: ignore[no-un
         return {"type": "string", "enum": values}
 
 
-class FormattedDateTimeSchema(OpenApiSerializerFieldExtension):  # type: ignore[no-untyped-call]
-    target_class = "rest_framework.serializers.DateTimeField"
-
-    def map_serializer_field(self, auto_schema: Any, direction: str) -> dict[str, Any]:
-        if direction == "response" and getattr(self.target, "format", None) == (
-            "%Y/%m/%d %H:%M"
-        ):
-            return {"type": "string", "pattern": r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$"}
-        return cast(
-            "dict[str, Any]",
-            auto_schema._map_serializer_field(  # noqa: SLF001
-                self.target, direction, bypass_extensions=True
-            ),
-        )
-
-
 class ModelRepresentationSchema(OpenApiSerializerExtension):  # type: ignore[no-untyped-call]
     target_class = "rest_framework.serializers.ModelSerializer"
     match_subclasses = True
@@ -285,17 +269,7 @@ class ModelRepresentationSchema(OpenApiSerializerExtension):  # type: ignore[no-
                     properties[name].pop(constraint, None)
             if isinstance(field, serializers.EmailField) and field.allow_blank:
                 properties[name].pop("format", None)
-            if (
-                isinstance(field, serializers.DateTimeField)
-                and getattr(field, "format", None) == "%Y/%m/%d %H:%M"
-            ):
-                properties[name].pop("format", None)
-                properties[name]["pattern"] = r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$"
         if isinstance(self.target, ProjectCommitSerializer):
-            properties["authored_date"] = {
-                "type": "string",
-                "pattern": r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$",
-            }
             properties["tree"] = {
                 "type": "array",
                 "items": {

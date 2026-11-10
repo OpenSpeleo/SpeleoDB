@@ -8,6 +8,9 @@ import geometryContract from '@speleodb/map-core/geometry-contract.json' with { 
 // in the map viewer. No magic numbers anywhere else.
 // ============================================================
 export const DEFAULTS = Object.freeze({
+    SENSORS: {
+        EXPIRY_WARNING_DAYS: 7,
+    },
     VIEWER_WORK: {
         BUDGET_MS: 8,
         WORKER_PARSE_BYTES: 4 * 1024 * 1024,

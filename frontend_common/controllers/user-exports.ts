@@ -1,3 +1,4 @@
+import { formatDateTime } from '../presentation/dates.ts';
 import { getV2UserExportsListUrl, getV2UserExportsDownloadRetrieveUrl, v2UserExportsList, v2UserExportsRetrieve, v2UserExportsCreate, v2UserExportsRetryCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
 import type { ExportHistoryOptions, ExportJob, ExportOmission, ExportPage, ExportRequestFailure, ExportState } from '../../ts-types/domain/exports.ts';
@@ -41,10 +42,6 @@ function element<Tag extends keyof HTMLElementTagNameMap>(tag: Tag, text?: strin
     return node;
 }
 
-function dateLabel(value: string | undefined) {
-    const date = new Date(value as string);
-    return Number.isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleString();
-}
 
 function sizeLabel(value: unknown) {
     const bytes = Number(value);
@@ -203,11 +200,11 @@ export function renderExportHistory(container: HTMLElement, jobs: ExportJob[], {
         heading.append(element('h4', 'Data export'), element('span',
             STATE_LABELS[job.state] || 'Export status unavailable',
             `exports-badge ${STATE_CLASSES[job.state] || ''}`));
-        body.append(heading, element('p', `Requested ${dateLabel(job.created_at)}`, 'exports-card-meta'));
+        body.append(heading, element('p', `Requested ${formatDateTime(job.created_at, 'Unknown date')}`, 'exports-card-meta'));
         if (ACTIVE_STATES.has(job.state)) {
             body.append(element('p', 'An email will be sent when ready to download.', 'exports-card-description'));
         } else if (job.artifact) {
-            body.append(element('p', `${sizeLabel(job.artifact.size_bytes)} · Expires ${dateLabel(job.artifact.expires_at)}`, 'exports-card-meta'));
+            body.append(element('p', `${sizeLabel(job.artifact.size_bytes)} · Expires ${formatDateTime(job.artifact.expires_at, 'Unknown date')}`, 'exports-card-meta'));
         }
         main.append(symbol, body);
         card.append(main);

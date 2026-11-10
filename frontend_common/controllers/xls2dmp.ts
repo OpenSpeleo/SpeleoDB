@@ -1,3 +1,4 @@
+import { dateInputValue } from '../presentation/dates.ts';
 import type { V2ToolsXls2dmpCreateBody } from '@speleodb/api';
 import { v2ToolsXls2dmpCreate } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
@@ -18,7 +19,7 @@ export function init() {
             });
         });
 
-        const today = new Date().toISOString().split('T')[0]!;
+        const today = dateInputValue();
         $('#surveyDate').attr('max', today);
 
         let currentUnit: V2ToolsXls2dmpCreateBody['unit'] = 'feet';

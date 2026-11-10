@@ -6,6 +6,7 @@ export interface AgGridColumn {
     resizable: boolean;
     minWidth: number;
     flex: number;
+    valueFormatter?: (params: { value: unknown }) => string;
 }
 export interface AgGridOptions<Row> {
     columnDefs: AgGridColumn[];

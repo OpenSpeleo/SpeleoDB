@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -9,7 +10,7 @@ from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from frontend_private.templatetags.filter_utils import time_struct_since
+from frontend_private.templatetags.filter_utils import datetime_since
 from speleodb.surveys.models import FileFormat
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
@@ -20,7 +21,9 @@ class ProjectCommitSerializer(serializers.ModelSerializer[ProjectCommit]):
     formats = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
 
-    authored_date = serializers.DateTimeField(format="%Y/%m/%d %H:%M")
+    authored_date = serializers.DateTimeField(
+        format="iso-8601", default_timezone=dt.UTC
+    )
     parent_ids = serializers.ListField(child=serializers.CharField(), read_only=True)
     tree = serializers.ListField(
         child=serializers.DictField(child=serializers.CharField()), read_only=True
@@ -50,7 +53,7 @@ class ProjectCommitSerializer(serializers.ModelSerializer[ProjectCommit]):
         )
 
     def get_dt_since(self, obj: ProjectCommit) -> str:
-        return time_struct_since(obj.authored_date.timetuple())
+        return datetime_since(obj.authored_date)
 
     @extend_schema_field(
         {

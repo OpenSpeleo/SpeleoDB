@@ -346,9 +346,13 @@ describe('Dashboard helpers', () => {
         });
 
         it('renders local date+time instead of time-ago', async () => {
-            await renderActivityFeed([makeEntry()], container);
-            const meta = container.querySelector<HTMLElement>('.activity-meta')!;
-            expect(meta.textContent).toContain('at');
+            const entry = makeEntry();
+            await renderActivityFeed([entry], container);
+            const meta = container.querySelector<HTMLTimeElement>('.activity-meta')!;
+            expect(meta.textContent).toBe(new Intl.DateTimeFormat(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+            }).format(new Date(entry.authored_date)));
+            expect(meta.dateTime).toBe(entry.authored_date);
         });
 
         it('renders date group headers', async () => {
@@ -396,15 +400,6 @@ describe('Dashboard helpers', () => {
             expect(msg.textContent).toBe('Fixed depth readings');
         });
 
-        it('renders both full and short time formats', async () => {
-            await renderActivityFeed([makeEntry()], container);
-            const full = container.querySelector<HTMLElement>('.activity-time-full')!;
-            const short = container.querySelector<HTMLElement>('.activity-time-short')!;
-            expect(full).not.toBeNull();
-            expect(short).not.toBeNull();
-            expect(full.textContent).toContain('at');
-            expect(short.textContent.length).toBeLessThan(full.textContent.length);
-        });
 
         it('renders avatar with correct background color', async () => {
             await renderActivityFeed([makeEntry({ author_name: 'Alice Smith' })], container);
@@ -452,11 +447,6 @@ describe('Dashboard helpers', () => {
             expect(rows.length).toBe(1);
         });
 
-        it('short time does not contain "at"', async () => {
-            await renderActivityFeed([makeEntry()], container);
-            const short = container.querySelector<HTMLElement>('.activity-time-short')!;
-            expect(short.textContent).not.toContain('at');
-        });
     });
 
     // -------------------------------------------------------------- //
@@ -474,9 +464,10 @@ describe('Dashboard helpers', () => {
             expect(buildCommitsChartConfig(sampleData).type).toBe('line');
         });
 
-        it('has labels matching month fields', () => {
+        it('displays calendar months in the browser locale without shifting their month', () => {
             const config = buildCommitsChartConfig(sampleData);
-            expect(config.data.labels).toEqual(['2025-05', '2025-06', '2025-07']);
+            const formatter = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short' });
+            expect(config.data.labels).toEqual([4, 5, 6].map(month => formatter.format(new Date(2025, month, 1))));
         });
 
         it('has two datasets', () => {

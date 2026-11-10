@@ -39,44 +39,6 @@ export const Utils = {
         return getMapCSRFToken();
     },
 
-    formatDateString: function(dateStr: string | null | undefined) {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    },
-
-    formatJournalDate: function(isoString: string | null | undefined) {
-        if (!isoString) return '';
-        const date = new Date(isoString);
-        return date.toLocaleDateString(undefined, {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    },
-
-    formatExpiracyDate: function(dateStr: string | null | undefined) {
-        if (!dateStr) return 'N/A';
-        const date = new Date(dateStr);
-        const now = new Date();
-        const diffTime = (date as unknown as number) - (now as unknown as number);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        let colorClass = 'text-emerald-400';
-        if (diffDays < 0) colorClass = 'text-red-400';
-        else if (diffDays < 7) colorClass = 'text-amber-400';
-
-        return `<span class="${colorClass}">${date.toLocaleDateString()} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
-    },
-
     filenameFromUrl: function(url: string | null | undefined) {
         if (!url) return '';
         try {

@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 
+{% load filter_utils %}
 {% load static vite_assets %}
 {% load set_var %}
 {% load str_format %}
@@ -213,7 +214,7 @@
                     </div>
                   </td>
                   <td class="px-2 first:pl-5 last:pr-5 py-3">
-                    <div class="text-center">{{ collection_perm.collection.creation_date|date:"Y/m/d" }}</div>
+                    <div class="text-center">{% local_date collection_perm.collection.creation_date %}</div>
                   </td>
                   <td class="px-2 first:pl-5 last:pr-5 py-3">
                     <div class="flex justify-end">

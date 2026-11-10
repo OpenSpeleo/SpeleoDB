@@ -1,6 +1,8 @@
+import { formatDate, formatDateTime, parseCalendarDate } from '../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { SensorInstallRecord } from '../../../../../../ts-types/domain/fleet-records.ts';
 import { Utils } from '../utils.ts';
+import { DEFAULTS } from '../defaults.ts';
 
 /**
  * Get color class for sensor install status
@@ -36,41 +38,23 @@ export function canChangeSensorInstallStatus(install: SensorInstallRecord) {
 }
 
 /**
- * Format date string without timezone issues
- */
-export function formatDateString(dateStr: string | null | undefined) {
-    if (!dateStr) return '';
-
-    // Extract just the date part
-    const dateOnly = dateStr.split('T')[0]!;
-    const parts = dateOnly.split('-');
-
-    if (parts.length === 3) {
-        const year = parseInt(parts[0]!, 10);
-        const month = parseInt(parts[1]!, 10) - 1;
-        const day = parseInt(parts[2]!, 10);
-        const date = new Date(year, month, day);
-        return date.toLocaleDateString();
-    }
-
-    return new Date(dateStr).toLocaleDateString();
-}
-
-/**
  * Format expiry date with color coding
  */
 export function formatExpiracyDate(dateStr: string | null | undefined) {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const date = parseCalendarDate(dateStr);
+    if (!date) return '';
     const now = new Date();
-    const diffTime = (date as unknown as number) - (now as unknown as number);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Compare calendar days, not elapsed hours: daylight-saving days can have
+    // 23 or 25 hours, and expiry dates do not represent UTC instants.
+    const diffDays = (date.getTime()
+        - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000;
 
     let colorClass = 'text-emerald-400';
     if (diffDays < 0) colorClass = 'text-red-400';
-    else if (diffDays < 7) colorClass = 'text-amber-400';
+    else if (diffDays < DEFAULTS.SENSORS.EXPIRY_WARNING_DAYS) colorClass = 'text-amber-400';
 
-    return `<span class="${colorClass}">${date.toLocaleDateString()} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
+    return `<span class="${colorClass}">${formatDate(dateStr)} (${diffDays > 0 ? 'in ' : ''}${Math.abs(diffDays)} days${diffDays < 0 ? ' ago' : ''})</span>`;
 }
 
 /**
@@ -257,11 +241,11 @@ export function renderSensorHistoryHtml(installs: SensorInstallRecord[], station
                                                 ${getSensorInstallStatusLabel(install.status)}
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-slate-300">${formatDateString(install.install_date)}</td>
+                                        <td class="px-4 py-3 text-slate-300">${formatDate(install.install_date, '')}</td>
                                         <td class="px-4 py-3 text-slate-400 text-xs">${Utils.escapeHtml(install.install_user || '-')}</td>
-                                        <td class="px-4 py-3 text-slate-300">${install.uninstall_date ? formatDateString(install.uninstall_date) : '-'}</td>
+                                        <td class="px-4 py-3 text-slate-300">${formatDate(install.uninstall_date, '-')}</td>
                                         <td class="px-4 py-3 text-slate-400 text-xs">${Utils.escapeHtml(install.uninstall_user || '-')}</td>
-                                        <td class="px-4 py-3 text-slate-400 text-xs">${install.modified_date ? new Date(install.modified_date).toLocaleDateString() : '-'}</td>
+                                        <td class="px-4 py-3 text-slate-400 text-xs">${formatDateTime(install.modified_date, '-')}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>

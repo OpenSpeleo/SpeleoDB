@@ -1,3 +1,4 @@
+import { formatDateTime } from '../presentation/dates.ts';
 import { v2ProjectsRevisionsRetrieve } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
 import { registerAlpineBindings } from '../runtime/alpine.ts';
@@ -22,6 +23,7 @@ export async function init(context: RevisionHistoryContext) {
                         if (commit.message == "[Automated] Project Creation" && commit.author_name == "SpeleoDB") {
                             return;  // Skip automated project creation commits
                         }
+                        const authoredDate = formatDateTime(commit.authored_date);
 
                         // === Build Mobile List Item ===
                         var $mobileItem = $('<div class="revision-item"></div>');
@@ -61,7 +63,7 @@ export async function init(context: RevisionHistoryContext) {
                         var $author = $('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span></span></div>');
                         $author.find('span').text(commit.author_name);
                         var $date = $('<div class="revision-meta-item"><svg class="revision-meta-icon stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span></span></div>');
-                        $date.find('span').text(commit.authored_date);
+                        $date.find('span').text(authoredDate);
                         $meta.append($author, $date);
                         $mobileItem.append($meta);
 
@@ -82,7 +84,7 @@ export async function init(context: RevisionHistoryContext) {
                         // ---------------------------------------------------------------------
                         $row.find('td').eq(0).find('.font-medium').text(commit.id.slice(0, 8));    // Commit Short ID
                         $row.find('td').eq(1).find('.font-medium').text(commit.author_name);     // Author
-                        $row.find('td').eq(2).find('.text-center').text(commit.authored_date);  // Date
+                        $row.find('td').eq(2).find('.text-center').text(authoredDate);  // Date
                         $row.find('td').eq(3).find('.font-medium').text(commit.message);         // Message
 
                         // Adjusting all the links

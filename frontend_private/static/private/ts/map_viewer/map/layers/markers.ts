@@ -1,4 +1,5 @@
 import type { CylinderInstallGeoJSONCollection } from '@speleodb/api';
+import { formatDate } from '../../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
@@ -47,7 +48,7 @@ function getCylinderGasMixTextExpression(): RendererValue {
 function getCylinderInstallLabelExpression(): RendererValue {
     return [
         'concat',
-        ['coalesce', ['get', 'install_date'], 'Unknown date'],
+        ['coalesce', ['get', 'install_date_display'], 'Unknown date'],
         '\n',
         getCylinderGasMixTextExpression(),
         '@',
@@ -426,7 +427,16 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
 
     addOwnedSource(map, sourceId, {
         type: 'geojson',
-        data: geojsonData,
+        data: {
+            ...geojsonData,
+            features: geojsonData.features.map(feature => ({
+                ...feature,
+                properties: {
+                    ...feature.properties,
+                    install_date_display: formatDate(feature.properties.install_date, 'Unknown date'),
+                },
+            })),
+        },
         promoteId: 'id'
     });
 

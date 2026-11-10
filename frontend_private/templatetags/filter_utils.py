@@ -4,44 +4,34 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-from typing import TYPE_CHECKING
 
-import pytz
 import timeago
 from django import template
-from django.conf import settings
 from django.utils import timezone
-
-if TYPE_CHECKING:
-    import time
+from django.utils.html import format_html
 
 register = template.Library()
 
 
-def datetime_of_struct_time(st: time.struct_time) -> dt.datetime:
-    "Convert a struct_time to datetime maintaining timezone information when present"
-    tz = None
-    if st.tm_gmtoff is not None:
-        tz = dt.timezone(dt.timedelta(seconds=st.tm_gmtoff))
-    # datetime doesn't like leap seconds so just truncate to 59 seconds
-    if st.tm_sec in {60, 61}:
-        converted_time = dt.datetime(*st[:5], 59, tzinfo=tz)
-    converted_time = dt.datetime(*st[:6], tzinfo=tz)
-
-    return converted_time.astimezone(pytz.timezone(settings.TIME_ZONE))
-
-
-@register.filter(name="time_struct_since")
-def time_struct_since(time_struct: time.struct_time) -> str:
-    dt = datetime_of_struct_time(time_struct)
-    dt_now = timezone.now()
-    return timeago.format(dt, dt_now)  # type: ignore[no-any-return,no-untyped-call]
+@register.simple_tag
+def local_date(value: dt.date | None, fallback: str = "") -> str:
+    """Expose timestamps and calendar dates to the shared browser formatter."""
+    if not value:
+        return fallback
+    mode = "datetime" if isinstance(value, dt.datetime) else "date"
+    iso_value = value.isoformat()
+    return format_html(
+        '<time datetime="{}" data-local-date="{}">{}</time>',
+        iso_value,
+        mode,
+        iso_value,
+    )
 
 
-@register.filter(name="time_struct_format")
-def time_struct_format(time_struct: time.struct_time) -> str:
-    dt = datetime_of_struct_time(time_struct)
-    return dt.strftime("%Y/%m/%d %H:%M")
+@register.filter(name="datetime_since")
+def datetime_since(value: dt.datetime) -> str:
+    """Format elapsed time without discarding the input's timezone."""
+    return timeago.format(value, timezone.now())  # type: ignore[no-any-return,no-untyped-call]
 
 
 @register.filter(name="format_byte_size")

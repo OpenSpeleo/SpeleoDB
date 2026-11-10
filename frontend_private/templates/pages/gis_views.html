@@ -1,5 +1,6 @@
 {% extends "base_private.html" %}
 
+{% load filter_utils %}
 {% load static vite_assets %}
 {% load set_var %}
 
@@ -147,7 +148,7 @@
                           </div>
                         </td>
                         <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                          <div class="text-slate-100">{{ gis_view.modified_date|date:"Y-m-d H:i" }}</div>
+                          <div class="text-slate-100">{% local_date gis_view.modified_date %}</div>
                         </td>
                         <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap w-px">
                           <div class="flex items-center justify-center gap-2">
@@ -222,7 +223,7 @@
                 </div>
                 <div class="gisview-card-row">
                   <span class="gisview-card-label">Modified:</span>
-                  <span class="gisview-card-value">{{ gis_view.modified_date|date:"Y-m-d H:i" }}</span>
+                  <span class="gisview-card-value">{% local_date gis_view.modified_date %}</span>
                 </div>
               </div>
             </div>

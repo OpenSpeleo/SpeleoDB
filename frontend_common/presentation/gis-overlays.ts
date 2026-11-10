@@ -1,3 +1,4 @@
+import { formatDateTime } from './dates.ts';
 import { getV2GisLayersSourceRetrieveUrl } from '@speleodb/api';
 import type { GISListRecord, GISListPresentation, GISDetailsRoute } from '../../ts-types/controllers/gis-lists.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
@@ -6,13 +7,6 @@ import { escapeHtml, safeCssColor, sanitizeUrl } from '../../frontend_private/st
 const FALLBACK_COLOR = '#94a3b8';
 export const SUPPORTED_FORMATS_LABEL = 'KML, KMZ, GeoJSON, TopoJSON, or a zipped Shapefile';
 
-function formatDate(dateString: string | undefined) {
-    const date = new Date(dateString as string);
-    if (Number.isNaN(date.getTime())) return 'Unknown';
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-}
 
 function routeUrl(routeName: GISDetailsRoute, layerId: EntityId) {
     const route = globalThis.Urls?.[routeName];
@@ -101,7 +95,7 @@ export function buildGISOverlayListMarkup(layers: GISListRecord[], openIconUrl =
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-300 text-sm break-words">${escapeHtml(layer.created_by || '—')}</div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center"><span class="inline-flex font-medium ${permissionPillClass(layer.user_permission_level_label)} rounded-full px-2.5 py-0.5">${escapeHtml(permissionLabel)}</span></div></td>
                 ${options.showSource ? `<td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-sm uppercase text-slate-300">${escapeHtml(layer.source_format || '—')}</div></td>` : ''}
-                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-400 text-sm">${escapeHtml(formatDate(layer.creation_date))}</div></td>
+                <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center text-slate-400 text-sm">${escapeHtml(formatDateTime(layer.creation_date, 'Unknown'))}</div></td>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="flex items-center justify-center gap-2">${renderDesktopActions(layer, openIconUrl, options)}</div></td>
             </tr>`;
     }).join('');
@@ -121,7 +115,7 @@ export function buildGISOverlayListMarkup(layers: GISListRecord[], openIconUrl =
                     <div class="track-card-row"><span class="track-card-label">Creator</span><span class="track-card-value">${escapeHtml(layer.created_by || '—')}</span></div>
                     <div class="track-card-row"><span class="track-card-label">Access</span><span class="inline-flex font-medium ${permissionPillClass(layer.user_permission_level_label)} rounded-full px-2.5 py-0.5">${escapeHtml(permissionLabel)}</span></div>
                     ${options.showSource ? `<div class="track-card-row"><span class="track-card-label">Source</span><span class="track-card-value uppercase">${escapeHtml(layer.source_format || '—')}</span></div>` : ''}
-                    <div class="track-card-row"><span class="track-card-label">Created</span><span class="track-card-value">${escapeHtml(formatDate(layer.creation_date))}</span></div>
+                    <div class="track-card-row"><span class="track-card-label">Created</span><span class="track-card-value">${escapeHtml(formatDateTime(layer.creation_date, 'Unknown'))}</span></div>
                 </div>
             </div>`;
     }).join('');

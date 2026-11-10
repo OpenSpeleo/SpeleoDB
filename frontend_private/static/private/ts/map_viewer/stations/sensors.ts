@@ -1,4 +1,5 @@
-import { getSensorInstallStatusColor, getSensorInstallStatusLabel, canChangeSensorInstallStatus, formatDateString, formatExpiracyDate, validateSensorInstallDates, renderSensorHistoryHtml } from './sensor_presentation.ts';
+import { dateInputValue, formatDate } from '../../../../../../frontend_common/presentation/dates.ts';
+import { getSensorInstallStatusColor, getSensorInstallStatusLabel, canChangeSensorInstallStatus, formatExpiracyDate, validateSensorInstallDates, renderSensorHistoryHtml } from './sensor_presentation.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { SensorInstallRecord, SensorRecord } from '../../../../../../ts-types/domain/fleet-records.ts';
 import type { PendingSensorStatusChange } from '../../../../../../ts-types/domain/station-sensors.ts';
@@ -116,7 +117,7 @@ export const StationSensors = {
                                             <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
                                                 <div>
                                                     <span class="text-slate-400">Installed:</span>
-                                                    <span class="text-white ml-2">${formatDateString(install.install_date)}</span>
+                                                    <span class="text-white ml-2">${formatDate(install.install_date, '')}</span>
                                                 </div>
                                                 <div>
                                                     <span class="text-slate-400">Installer:</span>
@@ -458,7 +459,7 @@ export const StationSensors = {
 
             Utils.hideLoadingOverlay(loadingOverlay);
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = dateInputValue();
 
             container.innerHTML = `
                 <div class="tab-content active">
@@ -821,7 +822,7 @@ export const StationSensors = {
     },
 
     showRetrieveModal(installId: EntityId, stationId: EntityId, projectId: EntityId | null) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = dateInputValue();
         const container = (document.getElementById('station-modal-content') as HTMLElement);
 
         container.innerHTML = `

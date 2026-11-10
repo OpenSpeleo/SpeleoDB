@@ -13,6 +13,10 @@ Unlike product docs, these files prioritize:
 
 ### Architecture and System Design
 
+- [Frontend dates](frontend-dates.md)
+  - Shared browser-local timestamps, calendar-date preservation, template
+    hydration, and private/public map presentation.
+
 - [Generated TypeScript API client](typescript-api-client.md)
   - Browser session/CSRF policy, generated operations and DTOs, file transfers,
     network boundaries, consumer upgrades, and verification.

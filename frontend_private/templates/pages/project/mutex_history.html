@@ -1,5 +1,6 @@
 {% extends "pages/project/base.html" %}
 
+{% load filter_utils %}
 {% load static vite_assets %}
 
 {% block extra_css %}
@@ -126,11 +127,11 @@
               <div class="timeline-dates">
                 <div class="timeline-date-row">
                   <span class="timeline-date-label">Locked:</span>
-                  <span>{{ mutex.creation_date|date:"Y/m/d H:i" }}</span>
+                  <span>{% local_date mutex.creation_date %}</span>
                 </div>
                 <div class="timeline-date-row">
                   <span class="timeline-date-label">Modified:</span>
-                  <span>{{ mutex.modified_date|date:"Y/m/d H:i" }}</span>
+                  <span>{% local_date mutex.modified_date %}</span>
                 </div>
               </div>
               {% if mutex.closing_user or mutex.closing_comment %}
@@ -187,10 +188,10 @@
                       </div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                      <div class="text-center">{{ mutex.creation_date|date:"Y/m/d H:i" }}</div>
+                      <div class="text-center">{% local_date mutex.creation_date %}</div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
-                      <div class="text-center">{{ mutex.modified_date|date:"Y/m/d H:i" }}</div>
+                      <div class="text-center">{% local_date mutex.modified_date %}</div>
                     </td>
                     <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                       <div class="text-center">{% if mutex.closing_user %}{{ mutex.closing_user }}{% endif %}</div>

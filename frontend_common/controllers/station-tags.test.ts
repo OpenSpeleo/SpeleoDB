@@ -6,7 +6,7 @@ beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
-const tag = { id: 'tag', name: '<unsafe>', color: '#EF4444', station_count: 1, creation_date: '2026-01-01' };
+const tag = { id: 'tag', name: '<unsafe>', color: '#EF4444', station_count: 1, creation_date: '2026-01-01T00:30:00Z' };
 beforeEach(() => {
     server.handle(request => request.method === 'GET' ? { json: [tag] } : { status: request.method === 'POST' ? 201 : 200, json: tag });
     document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn-create-tag">Create</button><table><tbody id="tags-table-body"></tbody></table><div id="tags-cards-container"></div><div id="edit-tag-modal"><form id="edit-tag-form"><input id="edit-tag-id"><input id="edit-tag-name"><input id="edit-tag-color"><input id="custom-color-input" type="color"><div id="edit-tag-color-picker"></div><button type="submit">Save</button></form></div><div id="delete-tag-modal"><input id="delete-tag-id"><div id="delete-tag-info"></div><span id="delete-tag-station-count"></span><button id="btn-confirm-delete">Delete</button></div><div id="modal_error"><span id="modal_error_txt"></span></div><div id="modal_success"><span id="modal_success_txt"></span></div>';
@@ -25,6 +25,11 @@ it('renders generated tag data as inert text and opens the selected edit/delete 
     $('#tags-cards-container .btn-delete-tag').trigger('click');
     expect($('#delete-tag-info').text()).toContain('<unsafe>'); expect($('#delete-tag-info unsafe')).toHaveLength(0);
     expect($('#delete-tag-station-count').text()).toBe('1');
+    const expectedDate = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    }).format(new Date(tag.creation_date));
+    expect($('#tags-table-body').text()).toContain(expectedDate);
+    expect($('#tags-cards-container').text()).toContain(expectedDate);
 });
 
 it('validates name/color locally and creates a typed tag through generated JSON', async () => {

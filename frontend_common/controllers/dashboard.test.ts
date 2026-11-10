@@ -10,7 +10,7 @@ beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 function response() {
-    return { summary: { total_projects: 7, total_teams: 2, user_commits: 12, total_stations_created: 30, total_landmarks: 0, total_gps_tracks: 1 }, commits_over_time: [{ month: 'Jan', total: 12, user: 7 }], projects_by_type: { compass: 2 }, contribution_calendar: { '2026-01-01': 3 }, recent_activity: [] as unknown[] };
+    return { summary: { total_projects: 7, total_teams: 2, user_commits: 12, total_stations_created: 30, total_landmarks: 0, total_gps_tracks: 1 }, commits_over_time: [{ month: '2026-01', total: 12, user: 7 }], projects_by_type: { compass: 2 }, contribution_calendar: { '2026-01-01': 3 }, recent_activity: [] as unknown[] };
 }
 beforeEach(() => {
     server.reply({ json: response() });
@@ -28,10 +28,14 @@ it('fetches immediately and renders the real stat, chart and 53-week heatmap imp
     expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/user/dashboard-stats/' });
     expect($('#stat-cards .stat-value').map(function () { return $(this).text(); }).get()).toEqual(['7', '2', '12', '30', '0', '1']);
     expect(Chart).toHaveBeenCalledTimes(2);
-    expect(Chart.mock.calls[0]![1]).toMatchObject({ type: 'line', data: { labels: ['Jan'], datasets: [{ data: [12], fill: true }, { data: [7], fill: true }] } });
+    const monthFormatter = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short' });
+    expect(Chart.mock.calls[0]![1]).toMatchObject({ type: 'line', data: { labels: [monthFormatter.format(new Date(2026, 0, 1))], datasets: [{ data: [12], fill: true }, { data: [7], fill: true }] } });
     expect(Chart.mock.calls[1]![1]).toMatchObject({ type: 'doughnut', data: { labels: ['Compass'] } });
     expect($('#contribution-heatmap tbody tr').length).toBe(7);
     expect($('#contribution-heatmap tbody tr').first().find('td').length).toBe(54);
+    const today = new Date();
+    const priorMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    expect($('#contribution-heatmap thead').text()).toContain(monthFormatter.format(priorMonth));
     expect($('#heatmap-total-count').text()).toBe('3');
     expect($('#recent-activity').text()).toContain('No recent activity');
 });
@@ -46,6 +50,10 @@ it('escapes activity fields, filters system commits and constructs project and r
     expect($('.activity-badge-project').attr('href')).toBe('/project/1/');
     expect($('.activity-badge-sha').text()).toBe('1234567');
     expect($('#recent-activity message, #recent-activity Cave').length).toBe(0);
+    const expectedDate = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    }).format(new Date('2026-01-01T12:00:00Z'));
+    expect($('.activity-meta').text()).toBe(expectedDate);
 });
 it('renders an empty project chart and the HTTP error state', async () => {
     server.reply({ json: { ...response(), projects_by_type: {} } }); init();
