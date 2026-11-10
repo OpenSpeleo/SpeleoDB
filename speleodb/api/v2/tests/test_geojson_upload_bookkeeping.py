@@ -1,4 +1,4 @@
-"""Optional map bookkeeping defers broker publication until SQL commit."""
+"""Optional map submission preserves source commits and defers publication."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from unittest.mock import patch
 import pytest
 from django.db import transaction
 from django.utils import timezone
+from django_celery_results.models import TaskResult
 
 from speleodb.api.v2.views.file import request_uploaded_geojson
 from speleodb.common.enums import ProjectType
-from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.surveys.models import ProjectCommit
 
 if TYPE_CHECKING:
@@ -35,40 +35,28 @@ def source(project: Project) -> ProjectCommit:
 
 
 @pytest.mark.django_db
-def test_request_records_only_and_rollback_discards_pending_job(
-    source: ProjectCommit,
-) -> None:
+def test_rollback_discards_task_and_publication(source: ProjectCommit) -> None:
     with (
         patch("celery.current_app.send_task", side_effect=AssertionError("broker")),
-        patch(
-            "openspeleo_lib.interfaces.ArianeInterface.from_file",
-            side_effect=AssertionError("parser"),
-        ),
         transaction.atomic(),
     ):
-        assert (
-            request_uploaded_geojson(source.project, source.pk, [Path("ariane.tml")])
-            == "pending"
-        )
-        assert ProjectGeoJSONGeneration.objects.filter(commit=source).exists()
+        request_uploaded_geojson(source.project, source.pk, [Path("ariane.tml")])
+        assert TaskResult.objects.exists()
         transaction.set_rollback(True)
-    assert not ProjectGeoJSONGeneration.objects.filter(commit=source).exists()
+    assert not TaskResult.objects.exists()
 
 
 @pytest.mark.django_db
 def test_unrelated_upload_does_not_schedule(source: ProjectCommit) -> None:
-    assert (
-        request_uploaded_geojson(source.project, source.pk, [Path("notes.pdf")])
-        == "not_requested"
-    )
-    assert not ProjectGeoJSONGeneration.objects.filter(commit=source).exists()
+    request_uploaded_geojson(source.project, source.pk, [Path("notes.pdf")])
+    assert not TaskResult.objects.exists()
 
 
 @pytest.mark.django_db
 def test_reporting_failure_cannot_change_upload_outcome(source: ProjectCommit) -> None:
     with (
         patch(
-            "speleodb.api.v2.views.file.request_geojson_generation",
+            "speleodb.api.v2.views.file.schedule_uploaded_geojson",
             side_effect=RuntimeError("optional bookkeeping"),
         ),
         patch(
@@ -76,8 +64,6 @@ def test_reporting_failure_cannot_change_upload_outcome(source: ProjectCommit) -
             side_effect=RuntimeError("reporting unavailable"),
         ),
     ):
-        assert (
-            request_uploaded_geojson(source.project, source.pk, [Path("ariane.tml")])
-            == "unavailable"
-        )
+        request_uploaded_geojson(source.project, source.pk, [Path("ariane.tml")])
     assert ProjectCommit.objects.filter(pk=source.pk).exists()
+    assert not TaskResult.objects.exists()

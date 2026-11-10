@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import socket
-import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
@@ -86,23 +85,17 @@ def test_real_unauthorized_response_is_not_retried() -> None:
         responses.append(response)
 
     client.session.hooks["response"].append(observe)
-    try:
+    with client:
         with pytest.raises(gitlab.exceptions.GitlabAuthenticationError) as raised:
             client.auth()
         assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
         assert len(responses) == 1
         assert raised.value.response_body == responses[0].content
-    finally:
-        client.session.close()
 
 
 @pytest.mark.skip_if_lighttest
-@pytest.mark.parametrize("retry_not_found", [False, True])
-def test_real_missing_project_obeys_opt_in_not_found_retries(
+def test_real_missing_project_is_not_retried_by_default(
     gitlab_client: GitlabClient,
-    gitlab_retry_delays: list[float],
-    *,
-    retry_not_found: bool,
 ) -> None:
     responses: list[Response] = []
 
@@ -114,20 +107,10 @@ def test_real_missing_project_obeys_opt_in_not_found_retries(
         with pytest.raises(gitlab.exceptions.GitlabGetError) as raised:
             gitlab_client.projects.get(
                 f"{settings.GITLAB_GROUP_NAME}/{uuid4()}",
-                retry_not_found=retry_not_found,
             )
         assert raised.value.response_code == HTTPStatus.NOT_FOUND
-        expected_attempts: int = (
-            settings.DJANGO_GIT_RETRY_ATTEMPTS if retry_not_found else 1
-        )
-        assert len(responses) == expected_attempts
-        assert gitlab_retry_delays == [
-            min(
-                settings.DJANGO_GIT_RETRY_BASE_DELAY_SECONDS * 2**attempt,
-                settings.DJANGO_GIT_RETRY_MAX_DELAY_SECONDS,
-            )
-            for attempt in range(expected_attempts - 1)
-        ]
+        assert len(responses) == 1
+
         assert all(
             "retry_not_found" not in str(response.request.url) for response in responses
         )
@@ -178,63 +161,41 @@ def test_failed_real_reauthentication_clears_project_cache(
 
 
 @pytest.mark.parametrize(
-    ("verb", "retry_transient_errors", "max_retries", "expected_attempts"),
+    ("verb", "retry_transient_errors", "max_retries"),
     [
-        ("GET", None, None, 3),
-        ("HEAD", None, None, 3),
-        ("GET", False, None, 1),
-        ("POST", None, None, 1),
-        ("POST", True, None, 3),
-        ("GET", None, 0, 1),
-        ("GET", None, 1, 2),
-        ("GET", None, 100, 3),
+        ("GET", False, None),
+        ("POST", None, None),
+        ("GET", None, 0),
     ],
 )
-def test_unavailable_connections_obey_read_write_and_retry_budgets(
+def test_unavailable_connections_are_not_repeated_when_retries_are_disabled(
     *,
     unavailable_gitlab_url: str,
     caplog: pytest.LogCaptureFixture,
     verb: str,
     retry_transient_errors: bool | None,
     max_retries: int | None,
-    expected_attempts: int,
 ) -> None:
     client = BoundedGitlabClient(
         unavailable_gitlab_url,
         private_token=f"unused-{uuid4()}",
         max_attempts=3,
         timeout=1,
-        base_delay=0.01,
-        max_delay=0.02,
     )
-    started: float = time.monotonic()
-    try:
-        with (
-            caplog.at_level(logging.WARNING, logger="speleodb.utils.gitlab_client"),
-            pytest.raises(RequestsConnectionError),
-        ):
-            client.http_request(
-                verb,
-                "/user",
-                retry_transient_errors=retry_transient_errors,
-                max_retries=max_retries,
-            )
-        retry_records: list[logging.LogRecord] = [
-            record
-            for record in caplog.records
-            if record.name == "speleodb.utils.gitlab_client"
-        ]
-        assert len(retry_records) == expected_attempts - 1
-        assert all(
-            (
-                "(ConnectionError)" in record.getMessage()
-                or "(ConnectTimeout)" in record.getMessage()
-            )
-            for record in retry_records
+    with (
+        client,
+        caplog.at_level(logging.WARNING, logger="speleodb.utils.gitlab_client"),
+        pytest.raises(RequestsConnectionError),
+    ):
+        client.http_request(
+            verb,
+            "/user",
+            retry_transient_errors=retry_transient_errors,
+            max_retries=max_retries,
         )
-        assert time.monotonic() - started < 5  # noqa: PLR2004
-    finally:
-        client.session.close()
+    assert not any(
+        record.name == "speleodb.utils.gitlab_client" for record in caplog.records
+    )
 
 
 @pytest.mark.parametrize("max_attempts", [0, -1])
@@ -260,20 +221,14 @@ def test_invalid_request_timeout_is_rejected(
     unavailable_gitlab_url: str, timeout: float
 ) -> None:
     client = BoundedGitlabClient(unavailable_gitlab_url, private_token=uuid4().hex)
-    try:
-        with pytest.raises(ValueError, match="timeout"):
-            client.http_request("GET", "/user", timeout=timeout)
-    finally:
-        client.session.close()
+    with client, pytest.raises(ValueError, match="timeout"):
+        client.http_request("GET", "/user", timeout=timeout)
 
 
 def test_unbounded_request_retries_are_rejected(unavailable_gitlab_url: str) -> None:
     client = BoundedGitlabClient(unavailable_gitlab_url, private_token=uuid4().hex)
-    try:
-        with pytest.raises(ValueError, match="max_retries"):
-            client.http_request("GET", "/user", max_retries=-1)
-    finally:
-        client.session.close()
+    with client, pytest.raises(ValueError, match="max_retries"):
+        client.http_request("GET", "/user", max_retries=-1)
 
 
 @pytest.mark.parametrize("private_token", ["", " ", "\t\n"])

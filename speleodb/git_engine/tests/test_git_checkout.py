@@ -25,15 +25,17 @@ class GitCheckoutTests(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.root: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.root: Path = Path(temporary_directory.name)
         self.branch: str = "configured-main"
-        self.enterContext(
-            override_settings(
-                DJANGO_GIT_BRANCH_NAME=self.branch,
-                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
-                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
-            )
+        settings_override = override_settings(
+            DJANGO_GIT_BRANCH_NAME=self.branch,
+            DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
+            DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
         )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
         self.actor: git.Actor = git.Actor("Test Author", "test@example.invalid")
         self.remote: git.Repo = git.Repo.init(
             self.root / "remote.git", bare=True, initial_branch=self.branch
@@ -274,7 +276,9 @@ class GitDownloadCheckoutTests(BaseProjectTestCaseMixin):
 
     def setUp(self) -> None:
         super().setUp()
-        self.root: Path = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.root: Path = Path(temporary_directory.name)
         get_pool().prepare(self.project)
         self.repo: GitRepo = self.project.git_repo
         self.addCleanup(self.repo.close)

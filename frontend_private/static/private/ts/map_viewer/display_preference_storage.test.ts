@@ -3,11 +3,11 @@ import { flushPreferenceWrites, schedulePreferenceWrite } from './display_prefer
 beforeEach(() => {
     flushPreferenceWrites();
     localStorage.clear();
-    vi.useFakeTimers();
+
 });
 afterEach(() => {
     flushPreferenceWrites();
-    vi.useRealTimers();
+
     vi.restoreAllMocks();
 });
 
@@ -18,8 +18,7 @@ it('coalesces a burst and reads the latest value after giving controls a paint o
     schedulePreferenceWrite('display', () => preferences);
     expect(write).not.toHaveBeenCalled();
     preferences.visible = true;
-    await vi.runAllTimersAsync();
-    expect(write).toHaveBeenCalledExactlyOnceWith('display', '{"visible":true}');
+    await vi.waitFor(() => expect(write).toHaveBeenCalledExactlyOnceWith('display', '{"visible":true}'));
 });
 
 it('flushes pending values on pagehide and cancels the scheduled duplicate', async () => {
@@ -27,7 +26,7 @@ it('flushes pending values on pagehide and cancels the scheduled duplicate', asy
     schedulePreferenceWrite('display', () => ({ visible: false }));
     window.dispatchEvent(new Event('pagehide'));
     expect(write).toHaveBeenCalledExactlyOnceWith('display', '{"visible":false}');
-    await vi.runAllTimersAsync();
+    await new Promise(resolve => setTimeout(resolve, 50));
     expect(write).toHaveBeenCalledTimes(1);
 });
 
@@ -37,30 +36,29 @@ it('flushes one lifecycle owner without discarding another pending record', asyn
     flushPreferenceWrites('display');
     expect(localStorage.getItem('display')).toBe('{"color":"depth"}');
     expect(localStorage.getItem('countries')).toBeNull();
-    await vi.runAllTimersAsync();
-    expect(localStorage.getItem('countries')).toBe('{"Mexico":false}');
+    await vi.waitFor(() => expect(localStorage.getItem('countries')).toBe('{"Mexico":false}'));
 });
 
 it('reports storage failures without rejecting or retaining failed work', async () => {
     const error = new Error('quota');
+    // JSDOM storage cannot report a quota failure with a small input fixture.
     const write = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw error; });
     const onResult = vi.fn();
     schedulePreferenceWrite('display', () => ({}), onResult);
-    await vi.runAllTimersAsync();
-    expect(onResult).toHaveBeenCalledExactlyOnceWith(error);
+    await vi.waitFor(() => expect(onResult).toHaveBeenCalledExactlyOnceWith(error));
     flushPreferenceWrites();
     expect(write).toHaveBeenCalledTimes(1);
 });
 
 it('uses a timer without requesting a frame while the document is hidden', async () => {
+    // JSDOM has no browser tab lifecycle; its visibility property is read-only.
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     const frame = vi.spyOn(window, 'requestAnimationFrame');
     const onResult = vi.fn();
     expect(schedulePreferenceWrite('hidden', () => null, onResult)).toBeUndefined();
     expect(frame).not.toHaveBeenCalled();
     expect(localStorage.getItem('hidden')).toBeNull();
-    await vi.runAllTimersAsync();
-    expect(localStorage.getItem('hidden')).toBe('null');
+    await vi.waitFor(() => expect(localStorage.getItem('hidden')).toBe('null'));
     expect(onResult).toHaveBeenCalledExactlyOnceWith(null);
 });
 

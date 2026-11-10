@@ -31,12 +31,11 @@ function deferred() {
 }
 
 async function apply() {
-    await vi.runAllTimersAsync();
+    await new Promise(resolve => setTimeout(resolve, 0));
     await ViewerUpdates.whenIdle();
 }
 
 beforeEach(() => {
-    vi.useFakeTimers();
     State.resetLayerState();
     State.displayPreferences = createDefaultDisplayPreferences();
     State.map = ({
@@ -55,11 +54,11 @@ beforeEach(() => {
 
 afterEach(async () => {
     Layers.cancelPendingWork();
-    await vi.runAllTimersAsync();
+    await ViewerUpdates.whenIdle();
     State.map = null;
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    vi.useRealTimers();
+
 });
 
 it('publishes intent immediately, applies only the latest choice, and avoids style serialization', async () => {

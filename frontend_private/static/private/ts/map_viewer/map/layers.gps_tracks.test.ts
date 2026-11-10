@@ -1,82 +1,78 @@
-const mocks = vi.hoisted(() => ({
-    getGPSTrackDetails: vi.fn(),
-}));
-
-vi.mock('../api.ts', () => ({
-    API: { getGPSTrackDetails: mocks.getGPSTrackDetails },
-}));
-
-vi.mock('./colors.ts', () => ({ Colors: {} }));
-vi.mock('./geometry.ts', () => ({ Geometry: {} }));
-
+import type { RendererLayer, RendererSourceOptions } from '../../../../../../ts-types/domain/renderer.ts';
+import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
+import { setBrowserUrl, startApiServer } from '../../../../../../frontend_common/test/api-server.ts';
+import { Config } from '../config.ts';
 import { State } from '../state.ts';
+import { ViewerUpdates } from '../viewer_updates.ts';
 import { Layers } from './layers.ts';
 
-describe('GPS Track lazy loading', () => {
-    beforeEach(() => {
-        State.resetLayerState();
-        State.gpsTrackLayerStates.clear();
-        State.gpsTrackLoadingStates.clear();
-        State.gpsTrackCache.clear();
-        mocks.getGPSTrackDetails.mockReset();
-        vi.restoreAllMocks();
-    });
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+const sources = new Map<string, RendererSourceOptions>();
+const layers = new Map<string, RendererLayer>();
+const geojson = { type: 'FeatureCollection', features: [] };
 
-    it('authorizes a fresh signed URL immediately before the first download', async () => {
-        mocks.getGPSTrackDetails.mockResolvedValue({ file: '/fresh-signed-url' });
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: vi.fn().mockResolvedValue({
-                type: 'FeatureCollection',
-                features: [],
-            }),
-        }) as unknown as typeof fetch;
-        vi.spyOn(Layers, 'addGPSTrackLayer').mockResolvedValue();
+beforeAll(async () => {
+    originalUrl = window.location.href;
+    server = await startApiServer();
+});
+afterAll(async () => {
+    setBrowserUrl(originalUrl);
+    await server.close();
+});
+beforeEach(() => {
+    server.reset();
+    setBrowserUrl(`${server.origin}/private/map/`);
+    server.handle(({ path }) => ({ json: path.startsWith('/api/v2/')
+        ? { id: 'track-1', file: `${server.origin}/track.geojson` }
+        : geojson }));
+    State.resetLayerState();
+    State.gpsTrackLayerStates.clear();
+    State.gpsTrackLoadingStates.clear();
+    State.gpsTrackCache.clear();
+    Config._gpsTracks = [{ id: 'track-1' }];
+    sources.clear();
+    layers.clear();
+    // JSDOM has no native map renderer; only source/layer storage is supplied.
+    // API transport, preparation, installation and viewer scheduling remain real.
+    State.map = {
+        getSource: (id: string) => sources.get(id),
+        addSource: (id: string, definition: RendererSourceOptions) => sources.set(id, definition),
+        removeSource: (id: string) => sources.delete(id),
+        getLayer: (id: string) => layers.get(id),
+        addLayer(layer: RendererLayer) {
+            layers.set(layer.id, layer);
+        },
+        removeLayer: (id: string) => layers.delete(id),
+        moveLayer() {},
+        setLayoutProperty(id: string, key: string, value: unknown) {
+            Object.assign(layers.get(id)!.layout ??= {}, { [key]: value });
+        },
+    } as unknown as ViewerMap;
+});
+afterEach(async () => {
+    await ViewerUpdates.whenIdle();
+    State.resetLayerState();
+    State.map = null;
+    Config._gpsTracks = null;
+});
 
-        await Layers.toggleGPSTrackVisibility('track-1', true);
+it('authorizes a fresh signed URL immediately before the first download', async () => {
+    await Layers.toggleGPSTrackVisibility('track-1', true);
+    expect(server.requests.map(request => request.path)).toEqual([
+        '/api/v2/gps_tracks/track-1/', '/track.geojson',
+    ]);
+    expect(State.gpsTrackCache.get('track-1')).toEqual(geojson);
+    expect(sources.get('gps-track-source-track-1')?.data).toEqual(geojson);
+    expect(layers.has('gps-track-line-track-1')).toBe(true);
+});
 
-        expect(mocks.getGPSTrackDetails).toHaveBeenCalledWith('track-1', { signal: expect.any(AbortSignal) as unknown });
-        expect(fetch).toHaveBeenCalledWith('/fresh-signed-url', { signal: expect.any(AbortSignal) as unknown });
-        expect(State.gpsTrackCache.has('track-1')).toBe(true);
-    });
-
-    it('downloads and installs again when the first map layer installation fails', async () => {
-        const geojson = { type: 'FeatureCollection', features: [] };
-        mocks.getGPSTrackDetails.mockResolvedValue({ file: '/fresh-signed-url' });
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: vi.fn().mockResolvedValue(geojson),
-        }) as unknown as typeof fetch;
-        const install = vi.spyOn(Layers, 'addGPSTrackLayer')
-            .mockRejectedValueOnce(new Error('Map style is not ready'))
-            .mockResolvedValue();
-
-        await Layers.toggleGPSTrackVisibility('track-1', true);
-
-        expect(Layers.isGPSTrackVisible('track-1')).toBe(false);
-        expect(Layers.isGPSTrackLoading('track-1')).toBe(false);
-        expect(State.gpsTrackCache.has('track-1')).toBe(false);
-
-        await Layers.toggleGPSTrackVisibility('track-1', true);
-
-        expect(mocks.getGPSTrackDetails).toHaveBeenCalledTimes(2);
-        expect(fetch).toHaveBeenCalledTimes(2);
-        expect(install).toHaveBeenCalledTimes(2);
-        expect(install).toHaveBeenLastCalledWith('track-1', geojson, { isCurrent: expect.any(Function) as unknown, prepared: { boundsCoordinates: null } });
-        expect(Layers.isGPSTrackVisible('track-1')).toBe(true);
-        expect(Layers.isGPSTrackLoading('track-1')).toBe(false);
-        expect(State.gpsTrackCache.get('track-1')).toEqual(geojson);
-    });
-
-    it('never fetches an undefined URL when detail metadata has no file', async () => {
-        mocks.getGPSTrackDetails.mockResolvedValue({ id: 'track-1' });
-        globalThis.fetch = vi.fn() as unknown as typeof fetch;
-
-        await Layers.toggleGPSTrackVisibility('track-1', true);
-
-        expect(fetch).not.toHaveBeenCalled();
-        expect(State.gpsTrackLayerStates.get('track-1')).toBe(false);
-        expect(State.gpsTrackLoadingStates.get('track-1')).toBe(false);
-        expect(State.gpsTrackCache.has('track-1')).toBe(false);
-    });
+it('never fetches an undefined URL when detail metadata has no file', async () => {
+    server.reply({ json: { id: 'track-1' } });
+    await Layers.toggleGPSTrackVisibility('track-1', true);
+    expect(server.requests.map(request => request.path)).toEqual(['/api/v2/gps_tracks/track-1/']);
+    expect(State.gpsTrackLayerStates.get('track-1')).toBe(false);
+    expect(State.gpsTrackLoadingStates.get('track-1')).toBe(false);
+    expect(State.gpsTrackCache.has('track-1')).toBe(false);
+    expect(sources.size).toBe(0);
 });

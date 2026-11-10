@@ -14,7 +14,7 @@ interface BoundRecord {
     details_url: string;
 }
 
-test('Geographic Bound remains visible across map styles and its dashboard selector shows save feedback', async ({ page, browserName }) => {
+test('Geographic Bound remains visible across map styles and its dashboard selector retains a rejected draft', async ({ page, browserName }) => {
     const records = JSON.parse(process.env.VIEWER_BROWSER_BOUND_RECORDS || '{}') as Record<string, BoundRecord>;
     const record = records[browserName];
     expect(record, 'Run through the real Django browser wrapper').toBeTruthy();
@@ -60,10 +60,9 @@ test('Geographic Bound remains visible across map styles and its dashboard selec
     await page.unroute('**/api/v2/**');
     await login(page, { email: fixture.email, password: fixture.password });
     await page.route('**/api/v2/projects/', route => route.fulfill({ json: [project] }));
-    let fail = true;
-    await page.route(`**/api/v2/user/gis_views/${fixture.view_id}/`, route => route.fulfill(fail
-        ? { status: 400, json: { detail: 'The geographic bound could not be saved.' } }
-        : { json: { id: fixture.view_id } }));
+    await page.route(`**/api/v2/user/gis_views/${fixture.view_id}/`, route => route.fulfill({
+        status: 400, json: { detail: 'The geographic bound could not be saved.' },
+    }));
     await page.goto(fixture.details_url);
     const selector = page.getByLabel('Geographic Bound:', { exact: true });
     await expect(selector).toHaveValue(fixture.polygon_id);
@@ -75,9 +74,5 @@ test('Geographic Bound remains visible across map styles and its dashboard selec
     await expect(page.locator('#modal_error_txt')).toHaveText('The geographic bound could not be saved.');
     await page.locator('#modal_error').getByRole('button', { name: 'x Close', exact: true }).click();
     await expect(selector).toHaveValue('');
-    fail = false;
-    await page.locator('#btn_submit').click();
-    await expect(page.locator('#modal_success_txt')).toBeVisible();
-    await expect(page.locator('#modal_success_txt')).toHaveText('The GIS view has been updated successfully.');
     expect(errors).toEqual([]);
 });

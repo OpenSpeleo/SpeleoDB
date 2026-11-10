@@ -13,9 +13,8 @@ from speleodb.users.tests.factories import UserFactory
 if TYPE_CHECKING:
     from pytest_django.fixtures import Settings
 
-pytestmark = pytest.mark.django_db
 
-
+@pytest.mark.django_db
 def test_user_count(settings: Settings) -> None:
     """A basic test to execute the get_users_count Celery task."""
     batch_size = 3

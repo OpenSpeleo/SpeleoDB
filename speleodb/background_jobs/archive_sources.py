@@ -285,34 +285,34 @@ def _run_git(
 
 def _empty_project_state(source: GitSource) -> GitRepositoryState | None:
     """Confirm a zero-history project's namespace before representing empty data."""
-    client = GitlabClient(
+    with GitlabClient(
         f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
         private_token=source.token,
         keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
-    )
-    try:
-        group = client.groups.get(str(settings.GITLAB_GROUP_ID))
-        if group.full_path != settings.GITLAB_GROUP_NAME:
-            raise ArchiveBuildError("The Git namespace configuration is inconsistent.")
+    ) as client:
         try:
-            project = client.projects.get(
-                f"{settings.GITLAB_GROUP_NAME}/{source.project_id}"
-            )
-        except gitlab.exceptions.GitlabGetError as error:
-            if error.response_code == HTTPStatus.NOT_FOUND:
-                return "uninitialized"
-            raise
-        if project.attributes.get("empty_repo") is True and project.attributes.get(
-            "repository_access_level"
-        ) in {"enabled", "private"}:
-            return "empty"
-        return None
-    except gitlab.exceptions.GitlabError:
-        raise ArchiveBuildError(
-            "Git source access could not be verified for an empty project."
-        ) from None
-    finally:
-        client.session.close()
+            group = client.groups.get(str(settings.GITLAB_GROUP_ID))
+            if group.full_path != settings.GITLAB_GROUP_NAME:
+                raise ArchiveBuildError(
+                    "The Git namespace configuration is inconsistent."
+                )
+            try:
+                project = client.projects.get(
+                    f"{settings.GITLAB_GROUP_NAME}/{source.project_id}"
+                )
+            except gitlab.exceptions.GitlabGetError as error:
+                if error.response_code == HTTPStatus.NOT_FOUND:
+                    return "uninitialized"
+                raise
+            if project.attributes.get("empty_repo") is True and project.attributes.get(
+                "repository_access_level"
+            ) in {"enabled", "private"}:
+                return "empty"
+            return None
+        except gitlab.exceptions.GitlabError:
+            raise ArchiveBuildError(
+                "Git source access could not be verified for an empty project."
+            ) from None
 
 
 def mirror_project(

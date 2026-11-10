@@ -25,7 +25,6 @@ from speleodb.testing.gitlab_pool import get_pool
 if TYPE_CHECKING:
     from speleodb.git_engine.core import GitRepo
 
-
 TEST_FILE = (
     pathlib.Path(__file__).parent.parent.parent
     / "api/v2/tests/artifacts"
@@ -78,7 +77,7 @@ class TestConstructGitHistory(BaseAPIProjectTestCase):
         assert first_commit.author_name == self.user.name
         assert first_commit.author_email == self.user.email
 
-        git_repo: GitRepo = self.project.git_repo
+        git_repo = self.project.git_repo
         assert first_commit.parent_ids == [
             parent.hexsha for parent in git_repo.commit(first_commit.id).parents
         ]

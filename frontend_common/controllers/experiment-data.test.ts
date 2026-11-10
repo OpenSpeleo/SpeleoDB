@@ -20,7 +20,7 @@ beforeEach(() => {
     server.handle(request => ({ json: request.path === '/api/v2/experiments/experiment/' ? { experiment_fields: fields } : { type: 'FeatureCollection', features } }));
     document.body.innerHTML = '<div id="loadingSpinner"></div><div id="dataGridContainer"><div id="dataGrid"></div></div><div id="errorMessage"><span id="errorText"></span></div><span id="recordCount"></span><span id="columnCount"></span><button id="refreshDataBtn"></button><button id="exportExcelBtn">Export</button>';
 });
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); delete (window as unknown as { agGrid?: AgGridRuntime }).agGrid; document.body.innerHTML = ''; });
+afterEach(() => { vi.unstubAllGlobals(); delete (window as unknown as { agGrid?: AgGridRuntime }).agGrid; document.body.innerHTML = ''; });
 
 it('loads generated experiment details before GeoJSON and preserves field order and status filtering', async () => {
     await init(context); await vi.waitFor(() => expect(createGrid).toHaveBeenCalledOnce());

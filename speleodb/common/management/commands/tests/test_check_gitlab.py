@@ -21,9 +21,8 @@ from speleodb.testing.gitlab_pool import get_pool
 if TYPE_CHECKING:
     from django.conf import LazySettings
 
-pytestmark = pytest.mark.skip_if_lighttest
 
-
+@pytest.mark.skip_if_lighttest
 def test_check_gitlab_verifies_real_identity_and_project_write(
     settings: LazySettings,
     monkeypatch: pytest.MonkeyPatch,
@@ -53,6 +52,7 @@ def test_check_gitlab_verifies_real_identity_and_project_write(
     assert not token_was_printed
 
 
+@pytest.mark.skip_if_lighttest
 def test_check_gitlab_read_only_never_creates_a_repository(
     settings: LazySettings,
 ) -> None:
@@ -65,6 +65,7 @@ def test_check_gitlab_read_only_never_creates_a_repository(
     assert get_ledger().summary()["creation_requests"] == before
 
 
+@pytest.mark.skip_if_lighttest
 def test_check_gitlab_rejects_actual_invalid_token() -> None:
     with (
         override_settings(GITLAB_TOKEN=f"invalid-{uuid4().hex}"),
@@ -74,6 +75,7 @@ def test_check_gitlab_rejects_actual_invalid_token() -> None:
     assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
 
 
+@pytest.mark.skip_if_lighttest
 def test_check_gitlab_rejects_mismatched_group_before_writing() -> None:
     with (
         override_settings(GITLAB_GROUP_NAME=f"wrong-{uuid4().hex}"),

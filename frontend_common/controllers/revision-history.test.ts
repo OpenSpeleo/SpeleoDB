@@ -8,13 +8,13 @@ beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixtu
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 let commits: RevisionCommit[];
 beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
     commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026/01/01 12:00', author_email: 'diver@example.com', dt_since: '1 day', parent_ids: [], tree: [], url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
     server.handle(() => ({ json: { commits } }));
     document.body.innerHTML = '<div id="loading_spinner"></div><div id="mobile-revision-container"></div><table><tbody id="commit-table-container"><tr id="commit-template" style="display:none"><td><span class="font-medium"></span></td><td><span class="font-medium"></span></td><td><span class="text-center"></span></td><td><span class="font-medium"></span></td><td><a class="revision_explorer"></a><ul id="format-download-container"><li id="format-download-template" style="display:none"><a></a></li></ul></td></tr></tbody></table>';
 });
 afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
 it('waits for load then uses the generated operation and renders independent mobile and desktop rows', async () => {
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init({ projectId: 'project' });
     expect(server.requests).toHaveLength(0);
@@ -41,7 +41,7 @@ it('skips only the exact automated project creation pair', async () => {
 });
 it('repeated initialization appends mobile rows after removing its sole desktop template', async () => {
     await init({ projectId: 'project' });
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error');
     await init({ projectId: 'project' });
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(1);

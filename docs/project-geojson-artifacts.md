@@ -129,3 +129,8 @@ Deployment and production regeneration are separate authorized operations.
 Follow the targeted verification and batch rollout in the
 [build-command documentation](project-geojson-command.md); retain retired
 objects until the cleanup conditions above are satisfied.
+
+Full history reset is an explicit exception to retired-object retention: it
+purges the project namespace, including current, retired and orphaned objects,
+verifies emptiness, and rebuilds from the existing remote. Previously issued
+links may stop working. See [Operations](admin-operations.md).

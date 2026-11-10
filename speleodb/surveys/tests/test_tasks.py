@@ -1,35 +1,26 @@
-"""Exercise maintenance task delivery without running against development data."""
+"""Exercise operations task delivery without running against development data."""
 
 from __future__ import annotations
 
 import os
 import signal
 import sys
-import uuid
 from typing import TYPE_CHECKING
 
 import pytest
-from celery import Celery
-from celery._state import get_current_app
-from celery.contrib.testing.worker import start_worker
 from celery.exceptions import SoftTimeLimitExceeded
-from celery.result import EagerResult
 from compass_lib.io import load_project
 from django.conf import settings
-from django.test import override_settings
 from openspeleo_lib.interfaces import ArianeInterface
 from openspeleo_lib.interfaces import StalagMightInterface
 
-from speleodb.api.v2.tests.factories import ProjectFactory
 from speleodb.common.enums import ProjectType
 from speleodb.surveys.models import Project
-from speleodb.surveys.tasks import refresh_all_projects_geojson
 from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.stalagmight import stalagmight_bytes
 from speleodb.utils.exceptions import reraise_task_timeout
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from pathlib import Path
     from types import FrameType
 
@@ -104,117 +95,15 @@ def test_ordinary_error_cycles_do_not_prevent_batch_error_isolation() -> None:
     reraise_task_timeout(error)
 
 
-@pytest.fixture
-def rebuild_app() -> Iterator[Celery]:
-    previous = get_current_app()
-    with Celery(f"geojson-rebuild-{uuid.uuid4()}") as application:
-        application.config_from_object("django.conf:settings", namespace="CELERY")
-        application.conf.update(
-            task_always_eager=False,
-            task_default_queue=f"test-geojson-rebuild-{uuid.uuid4().hex}",
-            task_routes={},
-        )
-        application.autodiscover_tasks(force=True)
-        try:
-            yield application
-        finally:
-            previous.set_current()
-
-
-@pytest.mark.django_db
-def test_coordinator_only_enqueues_one_forced_child_per_eligible_project(
-    rebuild_app: Celery, tmp_path: Path
-) -> None:
-    assert not Project.objects.exists()
-    assert refresh_all_projects_geojson.apply(throw=True).get() == {
-        "enqueued": 0,
-        "tasks": [],
-    }
-    assert not Project.objects.exists()
-    projects = ProjectFactory.create_batch(3, exclude_geojson=False)
-    ProjectFactory.create(exclude_geojson=True)
-    expected_ids = {str(project.pk) for project in projects}
-    with override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(tmp_path)):
-        result = refresh_all_projects_geojson.apply(throw=True).get()
-    assert result["enqueued"] == len(expected_ids)
-    assert {item["project_id"] for item in result["tasks"]} == expected_ids
-    expected_tasks = {item["task_id"]: item["project_id"] for item in result["tasks"]}
-    assert len(expected_tasks) == len(expected_ids)
-    # No worker is running: real broker messages prove the coordinator returns
-    # without cloning, converting or waiting for child execution.
-    with (
-        rebuild_app.connection_for_read() as connection,
-        connection.SimpleQueue(rebuild_app.conf.task_default_queue) as queue,
-    ):
-        for _ in projects:
-            message = queue.get(block=False)
-            assert message.headers["task"] == refresh_project_geojson.name
-            assert message.payload[0] == [expected_tasks.pop(message.headers["id"])]
-            assert message.payload[1] == {"force_recompute": True}
-            message.ack()
-        assert queue.qsize() == 0
-    assert not expected_tasks
-    assert not list(tmp_path.iterdir())
-
-
-@pytest.mark.django_db(transaction=True)
-def test_async_rebuild_rechecks_scope_isolates_failures_and_handles_empty_scope(
-    rebuild_app: Celery, tmp_path: Path
-) -> None:
-    failing: Project = ProjectFactory.create(exclude_geojson=False)
-    excluded: Project = ProjectFactory.create(exclude_geojson=False)
-    deleted: Project = ProjectFactory.create(exclude_geojson=False)
-    deleted_id = str(deleted.pk)
-    batch = refresh_all_projects_geojson.apply(throw=True).get()
-    excluded.exclude_geojson = True
-    excluded.save(update_fields=["exclude_geojson"])
-    deleted.delete()
-    results = {
-        item["project_id"]: rebuild_app.AsyncResult(item["task_id"])
-        for item in batch["tasks"]
-    }
-    with (
-        override_settings(
-            GITLAB_HOST_URL="invalid/host", GEOJSON_GENERATION_SCRATCH_DIR=str(tmp_path)
-        ),
-        start_worker(
-            rebuild_app,
-            queues=[rebuild_app.conf.task_default_queue],
-            perform_ping_check=False,
-        ),
-    ):
-        assert results[str(excluded.pk)].get(timeout=15) == "skipped"
-        assert results[deleted_id].get(timeout=15) == "skipped"
-        results[str(failing.pk)].get(timeout=15, propagate=False)
-        assert results[str(failing.pk)].failed()
-
-        # Reuse this actual worker to prove coordinator delivery with no
-        # eligible projects, after its children have completed independently.
-        Project.objects.filter(pk=failing.pk).update(exclude_geojson=True)
-        empty_result = refresh_all_projects_geojson.delay()
-        assert not isinstance(empty_result, EagerResult)
-        assert empty_result.get(timeout=15) == {"enqueued": 0, "tasks": []}
-        assert empty_result.successful()
-        assert not Project.objects.filter(exclude_geojson=False).exists()
-        assert set(Project.objects.values_list("pk", flat=True)) == {
-            failing.pk,
-            excluded.pk,
-        }
-    assert not list(tmp_path.iterdir())
-
-
-def test_project_rebuild_has_maintenance_limits_and_coordinator_does_not() -> None:
-    assert refresh_project_geojson.soft_time_limit == (
-        settings.GEOJSON_REBUILD_SOFT_TIME_LIMIT
+def test_project_rebuild_has_explicit_limits_and_manual_recovery_policy() -> None:
+    assert (
+        refresh_project_geojson.soft_time_limit
+        == settings.GEOJSON_REBUILD_SOFT_TIME_LIMIT
     )
     assert (
         refresh_project_geojson.time_limit == settings.GEOJSON_REBUILD_HARD_TIME_LIMIT
     )
-    assert refresh_all_projects_geojson.soft_time_limit != (
-        refresh_project_geojson.soft_time_limit
-    )
-    assert (
-        0
-        < settings.GEOJSON_REBUILD_SOFT_TIME_LIMIT
-        < settings.GEOJSON_REBUILD_HARD_TIME_LIMIT
-    )
+    assert refresh_project_geojson.track_started is False
+    assert refresh_project_geojson.acks_late is False
+    assert refresh_project_geojson.reject_on_worker_lost is False
+    assert refresh_project_geojson.max_retries == 0

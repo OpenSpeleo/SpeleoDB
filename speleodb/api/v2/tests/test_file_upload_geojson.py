@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import contextlib
+import json
 import pathlib
 import re
 import uuid
@@ -16,7 +16,9 @@ import pytest
 from celery import Celery
 from celery import current_app
 from celery._state import get_current_app
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django_celery_results.models import TaskResult
 from parameterized.parameterized import parameterized
 from rest_framework import status
 
@@ -24,8 +26,8 @@ from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
 from speleodb.api.v2.tests.base_testcase import PermissionType
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.common.enums import TaskResultStatus
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.gis.tasks import generate_project_geojson
 from speleodb.surveys.models import FileFormat
 from speleodb.testing.gitlab_pool import get_pool
@@ -87,12 +89,14 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             broker.SimpleQueue("background_control") as queue,
         ):
             queue.clear()
-            with (
-                contextlib.ExitStack() as stack,
-                self.captureOnCommitCallbacks(execute=True),
-            ):
+            with self.captureOnCommitCallbacks(execute=True):
                 opened_files = [
-                    stack.enter_context(path.open(mode="rb")) for path in artifact_paths
+                    SimpleUploadedFile(
+                        path.name,
+                        path.read_bytes(),
+                        content_type="application/octet-stream",
+                    )
+                    for path in artifact_paths
                 ]
                 response = self.client.put(
                     reverse(
@@ -115,28 +119,49 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             if expected_status == status.HTTP_304_NOT_MODIFIED:
                 assert queue.qsize() == 0
                 return {}
-            generation = ProjectGeoJSONGeneration.objects.filter(
-                commit_id=str(response.data["hexsha"])
+            result = TaskResult.objects.filter(
+                task_name=generate_project_geojson.name,
+                task_args=json.dumps([str(response.data["hexsha"])]),
             ).first()
-            if generation is None:
+            if result is None:
                 assert queue.qsize() == 0
             else:
-                assert generation.state == "queued"
+                assert result.status == TaskResultStatus.PENDING
                 message = queue.get(block=False)
                 assert message.headers["task"] == generate_project_geojson.name
-                assert message.payload[0] == [
-                    generation.commit_id,
-                    str(generation.token),
-                ]
+                assert message.headers["id"] == result.task_id
+                assert message.payload[0] == [str(response.data["hexsha"])]
+                assert message.payload[1] == {}
                 message.ack()
                 assert queue.qsize() == 0
             return cast("dict[str, Any]", response.data)
 
-    def _run_generation(self, commit_sha: str) -> None:
+    def _task(self, commit_sha: str) -> TaskResult:
+        return TaskResult.objects.get(
+            task_name=generate_project_geojson.name, task_args=json.dumps([commit_sha])
+        )
+
+    def _run_generation(
+        self, commit_sha: str, *, succeeds: bool = True
+    ) -> dict[str, Any]:
         assert not ProjectGeoJSON.objects.filter(commit_id=commit_sha).exists()
-        generation = ProjectGeoJSONGeneration.objects.get(commit_id=commit_sha)
-        assert generation.state == "queued"
-        generate_project_geojson.run(commit_sha, str(generation.token))
+        task = self._task(commit_sha)
+        result = generate_project_geojson.apply(
+            args=(commit_sha,),
+            task_id=task.task_id,
+            throw=succeeds,
+        )
+        assert result.successful() is succeeds
+        task.refresh_from_db()
+        assert task.status == (
+            TaskResultStatus.SUCCESS if succeeds else TaskResultStatus.FAILURE
+        )
+        return cast(
+            "dict[str, Any]",
+            json.loads(task.result or "{}")
+            if succeeds
+            else json.loads(task.meta or "{}")["summary"],
+        )
 
     def _assert_stored_shot_colors(self, commit_sha: str) -> None:
         artifact = ProjectGeoJSON.objects.get(commit_id=commit_sha)
@@ -206,9 +231,9 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
-        assert data["geojson_status"] == "skipped"
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit_id=str(data["hexsha"])
+        assert "geojson_status" not in data
+        assert not TaskResult.objects.filter(
+            task_args=json.dumps([str(data["hexsha"])])
         ).exists()
 
     def test_upload_auto_compass_generates_geojson(self) -> None:
@@ -234,8 +259,8 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 expected_status=status.HTTP_304_NOT_MODIFIED,
             )
             assert (
-                ProjectGeoJSONGeneration.objects.filter(
-                    commit__project=self.project
+                TaskResult.objects.filter(
+                    task_args=json.dumps([str(data["hexsha"])])
                 ).count()
                 == 1
             )
@@ -270,9 +295,9 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
-        assert data["geojson_status"] == "skipped"
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit_id=str(data["hexsha"])
+        assert "geojson_status" not in data
+        assert not TaskResult.objects.filter(
+            task_args=json.dumps([str(data["hexsha"])])
         ).exists()
 
     def test_upload_auto_compass_incomplete_bundle_skips_geojson(self) -> None:
@@ -295,9 +320,8 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
             commit__id=str(data["hexsha"]),
         ).exists()
 
-        self._run_generation(str(data["hexsha"]))
-        generation = ProjectGeoJSONGeneration.objects.get(commit_id=str(data["hexsha"]))
-        assert generation.state == "skipped"
+        summary = self._run_generation(str(data["hexsha"]))
+        assert summary["skipped"] == 1
 
     @parameterized.expand(
         [
@@ -320,36 +344,33 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         self.project.exclude_geojson = exclude_geojson
         self.project.save(update_fields=["type", "exclude_geojson"])
         self.project.acquire_mutex(self.user)
-        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
-        source = directory / "native.stalx"
-        source.write_bytes(stalagmight_bytes())
-        try:
-            data = self._upload_files(
-                fileformat=fileformat,
-                artifact_paths=[source],
-                commit_message="Native SQLite source",
-            )
-        finally:
-            self.project.release_mutex(self.user)
-
-        assert data["geojson_status"] == expected_status
-        if expected_status == "pending":
-            self._run_generation(str(data["hexsha"]))
-            generation = ProjectGeoJSONGeneration.objects.get(
-                commit_id=str(data["hexsha"])
-            )
-            assert generation.state == "ready"
-            self._assert_stored_shot_colors(str(data["hexsha"]))
-            artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
-            with artifact.file.open("rb") as stored:
-                assert orjson.loads(stored.read()) == orjson.loads(
-                    orjson.dumps(self.project.build_geojson(source))
+        with TemporaryDirectory() as directory_name:
+            directory = pathlib.Path(directory_name)
+            source = directory / "native.stalx"
+            source.write_bytes(stalagmight_bytes())
+            try:
+                data = self._upload_files(
+                    fileformat=fileformat,
+                    artifact_paths=[source],
+                    commit_message="Native SQLite source",
                 )
-        else:
-            assert not ProjectGeoJSONGeneration.objects.filter(
-                commit__project=self.project
-            ).exists()
-            assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
+            finally:
+                self.project.release_mutex(self.user)
+
+            assert "geojson_status" not in data
+            if expected_status == "pending":
+                self._run_generation(str(data["hexsha"]))
+                self._assert_stored_shot_colors(str(data["hexsha"]))
+                artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
+                with artifact.file.open("rb") as stored:
+                    assert orjson.loads(stored.read()) == orjson.loads(
+                        orjson.dumps(self.project.build_geojson(source))
+                    )
+            else:
+                assert not TaskResult.objects.filter(
+                    task_args=json.dumps([str(data["hexsha"])])
+                ).exists()
+                assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
 
     @parameterized.expand([FileFormat.STALAGMIGHT, FileFormat.AUTO])
     def test_unsupported_native_schema_is_saved_before_generation_fails(
@@ -358,26 +379,27 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
         self.project.type = ProjectType.STALAGMIGHT
         self.project.exclude_geojson = False
         self.project.save(update_fields=["type", "exclude_geojson"])
-        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
-        source = directory / "unsupported.stalx"
-        payload = stalagmight_bytes(schema_version=17)
-        source.write_bytes(payload)
-        self.project.acquire_mutex(self.user)
-        try:
-            data = self._upload_files(
-                fileformat=fileformat,
-                artifact_paths=[source],
-                commit_message="Preserve valid SQLite with unsupported schema",
-            )
-        finally:
-            self.project.release_mutex(self.user)
-        assert data["geojson_status"] == "pending"
-        self._run_generation(str(data["hexsha"]))
-        generation = ProjectGeoJSONGeneration.objects.get(commit_id=str(data["hexsha"]))
-        assert generation.state == "failed"
-        assert generation.last_error_code == "invalid_survey"
-        assert not ProjectGeoJSON.objects.filter(commit_id=str(data["hexsha"])).exists()
-        with self.project.git_repo as repository:
+        with TemporaryDirectory() as directory_name:
+            directory = pathlib.Path(directory_name)
+            source = directory / "unsupported.stalx"
+            payload = stalagmight_bytes(schema_version=17)
+            source.write_bytes(payload)
+            self.project.acquire_mutex(self.user)
+            try:
+                data = self._upload_files(
+                    fileformat=fileformat,
+                    artifact_paths=[source],
+                    commit_message="Preserve valid SQLite with unsupported schema",
+                )
+            finally:
+                self.project.release_mutex(self.user)
+            assert "geojson_status" not in data
+            summary = self._run_generation(str(data["hexsha"]), succeeds=False)
+            assert summary["failed"] == 1
+            assert not ProjectGeoJSON.objects.filter(
+                commit_id=str(data["hexsha"])
+            ).exists()
+            repository = self.project.git_repo
             source_blob = (
                 repository.commit(str(data["hexsha"])).tree / "stalagmight.stalx"
             )

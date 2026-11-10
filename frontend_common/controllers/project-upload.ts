@@ -154,12 +154,7 @@ export async function init(context: ProjectUploadContext) {
                 }
                 if (response.status !== 200) throw new ApiRequestError(response);
                 const data = response.data;
-                const message = data.geojson_status === 'pending'
-                  ? 'Upload saved. The map will update in the background.'
-                  : data.geojson_status === 'unavailable'
-                    ? 'Upload saved. Map generation is currently unavailable.'
-                    : 'The files have been successfully uploaded.';
-                $("#modal_success_txt").text(message);
+                $("#modal_success_txt").text("The files have been successfully uploaded.");
                 $("#modal_success").css('display', 'flex');
                 window.setTimeout(function() {
                   // Redirect to project revisions

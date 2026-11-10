@@ -26,18 +26,19 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
 
     def setUp(self) -> None:
         super().setUp()
-        self.root: Path = Path(
-            self.enterContext(tempfile.TemporaryDirectory())
-        ).resolve()
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.root: Path = Path(temporary_directory.name).resolve()
         self.working_dir: Path = self.root / "working"
-        self.enterContext(override_settings(DJANGO_GIT_PROJECTS_DIR=self.working_dir))
+        settings_override = override_settings(DJANGO_GIT_PROJECTS_DIR=self.working_dir)
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
 
     def _seed_remote(
         self, project: Project, messages: tuple[str, ...] = ()
     ) -> list[str]:
         get_pool().prepare(project)
-        repo: GitRepo = project.git_repo
-        self.addCleanup(repo.close)
+        repo = project.git_repo
         # Each pooled remote has a distinct initial commit restored after use.
         hashes: list[str] = [repo.head.commit.hexsha]
         for index, message in enumerate(messages):
@@ -63,12 +64,7 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
                 Path(directory),
                 branch=settings.DJANGO_GIT_BRANCH_NAME,
             )
-            try:
-                assert {commit.hexsha for commit in remote.iter_commits()} == set(
-                    hashes
-                )
-            finally:
-                remote.close()
+            assert {commit.hexsha for commit in remote.iter_commits()} == set(hashes)
 
     def test_preload_no_commits(self) -> None:
         """Cache the initial Git commit when there are no user commits."""
@@ -127,16 +123,7 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         broken_project: Project = canonical_project(PermissionLevel.READ_AND_WRITE)
         hashes: list[str] = self._seed_remote(self.project)
 
-        get_pool().prepare(broken_project)
-        broken_repo: GitRepo = broken_project.git_repo
-        self.addCleanup(broken_repo.close)
-        broken_repo.remotes.origin.set_url(str(self.root / "missing.git"))
-        self.enterContext(
-            override_settings(
-                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.01,
-                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.02,
-            )
-        )
+        broken_project.git_repo_dir.mkdir(parents=True)
         with self.assertLogs(
             "speleodb.common.management.commands.preload_git_history", level="ERROR"
         ) as logs:
@@ -145,4 +132,4 @@ class TestPreloadGitHistory(BaseProjectTestCaseMixin):
         self._assert_history(self.project, hashes)
         assert not broken_project.git_repo_dir.exists()
         assert not ProjectCommit.objects.filter(project=broken_project).exists()
-        assert "does not appear to be a git repository" in "\n".join(logs.output)
+        assert "InvalidGitRepositoryError" in "\n".join(logs.output)

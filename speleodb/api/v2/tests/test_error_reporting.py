@@ -13,6 +13,7 @@ import pathlib
 import shutil
 import tempfile
 import uuid
+from contextlib import closing
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 from typing import Any
@@ -80,6 +81,7 @@ def rejected_gitlab_credentials() -> Iterator[None]:
         GitlabCredentials.get.cache_clear()
 
 
+@override_settings(DEBUG=False)
 class AuthenticatedSentryTestCase(SentryEventTestCase):
     client: APIClient
     user: User
@@ -88,7 +90,6 @@ class AuthenticatedSentryTestCase(SentryEventTestCase):
     def setUp(self) -> None:
         super().setUp()
         assert not connection.in_atomic_block
-        self.enterContext(override_settings(DEBUG=False))
         self.user = canonical_user("A")
         token = TokenFactory.create(user=self.user)
         EmailAddress.objects.get_or_create(
@@ -106,10 +107,14 @@ class ProjectSentryTestCase(AuthenticatedSentryTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        directory: str = self.enterContext(tempfile.TemporaryDirectory())
-        self.enterContext(
-            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory))
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        directory: str = temporary_directory.name
+        settings_override = override_settings(
+            DJANGO_GIT_PROJECTS_DIR=pathlib.Path(directory)
         )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
         self.project = canonical_project(
             role=PermissionLevel.READ_AND_WRITE,
             type=ProjectType.ARIANE,
@@ -142,7 +147,6 @@ class ProjectSentryTestCase(AuthenticatedSentryTestCase):
         )
 
     def _remove_working_copy(self) -> None:
-        self.repo.close()
         shutil.rmtree(self.project.git_repo_dir)
 
     def _assert_gitlab_authentication_error(self) -> None:
@@ -170,9 +174,8 @@ class FileDownloadSentryTests(ProjectSentryTestCase):
         )
 
     def test_download_runtime_error_returns_500_with_sentry(self) -> None:
-        successful: Response | FileResponse = self._download()
-        assert successful.status_code == status.HTTP_200_OK
-        successful.close()
+        with closing(self._download()) as successful:
+            assert successful.status_code == status.HTTP_200_OK
         assert not self.sentry_events
         lock: pathlib.Path = pathlib.Path(self.repo.git_dir) / "index.lock"
         lock.write_text("integration checkout lock\n")

@@ -74,6 +74,8 @@ class MutexAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
+    search_fields = ("name", "id")
+
     list_display = (
         "name",
         "country",

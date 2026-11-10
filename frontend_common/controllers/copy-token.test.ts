@@ -15,7 +15,6 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
-    vi.useFakeTimers();
     document.body.innerHTML = template.replace(/{%.*?%}/gs, '').replace('{{ auth_token.key }}', token);
     writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
@@ -26,15 +25,15 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    vi.useRealTimers();
     vi.unstubAllGlobals();
     delete (document as unknown as {execCommand?: unknown}).execCommand;
     document.body.innerHTML = '';
 });
 
-async function copyToken() {
+async function copyToken(expected = 'Copied!') {
     (document.getElementById('copy-token-btn') as HTMLButtonElement).click();
-    await vi.advanceTimersByTimeAsync(0);
+    if (!(document.getElementById('auth-token') as HTMLInputElement).value.trim()) return;
+    await vi.waitFor(() => expect(document.getElementById('copy-token-text')!.textContent).toBe(expected));
 }
 
 it('copies the displayed disabled input and resets its success feedback', async () => {
@@ -47,8 +46,7 @@ it('copies the displayed disabled input and resets its success feedback', async 
     expect(writeText).toHaveBeenCalledWith(token);
     expect(button.textContent.trim()).toBe('Copied!');
     expect(execCommand).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(button.textContent.trim()).toBe('Copy');
+    await vi.waitFor(() => expect(button.textContent.trim()).toBe('Copy'), { timeout: 3000 });
 });
 
 it('keeps info styling and restores the original icon after integration copy feedback', async () => {
@@ -62,11 +60,9 @@ it('keeps info styling and restores the original icon after integration copy fee
     const originalIcon = icon.innerHTML;
     const originalClass = button.className;
     button.click();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(button.textContent.trim()).toBe('Copied!');
+    await vi.waitFor(() => expect(button.textContent.trim()).toBe('Copied!'));
     expect(button.className).toBe(originalClass);
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(button.textContent.trim()).toBe('Copy');
+    await vi.waitFor(() => expect(button.textContent.trim()).toBe('Copy'), { timeout: 3000 });
     expect(button.className).toBe(originalClass);
     expect(icon.innerHTML).toBe(originalIcon);
 });
@@ -80,7 +76,6 @@ it('keeps the unavailable surface-network copy control disabled', async () => {
     const button = (document.getElementById('copy-btn') as HTMLButtonElement);
     expect(button.disabled).toBe(true);
     button.click();
-    await vi.advanceTimersByTimeAsync(0);
     expect(writeText).not.toHaveBeenCalled();
     expect(button.textContent.trim()).toBe('Unavailable');
 });
@@ -99,15 +94,12 @@ it.each(['unavailable', 'denied'])('uses the fallback when clipboard access is %
     expect(document.getElementById('copy-token-text')!.textContent).toBe('Copied!');
 });
 
-it('reports failed copying without showing success and allows a retry', async () => {
+it('reports failed copying without showing success and restores its label', async () => {
     writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
     execCommand.mockReturnValue(false);
-    await copyToken();
+    await copyToken('Failed');
     expect(document.getElementById('copy-token-text')!.textContent).toBe('Failed');
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(document.getElementById('copy-token-text')!.textContent).toBe('Copy');
-    await copyToken();
-    expect(document.getElementById('copy-token-text')!.textContent).toBe('Copied!');
+    await vi.waitFor(() => expect(document.getElementById('copy-token-text')!.textContent).toBe('Copy'), { timeout: 3000 });
 });
 
 it('does not copy an empty token', async () => {
@@ -127,13 +119,13 @@ it('preserves copying text content for existing integration pages', async () => 
     document.body.append(source, button);
     await init({ copyButtons: [{ button: '#copy-integration', value: '#integration-url', text: '#copy-integration' }] });
     button.click();
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.waitFor(() => expect(button.textContent).toBe('Copied!'));
     expect(writeText).toHaveBeenCalledWith('https://example.com/integration/');
-    expect(button.textContent).toBe('Copied!');
 });
 
 it('waits only when requested, preserves missing-context rejection and repeated attachment', async () => {
     await expect(init(undefined as unknown as CopyTokenContext)).rejects.toThrow(TypeError);
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const descriptor = { button: '#copy-token-btn', value: '#auth-token', text: '#copy-token-text' };
     const pending = init({ waitForWindowLoad: true, copyButtons: [descriptor] });

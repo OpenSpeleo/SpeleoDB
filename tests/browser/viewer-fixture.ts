@@ -72,7 +72,6 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
     const selectedProjects = (emptyProjects ? [] : projects)
         .map(project => readOnly ? { ...project, permission: 'READ_ONLY' } : project);
     const gates = new Map<string, Promise<void>>();
-    const failures = new Set<string>();
     // Observe the normal map-created event; never replace renderer or Worker methods.
     await page.addInitScript(() => {
         window.addEventListener('speleo:map-created', event => {
@@ -96,7 +95,6 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
     await page.route('**/viewer-fixtures/**', async route => {
         const path = new URL(route.request().url()).pathname;
         if (gates.has(path)) await gates.get(path);
-        if (failures.has(path)) { await route.fulfill({ status: 503, body: 'Fixture unavailable' }); return; }
         if (path.includes('/fonts/')) { await route.fulfill({ body: Buffer.alloc(0), contentType: 'application/x-protobuf' }); return; }
         const project = path.match(/project-(\d+)\.geojson/);
         await route.fulfill({ json: project ? survey(Number(project[1])) : path.endsWith('track.geojson') ? track : gis });
@@ -122,7 +120,7 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
     await expect(page.locator(publicUrl ? '#color-mode-button' : '#map-settings-button')).toBeVisible();
     await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     await page.waitForFunction(() => window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
-    return { failures, gates };
+    return { gates };
 }
 
 /** Wait for actual map rendering before targeting canvas features with native input. */

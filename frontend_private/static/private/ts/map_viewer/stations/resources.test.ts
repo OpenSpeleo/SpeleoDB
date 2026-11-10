@@ -2,7 +2,7 @@ type HtmlPrimitive = string | number | boolean | null | undefined;
 import { StationResources } from './resources.ts';
 
 it('keeps note copy info styling throughout clipboard feedback', async () => {
-    vi.useFakeTimers();
+
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     try {
@@ -10,16 +10,15 @@ it('keeps note copy info styling throughout clipboard feedback', async () => {
         const button = document.querySelector<HTMLButtonElement>('[data-copy-note]')!;
         const originalMarkup = button.innerHTML;
         button.click();
-        await vi.advanceTimersByTimeAsync(0);
+        await new Promise(resolve => setTimeout(resolve, 0));
         expect(writeText).toHaveBeenCalledWith('Survey note');
         expect(button.textContent.trim()).toBe('Copied!');
         expect(button.className).toBe('copy-button');
-        await vi.advanceTimersByTimeAsync(2000);
-        expect(button.innerHTML).toBe(originalMarkup);
+        await vi.waitFor(() => expect(button.innerHTML).toBe(originalMarkup), { timeout: 2500 });
         expect(button.className).toBe('copy-button');
     } finally {
         StationResources.closeNoteViewer();
-        vi.useRealTimers();
+
         vi.unstubAllGlobals();
     }
 });

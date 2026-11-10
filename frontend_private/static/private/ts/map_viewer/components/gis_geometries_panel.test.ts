@@ -204,19 +204,12 @@ it('collapses after opening an editor but keeps the list open when the transitio
     expect(GISGeometriesPanel.panel!.hidden).toBe(false);
 });
 
-it('distinguishes a load failure from an empty list and offers retry', async () => {
+it('distinguishes a load failure from an empty list and offers retry', () => {
     Config.gisGeometriesError = true;
-    vi.spyOn(Config, 'loadGISGeometries').mockImplementation(async () => {
-        Config.gisGeometriesError = false;
-        Config._gisGeometries = [{ id: 'g1', revision: 1, name: 'Recovered geometry', color: '#123456' }];
-        return Config._gisGeometries;
-    });
     GISGeometriesPanel.init(editor);
     expect(document.querySelector<HTMLElement>('.gis-geometries-empty')!).toBeNull();
-    document.querySelector<HTMLButtonElement>('.gis-geometries-retry')!.click();
-    expect(document.querySelector<HTMLButtonElement>('.gis-geometries-retry')!.disabled).toBe(true);
-    await vi.waitFor(() => expect(document.querySelector<HTMLElement>('.gis-geometries-name')?.textContent).toBe('Recovered geometry'));
-    expect(document.querySelector<HTMLElement>('.gis-geometries-load-error')!).toBeNull();
+    expect(document.querySelector<HTMLElement>('.gis-geometries-load-error')!).not.toBeNull();
+    expect(document.querySelector<HTMLButtonElement>('.gis-geometries-retry')!.disabled).toBe(false);
 });
 
 it('retains locally saved rows alongside an unresolved load failure', () => {

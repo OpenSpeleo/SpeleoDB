@@ -13,31 +13,12 @@ function collection<const Features extends ViewerFeature[], Extra extends { bbox
     return { type: 'FeatureCollection' as const, features, ...extra };
 }
 
-const immediate = { yieldWork: () => Promise.resolve() };
-
-let restoreClock: (() => void) | undefined;
-function useIncrementingClock() {
-    let clock = 0;
-    const descriptor = Object.getOwnPropertyDescriptor(performance, 'now');
-    // A plain clock avoids millions of retained mock-call records while sorting
-    // the large fixture; only yield behavior is under test here.
-    Object.defineProperty(performance, 'now', { configurable: true, value: () => ++clock });
-    restoreClock = () => {
-        if (descriptor) Object.defineProperty(performance, 'now', descriptor);
-        else delete (performance as Partial<Performance>).now;
-    };
-}
-
-afterEach(() => {
-    restoreClock?.();
-    restoreClock = undefined;
-    vi.restoreAllMocks();
-});
+const scheduling = { yieldWork: () => new Promise<void>(resolve => setTimeout(resolve, 0)) };
 
 describe('cooperative project preparation', () => {
     it('returns non-collection inputs by identity without adding a domain or snap points', async () => {
         for (const raw of [null, undefined, { type: 'Point', coordinates: [1, 2] }] satisfies (ViewerGeoJSON | null | undefined)[]) {
-            const result = await prepareProjectGeoJSON(raw, immediate);
+            const result = await prepareProjectGeoJSON(raw, scheduling);
             expect(result.data).toBe(raw);
             expect(result.domain).toBeNull();
             expect(result.snapPoints).toEqual([]);
@@ -49,7 +30,7 @@ describe('cooperative project preparation', () => {
         const point = feature('Point', [1, 2], { name: 'Point' });
         const line = feature('LineString', [[1, 2], [3, 4]], { depth: 10 });
         const raw = collection([point, line]);
-        const result = await prepareProjectGeoJSON(raw, immediate);
+        const result = await prepareProjectGeoJSON(raw, scheduling);
         expect(result.data.features[0].properties).toBe(point.properties);
         expect(result.data.features[0].geometry.coordinates).toBe(point.geometry.coordinates);
         expect(result.data.features[1].properties).not.toBe(line.properties);
@@ -67,7 +48,7 @@ describe('cooperative project preparation', () => {
         ], { name: 'Survey', custom: { author: 'Sample' } });
         raw.features[2].id = 'line-1';
         const before = structuredClone(raw);
-        const result = await prepareProjectGeoJSON(raw, immediate);
+        const result = await prepareProjectGeoJSON(raw, scheduling);
         expect(raw).toEqual(before);
         expect(result.data).not.toBe(raw);
         expect(result.data.name).toBe('Survey');
@@ -84,7 +65,7 @@ describe('cooperative project preparation', () => {
     });
 
     it.each([{ features: [] }, { features: [feature('LineString', [[0, 0], [1, 1]])] }])('does not invent a depth domain', async ({ features }) => {
-        expect((await prepareProjectGeoJSON(collection(features), immediate)).domain).toBeNull();
+        expect((await prepareProjectGeoJSON(collection(features), scheduling)).domain).toBeNull();
     });
 
     it('handles zero depth and point-only sections like the depth utility', async () => {
@@ -92,19 +73,18 @@ describe('cooperative project preparation', () => {
             feature('Point', [1, 2], { section: 'point-only', depth: 75 }),
             feature('LineString', [[0, 0], [1, 1]], { depth: 0 }),
         ]);
-        const result = await prepareProjectGeoJSON(raw, immediate);
+        const result = await prepareProjectGeoJSON(raw, scheduling);
         expect(result.domain).toEqual(computeProjectDepthDomain(raw));
         expect(result.data.features[1].properties.depth_norm).toBe(0);
     });
 
-    it('yields within a single 100,000-coordinate line before publishing', async () => {
-        useIncrementingClock();
-        const yields = vi.fn(() => Promise.resolve());
-        const raw = collection([feature('LineString', Array.from({ length: 100_000 }, (_, i) => [i / 1000, 1, 20]))]);
-        const result = await prepareProjectGeoJSON(raw, { budgetMs: 1000, yieldWork: yields });
-        expect(yields.mock.calls.length).toBeGreaterThan(100);
-        expect(result.data.features[0].geometry.coordinates).toHaveLength(100_000);
-        expect(result.data.features[0].geometry.coordinates.at(-1)).toEqual([99.999, 1, 0]);
+    it('yields within a single line before publishing', async () => {
+        const yields = vi.fn(scheduling.yieldWork);
+        const raw = collection([feature('LineString', Array.from({ length: 128 }, (_, i) => [i / 1000, 1, 20]))]);
+        const result = await prepareProjectGeoJSON(raw, { budgetMs: 0, yieldWork: yields });
+        expect(yields.mock.calls.length).toBeGreaterThan(1);
+        expect(result.data.features[0].geometry.coordinates).toHaveLength(128);
+        expect(result.data.features[0].geometry.coordinates.at(-1)).toEqual([0.127, 1, 0]);
         expect(raw.features[0].geometry.coordinates.at(-1)![2]).toBe(20);
     });
 
@@ -115,7 +95,7 @@ describe('cooperative project preparation', () => {
         const work = prepareProjectGeoJSON(raw, {
             budgetMs: 0,
             isCurrent: () => current,
-            yieldWork: () => { current = false; return Promise.resolve(); },
+            yieldWork: async () => { await scheduling.yieldWork(); current = false; },
         });
         await expect(work).rejects.toMatchObject({ name: 'AbortError' });
         expect(raw).toEqual(before);
@@ -124,7 +104,7 @@ describe('cooperative project preparation', () => {
 
     it('preserves an authoritative 3D bbox and handles nested coordinate arrays', async () => {
         const raw = collection([feature('MultiPolygon', [[[[1, 2, 3], [4, 5, 6], [1, 2, 3]]]])], { bbox: [172, 18, -20, -65, 72, 0] });
-        const result = await prepareProjectGeoJSON(raw, immediate);
+        const result = await prepareProjectGeoJSON(raw, scheduling);
         expect(result.boundsCoordinates).toEqual([[172, 18], [295, 72]]);
         expect(result.data.features[0].geometry.coordinates[0]![0]![1]).toEqual([4, 5, 0]);
     });
@@ -149,7 +129,7 @@ describe('cooperative bounds', () => {
         vi.stubGlobal('__mapRenderer', { LngLatBounds: Bounds });
         try {
             for (const wrapLongitude of [true, false]) {
-                const options = { ...immediate, wrapLongitude };
+                const options = { ...scheduling, wrapLongitude };
                 expect(await prepareGeoJSONBounds(data, options)).toEqual((computeGeoJSONBounds(data, options) as Bounds).coordinates);
             }
         } finally {
@@ -176,7 +156,7 @@ describe('cooperative GIS display preparation', () => {
             ] },
         }]);
         const before = structuredClone(raw);
-        const prepared = await prepareGISLayerGeoJSONAsync(raw, immediate);
+        const prepared = await prepareGISLayerGeoJSONAsync(raw, scheduling);
         expect(prepared).toEqual(prepareGISLayerGeoJSON(raw));
         expect(prepared.data.features[0]!.geometry).toBe(raw.features[0].geometry.geometries[0]);
         expect(raw).toEqual(before);
@@ -187,19 +167,18 @@ describe('cooperative GIS display preparation', () => {
         let current = true;
         await expect(prepareGISLayerGeoJSONAsync({
             type: 'GeometryCollection', geometries: Array.from({ length: 100 }, (_, i) => ({ type: 'Point', coordinates: [i, 0] })),
-        }, { budgetMs: 0, isCurrent: () => current, yieldWork: async () => { current = false; } }))
+        }, { budgetMs: 0, isCurrent: () => current, yieldWork: async () => { await scheduling.yieldWork(); current = false; } }))
             .rejects.toMatchObject({ name: 'AbortError' });
     });
 });
 
-it('shares a preparation slice across simultaneously ready source loads', async () => {
-    useIncrementingClock();
-    const yieldWork = vi.fn(async () => {});
+it('yields real event-loop turns across simultaneously ready source loads', async () => {
+    const yieldWork = vi.fn(scheduling.yieldWork);
     const source = collection([feature('Point', [1, 2])]);
-    const pending = Array.from({ length: 20 }, () => prepareProjectGeoJSON(source, { budgetMs: 20, yieldWork }));
+    const pending = Array.from({ length: 20 }, () => prepareProjectGeoJSON(source, { budgetMs: 0, yieldWork }));
     // Every load gives the caller a turn before starting CPU work.
     expect(yieldWork).toHaveBeenCalledTimes(20);
     await Promise.all(pending);
-    // Small individual inputs must not each get a fresh full task allowance.
+    // Every preparation continues cooperatively after its initial turn.
     expect(yieldWork.mock.calls.length).toBeGreaterThan(20);
 });

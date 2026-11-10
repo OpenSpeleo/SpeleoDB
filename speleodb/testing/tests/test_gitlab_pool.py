@@ -51,9 +51,6 @@ if TYPE_CHECKING:
     from speleodb.surveys.models import TeamProjectPermission
 
 
-pytestmark = pytest.mark.django_db
-
-
 class RestoreStatePool(GitlabPool):
     """Exercise lease state without replacing any SDK or HTTP response."""
 
@@ -85,6 +82,7 @@ def state_pool() -> Iterator[RestoreStatePool]:
         pool._directory.cleanup()  # noqa: SLF001
 
 
+@pytest.mark.django_db
 def test_failed_release_still_restores_every_other_borrowed_role(
     state_pool: RestoreStatePool,
 ) -> None:
@@ -106,6 +104,7 @@ def test_failed_release_still_restores_every_other_borrowed_role(
     ]
 
 
+@pytest.mark.django_db
 def test_failed_role_requires_successful_reset_before_next_lease(
     state_pool: RestoreStatePool,
 ) -> None:
@@ -127,6 +126,7 @@ def test_failed_role_requires_successful_reset_before_next_lease(
     assert state_pool.restored_roles == []
 
 
+@pytest.mark.django_db
 def test_repeated_prepare_does_not_reset_a_healthy_active_lease(
     state_pool: RestoreStatePool,
 ) -> None:
@@ -136,6 +136,7 @@ def test_repeated_prepare_does_not_reset_a_healthy_active_lease(
     assert state_pool.restored_roles == []
 
 
+@pytest.mark.django_db
 def test_named_projects_reuse_ids_after_database_deletion() -> None:
     original: Project = canonical_project(PermissionLevel.READ_ONLY)
     original_id: UUID = original.id
@@ -149,6 +150,7 @@ def test_named_projects_reuse_ids_after_database_deletion() -> None:
     assert Project.objects.count() == 1
 
 
+@pytest.mark.django_db
 def test_repeated_requests_preserve_changes_and_apply_explicit_overrides() -> None:
     first: Project = canonical_project(description="Initial description")
     first.name = "Scenario-specific name"
@@ -162,6 +164,7 @@ def test_repeated_requests_preserve_changes_and_apply_explicit_overrides() -> No
     assert Project.objects.count() == 1
 
 
+@pytest.mark.django_db
 def test_rolled_back_changes_do_not_leak_through_cached_model_instances() -> None:
     original: Project = canonical_project()
     with transaction.atomic():
@@ -175,6 +178,7 @@ def test_rolled_back_changes_do_not_leak_through_cached_model_instances() -> Non
     assert restored.name == "ADMIN Project"
 
 
+@pytest.mark.django_db
 def test_matrix_has_exact_ownership_and_access_without_remote_creation() -> None:
     before: dict[str, object] = get_ledger().summary()
     remote_ids: list[int | None] = [
@@ -210,6 +214,7 @@ def test_matrix_has_exact_ownership_and_access_without_remote_creation() -> None
     assert all(not project.git_repo_dir.exists() for project in projects.values())
 
 
+@pytest.mark.django_db
 def test_repeated_matrix_requests_keep_one_permission_per_actor_and_project() -> None:
     first: dict[PermissionLevel, Project] = project_matrix()
     second: dict[PermissionLevel, Project] = project_matrix()
@@ -220,6 +225,7 @@ def test_repeated_matrix_requests_keep_one_permission_per_actor_and_project() ->
     assert UserProjectPermission.objects.count() == 7  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 def test_child_factories_share_a_project_and_allow_explicit_distinct_projects() -> None:
     project: Project = canonical_project()
     station: SubSurfaceStation = SubSurfaceStationFactory.create()
@@ -247,6 +253,7 @@ def test_child_factories_share_a_project_and_allow_explicit_distinct_projects() 
     assert not distinct.git_repo_dir.exists()
 
 
+@pytest.mark.django_db
 def test_commit_factory_build_does_not_persist_its_default_project() -> None:
     with CaptureQueriesContext(connection) as queries:
         commit: ProjectCommit = ProjectCommitFactory.build()
@@ -256,6 +263,7 @@ def test_commit_factory_build_does_not_persist_its_default_project() -> None:
     assert not Project.objects.filter(id=commit.project_id).exists()
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize("strategy", ["build", "create"])
 @pytest.mark.parametrize("identity_field", ["id", "pk"])
 def test_canonical_factory_rejects_identity_overrides(
@@ -265,6 +273,7 @@ def test_canonical_factory_rejects_identity_overrides(
         getattr(CanonicalProjectFactory, strategy)(**{identity_field: uuid4()})
 
 
+@pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
 def test_live_roles_use_uuid_repositories_with_standard_initial_commits() -> None:
     pool: GitlabPool = get_pool()
@@ -272,19 +281,19 @@ def test_live_roles_use_uuid_repositories_with_standard_initial_commits() -> Non
     for role in PROJECT_NAMES:
         project: Project = canonical_project(role)
         pool.prepare(project)
-        with closing(project.git_repo) as repository:
-            assert repository.head.commit.message.strip() == (
-                settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
-            )
-            assert list(repository.head.commit.tree) == []
-            assert len(list(repository.iter_commits())) == 1
-            assert repository.head.commit.author.name == (
-                settings.DJANGO_GIT_COMMITTER_NAME
-            )
-            assert repository.head.commit.author.email == (
-                settings.DJANGO_GIT_COMMITTER_EMAIL
-            )
-            assert repository.head.commit.hexsha == pool.slots[role].baseline_sha
+        repository = project.git_repo
+        assert repository.head.commit.message.strip() == (
+            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
+        )
+        assert list(repository.head.commit.tree) == []
+        assert len(list(repository.iter_commits())) == 1
+        assert repository.head.commit.author.name == (
+            settings.DJANGO_GIT_COMMITTER_NAME
+        )
+        assert repository.head.commit.author.email == (
+            settings.DJANGO_GIT_COMMITTER_EMAIL
+        )
+        assert repository.head.commit.hexsha == pool.slots[role].baseline_sha
         remote_id: int | None = pool.slots[role].remote_id
         assert remote_id is not None
         remote_ids.add(remote_id)
@@ -295,6 +304,7 @@ def test_live_roles_use_uuid_repositories_with_standard_initial_commits() -> Non
     assert len(remote_ids) == len(PROJECT_NAMES)
 
 
+@pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
 def test_live_lease_restores_history_branches_tags_and_contents(tmp_path: Path) -> None:
     pool: GitlabPool = get_pool()
@@ -305,25 +315,25 @@ def test_live_lease_restores_history_branches_tags_and_contents(tmp_path: Path) 
     remote: RemoteProject = pool.client.projects.get(remote_id)
     before: dict[str, object] = get_ledger().summary()
 
-    with closing(project.git_repo) as repository:
-        baseline: str = repository.head.commit.hexsha
-        (repository.path / "scenario.txt").write_text(
-            "Only this test may see this content", encoding="utf-8"
-        )
-        author = git.Actor("CI User A", canonical_user("A").email)
-        repository.index.add(["scenario.txt"])
-        changed: str = repository.index.commit(
-            "Temporary scenario history",
-            author=author,
-            committer=author,
-        ).hexsha
-        assert changed != baseline
-        repository.git.push(
-            "origin",
-            f"HEAD:refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}",
-            "HEAD:refs/heads/scenario-branch",
-            "HEAD:refs/tags/scenario-tag",
-        )
+    repository = project.git_repo
+    baseline: str = repository.head.commit.hexsha
+    (repository.path / "scenario.txt").write_text(
+        "Only this test may see this content", encoding="utf-8"
+    )
+    author = git.Actor("CI User A", canonical_user("A").email)
+    repository.index.add(["scenario.txt"])
+    changed: str = repository.index.commit(
+        "Temporary scenario history",
+        author=author,
+        committer=author,
+    ).hexsha
+    assert changed != baseline
+    repository.git.push(
+        "origin",
+        f"HEAD:refs/heads/{settings.DJANGO_GIT_BRANCH_NAME}",
+        "HEAD:refs/heads/scenario-branch",
+        "HEAD:refs/tags/scenario-tag",
+    )
 
     assert remote.tags.get("scenario-tag").commit["id"] == changed
     assert remote.branches.get("scenario-branch").commit["id"] == changed

@@ -502,7 +502,6 @@ describe('StationTags', () => {
 });
 
 describe('StationTags literal lifecycle contracts', () => {
-    afterEach(() => vi.useRealTimers());
 
     it('retains the API array and tag object identities', async () => {
         const tags = [{ id: 'identity', name: 'Exact', color: '#ff0000' }];
@@ -524,16 +523,15 @@ describe('StationTags literal lifecycle contracts', () => {
         await expect(StationTags.createNewTag()).rejects.toThrow(TypeError);
     });
 
-    it('defers the first color selection and uses the creation receiver', () => {
-        vi.useFakeTimers();
+    it('defers the first color selection and uses the creation receiver', async () => {
+
         document.body.innerHTML = '';
         State.tagColors = ['#123456'];
         const receiver = { ...StationTags, closeTagSelector: vi.fn(), selectTagColor: vi.fn() };
         expect(receiver.openTagCreationModal()).toBeUndefined();
         expect(receiver.closeTagSelector).toHaveBeenCalledOnce();
         expect(receiver.selectTagColor).not.toHaveBeenCalled();
-        vi.runOnlyPendingTimers();
-        expect(receiver.selectTagColor).toHaveBeenCalledWith('#123456');
+        await vi.waitFor(() => expect(receiver.selectTagColor).toHaveBeenCalledWith('#123456'));
         receiver.closeTagCreationModal();
     });
 });

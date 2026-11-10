@@ -95,9 +95,8 @@ class TestGPSTrackExportGPXAPI(BaseAPITestCase):
             geojson=geojson,
             name="Cueva Águila & Norte",
         )
-        track.file.open("rb")
-        original_geojson = track.file.read()
-        track.file.close()
+        with track.file.open("rb") as stored:
+            original_geojson = stored.read()
 
         response = self.client.get(
             reverse("api:v2:gps-track-export-gpx", kwargs={"id": track.id}),
@@ -140,9 +139,8 @@ class TestGPSTrackExportGPXAPI(BaseAPITestCase):
         ]
 
         track.refresh_from_db()
-        track.file.open("rb")
-        assert track.file.read() == original_geojson
-        track.file.close()
+        with track.file.open("rb") as stored:
+            assert stored.read() == original_geojson
 
     def test_empty_feature_collection_exports_valid_named_empty_track(self) -> None:
         track = _create_gps_track(

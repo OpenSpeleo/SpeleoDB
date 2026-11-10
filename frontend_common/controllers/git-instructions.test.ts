@@ -4,11 +4,11 @@ import { init } from './git-instructions.ts';
 const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
 beforeAll(() => { (0, eval)(jquery); });
 beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
     document.body.innerHTML = '<button id="btn_show_git_instructions"></button><div id="modal_git_instructions" style="display:none"><button class="btn_close"></button></div>';
 });
 afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
 it('waits for load before opening the modal and prevents default on the trigger', async () => {
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init();
     $('#btn_show_git_instructions').trigger('click');

@@ -5,7 +5,7 @@ let server: Awaited<ReturnType<typeof startApiServer>>;
 let originalUrl: string;
 beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
-afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf-delete"><button id="btn_delete">Delete</button><div id="modal_confirmation" style="display:none"><button id="btn_confirmed_delete">Confirm</button></div><div id="error_div"></div><div id="success_div"></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>`; }

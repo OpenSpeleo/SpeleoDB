@@ -17,11 +17,10 @@ missing commits can be a symptom of an earlier remote failure.
 ## Creation and retries
 
 Repository acquisition first looks up the configured namespace/project UUID. An
-existing remote is cloned without a creation POST. The acquisition lookup opts
-into bounded HTTP 404 retries before treating a project as absent. Only a lookup
-that exhausts its budget with HTTP 404 permits creation; authentication,
-throttling and other lookup failures propagate before the local working
-directory is changed.
+existing remote is cloned without a creation POST. HTTP 404 immediately permits
+creation; absence is an expected outcome of this existence check.
+Authentication, throttling and other lookup failures propagate before the local
+working directory is changed.
 
 The create endpoint's `GitlabCreateError` does not mean the repository already
 exists. It can also describe validation, permission, throttling, or server
@@ -37,23 +36,20 @@ Authentication and permission failures are not retried as transient failures.
 
 A create response with HTTP 400 or 409 can indicate a duplicate path. Before
 cloning, the manager performs an uncached lookup of the exact configured
-namespace/project UUID with the same transient and HTTP 404 retry policy:
+namespace/project UUID:
 
 - A successful lookup confirms that cloning is appropriate.
-- HTTP 404 is retried within the lookup budget; exhaustion preserves the
-  original create error, including its status and body.
+- HTTP 404 preserves the original create error immediately, including its status
+  and body.
 - Other lookup failures propagate instead of falling through to clone.
 - Other create failures propagate directly after the client's applicable
   retries.
 
-Both acquisition lookups pass the local-only `retry_not_found=True` option to
-`BoundedGitlabClient`. It is accepted only for GET/HEAD and never sent to
-GitLab. HTTP 404, transient server errors, and connection failures share the
-existing five-attempt budget and 1/2/4/8-second backoff, rather than nesting
-retry loops. The conflict lookup never restarts creation. Ordinary API calls,
-including history/branch lookups, retain immediate HTTP 404 behavior. This gives
-a failed existence lookup time to recover; it does not identify the historical
-cause of a particular 404.
+Both acquisition lookups use the transport's ordinary immediate HTTP 404
+behavior. Transient server errors and connection failures retain their existing
+bounded retry policy. The conflict lookup never restarts creation. This avoids
+waiting through a retry budget for an expected absent repository or concealing
+the original validation failure behind repeated missing-project reads.
 
 This also handles a create request that succeeded remotely but returned a
 transient error: a subsequent duplicate response can be resolved by confirming
@@ -179,11 +175,9 @@ without aborting the test or changing its retry behavior. The duration summary
 identifies slow phases when the run completes. These diagnostics require no
 extra dependency.
 
-The scheduler test `test_standby_exhausts_real_finite_lock_budget` intentionally
-waits through the real lock retry delays: 5 + 10 + 20 + 40 + 80 = 155 seconds.
-The 240-second threshold leaves room for that expected wait without producing a
-misleading timeout dump. The test runs with every other test in the same pytest
-invocation; its retry assertions and deadlines remain unchanged.
+Tests must not hold a competing scheduler lock solely to exhaust its backoff
+budget. The former full-budget standby test has been removed; the diagnostic
+threshold is a hang guard, not a target test duration.
 
 GitHub can delay displaying an unfinished progress line, so the last visible
 module is not proof that it owns the blocked operation. Inspect the stack dump
@@ -212,12 +206,11 @@ received an event.
 
 ## Performance and limits
 
-New creation follows up to five lookup GETs before the POST. A consistently
-absent repository adds 15 seconds of backoff with the default settings. An
-existing repository found immediately needs one lookup GET and no rejected
-creation POST. Retries add requests and delays only for failures; the API retry
-budget is separate from the clone budget. These are attempt limits, not a total
-elapsed-time deadline.
+New creation follows one existence GET before the POST, with no missing-project
+backoff after HTTP 404. An existing repository needs one lookup GET and no
+rejected creation POST. Retries add requests and delays for transient failures;
+the API retry budget is separate from the clone budget. These are attempt
+limits, not a total elapsed-time deadline.
 
 Preload and other live integration tests create external repositories. They need
 isolated test resources and must not overlap a group-wide cleanup. The retry
@@ -267,18 +260,15 @@ initialized client installed on the singleton.
 
 Real-service regressions exercise authentication, history and branch reads,
 recovery after a missing project, token propagation on actual requests, and
-opt-in versus default HTTP 404 behavior. For the latter, only the sleep is
-recorded instead of executed; all HTTP responses still come from GitLab.
-Separate deterministic acquisition/backoff policy tests script SDK-boundary
-outcomes to cover mixed failures, conflict recovery, exhaustion, and exact delay
-budgets. These tests do not establish live-service behavior or replace the
-audited integration lifecycles. Reserved non-listening sockets exercise bounded
-connection retries. The live-service and connection-refusal tests do not
-manufacture HTTP 429/5xx responses or delay headers. Standalone bootstrap
-provisioning uses the same pure-Python client with its existing 15-second
-request timeout and explicit transient-write opt-in. `compose/setup` invokes
-provisioning as a module so it can import this policy without initializing
-Django.
+immediate HTTP 404 error propagation. Do not manufacture outages solely to force
+backoff or script SDK exceptions and canned failure-then-success outcomes.
+Reserved non-listening sockets exercise single-attempt failure propagation when
+retries are disabled, without disrupting the configured GitLab service. The
+live-service and connection-refusal tests do not manufacture HTTP 429/5xx
+responses or delay headers. Standalone bootstrap provisioning uses the same
+pure-Python client with its existing 15-second request timeout and explicit
+transient-write opt-in. `compose/setup` invokes provisioning as a module so it
+can import this policy without initializing Django.
 
 ## Confirmed September 2026 CI stall
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
@@ -141,9 +142,9 @@ def test_unsupported_software_uses_existing_upload_behavior(
 ) -> None:
     project = Project(type=project_type, exclude_geojson=False)
 
-    assert request_uploaded_geojson(project, "a" * 40, [Path("project.tml")]) == (
-        "not_requested"
-    )
+    with patch("speleodb.api.v2.views.file.schedule_uploaded_geojson") as schedule:
+        request_uploaded_geojson(project, "a" * 40, [Path("project.tml")])
+    schedule.assert_not_called()
     assert project.exclude_geojson is False
 
 
@@ -153,7 +154,7 @@ def test_operator_exclusion_remains_independent_of_software(
 ) -> None:
     project = Project(type=project_type, exclude_geojson=True)
 
-    assert request_uploaded_geojson(project, "a" * 40, [Path("project.tml")]) == (
-        "skipped"
-    )
+    with patch("speleodb.api.v2.views.file.schedule_uploaded_geojson") as schedule:
+        request_uploaded_geojson(project, "a" * 40, [Path("project.tml")])
+    schedule.assert_not_called()
     assert project.exclude_geojson is True

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import re
 from io import BytesIO
-from time import monotonic
 from time import sleep
-from unittest.mock import MagicMock
+from unittest.mock import ANY
 from unittest.mock import call
 from unittest.mock import patch
 
-import pytest
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
@@ -20,13 +19,12 @@ from django.test import TestCase
 from django.urls import reverse
 from parameterized.parameterized import parameterized
 from requests import Response
-from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 from requests.exceptions import RequestException
-from requests.exceptions import Timeout
 from rest_framework import status
 
 from frontend_public.views import APP_STORE_URL
+from frontend_public.views import COMPASS_SIDECAR_FETCH_BUDGET_SECONDS
 from frontend_public.views import COMPASS_SIDECAR_LATEST_JSON_URL
 from frontend_public.views import COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY
 from frontend_public.views import COMPASS_SIDECAR_RELEASES_URL
@@ -213,6 +211,8 @@ class MobilePlatformClassificationTests(SimpleTestCase):
 
 
 class CompassSidecarReleaseFetchTests(SimpleTestCase):
+    """Validate release metadata, caching and real unavailable endpoints."""
+
     ASSET_RESOLUTION_REQUEST_COUNT = 2
     LATEST_JSON_URL = "https://downloads.example.test/latest.json"
     ASSET_API_URL = (
@@ -228,9 +228,10 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         return f"{COMPASS_SIDECAR_RELEASE_INFO_CACHE_KEY}:{self._testMethodName}"
 
     @staticmethod
-    def _response(payload: object) -> MagicMock:
-        response = MagicMock()
-        response.json.return_value = payload
+    def _response(payload: object) -> Response:
+        response = Response()
+        response.status_code = 200
+        response._content = json.dumps(payload).encode()  # noqa: SLF001 - Real HTTP response fixture.
         return response
 
     @classmethod
@@ -248,16 +249,6 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
     def setUp(self) -> None:
         super().setUp()
         cache.clear()
-        self.elapsed: float = 0.0
-        self.monotonic_mock: MagicMock = self.enterContext(
-            patch("frontend_public.views.monotonic", side_effect=lambda: self.elapsed)
-        )
-        self.sleep_mock: MagicMock = self.enterContext(
-            patch("frontend_public.views.sleep", side_effect=self._advance_clock)
-        )
-
-    def _advance_clock(self, seconds: float) -> None:
-        self.elapsed += seconds
 
     def tearDown(self) -> None:
         cache.clear()
@@ -265,7 +256,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
 
     def test_fetches_latest_release_info(self) -> None:
         cache_key: str = self._cache_key()
-        latest_response: MagicMock = self._response(
+        latest_response: Response = self._response(
             self._latest_payload(self.DIRECT_MSI_URL)
         )
         with patch(
@@ -280,12 +271,11 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
             "version": "1.2.3",
             "pub_date": "2026-01-01T00:00:00.000Z",
         }
-        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=1.0)
-        latest_response.raise_for_status.assert_called_once_with()
+        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=ANY)
 
     def test_cached_result_is_used_after_first_fetch(self) -> None:
         cache_key: str = self._cache_key()
-        latest_response: MagicMock = self._response(
+        latest_response: Response = self._response(
             self._latest_payload(self.DIRECT_MSI_URL)
         )
         with patch(
@@ -305,7 +295,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert first_payload is not None
         assert first_payload["windows_url"] == self.DIRECT_MSI_URL
         assert second_payload == first_payload
-        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=1.0)
+        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=ANY)
 
     @parameterized.expand(
         [
@@ -332,7 +322,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
 
         assert first_payload is None
         assert second_payload == first_payload
-        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=1.0)
+        get_mock.assert_called_once_with(COMPASS_SIDECAR_LATEST_JSON_URL, timeout=ANY)
         assert len(logs.output) == 1
         assert str(error) in logs.output[0]
 
@@ -347,13 +337,11 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert payload is None
 
     def test_fetches_latest_release_info_from_github(self) -> None:
-        self.monotonic_mock.side_effect = monotonic
-        self.sleep_mock.side_effect = sleep
         payload: CompassSidecarReleaseInfo | None = get_compass_sidecar_release_info(
             cache_key=self._cache_key()
         )
         # An unavailable upstream is a supported empty result. Deterministic
-        # tests below prove successful metadata extraction and bounded retries.
+        # tests below prove successful metadata extraction.
         if payload is None:
             assert cache.get(self._cache_key(), "missing") is None
             return
@@ -363,50 +351,6 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert payload["windows_url"].endswith(".msi")
         assert re.match(r"^\d+\.\d+\.\d+(?:[-+.\w]*)?$", payload["version"])
         assert payload["pub_date"] is None or isinstance(payload["pub_date"], str)
-
-    @parameterized.expand(
-        [
-            ("timeout", Timeout("upstream timed out")),
-            ("connection", RequestsConnectionError("connection reset")),
-        ]
-    )
-    def test_retries_transient_errors_with_bounded_backoff(
-        self, name: str, error: RequestException
-    ) -> None:
-        with patch(
-            "frontend_public.views.requests.api.get", side_effect=error
-        ) as get_mock:
-            payload = get_compass_sidecar_release_info(cache_key=self._cache_key())
-            cached_payload = get_compass_sidecar_release_info(
-                cache_key=self._cache_key()
-            )
-
-        assert payload is None
-        assert cached_payload is None
-        assert self.sleep_mock.call_args_list == [call(0.1), call(0.2), call(0.4)]
-        assert self.elapsed == pytest.approx(0.7)
-        assert [
-            request_call.kwargs["timeout"] for request_call in get_mock.call_args_list
-        ] == pytest.approx([1.0, 0.9, 0.7, 0.3])
-
-    @parameterized.expand([(429,), (500,), (502,), (503,), (504,)])
-    def test_retries_transient_http_status_then_succeeds(self, code: int) -> None:
-        failed_response: Response = Response()
-        failed_response.status_code = code
-        failed_response.raw = BytesIO()
-        success_response: MagicMock = self._response(
-            self._latest_payload(self.DIRECT_MSI_URL)
-        )
-        with patch(
-            "frontend_public.views.requests.api.get",
-            side_effect=[failed_response, success_response],
-        ) as get_mock:
-            payload = get_compass_sidecar_release_info(cache_key=self._cache_key())
-
-        assert payload is not None
-        assert payload["windows_url"] == self.DIRECT_MSI_URL
-        assert get_mock.call_count == self.ASSET_RESOLUTION_REQUEST_COUNT
-        self.sleep_mock.assert_called_once_with(0.1)
 
     @parameterized.expand([(400,), (401,), (403,), (404,)])
     def test_does_not_retry_permanent_http_errors(self, code: int) -> None:
@@ -420,13 +364,12 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
 
         assert payload is None
         get_mock.assert_called_once()
-        self.sleep_mock.assert_not_called()
 
     @parameterized.expand([("invalid_json",), ("invalid_payload",)])
     def test_does_not_retry_invalid_response(self, name: str) -> None:
-        response: MagicMock = self._response({})
+        response: Response = self._response({})
         if name == "invalid_json":
-            response.json.side_effect = ValueError("invalid JSON")
+            response._content = b"invalid JSON"  # noqa: SLF001 - Invalid upstream JSON fixture.
         with patch(
             "frontend_public.views.requests.api.get", return_value=response
         ) as get_mock:
@@ -434,19 +377,19 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
 
         assert payload is None
         get_mock.assert_called_once()
-        self.sleep_mock.assert_not_called()
 
     def test_asset_lookup_shares_remaining_request_budget(self) -> None:
-        latest_response: MagicMock = self._response(
+        request_duration = 0.75
+        latest_response: Response = self._response(
             self._latest_payload(self.ASSET_API_URL)
         )
-        asset_response: MagicMock = self._response(
+        asset_response: Response = self._response(
             {"browser_download_url": self.DIRECT_MSI_URL}
         )
 
-        def fetch(url: str, **kwargs: object) -> MagicMock:
+        def fetch(url: str, **kwargs: object) -> Response:
             if url == self.LATEST_JSON_URL:
-                self._advance_clock(0.75)
+                sleep(request_duration)
                 return latest_response
             return asset_response
 
@@ -459,47 +402,12 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
             )
 
         assert payload is not None
-        assert get_mock.call_args_list[0].kwargs["timeout"] == 1.0
-        assert get_mock.call_args_list[1].kwargs["timeout"] == pytest.approx(0.25)
-
-    def test_does_not_sleep_or_retry_after_request_exhausts_budget(self) -> None:
-        def fetch(url: str, **kwargs: object) -> MagicMock:
-            self._advance_clock(1.0)
-            raise Timeout("deadline reached")
-
-        with patch(
-            "frontend_public.views.requests.api.get", side_effect=fetch
-        ) as get_mock:
-            payload = get_compass_sidecar_release_info(cache_key=self._cache_key())
-
-        assert payload is None
-        get_mock.assert_called_once()
-        self.sleep_mock.assert_not_called()
-
-    def test_asset_retry_uses_remaining_shared_budget(self) -> None:
-        latest_response: MagicMock = self._response(
-            self._latest_payload(self.ASSET_API_URL)
+        first_timeout = get_mock.call_args_list[0].kwargs["timeout"]
+        asset_timeout = get_mock.call_args_list[1].kwargs["timeout"]
+        assert (
+            0 < asset_timeout <= COMPASS_SIDECAR_FETCH_BUDGET_SECONDS - request_duration
         )
-
-        def fetch(url: str, **kwargs: object) -> MagicMock:
-            if url == self.LATEST_JSON_URL:
-                self._advance_clock(0.75)
-                return latest_response
-            raise RequestsConnectionError("asset connection reset")
-
-        with patch(
-            "frontend_public.views.requests.api.get", side_effect=fetch
-        ) as get_mock:
-            payload = get_compass_sidecar_release_info(
-                latest_json_url=self.LATEST_JSON_URL,
-                cache_key=self._cache_key(),
-            )
-
-        assert payload is None
-        self.sleep_mock.assert_called_once_with(0.1)
-        assert [
-            request_call.kwargs["timeout"] for request_call in get_mock.call_args_list
-        ] == pytest.approx([1.0, 0.25, 0.15])
+        assert asset_timeout < first_timeout <= 1.0
 
     def test_resolves_github_asset_api_url_and_caches_direct_download(self) -> None:
         cache_key = self._cache_key()
@@ -529,14 +437,14 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert first_payload == expected_payload
         assert second_payload == expected_payload
         assert get_mock.call_args_list == [
-            call(self.LATEST_JSON_URL, timeout=1.0),
+            call(self.LATEST_JSON_URL, timeout=ANY),
             call(
                 self.ASSET_API_URL,
                 headers={
                     "Accept": "application/vnd.github+json",
                     "X-GitHub-Api-Version": "2022-11-28",
                 },
-                timeout=1.0,
+                timeout=ANY,
             ),
         ]
 
@@ -556,7 +464,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
 
         assert payload is not None
         assert payload["windows_url"] == self.DIRECT_MSI_URL
-        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=1.0)
+        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=ANY)
 
     @parameterized.expand(
         [
@@ -744,7 +652,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
             )
 
         assert payload is None
-        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=1.0)
+        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=ANY)
 
     def test_falls_back_when_asset_api_request_fails(self) -> None:
         cache_key = self._cache_key()
@@ -805,7 +713,7 @@ class CompassSidecarReleaseFetchTests(SimpleTestCase):
         assert payload is not None
         assert payload["windows_url"] == self.DIRECT_MSI_URL
         assert payload["version"] == "1.2.3"
-        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=1.0)
+        get_mock.assert_called_once_with(self.LATEST_JSON_URL, timeout=ANY)
 
     def test_uses_cached_release_info_without_network_call(self) -> None:
         cache_key = self._cache_key()

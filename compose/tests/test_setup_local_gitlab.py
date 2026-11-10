@@ -37,14 +37,12 @@ def setup_client() -> Generator[PythonGitLabClient]:
         f"{settings.GITLAB_HTTP_PROTOCOL}://{settings.GITLAB_HOST_URL}",
         settings.GITLAB_TOKEN,
     )
-    try:
+    with client.admin:
         client.admin.auth()
         assert client.admin.user is not None
         group = client.admin.groups.get(str(settings.GITLAB_GROUP_ID))
         assert group.full_path == settings.GITLAB_GROUP_NAME
         yield client
-    finally:
-        client.admin.session.close()
 
 
 @pytest.mark.parametrize(
@@ -165,14 +163,12 @@ def test_setup_create_authentication_error_is_not_retried(
         responses.append(response)
 
     invalid_client.admin.session.hooks["response"].append(observe)
-    try:
+    with invalid_client.admin:
         with pytest.raises(gitlab.exceptions.GitlabAuthenticationError) as raised:
             invalid_client.create_group(f"setup-invalid-{uuid4()}")
         assert raised.value.response_code == HTTPStatus.UNAUTHORIZED
         assert len(responses) == 1
         assert raised.value.response_body == responses[0].content
-    finally:
-        invalid_client.admin.session.close()
 
 
 def test_private_env_update_preserves_user_values_and_is_idempotent(
@@ -203,17 +199,17 @@ def bootstrap_groups() -> Generator[tuple[PythonGitLabClient, list[str]]]:
         bootstrap_token,
     )
     names: list[str] = []
-    try:
-        client.admin.auth()
-        assert client.admin.user is not None
-        assert client.admin.user.is_admin
-        yield client, names
-    finally:
-        for name in names:
-            group = client.find_group(name)
-            if group is not None:
-                client.admin.groups.delete(group["id"])
-        client.admin.session.close()
+    with client.admin:
+        try:
+            client.admin.auth()
+            assert client.admin.user is not None
+            assert client.admin.user.is_admin
+            yield client, names
+        finally:
+            for name in names:
+                group = client.find_group(name)
+                if group is not None:
+                    client.admin.groups.delete(group["id"])
 
 
 @pytest.mark.skip_if_lighttest

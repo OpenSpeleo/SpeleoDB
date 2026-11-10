@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { init as initialize } from './feedback.ts';
 
 const jquery = readFileSync(resolve('frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
-const fetchMock = vi.fn<(url: string, options: RequestInit) => Promise<{ ok: boolean; json(): Promise<unknown> }>>();
+const fetchMock = vi.fn<(url: string, options: RequestInit) => Promise<Response>>();
 function init(context?: unknown) { return initialize(context as FeedbackContext); }
 
 const fallbackMessage = 'Oops! There was a problem submitting your feedback';
@@ -14,7 +14,6 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
     document.body.innerHTML = `
         <form id="feedback_form" method="post">
             <input type="hidden" name="score" value="1">
@@ -27,7 +26,9 @@ beforeEach(() => {
         <div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>
         <div id="modal_confirmation" style="display:none"></div>
     `;
-    fetchMock.mockReset().mockResolvedValue({ ok: true, json: async () => ({}) });
+    fetchMock.mockReset().mockImplementation(async () => Response.json({}));
+    // Keep the browser FormData(form) boundary intact; JSDOM's form bodies
+    // do not share Bun fetch's native body constructors. Replies are real Responses.
     vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -41,11 +42,15 @@ afterEach(() => {
 async function submitFeedback() {
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });
     document.getElementById('btn_submit')!.dispatchEvent(event);
-    for (let turn = 0; turn < 4; turn++) await Promise.resolve();
+    await vi.waitFor(() => expect([
+        document.getElementById('modal_success')!.style.display,
+        document.getElementById('modal_error')!.style.display,
+    ]).toContain('flex'));
     return event;
 }
 
 it('waits for load before binding and resolves without a cleanup result', async () => {
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init({ endpoint: '/feedback/' });
     document.querySelector<HTMLElement>('[data-score="5"]')!.click();
@@ -95,7 +100,7 @@ it('submits native FormData with the form method, resets on success and shows th
 // FormModals accepts trusted HTML, so API errors must be escaped at this caller.
 it('renders API errors as inert text and joins messages in response order', async () => {
     const malicious = '<img src="missing" onerror="document.body.dataset.injectedEvent=\'yes\'"><em data-injected="feedback">unsafe</em>';
-    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ errors: [{ message: malicious }, { message: 'Second' }] }) });
+    fetchMock.mockResolvedValue(Response.json({ errors: [{ message: malicious }, { message: 'Second' }] }, { status: 400 }));
     await init({ endpoint: '/feedback/' });
     await submitFeedback();
     const errorText = document.getElementById('modal_error_txt')!;
@@ -113,7 +118,7 @@ it.each([
     '<strong>API error</strong>',
     'Salt & water &quot;label&quot; &#39;value&#39;',
 ])('preserves API error text without interpreting or decoding %s', async message => {
-    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ errors: [{ message }] }) });
+    fetchMock.mockResolvedValue(Response.json({ errors: [{ message }] }, { status: 400 }));
     await init({ endpoint: '/feedback/' });
     await submitFeedback();
     const errorText = document.getElementById('modal_error_txt')!;
@@ -123,9 +128,9 @@ it.each([
 
 it.each(['network', 'json', 'missing errors', 'invalid errors'])('shows the fallback and preserves form input on %s failure', async failure => {
     if (failure === 'network') fetchMock.mockRejectedValue(new Error('Offline'));
-    if (failure === 'json') fetchMock.mockResolvedValue({ ok: true, json: async () => { throw new SyntaxError('Invalid JSON'); } });
-    if (failure === 'missing errors') fetchMock.mockResolvedValue({ ok: false, json: async () => ({}) });
-    if (failure === 'invalid errors') fetchMock.mockResolvedValue({ ok: false, json: async () => ({ errors: null }) });
+    if (failure === 'json') fetchMock.mockResolvedValue(new Response('Invalid JSON'));
+    if (failure === 'missing errors') fetchMock.mockResolvedValue(Response.json({}, { status: 400 }));
+    if (failure === 'invalid errors') fetchMock.mockResolvedValue(Response.json({ errors: null }, { status: 400 }));
     await init({ endpoint: '/feedback/' });
     document.querySelector<HTMLTextAreaElement>('[name="message"]')!.value = 'Keep this';
     await submitFeedback();

@@ -1,0 +1,12 @@
+{% extends "admin/change_form.html" %}
+
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate "Home" %}</a>
+    › <a href="{% url 'admin:app_list' app_label='background_jobs' %}">{% translate "Background operations" %}</a>
+    › <a href="{% url opts|admin_urlname:'changelist' %}">{% if opts.model_name == "backgroundjob" %}Export jobs{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}</a>
+    › {{ original|truncatewords:18 }}
+  </div>
+{% endblock breadcrumbs %}

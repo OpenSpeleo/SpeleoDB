@@ -42,15 +42,10 @@ function widthAtZoom(expression: RendererValue | undefined, zoom: number): numbe
 describe('measurement native renderer', () => {
     let map: ReturnType<typeof makeMap> & { isStyleLoaded?: Mock<() => boolean> };
     let renderer: MeasurementRenderer;
-    let frames: Map<number, FrameRequestCallback>;
     let markers: TestMarker[];
     beforeEach(() => {
         map = makeMap();
-        frames = new Map();
         markers = [];
-        let sequence = 0;
-        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++sequence, callback); return sequence; });
-        vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
         vi.stubGlobal('__mapRenderer', { Marker: class implements TestMarker {
             declare options: RendererMarkerOptions;
             declare coordinate?: readonly number[];
@@ -68,7 +63,6 @@ describe('measurement native renderer', () => {
         renderer = new MeasurementRenderer(map);
     });
     afterEach(() => { renderer.destroy(); vi.unstubAllGlobals(); });
-    const flush = (frames: Map<number, FrameRequestCallback>) => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(callback => callback(0)); };
 
     it('creates no map resources before use and adds native overlays in declared order', () => {
         expect(map.addLayer).not.toHaveBeenCalled();
@@ -101,7 +95,7 @@ describe('measurement native renderer', () => {
         }
     });
 
-    it('prioritizes newer measurements and preserves older complete geometry on pointer movement', () => {
+    it('prioritizes newer measurements and preserves older complete geometry on pointer movement', async () => {
         const records = [createMeasurement([0, 0], [1, 0], 'one'), createMeasurement([2, 0], [3, 0], 'two')];
         renderer.setMeasurements(records);
         const source = map.sources.get(`${MEASUREMENT_LAYER_PREFIX}completed`)!;
@@ -110,8 +104,7 @@ describe('measurement native renderer', () => {
         source.setData.mockClear();
         map.getStyle.mockClear();
         for (let index = 0; index < 100; index++) renderer.setDraft({ start: [0, 0], end: [index / 100, 1] });
-        expect(frames.size).toBe(1);
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(source.setData).not.toHaveBeenCalled();
         expect(map.getStyle).not.toHaveBeenCalled();
         expect(source.data).toBe(data);
@@ -120,22 +113,22 @@ describe('measurement native renderer', () => {
         expect(draft.data.features.filter(feature => feature.properties.role === 'endpoint').at(-1)!.geometry.coordinates).toEqual([0.99, 1]);
     });
 
-    it('clears only a draft while preserving complete results', () => {
+    it('clears only a draft while preserving complete results', async () => {
         renderer.setMeasurements([createMeasurement([0, 0], [1, 0], 'one')]);
         renderer.setDraft({ start: [1, 1], end: null });
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(map.sources.get(`${MEASUREMENT_LAYER_PREFIX}draft`)!.data.features).toHaveLength(1);
         renderer.setDraft(null);
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(map.sources.get(`${MEASUREMENT_LAYER_PREFIX}draft`)!.data.features).toEqual([]);
         expect(map.sources.get(`${MEASUREMENT_LAYER_PREFIX}completed`)!.data.features).toHaveLength(4);
     });
 
-    it('updates one live capsule immediately without native symbol fade or completed DOM markers', () => {
+    it('updates one live capsule immediately without native symbol fade or completed DOM markers', async () => {
         renderer.setMeasurements([createMeasurement([0, 0], [1, 0], 'one')]);
         expect(markers).toHaveLength(0);
         renderer.setDraft({ start: [0, 0], end: [1, 0] });
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(markers).toHaveLength(1);
         const marker = markers[0]!;
         const element = marker.options.element;
@@ -149,7 +142,7 @@ describe('measurement native renderer', () => {
         expect(element.textContent).toBe('111.19 km · 69.09 mi');
         expect(map.layers.has(`${MEASUREMENT_LAYER_PREFIX}draft-label`)).toBe(false);
         renderer.setDraft({ start: [0, 0], end: [2, 0] });
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(markers).toHaveLength(1);
         expect(element.textContent).toBe('222.39 km · 138.19 mi');
         expect(marker.setLngLat).toHaveBeenCalledTimes(2);
@@ -159,9 +152,9 @@ describe('measurement native renderer', () => {
         expect(map.getContainer().children).toHaveLength(0);
     });
 
-    it('retains the single live Marker across style changes and removes it on clear', () => {
+    it('retains the single live Marker across style changes and removes it on clear', async () => {
         renderer.setDraft({ start: [0, 0], end: [1, 0] });
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         map.sources.clear(); map.layers.clear(); map.images.clear();
         map.listeners.get('style.load')!();
         expect(markers).toHaveLength(1);
@@ -180,11 +173,11 @@ describe('measurement native renderer', () => {
         expect(source.data.features.find(feature => feature.properties.role === 'line')).toBe(originalLine);
     });
 
-    it('defers source creation until a replacement style finishes loading', () => {
+    it('defers source creation until a replacement style finishes loading', async () => {
         map.getStyle.mockImplementation(() => { throw new Error('Style is not done loading'); });
         renderer.setMeasurements([createMeasurement([0, 0], [1, 0], 'one')]);
         renderer.setDraft({ start: [1, 1], end: [2, 2] });
-        flush(frames);
+        await new Promise(requestAnimationFrame);
         expect(map.addSource).not.toHaveBeenCalled();
         expect(map.addImage).not.toHaveBeenCalled();
         map.getStyle.mockReturnValue({ layers: [] });
@@ -228,17 +221,15 @@ describe('measurement native renderer', () => {
         expect(map.addLayer).toHaveBeenCalledTimes(count);
     });
 
-    it('removes all owned resources and prevents late frames or style events recreating them', () => {
+    it('removes all owned resources and prevents late frames or style events recreating them', async () => {
         renderer.setMeasurements([createMeasurement([0, 0], [1, 0], 'one')]);
         renderer.setDraft({ start: [1, 1], end: [2, 2] });
-        const lateFrame = [...frames.values()][0];
         renderer.clear();
-        lateFrame!(0);
+        await new Promise(requestAnimationFrame);
         map.listeners.get('style.load')!();
         expect(map.layers.size).toBe(0);
         expect(map.sources.size).toBe(0);
         expect(map.images.size).toBe(0);
-        expect(frames.size).toBe(0);
         renderer.setMeasurements([]);
         expect(map.layers.size).toBe(DEFAULTS.MEASUREMENT.LAYER_ROLES.length);
         renderer.destroy();

@@ -32,7 +32,7 @@ class Command(BaseCommand):
             private_token=settings.GITLAB_TOKEN,
             keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
         )
-        try:
+        with client:
             client.auth()
             if client.user is None:
                 raise CommandError("GitLab authentication returned no user.")
@@ -62,5 +62,3 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS("GitLab authenticated write check passed.")
             )
-        finally:
-            client.session.close()

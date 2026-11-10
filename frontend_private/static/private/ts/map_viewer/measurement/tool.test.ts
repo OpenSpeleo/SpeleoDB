@@ -71,13 +71,7 @@ const event = (x: number, y: number, extra: Omit<MeasurementInput, 'preventDefau
 });
 let map: ReturnType<typeof createMap>;
 let tool: MeasurementTool;
-let frames: Map<number, FrameRequestCallback>;
 let originalProjects: typeof Config._projects;
-const flushFrames = () => {
-    const callbacks = [...frames.values()];
-    frames.clear();
-    callbacks.forEach(callback => callback(0));
-};
 const click = (x: number, y: number) => {
     map.fire('mousedown', event(x, y));
     map.fire('mouseup', event(x, y));
@@ -87,10 +81,6 @@ const source = (kind: string) => map.getSource(`${DEFAULTS.MEASUREMENT.LAYER_PRE
 
 beforeEach(() => {
     originalProjects = Config._projects;
-    frames = new Map();
-    let frame = 0;
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++frame, callback); return frame; });
-    vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
     // Renderer's DOM Marker boundary: the actual renderer owns the live capsule.
     vi.stubGlobal('__mapRenderer', { Marker: class {
         declare element: HTMLElement;
@@ -118,16 +108,16 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-it('measures independent pairs, cancels only the draft, and clears all on toggling off', () => {
+it('measures independent pairs, cancels only the draft, and clears all on toggling off', async () => {
     tool.button.dispatchEvent(new MouseEvent('click', { detail: 1 }));
     expect(tool.button.getAttribute('aria-pressed')).toBe('true');
     expect(tool.gestures.textContent).toContain('Left-clickStart / stop');
     click(0, 0);
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     expect(tool.gestures.textContent).toContain('Right-click / EscCancel measurement');
     map.fire('mousemove', event(1, 1));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!.textContent).toMatch(/km.*mi/);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!.getAttribute('aria-hidden')).toBe('true');
     click(1, 1);
@@ -149,7 +139,7 @@ it('measures independent pairs, cancels only the draft, and clears all on toggli
     expect(tool.instructions.hidden).toBe(true);
     expect(tool.button.getAttribute('aria-pressed')).toBe('false');
     expect(source('completed')).toBeUndefined();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')).toBeUndefined();
 });
 
@@ -325,13 +315,13 @@ it('places keyboard endpoints at the center, ignores repeats, and gives dialogs 
     dialog.open = true;
     document.body.append(dialog);
     await Promise.resolve();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     key('Escape');
     expect(tool.start).not.toBeNull();
     expect(tool.crosshair.hidden).toBe(true);
     dialog.remove();
     await Promise.resolve();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     key('Escape');
     expect(tool.start).toBeNull();
     expect(tool.measurements).toHaveLength(1);
@@ -342,33 +332,33 @@ it('hides previews on sky, canvas leave, window blur and dialog opening while pr
     tool.activate();
     click(1, 1);
     map.fire('mousemove', event(3, 3));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!).not.toBeNull();
     map.getCanvas().dispatchEvent(new Event('mouseleave'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!).toBeNull();
     expect(tool.start).not.toBeNull();
     map.fire('mousemove', event(3, -3));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     map.fire('mousemove', event(3, 3));
     window.dispatchEvent(new Event('blur'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     map.fire('mousemove', event(3, 3));
     const dialog = document.createElement('dialog');
     dialog.open = true;
     document.body.append(dialog);
     await Promise.resolve();
-    flushFrames();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     click(3, 3);
     expect(tool.measurements).toHaveLength(0);
 });
 
-it('keeps completed data stable through pointer updates and restores after a style reload', () => {
+it('keeps completed data stable through pointer updates and restores after a style reload', async () => {
     tool.activate();
     click(1, 1);
     click(2, 2);
@@ -377,8 +367,7 @@ it('keeps completed data stable through pointer updates and restores after a sty
     click(3, 3);
     map.fire('mousemove', event(5, 5));
     map.fire('mousemove', event(6, 6));
-    expect(frames.size).toBe(1);
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(completed.setData).not.toHaveBeenCalled();
     const data = completed.data;
     for (const layer of map.getStyle().layers) map.removeLayer(layer.id!);
@@ -389,18 +378,18 @@ it('keeps completed data stable through pointer updates and restores after a sty
     expect(tool.measurements).toHaveLength(1);
 });
 
-it('keeps a mouse preview under the pointer through camera changes and commits the displayed endpoint', () => {
+it('keeps a mouse preview under the pointer through camera changes and commits the displayed endpoint', async () => {
     tool.activate();
     click(1, 1);
     map.fire('mousemove', event(20, 20));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect((source('draft')!.data.features.filter(feature => feature.properties!.role === 'endpoint').at(-1)!.geometry as import('geojson').Point).coordinates)
         .toEqual([2, 2]);
     // Camera navigation changes the coordinate under a stationary pointer.
     map.unproject = (point: ScreenPoint) => ({ lng: point.x / 20, lat: point.y / 20 });
     map.project = (coordinate: LongitudeLatitude | Coordinate2D) => ({ x: (coordinate as LongitudeLatitude).lng * 20, y: (coordinate as LongitudeLatitude).lat * 20 });
     map.fire('move');
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     const previewEndpoint = (source('draft')!.data.features.filter(feature => feature.properties!.role === 'endpoint').at(-1)!.geometry as import('geojson').Point).coordinates;
     const previewLabel = document.querySelector<HTMLElement>('.measurement-live-label')!.textContent;
     expect(previewEndpoint).toEqual([1, 1]);
@@ -409,32 +398,32 @@ it('keeps a mouse preview under the pointer through camera changes and commits t
     expect(tool.results.textContent).toContain(previewLabel);
 });
 
-it('does not revive a mouse preview during a pan or after the pointer leaves the canvas', () => {
+it('does not revive a mouse preview during a pan or after the pointer leaves the canvas', async () => {
     tool.activate();
     click(1, 1);
     map.fire('mousemove', event(20, 20));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     map.getCanvas().dispatchEvent(new Event('mouseleave'));
     map.fire('move');
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!).toBeNull();
     map.fire('mousemove', event(20, 20));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     map.fire('mousedown', event(20, 20));
     map.fire('mousemove', event(50, 50));
     map.fire('move');
     map.fire('mouseup', event(50, 50));
     // Inertia may continue moving the map after the pan gesture ends.
     map.fire('move');
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(source('draft')!.data.features).toHaveLength(1);
     expect(document.querySelector<HTMLElement>('.measurement-live-label')!).toBeNull();
     expect(tool.start).not.toBeNull();
     expect(tool.measurements).toHaveLength(0);
 });
 
-it('restores cursor and original double-click state across activation, busy editing and removal', () => {
+it('restores cursor and original double-click state across activation, busy editing and removal', async () => {
     map.getCanvas().style.cursor = 'grab';
     map.doubleClickZoom.disable();
     tool.activate();
@@ -451,7 +440,7 @@ it('restores cursor and original double-click state across activation, busy edit
     tool.activate();
     click(1, 1);
     map.fire('remove');
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(document.querySelector<HTMLElement>('.measurement-control')!).toBeNull();
     expect(source('draft')).toBeUndefined();
     expect(map.doubleClickZoom.isEnabled()).toBe(true);
@@ -547,38 +536,38 @@ it('tracks sibling panel visibility without placing instructions outside a narro
     expect(tool.instructions.style.left).toBe('312px');
     panel.style.display = 'none';
     await Promise.resolve();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(tool.instructions.style.left).toBe('12px');
     map.getContainer().getBoundingClientRect = () => ({ top: 0, left: 0, right: 320, bottom: 300, width: 320, height: 300 } as DOMRect);
     panel.style.display = 'block';
     await Promise.resolve();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(tool.instructions.style.left).toBe('12px');
     expect(tool.instructions.style.top).toBe('212px');
     expect(map.getContainer().classList.contains('measurement-compact-map')).toBe(true);
     tool.deactivate();
     panel.style.display = 'none';
     await Promise.resolve();
-    expect(frames.size).toBe(0);
+    await new Promise(requestAnimationFrame);
 });
 
-it('fits the rail to the visible viewport even when the map retains its desktop minimum height', () => {
+it('fits the rail to the visible viewport even when the map retains its desktop minimum height', async () => {
     const height = window.innerHeight;
     vi.stubGlobal('innerHeight', 390);
     map.getContainer().getBoundingClientRect = () => ({ top: 180, left: 0, right: 844, bottom: 780, width: 844, height: 600 } as DOMRect);
     window.dispatchEvent(new Event('resize'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(map.getContainer().classList.contains('measurement-compact-map')).toBe(true);
     vi.stubGlobal('innerHeight', height);
     window.dispatchEvent(new Event('resize'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(map.getContainer().classList.contains('measurement-compact-map')).toBe(false);
     window.dispatchEvent(new Event('scroll'));
     tool.destroy();
-    expect(frames.size).toBe(0);
+    await new Promise(requestAnimationFrame);
 });
 
-it('keeps keyboard targeting and its preview inside the visible canvas after viewport changes', () => {
+it('keeps keyboard targeting and its preview inside the visible canvas after viewport changes', async () => {
     vi.stubGlobal('innerHeight', 390);
     map.getContainer().getBoundingClientRect = () => ({ top: 180, left: 0, right: 800, bottom: 780, width: 800, height: 600 } as DOMRect);
     tool.activate({ keyboard: true });
@@ -588,8 +577,8 @@ it('keeps keyboard targeting and its preview inside the visible canvas after vie
     // Scrolling the map upwards changes the center of its visible portion.
     map.getContainer().getBoundingClientRect = () => ({ top: -100, left: 0, right: 800, bottom: 500, width: 800, height: 600 } as DOMRect);
     window.dispatchEvent(new Event('scroll'));
-    flushFrames();
-    flushFrames();
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
     expect(tool.crosshair.style.top).toBe('295px');
     expect((source('draft')!.data.features.filter(feature => feature.properties!.role === 'endpoint').at(-1)!.geometry as import('geojson').Point).coordinates)
         .toEqual([40, 29.5]);
@@ -597,7 +586,7 @@ it('keeps keyboard targeting and its preview inside the visible canvas after vie
     expect(tool.measurements[0]!.end).toEqual([40, 29.5]);
 });
 
-it('targets the visual viewport with offsets and rejects keyboard placement on a fully hidden map', () => {
+it('targets the visual viewport with offsets and rejects keyboard placement on a fully hidden map', async () => {
     const viewport = new EventTarget();
     Object.assign(viewport, { offsetLeft: 100, offsetTop: 50, width: 400, height: 300 });
     vi.stubGlobal('visualViewport', viewport);
@@ -609,7 +598,7 @@ it('targets the visual viewport with offsets and rejects keyboard placement on a
     expect(tool.start).toEqual([27, 18]);
     map.getCanvas().getBoundingClientRect = () => ({ top: 700, left: 0, right: 800, bottom: 1300, width: 800, height: 600 } as DOMRect);
     window.dispatchEvent(new Event('scroll'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     expect(tool.crosshair.hidden).toBe(true);
     map.getCanvas().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(tool.measurements).toHaveLength(0);
@@ -630,12 +619,17 @@ it('keeps the short-landscape keyboard target below its own instructions', () =>
 it('settles layout after positioning its own reticle without an observer feedback loop', async () => {
     tool.activate();
     window.dispatchEvent(new Event('resize'));
-    flushFrames();
+    await new Promise(requestAnimationFrame);
     await Promise.resolve();
-    expect(frames.size).toBe(0);
+    const positioned = tool.instructions.style.cssText;
+    await new Promise(requestAnimationFrame);
+    expect(tool.instructions.style.cssText).toBe(positioned);
     tool.setInputMode(true, false);
     await Promise.resolve();
-    expect(frames.size).toBe(0);
+    await new Promise(requestAnimationFrame);
+    const targeted = tool.crosshair.style.cssText;
+    await new Promise(requestAnimationFrame);
+    expect(tool.crosshair.style.cssText).toBe(targeted);
 });
 
 it('keeps DOM and map properties absent until onAdd owns their initialization', () => {

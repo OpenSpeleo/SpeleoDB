@@ -41,6 +41,7 @@ from speleodb.background_jobs.tasks import _clean_scratch
 from speleodb.background_jobs.tasks import generate_export
 from speleodb.background_jobs.tasks import maintain_background_jobs
 from speleodb.background_jobs.tasks import send_export_notification
+from speleodb.common.enums import TaskResultStatus
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -49,8 +50,6 @@ if TYPE_CHECKING:
     from pytest_django.fixtures import Settings
 
     from speleodb.users.models import User
-
-pytestmark = pytest.mark.django_db
 
 
 def _running(user: User) -> tuple[BackgroundJob, JobAttempt]:
@@ -73,6 +72,7 @@ def _publish(attempt: JobAttempt, *, partial: bool = False) -> bool:
     )
 
 
+@pytest.mark.django_db
 def test_database_rejects_two_active_jobs(user: User) -> None:
     job, created = request_export(user)
     assert created
@@ -83,6 +83,7 @@ def test_database_rejects_two_active_jobs(user: User) -> None:
         BackgroundJob.objects.create(requester=user)
 
 
+@pytest.mark.django_db
 def test_inactive_account_cannot_request_an_export(user: User) -> None:
     user.is_active = False
     user.save(update_fields=["is_active"])
@@ -91,11 +92,13 @@ def test_inactive_account_cannot_request_an_export(user: User) -> None:
     assert not BackgroundJob.objects.filter(requester=user).exists()
 
 
+@pytest.mark.django_db
 def test_celery_generation_limits_match_export_settings(settings: Settings) -> None:
     assert generate_export.soft_time_limit == settings.EXPORTS_SOFT_TIME_LIMIT
     assert generate_export.time_limit == settings.EXPORTS_HARD_TIME_LIMIT
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize("hard_limit", [13, 73])
 def test_attempt_deadline_and_scratch_cleanup_follow_configured_hard_limit(
     user: User, settings: Settings, tmp_path: Path, hard_limit: int
@@ -125,6 +128,7 @@ def test_attempt_deadline_and_scratch_cleanup_follow_configured_hard_limit(
     assert (active / "archive.zip").read_bytes() == b"export data"
 
 
+@pytest.mark.django_db
 def test_unexpected_task_id_cannot_claim_and_duplicates_cannot_overwrite_results(
     user: User,
 ) -> None:
@@ -132,25 +136,40 @@ def test_unexpected_task_id_cannot_claim_and_duplicates_cannot_overwrite_results
     attempt = job.attempts.get()
     assert claim_attempt(str(job.pk), str(attempt.pk), str(uuid.uuid4())) is None
     assert claim_attempt(str(job.pk), str(attempt.pk), str(attempt.task_id)) is not None
-    TaskResult.objects.create(task_id=str(attempt.task_id), status="STARTED")
+    TaskResult.objects.create(
+        task_id=str(attempt.task_id), status=TaskResultStatus.STARTED
+    )
     with pytest.raises(Ignore):
         generate_export.run(str(job.pk), str(attempt.pk))
-    assert TaskResult.objects.get(task_id=str(attempt.task_id)).status == "STARTED"
+    assert (
+        TaskResult.objects.get(task_id=str(attempt.task_id)).status
+        == TaskResultStatus.STARTED
+    )
 
 
-def test_retry_cycle_is_bounded_and_fresh_attempt_keeps_history(user: User) -> None:
-    job, attempt = _running(user)
+@pytest.mark.usefixtures("operation_queue")
+@pytest.mark.django_db
+def test_retry_cycle_is_bounded_and_fresh_attempt_keeps_history(
+    user: User, settings: Settings, tmp_path: Path
+) -> None:
+    blocked_root = tmp_path / "scratch-is-a-file"
+    blocked_root.write_bytes(b"Not a directory")
+    settings.EXPORTS_SCRATCH_DIR = blocked_root
+    job, _created = request_export(user)
+    attempt = job.attempts.get()
     keys: set[str] = set()
     for number in range(1, 4):
+        result = generate_export.apply(
+            args=(str(job.pk), str(attempt.pk)), task_id=str(attempt.task_id)
+        )
+        assert result.failed()
         attempt.refresh_from_db()
         assert attempt.object_key.startswith("exports/speleodb-export-")
         assert attempt.object_key.endswith(f"-{attempt.id}.zip")
         assert attempt.object_key.count("/") == 1
         assert attempt.object_key not in keys
         keys.add(attempt.object_key)
-        fail_attempt(attempt.pk, "Source unavailable")
         job.refresh_from_db()
-        attempt.refresh_from_db()
         assert attempt.finished_at is not None
         if number < 3:  # noqa: PLR2004
             assert job.state == JobState.RETRY_WAIT
@@ -160,10 +179,6 @@ def test_retry_cycle_is_bounded_and_fresh_attempt_keeps_history(user: User) -> N
             assert job.current_attempt_id is not None
             attempt = job.attempts.get(pk=job.current_attempt_id)
             assert attempt.cycle_attempt == number + 1
-            assert (
-                claim_attempt(str(job.pk), str(attempt.pk), str(attempt.task_id))
-                is not None
-            )
     assert job.state == JobState.FAILED
     assert job.attempts.count() == 3  # noqa: PLR2004
     retried = retry_export(job, user)
@@ -173,6 +188,7 @@ def test_retry_cycle_is_bounded_and_fresh_attempt_keeps_history(user: User) -> N
     assert retried.attempts.count() == 4  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 def test_stale_attempt_cannot_publish_or_fail_a_new_attempt(user: User) -> None:
     job, old = _running(user)
     fail_attempt(old.id, "Interrupted")
@@ -190,6 +206,7 @@ def test_stale_attempt_cannot_publish_or_fail_a_new_attempt(user: User) -> None:
     assert job.current_attempt_id == new.id
 
 
+@pytest.mark.django_db
 def test_publication_is_once_and_expiry_starts_at_ready(user: User) -> None:
     job, attempt = _running(user)
     before = timezone.now()
@@ -209,6 +226,7 @@ def test_publication_is_once_and_expiry_starts_at_ready(user: User) -> None:
         retry_export(job, user)
 
 
+@pytest.mark.django_db
 def test_deadline_prevents_publication(user: User) -> None:
     _, attempt = _running(user)
     JobAttempt.objects.filter(pk=attempt.pk).update(
@@ -218,6 +236,7 @@ def test_deadline_prevents_publication(user: User) -> None:
     assert not JobArtifact.objects.exists()
 
 
+@pytest.mark.django_db
 def test_expiry_enforced_without_cleanup_and_staff_cannot_download(user: User) -> None:
     job, attempt = _running(user)
     assert _publish(attempt)
@@ -234,6 +253,7 @@ def test_expiry_enforced_without_cleanup_and_staff_cannot_download(user: User) -
     assert JobArtifact.objects.get(job=job).deleted_at is None
 
 
+@pytest.mark.django_db
 def test_email_is_independent_and_duplicate_delivery_is_guarded(user: User) -> None:
     EmailAddress.objects.create(
         user=user, email=user.email, verified=True, primary=True
@@ -261,6 +281,7 @@ def test_email_is_independent_and_duplicate_delivery_is_guarded(user: User) -> N
     assert job.attempts.count() == 1
 
 
+@pytest.mark.django_db
 def test_email_html_escapes_artifact_metadata(user: User) -> None:
     EmailAddress.objects.create(
         user=user, email=user.email, verified=True, primary=True
@@ -278,6 +299,7 @@ def test_email_html_escapes_artifact_metadata(user: User) -> None:
     assert "&lt;script&gt;" in html_body
 
 
+@pytest.mark.django_db
 def test_unverified_email_retries_without_regenerating(user: User) -> None:
     job, attempt = _running(user)
     assert _publish(attempt)
@@ -290,6 +312,7 @@ def test_unverified_email_retries_without_regenerating(user: User) -> None:
     assert JobArtifact.objects.get(job=job).expires_at == expires_at
 
 
+@pytest.mark.django_db
 def test_notification_attempts_are_bounded_and_manual_resend_is_independent(
     user: User,
     settings: Settings,
@@ -320,6 +343,7 @@ def test_notification_attempts_are_bounded_and_manual_resend_is_independent(
     assert job.attempts.count() == 1
 
 
+@pytest.mark.django_db
 @pytest.mark.filterwarnings("error::django.utils.deprecation.RemovedInDjango70Warning")
 def test_smtp_failure_retries_email_without_rebuilding(
     user: User,
@@ -363,6 +387,7 @@ def test_smtp_failure_retries_email_without_rebuilding(
     assert len(mail.outbox) == 1
 
 
+@pytest.mark.django_db
 def test_maintenance_recovers_dead_workers_after_grace_period(user: User) -> None:
     job, attempt = _running(user)
     JobAttempt.objects.filter(pk=attempt.pk).update(
@@ -391,6 +416,7 @@ def test_maintenance_recovers_dead_workers_after_grace_period(user: User) -> Non
     assert job.attempts.count() == 2  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 def test_lost_notification_lease_is_recoverable(user: User) -> None:
     job, attempt = _running(user)
     assert _publish(attempt)
@@ -427,6 +453,7 @@ def test_lost_notification_lease_is_recoverable(user: User) -> None:
     assert job.attempts.count() == 1
 
 
+@pytest.mark.django_db
 def test_lost_final_notification_lease_requires_manual_retry(
     user: User, settings: Settings
 ) -> None:
@@ -464,6 +491,7 @@ def test_lost_final_notification_lease_requires_manual_retry(
     assert job.attempts.count() == 1
 
 
+@pytest.mark.django_db
 def test_scheduler_installation_is_idempotent_and_uses_control_queue() -> None:
     call_command("install_background_schedules")
     call_command("install_background_schedules")

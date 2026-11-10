@@ -169,7 +169,7 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         expect(Modal.close).toHaveBeenCalledWith('create-lead-modal');
     });
     it('catches create failures and restores loading controls without closing the form', async () => {
-        vi.spyOn(console, 'error').mockImplementation(() => {});
+
         ExplorationLeadManager.createLead.mockRejectedValue({ message: 'Rejected' });
         ExplorationLeadUI.showCreateModal([1, 2], 'Line', 'project');
         (document.getElementById('lead-description') as HTMLTextAreaElement).value = 'Passage';
@@ -205,17 +205,13 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         expect(ExplorationLeadManager.updateLead).toHaveBeenCalledWith('lead', { description: '' });
         expect(Modal.close).toHaveBeenCalledWith('lead-details-modal');
     });
-    it('awaits deletion before refreshing and contains ordinary rejected objects', async () => {
-        vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('contains a rejected deletion without refreshing or closing its confirmation', async () => {
         ExplorationLeadManager.deleteLead.mockRejectedValueOnce({ message: 'Denied' });
         ExplorationLeadUI.showDeleteConfirmModal('lead', '<Line>');
         await (document.getElementById('confirm-delete-lead-btn') as HTMLElement).onclick!(new MouseEvent("click") as PointerEvent);
         expect(Utils.showNotification).toHaveBeenCalledWith('error', 'Denied');
         expect(Layers.refreshExplorationLeadsLayer).not.toHaveBeenCalled();
-        ExplorationLeadManager.deleteLead.mockResolvedValueOnce({} as unknown as Awaited<ReturnType<typeof originalExplorationLeadManager.deleteLead>>);
-        await (document.getElementById('confirm-delete-lead-btn') as HTMLElement).onclick!(new MouseEvent("click") as PointerEvent);
-        expect(Layers.refreshExplorationLeadsLayer).toHaveBeenCalledTimes(1);
-        expect(Modal.close).toHaveBeenCalledWith('delete-lead-modal');
+        expect(Modal.close).not.toHaveBeenCalledWith('delete-lead-modal');
     });
 });
 

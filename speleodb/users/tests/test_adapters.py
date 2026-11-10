@@ -28,11 +28,7 @@ if TYPE_CHECKING:
     from django.test.client import Client
 
 
-pytestmark = pytest.mark.filterwarnings(
-    "error::django.utils.deprecation.RemovedInDjango70Warning"
-)
-
-
+@pytest.mark.filterwarnings("error::django.utils.deprecation.RemovedInDjango70Warning")
 @pytest.mark.django_db
 class TestAccountSignup:
     def test_signup_saves_required_profile_before_first_insert(
@@ -113,6 +109,7 @@ class TestAccountSignup:
         assert not User.objects.filter(email=user.email).exists()
 
 
+@pytest.mark.filterwarnings("error::django.utils.deprecation.RemovedInDjango70Warning")
 @pytest.mark.django_db
 class TestAccountAdapterSendMail:
     """

@@ -26,7 +26,6 @@ afterEach(() => {
 });
 
 it('initializes immediately, returns undefined, and displays the empty state', () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     expect(init({ textareaId: 'experiment-fields' })).toBeUndefined();
     expect(document.getElementById('no-fields-msg')!.style.display).toBe('block');
 });
@@ -79,7 +78,7 @@ it('saves new named fields, trims choices, toggles choice visibility and removes
 });
 
 it('logs malformed existing JSON without throwing and can save new fields afterwards', () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error');
     (document.getElementById('experiment-fields') as HTMLTextAreaElement).value = '{';
     expect(() => init({ textareaId: 'experiment-fields' })).not.toThrow();
     expect(error).toHaveBeenCalledWith('Error parsing existing fields:', expect.any(SyntaxError));
@@ -89,7 +88,7 @@ it('logs malformed existing JSON without throwing and can save new fields afterw
 
 it('throws synchronously for missing context or add button but catches a missing textarea', () => {
     expect(() => init(undefined as unknown as AdminExperimentFieldContext)).toThrow(TypeError);
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error');
     init({ textareaId: 'absent' });
     expect(error).toHaveBeenCalledWith('Error parsing existing fields:', expect.any(TypeError));
     document.getElementById('add-field-btn')!.remove();

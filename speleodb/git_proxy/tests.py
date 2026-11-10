@@ -16,7 +16,6 @@ import tempfile
 import time
 import uuid
 from collections.abc import Iterator
-from contextlib import closing
 from contextlib import contextmanager
 from datetime import timedelta
 from email.utils import format_datetime
@@ -36,6 +35,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
+from git import Actor
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from rest_framework import status
@@ -129,12 +129,11 @@ def upstream_stream(response: HttpResponseBase) -> UpstreamResponseStream:
 
 @pytest.mark.django_db
 @pytest.mark.skip_if_lighttest
-@pytest.mark.usefixtures("gitlab_retry_delays")
 def test_first_404_creates_real_repository_and_retries(
     user: User, tmp_path: Path
 ) -> None:
-    # This missing-repository contract needs no unrelated populated checkout
-    # from TestGitProxyServer.setUp. The actual GitLab/Git/HTTP boundary stays real.
+    # This missing-remote contract seeds only a local checkout, without another
+    # GitLab allocation. The actual GitLab/Git/HTTP boundary stays real.
     token: Token = TokenFactory.create(user=user)
     EmailAddress.objects.get_or_create(
         user=user, email=user.email, verified=True, primary=True
@@ -155,6 +154,14 @@ def test_first_404_creates_real_repository_and_retries(
         ) as missing:
             assert missing.status_code == status.HTTP_404_NOT_FOUND
         assert not project.git_repo_dir.exists()
+        project.git_repo_dir.parent.mkdir(parents=True, exist_ok=True)
+        stale = GitRepo.init(project.git_repo_dir)
+        (stale.path / "stale-local").write_text("old checkout", encoding="utf-8")
+        stale.index.add(["stale-local"])
+        actor = Actor("Local checkout", "local@example.test")
+        stale_commit = stale.index.commit(
+            "Unrelated local history", author=actor, committer=actor
+        ).hexsha
         with creation_allocation("proxy-new", group.id, str(project.id)):
             response: HttpResponseBase = APIClient().get(
                 reverse("git_info", kwargs={"id": project.id}),
@@ -167,6 +174,8 @@ def test_first_404_creates_real_repository_and_retries(
             f"{credentials.group_name}/{project.id}"
         )
         with GitRepo(project.git_repo_dir) as local:
+            assert local.head.commit.hexsha != stale_commit
+            assert not (project.git_repo_dir / "stale-local").exists()
             assert local.head.commit.hexsha.encode() in body
             assert (
                 remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME).commit["id"]
@@ -294,15 +303,15 @@ class TestGitProxyServer(TestCase):
     def test_service_result_stream_contains_a_real_unchanged_git_pack(self) -> None:
         # Only the pack-integrity case needs blob history; other proxy contracts
         # use the existing real initial commit without rewriting the remote.
-        with closing(self.project.git_repo) as repository:
-            (repository.path / "binary.bin").write_bytes(GIT_FILE_CONTENT)
-            head: str | None = repository.commit_and_push_project(
-                message="Proxy integration binary blob",
-                author_name="Proxy Integration",
-                author_email="proxy@example.test",
-            )
-            assert head is not None
-            self.head = head
+        repository = self.project.git_repo
+        (repository.path / "binary.bin").write_bytes(GIT_FILE_CONTENT)
+        head: str | None = repository.commit_and_push_project(
+            message="Proxy integration binary blob",
+            author_name="Proxy Integration",
+            author_email="proxy@example.test",
+        )
+        assert head is not None
+        self.head = head
         request_body: bytes = (
             packet_line(f"want {self.head}\n".encode())
             + b"0000"
@@ -327,20 +336,19 @@ class TestGitProxyServer(TestCase):
         assert body == direct.content
         assert body.startswith(b"0008NAK\nPACK")
         assert response["Content-Type"] == "application/x-git-upload-pack-result"
-        directory: str = self.enterContext(tempfile.TemporaryDirectory())
-        unpacked: GitRepo = GitRepo.init(Path(directory) / "unpacked")
-        self.addCleanup(unpacked.close)
-        # Indexing the actual returned pack checks its checksum, objects and blob
-        # content. A response carrying rewritten bytes cannot satisfy this check.
-        with tempfile.TemporaryFile(dir=directory) as pack:
-            pack.write(body[len(b"0008NAK\n") :])
-            pack.seek(0)
-            unpacked.git.index_pack("--stdin", istream=pack)
-        blob = unpacked.commit(self.head).tree["binary.bin"]
-        assert isinstance(blob, GitFile)
-        assert blob.content.getvalue() == GIT_FILE_CONTENT
-        assert stream.is_closed
-        assert stream.response.raw.closed
+        with tempfile.TemporaryDirectory() as directory:
+            unpacked = GitRepo.init(Path(directory) / "unpacked")
+            # Indexing the actual returned pack checks its checksum, objects and blob
+            # content. A response carrying rewritten bytes cannot satisfy this check.
+            with tempfile.TemporaryFile(dir=directory) as pack:
+                pack.write(body[len(b"0008NAK\n") :])
+                pack.seek(0)
+                unpacked.git.index_pack("--stdin", istream=pack)
+            blob = unpacked.commit(self.head).tree["binary.bin"]
+            assert isinstance(blob, GitFile)
+            assert blob.content.getvalue() == GIT_FILE_CONTENT
+            assert stream.is_closed
+            assert stream.response.raw.closed
 
     def test_receive_pack_result_uses_receive_media_type(self) -> None:
         self.project.acquire_mutex(self.user)

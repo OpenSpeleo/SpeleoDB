@@ -28,9 +28,8 @@ if TYPE_CHECKING:
 
     from speleodb.surveys.models import Project
 
-pytestmark = pytest.mark.skip_if_lighttest
 
-
+@pytest.mark.skip_if_lighttest
 def test_existing_remote_is_cloned_without_an_extra_commit(
     live_gitlab: Gitlab, tmp_path: Path
 ) -> None:
@@ -38,10 +37,7 @@ def test_existing_remote_is_cloned_without_an_extra_commit(
     get_pool().prepare(live_project)
     original = GitlabManager.create_or_clone_project(live_project, tmp_path / "first")
     assert original is not None
-    try:
-        original_sha: str = original.head.commit.hexsha
-    finally:
-        original.close()
+    original_sha: str = original.head.commit.hexsha
 
     requests: list[str] = []
 
@@ -60,18 +56,13 @@ def test_existing_remote_is_cloned_without_an_extra_commit(
     assert requests
     assert all(method == "GET" for method in requests)
     assert cloned is not None
-    try:
-        assert cloned.head.commit.hexsha == original_sha
-        assert not cloned.is_dirty(untracked_files=True)
-        remote = live_gitlab.projects.get(
-            f"{settings.GITLAB_GROUP_NAME}/{live_project.id}"
-        )
-        assert len(remote.commits.list(get_all=True)) == 1
-    finally:
-        cloned.close()
+    assert cloned.head.commit.hexsha == original_sha
+    assert not cloned.is_dirty(untracked_files=True)
+    remote = live_gitlab.projects.get(f"{settings.GITLAB_GROUP_NAME}/{live_project.id}")
+    assert len(remote.commits.list(get_all=True)) == 1
 
 
-@pytest.mark.usefixtures("gitlab_retry_delays")
+@pytest.mark.skip_if_lighttest
 def test_invalid_namespace_does_not_create_local_repository(
     live_gitlab: Gitlab,
     live_project: Project,
@@ -100,6 +91,7 @@ def test_invalid_namespace_does_not_create_local_repository(
     assert absent.value.response_code == HTTPStatus.NOT_FOUND
 
 
+@pytest.mark.skip_if_lighttest
 def test_invalid_token_fails_before_repository_initialization(
     live_gitlab: Gitlab, live_project: Project, tmp_path: Path
 ) -> None:

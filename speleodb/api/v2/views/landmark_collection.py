@@ -478,33 +478,32 @@ class LandmarkCollectionLandmarksExportExcelApiView(
         landmarks = collection_landmarks_queryset(collection=collection)
 
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Landmarks")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Landmarks")
 
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
+            )
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-        headers = ["Name", "Longitude", "Latitude", "Created By"]
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 16))
+            headers = ["Name", "Longitude", "Latitude", "Created By"]
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 16))
 
-        for row_num, landmark in enumerate(landmarks, start=1):
-            worksheet.write(row_num, 0, landmark.name, cell_format)
-            worksheet.write(row_num, 1, float(landmark.longitude), cell_format)
-            worksheet.write(row_num, 2, float(landmark.latitude), cell_format)
-            worksheet.write(row_num, 3, landmark.created_by, cell_format)
+            for row_num, landmark in enumerate(landmarks, start=1):
+                worksheet.write(row_num, 0, landmark.name, cell_format)
+                worksheet.write(row_num, 1, float(landmark.longitude), cell_format)
+                worksheet.write(row_num, 2, float(landmark.latitude), cell_format)
+                worksheet.write(row_num, 3, landmark.created_by, cell_format)
 
-        workbook.close()
         output.seek(0)
 
         filename = (

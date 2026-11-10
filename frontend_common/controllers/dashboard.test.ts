@@ -14,13 +14,14 @@ function response() {
 }
 beforeEach(() => {
     server.reply({ json: response() });
+    // Django emits these URL builders server-side; this fixture has no Django page.
     vi.stubGlobal('Urls', { 'api:v2:user-dashboard-stats': () => '/stats/', 'private:project_details': (id: string | number) => `/project/${id}/`, 'private:project_revision_explorer': (id: string | number, sha: string) => `/project/${id}/${sha}/` });
     // JSDOM has no canvas renderer; only the third-party chart renderer is isolated.
     Chart = vi.fn(function () {});
     window.Chart = Chart as unknown as DashboardChartConstructor;
     document.body.innerHTML = '<div id="stat-cards"><span class="stat-value" id="stat-projects"></span><span class="stat-value" id="stat-teams"></span><span class="stat-value" id="stat-commits"></span><span class="stat-value" id="stat-stations"></span><span class="stat-value" id="stat-landmarks"></span><span class="stat-value" id="stat-gps-tracks"></span></div><canvas id="commits-chart"></canvas><canvas id="projects-chart"></canvas><div id="projects-chart-empty" class="hidden"></div><table id="contribution-heatmap"></table><span id="heatmap-total-count"></span><div id="recent-activity"></div>';
 });
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); delete (window as unknown as {Chart?: unknown}).Chart; document.body.innerHTML = ''; });
+afterEach(() => { vi.unstubAllGlobals(); delete (window as unknown as {Chart?: unknown}).Chart; document.body.innerHTML = ''; });
 it('fetches immediately and renders the real stat, chart and 53-week heatmap implementations', async () => {
     expect(init()).toBeUndefined();
     await vi.waitFor(() => expect($('#stat-projects').text()).toBe('7'));

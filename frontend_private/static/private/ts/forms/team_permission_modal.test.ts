@@ -12,9 +12,14 @@ const operations = {
     remove: vi.fn(async (_payload: Record<string, unknown>) => ({})),
 };
 
+let originalLocation: Location;
+const reload = vi.fn();
 beforeAll(() => { (0, eval)(jquerySource); });
 beforeEach(() => {
-    vi.useFakeTimers();
+    originalLocation = window.location;
+    reload.mockClear();
+    // JSDOM cannot navigate; only that browser boundary is substituted.
+    Object.defineProperty(window, 'location', { configurable: true, value: { reload } });
     vi.clearAllMocks();
     document.body.innerHTML = `
         <input name="csrfmiddlewaretoken" value="csrf-team">
@@ -32,9 +37,9 @@ beforeEach(() => {
         <div id="modal_error"><span id="modal_error_txt"></span></div>`;
 });
 afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
     jqueryHost.jQuery(document).off();
     document.body.innerHTML = '';
-    vi.useRealTimers();
 });
 
 it('requires operations and returns undefined after wiring', () => {
@@ -43,7 +48,7 @@ it('requires operations and returns undefined after wiring', () => {
 });
 
 it('adds the assigned team as inert option text, locks edit selection, and unlocks add mode', () => {
-    attachTeamPermissionModal({ operations });
+    attachTeamPermissionModal({ operations, reloadDelayMs: 0 });
     jqueryHost.jQuery('.btn_open_edit_perm').trigger('click');
     const team = document.getElementById('team') as HTMLSelectElement;
     expect(team.value).toBe('assigned');
@@ -59,16 +64,17 @@ it('adds the assigned team as inert option text, locks edit selection, and unloc
     expect(allowed.defaultPrevented).toBe(false);
 });
 
-it('validates fields and supplies the update operation with form values', () => {
+it('validates fields and supplies the update operation with form values', async () => {
     const $ = jqueryHost.jQuery;
-    attachTeamPermissionModal({ operations });
+    attachTeamPermissionModal({ operations, reloadDelayMs: 0 });
     $('.btn_open_edit_perm').trigger('click');
     $('#btn_submit_add').trigger('click');
     expect(operations.update).toHaveBeenCalledWith({ team: 'assigned', level: 'READ_ONLY' });
     expect(operations.create).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
 });
 
-it('guards duplicate deletion and permits retry after operation rejection', async () => {
+it('guards duplicate deletion and restores controls after operation rejection', async () => {
     const $ = jqueryHost.jQuery;
     let reject!: (error: unknown) => void;
     const remove = vi.fn((_payload: Record<string, unknown>) => new Promise((_resolve, fail) => { reject = fail; }));
@@ -77,10 +83,10 @@ it('guards duplicate deletion and permits retry after operation rejection', asyn
     expect(remove).toHaveBeenCalledOnce();
     expect(remove).toHaveBeenCalledWith({ team: 'assigned' });
     reject(Object.assign(new Error('Denied'), { data: { detail: 'Denied' }, status: 403 }));
-    await vi.advanceTimersByTimeAsync(0);
+    await new Promise(resolve => setTimeout(resolve, 0));
     expect($('#modal_error_txt').text()).toBe('Denied');
-    $('.btn_delete_perm').trigger('click');
-    expect(remove).toHaveBeenCalledTimes(2);
+    expect($('.btn_delete_perm').hasClass('disabled')).toBe(false);
+    expect(remove).toHaveBeenCalledOnce();
 });
 
 it.each([
@@ -88,7 +94,7 @@ it.each([
     ['available', '', 'The Access Level field is empty!'],
 ])('rejects team=%s and level=%s before invoking an operation', (team, level, message) => {
     const $ = jqueryHost.jQuery;
-    attachTeamPermissionModal({ operations });
+    attachTeamPermissionModal({ operations, reloadDelayMs: 0 });
     $('#btn_open_add_team').trigger('click');
     $('#team').val(team);
     $('#level').val(level);
@@ -98,11 +104,12 @@ it.each([
     expect(document.getElementById('modal_error_txt')!.textContent).toBe(message);
 });
 
-it('captures selected fields at click time independently of later edits', () => {
+it('captures selected fields at click time independently of later edits', async () => {
     const $ = jqueryHost.jQuery;
-    attachTeamPermissionModal({ operations });
+    attachTeamPermissionModal({ operations, reloadDelayMs: 0 });
     $('.btn_open_edit_perm').trigger('click');
     $('#btn_submit_add').trigger('click');
     $('#level').val('');
     expect(operations.update).toHaveBeenCalledWith({ team: 'assigned', level: 'READ_ONLY' });
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
 });

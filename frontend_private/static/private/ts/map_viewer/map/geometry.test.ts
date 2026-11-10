@@ -1,8 +1,10 @@
 import type { Mock } from 'vitest';
-import type { GeometryFacade, SnapIndicatorMap } from '../../../../../../ts-types/domain/map-snapping.ts';
+import type { SnapIndicatorMap } from '../../../../../../ts-types/domain/map-snapping.ts';
 import type { ViewerFeature } from '../../../../../../ts-types/domain/map-geometry.ts';
 import type { ViewerState } from '../../../../../../ts-types/domain/map-state.ts';
-vi.mock('../state.ts', () => ({ State: {} }));
+import { Geometry as Geo } from './geometry.ts';
+import { State } from '../state.ts';
+import { Layers } from './layers.ts';
 
 function makeLineGeoJSON(lines: { coords: number[][]; name?: string }[]): { features: ViewerFeature[] } {
     return {
@@ -15,24 +17,21 @@ function makeLineGeoJSON(lines: { coords: number[][]; name?: string }[]): { feat
 }
 
 describe('Geometry', () => {
-    let Geo: GeometryFacade;
-    let state: ViewerState;
-
-    beforeEach(async () => {
-        vi.resetModules();
-        const mod = await import('./geometry.ts');
-        Geo = mod.Geometry;
-        const { State } = await import('../state.ts');
-        state = State;
+    beforeEach(() => {
+        Geo.snapIndicatorEl = null;
+        for (const projectId of Object.keys(Geo.getSnapInfo().snapPointsPerProject)) {
+            Geo.cachePreparedSnapPoints(projectId, []);
+        }
+        Geo.setSnapRadius(10);
+        State.resetLayerState();
         // Ensure visibility state is reset to default after tests that override it
-        state.projectLayerStates = new Map();
-        state.effectiveProjectVisibility = new Map();
+        State.projectLayerStates = new Map();
+        State.effectiveProjectVisibility = new Map();
     });
 
     afterEach(() => {
         const el = document.getElementById('snap-indicator');
         if (el) el.remove();
-        vi.restoreAllMocks();
     });
 
     // ── calculateDistanceInMeters ──────────────────────────────────────
@@ -175,7 +174,7 @@ describe('Geometry', () => {
         });
 
         it('skips hidden projects', () => {
-            state.projectLayerStates.set('snap-proj', false);
+            State.projectLayerStates.set('snap-proj', false);
             const result = Geo.findMagneticSnapPoint([10, 20]);
             expect(result.snapped).toBe(false);
         });
@@ -225,8 +224,6 @@ describe('Geometry', () => {
             ['findMagneticSnapPoint', []],
             ['findNearestSnapPointWithinRadius', [100]],
         ] as const)('%s excludes an individually enabled project behind a disabled country gate', async (method, args) => {
-            const { State } = await import('../state.ts');
-            const { Layers } = await vi.importActual<typeof import('./layers.ts')>('./layers.ts');
             const previousState = Object.getOwnPropertyDescriptors(State);
             try {
                 State.projectLayerStates = new Map([['country-hidden', true]]);
@@ -280,7 +277,7 @@ describe('Geometry', () => {
         });
 
         it('skips hidden projects', () => {
-            state.projectLayerStates.set('near-proj', false);
+            State.projectLayerStates.set('near-proj', false);
             const result = Geo.findNearestSnapPointWithinRadius([0, 0], 100);
             expect(result.snapped).toBe(false);
         });

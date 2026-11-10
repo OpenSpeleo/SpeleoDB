@@ -38,52 +38,25 @@ Omitting a selection, selecting both modes, passing an invalid or unknown UUID,
 selecting an excluded project, or combining `--project_type` with `--project`
 raises `CommandError`. These validation failures happen before repository work.
 
-## Enqueue independent project rebuilds
+## Schedule independent project rebuilds
 
-`speleodb.surveys.tasks.refresh_all_projects_geojson` is a short coordinator. It
-streams eligible project IDs and enqueues exactly one
-`refresh_project_geojson(project_id, force_recompute=True)` task per ID. It does
-not clone, convert, wait for children, or invoke the command in batch mode.
+Use **Django admin → Background operations → Operations** to schedule one
+project or all eligible projects. Force defaults to off. The request precreates
+TaskResult rows and directly publishes one independent task per project after
+commit, with GroupResult recording batch IDs. There is no scheduling
+coordinator. Receipts distinguish confirmed, ambiguous and unattempted
+publication. Inspect individual project outcomes; no batch success implies
+successful conversion.
 
-From the application environment:
-
-```bash
-python manage.py shell -c 'from speleodb.surveys.tasks import refresh_all_projects_geojson; print(refresh_all_projects_geojson.delay().id)'
-```
-
-Alternatively, sign in as a superuser and open **Django admin → Background jobs
-→ Background jobs** (`/admin/background_jobs/backgroundjob/`). **Rebuild all
-GeoJSONs** enqueues the coordinator, regardless of list selection or filters.
-The CSRF-protected POST redirects to the list; refreshing that page does not
-resubmit the request. Each new button submission schedules another batch.
-
-The coordinator result contains `enqueued` and a `tasks` list of `project_id` /
-`task_id` pairs. Each successful publication is also logged. Its `SUCCESS` means
-scheduling finished; inspect each child's result and worker logs to assess the
-rebuild. Broker failure stops the coordinator, leaving already published
-children independent and runnable. Review those IDs before resubmitting to avoid
-unintentionally overlapping work. No whole-batch automatic retry is installed.
-An empty eligible scope returns zero children without cloning or writing data.
-
-Each child rechecks that its project still exists and is not excluded before
-calling the single-project command. Deleted or newly excluded projects return
-`skipped`; completed commands return `completed`. Repository failures and task
-timeouts fail only that child. Commit-level materialization/conversion failures
-are logged and isolated so other commits can still be rebuilt; a completed child
-can therefore require inspection of logged conversion failures.
-
-To retry one inspected project:
-
-```bash
-python manage.py shell -c 'from speleodb.surveys.tasks import refresh_project_geojson; print(refresh_project_geojson.delay("<project-uuid>", force_recompute=True).id)'
-```
-
-The coordinator and children use `background_control`. The existing worker
-concurrency controls how many projects execute at once. A single-slot worker
-still converts projects sequentially, but each project has its own result,
-limits and cleanup boundary. Other queued work may wait behind those children.
-No recurring rebuild schedule, automatic child retry, distributed singleton
-lock, or resume checkpoint is installed.
+The command and Celery tasks call `Project.build_geojsons()`, which acquires a
+read-only clone and invokes `Project.convert_geojson_history()`. These model
+methods return processed, generated, existing, skipped and failed counts.
+Conversion logs each unexpected failure with its traceback, continues
+independent revisions, then raises an aggregate exception so partial failures
+fail Celery execution. Expected omissions such as missing sources or unusable
+anchors remain skips. Tasks do not automatically retry; Run again creates a new
+execution. See [Operations](admin-operations.md) for confirmation, status and
+recovery.
 
 ## Repository and temporary-file lifecycle
 
@@ -95,25 +68,23 @@ authentication helper files, repository contents and extracted sources all
 belong to that task's directory. Sources are streamed from immutable commit
 blobs into per-commit files rather than buffered as whole Git blobs in memory.
 
-The command closes Git handles and removes each commit's extracted files, then
-removes the whole task workspace on success, failure, or a propagated soft
-timeout. Shared upload working copies and remote repositories remain intact. The
-shared workspace helper holds an ownership lock while work is active;
-maintenance can remove abandoned directories after an abrupt worker kill without
-deleting a live task's files. See
-[background generation](project-geojson-background.md) for the recovery cadence
-and local-filesystem scope.
+The command removes each commit's extracted files, then removes the whole task
+workspace on success, failure, or a propagated soft timeout. Shared upload
+working copies and remote repositories remain intact. The shared workspace
+helper preserves active worker directories and removes abandoned directories
+during a later sweep after an abrupt worker kill. See
+[background generation](project-geojson-background.md) for workspace cleanup and
+local-filesystem scope; no generation execution is automatically recovered.
 
 Each project task has a configurable six-hour soft limit
 (`GEOJSON_REBUILD_SOFT_TIME_LIMIT`) and a hard limit one minute later
-(`GEOJSON_REBUILD_HARD_TIME_LIMIT`). The coordinator uses normal short-task
-limits. A soft timeout must stop processing and allow cleanup; a hard kill
-cannot execute Python cleanup and relies on abandoned-workspace recovery.
-Previously published replacements remain stored. Error handling recognizes
-timeouts even when another exception wraps them, provided the converter
-propagates the error. Compass may internally swallow coordinate conversion
-exceptions; its soft interruption remains best effort and the hard limit is the
-final bound.
+(`GEOJSON_REBUILD_HARD_TIME_LIMIT`). A soft timeout must stop processing and
+allow cleanup; a hard kill cannot execute Python cleanup and relies on
+abandoned-workspace recovery. Previously published replacements remain stored.
+Error handling recognizes timeouts even when another exception wraps them,
+provided the converter propagates the error. Compass may internally swallow
+coordinate conversion exceptions; its soft interruption remains best effort and
+the hard limit is the final bound.
 
 Disk-backed clones and per-project tasks reduce shared state and isolate worker
 failures. They do not bound all converter memory: the Compass solver can still
@@ -124,14 +95,15 @@ revision.
 
 ## History traversal and artifact replacement
 
-The command walks every non-initial commit available from `GitRepo.commits`.
-Ariane materializes its TML source; Compass materializes its TOML-declared
-MAK/DAT bundle; Stalagmight materializes the original `stalagmight.stalx` SQLite
-blob at each selected commit. Native conversion uses the same OpenSpeleo adapter
-and common exporter as background generation. The existing `build_geojson()`
-processors and `ProjectCommit` identity remain authoritative. Neither the
-command nor worker guesses missing coordinates or reads corrections from
-comments.
+The command walks complete default-branch history with `iter_commits("HEAD")`,
+including the initial revision. Revisions without complete supported source
+files are explained skips. Ariane materializes its TML source; Compass
+materializes its TOML-declared MAK/DAT bundle; Stalagmight materializes the
+original `stalagmight.stalx` SQLite blob at each selected commit. Native
+conversion uses the same OpenSpeleo adapter and common exporter as background
+generation. The existing `build_geojson()` processors and `ProjectCommit`
+identity remain authoritative. Neither the command nor worker guesses missing
+coordinates or reads corrections from comments.
 
 Forced recomputation validates a complete replacement and uploads a new object
 before atomically changing the stored artifact. Generation, validation, upload
@@ -144,22 +116,22 @@ Git/source cleanup does not remove those published objects.
 Each replacement receives a new `geojson_revision`, also used by OGC caches. See
 the [artifact contract](project-geojson-artifacts.md) for refresh behavior and
 section colors. The synchronous `--all` CLI logs project-level failures and
-continues; the single-project command raises `CommandError` for repository-level
-failure. Both log and isolate ordinary commit-level failures.
+continues, then raises `CommandError` if any project failed. The single-project
+command also raises `CommandError` for failures. Both process independent
+revisions before reporting aggregate conversion failure.
 
 ## Rollout and verification
 
-Deploy matching application and worker code before submitting a coordinator.
-Already-running workers retain their old task implementation, which performs the
-entire rebuild inline. Let an existing rebuild finish or inspect its failure
-before enqueueing the new flow. The direct-upload scheduling and maintenance
-schedule transition is documented in
-[background operations](background-jobs-operations.md).
+Deploy matching application and worker code before submitting operations.
+Already-running workers retain their old task signatures until restarted. Drain
+old work before removing the journal and restart workers with matching code;
+otherwise a task can fail before processing begins. See
+[Operations](admin-operations.md) for coordinated rollout.
 
-Coverage in `speleodb/surveys/tests/test_tasks.py` exercises real broker
-messages, exact fan-out cardinality and force flags, empty scope,
-deleted/excluded projects, and independent child failure. Command integration
-tests in
+Coverage in `speleodb/background_jobs/tests/test_operations.py` protects direct
+fan-out, force flags and honest partial publication. Conversion and task tests
+exercise immutable source revisions, aggregate failure and real worker delivery.
+Command integration tests in
 `speleodb/common/management/commands/tests/test_build_project_geojsons.py`
 exercise Ariane, Compass, and Stalagmight history, skip/replacement behavior,
 read-only source access, shared-checkout preservation, and temporary cleanup
@@ -176,7 +148,10 @@ return HTTP 304. A forced rebuild needs no artificial survey commits or client
 cache purge; clients receive the new revision after a successful online refresh.
 
 Normal uploads directly enqueue their committed revision after transaction
-commit, with durable recovery for broker failure. Those short generation tasks
-share source and workspace helpers but never invoke the historical scan. See
-[background generation](project-geojson-background.md) for status and retry
-behavior.
+commit. Broker failures leave TaskResult receipts showing uncertain or
+unattempted submission; they are not automatically republished. A superuser must
+inspect the receipt and worker state, then explicitly schedule another execution
+when needed. Those short generation tasks share source and workspace helpers but
+never invoke the historical scan. See
+[background generation](project-geojson-background.md) for status and manual
+recovery behavior.

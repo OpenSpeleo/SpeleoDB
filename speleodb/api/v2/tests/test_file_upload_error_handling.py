@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import io
+import json
 import pathlib
 import shutil
 import tempfile
@@ -34,6 +35,7 @@ from django.test import TransactionTestCase
 from django.test import override_settings
 from django.urls import reverse
 from django.views.static import serve
+from django_celery_results.models import TaskResult
 from git.exc import GitCommandError
 from parameterized.parameterized import parameterized
 from rest_framework import status
@@ -50,8 +52,8 @@ from speleodb.api.v2.tests.factories import TokenFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.common.enums import TaskResultStatus
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.gis.models import ProjectGeoJSONGeneration
 from speleodb.git_engine.core import GIT_COMMITTER
 from speleodb.git_engine.core import GitCommit
 from speleodb.git_engine.core import GitRepo
@@ -105,7 +107,8 @@ class SentryEventTestCase(TransactionTestCase):
             before_send=self._record_sentry_event,
         )
         self.addCleanup(sentry_client.close)
-        scope: sentry_sdk.Scope = self.enterContext(sentry_sdk.isolation_scope())
+        scope: sentry_sdk.Scope = sentry_sdk.get_isolation_scope()
+        self.addCleanup(scope.set_client, scope.client)
         scope.set_client(sentry_client)
 
     def _record_sentry_event(self, event: Event, hint: Hint) -> Event:
@@ -126,6 +129,7 @@ class SentryEventTestCase(TransactionTestCase):
 
 
 @pytest.mark.skip_if_lighttest
+@override_settings(DEBUG=False)
 class UploadErrorHandlingTests(SentryEventTestCase):
     """Require successful real provisioning before exercising upload failures."""
 
@@ -140,13 +144,16 @@ class UploadErrorHandlingTests(SentryEventTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.enterContext(override_settings(DEBUG=False))
         assert connection.settings_dict["ATOMIC_REQUESTS"] is True
         assert not connection.in_atomic_block
-        project_directory: str = self.enterContext(tempfile.TemporaryDirectory())
-        self.enterContext(
-            override_settings(DJANGO_GIT_PROJECTS_DIR=pathlib.Path(project_directory))
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        project_directory: str = temporary_directory.name
+        settings_override = override_settings(
+            DJANGO_GIT_PROJECTS_DIR=pathlib.Path(project_directory)
         )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
         self.client = APIClient(enforce_csrf_checks=False)
         self.user = canonical_user("A")
         self.token = TokenFactory.create(user=self.user)
@@ -227,8 +234,8 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         # persisted rows instead of inspecting a surrounding test's rollback flag.
         assert not connection.in_atomic_block
         assert not connection.needs_rollback
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit__project=self.project
+        assert not TaskResult.objects.filter(
+            task_name="speleodb.gis.tasks.generate_project_geojson"
         ).exists()
         assert not Format.objects.filter(project=self.project).exists()
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
@@ -326,7 +333,6 @@ class UploadErrorHandlingTests(SentryEventTestCase):
     def test_gitlab_error_reports_to_sentry(self) -> None:
         # A real GitLab rejects the invalid credential. Reset cached connection
         # state so the application authenticates against the configured service.
-        self.repo.close()
         shutil.rmtree(self.project.git_repo_dir)
         authenticated_client = GitlabManager._gl  # noqa: SLF001
         GitlabManager._gl = None  # noqa: SLF001
@@ -474,8 +480,8 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             )
             == original_formats
         )
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit__project=self.project
+        assert not TaskResult.objects.filter(
+            task_name="speleodb.gis.tasks.generate_project_geojson"
         ).exists()
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
 
@@ -488,14 +494,14 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             before_send=self._record_sentry_event,
         )
         self.addCleanup(sentry_client.close)
-        scope: sentry_sdk.Scope = self.enterContext(sentry_sdk.isolation_scope())
-        scope.set_client(sentry_client)
+        with sentry_sdk.isolation_scope() as scope:
+            scope.set_client(sentry_client)
 
-        response: Response = self._do_upload(content=b"This is not a ZIP archive.")
+            response: Response = self._do_upload(content=b"This is not a ZIP archive.")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert isinstance(self._reported_exception(), BadZipFile)
-        self._assert_no_upload_writes()
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert isinstance(self._reported_exception(), BadZipFile)
+            self._assert_no_upload_writes()
 
     def test_missing_message_reports_input_error_without_upload_writes(self) -> None:
         response: Response = self._do_upload(message="")
@@ -563,10 +569,10 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         assert response.status_code == status.HTTP_200_OK
         assert not self.sentry_events
         assert (
-            ProjectGeoJSONGeneration.objects.get(
-                commit_id=response.data["hexsha"]
-            ).state
-            == "queued"
+            TaskResult.objects.get(
+                task_args=json.dumps([response.data["hexsha"]])
+            ).status
+            == TaskResultStatus.PENDING
         )
         assert self._remote_head() != self.original_head
         assert Format.objects.filter(project=self.project).exists()
@@ -577,28 +583,29 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         self.project.save(update_fields=["exclude_geojson"])
         observed: list[str] = []
 
-        def record(
-            *, instance: ProjectGeoJSONGeneration, created: bool, **_kwargs: object
-        ) -> None:
+        def record(*, instance: TaskResult, created: bool, **_kwargs: object) -> None:
             if not created:
                 return
             # Observe the real remote, not merely a mocked local commit return.
-            assert self._remote_head() == instance.commit_id
-            assert instance.commit_id != self.original_head
+            if instance.task_name != "speleodb.gis.tasks.generate_project_geojson":
+                return
+            commit_id = json.loads(instance.task_args or "[]")[0]
+            assert self._remote_head() == commit_id
+            assert commit_id != self.original_head
             assert connection.in_atomic_block
-            assert instance.state == "pending"
-            observed.append(instance.commit_id)
+            assert instance.status == TaskResultStatus.PENDING
+            observed.append(commit_id)
 
-        post_save.connect(record, sender=ProjectGeoJSONGeneration)
+        post_save.connect(record, sender=TaskResult)
         try:
             response = self._do_upload()
         finally:
-            post_save.disconnect(record, sender=ProjectGeoJSONGeneration)
+            post_save.disconnect(record, sender=TaskResult)
         assert response.status_code == status.HTTP_200_OK
         assert observed == [response.data["hexsha"]]
         assert (
-            ProjectGeoJSONGeneration.objects.get(commit_id=observed[0]).state
-            == "queued"
+            TaskResult.objects.get(task_args=json.dumps([observed[0]])).status
+            == TaskResultStatus.PENDING
         )
 
     def test_optional_geojson_sql_failure_preserves_source_transaction(self) -> None:
@@ -617,18 +624,18 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             )
 
         with patch(
-            "speleodb.api.v2.views.file.request_geojson_generation",
+            "speleodb.api.v2.views.file.schedule_uploaded_geojson",
             side_effect=duplicate_commit,
         ):
             response = self._do_upload()
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["geojson_status"] == "unavailable"
+        assert "geojson_status" not in response.data
         assert not connection.needs_rollback
         assert self._remote_head() == response.data["hexsha"]
         assert ProjectCommit.objects.filter(pk=response.data["hexsha"]).exists()
         assert Format.objects.filter(project=self.project).exists()
-        assert not ProjectGeoJSONGeneration.objects.filter(
-            commit__project=self.project
+        assert not TaskResult.objects.filter(
+            task_name="speleodb.gis.tasks.generate_project_geojson"
         ).exists()
         assert isinstance(self._reported_exception(), IntegrityError)
 
@@ -648,10 +655,10 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         assert response.status_code == status.HTTP_200_OK
         assert not self.sentry_events
         assert (
-            ProjectGeoJSONGeneration.objects.get(
-                commit_id=response.data["hexsha"]
-            ).state
-            == "queued"
+            TaskResult.objects.get(
+                task_args=json.dumps([response.data["hexsha"]])
+            ).status
+            == TaskResultStatus.PENDING
         )
         assert self._remote_head() != self.original_head
         assert not ProjectGeoJSON.objects.filter(project=self.project).exists()
@@ -704,27 +711,30 @@ class ConstructGitHistorySavepointTests(TransactionTestCase):
         assert connection.vendor == "postgresql", (
             "This regression exercises PostgreSQL immediate FK constraints"
         )
-        directory: str = self.enterContext(tempfile.TemporaryDirectory())
-        repo: GitRepo = GitRepo.init(pathlib.Path(directory) / "history")
-        self.addCleanup(repo.close)
-        actor: git.Actor = git.Actor("History Test", "history@example.test")
-        repo.index.commit("History FK constraint", author=actor, committer=actor)
-        stale_project: Project = ProjectFactory.create()
-        Project.objects.filter(id=stale_project.id).delete()
+        with tempfile.TemporaryDirectory() as directory:
+            repo: GitRepo = GitRepo.init(pathlib.Path(directory) / "history")
+            actor: git.Actor = git.Actor("History Test", "history@example.test")
+            repo.index.commit("History FK constraint", author=actor, committer=actor)
+            stale_project: Project = ProjectFactory.create()
+            Project.objects.filter(id=stale_project.id).delete()
 
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
-            with pytest.raises(IntegrityError), transaction.atomic():
-                ProjectCommit.get_or_create_from_commit(stale_project, repo.head.commit)
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+                with pytest.raises(IntegrityError), transaction.atomic():
+                    ProjectCommit.get_or_create_from_commit(
+                        stale_project, repo.head.commit
+                    )
 
-            stale_project.construct_git_history_from_project(repo)
+                stale_project.construct_git_history_from_project(repo)
 
-            assert not connection.needs_rollback
-            assert not ProjectCommit.objects.filter(id=repo.head.commit.hexsha).exists()
-            surviving_project: Project = ProjectFactory.create()
+                assert not connection.needs_rollback
+                assert not ProjectCommit.objects.filter(
+                    id=repo.head.commit.hexsha
+                ).exists()
+                surviving_project: Project = ProjectFactory.create()
 
-        assert Project.objects.filter(id=surviving_project.id).exists()
+            assert Project.objects.filter(id=surviving_project.id).exists()
 
 
 class MiddlewareExceptionReportingTests(SentryEventTestCase):
@@ -733,7 +743,9 @@ class MiddlewareExceptionReportingTests(SentryEventTestCase):
     def _middleware_and_request(
         self, route: str
     ) -> tuple[DRFWrapResponseMiddleware, Request]:
-        directory: str = self.enterContext(tempfile.TemporaryDirectory())
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        directory: str = temporary_directory.name
         middleware: DRFWrapResponseMiddleware = DRFWrapResponseMiddleware(
             get_response=cast(
                 "Callable[[HttpRequest], HttpResponse]",

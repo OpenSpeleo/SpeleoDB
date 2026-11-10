@@ -34,7 +34,7 @@ beforeEach(() => {
         'private:project_revision_explorer': (id: string, sha: string | null) => `/private/project/${id}/${sha}/`,
     });
 });
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); });
 
 async function renderDashboard(overrides: Partial<Omit<DashboardResponse, 'recent_activity'>> & {
     recent_activity?: unknown[] | null;

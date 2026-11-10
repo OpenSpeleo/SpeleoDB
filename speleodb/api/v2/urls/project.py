@@ -22,7 +22,6 @@ from speleodb.api.v2.views.project_explorer import ProjectGitExplorerApiView
 from speleodb.api.v2.views.project_explorer import ProjectRevisionsApiView
 from speleodb.api.v2.views.project_geojson import ProjectAllProjectGeoJsonApiView
 from speleodb.api.v2.views.project_geojson import ProjectGeoJsonCommitsApiView
-from speleodb.api.v2.views.project_geojson_status import ProjectGeoJSONStatusView
 from speleodb.api.v2.views.station import ProjectStationsApiView
 from speleodb.api.v2.views.station import ProjectStationsGeoJSONView
 from speleodb.api.v2.views.team_project_permission import (
@@ -40,11 +39,6 @@ from speleodb.api.v2.views.user_project_permission import (
 
 project_base_urlpatterns: list[URLPattern] = [
     path("", ProjectSpecificApiView.as_view(), name="project-detail"),
-    path(
-        "geojson-status/",
-        ProjectGeoJSONStatusView.as_view(),
-        name="project-geojson-status",
-    ),
     # GeoJSON API
     path(
         "geojson/",

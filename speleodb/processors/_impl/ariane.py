@@ -14,6 +14,7 @@ from django.utils.timezone import localtime
 from mnemo_lib.commands.split import split_dmp_into_sections
 from mnemo_lib.models import DMPFile
 
+from speleodb.common.constants import ARIANE_TML_FILENAME
 from speleodb.processors.artifact import Artifact
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import FileFormat
@@ -178,7 +179,7 @@ class ArianeTMLFileProcessor(BaseFileProcessor):
     ASSOC_FILEFORMAT = FileFormat.ARIANE_TML
 
     TARGET_FOLDER = None
-    TARGET_SAVE_FILENAME: str = "ariane.tml"
+    TARGET_SAVE_FILENAME: str = ARIANE_TML_FILENAME
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.tml"
 
     def _add_to_project(self, artifact: Artifact) -> list[Path]:

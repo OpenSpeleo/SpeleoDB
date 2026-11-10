@@ -121,7 +121,7 @@ DJANGO_APPS = [
     (
         "django.contrib.admin.apps.SimpleAdminConfig"
         if SPELEODB_CELERY_WORKER_RUNTIME
-        else "django.contrib.admin"
+        else "speleodb.common.admin_config.SpeleoDBAdminConfig"
     ),
     "django.forms",
 ]
@@ -565,15 +565,9 @@ EXPORT_GPX_MAX_BYTES = env.int("EXPORT_GPX_MAX_BYTES", default=16 * 1024 * 1024)
 # retain their GeoJSON, with the GPX omission reported in the export manifest.
 EXPORT_GPX_MAX_POSITIONS = env.int("EXPORT_GPX_MAX_POSITIONS", default=250000)
 
-# Per-commit maps enqueue directly after upload commit. Maintenance recovers
-# broker outages and expired leases without spending a conversion attempt.
+# Per-commit maps publish once after upload commit. Failed work is rerun manually.
 GEOJSON_GENERATION_SOFT_TIME_LIMIT = 5 * 60
 GEOJSON_GENERATION_HARD_TIME_LIMIT = 6 * 60
-GEOJSON_GENERATION_MAX_ATTEMPTS = 3
-GEOJSON_GENERATION_RETRY_BASE_SECONDS = 60
-GEOJSON_GENERATION_RETRY_MAX_SECONDS = 15 * 60
-GEOJSON_GENERATION_DISPATCH_LEASE_SECONDS = 10 * 60
-GEOJSON_GENERATION_DISPATCH_BATCH = 100
 GEOJSON_GENERATION_CLEANUP_GRACE_SECONDS = 5 * 60
 GEOJSON_GENERATION_SCRATCH_DIR = env.str(
     "GEOJSON_GENERATION_SCRATCH_DIR",

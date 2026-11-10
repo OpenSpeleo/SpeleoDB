@@ -40,6 +40,104 @@ required; this rule only specifies where an authorized commit must run.
   regressions. Test count and assertions about obvious implementation details
   are not quality goals.
 
+## Mandatory owner directives
+
+These constraints apply to implementation, refactoring, tests, reviews and
+subagents. A plan, skill or existing pattern does not authorize ignoring them.
+Apply corrections throughout the affected callers, fixtures and documentation;
+do not fix one occurrence and leave the same rejected design elsewhere.
+
+Do not install packages, browser binaries or system libraries without an
+explicit user request to install them. Test authorization does not authorize
+environment installation. Report missing prerequisites instead.
+
+### Keep the design proportional to the actual application
+
+- This is a low-traffic application with one administrator. Do not build
+  coordination infrastructure for hypothetical concurrent administrators.
+- Do not introduce project-operation middleware, request-wide ownership,
+  advisory/filesystem checkout locks, generation counters, dispatch leases,
+  checkpoint/resume engines or automatic recovery without an explicit new
+  requirement. Preserve unrelated, established export and scheduler behavior.
+- Project history, checkout, purge and conversion behavior belongs on `Project`.
+  Do not extract it into separate files or services. Prefer a readable model
+  method over forwarding wrappers and helper layers.
+- Do not add a model, database field, migration, queue, service or recurring
+  schedule merely to support an implementation abstraction. Tie persistent state
+  to an actual requested product requirement.
+- Use ordinary exceptions when callers do not need a distinct exception type.
+  Report failures with the original traceback (`logger.exception` inside the
+  handler) and preserve exception chaining. Do not build regex-based exception
+  parsers, diagnostic taxonomies or retryability classifiers. Do not accumulate
+  coded per-commit diagnostics, `explain()` helpers or arbitrary diagnostic
+  limits. Keep required counts and log the original failure traceback.
+- Handle expected omissions, such as missing sources, empty surveys and missing
+  anchors, explicitly. Unexpected conversion failures must fail the task even
+  when other revisions succeeded; never swallow them and report success.
+- Do not introduce convenience aliases, renamed imports or rebound APIs just to
+  shorten or hide the original name. Prefer the original name or a
+  module-qualified reference. Do not retain superseded entrypoints as aliases.
+
+### Resource ownership must be concrete
+
+- Inspect the actual resource type and ownership before changing `.close()`.
+  Variable names alone do not identify a repository, HTTP response or file. UI
+  dialog/editor/menu `close()` calls are application behavior, not resource
+  disposal.
+- Prefer a library's existing native `with` protocol when the resource belongs
+  to one lexical scope. Verify that the installed class actually supports it; do
+  not assume that a file-like response is a context manager.
+- Remove redundant cleanup and cleanup-only `try/finally` blocks. When cleanup
+  is required and no native context exists, a standard-library context may be
+  appropriate. Retain explicit closure when ownership spans methods, a streamed
+  response, a shared fixture or a required shutdown sequence.
+- Do not add GitRepo `.close()` calls, `closing(repo)` wrappers, active-handle
+  caches or custom checkout lifetime protocols as an unsolicited cleanup
+  feature. A repository directory is not an open file.
+- Do not use `enterContext`, `ExitStack`, manual `__enter__`/`__exit__`, or
+  equivalent hidden context registration for ordinary resources. Prefer local
+  `with` blocks and simple fixtures with clear ownership. Do not rename a
+  rejected wrapper and keep the same design.
+- Do create custom context/disposal protocols to eliminate the spelling
+  `.close()`. Keep necessary ownership, scope and shutdown ordering visible.
+
+### Preserve API scope and real execution status
+
+- Internal refactors must not change unrelated API permissions, status codes,
+  error shapes or OpenAPI response schemas. Do not add HTTP 409 responses for
+  the rejected project coordination design or incidentally alter existing 403
+  behavior. Review generated schema changes; avoid global error-schema churn.
+- Keep task publishers, worker signatures, CLI callers and tests aligned. Do not
+  conceal mismatches with unused compatibility arguments or wrappers. Preserve
+  original exceptions through Celery serialization and task results. Use the
+  shared `TaskResultStatus` enum for Celery/TaskResult state values; do not
+  scatter status string literals through code, tests or templates. dss
+- Reuse existing admin/forms/assets and background execution infrastructure.
+  Failed project operations are rerun explicitly; do not restore automatic
+  generation retry/recovery or change the separate export-job lifecycle. Keep
+  model URLs, export permissions and the worker's lightweight admin setup. Use
+  `docs/admin-operations.md` for the current operation semantics.
+
+### Honor stop requests and migration ordering
+
+- A stop request overrides the verification workflow below. Stop the owned
+  running commands and delegated work in scope, including their child processes.
+  Do not merely stop launching new commands or leave checks running in the
+  background. Do not interrupt unrelated developer processes.
+- Do not restart stopped tests, hooks, builds or checks until the user requests
+  them again. Authorization to edit or review files is not authorization to
+  resume execution. Report unverified changes honestly.
+- When asked to run `prek`, fix its actual failures and rerun the requested
+  hooks. Include new untracked files without staging them. Do not weaken checks,
+  add blanket ignores, or claim that a passed hook means unrun tests passed.
+- When asked to revert an applied migration, inspect the reversal plan and
+  reverse the intended database migration **before** deleting its file or
+  dependent code. Verify the database state and migration record. Deleting a
+  Python migration file alone does not revert a database change.
+- Implementation, local checks, Git publication and production execution are
+  separate actions. Preserve staged/unstaged work; do not commit or deploy
+  without the explicit authorization required by the root instructions.
+
 ## Legacy and backward compatibility
 
 **Do not assume legacy support or backward compatibility is required.** Add or
@@ -70,7 +168,8 @@ files.
 
 1. **Plan First**: Write `plan.md` in the external temporary task directory with
    checkable items
-2. **Verify Plan**: Check in before starting implementation
+2. **Verify Plan**: State the intended approach before implementation; do not
+   request confirmation for work the user has already authorized
 3. **Track Progress**: Mark items complete as you go
 4. **Explain Changes**: High-level summary at each step
 5. **Document Results**: Add a review section to that temporary `plan.md`
@@ -84,17 +183,21 @@ files.
 
 ### 1. Plan by Default
 
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- Use a short plan for genuinely multistep work or architectural decisions;
+  routine fixes do not need a separate planning or approval ceremony
 - If something goes sideways, STOP and re-plan immediately - don't keep pushing
-- Use plan mode for verification steps, not just building
-- Write detailed specs upfront to reduce ambiguity
+- Include the authorized verification steps in the plan
+- Keep plans proportional to the task; do not turn a small fix into a design
+  project or introduce machinery merely to satisfy a plan
 
 ### 2. Subagent Strategy
 
-- Use subagents liberally to keep main context window clean
-- Offload research, exploration, and parallel analysis to subagents
-- For complex problems, throw more compute at it via subagents
-- One tack per subagent for focused execution
+- Use subagents for independent, clearly scoped work when delegation helps
+- Give each subagent one task and explicit file ownership
+- Propagate user constraints, stop requests and verification limits to every
+  subagent; review the combined result for missing imports and stale callers
+- Do not multiply parallel rewrites or abstractions just because agents are
+  available
 
 ### 3. Self-Improvement Loop
 
@@ -109,7 +212,8 @@ files.
 - Never mark a task complete without proving it works
 - Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness
+- Run appropriate tests and checks when authorized; obey stop requests and
+  explicitly identify anything left unverified
 
 ### 5. Demand Elegance (Balanced)
 
@@ -375,9 +479,11 @@ valid.
 
 ## Testing Requirements
 
-Run **every test inside the already-running application container**. Do not run
-tests on the host or start another stack for verification. The current local
-container is `speleodb-monorepo-django`, with the repository mounted at `/app`.
+The owner's stop/resume directives take precedence over every test/check
+requirement in this file. When tests are authorized, run **every test inside the
+already-running application container**. Do not run tests on the host or start
+another stack for verification. The current local container is
+`speleodb-monorepo-django`, with the repository mounted at `/app`.
 
 For frontend (public or private) changes, validate tests:
 
@@ -389,6 +495,19 @@ Backend/API changes should also run relevant `pytest` targets:
 - Focused suite: `docker exec -w /app speleodb-monorepo-django pytest <targets>`
 
 ### Targeted backend coverage
+
+Apply pytest markers directly to test functions or classes with decorators such
+as `@pytest.mark.django_db`. Do not introduce `pytestmark` assignments or
+aliases for marker expressions, including lists of markers. Mark database use
+only where needed and preserve required options such as `transaction=True`.
+
+Every new or retained test must protect an identifiable application failure. Do
+not create tests that merely restate factory defaults, compare factory
+timestamps with `before`/`after` calls to `timezone.now()`, verify framework
+mechanics, or echo values just assigned by a mock. Do not replace a deleted
+low-value test with another test of the same implementation detail. Keep
+regression coverage for permissions, real persistence and storage, Git history,
+failed replacement preservation, task outcomes and exception serialization.
 
 - The complete backend suite uses PostgreSQL, as explicitly authorized by the
   user, because retained integration contracts use advisory locks, immediate
@@ -427,15 +546,14 @@ Backend/API changes should also run relevant `pytest` targets:
   boundary cases; do not repeat randomized inputs or large fixtures without a
   failure they distinguish. A query-count regression must assert that the
   requested records are actually visible and returned.
-- Consider race conditions during implementation and review: transaction
-  boundaries, lock ownership, stale reads, permissions changing during an
-  operation, duplicate delivery, and idempotency. Implement the necessary
-  safeguards, but do not add race-condition tests unless the user explicitly
-  requests them. Do not introduce threaded writers, competing schedulers, forced
-  interleavings, or lock-contention harnesses as routine regression coverage.
-  Use small sequential tests for observable validation, lock rules, state
-  transitions, and recovery. Removing a race-condition test does not authorize
-  removing the production safeguard it exercised.
+- Review actual transaction boundaries, existing lock ownership, permissions,
+  duplicate delivery and idempotency. This does not authorize speculative
+  coordination infrastructure for single-admin project operations. Do not add
+  race-condition tests unless explicitly requested: no threaded writers,
+  competing schedulers, forced interleavings or lock-contention harnesses as
+  routine regression coverage. Use small sequential tests for observable state
+  transitions and existing safeguards. Removing a test does not by itself
+  authorize removing a production safeguard.
 - Test fixtures, generated payloads, and uploads/downloads must stay at or below
   100,000 bytes. Keep compressed fixtures small after extraction too. Preserve
   behavioral tests by using small representative inputs and lowering test-local
@@ -484,11 +602,12 @@ and to new tests as well as changes to existing tests:
   inspect lower-layer coverage. Before removing an application-logic assertion,
   verify its pytest/Vitest replacement or add the missing test. Do not retain
   duplicate logic coverage in browsers to avoid this verification.
-- Use small deterministic fixtures and controlled HTTP responses/loading gates.
-  This is the supported browser UI fixture boundary: simulate the server result
-  to exercise the real UI, without replacing application functions or renderer
-  methods. Large processing inputs, worker/internal counters, repeated timing
-  samples, and source-configuration assertions belong outside default UI CI.
+- Use small deterministic fixtures and real HTTP fixtures where possible.
+  Control responses/loading gates only when necessary to produce a specific
+  external failure or ordering case. Keep real application functions and
+  renderer methods. Large processing inputs, worker/internal counters, repeated
+  timing samples, and source-configuration assertions belong outside default UI
+  CI.
 - Minimal database/authentication fixtures may render real application pages.
   Seed editing independently. Do not use browser write/readback/reload chains to
   prove backend persistence; intercept mutations and assert visible completion.
@@ -507,23 +626,62 @@ outside the repository, not in these durable instructions.
 
 ### Controlled test boundaries
 
-Browser UI/UX tests may control HTTP responses and loading gates at the network
-boundary. Keep the real application functions, native input, image decoding, and
-renderer methods.
+**Never fabricate retry failures or retry behavior, anywhere in Python or
+TypeScript tests or fixtures.** Retry only after an actual call fails. Do not
+raise synthetic exceptions, return canned failure statuses, script failures
+followed by success, mock retry results, or replace clocks/sleeps to manufacture
+a retry scenario. Exercise the real operation against a real failure condition
+when retry coverage is necessary. Remove tests that only prove invented retry
+behavior; do not preserve them by replacing fake timers with long real waits.
 
-Prefer real constructors, supported configuration, and small real local inputs.
-A controlled substitute may isolate unrelated external work or elapsed waiting,
-but must not replace the behavior the test claims to prove. Document that
-boundary next to the replacement and assert observable results rather than
-values supplied by the substitute itself.
+Do not deliberately hold locks, pause services or manufacture outages solely to
+force a backoff sequence or exhaust its waiting budget. Using real sockets,
+database locks or real sleeps does not make that artificial scenario acceptable.
+Do not replace removed scenarios with shorter waits, patched delays or new
+backoff configuration. Preserve production recovery behavior.
+
+**No mocking, patching, stubbing or spying unless absolutely necessary.** This
+applies throughout backend, frontend, browser tests and shared fixtures.
+
+- Use real constructors, application functions, state/configuration objects,
+  supported configuration, small real inputs, local repositories and actual HTTP
+  fixtures. Reuse existing real composition coverage instead of creating suites
+  that replace entire application modules and assert mock call counts.
+- A necessary substitute must be limited to the precise external/native
+  boundary: for example, a specific upstream failure that cannot be induced
+  reliably, or a browser/GPU capability unavailable in the test environment.
+  Explain the concrete necessity beside it. Convenience, speed and avoiding
+  fixture setup are not sufficient reasons.
+- Test the behavior claimed by the test with the real implementation. Assert
+  observable results, not values manufactured by the substitute. Keep real
+  native input, decoding and available renderer/library behavior.
+- Do not mute console output, fix randomness, override document state or mock
+  working vendor libraries merely to make tests convenient. Observe actual calls
+  without replacing behavior only when that observation is necessary.
+- Inspect the substitutions behind `restoreAllMocks`, `restore_all`, patch
+  teardown and similar cleanup. Remove unnecessary substitutions and then
+  redundant cleanup. Do not replace bulk restoration with renamed/manual
+  restoration to hide the same mocking. Restore any genuinely required
+  substitution so it cannot leak into other tests.
+
+**Use real time and real waiting everywhere.** Do not patch clocks or sleeping,
+freeze `timezone.now()`/`Date.now()`, replace `monotonic`/`performance.now`,
+install fake timers, manually advance timers, flush captured animation-frame
+callbacks, or replace sleeps with no-ops or delay-recording functions. This
+includes shared GitLab provisioning and retry fixtures. Let actual retries,
+timeouts, polling, feedback and animation frames run. Existing supported
+arguments may use small positive test delays; do not add production timing APIs
+or patch constants solely to accelerate tests. Use real timestamps and persisted
+past/future deadlines for state transitions; pass explicit dates to pure
+calendar helpers instead of replacing the clock.
 
 Keep real rollback, storage readback, repository restoration, and worker
 lifecycle tests where a substitute would hide the failure. For retry policy,
-record requested waits while exercising real bounded attempts. Concurrency
-concerns require implementation review, not new race-condition tests without the
-user's explicit request. Keep substitutes function-scoped and automatically
-restored, including clocks and environment. Do not fabricate success responses
-in a test advertised as an integration test.
+exercise real bounded attempts and waits, and assert observable outcomes.
+Concurrency concerns require implementation review, not new race-condition tests
+without the user's explicit request. Keep substitutes function-scoped and
+automatically restored, including environment changes. Do not fabricate success
+responses in a test advertised as an integration test.
 
 ### Django GitLab repository contract
 

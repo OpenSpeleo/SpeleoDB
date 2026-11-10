@@ -35,16 +35,15 @@ commit SHAs, leases, and final cleanup. It retains no session-scoped Django
 model instances. Provisioning delegates to
 `GitlabManager.create_or_clone_project()`, including UUID remote names and
 paths, bounded creation attempts, ambiguous-response recovery, and the
-application's normal initial commit. During this fixture-only provisioning, only
-elapsed HTTP backoff is omitted with a scoped module clock replacement. Actual
-requests and SDK responses remain real; ordinary borrowed-repository operations
-retain their normal timing and cleanup behavior. Canonical role names are Django
-fixture labels only; using those labels as remote names collides across
-concurrent runs or with repositories awaiting deletion. `canonical_user()` and
-`canonical_project()` materialize database rows inside the requesting test's
-transaction, including after `TransactionTestCase` flushes. Database-only tests
-do not contact GitLab. `project_matrix()` explicitly creates the complete A/B
-ownership and permission matrix.
+application's normal initial commit. Provisioning retains actual HTTP requests,
+SDK responses and elapsed retry waits, as do ordinary borrowed-repository
+operations. Canonical role names are Django fixture labels only; using those
+labels as remote names collides across concurrent runs or with repositories
+awaiting deletion. `canonical_user()` and `canonical_project()` materialize
+database rows inside the requesting test's transaction, including after
+`TransactionTestCase` flushes. Database-only tests do not contact GitLab.
+`project_matrix()` explicitly creates the complete A/B ownership and permission
+matrix.
 
 The base API cases select the canonical project for their tested permission
 level. Grants remain explicit: `canonical_project()` does not silently grant A
@@ -73,13 +72,11 @@ pytest collection order never determines whether a project is ready or deleted.
 | `manager-empty` | Initialization of an existing empty remote, subgroup confirmation, dry run, authentication failure and deletion   |
 | `write-check`   | The management command's real authenticated create/delete check                                                   |
 
-The absent-remote manager/proxy tests explicitly request `gitlab_retry_delays`
-to record backoff without elapsed waiting. This function-scoped fixture replaces
-only the bounded client's module clock reference: actual HTTP requests, attempt
-counts, SDK errors and production delay settings remain intact. It never patches
-process-wide `time.sleep`; ordinary propagation/recovery tests keep real
-waiting. The API-policy suite separately asserts the complete requested delay
-sequence.
+Absent-remote manager/proxy tests use the normal client with real requests and
+SDK errors. An initial HTTP 404 permits creation immediately. The API-policy
+suite observes real HTTP 404 error propagation and single-attempt failures with
+retries disabled. Do not manufacture missing projects or unavailable endpoints
+solely to exercise a backoff sequence, or replace clocks and sleeping.
 
 Destructive command policies run against real GitLab through `call_command` with
 scoped stdin/environment. Two actual Make subprocesses retain successful and
@@ -235,12 +232,12 @@ value or prove the historical job's identity.
 ## Repository and cleanup boundaries
 
 `GitlabManager._ensure_remote_project()` first looks up the exact namespace and
-project UUID. An existing remote requires no creation POST. Acquisition retries
-HTTP 404 within the bounded REST attempt budget before permitting creation;
-other exhausted lookup failures propagate. Creation conflicts still require a
-successful lookup before cloning, using the same opt-in HTTP 404 backoff without
-restarting creation or treating authentication, validation, or throttling errors
-as success.
+project UUID. An existing remote requires no creation POST; HTTP 404 permits
+creation immediately. Transient lookup failures retain their bounded retry
+policy. Creation conflicts still require a successful confirming lookup before
+cloning. A confirming HTTP 404 preserves the original creation failure without
+backoff or restarting creation. Authentication, validation and throttling errors
+are never treated as success.
 
 Upload cleanup opens a working copy only if its directory already exists. It
 never accesses the provisioning property. Cleanup failures remain secondary to
@@ -286,9 +283,8 @@ status and body. See [GitLab reliability](gitlab-reliability.md).
   GitLab's delayed-deletion state.
 
 No patched SDK methods, HTTP fakes, or replacement GitLab services are used by
-these integration tests. Separate deterministic existence/backoff policy tests
-script SDK-boundary outcomes for retry decisions and conflict handling; they do
-not replace live-service coverage or participate in repository provisioning.
+these integration tests. Retry tests must exercise actual failed calls; do not
+script SDK outcomes, canned failure statuses or failure-then-success sequences.
 Local bare repositories remain appropriate for Git-only behavior. The existing
 `skip_if_lighttest` marker explicitly selects an offline test mode; a required
 live service becoming unavailable must not trigger an automatic skip.
@@ -394,13 +390,14 @@ results and measured creation counts belong in the task's review record; this
 document describes the required behavior rather than claiming a particular run
 passed.
 
-The lookup-first path adds up to five GETs and 15 seconds of default backoff to
-new creation, and removes a rejected POST from existing-remote acquisition. Four
-reusable remote identities bound provisioning independently of the number of
-database fixtures or upload parameters. Lease restoration adds bounded Git/ref
-operations, but prevents unbounded remote history and cross-test contamination.
-The immutable creation allocations provide a stronger regression check than
-counting repositories left in a group after teardown.
+The lookup-first path adds one existence GET to new creation and removes a
+rejected POST from existing-remote acquisition. Expected HTTP 404 responses do
+not incur backoff. Four reusable remote identities bound provisioning
+independently of the number of database fixtures or upload parameters. Lease
+restoration adds bounded Git/ref operations, but prevents unbounded remote
+history and cross-test contamination. The immutable creation allocations provide
+a stronger regression check than counting repositories left in a group after
+teardown.
 
 ### Default test coverage and explicit exclusions
 

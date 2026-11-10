@@ -40,7 +40,7 @@ from speleodb.background_jobs.services import retry_delay
 from speleodb.background_jobs.services import retry_due_jobs
 from speleodb.background_jobs.storage import delete_archive
 from speleodb.background_jobs.storage import upload_archive
-from speleodb.gis.geojson_generation import recover_geojson_generations
+from speleodb.common.enums import TaskResultStatus
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -124,7 +124,8 @@ def generate_export(self: Any, job_id: str, attempt_id: str) -> dict[str, Any]:
         # Celery's automatic STARTED write runs before this function's claim
         # guard, so only the successfully claimed invocation may record it.
         self.update_state(
-            state="STARTED", meta={"job_id": job_id, "attempt_id": attempt_id}
+            state=TaskResultStatus.STARTED,
+            meta={"job_id": job_id, "attempt_id": attempt_id},
         )
         owner = User.objects.get(pk=attempt.job.requester_id, is_active=True)
         root = Path(settings.EXPORTS_SCRATCH_DIR)
@@ -229,7 +230,6 @@ def maintain_background_jobs() -> None:
         .iterator()
     ):
         dispatch_notification(job_id)
-    recover_geojson_generations()
 
 
 @shared_task(name="speleodb.background_jobs.tasks.send_export_notification")

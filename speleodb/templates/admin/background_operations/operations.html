@@ -1,0 +1,41 @@
+{% extends "admin/background_operations/base.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ history_form.media }}
+{% endblock extrahead %}
+{% block content %}
+  <p>Schedule immediate operations. Only active superusers can run these operations. Execution status is recorded in Celery task results.</p>
+  <div class="operations-grid operations-actions">
+    <section class="operation-panel" aria-labelledby="history-title">
+      <h2 id="history-title">Rebuild Git history</h2>
+      <p>Start from zero: remove stored history and all project GeoJSONs, clone afresh, and rebuild history and eligible maps. You will review the project and confirm before scheduling.</p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="operation" value="history" />
+        {{ history_form.as_p }}
+        <button type="submit" class="button">Review history rebuild</button>
+      </form>
+    </section>
+    <section class="operation-panel" aria-labelledby="project-title">
+      <h2 id="project-title">Recompute project GeoJSONs</h2>
+      <p>Process the complete supported history of one eligible project.</p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="operation" value="project" />
+        {{ project_form.as_p }}
+        <button type="submit" class="button">Schedule project recomputation</button>
+      </form>
+    </section>
+    <section class="operation-panel" aria-labelledby="all-title">
+      <h2 id="all-title">Recompute all GeoJSONs</h2>
+      <p>{{ eligible_count }} eligible project{{ eligible_count|pluralize }}. Each project runs as an independent task.</p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="operation" value="all" />
+        {{ all_form.as_p }}
+        <button type="submit" class="button">Schedule all recomputations</button>
+      </form>
+    </section>
+  </div>
+{% endblock content %}

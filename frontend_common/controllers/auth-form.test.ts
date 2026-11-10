@@ -4,7 +4,7 @@ let server: Awaited<ReturnType<typeof startApiServer>>;
 let originalUrl: string;
 beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
-afterEach(() => { $(document).off(); $(window).off('click'); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterEach(() => { $(document).off(); $(window).off('click'); $('body').off(); document.body.innerHTML = ''; });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 function page(fields: Record<string, string>) {

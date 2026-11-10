@@ -81,6 +81,6 @@ access and ownership of the edition lock; downloads require read access.
 Use `ariane_tml`, `compass_zip`, or `stalagmight` for the corresponding file
 format, or `auto` for upload detection. Uploads use multipart `artifact` and
 `message` fields. Responses include the stored filenames, revision `hexsha`, and
-`geojson_status`. Downloads return the selected revision's file as an
+source-save confirmation. Downloads return the selected revision's file as an
 attachment. See [project capabilities](project-formats.md) for validation and
 conversion support.

@@ -4,7 +4,7 @@ let server: Awaited<ReturnType<typeof startApiServer>>;
 let originalUrl: string;
 beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
-afterEach(() => { $(document).off(); $(window).off('click'); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterEach(() => { $(document).off(); $(window).off('click'); $('body').off(); document.body.innerHTML = ''; });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 function page() { document.body.innerHTML = '<form id="entity"><input name="csrfmiddlewaretoken" value="csrf"><input name="name" value="Fleet"><input name="description" value="Description"><input type="checkbox" name="email_on_projects_updates" checked><input type="checkbox" name="email_on_speleodb_updates"><button id="btn_submit" type="button">Save</button></form><button id="add_sensor_btn">Add</button><div id="sensors_container"></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div> '; }

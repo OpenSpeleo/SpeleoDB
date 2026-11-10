@@ -30,8 +30,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-pytestmark = pytest.mark.skip_if_lighttest
-
 BACKENDS: tuple[tuple[type[BrowserFacingS3Storage], str, bool], ...] = (
     (S3MediaStorage, "public, max-age=86400", False),
     (PersonPhotoStorage, "public, max-age=86400", True),
@@ -79,6 +77,7 @@ def backend_bucket() -> Iterator[str]:
         client.delete_bucket(Bucket=bucket)
 
 
+@pytest.mark.skip_if_lighttest
 @pytest.mark.parametrize(("backend", "cache_control", "public"), BACKENDS)
 def test_all_backends_serve_stored_headers_and_share_exact_key_transfers(
     backend: type[BrowserFacingS3Storage],

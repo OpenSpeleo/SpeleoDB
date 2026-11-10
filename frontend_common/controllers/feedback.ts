@@ -19,6 +19,8 @@ export async function init(context: FeedbackContext) {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises -- Preserve the existing async listener and its internal submission catch.
     document.getElementById('btn_submit')!.addEventListener('click', async event => {
         event.preventDefault();
+        // Keep this click from dismissing a synchronous submission error.
+        event.stopPropagation();
         try {
             const response = await fetch(context.endpoint, {
                 method: form.method,

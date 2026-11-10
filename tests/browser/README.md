@@ -23,9 +23,9 @@ claim that a unit test certifies browser pixel output.
 | `controllers-parity.spec.ts`    |                    2 | Native file removal or rejected upload loses retained state; contenteditable Tab navigation and row operations lose focus or data.                                             |
 | `viewer-gestures.spec.ts`       |                    4 | Wheel/projection crossings change pan direction; releasing one touch loses the remaining contact.                                                                              |
 | `viewer-parity.spec.ts`         |                    5 | Public/private composition or country/project gates lose visibility across changes; focus/fullscreen interaction, measurement cancellation, or drawing history/discard breaks. |
-| `viewer-responsiveness.spec.ts` |                    2 | Pending GPS work ignores the final toggle intent; failed GIS loading cannot recover or preserve independent geometry visibility.                                               |
-| `resource-edit.spec.ts`         |                    1 | Rejected note/file editing loses input or the native file selection and cannot complete after recovery.                                                                        |
-| `gis-view-bound.spec.ts`        |                    1 | A public boundary disappears when changing sources, or a rejected bound selection loses its draft before retry.                                                                |
+| `viewer-responsiveness.spec.ts` |                    2 | Pending GPS work ignores the final toggle intent; GIS geometry visibility changes disturb other geometry types or surveys.                                                     |
+| `resource-edit.spec.ts`         |                    1 | Rejected note/file editing loses input or the native file selection.                                                                                                           |
+| `gis-view-bound.spec.ts`        |                    1 | A public boundary disappears when changing sources, or a rejected bound selection loses its draft.                                                                             |
 
 All 15 scenarios run in Chromium and WebKit, serially with one worker and zero
 retries. Use one representative of shared form/table implementations. Additional

@@ -1,40 +1,48 @@
-"""Cache contention must end in a storage fallback after bounded backoff."""
+"""Read normalized features from storage or an already populated cache."""
 
 from __future__ import annotations
 
-from unittest.mock import call
-from unittest.mock import patch
+from uuid import uuid4
 
-import pytest
+from django.core.cache import cache
+from django.core.files.base import ContentFile
 
+from speleodb.api.v2.views.gis_view import _geojson_cache_key
 from speleodb.api.v2.views.gis_view import _load_normalized_features
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.surveys.models import Project
 
 
-@pytest.mark.parametrize("cache_recovers", [False, True])
-def test_cache_lock_wait_is_bounded_and_exponential(cache_recovers: bool) -> None:
-    artifact = ProjectGeoJSON(commit_id="commit-sha", file="artifact.json")
-    with (
-        patch("speleodb.api.v2.views.gis_view.cache") as cache,
-        patch("speleodb.api.v2.views.gis_view.time.sleep") as sleep,
-        patch(
-            "speleodb.api.v2.views.gis_view._read_normalized_features_from_storage",
-            return_value=[],
-        ) as read,
-        patch("speleodb.api.v2.views.gis_view._cache_features_if_under_limit"),
-        patch("speleodb.api.v2.views.gis_view._cache_index_if_features_cached"),
-    ):
-        cache.add.return_value = False
-        cache.get.return_value = None
-        if cache_recovers:
-            cache.get.side_effect = [None, None, []]
-        assert _load_normalized_features(artifact) == []
-    expected: list[float] = (
-        [0.1, 0.2] if cache_recovers else [0.1, 0.2, 0.4, 0.8, 1, 1, 1]
+def test_missing_cached_features_are_loaded_from_stored_artifact() -> None:
+    artifact = ProjectGeoJSON(project=Project(), commit_id=uuid4().hex)
+    artifact.file.save(
+        f"{uuid4()}/stored-features.json",
+        ContentFile(
+            b'{"type":"FeatureCollection","features":[{"type":"Feature",'
+            b'"geometry":{"type":"Point","coordinates":[0,0]},'
+            b'"properties":{"name":"Stored survey"}}]}'
+        ),
+        save=False,
     )
-    assert sleep.call_args_list == [call(delay) for delay in expected]
-    assert cache.get.call_count == len(expected) + 1
-    if cache_recovers:
-        read.assert_not_called()
-    else:
-        read.assert_called_once_with(artifact)
+    cache_key = _geojson_cache_key(artifact, "features")
+    index_key = cache_key.replace(
+        "ogc_geojson_features_", "ogc_geojson_features_index_"
+    )
+    try:
+        features = _load_normalized_features(artifact)
+        assert len(features) == 1
+        assert features[0]["properties"]["name"] == "Stored survey"
+    finally:
+        cache.delete_many([cache_key, index_key])
+        artifact.file.delete(save=False)
+
+
+def test_available_cached_features_are_used_without_a_storage_object() -> None:
+    artifact = ProjectGeoJSON(commit_id=uuid4().hex, file="absent-artifact.json")
+    cache_key = _geojson_cache_key(artifact, "features")
+    features = [{"id": "cached"}]
+    try:
+        cache.set(cache_key, features, timeout=30)
+        assert _load_normalized_features(artifact) == features
+    finally:
+        cache.delete(cache_key)

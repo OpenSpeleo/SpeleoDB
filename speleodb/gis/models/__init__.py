@@ -6,8 +6,6 @@
 # Project Related Models
 from speleodb.gis.models.explo_lead import ExplorationLead
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
-from speleodb.gis.models.project_geojson_generation import GeoJSONGenerationState
-from speleodb.gis.models.project_geojson_generation import ProjectGeoJSONGeneration
 
 # GPS Track Related Models
 from speleodb.gis.models.gps_track import GPSTrack
@@ -83,12 +81,10 @@ __all__ = [
     "GISView",
     "GPSTrack",
     "GPSTrackUserPermission",
-    "GeoJSONGenerationState",
     "Landmark",
     "LandmarkCollection",
     "LandmarkCollectionUserPermission",
     "ProjectGeoJSON",
-    "ProjectGeoJSONGeneration",
     "Sensor",
     "SensorFleet",
     "SensorFleetUserPermission",

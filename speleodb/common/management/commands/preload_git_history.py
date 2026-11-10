@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 from typing import Any
 
 from django.core.management.base import BaseCommand
@@ -37,5 +36,4 @@ class Command(BaseCommand):
 
             finally:
                 # Clean up the git repository working copy
-                if (git_dir := project.git_repo_dir).exists():
-                    shutil.rmtree(git_dir)
+                project.discard_checkout()

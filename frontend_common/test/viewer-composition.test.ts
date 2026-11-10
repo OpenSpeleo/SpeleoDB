@@ -7,14 +7,16 @@ import { StationManager } from '../../frontend_private/static/private/ts/map_vie
 import { SurfaceStationManager } from '../../frontend_private/static/private/ts/map_viewer/surface_stations/manager.ts';
 import { ExplorationLeadManager } from '../../frontend_private/static/private/ts/map_viewer/exploration_leads/manager.ts';
 import type { RendererLayer } from '../../ts-types/domain/renderer.ts';
+import type { MapCreationOptions } from '../../ts-types/domain/map-core.ts';
 import { GeometryEditor } from '../../frontend_private/static/private/ts/map_viewer/geometry_editor/editor.ts';
 import { ProjectPanel } from '../../frontend_private/static/private/ts/map_viewer/components/project_panel.ts';
 import { GPSTracksPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gps_tracks_panel.ts';
 import { GISLayersPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gis_layers_panel.ts';
 import { GISGeometriesPanel } from '../../frontend_private/static/private/ts/map_viewer/components/gis_geometries_panel.ts';
-import { Config } from '../../frontend_private/static/private/ts/map_viewer/config.ts';
+import { Config, DEFAULTS } from '../../frontend_private/static/private/ts/map_viewer/config.ts';
 import { Layers } from '../../frontend_private/static/private/ts/map_viewer/map/layers.ts';
-import { State } from '../../frontend_private/static/private/ts/map_viewer/state.ts';
+import { MapCore } from '../../frontend_private/static/private/ts/map_viewer/map/core.ts';
+import { State, createDefaultDisplayPreferences } from '../../frontend_private/static/private/ts/map_viewer/state.ts';
 import { DisplayPreferences } from '../../frontend_private/static/private/ts/map_viewer/display_preferences.ts';
 import { ViewerUpdates } from '../../frontend_private/static/private/ts/map_viewer/viewer_updates.ts';
 import { DepthLegend } from '../../frontend_private/static/private/ts/map_viewer/components/depth_legend.ts';
@@ -32,6 +34,8 @@ class VendorBounds {
 }
 interface VendorSource { data?: unknown; setData(data: unknown): void }
 type VendorLayer = Omit<RendererLayer, 'type'> & { type: RendererLayer['type'] | CustomLayerInterface['type'] };
+// jsdom cannot create WebGL maps. This engine port is the only renderer
+// substitute; viewer startup, state, configuration, layers and UI remain real.
 class VendorMap implements GlobeAtmosphereMap {
     sources = new Map<string, VendorSource>();
     layers = new Map<string, VendorLayer>();
@@ -57,6 +61,9 @@ class VendorMap implements GlobeAtmosphereMap {
     handlers = new Map<string, Set<(event: unknown) => unknown>>();
     controls: VendorControl[] = [];
     maxZoom: number | undefined;
+    creationOptions: MapCreationOptions | undefined;
+    cameraJumps: unknown[] = [];
+    resizeCount = 0;
     on(name: string, handler: (event: unknown) => unknown) {
         if (!this.handlers.has(name)) this.handlers.set(name, new Set());
         this.handlers.get(name)!.add(handler);
@@ -74,8 +81,8 @@ class VendorMap implements GlobeAtmosphereMap {
         if (element) this.getContainer().append(element);
     }
     setMaxZoom(zoom: number) { this.maxZoom = zoom; }
-    resize() {}
-    jumpTo() {}
+    resize() { this.resizeCount += 1; }
+    jumpTo(options: unknown) { this.cameraJumps.push(options); }
     setStyle() {
         this.styleLoaded = false;
         this.sources.clear(); this.layers.clear(); this.images.clear();
@@ -95,6 +102,7 @@ class VendorMap implements GlobeAtmosphereMap {
 }
 
 let map: VendorMap;
+let fullscreenContainers: (HTMLElement | undefined)[];
 function captureMap(value: VendorMap) { map = value; }
 let requests: string[];
 let responses: Map<string, ApiTestReply>;
@@ -106,12 +114,15 @@ const survey = { type: 'FeatureCollection', features: [{ type: 'Feature', proper
 const emptyGeoJSON = { type: 'FeatureCollection', features: [] };
 let listeners: { target: EventTarget; type: string; handler: EventListenerOrEventListenerObject; options?: boolean | AddEventListenerOptions | undefined }[];
 beforeEach(() => {
+    map = new VendorMap();
+    fullscreenContainers = [];
     server.reset();
     setBrowserUrl(server.origin);
     project.geojson_file = `${server.origin}/survey.geojson`;
     document.body.innerHTML = '<div id="map-viewer-shell"><div id="loading-overlay"><span id="loading-progress"></span></div><div id="map"><canvas></canvas></div></div>';
     localStorage.clear();
     State.resetLayerState();
+    State.displayPreferences = createDefaultDisplayPreferences();
     StationManager.invalidateCache();
     SurfaceStationManager.invalidateCache();
     ExplorationLeadManager.invalidateCache();
@@ -123,6 +134,8 @@ beforeEach(() => {
     requests = [];
     responses = new Map();
     listeners = [];
+    // Forward native listener registration and retain handles solely for
+    // teardown, since EventTarget has no listener-enumeration API.
     for (const target of [window, document]) {
         const original = target.addEventListener.bind(target);
         vi.spyOn(target, 'addEventListener').mockImplementation((type: string, handler: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
@@ -138,12 +151,14 @@ beforeEach(() => {
     });
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     vi.stubGlobal('__mapRenderer', {
-        Map: class extends VendorMap { constructor() { super(); captureMap(this); } },
+        Map: class extends VendorMap { constructor(options: MapCreationOptions) { super(); this.creationOptions = options; captureMap(this); } },
         AttributionControl: class {
             onAdd() { return document.createElement('div'); }
             onRemove() {}
         },
-        NavigationControl: class {}, FullscreenControl: class {}, ScaleControl: class {},
+        NavigationControl: class {},
+        FullscreenControl: class { constructor(options?: { container: HTMLElement }) { fullscreenContainers.push(options?.container); } },
+        ScaleControl: class {},
         addProtocol() {}, LngLatBounds: VendorBounds,
     });
 });
@@ -159,8 +174,8 @@ afterEach(async () => {
     for (const { target, type, handler, options } of listeners) target.removeEventListener(type, handler, options);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    vi.useRealTimers();
     State.map = null;
+    Reflect.deleteProperty(document, 'fullscreenElement');
     document.body.innerHTML = '';
 });
 
@@ -200,7 +215,6 @@ async function sourceChanged(reloadRequired: boolean) {
 }
 
 it.each(['private', 'public'] as const)('hydrates the real %s viewer and restores survey sources after a style replacement', async mode => {
-    vi.useRealTimers();
     responses.set('/api/v2/projects/', { json: [project] });
     responses.set('/api/v2/projects/geojson/', { json: [project] });
     responses.set('/survey.geojson', { json: survey });
@@ -232,11 +246,13 @@ it.each(['private', 'public'] as const)('hydrates the real %s viewer and restore
     expect(requests).toEqual(requestsBefore);
 
     // A source requiring a style replacement has removed the former renderer state.
+    if (mode === 'private') State.gisLayerClickableLayerIds.add('retired-click-layer');
     map.setStyle();
     await map.fire('style.load');
     expect(map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID)).toMatchObject({ type: 'custom' });
     expect(map.getLayer(GLOBE_ATMOSPHERE_LAYER_ID)).not.toBe(atmosphere);
     await sourceChanged(true);
+    if (mode === 'private') expect(State.gisLayerClickableLayerIds.has('retired-click-layer')).toBe(false);
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(State.projectBounds.has('project')).toBe(true);
     expect(requests.filter(url => url === '/survey.geojson')).toHaveLength(2);
@@ -251,8 +267,7 @@ it.each(['private', 'public'] as const)('hydrates the real %s viewer and restore
     }
 });
 
-it('consumes a failed public prefetch and retries through the real source-change lifecycle', async () => {
-    vi.useRealTimers();
+it('reports a failed public prefetch without publishing a survey source', async () => {
     responses.set('/api/v2/gis-ogc/view/shared/geojson', { status: 503, json: { detail: 'Unavailable' } });
     responses.set('/survey.geojson', { json: survey });
     configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
@@ -266,13 +281,6 @@ it('consumes a failed public prefetch and retries through the real source-change
     expect(map.getSource('project-geojson-project')).toBeUndefined();
     expect(document.body.textContent).toContain('Failed to load map data');
     expect(document.querySelector('#loading-overlay')?.classList.contains('pointer-events-none')).toBe(true);
-
-    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: { projects: [project], view_name: 'Recovered' } });
-    await sourceChanged(true);
-    expect(requests).toEqual(['/api/v2/gis-ogc/view/shared/geojson', '/api/v2/gis-ogc/view/shared/geojson', '/survey.geojson']);
-    expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
-    expect(Config.projects.map(item => item.id)).toEqual(['project']);
-    expect(map.fits).toEqual([]);
 });
 
 it('clips public surveys before rendering, depth and navigation and retains full inputs across style changes', async () => {
@@ -445,4 +453,120 @@ it('does not let a stale unbounded source overwrite a newer style reload', async
     }
     expect(map.getSource('project-geojson-project')?.data).toMatchObject(survey);
     expect(State.projectDepthDomains.get('project')).toEqual({ min: 0, max: 12 });
+});
+
+it('rejects invalid public configuration through the real notification UI', async () => {
+    configureRuntimeContext({ viewMode: 'private', gisToken: 'shared' });
+    await initPublicGISViewer();
+    expect(State.map).toBeNull();
+    expect(requests).toEqual([]);
+    expect(document.body.textContent).toContain('Invalid GIS View configuration');
+});
+
+it('uses precise public zoom and preserves project colors without country grouping', async () => {
+    responses.set('/api/v2/gis-ogc/view/shared/geojson', { json: { projects: [project], view_name: 'Public' } });
+    responses.set('/survey.geojson', { json: survey });
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared', mapboxToken: '', allowPreciseZoom: true });
+    await initPublicGISViewer();
+    await map.fire('style.load');
+    await map.fire('load');
+    await ViewerUpdates.whenIdle();
+    expect(map.maxZoom).toBe(22);
+    expect(map.fits[0]!.options).toMatchObject({ maxZoom: 16 });
+    expect(Config.projects[0]).toMatchObject({ color: '#22c55e', permissions: 'READ_ONLY' });
+    expect(Config.projects[0]).not.toHaveProperty('country');
+});
+
+it.each(['depth', 'shot'])('keeps saved private %s preferences unchanged during public use', async colorMode => {
+    const key = DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES;
+    const saved = JSON.stringify({
+        version: DEFAULTS.DISPLAY.STORAGE_VERSION,
+        colorMode, depthLimitFeet: 125.75, depthUnit: 'm',
+        categories: { caveEntrances: false, landmarks: false },
+    });
+    localStorage.setItem(key, saved);
+    configureRuntimeContext({ viewMode: 'public', gisToken: 'shared' });
+    await initPublicGISViewer();
+    expect(State.displayPreferences).toMatchObject({
+        colorMode: 'project', depthLimitFeet: null, depthUnit: 'ft',
+        categories: { caveEntrances: true, landmarks: true },
+    });
+    window.dispatchEvent(new CustomEvent('speleo:display-preferences-changed', {
+        detail: { preferences: State.displayPreferences },
+    }));
+    expect(localStorage.getItem(key)).toBe(saved);
+});
+
+it.each([
+    { mode: 'private', width: 1024, fullscreen: false, height: '830px' },
+    { mode: 'private', width: 640, fullscreen: false, height: '850px' },
+    { mode: 'private', width: 1024, fullscreen: true, height: '850px' },
+    { mode: 'public', width: 1024, fullscreen: true, height: '830px' },
+    { mode: 'public', width: 640, fullscreen: false, height: '850px' },
+] as const)('sizes the real $mode viewer for width $width and fullscreen=$fullscreen', async ({ mode, width, fullscreen, height }) => {
+    const element = document.getElementById('map')!;
+    // jsdom does not calculate layout or implement native fullscreen state.
+    // Supply only those browser values; the viewer's height policy remains real.
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 50, 800, 400));
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: fullscreen ? document.getElementById('map-viewer-shell') : null });
+    vi.stubGlobal('innerWidth', width);
+    vi.stubGlobal('innerHeight', 900);
+    configureRuntimeContext(mode === 'public'
+        ? { viewMode: 'public', gisToken: 'shared' }
+        : { icons: {} });
+    await (mode === 'public' ? initPublicGISViewer() : initPrivateMapViewer());
+    expect(element.style.height).toBe(height);
+});
+
+it('opens the actual geometry editor from the private top bar after map readiness', async () => {
+    document.body.insertAdjacentHTML('beforeend', '<button id="create-geometry-btn">Create Geometry</button>');
+    configureRuntimeContext({ icons: {} });
+    await initPrivateMapViewer();
+    await map.fire('style.load');
+    await map.fire('load');
+    await ViewerUpdates.whenIdle();
+    GISGeometriesPanel.setExpanded(true);
+    expect(document.getElementById('gis-geometries-panel-minimized')!.getAttribute('aria-expanded')).toBe('true');
+    document.getElementById('create-geometry-btn')!.click();
+    await vi.waitFor(() => {
+        expect(document.querySelector('[data-geometry-editor]')).not.toBeNull();
+        expect(GeometryEditor.isActive()).toBe(true);
+        expect(document.getElementById('gis-geometries-panel-minimized')!.getAttribute('aria-expanded')).toBe('false');
+    });
+});
+
+
+it('restores the initial camera once after globe style loading and preserves later navigation', async () => {
+    MapCore.init('');
+    expect(map.creationOptions).toMatchObject({ container: 'map', style: null, attributionControl: false });
+    expect(map.cameraJumps).toEqual([]);
+    await map.fire('style.load');
+    expect(map.cameraJumps).toEqual([{ center: DEFAULTS.MAP.CENTER, zoom: DEFAULTS.MAP.INITIAL_ZOOM }]);
+    map.jumpTo({ center: [-87, 20], zoom: 12 });
+    await map.fire('style.load');
+    expect(map.cameraJumps).toHaveLength(2);
+    expect(map.cameraJumps.at(-1)).toEqual({ center: [-87, 20], zoom: 12 });
+});
+
+it('passes the complete private toolbar and overlay shell to native fullscreen control', () => {
+    const shell = document.getElementById('map-viewer-shell')!;
+    MapCore.init('', 'map', { fullscreenContainer: shell });
+    expect(fullscreenContainers).toEqual([shell]);
+});
+
+it('resizes through real timers and stops resize and pending display work on removal', async () => {
+    MapCore.init('');
+    expect(map.resizeCount).toBe(0);
+    await vi.waitFor(() => expect(map.resizeCount).toBe(1));
+    window.dispatchEvent(new Event('resize'));
+    expect(map.resizeCount).toBe(2);
+    const pending = Layers.setCategoryVisibility('caveEntrances', false);
+    await map.fire('remove');
+    expect(await pending).toEqual({ status: 'cancelled' });
+    expect(State.map).toBeNull();
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(resolve => setTimeout(resolve, DEFAULTS.MAP.RESIZE_DELAY_MS));
+    expect(map.resizeCount).toBe(2);
+    await map.fire('remove');
+    expect(State.map).toBeNull();
 });

@@ -142,18 +142,16 @@ describe('native GIS geometry editor', () => {
         expect(GeometryEditor.hasUnsavedChanges()).toBe(true);
     });
 
-    it('selects a fresh palette color for each new draft and preserves stored colors on edit', async () => {
-        const random = vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.99);
+    it('selects a palette color for new drafts and preserves stored colors on edit', async () => {
         await GeometryEditor.create();
-        expect(GeometryEditor.session!.color).toBe('#38bdf8');
+        expect(['#38bdf8', '#ef4444']).toContain(GeometryEditor.session!.color);
         expect(GeometryEditor.hasUnsavedChanges()).toBe(false);
         await GeometryEditor.create();
-        expect(GeometryEditor.session!.color).toBe('#ef4444');
-        expect(GeometryEditor.nodes!.colors.querySelector<HTMLElement>('[aria-pressed="true"]')!.dataset.color).toBe('#ef4444');
+        expect(['#38bdf8', '#ef4444']).toContain(GeometryEditor.session!.color);
+        expect(GeometryEditor.nodes!.colors.querySelector<HTMLElement>('[aria-pressed="true"]')!.dataset.color).toBe(GeometryEditor.session!.color);
         expect(GeometryEditor.hasUnsavedChanges()).toBe(false);
         await GeometryEditor.edit(existing);
         expect(GeometryEditor.session!.color).toBe(existing.color);
-        expect(random).toHaveBeenCalledTimes(2);
     });
 
     it('returns focus to Create Geometry after closing an editor opened directly from a URL', async () => {

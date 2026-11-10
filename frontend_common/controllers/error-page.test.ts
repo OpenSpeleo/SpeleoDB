@@ -6,17 +6,16 @@ const load = vi.fn<ParticlesRuntime['load']>();
 beforeEach(() => {
     load.mockReset().mockResolvedValue({ id: 'particles-instance' });
     document.body.innerHTML = '<div id="tsparticles"></div>';
+    // tsParticles requires browser canvas rendering unavailable in JSDOM.
     vi.stubGlobal('tsParticles', { load });
 });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
 });
 
 it('starts immediately without context or load readiness and retains the vendor receiver', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init();
     expect(load).toHaveBeenCalledOnce();
     expect(load.mock.contexts[0]).toBe(tsParticles);

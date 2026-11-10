@@ -177,7 +177,7 @@ def test_worker_profile_preserves_tasks_and_results_without_admin_autodiscovery(
     expected_tasks: set[str] = {
         "speleodb.background_jobs.tasks.generate_export",
         "speleodb.background_jobs.tasks.maintain_background_jobs",
-        "speleodb.surveys.tasks.refresh_all_projects_geojson",
+        "speleodb.surveys.tasks.reset_project_history",
         "speleodb.surveys.tasks.refresh_project_geojson",
         "speleodb.gis.tasks.generate_project_geojson",
         "speleodb.users.tasks.get_users_count",
@@ -192,6 +192,6 @@ def test_worker_profile_preserves_tasks_and_results_without_admin_autodiscovery(
         assert "speleodb.background_jobs.admin" not in snapshot["modules"]
         assert "config.urls" not in snapshot["modules"]
     else:
-        assert "django.contrib.admin" in snapshot["apps"]
+        assert "speleodb.common.admin_config.SpeleoDBAdminConfig" in snapshot["apps"]
         assert {"debug_toolbar", "silk", "django_extensions"} <= set(snapshot["apps"])
         assert "speleodb.background_jobs.admin" in snapshot["modules"]

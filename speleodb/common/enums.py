@@ -7,6 +7,7 @@ import re
 from typing import TYPE_CHECKING
 from typing import Self
 
+from celery import states
 from django.db import models
 
 from speleodb.utils.decorators import classproperty
@@ -29,6 +30,16 @@ class BaseIntegerChoices(models.IntegerChoices):
     @classproperty
     def members(cls) -> list[Self]:  # noqa: N805
         return list(cls._member_map_.values())  # type: ignore[attr-defined]
+
+
+class TaskResultStatus(models.TextChoices):
+    PENDING = states.PENDING, "Pending"
+    RECEIVED = states.RECEIVED, "Received"
+    STARTED = states.STARTED, "Started"
+    SUCCESS = states.SUCCESS, "Success"
+    FAILURE = states.FAILURE, "Failure"
+    RETRY = states.RETRY, "Retry"
+    REVOKED = states.REVOKED, "Revoked"
 
 
 class UserAction(models.TextChoices):

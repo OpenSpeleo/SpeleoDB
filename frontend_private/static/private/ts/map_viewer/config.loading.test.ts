@@ -1,12 +1,16 @@
 import { Config } from './config.ts';
+import { setBrowserUrl, startApiServer } from '../../../../../frontend_common/test/api-server.ts';
 
-const API = vi.hoisted(() => ({
-    getAllProjects: vi.fn<() => Promise<unknown>>(),
-    getAllSurfaceNetworks: vi.fn<() => Promise<unknown>>(),
-    getGPSTracks: vi.fn<() => Promise<unknown>>(),
-    getGISLayers: vi.fn<() => Promise<unknown>>(),
-}));
-vi.mock('./api.ts', () => ({ API }));
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => {
+    originalUrl = window.location.href;
+    server = await startApiServer();
+});
+afterAll(async () => {
+    setBrowserUrl(originalUrl);
+    await server.close();
+});
 
 describe('Config loading and data methods', () => {
     let originalProjects: typeof Config._projects;
@@ -15,6 +19,8 @@ describe('Config loading and data methods', () => {
     let originalGISLayers: typeof Config._gisLayers;
 
     beforeEach(() => {
+        server.reset();
+        setBrowserUrl(`${server.origin}/private/map/`);
         originalProjects = Config._projects;
         originalNetworks = Config._networks;
         originalGpsTracks = Config._gpsTracks;
@@ -30,8 +36,6 @@ describe('Config loading and data methods', () => {
         Config._networks = originalNetworks;
         Config._gpsTracks = originalGpsTracks;
         Config._gisLayers = originalGISLayers;
-        vi.restoreAllMocks();
-        vi.clearAllMocks();
     });
 
     // ------------------------------------------------------------------ //
@@ -39,22 +43,22 @@ describe('Config loading and data methods', () => {
     // ------------------------------------------------------------------ //
 
     describe.each([
-        ['loadGISLayers', 'getGISLayers', '_gisLayers'],
-        ['loadGPSTracks', 'getGPSTracks', '_gpsTracks'],
-    ] as const)('%s import refresh', (method, endpoint, cache) => {
+        ['loadGISLayers', '_gisLayers'],
+        ['loadGPSTracks', '_gpsTracks'],
+    ] as const)('%s import refresh', (method, cache) => {
         it('forces a fresh list without requiring callers to clear the cache', async () => {
             Config[cache] = [{ id: 'old' }];
-            API[endpoint].mockResolvedValue([{ id: 'new' }]);
+            server.reply({ json: [{ id: 'new' }] });
             const result = await Config[method]({ force: true, throwOnError: true });
             expect(result).toEqual([expect.objectContaining({ id: 'new' })]);
-            expect(API[endpoint]).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
         });
 
         it.each(['failure', 'invalid'])('preserves the prior list on %s and exposes retryable refresh failure', async kind => {
             const previous = [{ id: 'old' }];
             Config[cache] = previous;
-            if (kind === 'failure') API[endpoint].mockRejectedValue(new Error('Unavailable'));
-            else API[endpoint].mockResolvedValue({ error: 'Bad response' });
+            if (kind === 'failure') server.reply({ status: 503, json: { detail: 'Unavailable' } });
+            else server.reply({ json: { error: 'Bad response' } });
             await expect(Config[method]({ force: true, throwOnError: true })).rejects.toThrow();
             expect(Config[cache]).toBe(previous);
         });
@@ -128,17 +132,17 @@ describe('Config loading and data methods', () => {
 
     describe('GIS Layer data', () => {
         it('loads accessible layers once and normalizes IDs', async () => {
-            API.getGISLayers.mockResolvedValue([{
+            server.reply({ json: [{
                 id: 42,
                 name: 'Protected areas',
                 color: '#6366f1',
                 file: '/stale-list-url',
-            }]);
+            }] });
 
             const first = await Config.loadGISLayers();
             const second = await Config.loadGISLayers();
 
-            expect(API.getGISLayers).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(first).toBe(second);
             expect(Config.gisLayerIds).toEqual(['42']);
             expect(Config.getGISLayerById(42)).toEqual(expect.objectContaining({
@@ -148,7 +152,7 @@ describe('Config loading and data methods', () => {
         });
 
         it('uses an empty collection for invalid or failed responses', async () => {
-            API.getGISLayers.mockRejectedValue(new Error('network'));
+            server.reply({ status: 503, json: { detail: 'network' } });
 
             await expect(Config.loadGISLayers()).resolves.toEqual([]);
             expect(Config.getGISLayerById('missing')).toBeNull();
@@ -161,7 +165,7 @@ describe('Config loading and data methods', () => {
 
     describe('loadProjects()', () => {
         it('calls API.getAllProjects and maps response data', async () => {
-            API.getAllProjects.mockResolvedValue([
+            server.reply({ json: [
                 {
                     id: 'p-1',
                     name: 'Project 1',
@@ -173,11 +177,11 @@ describe('Config loading and data methods', () => {
                     longitude: -73.0,
                     visibility: 'public',
                 },
-            ]);
+            ] });
 
             const result = await Config.loadProjects();
 
-            expect(API.getAllProjects).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(result).toEqual([
                 {
                     id: 'p-1',
@@ -194,9 +198,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps the color field from the API response', async () => {
-            API.getAllProjects.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'p-1', name: 'Test', permission: 'ADMIN', color: '#377eb8' },
-            ]);
+            ] });
 
             await Config.loadProjects();
 
@@ -204,9 +208,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('renames API "permission" field to "permissions"', async () => {
-            API.getAllProjects.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'p-1', name: 'Test', permission: 'READ_ONLY' },
-            ]);
+            ] });
 
             await Config.loadProjects();
 
@@ -215,51 +219,51 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached projects on subsequent calls without re-fetching', async () => {
-            API.getAllProjects.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'p-1', name: 'Project', permission: 'ADMIN' },
-            ]);
+            ] });
 
             const first = await Config.loadProjects();
             const second = await Config.loadProjects();
 
-            expect(API.getAllProjects).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(first).toBe(second);
         });
 
         it('sets empty array when API rejects', async () => {
-            API.getAllProjects.mockRejectedValue(new Error('network'));
+            server.reply({ status: 503, json: { detail: 'network' } });
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
         });
 
         it('sets empty array when response is not an array', async () => {
-            API.getAllProjects.mockResolvedValue('not-array');
+            server.reply({ json: 'not-array' });
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
         });
 
         it('sets empty array when response is null', async () => {
-            API.getAllProjects.mockResolvedValue(null);
+            server.reply({ json: null });
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
         });
 
         it('sets empty array on API rejection and does not throw', async () => {
-            API.getAllProjects.mockRejectedValue(new Error('Network error'));
+            server.reply({ status: 503, json: { detail: 'Network error' } });
 
             const result = await Config.loadProjects();
             expect(result).toEqual([]);
         });
 
         it('maps multiple projects correctly', async () => {
-            API.getAllProjects.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'p-1', name: 'Cave A', permission: 'ADMIN' },
                 { id: 'p-2', name: 'Cave B', permission: 'READ_ONLY' },
                 { id: 'p-3', name: 'Cave C', permission: 'READ_AND_WRITE' },
-            ]);
+            ] });
 
             await Config.loadProjects();
 
@@ -274,7 +278,7 @@ describe('Config loading and data methods', () => {
 
     describe('loadNetworks()', () => {
         it('calls API.getAllSurfaceNetworks and maps response data', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue([
+            server.reply({ json: [
                 {
                     id: 'n-1',
                     name: 'Network 1',
@@ -286,11 +290,11 @@ describe('Config loading and data methods', () => {
                     user_permission_level_label: 'ADMIN',
                     user_permission_level: 3,
                 },
-            ]);
+            ] });
 
             const result = await Config.loadNetworks();
 
-            expect(API.getAllSurfaceNetworks).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(result).toEqual([
                 {
                     id: 'n-1',
@@ -307,9 +311,9 @@ describe('Config loading and data methods', () => {
         });
 
         it('maps user_permission_level_label to permissions', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'n-1', name: 'Net', user_permission_level_label: 'READ_ONLY', user_permission_level: 1 },
-            ]);
+            ] });
 
             await Config.loadNetworks();
 
@@ -318,33 +322,33 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached networks on subsequent calls', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue([
+            server.reply({ json: [
                 { id: 'n-1', name: 'Net', user_permission_level_label: 'ADMIN', user_permission_level: 3 },
-            ]);
+            ] });
 
             const first = await Config.loadNetworks();
             const second = await Config.loadNetworks();
 
-            expect(API.getAllSurfaceNetworks).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(first).toBe(second);
         });
 
         it('sets empty array on API rejection', async () => {
-            API.getAllSurfaceNetworks.mockRejectedValue(new Error('network'));
+            server.reply({ status: 503, json: { detail: 'network' } });
 
             const result = await Config.loadNetworks();
             expect(result).toEqual([]);
         });
 
         it('sets empty array when response is not an array', async () => {
-            API.getAllSurfaceNetworks.mockResolvedValue({});
+            server.reply({ json: {} });
 
             const result = await Config.loadNetworks();
             expect(result).toEqual([]);
         });
 
         it('sets empty array on API rejection', async () => {
-            API.getAllSurfaceNetworks.mockRejectedValue(new Error('Timeout'));
+            server.reply({ status: 503, json: { detail: 'Timeout' } });
 
             const result = await Config.loadNetworks();
             expect(result).toEqual([]);
@@ -357,7 +361,7 @@ describe('Config loading and data methods', () => {
 
     describe('loadGPSTracks()', () => {
         it('calls API.getGPSTracks and maps response data including color', async () => {
-            API.getGPSTracks.mockResolvedValue([
+            server.reply({ json: [
                 {
                     id: 't-1',
                     name: 'Track 1',
@@ -366,11 +370,11 @@ describe('Config loading and data methods', () => {
                     creation_date: '2024-01-01',
                     modified_date: '2024-06-01',
                 },
-            ]);
+            ] });
 
             const result = await Config.loadGPSTracks();
 
-            expect(API.getGPSTracks).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(result).toEqual([
                 {
                     id: 't-1',
@@ -384,40 +388,40 @@ describe('Config loading and data methods', () => {
         });
 
         it('returns cached tracks on subsequent calls', async () => {
-            API.getGPSTracks.mockResolvedValue([
+            server.reply({ json: [
                 { id: 't-1', name: 'Track', file: '/t.geojson' },
-            ]);
+            ] });
 
             const first = await Config.loadGPSTracks();
             const second = await Config.loadGPSTracks();
 
-            expect(API.getGPSTracks).toHaveBeenCalledOnce();
+            expect(server.requests).toHaveLength(1);
             expect(first).toBe(second);
         });
 
         it('sets empty array when response is null', async () => {
-            API.getGPSTracks.mockResolvedValue(null);
+            server.reply({ json: null });
 
             const result = await Config.loadGPSTracks();
             expect(result).toEqual([]);
         });
 
         it('sets empty array on invalid response', async () => {
-            API.getGPSTracks.mockResolvedValue({});
+            server.reply({ json: {} });
 
             const result = await Config.loadGPSTracks();
             expect(result).toEqual([]);
         });
 
         it('sets empty array on API rejection', async () => {
-            API.getGPSTracks.mockRejectedValue(new Error('Server down'));
+            server.reply({ status: 503, json: { detail: 'Server down' } });
 
             const result = await Config.loadGPSTracks();
             expect(result).toEqual([]);
         });
 
         it('maps all expected fields', async () => {
-            API.getGPSTracks.mockResolvedValue([
+            server.reply({ json: [
                 {
                     id: 't-1',
                     name: 'Track',
@@ -427,7 +431,7 @@ describe('Config loading and data methods', () => {
                     modified_date: '2024-02-01',
                     extra_field: 'should be excluded',
                 },
-            ]);
+            ] });
 
             await Config.loadGPSTracks();
 

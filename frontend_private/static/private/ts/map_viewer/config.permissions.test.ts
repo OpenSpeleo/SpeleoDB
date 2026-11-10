@@ -39,7 +39,6 @@ describe('Config permission refactor', () => {
     afterEach(() => {
         Config._projects = originalProjects;
         Config._networks = originalNetworks;
-        vi.restoreAllMocks();
     });
 
     describe('normalization helpers', () => {
@@ -96,11 +95,9 @@ describe('Config permission refactor', () => {
         });
 
         it('fails closed when project access evaluation throws', () => {
-            const spy = vi.spyOn(Config, 'getProjectPermissionRank').mockImplementation(() => {
-                throw new Error('boom');
-            });
+            // Exercise the real evaluator with a record that fails when read.
+            Config._projects = [{ id: 'p-admin', get permissions(): string { throw new Error('boom'); } }];
             expect(Config.hasProjectAccess('p-admin', 'read')).toBe(false);
-            expect(spy).toHaveBeenCalled();
         });
     });
 
@@ -143,11 +140,9 @@ describe('Config permission refactor', () => {
         });
 
         it('fails closed when network access evaluation throws', () => {
-            const spy = vi.spyOn(Config, 'getNetworkPermissionLevel').mockImplementation(() => {
-                throw new Error('boom');
-            });
+            // Exercise the real evaluator with a record that fails when read.
+            Config._networks = [{ id: 'n-admin', get permissions(): string { throw new Error('boom'); } }];
             expect(Config.hasNetworkAccess('n-admin', 'read')).toBe(false);
-            expect(spy).toHaveBeenCalled();
         });
     });
 

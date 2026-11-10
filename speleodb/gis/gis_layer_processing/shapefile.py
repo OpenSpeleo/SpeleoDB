@@ -54,27 +54,28 @@ class ShapefileProcessor(BaseGISLayerProcessor):
 
         features: list[dict[str, Any]] = []
         try:
-            for index, shape_record in enumerate(reader.iterShapeRecords()):
-                shape = shape_record.shape
-                record = shape_record.record
-                if shape is None or record is None:
-                    raise _invalid("The Shapefile contains an incomplete record.")
-                if shape.shapeType == shapefile.NULL:
-                    continue
-                geometry = dict(shape.__geo_interface__)
-                converted_geometry = self._transform_geometry(geometry, transformer)
-                properties = {
-                    str(key): _json_value(value)
-                    for key, value in record.as_dict().items()
-                }
-                features.append(
-                    {
-                        "type": "Feature",
-                        "id": f"shapefile:{index}",
-                        "geometry": converted_geometry,
-                        "properties": properties,
+            with reader:
+                for index, shape_record in enumerate(reader.iterShapeRecords()):
+                    shape = shape_record.shape
+                    record = shape_record.record
+                    if shape is None or record is None:
+                        raise _invalid("The Shapefile contains an incomplete record.")
+                    if shape.shapeType == shapefile.NULL:
+                        continue
+                    geometry = dict(shape.__geo_interface__)
+                    converted_geometry = self._transform_geometry(geometry, transformer)
+                    properties = {
+                        str(key): _json_value(value)
+                        for key, value in record.as_dict().items()
                     }
-                )
+                    features.append(
+                        {
+                            "type": "Feature",
+                            "id": f"shapefile:{index}",
+                            "geometry": converted_geometry,
+                            "properties": properties,
+                        }
+                    )
         except GISLayerProcessingError:
             raise
         except (
@@ -87,8 +88,6 @@ class ShapefileProcessor(BaseGISLayerProcessor):
             raise _invalid(
                 "The Shapefile contains invalid records or geometry."
             ) from exc
-        finally:
-            reader.close()
 
         return {"type": "FeatureCollection", "features": features}
 

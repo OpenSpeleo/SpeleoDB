@@ -79,10 +79,10 @@ describe('MapSources', () => {
 
     afterEach(() => {
         ViewerUpdates.cancelAll();
-        vi.useRealTimers();
+
         localStorage.clear();
         document.body.innerHTML = '';
-        vi.restoreAllMocks();
+
     });
 
     it('uses Mapbox satellite as the default source when a token is available', () => {
@@ -484,7 +484,7 @@ describe('MapSources', () => {
     });
 
     it('coalesces rapid source choices and keeps selection ahead of map application', async () => {
-        vi.useFakeTimers();
+
         const { map } = createMapMock();
         const control = MapSources.createControl('token');
         const element = control.onAdd(map);
@@ -495,7 +495,6 @@ describe('MapSources', () => {
         dark.click();
         expect(dark.checked).toBe(true);
         expect(map.addSource).not.toHaveBeenCalled();
-        await vi.runAllTimersAsync();
         await ViewerUpdates.whenIdle();
         expect(map.addSource).toHaveBeenCalledTimes(1);
         expect(MapSources.getCurrentMapSourceId('token')).toBe('esri-world-hillshade-dark');
@@ -503,14 +502,14 @@ describe('MapSources', () => {
     });
 
     it('cancels queued source changes when its control is removed', async () => {
-        vi.useFakeTimers();
+
         const { map } = createMapMock();
         const control = MapSources.createControl('token');
         const element = control.onAdd(map);
         document.body.append(element);
         element.querySelector<HTMLInputElement>('input[value="esri-world-hillshade"]')!.click();
         control.onRemove();
-        await vi.runAllTimersAsync();
+        await ViewerUpdates.whenIdle();
         expect(map.addSource).not.toHaveBeenCalled();
     });
 });

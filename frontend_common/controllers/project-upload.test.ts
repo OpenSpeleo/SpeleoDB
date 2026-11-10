@@ -16,7 +16,7 @@ beforeEach(async () => {
     document.body.innerHTML = template.replace('{% csrf_token %}', '<input name="csrfmiddlewaretoken" value="upload-csrf">').replace(/{%.*?%}/gs, '') + errorModal;
     await init({ projectId: 'project', maxFiles: 10, maxFileSizeMb: 2, maxTotalSizeMb: 50 });
 });
-afterEach(() => { $(document.body).off(); document.body.innerHTML = ''; restoreBodyConstructors(); vi.useRealTimers(); });
+afterEach(() => { $(document.body).off(); document.body.innerHTML = ''; restoreBodyConstructors(); });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 function selectFile() {
     const input = (document.getElementById('artifact') as HTMLInputElement);
@@ -103,7 +103,7 @@ it.each([
     expect(server.requests[0]!.body).toContain('Corrected title');
 });
 
-it('retains the title and files after a failed upload so form submission can retry', async () => {
+it('retains the title and files after a rejected upload', async () => {
     responseStatus = 403;
     $('#message').val('Retry this survey');
     selectFile();
@@ -113,30 +113,20 @@ it('retains the title and files after a failed upload so form submission can ret
     expect($('#message').val()).toBe('Retry this survey');
     expect($('#dropzone label').text()).toContain('survey.dat');
 
-    responseStatus = 304;
-    (document.getElementById('file_upload_form') as HTMLFormElement).requestSubmit();
-    await vi.waitFor(() => expect($('#modal_error_txt').text()).toContain('identical'));
-    expect(server.requests).toHaveLength(2);
-    for (const request of server.requests) {
-        expect(request.body).toContain('survey contents');
-        expect(request.body).toContain('Retry this survey');
-    }
+    expect(server.requests).toHaveLength(1);
+    expect(server.requests[0]!.body).toContain('survey contents');
+    expect(server.requests[0]!.body).toContain('Retry this survey');
 });
 
 
-it.each([
-    ['pending', 'Upload saved. The map will update in the background.'],
-    ['unavailable', 'Upload saved. Map generation is currently unavailable.'],
-    ['skipped', 'The files have been successfully uploaded.'],
-    [undefined, 'The files have been successfully uploaded.'],
-])('explains successful upload with map status %s and preserves the redirect', async (geojson_status, expected) => {
+it('confirms source upload success and preserves the redirect', async () => {
     document.body.insertAdjacentHTML('beforeend', '<div id="modal_success"><p id="modal_success_txt"></p></div>');
-    server.reply({ json: { browser_url: `${window.location.href}#saved`, geojson_status } });
-    vi.useFakeTimers(); $('#message').val('Updated survey'); selectFile();
+    server.reply({ json: { browser_url: `${window.location.href}#saved` } });
+    $('#message').val('Updated survey'); selectFile();
     document.querySelector<HTMLFormElement>('#file_upload_form')!.requestSubmit();
-    await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe(expected));
+    await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe('The files have been successfully uploaded.'));
     expect($('#modal_error_txt').text()).not.toContain('identical');
-    await vi.advanceTimersByTimeAsync(2000); expect(window.location.hash).toBe('#saved');
+    await vi.waitFor(() => expect(window.location.hash).toBe('#saved'), { timeout: 3000 });
 });
 it('checks count and size limits before accepting files and keeps file names inert', () => {
     const input = (document.getElementById('artifact') as HTMLInputElement);
@@ -163,6 +153,7 @@ it('checks count and size limits before accepting files and keeps file names ine
 
 it('waits for future load before wiring and rejects total size as one batch', async () => {
     $('#artifact').off('change');
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     const ready = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init({ projectId: 'project', maxFiles: 10, maxFileSizeMb: 2, maxTotalSizeMb: 1 });
     const file = new File([], 'medium.dat');

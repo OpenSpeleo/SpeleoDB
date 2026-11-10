@@ -153,6 +153,7 @@ describe('generated GIS layer upload lifecycle', () => {
     }
     function submit() { element('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
     beforeEach(() => {
+        // Observe registrations only to remove page-owned listeners between documents.
         documentListeners = vi.spyOn(document, 'addEventListener'); windowListeners = vi.spyOn(window, 'addEventListener');
         server.handle(request => request.method === 'GET' ? { json: [layer()] } : { status: 201, json: { id: 'new-layer' } });
         document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf">

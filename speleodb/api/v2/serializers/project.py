@@ -279,25 +279,3 @@ class ProjectWithGeoJsonSerializer(ProjectSerializer):
             artifact.commit_id if artifact is not None else None
         )
         return data
-
-
-class ProjectGeoJSONStatusSerializer(serializers.Serializer[dict[str, Any]]):
-    state = serializers.ChoiceField(
-        choices=[
-            "pending",
-            "queued",
-            "running",
-            "ready",
-            "skipped",
-            "failed",
-            "not_requested",
-        ],
-        read_only=True,
-    )
-    source_commit_sha = serializers.CharField(read_only=True, allow_null=True)
-    generation_commit_sha = serializers.CharField(read_only=True, allow_null=True)
-    geojson_commit_sha = serializers.CharField(read_only=True, allow_null=True)
-    geojson_revision = serializers.CharField(read_only=True, allow_null=True)
-    error_code = serializers.CharField(read_only=True, allow_null=True)
-    error = serializers.CharField(read_only=True, allow_null=True)
-    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import io
 import pathlib
 import zipfile
@@ -65,24 +64,23 @@ class FileViewTests(BaseAPIProjectTestCase):
         commit_message: str = "Valid commit message",
     ) -> HttpResponse:
         get_pool().prepare(self.project)
-        with contextlib.ExitStack() as stack:
-            opened_files = [
-                stack.enter_context(path.open(mode="rb")) for path in artifact_paths
-            ]
-            artifacts = [*opened_files, *(extra_artifacts or [])]
+        opened_files = [
+            SimpleUploadedFile(path.name, path.read_bytes()) for path in artifact_paths
+        ]
+        artifacts = [*opened_files, *(extra_artifacts or [])]
 
-            return self.client.put(
-                reverse(
-                    "api:v2:project-upload",
-                    kwargs={
-                        "id": self.project.id,
-                        "fileformat": fileformat.label.lower(),
-                    },
-                ),
-                {"artifact": artifacts, "message": commit_message},
-                format="multipart",
-                headers={"authorization": f"{self.header_prefix}{self.token.key}"},
-            )
+        return self.client.put(
+            reverse(
+                "api:v2:project-upload",
+                kwargs={
+                    "id": self.project.id,
+                    "fileformat": fileformat.label.lower(),
+                },
+            ),
+            {"artifact": artifacts, "message": commit_message},
+            format="multipart",
+            headers={"authorization": f"{self.header_prefix}{self.token.key}"},
+        )
 
     def _download_project_format(
         self, fileformat: FileFormat
@@ -168,10 +166,11 @@ class FileViewTests(BaseAPIProjectTestCase):
         # Native processors store their source under a canonical filename,
         # regardless of the client-chosen upload name. This also determines the
         # filename returned by the upload API.
+        repository = self.project.git_repo
         expected_data = {
             "files": [CANONICAL_FILENAMES[fileformat]],
             "message": commit_message,
-            "hexsha": self.project.git_repo.head.commit.hexsha,
+            "hexsha": repository.head.commit.hexsha,
         }
 
         response_data = response.data

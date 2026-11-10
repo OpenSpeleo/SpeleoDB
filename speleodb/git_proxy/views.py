@@ -349,6 +349,10 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
             if tentative_id == 0:
                 gitlab_response.close()
                 try:
+                    # A discovery 404 is remote recovery, even when a stale
+                    # local checkout exists. Ordinary checkout access would only
+                    # reopen that directory without checking the missing remote.
+                    _ = project.git_repo_dir
                     GitlabManager.create_or_clone_project(project)
                 except Exception:  # noqa: BLE001
                     # Recovery spans GitLab API and Git subprocess exception types.
@@ -415,7 +419,7 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
             gitlab_response.headers.get("Content-Type")
         )
         upstream_request_id = gitlab_response.headers.get("X-Request-Id", "")
-        try:
+        with gitlab_response:
             logger.error(
                 "Git upstream response rejected: project_id=%s method=%s service=%s "
                 "status=%s content_type=%s request_id=%s",
@@ -426,8 +430,6 @@ class BaseGitProxyAPIView(GenericAPIView[Project]):
                 upstream_content_type,
                 upstream_request_id,
             )
-        finally:
-            gitlab_response.close()
 
         return generate_upstream_error_response()
 

@@ -39,9 +39,8 @@ from speleodb.api.v2.serializers import ProjectSerializer
 from speleodb.api.v2.serializers import UploadSerializer
 from speleodb.api.v2.serializers.api_contract import ProjectUploadRequestSerializer
 from speleodb.api.v2.serializers.api_contract import ProjectUploadResponseSerializer
+from speleodb.background_jobs.operations import schedule_uploaded_geojson
 from speleodb.common.enums import ProjectType
-from speleodb.gis.geojson_generation import request_geojson_generation
-from speleodb.git_engine.core import GitRepo
 from speleodb.git_engine.exceptions import GitBlobNotFoundError
 from speleodb.git_engine.gitlab_manager import GitlabError
 from speleodb.processors import ArianeTMLFileProcessor
@@ -119,10 +118,7 @@ def handle_exception(
     # Open the existing working copy directly; the lazy project.git_repo property
     # can create a GitLab project and restart its entire retry budget.
     try:
-        if project.git_repo_dir.is_dir():
-            git_repo = GitRepo(project.git_repo_dir)
-            with git_repo:
-                git_repo.reset_and_remove_untracked()
+        project.reset_failed_upload_checkout()
     except Exception as cleanup_error:
         logger.warning(
             "Failed to reset git working tree for project %s",
@@ -137,7 +133,7 @@ def handle_exception(
 
 def request_uploaded_geojson(
     project: Project, hexsha: str, uploaded_files: list[pathlib.Path]
-) -> str:
+) -> None:
     """Record optional work and arrange direct publication after SQL commit.
 
     The on_commit callback runs after ATOMIC_REQUESTS commits. A failed
@@ -145,7 +141,7 @@ def request_uploaded_geojson(
     Operators can retry the pushed commit from administration if recording fails.
     """
     if project.exclude_geojson:
-        return "skipped"
+        return
     eligible = any(
         (
             project.type == ProjectType.ARIANE
@@ -165,13 +161,12 @@ def request_uploaded_geojson(
         for file in uploaded_files
     )
     if not eligible:
-        return "not_requested"
+        return
 
     try:
         with transaction.atomic():
             commit = ProjectCommit.objects.get(pk=hexsha, project=project)
-            generation = request_geojson_generation(project, commit)
-        return str(generation.state)
+            schedule_uploaded_geojson(project, commit)
     except Exception as error:
         logger.exception(
             "Unable to schedule GeoJSON for saved project %s at %s", project.pk, hexsha
@@ -179,7 +174,7 @@ def request_uploaded_geojson(
         # Telemetry is optional too; a reporting transport must not reject source.
         with contextlib.suppress(Exception):
             sentry_sdk.capture_exception(error)
-        return "unavailable"
+        return
 
 
 class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
@@ -432,7 +427,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                     target_fileformat = fileformat_f
 
                                 # Associates the project with the format, ignore if
-                                # already done. We have to start with this in order to
+                                # already done. We have to start with this
+                                # in order to
                                 # have: `commit_date` > creation_date.
                                 Format.objects.get_or_create(
                                     project=project, _format=target_fileformat
@@ -446,7 +442,8 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                                 except FileExistsError:
                                     logger.info(
-                                        f"File collision detected for: `{file.name}` "
+                                        "File collision detected for: "
+                                        f"`{file.name}` "
                                         "- Skipping ..."
                                     )
                                     continue
@@ -479,10 +476,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             return HttpResponse(status=304)
 
                     # Git push has completed. Record durable work in this request's
-                    # SQL transaction; its on_commit callback enqueues this revision.
-                    geojson_status = request_uploaded_geojson(
-                        project, hexsha, uploaded_files
-                    )
+                    # SQL transaction; its on_commit callback
+                    # enqueues this revision.
+                    request_uploaded_geojson(project, hexsha, uploaded_files)
 
                     with timed_section("HTTP Success Response Construction"):
                         # Refresh the `modified_date` field
@@ -501,7 +497,6 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                                 ],
                                 "message": commit_message,
                                 "hexsha": hexsha,
-                                "geojson_status": geojson_status,
                                 "browser_url": (
                                     reverse(
                                         "private:project_revision_explorer",
@@ -605,93 +600,63 @@ class FileDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
             )
 
         project = self.get_object()
-
         try:
             processor = AutoSelector.get_download_processor(
                 fileformat=fileformat_f, project=project, hexsha=hexsha
             )
-
-        except FileNotFoundError as e:
-            return ErrorResponse(
-                {"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        except ValidationError as e:
-            return ErrorResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        except RuntimeError as e:
-            logger.exception("Download error for project %s", project.id)
-            sentry_sdk.capture_exception(e)
-            return ErrorResponse(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-        except GitlabError as e:
-            logger.exception("GitLab error during download for project %s", project.id)
-            sentry_sdk.capture_exception(e)
-            return ErrorResponse(
-                {"error": "There has been a problem accessing gitlab"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        with tempfile.TemporaryDirectory() as tempdir:
-            try:
+            with tempfile.TemporaryDirectory() as tempdir:
                 temp_filepath = (
                     pathlib.Path(tempdir)
                     / f"{''.join(random.choice(string.ascii_letters) for _ in range(10))}.obj"  # noqa: E501
                 )
-
                 try:
                     filename = processor.get_filename_for_download(
                         target_f=temp_filepath, hexsha=hexsha
-                    )
-                except FileNotFoundError as e:
-                    return ErrorResponse(
-                        {"error": str(e)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
                     )
                 except ValidationError:
                     return ErrorResponse(
                         {
                             "error": (
-                                f"The file: `{processor.TARGET_SAVE_FILENAME}` does "
-                                "not exists."
+                                f"The file: `{processor.TARGET_SAVE_FILENAME}` "
+                                "does not exists."
                             )
                         },
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-
                 if filename is not None and temp_filepath.is_file():
                     return DownloadResponseFromFile(
                         filepath=temp_filepath,
                         filename=str(filename),
                         attachment=True,
                     )
-
                 return ErrorResponse(
                     {"error": "File not found ..."}, status=status.HTTP_404_NOT_FOUND
                 )
-
-            except ProjectNotFound as e:
-                return ErrorResponse(
-                    {"error": str(e)}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            except RuntimeError as e:
-                logger.exception("Download error for project %s", project.id)
-                sentry_sdk.capture_exception(e)
-                return ErrorResponse(
-                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-
-            except GitlabError as e:
-                logger.exception(
-                    "GitLab error during download for project %s", project.id
-                )
-                sentry_sdk.capture_exception(e)
-                return ErrorResponse(
-                    {"error": "There has been a problem accessing gitlab"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+        except FileNotFoundError as error:
+            return ErrorResponse(
+                {"error": str(error)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        except ValidationError as error:
+            return ErrorResponse(
+                {"error": str(error)}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except ProjectNotFound as error:
+            return ErrorResponse(
+                {"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
+        except RuntimeError as error:
+            logger.exception("Download error for project %s", project.id)
+            sentry_sdk.capture_exception(error)
+            return ErrorResponse(
+                {"error": str(error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except GitlabError as error:
+            logger.exception("GitLab error during download for project %s", project.id)
+            sentry_sdk.capture_exception(error)
+            return ErrorResponse(
+                {"error": "There has been a problem accessing gitlab"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
@@ -720,7 +685,8 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
 
         # Using a retry-loop to prevent "pulling the repo" first.
         # If - by any chance - the blob is already known by GIT, we can reply fast
-        # Otherwise, we detect the blob to not be found and pull the repo and try again.
+        # Otherwise, we detect the blob to not be found and pull the repo
+        # and try again.
         for retry_attempt in range(2):
             with contextlib.suppress(GitBlobNotFoundError):
                 obj = project.git_repo.find_blob(hexsha)

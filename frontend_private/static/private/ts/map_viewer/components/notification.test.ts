@@ -3,11 +3,6 @@ import { Notification } from './notification.ts';
 describe('Notification', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
-        vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-        vi.useRealTimers();
     });
 
     function getContainer() {
@@ -101,39 +96,34 @@ describe('Notification', () => {
     // ------------------------------------------------------------------ //
 
     describe('auto-removal', () => {
-        it('removes notification element after duration + fade-out', () => {
-            Notification.show('success', 'bye', 2000);
+        it('removes notification element after duration + fade-out', async () => {
+            Notification.show('success', 'bye', 40);
 
             const container = getContainer();
             expect(container.children).toHaveLength(1);
 
-            vi.advanceTimersByTime(2000);
+            await vi.waitFor(() => expect(container.children[0]!.classList.contains('translate-y-2')).toBe(true));
             expect(container.children).toHaveLength(1);
-
-            vi.advanceTimersByTime(300);
-            expect(container.children).toHaveLength(0);
+            await vi.waitFor(() => expect(container.children).toHaveLength(0));
         });
 
-        it('uses default 3000ms duration', () => {
+        it('uses default 3000ms duration', async () => {
             Notification.show('success', 'default');
 
             const container = getContainer();
-            vi.advanceTimersByTime(2999);
+            const element = container.children[0]!;
+            expect(element.classList.contains('translate-y-2')).toBe(false);
+            await vi.waitFor(() => expect(element.classList.contains('translate-y-2')).toBe(true), { timeout: 4000 });
             expect(container.children).toHaveLength(1);
-
-            vi.advanceTimersByTime(1);
-            expect(container.children).toHaveLength(1);
-
-            vi.advanceTimersByTime(300);
-            expect(container.children).toHaveLength(0);
+            await vi.waitFor(() => expect(container.children).toHaveLength(0));
         });
 
-        it('adds fade-out classes before removal', () => {
-            Notification.show('success', 'fading', 1000);
+        it('adds fade-out classes before removal', async () => {
+            Notification.show('success', 'fading', 40);
 
             const el = getContainer().children[0]!;
 
-            vi.advanceTimersByTime(1000);
+            await vi.waitFor(() => expect(el.classList.contains('translate-y-2')).toBe(true));
             expect(el.classList.contains('opacity-0')).toBe(true);
             expect(el.classList.contains('translate-y-2')).toBe(true);
         });
@@ -152,14 +142,14 @@ describe('Notification', () => {
             expect(getContainer().children).toHaveLength(3);
         });
 
-        it('removes each independently based on their duration', () => {
-            Notification.show('success', 'short', 1000);
-            Notification.show('error', 'long', 5000);
+        it('removes each independently based on their duration', async () => {
+            Notification.show('success', 'short', 40);
+            Notification.show('error', 'long', 500);
 
-            vi.advanceTimersByTime(1300);
+            await vi.waitFor(() => expect(getContainer().children).toHaveLength(1));
             expect(getContainer().children).toHaveLength(1);
 
-            vi.advanceTimersByTime(4000);
+            await vi.waitFor(() => expect(getContainer().children).toHaveLength(0));
             expect(getContainer().children).toHaveLength(0);
         });
     });

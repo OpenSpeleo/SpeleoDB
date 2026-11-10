@@ -34,11 +34,9 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-pytestmark = pytest.mark.skip_if_lighttest
 
-
+@pytest.mark.skip_if_lighttest
 @pytest.mark.django_db
-@pytest.mark.usefixtures("gitlab_retry_delays")
 def test_new_repository_cache_recovery_and_user_cleanup(
     live_gitlab: Gitlab,
     user: User,
@@ -57,27 +55,22 @@ def test_new_repository_cache_recovery_and_user_cleanup(
         ):
             repository = GitlabManager.create_or_clone_project(project, tmp_path)
         assert repository is not None
-        try:
-            assert repository.head.is_valid()
-            assert repository.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
-            remote: RemoteProject = live_gitlab.projects.get(remote_path)
-            branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
-            assert branch.commit["id"] == repository.head.commit.hexsha
-            assert repository.head.commit.message.strip() == (
-                settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
-            )
-            assert len(remote.commits.list(get_all=True)) == 1
-            history = GitlabManager.get_commit_history(project)
-            assert history is not None
-            assert [commit["id"] for commit in history] == [
-                repository.head.commit.hexsha
-            ]
-            assert all("web_url" not in commit for commit in history)
-            assert GitlabManager.get_last_commit_hash(project) == (
-                repository.head.commit.hexsha
-            )
-        finally:
-            repository.close()
+        assert repository.head.is_valid()
+        assert repository.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
+        remote: RemoteProject = live_gitlab.projects.get(remote_path)
+        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+        assert branch.commit["id"] == repository.head.commit.hexsha
+        assert repository.head.commit.message.strip() == (
+            settings.DJANGO_GIT_FIRST_COMMIT_MESSAGE
+        )
+        assert len(remote.commits.list(get_all=True)) == 1
+        history = GitlabManager.get_commit_history(project)
+        assert history is not None
+        assert [commit["id"] for commit in history] == [repository.head.commit.hexsha]
+        assert all("web_url" not in commit for commit in history)
+        assert GitlabManager.get_last_commit_hash(project) == (
+            repository.head.commit.hexsha
+        )
 
         with override_settings(GITLAB_TOKEN=f"invalid-{uuid4()}"):
             GitlabCredentials.get.cache_clear()
@@ -114,6 +107,7 @@ def test_new_repository_cache_recovery_and_user_cleanup(
             delete_remote_if_present(live_gitlab, remaining.id)
 
 
+@pytest.mark.skip_if_lighttest
 def test_empty_repository_initialization_and_group_cleanup(
     live_gitlab: Gitlab, tmp_path: Path
 ) -> None:
@@ -126,15 +120,13 @@ def test_empty_repository_initialization_and_group_cleanup(
         assert remote.empty_repo
         repository = GitlabManager.create_or_clone_project(project, tmp_path)
         assert repository is not None
-        try:
-            branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
-            assert branch.commit["id"] == repository.head.commit.hexsha
-            assert len(remote.commits.list(get_all=True)) == 1
-        finally:
-            repository.close()
+        branch = remote.branches.get(settings.DJANGO_GIT_BRANCH_NAME)
+        assert branch.commit["id"] == repository.head.commit.hexsha
+        assert len(remote.commits.list(get_all=True)) == 1
         assert_group_cleanup_lifecycle(live_gitlab, group, remote)
 
 
+@pytest.mark.skip_if_lighttest
 def test_cleanup_preserves_original_failure_when_remote_was_never_created(
     live_gitlab: Gitlab,
 ) -> None:

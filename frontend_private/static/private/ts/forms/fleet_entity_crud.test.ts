@@ -4,15 +4,20 @@ import type { FormTestJQuery } from '../../../../../ts-types/testing/vitest/form
 
 const jquerySource = readFileSync(path.join(process.cwd(), 'frontend_public/static/ts/vendors/jquery-3.7.1.js'), 'utf8');
 const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
+let originalLocation: Location;
+const reload = vi.fn();
 beforeAll(() => { (0, eval)(jquerySource); });
 beforeEach(() => {
-    vi.useFakeTimers();
+    originalLocation = window.location;
+    reload.mockClear();
+    // JSDOM cannot navigate; only that browser boundary is substituted.
+    Object.defineProperty(window, 'location', { configurable: true, value: { reload } });
     document.body.innerHTML = '<div id="modal_error"><span id="modal_error_txt"></span></div><div id="modal_success"><span id="modal_success_txt"></span></div>';
 });
 afterEach(() => {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
     jqueryHost.jQuery(document).off();
     document.body.innerHTML = '';
-    vi.useRealTimers();
 });
 
 import { attachFleetEntityCrud } from './fleet_entity_crud.ts';
@@ -36,7 +41,7 @@ it('retains required-option errors and lets the collector cancel or throw before
     expect($('#modal_error_txt').text()).toBe('Invalid fleet item');
 });
 
-it('keeps editing identity attachment-local and passes the original button into population', () => {
+it('keeps editing identity attachment-local and passes the original button into population', async () => {
     controls();
     const $ = jqueryHost.jQuery;
     const update = vi.fn(async (_id: string | number, _payload: { name: string }) => ({}));
@@ -44,7 +49,7 @@ it('keeps editing identity attachment-local and passes the original button into 
     const populate = vi.fn();
     const reset = vi.fn();
     const collect = vi.fn(() => ({ name: 'Item' }));
-    attachFleetEntityCrud({ modalSelector: '#entity_modal', saveButtonSelector: '#save', update, collectPayload: collect,
+    attachFleetEntityCrud({ reloadDelayMs: 0, modalSelector: '#entity_modal', saveButtonSelector: '#save', update, collectPayload: collect,
         editButtonSelector: '.edit', populateForEdit: populate, addButtonSelector: '#add', resetForCreate: reset, create });
     $('.edit').trigger('click');
     $('#save').trigger('click');
@@ -56,4 +61,5 @@ it('keeps editing identity attachment-local and passes the original button into 
     expect(reset).toHaveBeenCalledOnce();
     expect(collect).toHaveBeenLastCalledWith(false);
     expect(create).toHaveBeenCalledWith({ name: 'Item' });
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
 });

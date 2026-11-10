@@ -5,13 +5,13 @@ afterEach(() => {
 });
 
 it('resolves undefined without registering a listener when load already completed', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
     const listen = vi.spyOn(window, 'addEventListener');
     await expect(afterWindowLoad()).resolves.toBeUndefined();
     expect(listen).not.toHaveBeenCalled();
 });
 
 it.each(['loading', 'interactive'] as const)('resolves the original future load event from %s state', async state => {
+    // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue(state);
     const listen = vi.spyOn(window, 'addEventListener');
     const pending = afterWindowLoad();

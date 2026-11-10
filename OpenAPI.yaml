@@ -24708,97 +24708,6 @@ paths:
                 required:
                 - detail
                 additionalProperties: false
-  /api/v2/projects/{id}/geojson-status/:
-    get:
-      operationId: v2_project_geojson_status
-      parameters:
-      - in: query
-        name: format
-        schema:
-          type: string
-          enum:
-          - json
-        description: DRF machine-response renderer selection.
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - v2
-      security:
-      - cookieAuth: []
-      - tokenAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectGeoJSONStatus'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                anyOf:
-                - type: object
-                  minProperties: 1
-                  additionalProperties:
-                    oneOf:
-                    - type: string
-                    - type: array
-                      items:
-                        type: string
-                - type: object
-                  required:
-                  - error
-                  properties:
-                    error:
-                      type: string
-                - type: object
-                  required:
-                  - detail
-                  properties:
-                    detail:
-                      type: string
-                - type: object
-                  required:
-                  - errors
-                  properties:
-                    errors:
-                      oneOf:
-                      - type: object
-                        additionalProperties: true
-                      - type: array
-                        items:
-                          type: string
-          description: API request failed.
-        '404':
-          description: API request failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                required:
-                - detail
-                additionalProperties: false
-        '406':
-          description: API request failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                required:
-                - detail
-                additionalProperties: false
   /api/v2/projects/{id}/git_explorer/{hexsha}/:
     get:
       operationId: v2_projects_git_explorer_retrieve
@@ -56444,67 +56353,6 @@ components:
       - commit_message
       - commit_sha
       additionalProperties: false
-    ProjectGeoJSONStatus:
-      type: object
-      properties:
-        state:
-          enum:
-          - pending
-          - queued
-          - running
-          - ready
-          - skipped
-          - failed
-          - not_requested
-          type: string
-          description: |-
-            * `pending` - pending
-            * `queued` - queued
-            * `running` - running
-            * `ready` - ready
-            * `skipped` - skipped
-            * `failed` - failed
-            * `not_requested` - not_requested
-          x-spec-enum-id: 65d9fe0b9760d3d2
-          readOnly: true
-        source_commit_sha:
-          type: string
-          readOnly: true
-          nullable: true
-        generation_commit_sha:
-          type: string
-          readOnly: true
-          nullable: true
-        geojson_commit_sha:
-          type: string
-          readOnly: true
-          nullable: true
-        geojson_revision:
-          type: string
-          readOnly: true
-          nullable: true
-        error_code:
-          type: string
-          readOnly: true
-          nullable: true
-        error:
-          type: string
-          readOnly: true
-          nullable: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
-      required:
-      - error
-      - error_code
-      - generation_commit_sha
-      - geojson_commit_sha
-      - geojson_revision
-      - source_commit_sha
-      - state
-      - updated_at
     ProjectGitExplorerResponse:
       type: object
       properties:
@@ -56991,8 +56839,6 @@ components:
           type: string
         hexsha:
           type: string
-        geojson_status:
-          type: string
         browser_url:
           type: string
           nullable: true
@@ -57001,7 +56847,6 @@ components:
       required:
       - browser_url
       - files
-      - geojson_status
       - hexsha
       - message
       - project

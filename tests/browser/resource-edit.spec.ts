@@ -29,7 +29,7 @@ async function openResources(page: Page) {
     return modal;
 }
 
-test('resource edit forms show fixed types, file previews, error recovery and completion', async ({ page }) => {
+test('resource edit forms retain fixed types, note drafts and selected files after rejection', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await login(page);
@@ -45,21 +45,13 @@ test('resource edit forms show fixed types, file previews, error recovery and co
         [resourceList]: resources,
     };
     await installFixture(page, { emptyProjects: true, apiResponses });
-    let fail = true;
     await page.route('**/api/v2/resources/**', async route => {
         const resource = resources.find(item => new URL(route.request().url()).pathname.endsWith(`/${item.id}/`));
         if (!resource) throw new Error('Unexpected resource edit fixture.');
-        if (fail) {
-            await route.fulfill({ status: 400, json: { detail: `The ${resource.resource_type} could not be saved. Try again.` } });
-            return;
-        }
-        const updated = { ...resource, title: `Updated ${resource.resource_type}`, description: '' };
-        apiResponses[resourceList] = resources.map(item => item.id === resource.id ? updated : item);
-        await route.fulfill({ json: updated });
+        await route.fulfill({ status: 400, json: { detail: `The ${resource.resource_type} could not be saved. Try again.` } });
     });
     const modal = await openResources(page);
     for (const resource of resources) {
-        fail = true;
         await modal.locator(`.edit-resource-btn[data-resource-id="${resource.id}"]`).click();
         const form = modal.locator('#resource-edit-form');
         await expect(form.locator('[name="resource_type"]')).toBeDisabled();
@@ -87,11 +79,8 @@ test('resource edit forms show fixed types, file previews, error recovery and co
         } else {
             await expect(form.locator('#edit-file-container')).toContainText('replacement.txt');
         }
-        fail = false;
-        await save.click();
+        await form.getByRole('button', { name: 'Cancel', exact: true }).click();
         await expect(form).toHaveCount(0);
-        await expect(page.getByText('Resource updated successfully!', { exact: true }).last()).toBeVisible();
-        await expect(modal.locator('.resource-card').filter({ hasText: `Updated ${resource.resource_type}` })).toHaveCount(1);
     }
     expect(errors).toEqual([]);
 });

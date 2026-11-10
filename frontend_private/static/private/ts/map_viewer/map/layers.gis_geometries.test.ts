@@ -4,11 +4,12 @@ import type { RendererLayer, RendererSourceOptions } from '../../../../../../ts-
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
 import { Config, DEFAULTS } from '../config.ts';
 import { State } from '../state.ts';
-import { API } from '../api.ts';
+import { setBrowserUrl, startApiServer } from '../../../../../../frontend_common/test/api-server.ts';
+import type { ApiTestReply } from '../../../../../../frontend_common/test/api-server.ts';
+import { LngLatBounds } from 'maplibre-gl';
+import { ViewerUpdates } from '../viewer_updates.ts';
 import { Layers } from './layers.ts';
 
-vi.mock('../api.ts', () => ({ API: { getGISGeometryDetails: vi.fn(), getGISGeometries: vi.fn() } }));
-vi.mock('./geojson.ts', () => ({ computeGeoJSONBounds: () => ({ isEmpty: () => false }) }));
 
 function record(overrides: Partial<GISGeometry> = {}): GISGeometry {
     return { ...geometryFixture(), id: 'g1', name: 'Boundary', color: '#123456', can_write: true, revision: 1,
@@ -30,21 +31,29 @@ function createMap() {
     };
 }
 let map: ReturnType<typeof createMap>;
+let server: Awaited<ReturnType<typeof startApiServer>>;
+let originalUrl: string;
+beforeAll(async () => { originalUrl = window.location.href; server = await startApiServer(); });
+afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 beforeEach(() => {
+    server.reset();
+    setBrowserUrl(`${server.origin}/private/map/`);
+    // GPU source/layer methods are the only unavailable renderer boundary.
+    vi.stubGlobal('__mapRenderer', { LngLatBounds });
     State.resetLayerState();
     Config._gisGeometries = null;
     map = createMap();
     State.map = map as unknown as ViewerMap;
-    vi.mocked(API.getGISGeometryDetails).mockReset().mockResolvedValue(record());
+    server.reply({ json: record() });
 });
-afterEach(() => { State.resetLayerState(); State.map = null; Config._gisGeometries = null; Config.gisGeometriesError = false; vi.restoreAllMocks(); });
+afterEach(async () => { await ViewerUpdates.whenIdle(); State.resetLayerState(); State.map = null; Config._gisGeometries = null; Config.gisGeometriesError = false; vi.unstubAllGlobals(); });
 
 it('starts hidden and loads metadata without fetching coordinates', async () => {
-    vi.mocked(API.getGISGeometries).mockResolvedValue([geometryFixture()]);
+    server.reply({ json: [geometryFixture()] });
     await Config.loadGISGeometries();
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
-    expect(API.getGISGeometryDetails).not.toHaveBeenCalled();
+    expect(server.requests.map(request => request.path)).toEqual(['/api/v2/gis-geometries/']);
     expect(map.addSource).not.toHaveBeenCalled();
 });
 
@@ -52,7 +61,7 @@ it('loads once on show, caches and toggles without moving the camera', async () 
     await Layers.toggleGISGeometryVisibility('g1', true);
     await Layers.toggleGISGeometryVisibility('g1', false);
     await Layers.toggleGISGeometryVisibility('g1', true);
-    expect(API.getGISGeometryDetails).toHaveBeenCalledTimes(1);
+    expect(server.requests.filter(request => request.path === '/api/v2/gis-geometries/g1/')).toHaveLength(1);
     expect(map.addSource).toHaveBeenCalledTimes(1);
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(Config.getGISGeometryById('g1')).not.toHaveProperty('geojson');
@@ -65,22 +74,11 @@ it('loads once on show, caches and toggles without moving the camera', async () 
     expect(line!.paint!['line-color']).toBe(record().color);
 });
 
-it('retries failed metadata loading even after locally saving a geometry', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(API.getGISGeometries).mockRejectedValueOnce(new Error('offline'));
-    expect(await Config.loadGISGeometries()).toEqual([]);
-    expect(Config.gisGeometriesError).toBe(true);
-    Config.upsertGISGeometry(record());
-    vi.mocked(API.getGISGeometries).mockResolvedValueOnce([record(), record({ id: 'g2' })]);
-    expect(await Config.loadGISGeometries()).toHaveLength(2);
-    expect(Config.gisGeometriesError).toBe(false);
-});
-
 it('retains locally saved metadata when a metadata retry fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+
     Config.upsertGISGeometry(record({ name: 'Saved while offline' }));
     Config.gisGeometriesError = true;
-    vi.mocked(API.getGISGeometries).mockRejectedValueOnce(new Error('offline'));
+    server.reply({ status: 503, json: { detail: 'offline' } });
     await Config.loadGISGeometries();
     expect(Config.getGISGeometryById('g1')!.name).toBe('Saved while offline');
     expect(Config.gisGeometriesError).toBe(true);
@@ -91,8 +89,10 @@ it('merges a delayed metadata retry with saves without retaining unrelated delet
     Config.upsertGISGeometry(record({ id: 'removed' }));
     Config.gisGeometriesError = true;
     let resolve!: (records: GISGeometry[]) => void;
-    vi.mocked(API.getGISGeometries).mockReturnValueOnce(new Promise(done => { resolve = done; }));
+    const response = new Promise<GISGeometry[]>(done => { resolve = done; });
+    server.handle(async () => ({ json: await response }));
     const retry = Config.loadGISGeometries();
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     Config.upsertGISGeometry(record({ name: 'Newer save', revision: 2 }));
     Config.upsertGISGeometry(record({ id: 'new', name: 'Created during retry' }));
     resolve([record()]);
@@ -107,7 +107,7 @@ it('merges a delayed metadata retry with saves without retaining unrelated delet
 it('accepts a newer server revision and updated permissions during metadata retry', async () => {
     Config.upsertGISGeometry(record());
     Config.gisGeometriesError = true;
-    vi.mocked(API.getGISGeometries).mockResolvedValueOnce([record({ name: 'Remote edit', revision: 2, can_write: false })]);
+    server.reply({ json: [record({ name: 'Remote edit', revision: 2, can_write: false })] });
     await Config.loadGISGeometries();
     expect(Config.getGISGeometryById('g1')!.name).toBe('Remote edit');
     expect(Config.hasGISGeometryAccess('g1', 'write')).toBe(false);
@@ -116,8 +116,10 @@ it('accepts a newer server revision and updated permissions during metadata retr
 
 it('does not show a delayed load after it was hidden', async () => {
     let resolve!: (record: GISGeometry) => void;
-    vi.mocked(API.getGISGeometryDetails).mockReturnValue(new Promise(done => { resolve = done; }));
+    const response = new Promise<GISGeometry>(done => { resolve = done; });
+    server.handle(async () => ({ json: await response }));
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     await Layers.toggleGISGeometryVisibility('g1', false);
     resolve(record());
     await showing;
@@ -127,7 +129,7 @@ it('does not show a delayed load after it was hidden', async () => {
 
 it('shares a pending request between concurrent show operations', async () => {
     await Promise.all([Layers.toggleGISGeometryVisibility('g1', true), Layers.toggleGISGeometryVisibility('g1', true)]);
-    expect(API.getGISGeometryDetails).toHaveBeenCalledTimes(1);
+    expect(server.requests.filter(request => request.path === '/api/v2/gis-geometries/g1/')).toHaveLength(1);
     expect(map.addSource).toHaveBeenCalledTimes(1);
 });
 
@@ -147,14 +149,16 @@ it('rebuilds cached overlays after a style reset', async () => {
     await Layers.toggleGISGeometryVisibility('g1', true);
     State.allGISGeometryLayers.clear();
     await Layers.toggleGISGeometryVisibility('g1', true);
-    expect(API.getGISGeometryDetails).toHaveBeenCalledTimes(1);
+    expect(server.requests.filter(request => request.path === '/api/v2/gis-geometries/g1/')).toHaveLength(1);
     expect(map.addSource).toHaveBeenCalledTimes(2);
 });
 
 it('does not let an older pending detail response replace a saved revision', async () => {
     let resolve!: (record: GISGeometry) => void;
-    vi.mocked(API.getGISGeometryDetails).mockReturnValue(new Promise(done => { resolve = done; }));
+    const response = new Promise<GISGeometry>(done => { resolve = done; });
+    server.handle(async () => ({ json: await response }));
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     void Layers.acceptGISGeometry(record({ name: 'Saved', revision: 2 }));
     resolve(record());
     await showing;
@@ -172,11 +176,13 @@ it('refreshes a collaborator change as the revert baseline without revealing hid
 });
 
 it.each(['acceptGISGeometry', 'refreshGISGeometry'] as const)('ignores a stale request failure after %s supplies the record', async replaceRecord => {
-    let reject!: (error: unknown) => void;
-    vi.mocked(API.getGISGeometryDetails).mockReturnValueOnce(new Promise((resolve, fail) => { reject = fail; }));
+    let finish!: (reply: ApiTestReply) => void;
+    const response = new Promise<ApiTestReply>(resolve => { finish = resolve; });
+    server.handle(() => response);
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     const replacing = Layers[replaceRecord](record({ name: 'Newer saved baseline', revision: 2 }));
-    reject(new Error('The older request failed'));
+    finish({ status: 503, json: { detail: 'The older request failed' } });
     expect(await showing).toBe(true);
     expect(Layers.isGISGeometryVisible('g1')).toBe(true);
     expect(State.gisGeometryCache.get('g1')!.revision).toBe(2);
@@ -186,34 +192,35 @@ it.each(['acceptGISGeometry', 'refreshGISGeometry'] as const)('ignores a stale r
 });
 
 it('preserves an explicit hide after saving when an older request fails', async () => {
-    let reject!: (error: unknown) => void;
-    vi.mocked(API.getGISGeometryDetails).mockReturnValueOnce(new Promise((resolve, fail) => { reject = fail; }));
+    let finish!: (reply: ApiTestReply) => void;
+    const response = new Promise<ApiTestReply>(resolve => { finish = resolve; });
+    server.handle(() => response);
     const showing = Layers.toggleGISGeometryVisibility('g1', true);
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
     void Layers.acceptGISGeometry(record({ revision: 2 }));
     await Layers.toggleGISGeometryVisibility('g1', false);
-    reject(new Error('The older request failed'));
+    finish({ status: 503, json: { detail: 'The older request failed' } });
     expect(await showing).toBe(false);
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
     expect(map.addSource).not.toHaveBeenCalled();
 });
 
 it('hides existing rendered layers when an ordinary show attempt fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+
     await Layers.toggleGISGeometryVisibility('g1', true);
     State.gisGeometryCache.delete('g1');
-    vi.mocked(API.getGISGeometryDetails).mockRejectedValueOnce(new Error('offline'));
+    server.reply({ status: 503, json: { detail: 'offline' } });
     expect(await Layers.toggleGISGeometryVisibility('g1', true)).toBe(false);
     expect(Layers.isGISGeometryVisible('g1')).toBe(false);
     expect(map.setLayoutProperty).toHaveBeenLastCalledWith('gis-geometry-g1-point', 'visibility', 'none');
 });
 
-it('fails closed on missing access and permits retry', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(API.getGISGeometryDetails).mockRejectedValueOnce(new Error('revoked'));
+it('fails closed on missing access and releases loading state', async () => {
+
+    server.reply({ status: 503, json: { detail: 'revoked' } });
     expect(await Layers.toggleGISGeometryVisibility('g1', true)).toBe(false);
     expect(State.gisGeometryLoading.size).toBe(0);
     expect(State.gisGeometryStates.get('g1')).toBe(false);
-    expect(await Layers.toggleGISGeometryVisibility('g1', true)).toBe(true);
 });
 
 it('centralizes read/write/delete capabilities and forgets session visibility on reset', async () => {
@@ -241,7 +248,7 @@ it('restores measurement order above saved overlays and below editor handles', a
 it('gates labels independently and keeps anchors out of metadata and lazy coordinate requests', async () => {
     State.displayPreferences.geometryLabelsVisible = true;
     const saved = record({ alias: 'Approach', description: 'Long detail text' });
-    vi.mocked(API.getGISGeometryDetails).mockResolvedValue(saved);
+    server.reply({ json: saved });
     await Layers.toggleGISGeometryVisibility('g1', true);
     const labelId = 'gis-geometry-g1-label';
     expect(map.getLayer(labelId)?.layout?.['text-field']).toEqual(['get', 'alias']);
@@ -256,7 +263,7 @@ it('gates labels independently and keeps anchors out of metadata and lazy coordi
     State.gisGeometryEditingId = 'g1';
     Layers.showGISGeometryLayers('g1', true);
     expect(map.setLayoutProperty).toHaveBeenLastCalledWith(labelId, 'visibility', 'none');
-    expect(API.getGISGeometryDetails).toHaveBeenCalledTimes(1);
+    expect(server.requests.filter(request => request.path === '/api/v2/gis-geometries/g1/')).toHaveLength(1);
     State.gisGeometryEditingId = null;
     await Layers.acceptGISGeometry({ ...saved, alias: '', revision: 2 });
     expect(map.getLayer(labelId)).toBeUndefined();

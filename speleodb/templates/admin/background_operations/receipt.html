@@ -1,0 +1,65 @@
+{% extends "admin/background_operations/base.html" %}
+
+{% block content %}
+  <p>Refresh to inspect current execution status. Run again creates a new execution; inspect uncertain submissions before resubmitting work.</p>
+  <a class="button" href="{{ request.get_full_path }}">Refresh status</a>
+  <div class="operations-grid">
+    {% for row in rows %}
+      <section class="operation-panel"
+               aria-labelledby="task-{{ row.result.task_id }}">
+        <h2 id="task-{{ row.result.task_id }}">{{ row.metadata.project_name|default:"Operation execution" }}</h2>
+        {% if row.parameters %}
+          <p>Project UUID: <code>{{ row.parameters.project_id }}</code></p>
+          <p>Operation: {{ row.parameters.operation }}. Force recompute: {{ row.parameters.force|yesno:"on,off" }}.</p>
+        {% else %}
+          <p class="operation-warning">Operation parameters are unavailable. Inspect the task result and worker logs, then schedule a new operation from <a href="{% url 'admin:operations' %}">Operations</a>.</p>
+        {% endif %}
+        <p>Task ID: <code>{{ row.result.task_id }}</code></p>
+        <p>
+          Submission:
+          {% if row.metadata.publication == "confirmed" %}
+            Confirmed submission.
+          {% elif row.metadata.publication == "ambiguous" %}
+            Delivery ambiguous. Broker acceptance could not be confirmed; inspect task results and worker logs before running again.
+          {% elif row.metadata.publication == "unattempted" %}
+            Publication unattempted. This execution has not been submitted.
+          {% else %}
+            Submission details are unavailable.
+          {% endif %}
+        </p>
+        <p><strong>Status: {{ row.display_status }}</strong></p>
+        {% if row.completion_unconfirmed %}
+          <p class="operation-warning">Completion unconfirmed. The execution deadline has passed without a terminal result. Inspect worker logs and recover manually.</p>
+        {% else %}
+          {% if row.metadata.stage %}<p>Stage: {{ row.metadata.stage }}.</p>{% endif %}
+        {% endif %}
+        {% if row.result.status == TaskResultStatus.FAILURE %}
+          {% if row.parameters %}
+            <p class="operation-warning">This operation failed. Some revisions may have completed. Inspect task results and worker logs for the original traceback before running again.</p>
+          {% else %}
+            <p class="operation-warning">This task failed. Execution details are unavailable; inspect the task result and worker logs before scheduling a new operation.</p>
+          {% endif %}
+        {% endif %}
+        {% if row.details.commits != None %}
+          <p>Reconstructed commits: {{ row.details.commits }}; deleted GeoJSON objects: {{ row.details.deleted_objects }}.</p>
+        {% endif %}
+        {% if row.details.geojson_skipped %}<p>GeoJSON regeneration was skipped for this project.</p>{% endif %}
+        {% if row.details.generated != None %}
+          <p>Processed: {{ row.details.processed }}; generated: {{ row.details.generated }}; existing: {{ row.details.existing }}; skipped: {{ row.details.skipped }}; failed: {{ row.details.failed }}.</p>
+        {% endif %}
+        <p>
+          <a href="{% url 'admin:django_celery_results_taskresult_change' row.result.pk %}">View task result</a>
+        </p>
+        {% if row.parameters %}
+          <form method="post"
+                action="{% url 'admin:operations_rerun' row.result.task_id %}">
+            {% csrf_token %}
+            <button type="submit" class="button">Run again</button>
+          </form>
+        {% endif %}
+      </section>
+    {% empty %}
+      <p>No eligible projects were found. No tasks were submitted.</p>
+    {% endfor %}
+  </div>
+{% endblock content %}

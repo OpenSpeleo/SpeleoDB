@@ -697,87 +697,88 @@ class SensorFleetExportExcelApiView(GenericAPIView[SensorFleet], SDBAPIViewMixin
 
         # Create Excel file in memory
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Sensors")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Sensors")
 
-        # Define formats
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
-
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
-
-        # Define headers
-        headers = [
-            "Sensor Name",
-            "Status",
-            "Notes",
-            "Current Project",
-            "Current Lat",
-            "Current Long",
-            "Memory Expiry",
-            "Battery Expiry",
-            "Modified Date",
-        ]
-
-        # Write headers
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            # Auto-adjust column width based on header length
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
-
-        # Write data rows
-        for row_num, sensor in enumerate(sensors, start=1):
-            # Get latest install info
-            latest_install = sensor.installs.filter(
-                status=InstallStatus.INSTALLED
-            ).first()
-
-            project_name = (
-                station.project.name
-                if (
-                    latest_install is not None
-                    and isinstance(station := latest_install.station, SubSurfaceStation)
-                )
-                else ""
+            # Define formats
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
             )
 
-            lat = float(latest_install.station.latitude) if latest_install else ""
-            long = float(latest_install.station.longitude) if latest_install else ""
-            mem_expiry = (
-                latest_install.expiracy_memory_date.strftime("%Y-%m-%d")
-                if latest_install and latest_install.expiracy_memory_date
-                else ""
-            )
-            bat_expiry = (
-                latest_install.expiracy_battery_date.strftime("%Y-%m-%d")
-                if latest_install and latest_install.expiracy_battery_date
-                else ""
-            )
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-            row_data = [
-                sensor.name,
-                sensor.status.title(),
-                sensor.notes,
-                project_name,
-                lat,
-                long,
-                mem_expiry,
-                bat_expiry,
-                sensor.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+            # Define headers
+            headers = [
+                "Sensor Name",
+                "Status",
+                "Notes",
+                "Current Project",
+                "Current Lat",
+                "Current Long",
+                "Memory Expiry",
+                "Battery Expiry",
+                "Modified Date",
             ]
 
-            for col_num, cell_value in enumerate(row_data):
-                worksheet.write(row_num, col_num, cell_value, cell_format)
+            # Write headers
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                # Auto-adjust column width based on header length
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
 
-        workbook.close()
+            # Write data rows
+            for row_num, sensor in enumerate(sensors, start=1):
+                # Get latest install info
+                latest_install = sensor.installs.filter(
+                    status=InstallStatus.INSTALLED
+                ).first()
+
+                project_name = (
+                    station.project.name
+                    if (
+                        latest_install is not None
+                        and isinstance(
+                            station := latest_install.station, SubSurfaceStation
+                        )
+                    )
+                    else ""
+                )
+
+                lat = float(latest_install.station.latitude) if latest_install else ""
+                long = float(latest_install.station.longitude) if latest_install else ""
+                mem_expiry = (
+                    latest_install.expiracy_memory_date.strftime("%Y-%m-%d")
+                    if latest_install and latest_install.expiracy_memory_date
+                    else ""
+                )
+                bat_expiry = (
+                    latest_install.expiracy_battery_date.strftime("%Y-%m-%d")
+                    if latest_install and latest_install.expiracy_battery_date
+                    else ""
+                )
+
+                row_data = [
+                    sensor.name,
+                    sensor.status.title(),
+                    sensor.notes,
+                    project_name,
+                    lat,
+                    long,
+                    mem_expiry,
+                    bat_expiry,
+                    sensor.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+
+                for col_num, cell_value in enumerate(row_data):
+                    worksheet.write(row_num, col_num, cell_value, cell_format)
+
         output.seek(0)
 
         filename = f"sensor_fleet_{fleet.name}_{timezone.localdate().isoformat()}.xlsx"
@@ -1016,85 +1017,86 @@ class SensorFleetWatchlistExportExcelApiView(
 
         # Create Excel file in memory
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Watchlist")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Watchlist")
 
-        # Define formats
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
-
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
-
-        # Define headers
-        headers = [
-            "Sensor Name",
-            "Status",
-            "Notes",
-            "Current Project",
-            "Current Lat",
-            "Current Long",
-            "Memory Expiry",
-            "Battery Expiry",
-            "Modified Date",
-        ]
-
-        # Write headers
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
-
-        # Write data rows
-        for row_num, sensor in enumerate(sensors, start=1):
-            latest_install = sensor.installs.filter(
-                status=InstallStatus.INSTALLED
-            ).first()
-
-            project_name = (
-                station.project.name
-                if (
-                    latest_install is not None
-                    and isinstance(station := latest_install.station, SubSurfaceStation)
-                )
-                else ""
+            # Define formats
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
             )
 
-            lat = float(latest_install.station.latitude) if latest_install else ""
-            long = float(latest_install.station.longitude) if latest_install else ""
-            mem_expiry = (
-                latest_install.expiracy_memory_date.strftime("%Y-%m-%d")
-                if latest_install and latest_install.expiracy_memory_date
-                else ""
-            )
-            bat_expiry = (
-                latest_install.expiracy_battery_date.strftime("%Y-%m-%d")
-                if latest_install and latest_install.expiracy_battery_date
-                else ""
-            )
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-            row_data = [
-                sensor.name,
-                sensor.status.title(),
-                sensor.notes,
-                project_name,
-                lat,
-                long,
-                mem_expiry,
-                bat_expiry,
-                sensor.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+            # Define headers
+            headers = [
+                "Sensor Name",
+                "Status",
+                "Notes",
+                "Current Project",
+                "Current Lat",
+                "Current Long",
+                "Memory Expiry",
+                "Battery Expiry",
+                "Modified Date",
             ]
 
-            for col_num, cell_value in enumerate(row_data):
-                worksheet.write(row_num, col_num, cell_value, cell_format)
+            # Write headers
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
 
-        workbook.close()
+            # Write data rows
+            for row_num, sensor in enumerate(sensors, start=1):
+                latest_install = sensor.installs.filter(
+                    status=InstallStatus.INSTALLED
+                ).first()
+
+                project_name = (
+                    station.project.name
+                    if (
+                        latest_install is not None
+                        and isinstance(
+                            station := latest_install.station, SubSurfaceStation
+                        )
+                    )
+                    else ""
+                )
+
+                lat = float(latest_install.station.latitude) if latest_install else ""
+                long = float(latest_install.station.longitude) if latest_install else ""
+                mem_expiry = (
+                    latest_install.expiracy_memory_date.strftime("%Y-%m-%d")
+                    if latest_install and latest_install.expiracy_memory_date
+                    else ""
+                )
+                bat_expiry = (
+                    latest_install.expiracy_battery_date.strftime("%Y-%m-%d")
+                    if latest_install and latest_install.expiracy_battery_date
+                    else ""
+                )
+
+                row_data = [
+                    sensor.name,
+                    sensor.status.title(),
+                    sensor.notes,
+                    project_name,
+                    lat,
+                    long,
+                    mem_expiry,
+                    bat_expiry,
+                    sensor.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+
+                for col_num, cell_value in enumerate(row_data):
+                    worksheet.write(row_num, col_num, cell_value, cell_format)
+
         output.seek(0)
 
         filename = (
@@ -1312,186 +1314,192 @@ class StationSensorInstallExportExcelApiView(GenericAPIView[Station], SDBAPIView
 
         # Create Excel file in memory
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Sensor Install History")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Sensor Install History")
 
-        # Define formats
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
+            # Define formats
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
+            )
+
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
+
+            # Status-specific formats with colors
+            status_formats: dict[InstallStatus, xlsxwriter.format.Format] = {
+                InstallStatus.INSTALLED: workbook.add_format(
+                    {
+                        "border": 1,
+                        "valign": "top",
+                        "bg_color": "#10B981",
+                        "font_color": "white",
+                    }
+                ),
+                InstallStatus.RETRIEVED: workbook.add_format(
+                    {
+                        "border": 1,
+                        "valign": "top",
+                        "bg_color": "#3B82F6",
+                        "font_color": "white",
+                    }
+                ),
+                InstallStatus.LOST: workbook.add_format(
+                    {
+                        "border": 1,
+                        "valign": "top",
+                        "bg_color": "#F59E0B",
+                        "font_color": "white",
+                    }
+                ),
+                InstallStatus.ABANDONED: workbook.add_format(
+                    {
+                        "border": 1,
+                        "valign": "top",
+                        "bg_color": "#EF4444",
+                        "font_color": "white",
+                    }
+                ),
             }
-        )
 
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
+            # Define headers
+            headers = [
+                "Sensor Name",
+                "Sensor Fleet Name",
+                "State",
+                "Install Date",
+                "Install User",
+                "Retrieval Date",
+                "Retrieval User",
+                "Memory Expiry Date",
+                "Battery Expiry Date",
+                "Created Date",
+                "Modified Date",
+            ]
 
-        # Status-specific formats with colors
-        status_formats: dict[InstallStatus, xlsxwriter.format.Format] = {
-            InstallStatus.INSTALLED: workbook.add_format(
-                {
-                    "border": 1,
-                    "valign": "top",
-                    "bg_color": "#10B981",
-                    "font_color": "white",
-                }
-            ),
-            InstallStatus.RETRIEVED: workbook.add_format(
-                {
-                    "border": 1,
-                    "valign": "top",
-                    "bg_color": "#3B82F6",
-                    "font_color": "white",
-                }
-            ),
-            InstallStatus.LOST: workbook.add_format(
-                {
-                    "border": 1,
-                    "valign": "top",
-                    "bg_color": "#F59E0B",
-                    "font_color": "white",
-                }
-            ),
-            InstallStatus.ABANDONED: workbook.add_format(
-                {
-                    "border": 1,
-                    "valign": "top",
-                    "bg_color": "#EF4444",
-                    "font_color": "white",
-                }
-            ),
-        }
+            # Write headers
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                # Auto-adjust column width based on header length
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
 
-        # Define headers
-        headers = [
-            "Sensor Name",
-            "Sensor Fleet Name",
-            "State",
-            "Install Date",
-            "Install User",
-            "Retrieval Date",
-            "Retrieval User",
-            "Memory Expiry Date",
-            "Battery Expiry Date",
-            "Created Date",
-            "Modified Date",
-        ]
+            # Write data rows
+            row_num = 1
+            for install in installs:
+                col_num = 0
 
-        # Write headers
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            # Auto-adjust column width based on header length
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
-
-        # Write data rows
-        row_num = 1
-        for install in installs:
-            col_num = 0
-
-            # Sensor Name
-            worksheet.write(
-                row_num, col_num, install.sensor.name or "Unknown", cell_format
-            )
-            col_num += 1
-
-            # Sensor Fleet Name
-            worksheet.write(
-                row_num,
-                col_num,
-                install.sensor.fleet.name if install.sensor.fleet else "Unknown",
-                cell_format,
-            )
-            col_num += 1
-
-            # Status (with colored formatting)
-            install_status: InstallStatus = install.status  # type: ignore[assignment]
-            status_format = status_formats.get(install_status, cell_format)
-            worksheet.write(
-                row_num, col_num, install.get_status_display(), status_format
-            )  # pyright: ignore[reportAttributeAccessIssue]
-            col_num += 1
-
-            # Install Date
-            if install.install_date:
+                # Sensor Name
                 worksheet.write(
-                    row_num, col_num, install.install_date.isoformat(), cell_format
+                    row_num, col_num, install.sensor.name or "Unknown", cell_format
                 )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+                col_num += 1
 
-            # Install User
-            worksheet.write(row_num, col_num, install.install_user or "", cell_format)
-            col_num += 1
-
-            # Retrieval Date
-            if install.uninstall_date:
-                worksheet.write(
-                    row_num, col_num, install.uninstall_date.isoformat(), cell_format
-                )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
-
-            # Retrieval User
-            worksheet.write(row_num, col_num, install.uninstall_user or "", cell_format)
-            col_num += 1
-
-            # Memory Expiry Date
-            if install.expiracy_memory_date:
+                # Sensor Fleet Name
                 worksheet.write(
                     row_num,
                     col_num,
-                    install.expiracy_memory_date.isoformat(),
+                    install.sensor.fleet.name if install.sensor.fleet else "Unknown",
                     cell_format,
                 )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+                col_num += 1
 
-            # Battery Expiry Date
-            if install.expiracy_battery_date:
+                # Status (with colored formatting)
+                install_status: InstallStatus = install.status  # type: ignore[assignment]
+                status_format = status_formats.get(install_status, cell_format)
                 worksheet.write(
-                    row_num,
-                    col_num,
-                    install.expiracy_battery_date.isoformat(),
-                    cell_format,
-                )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+                    row_num, col_num, install.get_status_display(), status_format
+                )  # pyright: ignore[reportAttributeAccessIssue]
+                col_num += 1
 
-            # Created Date
-            if install.creation_date:
+                # Install Date
+                if install.install_date:
+                    worksheet.write(
+                        row_num, col_num, install.install_date.isoformat(), cell_format
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # Install User
                 worksheet.write(
-                    row_num,
-                    col_num,
-                    install.creation_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    cell_format,
+                    row_num, col_num, install.install_user or "", cell_format
                 )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+                col_num += 1
 
-            # Modified Date
-            if install.modified_date:
+                # Retrieval Date
+                if install.uninstall_date:
+                    worksheet.write(
+                        row_num,
+                        col_num,
+                        install.uninstall_date.isoformat(),
+                        cell_format,
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # Retrieval User
                 worksheet.write(
-                    row_num,
-                    col_num,
-                    install.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    cell_format,
+                    row_num, col_num, install.uninstall_user or "", cell_format
                 )
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+                col_num += 1
 
-            row_num += 1
+                # Memory Expiry Date
+                if install.expiracy_memory_date:
+                    worksheet.write(
+                        row_num,
+                        col_num,
+                        install.expiracy_memory_date.isoformat(),
+                        cell_format,
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
 
-        # Close workbook
-        workbook.close()
+                # Battery Expiry Date
+                if install.expiracy_battery_date:
+                    worksheet.write(
+                        row_num,
+                        col_num,
+                        install.expiracy_battery_date.isoformat(),
+                        cell_format,
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # Created Date
+                if install.creation_date:
+                    worksheet.write(
+                        row_num,
+                        col_num,
+                        install.creation_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        cell_format,
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # Modified Date
+                if install.modified_date:
+                    worksheet.write(
+                        row_num,
+                        col_num,
+                        install.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        cell_format,
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                row_num += 1
+
+            # Close workbook
         output.seek(0)
 
         # Generate filename with timestamp

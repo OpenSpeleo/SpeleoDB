@@ -61,7 +61,6 @@ describe('attachPermissionModal', () => {
     let reloadSpy: Mock<() => void>;
 
     beforeEach(() => {
-        vi.useFakeTimers();
         setupPage();
         vi.clearAllMocks();
             originalLocation = window.location;
@@ -79,7 +78,7 @@ describe('attachPermissionModal', () => {
             writable: true,
             value: originalLocation,
         });
-        vi.useRealTimers();
+
         document.body.innerHTML = '';
     });
 
@@ -158,9 +157,9 @@ describe('attachPermissionModal', () => {
         (document.getElementById('btn_submit_add') as HTMLElement).click();
 
         expect(operations.create).toHaveBeenCalledWith({ user: 'new@example.com', level: 'READ_AND_WRITE' });
-        await vi.advanceTimersByTimeAsync(0);
+        await new Promise(resolve => setTimeout(resolve, 0));
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
-        vi.advanceTimersByTime(100);
+        await new Promise(resolve => setTimeout(resolve, 100));
         expect(reloadSpy).toHaveBeenCalledTimes(1);
     });
 

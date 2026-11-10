@@ -139,3 +139,6 @@ Repository-wide agent guardrails live at:
 
 - [TypeScript architecture](typescript-architecture.md): strict environment
   boundaries, compiler compatibility, and migration verification.
+
+- [Administrator operations](admin-operations.md): explicit history resets,
+  GeoJSON recomputation and manual task recovery.

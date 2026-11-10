@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
     from django.http import HttpRequest
 
-pytestmark = pytest.mark.django_db
-
 
 @pytest.fixture
 def projects() -> list[Project]:
@@ -39,6 +37,7 @@ def _country_filter(
     return country_filter, request, project_admin
 
 
+@pytest.mark.django_db
 def test_lookups_are_distinct_sorted_labels_and_follow_deleted_projects(
     projects: list[Project],
     django_assert_num_queries: Callable[[int], AbstractContextManager[None]],
@@ -53,11 +52,13 @@ def test_lookups_are_distinct_sorted_labels_and_follow_deleted_projects(
     assert country_filter.lookups(request, project_admin) == [("FR", "France")]
 
 
+@pytest.mark.django_db
 def test_lookups_are_empty_without_projects() -> None:
     country_filter, request, project_admin = _country_filter()
     assert country_filter.lookups(request, project_admin) == []
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("selection", "expected_countries"),
     [

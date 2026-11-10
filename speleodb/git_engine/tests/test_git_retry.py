@@ -63,16 +63,16 @@ def assert_process_stopped(pid: int) -> None:
 class LocalGitTests(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.root: pathlib.Path = pathlib.Path(
-            self.enterContext(tempfile.TemporaryDirectory())
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.root: pathlib.Path = pathlib.Path(temporary_directory.name)
+        settings_override = override_settings(
+            DJANGO_GIT_RETRY_ATTEMPTS=RETRY_ATTEMPTS,
+            DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.05,
+            DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.1,
         )
-        self.enterContext(
-            override_settings(
-                DJANGO_GIT_RETRY_ATTEMPTS=RETRY_ATTEMPTS,
-                DJANGO_GIT_RETRY_BASE_DELAY_SECONDS=0.05,
-                DJANGO_GIT_RETRY_MAX_DELAY_SECONDS=0.1,
-            )
-        )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
         self.remote: git.Repo = git.Repo.init(self.root / "remote.git", bare=True)
         self.addCleanup(self.remote.close)
         self.repo: GitRepo = GitRepo.init(self.root / "working")
@@ -82,7 +82,8 @@ class LocalGitTests(TestCase):
         self.repo.index.commit("initial commit", author=GIT_COMMITTER)
         self.repo.create_remote("origin", url=str(self.remote.git_dir))
         self.repo.git.push("--set-upstream", "origin", self.repo.active_branch.name)
-        self.unavailable: socket.socket = self.enterContext(socket.socket())
+        self.unavailable: socket.socket = socket.socket()
+        self.addCleanup(self.unavailable.close)
         self.unavailable.bind(("127.0.0.1", 0))
         self.remote_url: str = (
             f"http://oauth2:{ENCODED_CREDENTIAL}@127.0.0.1:"
@@ -568,9 +569,9 @@ class GitProcessDeadlineTests(TestCase):
         assert child.poll() is not None
 
     def _helper_process(self, *, detached: bool) -> tuple[DeadlineGitProcess, int]:
-        root: pathlib.Path = pathlib.Path(
-            self.enterContext(tempfile.TemporaryDirectory())
-        )
+        temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        root: pathlib.Path = pathlib.Path(temporary_directory.name)
         pid_file: pathlib.Path = root / "helper.pid"
         helper: str = (
             "import os, signal; from pathlib import Path; "

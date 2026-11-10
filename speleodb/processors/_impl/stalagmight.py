@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from django.core.exceptions import ValidationError
 
+from speleodb.common.constants import STALAGMIGHT_FILENAME
 from speleodb.processors.base import BaseFileProcessor
 from speleodb.surveys.models import FileFormat
 
@@ -23,7 +24,7 @@ class StalagmightFileProcessor(BaseFileProcessor):
     ASSOC_FILEFORMAT = FileFormat.STALAGMIGHT
 
     TARGET_FOLDER = None
-    TARGET_SAVE_FILENAME: str = "stalagmight.stalx"
+    TARGET_SAVE_FILENAME: str = STALAGMIGHT_FILENAME
     TARGET_DOWNLOAD_FILENAME = "{project_name}__{timestamp}.stalx"
 
     def _add_to_project(self, artifact: Artifact) -> list[Path]:

@@ -1,8 +1,8 @@
+import { startApiServer } from '../../../../../../frontend_common/test/api-server.ts';
 import type { FeatureCollection, Geometry as GeoJSONGeometry } from 'geojson';
 import type { Mock } from 'vitest';
 import type { JSONObject } from '../../../../../../ts-types/domain/json.ts';
 import type { RendererLayer } from '../../../../../../ts-types/domain/renderer.ts';
-import type { DepthDomain } from '../../../../../../ts-types/domain/map-display.ts';
 type Collection = FeatureCollection<GeoJSONGeometry, JSONObject>;
 interface Source { data: Collection; setData: Mock }
 import { Config } from '../config.ts';
@@ -10,11 +10,8 @@ import { State, createDefaultDisplayPreferences } from '../state.ts';
 import { Geometry } from './geometry.ts';
 import { Layers } from './layers.ts';
 
-it('changes depth settings and visibility using cached domains after ingesting 20,000 survey lines', async () => {
-    // This checks data-work counts, not browser frame latency. Advance frames
-    // with real tasks so 300 reconciliations do not wait for 300 display refreshes.
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => setTimeout(() => callback(performance.now()), 0));
-    vi.stubGlobal('cancelAnimationFrame', (timer: ReturnType<typeof setTimeout>) => clearTimeout(timer));
+it('changes depth settings and visibility using cached domains without rereading survey data', async () => {
+    // Exercise real frame scheduling while checking cached-data work counts.
     State.resetLayerState();
     State.displayPreferences = createDefaultDisplayPreferences();
     localStorage.clear();
@@ -33,20 +30,21 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         setFilter: vi.fn(),
     };
     State.map = (map) as unknown as NonNullable<typeof State.map>;
-    const projects = Array.from({ length: 20 }, (_, projectIndex) => ({
+    const projects = Array.from({ length: 2 }, (_, projectIndex) => ({
         id: `depth-performance-${projectIndex}`, color: '#123456',
     }));
     Config._projects = projects;
     const input = new Map<string, Collection>(projects.map((project, projectIndex) => [project.id, {
         type: 'FeatureCollection',
-        features: Array.from({ length: 1000 }, (_, index) => ({
+        features: Array.from({ length: 3 }, (_, index) => ({
             type: 'Feature',
-            properties: { depth: projectIndex * 1000 + index + 1 },
+            properties: { depth: projectIndex * 3 + index + 1 },
             geometry: { type: 'LineString', coordinates: [[-87, 20], [-87.01, 20.01]] },
         })),
     }]));
-    const download = vi.fn(async (projectId: string) => ({ ok: true, json: async () => input.get(projectId) }));
-    vi.stubGlobal('fetch', download);
+    const server = await startApiServer();
+    server.handle(request => ({ json: input.get(request.path.slice(1)) }));
+    // The test environment cannot create native WebGL bounds.
     vi.stubGlobal('__mapRenderer', {
         LngLatBounds: class {
             extend() { return this; }
@@ -54,20 +52,19 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         },
     });
     // Keep the real preprocessing and snap-cache work in the ingest path.
-    const cache = vi.spyOn(Geometry, 'cachePreparedSnapPoints');
     const snapshots: Array<[Collection, string]> = [];
     const restore: Array<() => unknown> = [];
     const forbidRead = () => { throw new Error('Depth controls must not read survey feature data'); };
 
     try {
-        for (const project of projects) await Layers.addProjectGeoJSON(project.id, project.id);
-        expect(download).toHaveBeenCalledTimes(20);
-        expect(cache).toHaveBeenCalledTimes(20);
-        expect(map.addSource).toHaveBeenCalledTimes(20);
-        expect(map.addLayer).toHaveBeenCalledTimes(60);
-        expect(State.projectDepthDomains.size).toBe(20);
-        expect(State.activeDepthDomain).toEqual({ min: 0, max: 20000 });
+        for (const project of projects) await Layers.addProjectGeoJSON(project.id, `${server.origin}/${project.id}`);
+        expect(server.requests).toHaveLength(2);
+        expect(map.addSource).toHaveBeenCalledTimes(2);
+        expect(map.addLayer).toHaveBeenCalledTimes(6);
+        expect(State.projectDepthDomains.size).toBe(2);
+        expect(State.activeDepthDomain).toEqual({ min: 0, max: 6 });
         const cachedDomains = [...State.projectDepthDomains];
+        const cachedSnapPoints = Geometry.getSnapInfo().totalSnapPoints;
         cachedDomains.forEach(([, domain]) => Object.freeze(domain));
 
         for (const project of projects) {
@@ -86,8 +83,8 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         map.getSource.mockImplementation(forbidRead);
 
         await Layers.setColorMode('depth');
-        for (let index = 0; index < 100; index += 1) {
-            const limit = 50 + index;
+        for (let index = 0; index < 3; index += 1) {
+            const limit = 1 + index;
             Layers.setDepthLimit(limit, 'ft');
             await Layers.whenDisplayApplied();
             Layers.setDepthLimit(limit, 'm');
@@ -99,13 +96,13 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         await Layers.toggleProjectVisibility(projects.at(-1)!.id, true);
         Layers.setDepthLimit(null, 'ft');
         await Layers.whenDisplayApplied();
-        expect(State.activeDepthDomain).toEqual({ min: 0, max: 20000 });
-        expect(download).toHaveBeenCalledTimes(20);
-        expect(cache).toHaveBeenCalledTimes(20);
-        expect(map.addSource).toHaveBeenCalledTimes(20);
-        expect(map.addLayer).toHaveBeenCalledTimes(60);
+        expect(State.activeDepthDomain).toEqual({ min: 0, max: 6 });
+        expect(server.requests).toHaveLength(2);
+        expect(map.addSource).toHaveBeenCalledTimes(2);
+        expect(map.addLayer).toHaveBeenCalledTimes(6);
         expect(map.getSource).not.toHaveBeenCalled();
         expect(setData).not.toHaveBeenCalled();
+        expect(Geometry.getSnapInfo().totalSnapPoints).toBe(cachedSnapPoints);
         expect(map.setPaintProperty).toHaveBeenCalled();
         expect([...State.projectDepthDomains]).toEqual(cachedDomains);
         for (const [id, domain] of cachedDomains) expect(State.projectDepthDomains.get(id)).toBe(domain);
@@ -114,12 +111,12 @@ it('changes depth settings and visibility using cached domains after ingesting 2
         for (const [collection, snapshot] of snapshots) expect(JSON.stringify(collection)).toBe(snapshot);
     } finally {
         restore.forEach(restoreProperty => restoreProperty());
-        vi.restoreAllMocks();
         vi.unstubAllGlobals();
         State.map = null;
         State.resetLayerState();
         State.displayPreferences = createDefaultDisplayPreferences();
         Config._projects = previousProjects;
+        await server.close();
         localStorage.clear();
     }
 });

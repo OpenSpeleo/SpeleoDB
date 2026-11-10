@@ -29,10 +29,8 @@ def configured_gitlab_client_fixture() -> Generator[GitlabClient]:
         private_token=settings.GITLAB_TOKEN,
         keep_base_url=settings.GITLAB_HTTP_PROTOCOL == "http",
     )
-    try:
+    with client:
         yield client
-    finally:
-        client.session.close()
 
 
 @pytest.fixture(name="live_gitlab")

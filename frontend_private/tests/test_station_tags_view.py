@@ -15,15 +15,15 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-pytestmark = pytest.mark.django_db
 
-
+@pytest.mark.django_db
 def test_station_tags_requires_authentication(client: Client) -> None:
     response = client.get(reverse("private:station_tags"))
     assert response.status_code == status.HTTP_302_FOUND
     assert response["Location"].startswith(reverse("account_login"))
 
 
+@pytest.mark.django_db
 def test_station_tags_renders_authenticated_bootstrap(
     client: Client,
 ) -> None:

@@ -24,13 +24,12 @@ from speleodb.gis.models import SurfaceStation
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.sanitize import sanitize_text
 
-pytestmark = pytest.mark.django_db
-
 
 class PermissionType(Enum):
     USER = "user"
 
 
+@pytest.mark.django_db
 class TestUnauthenticatedSurfaceStationAPIAuthentication:
     """Test authentication requirements for surface station API endpoints."""
 
@@ -117,6 +116,7 @@ class TestUnauthenticatedSurfaceStationAPIAuthentication:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.django_db
 class TestSurfaceStationAPIPermissions:
     """Test permission requirements for surface station API endpoints."""
 
@@ -246,6 +246,7 @@ class TestSurfaceStationAPIPermissions:
         assert response.status_code == expected
 
 
+@pytest.mark.django_db
 class TestSurfaceStationCRUDOperations:
     """Test CRUD operations for surface stations."""
 
@@ -404,6 +405,7 @@ class TestSurfaceStationCRUDOperations:
         assert resp_data["description"] == "Updated description"
 
 
+@pytest.mark.django_db
 class TestSurfaceStationValidation:
     """Test validation rules for surface station data."""
 
@@ -522,6 +524,7 @@ class TestSurfaceStationValidation:
         assert "name" in response.data["errors"]
 
 
+@pytest.mark.django_db
 class TestSurfaceStationEdgeCases:
     """Test edge cases and error handling for surface stations."""
 
@@ -608,6 +611,7 @@ class TestSurfaceStationEdgeCases:
         assert response.status_code == status.HTTP_201_CREATED
 
 
+@pytest.mark.django_db
 class TestSurfaceStationCoordinateRounding:
     """Test coordinate rounding functionality for surface stations."""
 
@@ -684,6 +688,7 @@ class TestSurfaceStationCoordinateRounding:
         assert station_data["longitude"] == -124.1234568  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 class TestSurfaceStationGeoJSONEndpoint:
     """Test GeoJSON endpoints for surface stations."""
 
@@ -768,6 +773,7 @@ class TestSurfaceStationGeoJSONEndpoint:
         assert len(data["features"]) == 2  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 class TestSurfaceStationFuzzing:
     """Test API with random/fuzzing data for surface stations."""
 
@@ -883,6 +889,7 @@ class TestSurfaceStationFuzzing:
             assert response.status_code == status.HTTP_201_CREATED
 
 
+@pytest.mark.django_db
 class TestSurfaceStationNoAccessToOtherNetworks:
     """Test that users cannot access stations in networks they don't have access to."""
 

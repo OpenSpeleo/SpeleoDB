@@ -25,7 +25,6 @@ beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/project/`); }
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     document.head.innerHTML = '';
     document.body.innerHTML = '';
 });

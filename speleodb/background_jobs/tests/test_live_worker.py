@@ -42,6 +42,7 @@ from speleodb.background_jobs.models import JobState
 from speleodb.background_jobs.services import GENERATION_TASK
 from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.storage import delete_archive
+from speleodb.common.enums import TaskResultStatus
 from speleodb.testing.celery import isolated_test_broker_url
 from speleodb.testing.database import postgres_test_database_url
 from speleodb.users.models import User
@@ -56,11 +57,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from django.http import HttpResponse
-
-pytestmark = [
-    pytest.mark.django_db(transaction=True),
-    pytest.mark.live_services,
-]
 
 WAIT_SECONDS: int = 45
 TEST_BUCKET: str = "speleodb-user-artifacts-test"
@@ -142,7 +138,7 @@ class LiveWorker:
         attempt: JobAttempt = job.attempts.get(pk=job.current_attempt_id)
         self.wait_for(
             lambda: TaskResult.objects.filter(
-                task_id=str(attempt.task_id), status="SUCCESS"
+                task_id=str(attempt.task_id), status=TaskResultStatus.SUCCESS
             ).exists()
         )
         return attempt
@@ -323,6 +319,8 @@ def _publish_scheduled_task(
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     live_worker: LiveWorker,
 ) -> None:
@@ -339,14 +337,16 @@ def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
         live_worker.application.send_task(task_name, task_id=task_id)
         live_worker.wait_for(
             lambda: TaskResult.objects.filter(
-                task_id=task_id, status="STARTED"
+                task_id=task_id, status=TaskResultStatus.STARTED
             ).exists()
         )
         started: Mapping[str, object] = TaskResult.objects.values(
             "id", "date_started"
         ).get(task_id=task_id)
     live_worker.wait_for(
-        lambda: TaskResult.objects.filter(task_id=task_id, status="SUCCESS").exists()
+        lambda: TaskResult.objects.filter(
+            task_id=task_id, status=TaskResultStatus.SUCCESS
+        ).exists()
     )
     completed: TaskResult = TaskResult.objects.get(task_id=task_id)
     metadata: Mapping[str, object] = TaskResult.objects.values(
@@ -361,6 +361,8 @@ def test_live_worker_consumes_existing_tasks_without_an_explicit_queue(
     assert TaskResult.objects.filter(task_id=task_id).count() == 1
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_housekeeping_records_only_failures(live_worker: LiveWorker) -> None:
     for task_name in (
         MAINTENANCE_TASK,
@@ -385,7 +387,9 @@ def test_live_housekeeping_records_only_failures(live_worker: LiveWorker) -> Non
             ignore_result=live_worker.application.tasks[task_name].ignore_result,
         )
         live_worker.wait_for(
-            TaskResult.objects.filter(task_id=failed_id, status="FAILURE").exists
+            TaskResult.objects.filter(
+                task_id=failed_id, status=TaskResultStatus.FAILURE
+            ).exists
         )
         failed: TaskResult = TaskResult.objects.get(task_id=failed_id)
         metadata: Mapping[str, object] = TaskResult.objects.values(
@@ -400,6 +404,8 @@ def test_live_housekeeping_records_only_failures(live_worker: LiveWorker) -> Non
         assert "unsupported_argument" in (failed.traceback or ""), task_name
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
     live_worker: LiveWorker,
 ) -> None:
@@ -418,7 +424,7 @@ def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
         )
         live_worker.wait_for(
             lambda: TaskResult.objects.filter(
-                task_id=task_id, status="FAILURE"
+                task_id=task_id, status=TaskResultStatus.FAILURE
             ).exists()
         )
     failed: TaskResult = TaskResult.objects.get(task_id=task_id)
@@ -432,6 +438,8 @@ def test_live_prefork_soft_timeout_records_failure_and_accepts_the_next_task(
     live_worker.run_control_task("speleodb.users.tasks.get_users_count")
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 @pytest.mark.parametrize("live_worker", ["hard-timeout"], indirect=True)
 def test_live_prefork_hard_timeout_replaces_child_and_accepts_next_task(
     live_worker: LiveWorker,
@@ -449,7 +457,7 @@ def test_live_prefork_hard_timeout_replaces_child_and_accepts_next_task(
         )
         live_worker.wait_for(
             lambda: TaskResult.objects.filter(
-                task_id=task_id, status="FAILURE"
+                task_id=task_id, status=TaskResultStatus.FAILURE
             ).exists()
         )
     failed: TaskResult = TaskResult.objects.get(task_id=task_id)
@@ -460,6 +468,8 @@ def test_live_prefork_hard_timeout_replaces_child_and_accepts_next_task(
     live_worker.run_control_task(task_name)
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_beat_publication_preserves_worker_result_recording(
     live_worker: LiveWorker,
 ) -> None:
@@ -468,7 +478,9 @@ def test_live_beat_publication_preserves_worker_result_recording(
         live_worker, "speleodb.users.tasks.get_users_count", task_id
     )
     live_worker.wait_for(
-        lambda: TaskResult.objects.filter(task_id=task_id, status="SUCCESS").exists()
+        lambda: TaskResult.objects.filter(
+            task_id=task_id, status=TaskResultStatus.SUCCESS
+        ).exists()
     )
     result: TaskResult = TaskResult.objects.get(task_id=task_id)
     metadata: Mapping[str, object] = TaskResult.objects.values(
@@ -479,6 +491,8 @@ def test_live_beat_publication_preserves_worker_result_recording(
     assert metadata["worker"] == live_worker.hostname
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_export_download_notification_and_expiration(
     live_worker: LiveWorker,
 ) -> None:
@@ -549,6 +563,8 @@ def test_live_export_download_notification_and_expiration(
     assert missing.value.response["Error"]["Code"] in {"404", "NoSuchKey", "NotFound"}
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_duplicate_delivery_preserves_success(live_worker: LiveWorker) -> None:
     job: BackgroundJob
     job, _ = request_export(VerifiedUserFactory.create())
@@ -570,13 +586,15 @@ def test_live_duplicate_delivery_preserves_success(live_worker: LiveWorker) -> N
         )
     )
     result.refresh_from_db()
-    assert result.status == "SUCCESS"
+    assert result.status == TaskResultStatus.SUCCESS
     assert result.result == original_result
     assert result.date_done == original_completion
     assert JobArtifact.objects.get(job=job).pk == artifact.pk
     assert job.attempts.count() == 1
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_broker_failure_keeps_request_for_maintenance(
     live_worker: LiveWorker,
 ) -> None:
@@ -609,6 +627,8 @@ def test_live_broker_failure_keeps_request_for_maintenance(
     assert JobArtifact.objects.get(job=job).attempt_id != attempt.pk
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.live_services
 def test_live_worker_death_recovers_with_a_new_attempt(live_worker: LiveWorker) -> None:
     user: User = VerifiedUserFactory.create()
     job: BackgroundJob

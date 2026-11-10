@@ -5,18 +5,23 @@ import { clearRenderedSurveyState, createMapHeightUpdater, registerViewerDataLif
 
 
 describe('read-only viewer lifecycle', () => {
-    it('registers original load and source callbacks in order without invoking or wrapping them', () => {
-        const calls: string[] = [];
-        const load = vi.fn(async () => {});
-        const sourceChange = vi.fn(async (_event: Event) => {});
-        const on = vi.fn((_event: 'load', _callback: () => Promise<void>) => { calls.push('load'); });
-        const listener = vi.spyOn(window, 'addEventListener').mockImplementation(() => { calls.push('source'); });
-        registerViewerDataLifecycle({ on }, { load, sourceChange });
-        expect(calls).toEqual(['load', 'source']);
-        expect(on).toHaveBeenCalledWith('load', load);
-        expect(listener).toHaveBeenCalledWith('speleo:map-source-changed', sourceChange);
-        expect(load).not.toHaveBeenCalled();
-        expect(sourceChange).not.toHaveBeenCalled();
+    it('runs load and source callbacks only when their native events arrive', async () => {
+        let loadCalls = 0;
+        let sourceCalls = 0;
+        let mapLoad!: () => Promise<void>;
+        const load = async () => { loadCalls += 1; };
+        const sourceChange = async () => { sourceCalls += 1; };
+        registerViewerDataLifecycle({ on(_event, callback) { mapLoad = callback; } }, { load, sourceChange });
+        try {
+            expect(loadCalls).toBe(0);
+            expect(sourceCalls).toBe(0);
+            await mapLoad();
+            window.dispatchEvent(new CustomEvent('speleo:map-source-changed'));
+            expect(loadCalls).toBe(1);
+            expect(sourceCalls).toBe(1);
+        } finally {
+            window.removeEventListener('speleo:map-source-changed', sourceChange as unknown as EventListener);
+        }
     });
 
     afterEach(() => {
@@ -46,14 +51,15 @@ describe('read-only viewer lifecycle', () => {
     it('recomputes height from the current viewport and explicit fullscreen policy', () => {
         document.body.innerHTML = '<div id="map"></div>';
         const element = document.getElementById('map')!;
+        // JSDOM does not compute layout or native viewport dimensions.
         vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 50, 800, 400));
         vi.stubGlobal('innerWidth', 1024);
         vi.stubGlobal('innerHeight', 300);
-        const fullscreen = vi.fn(() => false);
-        const update = createMapHeightUpdater(fullscreen);
+        let fullscreen = false;
+        const update = createMapHeightUpdater(() => fullscreen);
         update();
         expect(element.style.height).toBe('600px');
-        fullscreen.mockReturnValue(true);
+        fullscreen = true;
         update();
         expect(element.style.height).toBe('250px');
         vi.stubGlobal('innerHeight', 900);

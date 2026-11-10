@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 from typing import Any
-from unittest.mock import patch
+from unittest import TestCase
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -23,6 +23,7 @@ from speleodb.api.v2.tests.factories import SurveyTeamFactory
 from speleodb.api.v2.tests.factories import SurveyTeamMembershipFactory
 from speleodb.api.v2.tests.factories import TeamProjectPermissionFactory
 from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
+from speleodb.api.v2.views.user_dashboard import _first_of_month
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import SurveyTeamMembershipRole
@@ -430,27 +431,19 @@ class TestDashboardStatsCommitsOverTime(BaseAPITestCase):
 # ------------------------------------------------------------------ #
 #  Commits over time — month boundary edge cases
 # ------------------------------------------------------------------ #
-class TestCommitsOverTimeMonthBoundary(BaseAPITestCase):
+class TestCommitsOverTimeMonthBoundary(TestCase):
     """Verify the 12-month window never skips a calendar month.
 
     The old 31-day-step heuristic would skip February when 'now' landed
-    on March 1st.  These tests freeze time on short-month boundaries.
+    on March 1st. These tests pass short-month boundaries to the date helper.
     """
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.project = ProjectFactory.create(created_by=self.user.email)
-        UserProjectPermissionFactory.create(
-            target=self.user, project=self.project, level=PermissionLevel.ADMIN
-        )
-
-    def _get_months(self, fake_now: dt.datetime) -> list[str]:
-        with patch(
-            "speleodb.api.v2.views.user_dashboard.timezone.now", return_value=fake_now
-        ):
-            response = self.client.get(URL, headers={"authorization": self.auth})
-        assert response.status_code == status.HTTP_200_OK
-        return [e["month"] for e in response.data["commits_over_time"]]
+    @staticmethod
+    def _get_months(now: dt.datetime) -> list[str]:
+        return [
+            _first_of_month(now, months_back).strftime("%Y-%m")
+            for months_back in range(11, -1, -1)
+        ]
 
     def test_march_1st_includes_every_month_once(self) -> None:
         months = self._get_months(dt.datetime(2026, 3, 1, 12, 0, 0, tzinfo=dt.UTC))

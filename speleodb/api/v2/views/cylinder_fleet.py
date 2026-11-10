@@ -654,89 +654,88 @@ class CylinderFleetExportExcelApiView(GenericAPIView[CylinderFleet], SDBAPIViewM
         )
 
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Cylinders")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Cylinders")
 
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
+            )
 
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-        headers = [
-            "Cylinder Name",
-            "Serial",
-            "Brand",
-            "Owner",
-            "Type",
-            "Status",
-            "O2 %",
-            "He %",
-            "N2 %",
-            "Pressure",
-            "Unit System",
-            "Use Anode",
-            "Manufactured",
-            "Last Visual",
-            "Last Hydro",
-            "Location",
-            "Lat",
-            "Long",
-            "Install Date",
-            "Modified Date",
-        ]
-
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
-
-        for row_num, cylinder in enumerate(cylinders, start=1):
-            latest_install = cylinder.installs.filter(
-                status=InstallStatus.INSTALLED
-            ).first()
-
-            row_data = [
-                cylinder.name,
-                cylinder.serial,
-                cylinder.brand,
-                cylinder.owner,
-                cylinder.type,
-                cylinder.status.title(),
-                cylinder.o2_percentage,
-                cylinder.he_percentage,
-                cylinder.n2_percentage,
-                cylinder.pressure,
-                cylinder.unit_system,
-                "Yes" if cylinder.use_anode else "No",
-                cylinder.manufactured_date.isoformat()
-                if cylinder.manufactured_date
-                else "",
-                cylinder.last_visual_inspection_date.isoformat()
-                if cylinder.last_visual_inspection_date
-                else "",
-                cylinder.last_hydrostatic_test_date.isoformat()
-                if cylinder.last_hydrostatic_test_date
-                else "",
-                latest_install.location_name if latest_install else "",
-                float(latest_install.latitude) if latest_install else "",
-                float(latest_install.longitude) if latest_install else "",
-                latest_install.install_date.isoformat()
-                if latest_install and latest_install.install_date
-                else "",
-                cylinder.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+            headers = [
+                "Cylinder Name",
+                "Serial",
+                "Brand",
+                "Owner",
+                "Type",
+                "Status",
+                "O2 %",
+                "He %",
+                "N2 %",
+                "Pressure",
+                "Unit System",
+                "Use Anode",
+                "Manufactured",
+                "Last Visual",
+                "Last Hydro",
+                "Location",
+                "Lat",
+                "Long",
+                "Install Date",
+                "Modified Date",
             ]
 
-            for col_num, cell_value in enumerate(row_data):
-                worksheet.write(row_num, col_num, cell_value, cell_format)
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
 
-        workbook.close()
+            for row_num, cylinder in enumerate(cylinders, start=1):
+                latest_install = cylinder.installs.filter(
+                    status=InstallStatus.INSTALLED
+                ).first()
+
+                row_data = [
+                    cylinder.name,
+                    cylinder.serial,
+                    cylinder.brand,
+                    cylinder.owner,
+                    cylinder.type,
+                    cylinder.status.title(),
+                    cylinder.o2_percentage,
+                    cylinder.he_percentage,
+                    cylinder.n2_percentage,
+                    cylinder.pressure,
+                    cylinder.unit_system,
+                    "Yes" if cylinder.use_anode else "No",
+                    cylinder.manufactured_date.isoformat()
+                    if cylinder.manufactured_date
+                    else "",
+                    cylinder.last_visual_inspection_date.isoformat()
+                    if cylinder.last_visual_inspection_date
+                    else "",
+                    cylinder.last_hydrostatic_test_date.isoformat()
+                    if cylinder.last_hydrostatic_test_date
+                    else "",
+                    latest_install.location_name if latest_install else "",
+                    float(latest_install.latitude) if latest_install else "",
+                    float(latest_install.longitude) if latest_install else "",
+                    latest_install.install_date.isoformat()
+                    if latest_install and latest_install.install_date
+                    else "",
+                    cylinder.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+
+                for col_num, cell_value in enumerate(row_data):
+                    worksheet.write(row_num, col_num, cell_value, cell_format)
+
         output.seek(0)
 
         filename = (
@@ -911,59 +910,58 @@ class CylinderFleetWatchlistExportExcelApiView(
         )
 
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Watchlist")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Watchlist")
 
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
+            )
 
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-        headers = [
-            "Cylinder Name",
-            "Serial",
-            "Status",
-            "Location",
-            "Lat",
-            "Long",
-            "Install Date",
-            "Modified Date",
-        ]
-
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
-
-        for row_num, cylinder in enumerate(cylinders, start=1):
-            latest_install = cylinder.installs.filter(
-                status=InstallStatus.INSTALLED
-            ).first()
-
-            row_data = [
-                cylinder.name,
-                cylinder.serial,
-                cylinder.status.title(),
-                latest_install.location_name if latest_install else "",
-                float(latest_install.latitude) if latest_install else "",
-                float(latest_install.longitude) if latest_install else "",
-                latest_install.install_date.isoformat()
-                if latest_install and latest_install.install_date
-                else "",
-                cylinder.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+            headers = [
+                "Cylinder Name",
+                "Serial",
+                "Status",
+                "Location",
+                "Lat",
+                "Long",
+                "Install Date",
+                "Modified Date",
             ]
 
-            for col_num, cell_value in enumerate(row_data):
-                worksheet.write(row_num, col_num, cell_value, cell_format)
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 15))
 
-        workbook.close()
+            for row_num, cylinder in enumerate(cylinders, start=1):
+                latest_install = cylinder.installs.filter(
+                    status=InstallStatus.INSTALLED
+                ).first()
+
+                row_data = [
+                    cylinder.name,
+                    cylinder.serial,
+                    cylinder.status.title(),
+                    latest_install.location_name if latest_install else "",
+                    float(latest_install.latitude) if latest_install else "",
+                    float(latest_install.longitude) if latest_install else "",
+                    latest_install.install_date.isoformat()
+                    if latest_install and latest_install.install_date
+                    else "",
+                    cylinder.modified_date.strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+
+                for col_num, cell_value in enumerate(row_data):
+                    worksheet.write(row_num, col_num, cell_value, cell_format)
+
         output.seek(0)
 
         filename = (

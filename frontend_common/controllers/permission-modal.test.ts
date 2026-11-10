@@ -5,7 +5,7 @@ let server: Awaited<ReturnType<typeof startApiServer>>;
 let originalUrl: string;
 beforeAll(async () => { originalUrl = window.location.href; loadJQuery(); server = await startApiServer(); });
 beforeEach(() => { server.reset(); setBrowserUrl(`${server.origin}/private/fixture/`); });
-afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; vi.useRealTimers(); });
+afterEach(() => { $(document).off(); $('body').off(); document.body.innerHTML = ''; });
 afterAll(async () => { setBrowserUrl(originalUrl); await server.close(); });
 
 function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" value="csrf-permission"><button id="btn_open_add_user">Add</button><button class="btn_delete_perm" data-user="person@example.test">Delete</button><div id="permission_modal" style="display:none"><h2 id="permission_modal_title"></h2><h3 id="permission_modal_header"></h3><form id="permission_form"><input id="user" name="user"><div id="user_suggestions"></div><select id="level" name="level"><option value="READ_ONLY">Read</option></select><button id="btn_submit_add">Save</button></form></div><div id="error_div"></div><div id="success_div"></div><div id="modal_success" style="display:none"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div>`; }
@@ -13,7 +13,6 @@ function page() { document.body.innerHTML = `<input name="csrfmiddlewaretoken" v
 it('creates a user permission through generated JSON with current CSRF', async () => {
     page(); server.reply({ status: 201, json: {} });
     await init({ resource: 'project', entityId: 'project' });
-    vi.useFakeTimers();
     $('#btn_open_add_user').trigger('click');
     $('#user').val('person@example.test');
     $('#btn_submit_add').trigger('click');

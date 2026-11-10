@@ -1,38 +1,52 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { initPublicShell } from './main.ts';
 import { ParticleAnimation } from './animation/particle-animation.ts';
 import { Highlighter } from './animation/highlighter.ts';
 import type { SwiperOptions } from '../../../ts-types/domain/public-shell.ts';
 import type { MockInstance } from 'vitest';
 
-const swiper = vi.fn(function (_selector: string, _options: SwiperOptions) {});
-const aosInit = vi.fn();
+type CarouselElement = HTMLElement & {
+    swiper?: { initialized: boolean; params: SwiperOptions; destroy(deleteInstance: boolean, cleanStyles: boolean): void };
+};
+beforeAll(() => {
+    for (const vendor of ['aos.js', 'swiper-bundle.min.js']) {
+        (0, eval)(readFileSync(resolve('frontend_public/static/ts/vendors', vendor), 'utf8'));
+    }
+});
 let getContext: MockInstance<HTMLCanvasElement['getContext']>;
 function drawingContext() {
     return {
-        scale: vi.fn(), translate: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(),
+        scale: vi.fn(), translate: vi.fn(), beginPath: vi.fn(), arc: vi.fn<CanvasRenderingContext2D['arc']>(), fill: vi.fn(),
         setTransform: vi.fn(), clearRect: vi.fn(), fillStyle: '',
     };
 }
-let listeners: Array<[string, EventListenerOrEventListenerObject]>;
+let listeners: Array<[string, EventListenerOrEventListenerObject, boolean | AddEventListenerOptions | undefined]>;
 let context: ReturnType<typeof drawingContext>;
-let frames: FrameRequestCallback[];
+let frameRequests: MockInstance<typeof window.requestAnimationFrame>;
 beforeEach(() => {
     listeners = [];
-    frames = [];
     context = drawingContext();
-    aosInit.mockClear(); vi.stubGlobal('AOS', { init: aosInit });
-    swiper.mockClear(); vi.stubGlobal('Swiper', swiper);
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    // jsdom has no canvas renderer. Only the drawing surface is substituted;
+    // particle generation, real RAF scheduling and event handling stay intact.
     getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => { frames.push(callback); return frames.length; });
+    // Forward real scheduling and registration while retaining resource handles
+    // for cleanup; the animation API has no destroy method.
+    frameRequests = vi.spyOn(window, 'requestAnimationFrame');
     const add = window.addEventListener.bind(window);
     vi.spyOn(window, 'addEventListener').mockImplementation((type, handler, options) => {
-        listeners.push([type, handler]); add(type, handler, options);
+        listeners.push([type, handler, options]); add(type, handler, options);
     });
     document.body.innerHTML = '';
 });
 afterEach(() => {
-    for (const [type, handler] of listeners) window.removeEventListener(type, handler);
+    for (const carousel of document.querySelectorAll<CarouselElement>('.clients-carousel, .testimonials-carousel')) {
+        carousel.swiper?.destroy(true, true);
+    }
+    for (const [type, handler, options] of listeners) window.removeEventListener(type, handler, options);
+    for (const result of frameRequests.mock.results) {
+        if (result.type === 'return') cancelAnimationFrame(result.value);
+    }
     vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = '';
 });
 
@@ -46,29 +60,34 @@ function canvas({ width = '100', height = '80', quantity = '1', extra = '' } = {
 it('initializes AOS immediately but does not require Swiper without matching carousels', () => {
     vi.stubGlobal('Swiper', undefined);
     expect(initPublicShell()).toBeUndefined();
-    expect(aosInit).toHaveBeenCalledWith({ once: true, disable: 'phone', duration: 1000, easing: 'ease-out-cubic' });
-    expect(aosInit.mock.contexts[0]).toBe(AOS);
-    expect(frames).toHaveLength(0);
+    expect(document.body.getAttribute('data-aos-easing')).toBe('ease-out-cubic');
+    expect(document.body.getAttribute('data-aos-duration')).toBe('1000');
+    expect(frameRequests).toHaveBeenCalledTimes(0);
 });
 
-it('constructs one swiper per matching family with its distinct options', () => {
-    document.body.innerHTML = '<div class="clients-carousel"></div><div class="clients-carousel"></div><div class="testimonials-carousel"></div>';
+it('initializes the actual carousel runtime with each family configuration', () => {
+    const slides = '<div class="swiper-wrapper"><div class="swiper-slide">One</div><div class="swiper-slide">Two</div><div class="swiper-slide">Three</div></div>';
+    document.body.innerHTML = `<div class="clients-carousel">${slides}</div><div class="testimonials-carousel">${slides}</div>`;
     initPublicShell();
-    expect(Swiper).toHaveBeenCalledTimes(2);
-    expect(swiper.mock.calls[0]).toEqual(['.clients-carousel', expect.objectContaining({ slidesPerView: 'auto', spaceBetween: 64, loop: true, speed: 5000, autoplay: { delay: 0, disableOnInteraction: true } })]);
-    expect(swiper.mock.calls[1]).toEqual(['.testimonials-carousel', expect.objectContaining({ loop: false, spaceBetween: 24, navigation: { nextEl: '.carousel-next', prevEl: '.carousel-prev' } })]);
+    const clients = document.querySelector<CarouselElement>('.clients-carousel')!.swiper!;
+    const testimonials = document.querySelector<CarouselElement>('.testimonials-carousel')!.swiper!;
+    expect(clients.initialized).toBe(true);
+    expect(clients.params).toMatchObject({ slidesPerView: 'auto', spaceBetween: 64, loop: true, speed: 5000, autoplay: { delay: 0, disableOnInteraction: true } });
+    expect(testimonials.initialized).toBe(true);
+    expect(testimonials.params).toMatchObject({ loop: false, spaceBetween: 24, navigation: { nextEl: '.carousel-next', prevEl: '.carousel-prev' } });
 });
 
 it('propagates missing required vendors synchronously', () => {
+    const aos = AOS;
     vi.stubGlobal('AOS', undefined);
     expect(() => initPublicShell()).toThrow(TypeError);
-    vi.stubGlobal('AOS', { init: vi.fn() });
+    vi.stubGlobal('AOS', aos);
     vi.stubGlobal('Swiper', undefined);
     document.body.innerHTML = '<div class="clients-carousel"></div>';
     expect(() => initPublicShell()).toThrow(TypeError);
 });
 
-it('consumes captured dimensions once, scales the context, and preserves the RAF callback identity', () => {
+it('consumes captured dimensions once, scales the context, and preserves the RAF callback identity', async () => {
     const element = canvas();
     vi.stubGlobal('devicePixelRatio', 2);
     initPublicShell();
@@ -76,26 +95,34 @@ it('consumes captured dimensions once, scales the context, and preserves the RAF
     expect(element.style.width).toBe('100px'); expect(element.style.height).toBe('80px');
     expect(element.dataset.initialParticleWidth).toBeUndefined(); expect(element.dataset.initialParticleHeight).toBeUndefined();
     expect(context.scale).toHaveBeenCalledWith(2, 2);
-    expect(context.arc).toHaveBeenCalledWith(50, 40, 2, 0, 2 * Math.PI);
-    expect(context.fillStyle).toBe('rgba(255, 255, 255, 0.02)');
-    const frame = frames[0]!; frame(16);
-    expect(frames[1]).toBe(frame); expect(context.fillStyle).toBe('rgba(255, 255, 255, 0.04)');
+    const [x, y, radius, start, end] = context.arc.mock.calls[0]!;
+    expect(x).toBeGreaterThanOrEqual(0); expect(x).toBeLessThan(100);
+    expect(y).toBeGreaterThanOrEqual(0); expect(y).toBeLessThan(80);
+    expect([1, 2]).toContain(radius); expect(start).toBe(0); expect(end).toBe(2 * Math.PI);
+    const frame = frameRequests.mock.calls[0]![0];
+    await new Promise(requestAnimationFrame);
+    expect(frameRequests.mock.calls.at(-1)![0]).toBe(frame);
     window.dispatchEvent(new Event('resize'));
     expect(element.width).toBe(240); expect(element.height).toBe(180);
-    expect(frames).toHaveLength(2);
+    expect(frameRequests).toHaveBeenCalledTimes(3);
 });
 
 it('rounds the edge remapping before numeric alpha multiplication', () => {
-    canvas({ width: '10', height: '10' }); initPublicShell();
+    const animation = new ParticleAnimation(canvas({ width: '10', height: '10' }), { quantity: 0 });
+    animation.circles.push({
+        x: 5, y: 5, translateX: 0, translateY: 0, size: 1,
+        alpha: 0, targetAlpha: 0.3, dx: 0, dy: 0, magnetism: 1,
+    });
+    animation.animate();
     expect(context.fillStyle).toBe('rgba(255, 255, 255, 0.06)');
 });
 
 it('uses parent dimensions for invalid captures and preserves empty/invalid quantity semantics', () => {
     const element = canvas({ width: 'invalid', height: '0', quantity: '' });
     initPublicShell(); expect(element.width).toBe(120); expect(element.height).toBe(90);
-    expect(context.arc).not.toHaveBeenCalled(); expect(frames).toHaveLength(1);
+    expect(context.arc).not.toHaveBeenCalled(); expect(frameRequests).toHaveBeenCalledTimes(1);
     element.dataset.particleQuantity = 'invalid'; initPublicShell();
-    expect(context.arc).not.toHaveBeenCalled(); expect(frames).toHaveLength(2);
+    expect(context.arc).not.toHaveBeenCalled(); expect(frameRequests).toHaveBeenCalledTimes(2);
 });
 
 it('uses quantity defaults only when the attribute is absent', () => {
@@ -105,7 +132,7 @@ it('uses quantity defaults only when the attribute is absent', () => {
 
 it('preserves missing-context failure and creates no animation frame after that failure', () => {
     canvas(); getContext.mockReturnValue(null);
-    expect(() => initPublicShell()).toThrow(TypeError); expect(frames).toHaveLength(0);
+    expect(() => initPublicShell()).toThrow(TypeError); expect(frameRequests).toHaveBeenCalledTimes(0);
 });
 
 it('updates highlighter variables only strictly inside and retains the original box set', () => {
@@ -126,25 +153,19 @@ it('updates highlighter variables only strictly inside and retains the original 
 
 it('repeated initialization creates fresh animation state and listeners', () => {
     canvas(); initPublicShell(); initPublicShell();
-    expect(frames).toHaveLength(2); expect(frames[0]).not.toBe(frames[1]);
+    expect(frameRequests).toHaveBeenCalledTimes(2); expect(frameRequests.mock.calls[0]![0]).not.toBe(frameRequests.mock.calls[1]![0]);
     expect(listeners.filter(([type]) => type === 'mousemove')).toHaveLength(2);
 });
 
-it('exposes particle construction without changing random sampling order or bound receiver identity', () => {
-    const element = canvas({ quantity: '0' });
-    const animation = new ParticleAnimation(element, { quantity: 0 });
-    const random = vi.mocked(Math.random);
-    random.mockClear();
-    for (const value of [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]) random.mockReturnValueOnce(value);
-    expect(animation.circleParams()).toEqual({
-        x: 10, y: 16, translateX: 0, translateY: 0, size: 1,
-        alpha: 0, targetAlpha: 0.3, dx: 0, dy: (0.6 - 0.5) * 0.2,
-        magnetism: 0.1 + 0.7 * 4,
-    });
-    expect(random).toHaveBeenCalledTimes(7);
-    expect(animation).toHaveProperty('animate', frames[0]);
-    expect(Object.hasOwn(animation, 'drawCircle')).toBe(true);
-    expect(Object.hasOwn(animation, 'clearContext')).toBe(false);
+it('creates particle parameters within the actual canvas and motion bounds', () => {
+    const animation = new ParticleAnimation(canvas({ quantity: '0' }), { quantity: 0 });
+    const circle = animation.circleParams();
+    expect(circle.x).toBeGreaterThanOrEqual(0); expect(circle.x).toBeLessThan(100);
+    expect(circle.y).toBeGreaterThanOrEqual(0); expect(circle.y).toBeLessThan(80);
+    expect([1, 2]).toContain(circle.size);
+    expect(circle.targetAlpha).toBeGreaterThanOrEqual(0.1); expect(circle.targetAlpha).toBeLessThanOrEqual(0.7);
+    expect(Math.abs(circle.dx)).toBeLessThanOrEqual(0.1); expect(Math.abs(circle.dy)).toBeLessThanOrEqual(0.1);
+    expect(circle.magnetism).toBeGreaterThanOrEqual(0.1); expect(circle.magnetism).toBeLessThan(4.1);
 });
 
 it('constructs highlighters immediately with independent captured boxes and bound listeners', () => {

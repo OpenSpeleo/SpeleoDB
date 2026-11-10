@@ -6,13 +6,11 @@ const jquerySource = readFileSync(path.join(process.cwd(), 'frontend_public/stat
 const jqueryHost = globalThis as typeof globalThis & { jQuery: FormTestJQuery };
 beforeAll(() => { (0, eval)(jquerySource); });
 beforeEach(() => {
-    vi.useFakeTimers();
     document.body.innerHTML = '<div id="modal_error"><span id="modal_error_txt"></span></div><div id="modal_success"><span id="modal_success_txt"></span></div>';
 });
 afterEach(() => {
     jqueryHost.jQuery(document).off();
     document.body.innerHTML = '';
-    vi.useRealTimers();
 });
 
 import { attachSurveyTableTool } from './survey_table_tool.ts';

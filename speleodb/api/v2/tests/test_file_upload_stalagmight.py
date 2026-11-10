@@ -97,7 +97,7 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
         assert isinstance(uploaded, Response)
         assert uploaded.status_code == status.HTTP_200_OK, uploaded.data
         assert uploaded.data["files"] == ["stalagmight.stalx"]
-        assert uploaded.data["geojson_status"] == "pending"
+        assert "geojson_status" not in uploaded.data
         assert uploaded.data["project"]["type"] == "STALAGMIGHT"
         assert (
             Format.objects.get(project=self.project).raw_format
@@ -147,9 +147,9 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
             )
             == commit_ids
         )
-        with self.project.git_repo as repo:
-            assert repo.head.commit.hexsha == commit.id
-            assert not repo.is_dirty(untracked_files=True)
+        repo = self.project.git_repo
+        assert repo.head.commit.hexsha == commit.id
+        assert not repo.is_dirty(untracked_files=True)
 
     def test_latest_historical_blob_and_dump_preserve_each_revision(self) -> None:
         first = self._upload(self.source)
@@ -177,10 +177,9 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
         assert latest.status_code == status.HTTP_200_OK
         assert self._bytes(latest) == second_source
         history_repo = self.project.git_repo
-        with history_repo:
-            first_blob = history_repo.commit(first_sha).tree / "stalagmight.stalx"
-            blob_sha = first_blob.hexsha
-            self.project.construct_git_history_from_project(history_repo)
+        first_blob = history_repo.commit(first_sha).tree / "stalagmight.stalx"
+        blob_sha = first_blob.hexsha
+        self.project.construct_git_history_from_project(history_repo)
         assert set(
             ProjectCommit.objects.filter(
                 project=self.project, id__in=[first_sha, second_sha]
@@ -204,8 +203,8 @@ class TestStalagmightFiles(BaseAPIProjectTestCase):
     def test_missing_source_reports_canonical_filename_at_latest_and_revision(
         self,
     ) -> None:
-        with self.project.git_repo as repo:
-            baseline_sha = repo.head.commit.hexsha
+        repo = self.project.git_repo
+        baseline_sha = repo.head.commit.hexsha
         for hexsha in (None, baseline_sha):
             response = self._download(hexsha=hexsha)
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

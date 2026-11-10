@@ -6,7 +6,7 @@ import { State } from '../state.ts';
 import { configureRuntimeContext } from '../runtime_context.ts';
 
 beforeEach(() => { State.resetLayerState(); });
-afterEach(() => { State.resetLayerState(); State.map = null; vi.restoreAllMocks(); });
+afterEach(() => { State.resetLayerState(); State.map = null; });
 
 function stationSource() {
     const data: MapPointCollection = { type: 'FeatureCollection', features: [{
@@ -74,7 +74,7 @@ it('publishes station refresh synchronously on Window and returns a promise', as
     }
 });
 
-it('loads images sequentially, skips existing images and retries a missing image on a later map', async () => {
+it('loads images sequentially, skips existing images and fills a missing image on a later map', async () => {
     configureRuntimeContext({ icons: { cylinderOrange: '/cylinder', explorationLead: '/lead', biology: '/biology', bone: '/bone', artifact: '/artifact', geology: '/geology' } });
     const images = new Set<string>();
     const image = {} as RendererImage;
@@ -89,22 +89,4 @@ it('loads images sequentially, skips existing images and retries a missing image
     await Layers.loadMarkerImages();
     expect(loadImage.mock.calls[6]?.[0]).toBe('/bone');
     expect(addImage).toHaveBeenCalledTimes(7);
-});
-
-it('catches image failures and resumes with only missing icons on retry', async () => {
-    const images = new Set<string>();
-    const image = {} as RendererImage;
-    let fail = true;
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const loadImage = vi.fn(async (_url: string) => {
-        if (fail) throw new Error('image failed');
-        return { data: image };
-    });
-    State.map = { hasImage: (id: string) => images.has(id), loadImage, addImage: (id: string) => images.add(id) } as unknown as ViewerMap;
-    await expect(Layers.loadMarkerImages()).resolves.toBeUndefined();
-    expect(loadImage).toHaveBeenCalledOnce();
-    expect(log).toHaveBeenCalledOnce();
-    fail = false;
-    await Layers.loadMarkerImages();
-    expect(images.size).toBe(6);
 });

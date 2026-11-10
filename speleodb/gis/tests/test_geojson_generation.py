@@ -1,13 +1,10 @@
-"""Durable map work uses SQL, local Git, and temporary storage, never GitLab."""
+"""Explicit map executions retain real immutable Git, conversion and storage."""
 
 from __future__ import annotations
 
-import os
-import socket
+import json
 import uuid
 from contextlib import closing
-from datetime import timedelta
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -16,69 +13,37 @@ from unittest.mock import patch
 import orjson
 import pytest
 from celery import Celery
-from celery import current_app
 from celery._state import get_current_app
 from celery.contrib.testing.worker import start_worker
 from celery.exceptions import SoftTimeLimitExceeded
 from celery.result import EagerResult
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
-from django.core.management import call_command
 from django.db import connection
-from django.db import transaction
-from django.utils import timezone
-from django_celery_beat.models import IntervalSchedule
-from django_celery_beat.models import PeriodicTask
+from django.test import TestCase
+from django_celery_results.models import TaskResult
 from git import Actor
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import StalagMightInterface
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import ValidationError
 
 from speleodb.background_jobs.archive_sources import GitSource
-from speleodb.background_jobs.tasks import maintain_background_jobs
+from speleodb.background_jobs.operations import schedule_uploaded_geojson
 from speleodb.common.enums import ProjectType
-from speleodb.gis.admin.project_geojson_generation import GeoJSONGenerationForm
-from speleodb.gis.geojson_generation import GeoJSONOwnershipLostError
-from speleodb.gis.geojson_generation import claim_geojson_generation
-from speleodb.gis.geojson_generation import cleanup_geojson_work
-from speleodb.gis.geojson_generation import enqueue_geojson_generation
-from speleodb.gis.geojson_generation import finish_geojson_generation
-from speleodb.gis.geojson_generation import mark_geojson_ready
-from speleodb.gis.geojson_generation import recover_geojson_generations
-from speleodb.gis.geojson_generation import request_geojson_generation
-from speleodb.gis.geojson_generation import reserve_geojson_object
-from speleodb.gis.geojson_generation import retry_geojson_generation
-from speleodb.gis.models import GeoJSONGenerationState
+from speleodb.common.enums import TaskResultStatus
 from speleodb.gis.models import ProjectGeoJSON
-from speleodb.gis.models import ProjectGeoJSONGeneration
-from speleodb.gis.project_geojson_services import replace_project_geojson
 from speleodb.gis.tasks import generate_project_geojson
 from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models.project import ConversionFailedError
 from speleodb.testing.stalagmight import NATIVE_SHOT_ID
 from speleodb.testing.stalagmight import stalagmight_bytes
+from speleodb.utils.exceptions import GeoJSONGenerationError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from pytest_django.fixtures import Settings
-
-pytestmark = pytest.mark.django_db
-PUBLISH = "speleodb.gis.geojson_generation.current_app.send_task"
-POINT_DATA: dict[str, Any] = {
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [1, 2]},
-            "properties": {},
-        }
-    ],
-}
 
 
 @pytest.fixture(autouse=True)
@@ -87,360 +52,52 @@ def private_scratch(settings: Settings, tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def commit(project: Project) -> ProjectCommit:
-    project.type = ProjectType.ARIANE
-    project.exclude_geojson = False
-    project.save(update_fields=["type", "exclude_geojson"])
-    return ProjectCommit.objects.create(
-        id="a" * 40,
-        project=project,
-        author_name="Surveyor",
-        author_email="surveyor@example.test",
-        authored_date=timezone.now(),
-        message="Survey upload",
-    )
-
-
-@pytest.fixture
 def artifact_storage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> FileSystemStorage:
     storage = FileSystemStorage(location=tmp_path / "artifacts")
-    field = ProjectGeoJSON._meta.get_field("file")  # noqa: SLF001
-    monkeypatch.setattr(field, "storage", storage)
+    monkeypatch.setattr(ProjectGeoJSON._meta.get_field("file"), "storage", storage)  # noqa: SLF001
     return storage
 
 
 @pytest.fixture(autouse=True)
 def memory_broker() -> Generator[Celery]:
     previous = get_current_app()
-    with Celery(f"geojson-tests-{uuid.uuid4()}") as application:
-        application.config_from_object("django.conf:settings", namespace="CELERY")
-        application.conf.update(
+    with Celery(f"geojson-tests-{uuid.uuid4()}") as app:
+        app.config_from_object("django.conf:settings", namespace="CELERY")
+        app.conf.update(
             broker_url="memory://",
             broker_read_url="memory://",
             broker_write_url="memory://",
             task_always_eager=False,
             result_backend="cache+memory://",
         )
-        application.autodiscover_tasks(force=True)
+        app.autodiscover_tasks(force=True)
         try:
-            with (
-                application.connection_for_write() as broker,
-                broker.SimpleQueue("background_control") as queue,
-            ):
-                queue.clear()
-            yield application
+            yield app
         finally:
             with (
-                application.connection_for_write() as broker,
+                app.connection_for_write() as broker,
                 broker.SimpleQueue("background_control") as queue,
             ):
                 queue.clear()
             previous.set_current()
 
 
-def _queued_messages() -> list[dict[str, Any]]:
-    messages: list[dict[str, Any]] = []
-    with (
-        current_app.connection_for_write() as broker,
-        broker.SimpleQueue("background_control") as queue,
-    ):
-        while queue.qsize():
-            message = queue.get(block=False)
-            messages.append({"headers": message.headers, "body": message.payload})
-            message.ack()
-    return messages
-
-
-def _queue(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
-    generation = request_geojson_generation(commit.project, commit)
-    enqueue_geojson_generation(commit.pk)
-    generation.refresh_from_db()
-    messages = _queued_messages()
-    assert len(messages) == 1
-    assert messages[0]["headers"]["task"] == generate_project_geojson.name
-    assert messages[0]["headers"]["id"] == str(generation.token)
-    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
-    return generation
-
-
-def _running(commit: ProjectCommit) -> ProjectGeoJSONGeneration:
-    generation = _queue(commit)
-    claimed = claim_geojson_generation(commit.pk, str(generation.token))
-    assert claimed is not None
-    return claimed
-
-
-@pytest.mark.django_db(transaction=True)
-def test_request_publishes_once_only_after_transaction_commit(
-    commit: ProjectCommit,
-) -> None:
-    with transaction.atomic():
-        first = request_geojson_generation(commit.project, commit)
-        second = request_geojson_generation(commit.project, commit)
-        assert first.pk == second.pk
-        assert first.state == GeoJSONGenerationState.PENDING
-        assert _queued_messages() == []
-    first.refresh_from_db()
-    assert first.state == GeoJSONGenerationState.QUEUED
-    messages = _queued_messages()
-    assert len(messages) == 1
-    assert messages[0]["headers"]["task"] == generate_project_geojson.name
-    assert messages[0]["body"][0] == [commit.pk, str(first.token)]
-    request_geojson_generation(commit.project, commit)
-    assert _queued_messages() == []
-    assert ProjectGeoJSONGeneration.objects.count() == 1
-    assert first.attempts == 0
-
-
-@pytest.mark.django_db(transaction=True)
-def test_request_rollback_removes_pending_work(commit: ProjectCommit) -> None:
-    with transaction.atomic():
-        request_geojson_generation(commit.project, commit)
-        transaction.set_rollback(True)
-    assert _queued_messages() == []
-    assert not ProjectGeoJSONGeneration.objects.exists()
-
-
-@pytest.mark.django_db(transaction=True)
-def test_excluded_project_never_dispatches(commit: ProjectCommit) -> None:
-    commit.project.exclude_geojson = True
-    commit.project.save(update_fields=["exclude_geojson"])
-    generation = request_geojson_generation(commit.project, commit)
-    assert generation.state == GeoJSONGenerationState.SKIPPED
-    recover_geojson_generations()
-    assert _queued_messages() == []
-
-
-def test_maintenance_recovers_pending_work(commit: ProjectCommit) -> None:
-    generation = request_geojson_generation(commit.project, commit)
-    assert _queued_messages() == []
-    maintain_background_jobs.run()
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.QUEUED
-    messages = _queued_messages()
-    assert len(messages) == 1
-    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
-
-
-@pytest.mark.django_db(transaction=True)
-def test_manual_retry_publishes_after_commit(commit: ProjectCommit) -> None:
-    generation = ProjectGeoJSONGeneration.objects.create(
-        commit=commit,
-        state=GeoJSONGenerationState.FAILED,
-        attempts=3,
-        last_error_code="invalid_survey",
+def _queue(commit: ProjectCommit) -> TaskResult:
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        schedule_uploaded_geojson(commit.project, commit)
+    return TaskResult.objects.filter(task_args=json.dumps([commit.pk])).latest(
+        "date_created"
     )
-    old_token = generation.token
-    with transaction.atomic():
-        retry_geojson_generation(commit)
-        assert _queued_messages() == []
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.QUEUED
-    assert generation.attempts == 0
-    assert generation.token != old_token
-    messages = _queued_messages()
-    assert len(messages) == 1
-    assert messages[0]["body"][0] == [commit.pk, str(generation.token)]
 
 
-@pytest.mark.django_db(transaction=True)
-def test_broker_failure_retains_work_without_consuming_execution_budget(
-    commit: ProjectCommit, memory_broker: Celery
-) -> None:
-    before = timezone.now()
-    with socket.socket() as refused:
-        refused.bind(("127.0.0.1", 0))
-        broker_url = f"redis://127.0.0.1:{refused.getsockname()[1]}/0"
-        with Celery(f"geojson-unavailable-{uuid.uuid4()}") as unavailable:
-            unavailable.config_from_object("django.conf:settings", namespace="CELERY")
-            unavailable.conf.update(
-                broker_url=broker_url,
-                broker_read_url=broker_url,
-                broker_write_url=broker_url,
-                # These two keys already exist in namespaced Django settings;
-                # lowercase updates would be shadowed by their CELERY_* values.
-                CELERY_BROKER_CONNECTION_TIMEOUT=0.2,
-                CELERY_BROKER_TRANSPORT_OPTIONS={
-                    "socket_timeout": 0.2,
-                    "socket_connect_timeout": 0.2,
-                    # One real refused connection exercises application
-                    # recovery; Kombu's own reconnect budget is unrelated.
-                    "max_retries": 0,
-                },
-            )
-            try:
-                generation = request_geojson_generation(commit.project, commit)
-            finally:
-                memory_broker.set_current()
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.PENDING
-    assert generation.attempts == 0
-    assert generation.dispatch_attempts == 1
-    assert generation.last_error_code == "broker_unavailable"
-    assert generation.next_attempt_at is not None
-    assert generation.next_attempt_at >= before + timedelta(seconds=60)
-    recover_geojson_generations()
-    assert _queued_messages() == []
-    ProjectGeoJSONGeneration.objects.filter(pk=generation.pk).update(
-        next_attempt_at=timezone.now()
+def _run(commit: ProjectCommit, task: TaskResult, *, throw: bool = True) -> Any:
+    return generate_project_geojson.apply(
+        args=(commit.pk,),
+        task_id=task.task_id,
+        throw=throw,
     )
-    maintain_background_jobs.run()
-    assert len(_queued_messages()) == 1
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.QUEUED
-
-
-def test_ambiguous_delivery_does_not_reset_claimed_execution(
-    commit: ProjectCommit,
-) -> None:
-    generation = request_geojson_generation(commit.project, commit)
-
-    def claim_then_fail(*args: Any, **kwargs: Any) -> None:
-        assert claim_geojson_generation(*kwargs["args"]) is not None
-        raise ConnectionError("reply lost after acceptance")
-
-    with patch(PUBLISH, side_effect=claim_then_fail):
-        recover_geojson_generations()
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.RUNNING
-    assert generation.attempts == 1
-
-
-def test_duplicate_delivery_claims_once_and_expired_queue_token_is_ignored(
-    commit: ProjectCommit, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    generation = _queue(commit)
-    old_token = str(generation.token)
-    now = generation.lease_expires_at
-    assert now is not None
-    monkeypatch.setattr(timezone, "now", lambda: now)
-    assert claim_geojson_generation(commit.pk, old_token) is None
-    recover_geojson_generations()
-    assert len(_queued_messages()) == 1
-    generation.refresh_from_db()
-    assert str(generation.token) != old_token
-    assert claim_geojson_generation(commit.pk, old_token) is None
-    assert claim_geojson_generation(commit.pk, str(generation.token)) is not None
-    assert claim_geojson_generation(commit.pk, str(generation.token)) is None
-
-
-def test_worker_lease_recovers_and_stops_after_three_attempts(
-    commit: ProjectCommit, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    now = timezone.now()
-    monkeypatch.setattr(timezone, "now", lambda: now)
-    generation = request_geojson_generation(commit.project, commit)
-    for attempt in range(1, settings.GEOJSON_GENERATION_MAX_ATTEMPTS + 1):
-        recover_geojson_generations()
-        assert len(_queued_messages()) == 1
-        generation.refresh_from_db()
-        assert claim_geojson_generation(commit.pk, str(generation.token)) is not None
-        generation.refresh_from_db()
-        assert generation.attempts == attempt
-        assert generation.lease_expires_at is not None
-        now = generation.lease_expires_at
-        recover_geojson_generations()
-        assert _queued_messages() == []
-        generation.refresh_from_db()
-        if generation.next_attempt_at is not None:
-            now = generation.next_attempt_at
-    assert generation.state == GeoJSONGenerationState.FAILED
-    assert generation.last_error_code == "worker_timeout"
-
-
-def test_stale_result_cannot_publish_and_new_blob_is_removed(
-    commit: ProjectCommit,
-    artifact_storage: FileSystemStorage,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    generation = _running(commit)
-    deadline = generation.lease_expires_at
-    assert deadline is not None
-    monkeypatch.setattr(timezone, "now", lambda: deadline)
-    with pytest.raises(GeoJSONOwnershipLostError):
-        replace_project_geojson(
-            commit.project,
-            commit,
-            POINT_DATA,
-            before_publish=partial(
-                mark_geojson_ready, commit.pk, str(generation.token)
-            ),
-        )
-    assert not ProjectGeoJSON.objects.exists()
-    assert not list(tmp_path.rglob("*.json"))
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.RUNNING
-
-
-@pytest.mark.parametrize("maintenance", [False, True])
-def test_ready_state_and_artifact_insert_roll_back_together(
-    commit: ProjectCommit, artifact_storage: FileSystemStorage, maintenance: bool
-) -> None:
-    generation = _running(commit)
-    with (
-        patch.object(ProjectGeoJSON, "save", side_effect=RuntimeError("insert failed")),
-        pytest.raises(RuntimeError, match="insert failed"),
-    ):
-        replace_project_geojson(
-            commit.project,
-            commit,
-            POINT_DATA,
-            before_publish=None
-            if maintenance
-            else partial(mark_geojson_ready, commit.pk, str(generation.token)),
-        )
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.RUNNING
-    assert not ProjectGeoJSON.objects.exists()
-
-
-@pytest.mark.parametrize("project_type", [ProjectType.ARIANE, ProjectType.STALAGMIGHT])
-def test_retry_recovers_missing_row_and_terminal_failure(
-    commit: ProjectCommit, project_type: ProjectType
-) -> None:
-    commit.project.type = project_type
-    commit.project.save(update_fields=["type"])
-    generation = retry_geojson_generation(commit)
-    assert generation.state == GeoJSONGenerationState.PENDING
-    generation.state = GeoJSONGenerationState.FAILED
-    generation.attempts = 3
-    generation.last_error_code = "invalid_survey"
-    generation.save()
-    old_token = generation.token
-    generation = retry_geojson_generation(commit)
-    assert generation.state == GeoJSONGenerationState.PENDING
-    assert generation.attempts == 0
-    assert generation.last_error_code == ""
-    assert generation.token != old_token
-
-
-def test_terminal_failure_retains_previous_artifact(
-    commit: ProjectCommit, artifact_storage: FileSystemStorage
-) -> None:
-    previous = ProjectCommit.objects.create(
-        id="b" * 40,
-        project=commit.project,
-        author_name=commit.author_name,
-        author_email=commit.author_email,
-        authored_date=commit.authored_date - timedelta(days=1),
-        message="Previous source",
-    )
-    artifact = replace_project_geojson(commit.project, previous, POINT_DATA)
-    generation = _running(commit)
-    finish_geojson_generation(
-        commit.pk,
-        str(generation.token),
-        code="invalid_survey",
-        message="Longitude is invalid.",
-    )
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.FAILED
-    assert ProjectGeoJSON.objects.get(commit=previous).file.name == artifact.file.name
-    assert artifact.file.name is not None
-    assert artifact_storage.exists(artifact.file.name)
 
 
 @pytest.fixture
@@ -469,12 +126,13 @@ def local_source(
             project, repository.head.commit
         )
         monkeypatch.setattr(
-            "speleodb.gis.tasks.project_git_source",
-            lambda project_id: GitSource(url=str(directory), token=""),
+            "speleodb.surveys.models.project.project_git_source",
+            lambda project_id, **kwargs: GitSource(url=str(directory), token=""),
         )
         yield commit, repository
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "local_source", [ProjectType.ARIANE, ProjectType.STALAGMIGHT], indirect=True
 )
@@ -497,13 +155,9 @@ def test_task_reads_requested_sha_after_new_upload(
     actor = Actor("Surveyor", "surveyor@example.test")
     repository.index.commit("Later broken survey", author=actor, committer=actor)
 
-    def reject_shared_checkout(self: Project) -> None:
-        pytest.fail("Worker must not access a shared project checkout")
-
-    with patch.object(Project, "git_repo", property(reject_shared_checkout)):
-        generate_project_geojson.run(commit.pk, str(generation.token))
+    _run(commit, generation)
     generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
+    assert generation.status == TaskResultStatus.SUCCESS
     artifact = ProjectGeoJSON.objects.get(commit=commit)
     assert artifact.file.name is not None
     assert artifact_storage.exists(artifact.file.name)
@@ -513,11 +167,13 @@ def test_task_reads_requested_sha_after_new_upload(
     assert (repository.path / filename).read_bytes() == b"not a survey"
     assert not repository.is_dirty(untracked_files=True)
     revision = artifact.geojson_revision
-    generate_project_geojson.run(commit.pk, str(generation.token))
+    duplicate = _run(commit, generation)
+    assert duplicate.state == "IGNORED"
     artifact.refresh_from_db()
     assert artifact.geojson_revision == revision
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
 def test_native_generation_uses_common_exporter(
     local_source: tuple[ProjectCommit, GitRepo],
@@ -529,9 +185,9 @@ def test_native_generation_uses_common_exporter(
         orjson.dumps(survey_to_geojson(StalagMightInterface.from_file(source)))
     )
     generation = _queue(commit)
-    generate_project_geojson.run(commit.pk, str(generation.token))
+    _run(commit, generation)
     generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
+    assert generation.status == TaskResultStatus.SUCCESS
     artifact = ProjectGeoJSON.objects.get(commit=commit)
     with artifact.file.open("rb") as stored:
         actual = orjson.loads(stored.read())
@@ -557,26 +213,26 @@ def test_native_generation_uses_common_exporter(
     assert not list(Path(settings.GEOJSON_GENERATION_SCRATCH_DIR).iterdir())
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
 @pytest.mark.parametrize(
-    ("failure", "expected_state", "expected_code"),
+    ("failure", "expected_state"),
     [
-        ("unsupported_schema", GeoJSONGenerationState.FAILED, "invalid_survey"),
-        ("missing_anchor", GeoJSONGenerationState.SKIPPED, "no_anchor"),
-        ("impossible_geometry", GeoJSONGenerationState.FAILED, "invalid_survey"),
-        ("missing_source", GeoJSONGenerationState.SKIPPED, "missing_source"),
+        ("unsupported_schema", TaskResultStatus.FAILURE),
+        ("missing_anchor", TaskResultStatus.SUCCESS),
+        ("impossible_geometry", TaskResultStatus.FAILURE),
+        ("missing_source", TaskResultStatus.SUCCESS),
     ],
 )
 def test_native_failure_preserves_source_and_previous_artifact(
     local_source: tuple[ProjectCommit, GitRepo],
     artifact_storage: FileSystemStorage,
     failure: str,
-    expected_state: GeoJSONGenerationState,
-    expected_code: str,
+    expected_state: str,
 ) -> None:
     previous, repository = local_source
     generation = _queue(previous)
-    generate_project_geojson.run(previous.pk, str(generation.token))
+    _run(previous, generation)
     artifact = ProjectGeoJSON.objects.get(commit=previous)
     original_revision = artifact.geojson_revision
     with artifact.file.open("rb") as stored:
@@ -607,12 +263,13 @@ def test_native_failure_preserves_source_and_previous_artifact(
         previous.project, repository.head.commit
     )
     generation = _queue(commit)
-    generate_project_geojson.run(commit.pk, str(generation.token))
+    result = _run(commit, generation, throw=False)
+    assert result.failed() is (expected_state == TaskResultStatus.FAILURE)
     generation.refresh_from_db()
-    assert generation.state == expected_state
-    assert generation.last_error_code == expected_code
-    assert generation.attempts == 1
-    assert generation.next_attempt_at is None
+    assert generation.status == expected_state
+    assert json.loads(generation.meta or "{}")["summary"]["failed"] == (
+        1 if expected_state == TaskResultStatus.FAILURE else 0
+    )
     assert not ProjectGeoJSON.objects.filter(commit=commit).exists()
     artifact.refresh_from_db()
     assert artifact.geojson_revision == original_revision
@@ -626,31 +283,7 @@ def test_native_failure_preserves_source_and_previous_artifact(
     assert not list(Path(settings.GEOJSON_GENERATION_SCRATCH_DIR).iterdir())
 
 
-def test_validation_failure_has_bounded_station_notes_without_raw_payload(
-    local_source: tuple[ProjectCommit, GitRepo],
-) -> None:
-    commit, _ = local_source
-    generation = _queue(commit)
-
-    class Coordinate(BaseModel):
-        longitude: float = Field(ge=-180, le=180)
-
-    with pytest.raises(ValidationError) as captured:
-        Coordinate(longitude=-183.47)
-    error = captured.value
-    error.add_note("Section entrance; station 0: longitude -183.47 outside [-180,180]")
-    error.add_note("x" * 5000)
-    with patch.object(Project, "build_geojson", side_effect=error):
-        generate_project_geojson.run(commit.pk, str(generation.token))
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.FAILED
-    assert generation.last_error_code == "invalid_survey"
-    assert "station 0" in generation.last_error
-    assert len(generation.last_error) <= 2000  # noqa: PLR2004
-    assert "Input should" not in generation.last_error
-    assert generation.attempts == 1
-
-
+@pytest.mark.django_db
 def test_soft_timeout_is_durable_and_still_escapes_to_celery(
     local_source: tuple[ProjectCommit, GitRepo],
 ) -> None:
@@ -660,296 +293,37 @@ def test_soft_timeout_is_durable_and_still_escapes_to_celery(
         patch.object(Project, "build_geojson", side_effect=SoftTimeLimitExceeded),
         pytest.raises(SoftTimeLimitExceeded),
     ):
-        generate_project_geojson.run(commit.pk, str(generation.token))
+        _run(commit, generation)
     generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.PENDING
-    assert generation.last_error_code == "worker_timeout"
-    assert generation.next_attempt_at is not None
-
-
-def test_scheduler_and_task_limits() -> None:
-    interval = IntervalSchedule.objects.create(every=60, period="seconds")
-    PeriodicTask.objects.create(
-        name="project-geojson-dispatch",
-        task="retired.geojson.scheduler",
-        interval=interval,
-    )
-    custom = PeriodicTask.objects.create(
-        name="operator-owned-schedule",
-        task="operator.task",
-        interval=interval,
-    )
-    call_command("install_background_schedules")
-    schedules = dict(PeriodicTask.objects.values_list("name", "pk"))
-    call_command("install_background_schedules")
-    assert dict(PeriodicTask.objects.values_list("name", "pk")) == schedules
-    assert not PeriodicTask.objects.filter(name="project-geojson-dispatch").exists()
-    custom.refresh_from_db()
-    assert custom.interval_id == interval.pk
-    assert custom.task == "operator.task"
-    schedule = PeriodicTask.objects.get(name="background-job-maintenance")
-    assert schedule.task == maintain_background_jobs.name
-    assert schedule.queue == "background_control"
-    assert schedule.interval is not None
-    assert schedule.interval.every == 600  # noqa: PLR2004
-    assert generate_project_geojson.soft_time_limit == 300  # noqa: PLR2004
-    assert generate_project_geojson.time_limit == 360  # noqa: PLR2004
-
-
-def test_journal_recovers_unpublished_blob_after_hard_kill(
-    commit: ProjectCommit,
-    artifact_storage: FileSystemStorage,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    generation = _running(commit)
-    token = str(generation.token)
-    key = f"{commit.project_id}/abandoned.json"
-    reserve_geojson_object(commit.pk, token, key)
-    # Simulate process death after S3 accepted bytes but before SQL publication.
-    artifact_storage.save(key, ContentFile(b"abandoned map"))
-    generation.refresh_from_db()
-    assert generation.lease_expires_at is not None
-    later = generation.lease_expires_at + timedelta(
-        seconds=settings.GEOJSON_GENERATION_CLEANUP_GRACE_SECONDS
-    )
-    cleanup_geojson_work()
-    assert artifact_storage.exists(key)
-    monkeypatch.setattr(timezone, "now", lambda: later)
-    cleanup_geojson_work()
-    assert not artifact_storage.exists(key)
-    generation.refresh_from_db()
-    assert generation.unpublished_objects == []
-
-
-def test_failed_cleanup_does_not_starve_later_journals(
-    commit: ProjectCommit,
-    artifact_storage: FileSystemStorage,
-    settings: Settings,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    settings.GEOJSON_GENERATION_DISPATCH_BATCH = 1
-    now = timezone.now()
-    monkeypatch.setattr(timezone, "now", lambda: now)
-    newer = ProjectCommit.objects.create(
-        id="b" * 40,
-        project=commit.project,
-        author_name=commit.author_name,
-        author_email=commit.author_email,
-        authored_date=commit.authored_date,
-        message="Later abandoned upload",
-    )
-    for index, source in enumerate((commit, newer)):
-        key = f"{source.project_id}/{source.pk}.json"
-        artifact_storage.save(key, ContentFile(b"abandoned"))
-        ProjectGeoJSONGeneration.objects.create(
-            commit=source,
-            state=GeoJSONGenerationState.FAILED,
-            updated_at=now - timedelta(days=2 - index),
-            unpublished_objects=[
-                {"key": key, "token": "expired", "cleanup_after": now.isoformat()}
-            ],
-        )
-    delete = artifact_storage.delete
-    blocked_key = f"{commit.project_id}/{commit.pk}.json"
-    newer_key = f"{newer.project_id}/{newer.pk}.json"
-
-    def delete_except_blocked(key: str) -> None:
-        if key == blocked_key:
-            raise OSError("Deletion permanently denied for this object")
-        delete(key)
-
-    monkeypatch.setattr(artifact_storage, "delete", delete_except_blocked)
-    cleanup_geojson_work()
-    assert artifact_storage.exists(newer_key)
-    cleanup_geojson_work()
-    assert not artifact_storage.exists(newer_key)
-    assert artifact_storage.exists(blocked_key)
-    assert ProjectGeoJSONGeneration.objects.get(pk=commit.pk).unpublished_objects
-    assert ProjectGeoJSONGeneration.objects.get(pk=newer.pk).unpublished_objects == []
-
-
-@pytest.mark.parametrize("failed", [False, True])
-def test_maintenance_publication_reconciles_worker_and_preserves_cleanup(
-    commit: ProjectCommit, artifact_storage: FileSystemStorage, failed: bool
-) -> None:
-    generation = _running(commit)
-    token = str(generation.token)
-    reserve_geojson_object(commit.pk, token, "abandoned.json")
-    if failed:
-        finish_geojson_generation(
-            commit.pk, token, code="invalid_survey", message="Previous exporter failed"
-        )
-    artifact = replace_project_geojson(commit.project, commit, POINT_DATA)
-    # A late worker failure must not undo a successful maintenance publication.
-    finish_geojson_generation(
-        commit.pk, token, code="invalid_survey", message="Superseded worker failed"
-    )
-    with pytest.raises(GeoJSONOwnershipLostError):
-        mark_geojson_ready(commit.pk, token)
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
-    assert generation.last_error == ""
-    assert generation.lease_expires_at is None
-    assert generation.unpublished_objects[0]["key"] == "abandoned.json"
-    assert ProjectGeoJSON.objects.get(commit=commit).file.name == artifact.file.name
-
-
-def test_failed_maintenance_replacement_preserves_artifact_and_status(
-    commit: ProjectCommit, artifact_storage: FileSystemStorage
-) -> None:
-    previous = replace_project_geojson(commit.project, commit, POINT_DATA)
-    generation = ProjectGeoJSONGeneration.objects.create(
-        commit=commit,
-        state=GeoJSONGenerationState.FAILED,
-        last_error="Earlier generation failure",
-    )
-    with (
-        patch.object(ProjectGeoJSON, "save", side_effect=RuntimeError("insert failed")),
-        pytest.raises(RuntimeError, match="insert failed"),
-    ):
-        replace_project_geojson(commit.project, commit, POINT_DATA)
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.FAILED
-    assert generation.last_error == "Earlier generation failure"
-    assert ProjectGeoJSON.objects.get(commit=commit).file.name == previous.file.name
-    assert previous.file.name is not None
-    assert artifact_storage.exists(previous.file.name)
-
-
-def test_journal_never_deletes_published_or_live_objects(
-    commit: ProjectCommit,
-    artifact_storage: FileSystemStorage,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    generation = _running(commit)
-    artifact = replace_project_geojson(commit.project, commit, POINT_DATA)
-    now = timezone.now()
-    ProjectGeoJSONGeneration.objects.filter(pk=commit.pk).update(
-        unpublished_objects=[
-            {
-                "key": artifact.file.name,
-                "token": "old",
-                "cleanup_after": now.isoformat(),
-            }
-        ]
-    )
-    cleanup_geojson_work()
-    assert artifact.file.name is not None
-    assert artifact_storage.exists(artifact.file.name)
-    generation.refresh_from_db()
-    assert generation.unpublished_objects == []
-
-
-def test_ready_publication_clears_upload_journal_atomically(
-    commit: ProjectCommit, artifact_storage: FileSystemStorage
-) -> None:
-    generation = _running(commit)
-    token = str(generation.token)
-    replace_project_geojson(
-        commit.project,
-        commit,
-        POINT_DATA,
-        before_upload=partial(reserve_geojson_object, commit.pk, token),
-        before_publish=partial(mark_geojson_ready, commit.pk, token),
-    )
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
-    assert generation.unpublished_objects == []
-
-
-def test_abandoned_scratch_cleanup_preserves_live_work(
-    commit: ProjectCommit, tmp_path: Path
-) -> None:
-    generation = _running(commit)
-    root = tmp_path / "scratch"
-    root.mkdir()
-    abandoned = root / f"{uuid.uuid4()}-abandoned"
-    live = root / f"{generation.token}-live"
-    unrelated = root / "unrelated"
-    now = timezone.now()
-    cutoff = now.timestamp() - settings.GEOJSON_GENERATION_HARD_TIME_LIMIT - 301
-    for directory in (abandoned, live, unrelated):
-        directory.mkdir()
-        (directory / "source").write_bytes(b"survey")
-        os.utime(directory, (cutoff, cutoff))
-    cleanup_geojson_work()
-    assert not abandoned.exists()
-    assert live.exists()
-    assert unrelated.exists()
-
-
-def test_admin_add_validates_excluded_commit(commit: ProjectCommit) -> None:
-    commit.project.exclude_geojson = True
-    commit.project.save(update_fields=["exclude_geojson"])
-    form = GeoJSONGenerationForm(data={"commit": commit.pk})
-    assert not form.is_valid()
-    assert "excluded" in str(form.errors["commit"])
-
-
-@pytest.mark.parametrize(
-    ("project_type", "valid"),
-    [(ProjectType.STALAGMIGHT, True), (ProjectType.THERION, False)],
-)
-def test_admin_generation_form_uses_project_capability(
-    commit: ProjectCommit, project_type: ProjectType, valid: bool
-) -> None:
-    commit.project.type = project_type
-    commit.project.save(update_fields=["type"])
-    form = GeoJSONGenerationForm(data={"commit": commit.pk})
-    assert form.is_valid() is valid, form.errors
-    if not valid:
-        assert "no GeoJSON exporter" in str(form.errors["commit"])
-
-
-def test_existing_artifact_winner_retains_failed_cleanup_journal(
-    commit: ProjectCommit,
-    artifact_storage: FileSystemStorage,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    generation = _running(commit)
-    token = str(generation.token)
-    # A legacy/direct artifact writer does not reconcile generation ownership.
-    previous = ProjectGeoJSON.objects.create(
-        project=commit.project,
-        commit=commit,
-        file=ContentFile(orjson.dumps(POINT_DATA), name="existing.geojson"),
-    )
-    later = timezone.now() + timedelta(
-        seconds=settings.GEOJSON_GENERATION_HARD_TIME_LIMIT
-        + settings.GEOJSON_GENERATION_CLEANUP_GRACE_SECONDS
-    )
-    with patch.object(artifact_storage, "delete", side_effect=OSError("offline")):
-        result = replace_project_geojson(
-            commit.project,
-            commit,
-            POINT_DATA,
-            replace_existing=False,
-            before_upload=partial(reserve_geojson_object, commit.pk, token),
-            before_publish=partial(mark_geojson_ready, commit.pk, token),
-        )
-    assert result.file.name == previous.file.name
-    generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
-    assert len(generation.unpublished_objects) == 1
-    abandoned_key = generation.unpublished_objects[0]["key"]
-    assert artifact_storage.exists(abandoned_key)
-    monkeypatch.setattr(timezone, "now", lambda: later)
-    cleanup_geojson_work()
-    assert not artifact_storage.exists(abandoned_key)
-    assert previous.file.name is not None
-    assert artifact_storage.exists(previous.file.name)
+    assert generation.status == TaskResultStatus.FAILURE
+    assert json.loads(generation.meta or "{}")["error_type"] == "SoftTimeLimitExceeded"
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("local_source", "invalid_geometry"),
+    [(ProjectType.ARIANE, False), (ProjectType.STALAGMIGHT, True)],
+    indirect=["local_source"],
+)
 def test_worker_consumes_committed_job_asynchronously(
     local_source: tuple[ProjectCommit, GitRepo],
     artifact_storage: FileSystemStorage,
     memory_broker: Celery,
+    invalid_geometry: bool,
 ) -> None:
     assert connection.vendor == "postgresql", (
         "This integration test uses an independent worker DB connection"
     )
-    commit, _ = local_source
+    commit, repository = local_source
+    if invalid_geometry:
+        source = repository.path / "stalagmight.stalx"
+        source.write_bytes(stalagmight_bytes(length=1.0))
+        repository.index.add([source.name])
+        actor = Actor("Surveyor", "surveyor@example.test")
+        repository.index.commit("Invalid geometry", author=actor, committer=actor)
+        commit = ProjectCommit.get_or_create_from_commit(
+            commit.project, repository.head.commit
+        )
     generation = _queue(commit)
     queue = f"test-geojson-{uuid.uuid4().hex}"
     # Memory transport otherwise sleeps a full second between deliveries.
@@ -960,44 +334,55 @@ def test_worker_consumes_committed_job_asynchronously(
     }
     with start_worker(memory_broker, queues=[queue], perform_ping_check=False):
         result = generate_project_geojson.apply_async(
-            args=(commit.pk, str(generation.token)),
-            task_id=str(generation.token),
+            args=(commit.pk,),
+            task_id=generation.task_id,
             queue=queue,
         )
         assert not isinstance(result, EagerResult)
-        assert result.get(timeout=30, interval=0.05) is None
-        assert result.successful()
+        outcome = result.get(timeout=30, interval=0.05, propagate=False)
+        if invalid_geometry:
+            assert isinstance(outcome, ConversionFailedError)
+            assert outcome.summary.failed == 1
+            assert result.failed()
+        else:
+            assert outcome["generated"] == 1
+            assert result.successful()
     generation.refresh_from_db()
-    assert generation.state == GeoJSONGenerationState.READY
-    assert generation.unpublished_objects == []
-    artifact = ProjectGeoJSON.objects.get(commit=commit)
+    if invalid_geometry:
+        assert generation.status == TaskResultStatus.FAILURE
+        assert not ProjectGeoJSON.objects.filter(commit=commit).exists()
+    else:
+        assert generation.status == TaskResultStatus.SUCCESS
+        artifact = ProjectGeoJSON.objects.get(commit=commit)
+        assert artifact.file.name is not None
+        assert artifact_storage.exists(artifact.file.name)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
+def test_history_continues_independent_revisions_then_fails(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+) -> None:
+    first, repository = local_source
+    source = repository.path / "stalagmight.stalx"
+    source.write_bytes(stalagmight_bytes(length=1.0))
+    repository.index.add([source.name])
+    actor = Actor("Surveyor", "surveyor@example.test")
+    repository.index.commit(
+        "Impossible later measurements", author=actor, committer=actor
+    )
+    failing_sha = repository.head.commit.hexsha
+    with pytest.raises(ConversionFailedError) as raised:
+        first.project.build_geojsons()
+    summary = raised.value.summary
+    assert summary.processed == 2  # noqa: PLR2004 - One valid and one invalid revision.
+    assert summary.generated == 1
+    assert summary.failed == 1
+    assert isinstance(raised.value.__cause__, GeoJSONGenerationError)
+    assert raised.value.__cause__.__cause__ is not None
+    assert ProjectGeoJSON.objects.filter(commit=first).exists()
+    assert not ProjectGeoJSON.objects.filter(commit_id=failing_sha).exists()
+    artifact = ProjectGeoJSON.objects.get(commit=first)
     assert artifact.file.name is not None
     assert artifact_storage.exists(artifact.file.name)
-
-
-@pytest.mark.parametrize("operation", ["claim", "reserve", "publish"])
-def test_deadline_is_rechecked_after_acquiring_the_row_lock(
-    commit: ProjectCommit, operation: str
-) -> None:
-    generation = _queue(commit) if operation == "claim" else _running(commit)
-    deadline = generation.lease_expires_at
-    assert deadline is not None
-    initial_state = generation.state
-    token = str(generation.token)
-    # First clock read constructs the SQL predicate. Time advances while the
-    # SELECT FOR UPDATE acquires its row, before the second application check.
-    with patch(
-        "speleodb.gis.geojson_generation.timezone.now",
-        side_effect=(deadline - timedelta(seconds=1), deadline),
-    ):
-        if operation == "claim":
-            assert claim_geojson_generation(commit.pk, token) is None
-        elif operation == "reserve":
-            with pytest.raises(GeoJSONOwnershipLostError):
-                reserve_geojson_object(commit.pk, token, "unused.json")
-        else:
-            with pytest.raises(GeoJSONOwnershipLostError):
-                mark_geojson_ready(commit.pk, token)
-    generation.refresh_from_db()
-    assert generation.state == initial_state
-    assert generation.unpublished_objects == []

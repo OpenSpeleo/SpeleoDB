@@ -38,7 +38,6 @@ describe('attachDangerZone', () => {
     let locationHrefSpy: Mock<(value: unknown) => void>;
 
     beforeEach(() => {
-        vi.useFakeTimers();
         setupPage();
         // JSDOM cannot perform navigation; observe only the unavailable navigation boundary.
         originalLocation = window.location;
@@ -62,7 +61,7 @@ describe('attachDangerZone', () => {
             writable: true,
             value: originalLocation,
         });
-        vi.useRealTimers();
+
         document.body.innerHTML = '';
     });
 
@@ -86,7 +85,7 @@ describe('attachDangerZone', () => {
             remove,
             successMessage: 'Gone.',
             successRedirect: '/list',
-            redirectDelayMs: 1000,
+            redirectDelayMs: 20,
         });
 
         // Open confirmation, then confirm.
@@ -100,22 +99,22 @@ describe('attachDangerZone', () => {
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_success_txt') as HTMLElement).innerHTML).toBe('Gone.');
 
-        vi.advanceTimersByTime(1000);
+        await new Promise(resolve => setTimeout(resolve, 20));
         expect(locationHrefSpy).toHaveBeenCalledWith('/list');
     });
 
     it('surfaces rejected operations without redirecting', async () => {
         const remove = async () => { throw Object.assign(new Error('nope'), { data: { error: 'nope' }, status: 400 }); };
 
-        attachDangerZone({ remove, successRedirect: '/list' });
+        attachDangerZone({ remove, successRedirect: '/list', redirectDelayMs: 20 });
         (document.getElementById('btn_delete') as HTMLElement).click();
         (document.getElementById('btn_confirmed_delete') as HTMLElement).click();
 
-        await vi.advanceTimersByTimeAsync(0);
+        await new Promise(resolve => setTimeout(resolve, 0));
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe('nope');
         // No redirect on failure.
-        vi.advanceTimersByTime(10_000);
+        await new Promise(resolve => setTimeout(resolve, 40));
         expect(locationHrefSpy).not.toHaveBeenCalled();
     });
 });

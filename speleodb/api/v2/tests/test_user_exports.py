@@ -20,6 +20,7 @@ from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
+from speleodb.common.enums import TaskResultStatus
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -379,7 +380,7 @@ class TestUserExports(BaseAPITestCase):
         task: TaskResult = TaskResult.objects.create(
             task_id="11111111-1111-4111-8111-111111111111",
             task_name="speleodb.background_jobs.tasks.generate_export",
-            status="FAILURE",
+            status=TaskResultStatus.FAILURE,
             content_type="application/json",
             content_encoding="utf-8",
             result='{"error": "Source unavailable"}',
@@ -402,7 +403,9 @@ class TestUserExports(BaseAPITestCase):
                 assert response.status_code == status.HTTP_200_OK
                 assert 'name="_save"' not in response.content.decode()
                 assert (
-                    self.client.post(change_url, {"status": "SUCCESS"}).status_code
+                    self.client.post(
+                        change_url, {"status": TaskResultStatus.SUCCESS}
+                    ).status_code
                     == status.HTTP_403_FORBIDDEN
                 )
                 assert (
@@ -416,14 +419,14 @@ class TestUserExports(BaseAPITestCase):
                     == status.HTTP_403_FORBIDDEN
                 )
             task.refresh_from_db()
-            assert task.status == "FAILURE"
+            assert task.status == TaskResultStatus.FAILURE
             assert GroupResult.objects.filter(pk=group.pk).exists()
 
     def test_task_history_navigation_metadata_search_and_failure_filter(self) -> None:
         task: TaskResult = TaskResult.objects.create(
             task_id="33333333-3333-4333-8333-333333333333",
             task_name="speleodb.background_jobs.tasks.generate_export",
-            status="FAILURE",
+            status=TaskResultStatus.FAILURE,
             date_started=timezone.now() - timedelta(seconds=5),
             worker="task-history-worker",
             content_type="application/json",
@@ -434,7 +437,7 @@ class TestUserExports(BaseAPITestCase):
         succeeded: TaskResult = TaskResult.objects.create(
             task_id="44444444-4444-4444-8444-444444444444",
             task_name="speleodb.users.tasks.get_users_count",
-            status="SUCCESS",
+            status=TaskResultStatus.SUCCESS,
             content_type="application/json",
             content_encoding="utf-8",
             result="1",
@@ -462,7 +465,9 @@ class TestUserExports(BaseAPITestCase):
             assert "column-last_updated" in html
             assert 'name="action"' not in html
 
-            filtered = self.client.get(history_url, {"status__exact": "FAILURE"})
+            filtered = self.client.get(
+                history_url, {"status__exact": TaskResultStatus.FAILURE}
+            )
             assert filtered.status_code == status.HTTP_200_OK
             assert task.task_id in filtered.content.decode()
             assert succeeded.task_id not in filtered.content.decode()
@@ -483,7 +488,7 @@ class TestUserExports(BaseAPITestCase):
         task: TaskResult = TaskResult.objects.create(
             task_id="55555555-5555-4555-8555-555555555555",
             task_name="speleodb.background_jobs.tasks.generate_export",
-            status="FAILURE",
+            status=TaskResultStatus.FAILURE,
             result='{"error": "Private execution details"}',
         )
         urls: tuple[str, ...] = (

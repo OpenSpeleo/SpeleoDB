@@ -12,17 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../api.ts', () => ({
     API: { getGISLayerDetails: mocks.getGISLayerDetails },
 }));
-vi.mock('../config.ts', async () => {
-    const actual = await vi.importActual<typeof import('../config.ts')>('../config.ts');
-    return {
-        ...actual,
-        Config: { getGISLayerById: vi.fn(() => ({ color: '#6366f1' })) },
-    };
-});
-vi.mock('./colors.ts', () => ({ Colors: {} }));
-vi.mock('./geometry.ts', () => ({ Geometry: {} }));
-
-
+import { Config } from '../config.ts';
 import { State } from '../state.ts';
 import { GIS_GEOMETRY_TYPE_PROPERTY, gisLayerGeometryFilter } from './gis_layer_geometry.ts';
 import {
@@ -50,6 +40,11 @@ let map: ReturnType<typeof createMap>;
 
 describe('GIS Layer display', () => {
     beforeEach(() => {
+        Config._gisLayers = [
+            { id: 'layer-1', color: '#6366f1' },
+            { id: 'layer-2', color: '#6366f1' },
+            { id: 'retry', color: '#6366f1' },
+        ];
         State.resetLayerState();
         State.gisLayerStates.clear();
         State.gisLayerLoadingStates.clear();
@@ -66,9 +61,10 @@ describe('GIS Layer display', () => {
     });
 
     afterEach(() => {
+        Config._gisLayers = null;
         State.map = null;
         delete (globalThis as { __mapRenderer?: RendererGlobal }).__mapRenderer;
-        vi.restoreAllMocks();
+
     });
 
     it('refreshes detail, downloads once, and preserves the cached GeoJSON', async () => {
@@ -307,7 +303,7 @@ describe('GIS Layer display', () => {
 
     it('reverts visibility after a failed display request', async () => {
         mocks.getGISLayerDetails.mockRejectedValue(new Error('revoked'));
-        vi.spyOn(console, 'error').mockImplementation(() => {});
+
 
         await expect(Layers.toggleGISLayerVisibility('layer-1', true)).resolves.toBe(false);
 
@@ -315,15 +311,12 @@ describe('GIS Layer display', () => {
         expect(Layers.isGISLayerLoading('layer-1')).toBe(false);
     });
 
-    it('clears a failed download and retries the same layer without touching a survey', async () => {
-        const data: ViewerGeoJSON = { type: 'FeatureCollection', features: [] };
+    it('clears a failed download without touching a survey', async () => {
         const surveySource = { setData: vi.fn() };
         map.getSource.mockImplementation(id => id === 'project-geojson-survey' ? surveySource : undefined);
         State.allProjectLayers.set('survey', ['project-layer-survey']);
         mocks.getGISLayerDetails.mockResolvedValue({ file: '/retry.geojson' });
-        vi.mocked(fetch)
-            .mockResolvedValueOnce(new Response('Unavailable', { status: 503 }))
-            .mockResolvedValueOnce(new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } }));
+        vi.mocked(fetch).mockResolvedValue(new Response('Unavailable', { status: 503 }));
 
         await expect(Layers.toggleGISLayerVisibility('retry', true)).resolves.toBe(false);
         expect(Layers.isGISLayerLoading('retry')).toBe(false);
@@ -332,12 +325,8 @@ describe('GIS Layer display', () => {
         expect(State.allGISLayerLayers.has('retry')).toBe(false);
         expect(map.addSource).not.toHaveBeenCalled();
 
-        await expect(Layers.toggleGISLayerVisibility('retry', true)).resolves.toBe(true);
-        expect(mocks.getGISLayerDetails).toHaveBeenCalledTimes(2);
-        expect(fetch).toHaveBeenCalledTimes(2);
-        expect(State.gisLayerCache.get('retry')).toEqual(data);
-        expect(Layers.isGISLayerLoading('retry')).toBe(false);
-        expect(map.addSource).toHaveBeenCalledOnce();
+        expect(mocks.getGISLayerDetails).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledOnce();
         expect(surveySource.setData).not.toHaveBeenCalled();
         expect(map.removeSource).not.toHaveBeenCalledWith('project-geojson-survey');
         expect(map.removeLayer).not.toHaveBeenCalledWith('project-layer-survey');

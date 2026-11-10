@@ -1,4 +1,4 @@
-{% extends "admin/change_list.html" %}
+{% extends "admin/background_operations/change_list.html" %}
 
 {% load i18n vite_assets %}
 
@@ -16,18 +16,13 @@
   {% if request.user.is_superuser %}
     <section class="job-maintenance" aria-labelledby="geojson-maintenance-title">
       <div class="job-maintenance-copy">
-        <h2 id="geojson-maintenance-title">{% translate "Rebuild survey GeoJSONs" %}</h2>
+        <h2 id="geojson-maintenance-title">{% translate "Background operations" %}</h2>
         <p id="geojson-maintenance-description">
-          {% translate "Run once for all eligible projects, including their full survey history." %}
+          {% translate "Schedule history rebuilds and GeoJSON recomputation, and inspect execution receipts." %}
         </p>
       </div>
-      <form method="post"
-            action="{% url 'admin:background_jobs_backgroundjob_rebuild_geojson' %}">
-        {% csrf_token %}
-        <button type="submit"
-                class="button default job-maintenance-button"
-                aria-describedby="geojson-maintenance-description">{% translate "Rebuild all GeoJSONs" %}</button>
-      </form>
+      <a class="button job-maintenance-button"
+         href="{% url 'admin:operations' %}">{% translate "Open Operations" %}</a>
     </section>
   {% endif %}
   {{ block.super }}

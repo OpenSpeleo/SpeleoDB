@@ -495,30 +495,6 @@ Declared conformance classes (also returned at `/conformance`):
 - `http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson`
 - `http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30`
 
-Test coverage:
-
-- `pytest speleodb/api/v2/tests/test_ogc_compliance.py` — happy-path,
-  cross-tenant security, ArcGIS Pro 3.6.1 replay, OGC schema validation,
-  snapshots, query-count invariants.
-- `pytest speleodb/api/v2/tests/test_gis_view_api.py` — project family
-  integration tests.
-- `pytest speleodb/api/v2/tests/test_landmark_collection_ogc.py` — landmark
-  family integration tests.
-- `make test-ogc-coverage` — line and branch coverage report on the OGC core
-  (`ogc_helpers.py`, `ogc_base.py`, the four service modules).
-- `make test-ogc-mutations` — `mutmut`-based mutation testing on the OGC core
-  (run ad-hoc; `uv pip install mutmut` first).
-
-External conformance suite (optional, post-merge):
-
-- `make test-ogc-teamengine` — runs the official OGC API - Features 1.0 Core +
-  GeoJSON conformance suite via the
-  [OGC Team Engine](https://github.com/opengeospatial/teamengine) container
-  against the explicitly selected `BASE_URL`. This is a separate staged-service
-  check; its availability does not establish a completed conformance run.
-
-Run repository pytest/coverage checks inside the existing application container.
-
 ### 3.6 Manual smoke test (post-deploy)
 
 Before announcing a release, run the four-step smoke test below against a

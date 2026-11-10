@@ -18,7 +18,7 @@ beforeEach(() => {
     (0, eval)(readFileSync('frontend_private/static/private/ts/vendors/moment.js', 'utf8'));
     document.body.innerHTML = '<div id="loading_spinner"></div><span id="commit-author"></span><span id="commit-message"></span><span id="commit-hexsha_short"></span><span id="commit-dt_since"></span><span id="n-commits-count"></span><div id="row-template-currentdir" style="display:none"><span class="current-gitfolder-name"></span></div><div id="row-template-folder" style="display:none"><button class="gitfolder-link"><span class="gitfolder-name"></span></button><a class="commit-message"></a><a class="commit-time-ago"></a></div><div id="row-template-file" style="display:none"><a class="download-file-link"><span class="download-file-name"></span></a><a class="file-size-link"><span class="file-size"></span></a><a class="commit-message"></a><a class="commit-time-ago"></a></div><div id="git-viewer-container"></div>';
 });
-afterEach(() => { vi.restoreAllMocks(); delete (window as unknown as {moment?: unknown}).moment; document.body.innerHTML = ''; });
+afterEach(() => { delete (window as unknown as {moment?: unknown}).moment; document.body.innerHTML = ''; });
 it('loads the generated Git tree asynchronously, renders text metadata and sorts files', async () => {
     await init({ projectId: 'project', commit: 'latest' });
     expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/projects/project/git_explorer/latest/' });

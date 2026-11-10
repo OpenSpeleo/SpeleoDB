@@ -11,6 +11,7 @@ import threading
 import uuid
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
+from typing import Any
 from unittest.mock import patch
 
 import orjson
@@ -20,6 +21,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 from django.test import override_settings
+from django_celery_results.models import TaskResult
 from git import Actor
 
 from speleodb.api.v2.tests.factories import ProjectCommitFactory
@@ -30,6 +32,7 @@ from speleodb.background_jobs.archive_sources import GitMirrorResult
 from speleodb.background_jobs.archive_sources import GitSource
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.common.enums import TaskResultStatus
 from speleodb.common.management.commands.build_project_geojsons import Command
 from speleodb.gis.models import ProjectGeoJSON
 from speleodb.git_engine.core import GitRepo
@@ -65,6 +68,23 @@ COMPASS_TEST_FILES = [
 ]
 
 
+def _run_rebuild(project: Project, *, throw: bool = True) -> Any:
+    task_id = str(uuid.uuid4())
+    TaskResult.objects.create(
+        task_id=task_id,
+        status=TaskResultStatus.PENDING,
+        meta="{}",
+        content_type="application/json",
+        content_encoding="utf-8",
+    )
+    return refresh_project_geojson.apply(
+        args=(str(project.pk),),
+        kwargs={"force_recompute": True},
+        task_id=task_id,
+        throw=throw,
+    )
+
+
 class TestBuildProjectGeoJSONCommand(TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -72,10 +92,14 @@ class TestBuildProjectGeoJSONCommand(TestCase):
             type=ProjectType.ARIANE,
             exclude_geojson=False,
         )
-        self.scratch = pathlib.Path(self.enterContext(TemporaryDirectory()))
-        self.enterContext(
-            override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch))
+        temporary_directory = TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.scratch = pathlib.Path(temporary_directory.name)
+        settings_override = override_settings(
+            GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch)
         )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
 
     def test_command_requires_exactly_one_selection_mode(self) -> None:
         with pytest.raises(CommandError):
@@ -125,8 +149,7 @@ class TestBuildProjectGeoJSONCommand(TestCase):
 
     def _seed_project(self, project: Project) -> str:
         get_pool().prepare(project)
-        repo: GitRepo = project.git_repo
-        self.addCleanup(repo.close)
+        repo = project.git_repo
         assert repo.head.is_valid()
         return repo.head.commit.hexsha
 
@@ -173,8 +196,8 @@ class TestBuildProjectGeoJSONCommand(TestCase):
         marker.write_text("retain upload work", encoding="utf-8")
         self._run_successfully("--project", str(self.project.id), "--force_recompute")
         assert marker.read_text() == "retain upload work"
-        with self.project.git_repo as untouched:
-            assert untouched.head.commit.hexsha == original_sha
+        untouched = self.project.git_repo
+        assert untouched.head.commit.hexsha == original_sha
         marker.unlink()
 
     @pytest.mark.skip_if_lighttest
@@ -186,7 +209,10 @@ class TestBuildProjectGeoJSONCommand(TestCase):
         ProjectCommitFactory.create(project=broken)
         # The remote is genuinely absent despite recorded history; read-only
         # rebuilds must fail rather than provision a replacement repository.
-        with self.assertLogs(Command.__module__, level="INFO") as logs:
+        with (
+            self.assertLogs(Command.__module__, level="INFO") as logs,
+            pytest.raises(CommandError),
+        ):
             call_command("build_project_geojsons", "--all")
         errors = [record for record in logs.records if record.levelno >= logging.ERROR]
         assert len(errors) == 1, logs.output
@@ -218,10 +244,14 @@ class TestBuildProjectGeoJSONs(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.project = canonical_project(exclude_geojson=False)
-        self.scratch = pathlib.Path(self.enterContext(TemporaryDirectory()))
-        self.enterContext(
-            override_settings(GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch))
+        temporary_directory = TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        self.scratch = pathlib.Path(temporary_directory.name)
+        settings_override = override_settings(
+            GEOJSON_GENERATION_SCRATCH_DIR=str(self.scratch)
         )
+        self.addCleanup(settings_override.disable)
+        settings_override.enable()
 
     def tearDown(self) -> None:
         assert not list(self.scratch.iterdir())
@@ -235,7 +265,9 @@ class TestBuildProjectGeoJSONs(TestCase):
     ) -> str:
         self.project.type = project_type
         self.project.save(update_fields=["type"])
-        directory = pathlib.Path(self.enterContext(TemporaryDirectory())) / "source"
+        temporary_directory = TemporaryDirectory()
+        self.addCleanup(temporary_directory.cleanup)
+        directory = pathlib.Path(temporary_directory.name) / "source"
         self.source_directory = directory
         repository = GitRepo.init(directory)
         with repository:
@@ -282,12 +314,12 @@ class TestBuildProjectGeoJSONs(TestCase):
         # Shared-checkout preservation and task-timeout tests exercise the
         # real mirror boundary; test_archive.py protects complete refs/history.
         # Upload/mutex behavior is exercised by test_file_upload_geojson.py.
-        self.enterContext(
-            patch(
-                "speleodb.common.management.commands.build_project_geojsons.mirror_project",
-                side_effect=clone_local_source,
-            )
+        mirror_patch = patch(
+            "speleodb.surveys.models.project.mirror_project",
+            side_effect=clone_local_source,
         )
+        self.addCleanup(mirror_patch.stop)
+        mirror_patch.start()
         return commit.id
 
     def test_command_builds_and_recomputes_geojson_for_ariane_project(self) -> None:
@@ -319,14 +351,8 @@ class TestBuildProjectGeoJSONs(TestCase):
         ).creation_date
         assert skipped_creation_date == initial_creation_date
 
-        with self.assertLogs(Command.__module__, level="INFO") as logs:
-            result = refresh_project_geojson.apply(
-                args=(str(self.project.id),),
-                kwargs={"force_recompute": True},
-                throw=True,
-            )
+        result = _run_rebuild(self.project)
         assert result.successful()
-        assert all(record.levelno < logging.ERROR for record in logs.records)
         regenerated = ProjectGeoJSON.objects.get(
             project=self.project,
             commit__id=hexsha,
@@ -375,14 +401,8 @@ class TestBuildProjectGeoJSONs(TestCase):
         artifact.refresh_from_db()
         assert artifact.geojson_revision == original_revision
 
-        with self.assertLogs(Command.__module__, level="INFO") as logs:
-            result = refresh_project_geojson.apply(
-                args=(str(self.project.id),),
-                kwargs={"force_recompute": True},
-                throw=True,
-            )
+        result = _run_rebuild(self.project)
         assert result.successful()
-        assert all(record.levelno < logging.ERROR for record in logs.records)
         artifact.refresh_from_db()
         assert artifact.geojson_revision != original_revision
         self.addCleanup(artifact.file.delete, save=False)
@@ -407,56 +427,59 @@ class TestBuildProjectGeoJSONs(TestCase):
     def test_command_rebuilds_native_history_and_retains_maps_after_failure(
         self,
     ) -> None:
-        directory = pathlib.Path(self.enterContext(TemporaryDirectory()))
-        native = directory / "client.stalx"
-        native.write_bytes(stalagmight_bytes())
-        hexsha = self._seed_source(
-            project_type=ProjectType.STALAGMIGHT,
-            artifact_paths=[native],
-        )
-        expected = orjson.loads(orjson.dumps(self.project.build_geojson(native)))
-        source = self.source_directory / StalagmightFileProcessor.TARGET_SAVE_FILENAME
-        invalid_payload = stalagmight_bytes(length=1.0)
-        source.write_bytes(invalid_payload)
-        with GitRepo(self.source_directory) as repository:
-            repository.index.add([source.name])
-            actor = Actor("Surveyor", "surveyor@example.test")
-            repository.index.commit(
-                "Later impossible measurements", author=actor, committer=actor
+        with TemporaryDirectory() as directory_name:
+            directory = pathlib.Path(directory_name)
+            native = directory / "client.stalx"
+            native.write_bytes(stalagmight_bytes())
+            hexsha = self._seed_source(
+                project_type=ProjectType.STALAGMIGHT,
+                artifact_paths=[native],
             )
-            invalid_sha = repository.head.commit.hexsha
-        marker = self.source_directory / "unfinished-upload"
-        marker.write_text("retain", encoding="utf-8")
-        args = ("--project", str(self.project.id))
+            expected = orjson.loads(orjson.dumps(self.project.build_geojson(native)))
+            source = (
+                self.source_directory / StalagmightFileProcessor.TARGET_SAVE_FILENAME
+            )
+            invalid_payload = stalagmight_bytes(length=1.0)
+            source.write_bytes(invalid_payload)
+            with GitRepo(self.source_directory) as repository:
+                repository.index.add([source.name])
+                actor = Actor("Surveyor", "surveyor@example.test")
+                repository.index.commit(
+                    "Later impossible measurements", author=actor, committer=actor
+                )
+                invalid_sha = repository.head.commit.hexsha
+            marker = self.source_directory / "unfinished-upload"
+            marker.write_text("retain", encoding="utf-8")
+            args = ("--project", str(self.project.id))
 
-        call_command("build_project_geojsons", *args)
+            with pytest.raises(CommandError):
+                call_command("build_project_geojsons", *args)
 
-        artifact = ProjectGeoJSON.objects.get(commit_id=hexsha)
-        self.addCleanup(artifact.file.delete, save=False)
-        original_revision = artifact.geojson_revision
-        with artifact.file.open("rb") as stored:
-            assert orjson.loads(stored.read()) == expected
-        assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
-        call_command("build_project_geojsons", *args)
-        artifact.refresh_from_db()
-        assert artifact.geojson_revision == original_revision
+            artifact = ProjectGeoJSON.objects.get(commit_id=hexsha)
+            self.addCleanup(artifact.file.delete, save=False)
+            original_revision = artifact.geojson_revision
+            with artifact.file.open("rb") as stored:
+                assert orjson.loads(stored.read()) == expected
+            assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
+            with pytest.raises(CommandError):
+                call_command("build_project_geojsons", *args)
+            artifact.refresh_from_db()
+            assert artifact.geojson_revision == original_revision
 
-        result = refresh_project_geojson.apply(
-            args=(str(self.project.id),), kwargs={"force_recompute": True}, throw=True
-        )
+            result = _run_rebuild(self.project, throw=False)
 
-        assert result.successful()
-        artifact.refresh_from_db()
-        assert artifact.geojson_revision != original_revision
-        self.addCleanup(artifact.file.delete, save=False)
-        with artifact.file.open("rb") as stored:
-            assert orjson.loads(stored.read()) == expected
-        assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
-        assert source.read_bytes() == invalid_payload
-        assert marker.read_text(encoding="utf-8") == "retain"
-        with GitRepo(self.source_directory) as repository:
-            assert repository.head.commit.hexsha == invalid_sha
-        assert not list(self.scratch.iterdir())
+            assert result.failed()
+            artifact.refresh_from_db()
+            assert artifact.geojson_revision != original_revision
+            self.addCleanup(artifact.file.delete, save=False)
+            with artifact.file.open("rb") as stored:
+                assert orjson.loads(stored.read()) == expected
+            assert not ProjectGeoJSON.objects.filter(commit_id=invalid_sha).exists()
+            assert source.read_bytes() == invalid_payload
+            assert marker.read_text(encoding="utf-8") == "retain"
+            with GitRepo(self.source_directory) as repository:
+                assert repository.head.commit.hexsha == invalid_sha
+            assert not list(self.scratch.iterdir())
 
     def test_task_timeout_stops_clone_and_cleans_all_temporary_files(self) -> None:
         get_pool().prepare(self.project)
@@ -482,11 +505,7 @@ class TestBuildProjectGeoJSONs(TestCase):
         watcher = threading.Thread(target=interrupt_clone)
         watcher.start()
         try:
-            result = refresh_project_geojson.apply(
-                args=(str(self.project.id),),
-                kwargs={"force_recompute": True},
-                throw=False,
-            )
+            result = _run_rebuild(self.project, throw=False)
         finally:
             stopped.set()
             watcher.join(timeout=5)

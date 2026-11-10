@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-pytestmark = pytest.mark.skip_if_lighttest
-
 
 @pytest.fixture
 def owned_project(user: User) -> Project:
@@ -47,6 +45,7 @@ def run_cleanup(user: User) -> None:
     )
 
 
+@pytest.mark.skip_if_lighttest
 def test_confirmed_missing_remote_removes_local_project(
     user: User,
     owned_project: Project,
@@ -60,6 +59,7 @@ def test_confirmed_missing_remote_removes_local_project(
     assert not Project.objects.filter(id=owned_project.id).exists()
 
 
+@pytest.mark.skip_if_lighttest
 def test_transport_failure_preserves_local_project(
     user: User,
     owned_project: Project,
@@ -83,6 +83,7 @@ def test_transport_failure_preserves_local_project(
     assert Project.objects.filter(id=owned_project.id).exists()
 
 
+@pytest.mark.skip_if_lighttest
 @pytest.mark.parametrize(
     ("answer", "confirmed"),
     [

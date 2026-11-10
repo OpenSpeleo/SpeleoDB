@@ -162,12 +162,10 @@ def test_zipped_shapefile_is_converted_to_wgs84_geojson() -> None:
     shx = io.BytesIO()
     dbf = io.BytesIO()
     writer = shapefile.Writer(shp=shp, shx=shx, dbf=dbf)
-    try:
+    with writer:
         writer.field("name", "C")  # type: ignore[arg-type]  # pyshp stub binds self twice
         writer.point(-87.5, 20.1)
         writer.record("Entrance")
-    finally:
-        writer.close()
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, "w") as zip_file:
         zip_file.writestr("caves.shp", shp.getvalue())

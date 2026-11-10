@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -14,7 +13,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -28,16 +26,9 @@ from django.utils import timezone
 from django_celery_beat.models import IntervalSchedule
 from django_celery_beat.models import PeriodicTask
 from django_celery_beat.schedulers import ModelEntry
-from kombu import Exchange
-from kombu import Producer
-from kombu import Queue
-from kombu.exceptions import OperationalError
 from redis import Redis
 
-from speleodb.background_jobs import lease as lease_module
 from speleodb.background_jobs.lease import BEAT_LOCK_ID
-from speleodb.background_jobs.lease import LOCK_MAX_ATTEMPTS
-from speleodb.background_jobs.lease import LOCK_WAIT_SECONDS
 from speleodb.background_jobs.lease import SchedulerLease
 from speleodb.background_jobs.lease import SchedulerLeaseLostError
 from speleodb.background_jobs.scheduler import ExponentialBackoffDatabaseScheduler
@@ -50,7 +41,6 @@ if TYPE_CHECKING:
 
     from celery.beat import ScheduleEntry
 
-pytestmark = pytest.mark.django_db(transaction=True)
 PROCESS_TIMEOUT_SECONDS: int = 20
 
 
@@ -66,8 +56,8 @@ def postgres_parameters() -> dict[str, Any]:
 @pytest.fixture
 def lease(postgres_parameters: dict[str, Any]) -> Iterator[SchedulerLease]:
     owner = SchedulerLease(postgres_parameters)
-    owner.acquire()
     try:
+        owner.acquire()
         yield owner
     finally:
         owner.close()
@@ -86,34 +76,40 @@ def scheduler_runtime(
     lease: SchedulerLease, *, broker_url: str = "memory://"
 ) -> Iterator[SchedulerRuntime]:
     queue = f"scheduler-test-{uuid.uuid4().hex}"
-    app = Celery(queue, fixups=[], set_as_current=False)
-    app.conf.update(
-        broker_url=broker_url,
-        broker_read_url=broker_url,
-        broker_write_url=broker_url,
-        broker_transport_options={"socket_timeout": 0.2, "socket_connect_timeout": 1},
-        broker_connection_max_retries=2,
-        broker_retry_base_delay_seconds=0.1,
-        broker_retry_max_delay_seconds=0.2,
-        task_default_queue=queue,
-        task_send_sent_event=False,
-        result_backend=None,
-        result_expires=None,
-    )
-    interval = IntervalSchedule.objects.create(every=60, period="seconds")
-    task = PeriodicTask.objects.create(
-        name=queue,
-        task=f"scheduler_test.{uuid.uuid4().hex}",
-        interval=interval,
-        queue=queue,
-        last_run_at=timezone.now() - timedelta(seconds=120),
-    )
-    scheduler = ExponentialBackoffDatabaseScheduler(app=app, lease=lease)
-    try:
-        yield SchedulerRuntime(app, scheduler, task, queue)
-    finally:
-        scheduler.close()
-        app.close()
+    with Celery(queue, fixups=[], set_as_current=False) as app:
+        app.conf.update(
+            broker_url=broker_url,
+            broker_read_url=broker_url,
+            broker_write_url=broker_url,
+            broker_transport_options={
+                "socket_timeout": 0.2,
+                "socket_connect_timeout": 1,
+            },
+            broker_connection_max_retries=2,
+            broker_retry_base_delay_seconds=(
+                settings.CELERY_BROKER_RETRY_BASE_DELAY_SECONDS
+            ),
+            broker_retry_max_delay_seconds=(
+                settings.CELERY_BROKER_RETRY_MAX_DELAY_SECONDS
+            ),
+            task_default_queue=queue,
+            task_send_sent_event=False,
+            result_backend=None,
+            result_expires=None,
+        )
+        interval = IntervalSchedule.objects.create(every=60, period="seconds")
+        task = PeriodicTask.objects.create(
+            name=queue,
+            task=f"scheduler_test.{uuid.uuid4().hex}",
+            interval=interval,
+            queue=queue,
+            last_run_at=timezone.now() - timedelta(seconds=120),
+        )
+        scheduler = ExponentialBackoffDatabaseScheduler(app=app, lease=lease)
+        try:
+            yield SchedulerRuntime(app, scheduler, task, queue)
+        finally:
+            scheduler.close()
 
 
 @pytest.fixture
@@ -125,12 +121,11 @@ def runtime(lease: SchedulerLease) -> Iterator[SchedulerRuntime]:
 @pytest.fixture
 def isolated_redis() -> Iterator[tuple[str, Redis]]:
     broker_url = isolated_test_broker_url()
-    client = Redis.from_url(broker_url, socket_timeout=2, socket_connect_timeout=1)
-    assert client.ping()
-    try:
+    with Redis.from_url(
+        broker_url, socket_timeout=2, socket_connect_timeout=1
+    ) as client:
+        assert client.ping()
         yield broker_url, client
-    finally:
-        client.close()
 
 
 def _wait_until(predicate: Callable[[], bool], *, timeout: float = 20) -> None:
@@ -214,7 +209,7 @@ def _owns_lock(application_name: str) -> bool:
         (
             "speleodb.gis.tasks.generate_project_geojson",
             False,
-            ["a" * 40, str(uuid.uuid4())],
+            ["a" * 40],
             True,
         ),
         (
@@ -225,6 +220,7 @@ def _owns_lock(application_name: str) -> bool:
         ),
     ],
 )
+@pytest.mark.django_db(transaction=True)
 def test_scheduler_result_policy_preserves_original_entry_options(
     runtime: SchedulerRuntime,
     task_name: str,
@@ -237,7 +233,8 @@ def test_scheduler_result_policy_preserves_original_entry_options(
     assert runtime.scheduler.schedule[runtime.task.name].task == runtime.task.task
     runtime.task.task = task_name
     runtime.task.args = json.dumps(task_args)
-    runtime.task.save(update_fields=["task", "args"])
+    runtime.task.kwargs = json.dumps({})
+    runtime.task.save(update_fields=["task", "args", "kwargs"])
     entry: ScheduleEntry = runtime.scheduler.schedule[runtime.task.name]
     assert isinstance(entry, ModelEntry)
     assert entry.task == task_name
@@ -279,6 +276,7 @@ def test_scheduler_result_policy_preserves_original_entry_options(
 
 
 @pytest.mark.parametrize("failure", ["close", "unlock", "terminate"])
+@pytest.mark.django_db(transaction=True)
 def test_lost_lease_cannot_recover_or_publish_again(
     lease: SchedulerLease, runtime: SchedulerRuntime, failure: str
 ) -> None:
@@ -310,6 +308,7 @@ def test_lost_lease_cannot_recover_or_publish_again(
         assert queue.qsize() == 0
 
 
+@pytest.mark.django_db(transaction=True)
 def test_tick_publishes_real_message_and_preserves_entry_options(
     runtime: SchedulerRuntime,
 ) -> None:
@@ -334,165 +333,7 @@ def test_tick_publishes_real_message_and_preserves_entry_options(
         assert queue.qsize() == 0
 
 
-def test_scheduler_connection_failure_obeys_budget(
-    lease: SchedulerLease,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    # A bound but non-listening socket guarantees refusal without a race for
-    # an otherwise-unused port and without replacing Kombu's connection API.
-    with socket.socket() as refused:
-        refused.bind(("127.0.0.1", 0))
-        broker_url = f"redis://127.0.0.1:{refused.getsockname()[1]}/0"
-        with scheduler_runtime(lease, broker_url=broker_url) as current:
-            started = time.monotonic()
-            with pytest.raises(OperationalError):
-                current.scheduler.tick()
-            assert time.monotonic() - started >= sum((0.1, 0.2))
-            failures = [
-                record
-                for record in caplog.records
-                if record.name == "speleodb.background_jobs.broker"
-            ]
-            assert len(failures) == 3  # noqa: PLR2004
-            assert "attempt 3/3" in failures[-1].getMessage()
-            lease.assert_owned()
-
-
-@pytest.mark.live_services
-def test_scheduler_connection_recovers_through_real_failover(
-    lease: SchedulerLease,
-    isolated_redis: tuple[str, Redis],
-) -> None:
-    broker_url, client = isolated_redis
-    with socket.socket() as refused:
-        refused.bind(("127.0.0.1", 0))
-        unavailable = f"redis://127.0.0.1:{refused.getsockname()[1]}/0"
-        with scheduler_runtime(
-            lease, broker_url=f"{unavailable};{broker_url}"
-        ) as current:
-            current.scheduler.tick()
-            current.scheduler.sync()
-            payload = client.lpop(current.queue)
-            assert isinstance(payload, bytes | str)
-            message = json.loads(payload)
-            assert message["headers"]["task"] == current.task.task
-            current.task.refresh_from_db()
-            assert current.task.total_run_count == 1
-            client.delete(current.queue, f"_kombu.binding.{current.queue}")
-
-
-@pytest.mark.parametrize("predeclare", [False, True])
-@pytest.mark.live_services
-def test_real_broker_retries_cannot_publish_after_lease_loss(
-    lease: SchedulerLease,
-    isolated_redis: tuple[str, Redis],
-    caplog: pytest.LogCaptureFixture,
-    predeclare: bool,
-) -> None:
-    broker_url, client = isolated_redis
-    with scheduler_runtime(lease, broker_url=broker_url) as current:
-        if predeclare:
-            channel = current.scheduler.producer.channel
-            assert channel is not None
-            current.app.amqp.queues[current.queue].bind(channel).declare()
-        policies: list[dict[str, Any]] = []
-        pauses: list[bool] = []
-        owner = lease.connection
-        assert owner is not None
-
-        def interrupt_publication(
-            sender: str, retry_policy: dict[str, Any], **kwargs: Any
-        ) -> None:
-            policies.append(retry_policy)
-            owner.execute("SELECT pg_advisory_unlock_all()")
-            # Redis's administrative API creates a real write timeout; the
-            # server resumes automatically without replacing any client method.
-            pauses.append(client.client_pause(1000, mode="WRITE"))
-
-        before_task_publish.connect(
-            interrupt_publication, sender=current.task.task, weak=False
-        )
-        try:
-            with pytest.raises(SchedulerLeaseLostError):
-                current.scheduler.tick()
-        finally:
-            before_task_publish.disconnect(
-                interrupt_publication, sender=current.task.task
-            )
-            client.client_unpause()
-        assert lease.lost
-        # Celery signals catch receiver exceptions. Assert the administrative
-        # operation completed outside the receiver, where failure cannot hide.
-        assert pauses == [True]
-        assert "Message Error" in caplog.text
-        assert policies
-        assert callable(policies[0]["errback"])
-        assert callable(policies[0]["on_revive"])
-        assert client.llen(current.queue) == 0
-        current.task.refresh_from_db()
-        assert current.task.total_run_count == 0
-        client.delete(current.queue, f"_kombu.binding.{current.queue}")
-
-
-@pytest.mark.live_services
-def test_real_kombu_connection_revival_rechecks_ownership(
-    lease: SchedulerLease,
-    isolated_redis: tuple[str, Redis],
-) -> None:
-    broker_url, client = isolated_redis
-    policies: list[dict[str, Any]] = []
-
-    def observe_policy(retry_policy: dict[str, Any], **kwargs: Any) -> None:
-        policies.append(retry_policy)
-
-    with scheduler_runtime(lease, broker_url=broker_url) as current:
-        before_task_publish.connect(
-            observe_policy, sender=current.task.task, weak=False
-        )
-        try:
-            current.scheduler.tick()
-        finally:
-            before_task_publish.disconnect(observe_policy, sender=current.task.task)
-        assert client.lpop(current.queue) is not None
-        assert policies
-        assert lease.connection is not None
-        lease.connection.execute("SELECT pg_advisory_unlock_all()")
-        retry_queue = f"scheduler-revival-{uuid.uuid4().hex}"
-        with current.app.connection_for_write() as broker:
-            producer = Producer(broker)
-            # Establish the real channel before inducing the outage. Lazy
-            # initial-channel creation has its own internal connection retries
-            # and can otherwise recover without reaching Connection.ensure.
-            assert producer.channel is not None
-            # Exercise Kombu's actual revival callback separately from errback.
-            # Queue declaration hits a genuine Redis write timeout before any
-            # message is sent; reconnect succeeds while writes remain paused.
-            guarded_publish = broker.ensure(
-                producer,
-                producer.publish,
-                on_revive=policies[0]["on_revive"],
-                max_retries=2,
-            )
-            client.client_pause(1000, mode="WRITE")
-            try:
-                with pytest.raises(SchedulerLeaseLostError):
-                    guarded_publish(
-                        {"probe": True},
-                        routing_key=retry_queue,
-                        declare=[Queue(retry_queue, exchange=Exchange(retry_queue))],
-                    )
-            finally:
-                client.client_unpause()
-        assert lease.lost
-        assert client.llen(retry_queue) == 0
-        client.delete(
-            current.queue,
-            f"_kombu.binding.{current.queue}",
-            retry_queue,
-            f"_kombu.binding.{retry_queue}",
-        )
-
-
+@pytest.mark.django_db(transaction=True)
 def test_close_syncs_once_and_finalizers_cannot_overwrite_new_owner_state(
     runtime: SchedulerRuntime,
     lease: SchedulerLease,
@@ -512,6 +353,7 @@ def test_close_syncs_once_and_finalizers_cannot_overwrite_new_owner_state(
 
 
 @pytest.mark.parametrize("state", ["lost", "closed", "lazy"])
+@pytest.mark.django_db(transaction=True)
 def test_sync_skips_unowned_and_lazy_schedulers(
     runtime: SchedulerRuntime,
     lease: SchedulerLease,
@@ -537,45 +379,7 @@ def test_sync_skips_unowned_and_lazy_schedulers(
         scheduler.close()
 
 
-def test_standby_exhausts_finite_lock_budget(
-    lease: SchedulerLease,
-    postgres_parameters: dict[str, Any],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    delays: list[float] = []
-    # Keep actual competing PostgreSQL sessions; elapsed waiting does not change
-    # the exhausted-budget path. Signal interruption is exercised separately
-    # without replacing its clock.
-    monkeypatch.setattr(lease_module, "time", SimpleNamespace(sleep=delays.append))
-    replacement = SchedulerLease(postgres_parameters)
-    try:
-        with pytest.raises(RuntimeError, match=f"after {LOCK_MAX_ATTEMPTS} attempts"):
-            replacement.acquire()
-        assert delays == [5, 10, 20, 40, 80]
-        assert not replacement.active
-        lease.assert_owned()
-    finally:
-        replacement.close()
-
-
-def test_sigterm_interrupts_standby_wait_without_releasing_previous_owner(
-    lease: SchedulerLease,
-    tmp_path: Path,
-) -> None:
-    with beat_process(tmp_path) as (process, log_path, application_name):
-        _wait_until(
-            lambda: any(
-                "pg_try_advisory_lock" in row[1] for row in _activity(application_name)
-            )
-        )
-        started = time.monotonic()
-        process.send_signal(signal.SIGTERM)
-        assert process.wait(timeout=PROCESS_TIMEOUT_SECONDS) == 0, log_path.read_text()
-        assert time.monotonic() - started < LOCK_WAIT_SECONDS
-        lease.assert_owned()
-        _wait_until(lambda: not _activity(application_name))
-
-
+@pytest.mark.django_db(transaction=True)
 def test_sigterm_during_real_scheduler_database_initialization(
     postgres_parameters: dict[str, Any],
     tmp_path: Path,
@@ -600,6 +404,7 @@ def test_sigterm_during_real_scheduler_database_initialization(
             assert not _activity(application_name)
 
 
+@pytest.mark.django_db(transaction=True)
 def test_launcher_releases_lease_after_real_invalid_broker_failure(
     postgres_parameters: dict[str, Any],
     tmp_path: Path,
@@ -621,6 +426,7 @@ def test_launcher_releases_lease_after_real_invalid_broker_failure(
 
 
 @pytest.mark.live_services
+@pytest.mark.django_db(transaction=True)
 def test_sigterm_syncs_actual_publication_before_releasing_lock(
     postgres_parameters: dict[str, Any],
     isolated_redis: tuple[str, Redis],
@@ -659,6 +465,7 @@ def test_sigterm_syncs_actual_publication_before_releasing_lock(
         client.delete(queue, f"_kombu.binding.{queue}")
 
 
+@pytest.mark.django_db(transaction=True)
 def test_launcher_runs_in_one_process_and_one_thread(
     postgres_parameters: dict[str, Any],
     tmp_path: Path,

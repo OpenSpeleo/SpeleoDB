@@ -17,9 +17,8 @@ from speleodb.users.tests.factories import UserFactory
 if TYPE_CHECKING:
     from speleodb.users.models import User
 
-pytestmark = pytest.mark.django_db
 
-
+@pytest.mark.django_db
 class TestSurfaceMonitoringNetworkApi:
     @pytest.fixture
     def api_client(self) -> APIClient:
@@ -119,6 +118,7 @@ class TestSurfaceMonitoringNetworkApi:
         assert not network.is_active
 
 
+@pytest.mark.django_db
 class TestSurfaceMonitoringNetworkPermissionsApi:
     @pytest.fixture
     def api_client(self) -> APIClient:

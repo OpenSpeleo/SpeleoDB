@@ -47,9 +47,9 @@ request background generation when the project software matches the source.
 SQLite integrity validation and byte-for-byte storage happen before scheduling;
 a supported survey schema is not required to save a source. Semantic errors fail
 optional generation without rejecting the upload or removing the last usable
-map. Uploads without eligible survey sources report
-`geojson_status: not_requested`; the independent `exclude_geojson` flag produces
-`skipped`. Uploading a file does not change the project's software category.
+map. Uploads without eligible survey sources or with `exclude_geojson` enabled
+do not schedule map work. Uploading a file does not change the project's
+software category.
 
 Existing map artifacts remain readable after a software change. See
 [background generation](project-geojson-background.md) and

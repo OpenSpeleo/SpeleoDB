@@ -41,7 +41,6 @@ describe('attachEntityCrudForm', () => {
     let reloadSpy: Mock<() => void>;
 
     beforeEach(() => {
-        vi.useFakeTimers();
         setupPage();
         originalLocation = window.location;
         locationHrefSpy = vi.fn();
@@ -66,7 +65,7 @@ describe('attachEntityCrudForm', () => {
             writable: true,
             value: originalLocation,
         });
-        vi.useRealTimers();
+
         document.body.innerHTML = '';
     });
 
@@ -87,7 +86,7 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
+        await vi.waitFor(() => expect(document.getElementById('modal_success')!.style.display).toBe('flex'));
 
         expect(submit).toHaveBeenCalledTimes(1);
         expect(submit.mock.calls[0]?.[0]).toEqual({
@@ -97,7 +96,7 @@ describe('attachEntityCrudForm', () => {
         });
 
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('flex');
-        vi.advanceTimersByTime(500);
+        await new Promise(resolve => setTimeout(resolve, 500));
         expect(locationHrefSpy).toHaveBeenCalledWith('/teams');
     });
 
@@ -113,9 +112,7 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
-        vi.advanceTimersByTime(0);
-        expect(locationHrefSpy).toHaveBeenCalledWith('/teams/xxx');
+        await vi.waitFor(() => expect(locationHrefSpy).toHaveBeenCalledWith('/teams/xxx'));
     });
 
     it('reloadOnSuccess triggers window.location.reload', async () => {
@@ -130,9 +127,7 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
-        vi.advanceTimersByTime(0);
-        expect(reloadSpy).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(reloadSpy).toHaveBeenCalledTimes(1));
     });
 
     it('beforeSubmit returning false cancels the request', async () => {
@@ -149,7 +144,6 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
         expect(submit).not.toHaveBeenCalled();
         expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
     });
@@ -166,10 +160,9 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
-        expect((document.getElementById('modal_error') as HTMLElement).style.display).toBe('flex');
+        await vi.waitFor(() => expect(document.getElementById('modal_error')!.style.display).toBe('flex'));
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe('bad');
-        vi.advanceTimersByTime(100);
+        await new Promise(resolve => setTimeout(resolve, 100));
         expect(locationHrefSpy).not.toHaveBeenCalled();
     });
 
@@ -184,7 +177,7 @@ describe('attachEntityCrudForm', () => {
         });
 
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
+        await vi.waitFor(() => expect(submit).toHaveBeenCalledOnce());
         expect(submit.mock.calls[0]?.[0]).toEqual({
             csrfmiddlewaretoken: 'csrf-xyz',
             name: 'Alice',
@@ -201,17 +194,14 @@ describe('attachEntityCrudForm', () => {
         const button = document.getElementById('btn_submit') as HTMLElement;
         button.click();
         button.click();
-        await vi.advanceTimersByTimeAsync(0);
-        expect(submit).toHaveBeenCalledOnce();
+        await vi.waitFor(() => expect(submit).toHaveBeenCalledOnce());
         expect(onPendingChange.mock.calls).toEqual([[true]]);
         finish({});
-        await vi.advanceTimersByTimeAsync(0);
-        expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
+        await vi.waitFor(() => expect(onPendingChange.mock.calls).toEqual([[true], [false]]));
         button.click();
-        await vi.advanceTimersByTimeAsync(0);
-        expect(submit).toHaveBeenCalledTimes(2);
+        await vi.waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
         finish({});
-        await vi.advanceTimersByTimeAsync(0);
+        await vi.waitFor(() => expect(onPendingChange.mock.calls).toEqual([[true], [false], [true], [false]]));
     });
 
     it('releases pending state when request preparation throws synchronously', async () => {
@@ -222,8 +212,7 @@ describe('attachEntityCrudForm', () => {
             formId: 'my_form', submit: () => { throw failure; }, onError, onPendingChange,
         });
         (document.getElementById('btn_submit') as HTMLElement).click();
-        await vi.advanceTimersByTimeAsync(0);
-        expect(onError).toHaveBeenCalledWith(failure);
+        await vi.waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
         expect(onPendingChange.mock.calls).toEqual([[true], [false]]);
     });
 });

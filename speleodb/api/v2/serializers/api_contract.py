@@ -95,6 +95,5 @@ class ProjectUploadResponseSerializer(serializers.Serializer[dict[str, Any]]):
     files = serializers.ListField(child=serializers.CharField())
     message = serializers.CharField()
     hexsha = serializers.CharField()
-    geojson_status = serializers.CharField()
     browser_url = serializers.CharField(allow_null=True)
     project = ProjectSerializer()

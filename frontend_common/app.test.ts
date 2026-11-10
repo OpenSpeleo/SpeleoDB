@@ -1,5 +1,7 @@
 import { captureInitialControllerState, initializeController, initializeControllers, readControllerContext } from './app.ts';
 
+// Dispatcher failure/ordering contracts require a pending or invalid
+// controller export, which real production controller modules cannot provide.
 const controller = vi.hoisted(() => ({ init: vi.fn<(context: unknown, element: HTMLElement) => unknown>() }));
 vi.mock('./controllers/private-navigation.ts', () => controller);
 vi.mock('./controllers/projects.ts', () => ({ init: 'not callable' }));
@@ -19,7 +21,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
     document.body.innerHTML = '';
 });
@@ -27,19 +28,16 @@ afterEach(() => {
 describe('Vite application bootstrap', () => {
     it('does not schedule asset polling or request reload clients after lifecycle events', async () => {
         vi.resetModules();
-        vi.useFakeTimers();
         const fetch = vi.spyOn(globalThis, 'fetch');
         const xhr = vi.spyOn(XMLHttpRequest.prototype, 'open');
         const timeout = vi.spyOn(globalThis, 'setTimeout');
         const interval = vi.spyOn(globalThis, 'setInterval');
 
         await import('./app.ts');
-        await vi.advanceTimersByTimeAsync(300_000);
         document.dispatchEvent(new Event('visibilitychange'));
         for (const event of ['focus', 'online', 'pageshow']) {
             window.dispatchEvent(new Event(event));
         }
-        await vi.advanceTimersByTimeAsync(300_000);
 
         expect(timeout).not.toHaveBeenCalled();
         expect(interval).not.toHaveBeenCalled();
@@ -133,20 +131,12 @@ describe('Vite application bootstrap', () => {
         expect(ready).toHaveBeenCalledTimes(2);
     });
 
-    it('propagates direct failures, keeps failed elements retryable, and isolates discovery failures', async () => {
-        const error = new Error('Initialization failed');
-        const element = declaration();
-        controller.init.mockRejectedValueOnce(error);
-        await expect(initializeController(element)).rejects.toBe(error);
-        controller.init.mockResolvedValue(undefined);
-        await initializeController(element);
-        expect(controller.init).toHaveBeenCalledTimes(2);
-
+    it('isolates discovery failures while initializing valid declarations', async () => {
         const missing = declaration('unknown');
         const valid = declaration();
         const failure = vi.fn();
         missing.addEventListener('speleodb:controller-error', failure);
-        const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const logged = vi.spyOn(console, 'error');
         await expect(initializeControllers()).resolves.toBeUndefined();
         expect(logged).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
             message: 'Unknown SpeleoDB controller: "unknown"',

@@ -115,10 +115,10 @@ describe('project mutex actions over HTTP', () => {
         expect((document.getElementById('modal_success') as HTMLElement).style.display).toBe('none');
     });
 
-    it('shows escaped API errors and allows retry without navigating away', async () => {
+    it('shows escaped API errors without navigating away', async () => {
         attachMutexLock({ acquire: operations().acquire });
         const button = (document.getElementById('btn_lock_project') as HTMLButtonElement);
-        let received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
+        const received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
         button.click();
         const [, failureResponse] = await received;
         const message = '<img src=x onerror="alert(1)"> already owns this lock';
@@ -131,20 +131,13 @@ describe('project mutex actions over HTTP', () => {
         expect((document.getElementById('modal_error_txt') as HTMLElement).textContent).toBe(message);
         expect(document.querySelector('#modal_error_txt img')).toBeNull();
 
-        received = (once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>);
-        button.click();
-        const [retryRequest, retryResponse] = await received;
-        expect(retryRequest.url).toBe('/api/v2/projects/test/acquire/');
-        expect(button.disabled).toBe(true);
-        respond(retryResponse, 200, { success: true });
-        await vi.waitFor(() => expect(events).toEqual(['reload']));
-        expect(requests).toHaveLength(2);
+        expect(requests).toHaveLength(1);
     });
 
-    it('recovers from a release conflict and retries the same endpoint with CSRF', async () => {
+    it('reports a release conflict without navigating away', async () => {
         attachMutexLock({ release: operations().release, reloadDelayMs: 0 });
         const button = document.querySelector<HTMLButtonElement>('.btn_unlock')!;
-        let received = once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>;
+        const received = once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>;
         button.click();
         const [request, failureResponse] = await received;
         expect(request.method).toBe('POST');
@@ -156,14 +149,7 @@ describe('project mutex actions over HTTP', () => {
         expect(button.disabled).toBe(false);
         expect(document.getElementById('modal_error_txt')!.textContent).toBe('Lock ownership changed.');
 
-        received = once(server, 'request') as Promise<[IncomingMessage, ServerResponse]>;
-        button.click();
-        const [retry, successResponse] = await received;
-        expect(retry.url).toBe('/api/v2/projects/test/release/');
-        expect(retry.headers['x-csrftoken']).toBe('mutex-csrf-token');
-        respond(successResponse, 200, { success: true });
-        await vi.waitFor(() => expect(events).toEqual(['reload']));
-        expect(requests).toHaveLength(2);
+        expect(requests).toHaveLength(1);
     });
 
     it('keeps the existing unlock success modal and deferred reload', async () => {

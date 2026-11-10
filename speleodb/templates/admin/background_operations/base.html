@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate "Home" %}</a>
+    › <a href="{% url 'admin:app_list' app_label='background_jobs' %}">{% translate "Background operations" %}</a>
+    › <a href="{% url 'admin:operations' %}">{% translate "Operations" %}</a>
+    {% if title != "Operations" %}› {{ title }}{% endif %}
+  </div>
+{% endblock breadcrumbs %}

@@ -141,19 +141,18 @@ memory or every possible network failure timing.
 
 The consumer and scheduler regressions use normal Celery constructors and
 configuration, real Kombu connections, and PostgreSQL advisory locks. Bound,
-non-listening TCP sockets produce actual connection refusal; failover uses
-Kombu's supported broker URL list. Redis's administrative pause API produces
-real write timeouts on the dedicated test broker. Lease revocation uses SQL or
-connection closure, and subprocess signals exercise shutdown and the full
-155-second standby retry budget. No framework methods, clocks, executables, or
-lease objects are replaced. The hard-timeout worker selects a test settings
-module with no soft limit before normal Celery CLI startup.
+non-listening TCP sockets exercise single-attempt failure handling. Lease
+revocation uses SQL or connection closure, and subprocess signals exercise
+shutdown. Tests must not manufacture outages, pause Redis or hold a competing
+lock solely to force a backoff sequence. No framework methods, clocks,
+executables, or lease objects are replaced. The hard-timeout worker selects a
+test settings module with no soft limit before normal Celery CLI startup.
 
 GitLab integrations exercise the real configured service and actual connection
-refusal. Separate deterministic policy tests cover scripted SDK-boundary
-outcomes and delay budgets; they do not establish the behavior of a live server
-under arbitrary 429/5xx responses or hostile delay headers. Keep those evidence
-boundaries explicit and preserve the audited repository budget. See
+refusal. Retry tests must use actual failed calls rather than scripted SDK
+outcomes, canned failure responses or fake waiting. They do not establish the
+behavior of a live server under arbitrary 429/5xx responses or hostile delay
+headers. Preserve the audited repository budget. See
 [GitLab test design](ci-gitlab-testing.md) and
 [Git process retry isolation](git-retry-testing.md).
 

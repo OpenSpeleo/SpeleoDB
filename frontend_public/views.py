@@ -186,15 +186,15 @@ def _fetch_compass_sidecar_json(
         remaining: float = deadline - monotonic()
         if remaining <= 0:
             raise Timeout("Compass Sidecar release lookup budget exhausted")
-        response: requests.Response | None = None
         try:
             timeout: float = min(fetch_timeout, remaining)
             if headers is None:
                 response = requests.api.get(url, timeout=timeout)
             else:
                 response = requests.api.get(url, headers=headers, timeout=timeout)
-            response.raise_for_status()
-            payload: object = response.json()
+            with response:
+                response.raise_for_status()
+                payload: object = response.json()
         except (RequestsConnectionError, Timeout, HTTPError) as exc:
             if isinstance(exc, HTTPError) and (
                 exc.response is None
@@ -208,9 +208,6 @@ def _fetch_compass_sidecar_json(
             if monotonic() >= deadline:
                 raise Timeout("Compass Sidecar release lookup budget exhausted")
             return payload
-        finally:
-            if response is not None:
-                response.close()
         sleep(delay)
         delay *= 2
 

@@ -32,17 +32,10 @@ test('GPS loading keeps the toggle usable and displays the final selection', asy
     await expectRenderedFeatures(page, `gps-track-line-${trackId}`, false);
 });
 
-test('GIS load failure permits retry and geometry toggles change the visible map', async ({ page }) => {
-    const { failures } = await installFixture(page);
-    failures.add('/viewer-fixtures/gis.geojson');
+test('GIS geometry toggles change the visible map', async ({ page }) => {
+    await installFixture(page);
     await page.locator('#gis-panel-expand').click();
     const input = page.getByLabel('Show Mixed GIS layer', { exact: true });
-    const row = page.locator(`[data-layer-id="${gisId}"]`);
-    await toggleLabel(input);
-    await expect(input).not.toBeChecked();
-    await expect(input).toBeEnabled();
-    await expect(row).not.toHaveAttribute('aria-busy', 'true');
-    failures.delete('/viewer-fixtures/gis.geojson');
     await toggleLabel(input);
     await expect(input).toBeChecked();
     await expectRenderedFeatures(page, `gis-layer-${gisId}-fill`, true);

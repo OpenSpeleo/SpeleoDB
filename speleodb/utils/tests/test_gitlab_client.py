@@ -75,14 +75,12 @@ def test_keep_base_url_scopes_read_redirects_to_gitlab_api(
     response.status_code = HTTPStatus.MOVED_PERMANENTLY
     response.headers["Location"] = location
     response.request = Request(method, f"{base_url}/api/v4/projects/old").prepare()
-    try:
+    with client:
         assert client.session.get_redirect_target(response) == (
             preserved_location if keep_base_url else location
         )
         # Diagnostic hooks and SDK history retain the server's original header.
         assert response.headers["Location"] == location
-    finally:
-        client.session.close()
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
@@ -97,10 +95,8 @@ def test_keep_base_url_preserves_write_redirect_handling(method: str) -> None:
     response.request = Request(
         method, "http://gitlab:9080/api/v4/projects/old"
     ).prepare()
-    try:
+    with client:
         assert client.session.get_redirect_target(response) == location
-    finally:
-        client.session.close()
 
 
 def test_keep_base_url_does_not_redirect_successful_responses() -> None:
@@ -110,7 +106,5 @@ def test_keep_base_url_does_not_redirect_successful_responses() -> None:
     response: Response = Response()
     response.status_code = HTTPStatus.OK
     response.headers["Location"] = "http://localhost:9080/api/v4/projects/6"
-    try:
+    with client:
         assert client.session.get_redirect_target(response) is None
-    finally:
-        client.session.close()

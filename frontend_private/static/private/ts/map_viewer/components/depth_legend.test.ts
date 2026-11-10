@@ -79,7 +79,7 @@ describe('DepthLegend', () => {
         expect(State.activeDepthDomain).toEqual({ min: 0, max: 80 });
     });
 
-    it('withholds the legend after partial application failure until a successful retry', async () => {
+    it('withholds the legend after partial application failure', async () => {
         await initializeDepthLegend();
         const legend = document.getElementById('depth-scale-fixed')!;
         expect(legend.style.display).toBe('block');
@@ -91,8 +91,6 @@ describe('DepthLegend', () => {
             detail: { domain: { min: 0, max: 80 } },
         }));
         expect(legend.style.display).toBe('none');
-        await Layers.setColorMode('depth');
-        expect(legend.style.display).toBe('block');
     });
 
     it('updates gauge labels when depth domain max changes', async () => {

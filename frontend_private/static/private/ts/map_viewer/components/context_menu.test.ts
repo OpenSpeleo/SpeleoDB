@@ -12,7 +12,7 @@ describe('ContextMenu', () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+
         configureRuntimeContext({});
     });
 

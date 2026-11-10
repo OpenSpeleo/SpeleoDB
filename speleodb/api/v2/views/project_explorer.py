@@ -94,7 +94,6 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
         try:
             # Checkout default branch and pull repository.
             project.checkout_commit_or_default_pull_branch()
-
             commit = project.git_repo.commit(hexsha)
 
             # Collect all the commits and sort them by date

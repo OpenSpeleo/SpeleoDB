@@ -1,13 +1,8 @@
-import type { MockInstance } from 'vitest';
 import { init } from './projects.ts';
 import { loadJQuery, setBrowserUrl, startApiServer } from '../test/api-server.ts';
-import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
-
-vi.mock('../../frontend_private/static/private/ts/forms/api_errors.ts', () => ({ showApiErrorModal: vi.fn() }));
 
 let server: Awaited<ReturnType<typeof startApiServer>>;
 let originalUrl: string;
-let timer: MockInstance<typeof window.setTimeout>;
 const context = { projectsUrl: '#projects' };
 
 beforeAll(async () => {
@@ -20,16 +15,10 @@ beforeEach(() => {
     server.reset();
     server.reply({ json: [{ id: '7', commit_count: 0 }] });
     setBrowserUrl(`${server.origin}/private/projects/`);
-    timer = vi.spyOn(window, 'setTimeout');
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
-    document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn_release_all_locks"></button><button id="btn_confirmed_mass_unlock"></button><button class="btn-unlock" data-project_id="7"></button><button id="btn_confirmed_unlock"></button><div id="modal_confirmation_mass_unlock" style="display:none"></div><div id="modal_confirmation_unlock" style="display:none"></div><div id="modal_success"><span id="modal_success_txt"></span></div><span class="async_revision" data-id="revision-7" data-project_id="7"></span><span id="revision-7"></span><span class="async_revision" data-id="revision-8" data-project_id="8"></span><span id="revision-8"></span><div class="country-group" data-country-code="MX"><button class="country-group-header"></button></div>';
+    document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn_release_all_locks"></button><button id="btn_confirmed_mass_unlock"></button><button class="btn-unlock" data-project_id="7"></button><button id="btn_confirmed_unlock"></button><div id="modal_confirmation_mass_unlock" style="display:none"></div><div id="modal_confirmation_unlock" style="display:none"></div><div id="modal_success"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><span class="async_revision" data-id="revision-7" data-project_id="7"></span><span id="revision-7"></span><span class="async_revision" data-id="revision-8" data-project_id="8"></span><span id="revision-8"></span><div class="country-group" data-country-code="MX"><button class="country-group-header"></button></div>';
 });
 afterEach(() => {
-    for (const [index, args] of timer.mock.calls.entries()) {
-        if (args[1] === 2000) window.clearTimeout(timer.mock.results[index]?.value as ReturnType<typeof window.setTimeout>);
-    }
     $('body').off('click');
     vi.restoreAllMocks();
     document.body.innerHTML = '';
@@ -63,13 +52,13 @@ it('opens mass confirmation and sends DELETE with CSRF, shared errors and delaye
     expect($('#modal_confirmation_mass_unlock')[0]!.style.display).toBe('flex');
     server.reply({ status: 403, json: { detail: 'Denied' } });
     $('#btn_confirmed_mass_unlock').trigger('click');
-    await vi.waitFor(() => expect(showApiErrorModal).toHaveBeenCalledWith(expect.objectContaining({ status: 403, data: { detail: 'Denied' } })));
+    await vi.waitFor(() => expect($('#modal_error_txt').text()).toBe('Denied'));
     expect(server.requests[1]).toMatchObject({ method: 'DELETE', path: '/api/v2/user/release_all_locks/', headers: { 'x-csrftoken': 'csrf' }, body: '' });
 
     server.reply({ json: {} });
     $('#btn_confirmed_mass_unlock').trigger('click');
     await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe('All the projects have been unlocked.'));
-    expect(timer).toHaveBeenCalledWith(expect.any(Function), 2000);
+    await vi.waitFor(() => expect(window.location.hash).toBe('#projects'), { timeout: 3000 });
 });
 
 it('uses the clicked project ID in the subsequent single-project POST', async () => {
@@ -99,6 +88,7 @@ it('tolerates invalid stored JSON and denied writes and repeats handlers when re
     await initialize();
     $('.country-group-header').trigger('click');
     expect($('.country-group').hasClass('collapsed')).toBe(true);
+    // Exercise browser storage denial, which JSDOM's in-memory storage cannot produce.
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('Unavailable'); });
     expect(() => $('.country-group-header').trigger('click')).not.toThrow();
     $('#revision-8').text('');

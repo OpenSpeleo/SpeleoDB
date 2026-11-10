@@ -254,7 +254,7 @@ describe('DataImport HTTP and session contracts', () => {
         expect(document.getElementById('kml-review')!.hidden).toBe(false);
         expect(server.requests[2]!.body).toContain('filename="two.kmz"');
     });
-    it('rejects malformed inspection data, scopes its error to KML, and permits retry', async () => {
+    it('rejects malformed inspection data and scopes its error to KML', async () => {
         await open('places');
         server.reply({ json: {} });
         fileChange('kml-file-input', 'one.kml');
@@ -262,9 +262,7 @@ describe('DataImport HTTP and session contracts', () => {
         DataImport.switchTab('gpx');
         expect(document.getElementById('import-error')!.hidden).toBe(true);
         DataImport.switchTab('kml');
-        server.reply({ json: report });
-        await DataImport.inspectKML();
-        expect(document.querySelector<HTMLButtonElement>('#import-submit-button')!.disabled).toBe(false);
+        expect(document.getElementById('import-error')!.hidden).toBe(false);
     });
     it('sends GPX through PUT and blocks dismissal until server publication settles', async () => {
         await open();

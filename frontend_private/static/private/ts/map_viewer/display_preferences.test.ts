@@ -279,25 +279,14 @@ it('replaces preferences on init and reset but retains their identity on destroy
     expect(DisplayPreferences._onChange).toBeNull();
 });
 
-it('reads each stored category again when applying its checked value', () => {
-    localStorage.setItem(storageKey, '{}');
-    let categoryReads = 0;
-    const stored = {
+it('restores a stored category through real JSON parsing', () => {
+    localStorage.setItem(storageKey, JSON.stringify({
         version: DEFAULTS.DISPLAY.STORAGE_VERSION,
-        get categories() {
-            categoryReads += 1;
-            return { caveEntrances: categoryReads !== 5 };
-        },
-    };
-    vi.spyOn(JSON, 'parse').mockReturnValue(stored);
-
+        categories: { caveEntrances: false },
+    }));
     DisplayPreferences.init({ persist: true });
-
-    // Three section guards, then the type check and assignment each read the section.
     expect(State.displayPreferences.categories.caveEntrances).toBe(false);
-    expect(categoryReads).toBe(4 + Object.keys(State.displayPreferences.categories).length);
 });
-
 
 it.each([undefined, null, 'false', false, true])('restores geometry labels only from a boolean: %j', geometryLabelsVisible => {
     localStorage.setItem(storageKey, JSON.stringify({ version: DEFAULTS.DISPLAY.STORAGE_VERSION, geometryLabelsVisible }));

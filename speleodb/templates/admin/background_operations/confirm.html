@@ -1,0 +1,24 @@
+{% extends "admin/background_operations/base.html" %}
+
+{% block content %}
+  <section class="operation-panel" aria-labelledby="confirmation-title">
+    <h2 id="confirmation-title">Rebuild history for {{ project.name }}?</h2>
+    <p>Project UUID: <code>{{ project.pk }}</code></p>
+    <ul>
+      <li>Stored Git history and maps will be temporarily unavailable.</li>
+      <li>All project GeoJSON objects will be deleted, including retired and orphaned objects.</li>
+      <li>Existing download links may stop working.</li>
+      <li>The local checkout will be discarded and history reconstructed from the existing remote. The remote repository, permissions, settings, and GIS-view references are preserved.</li>
+    </ul>
+    {% if skip_geojson %}
+      <p class="operation-warning">GeoJSON regeneration will be skipped because this project is excluded or its format is unsupported. Its Git history will still be rebuilt.</p>
+    {% endif %}
+    <p>A failed reset must be run again from zero. There is no automatic retry or resume.</p>
+    <form method="post" action="{% url 'admin:operations_confirm' %}">
+      {% csrf_token %}
+      <input type="hidden" name="confirmation" value="{{ confirmation }}" />
+      <button type="submit" class="button default">Confirm destructive history rebuild</button>
+      <a href="{% url 'admin:operations' %}">Cancel</a>
+    </form>
+  </section>
+{% endblock content %}

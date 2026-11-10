@@ -774,118 +774,121 @@ class ExperimentExportExcelApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
 
         # Create Excel file in memory
         output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("Experiment Data")
+        with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+            worksheet = workbook.add_worksheet("Experiment Data")
 
-        # Define formats
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "bg_color": "#4F46E5",
-                "font_color": "white",
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
-
-        cell_format = workbook.add_format({"border": 1, "valign": "top"})
-
-        # Build headers from experiment fields
-        headers = [
-            "Project Name",
-            "Project ID",
-            "Station ID",
-            "Station Name",
-            "Longitude",
-            "Latitude",
-        ]
-
-        # Sort ALL experiment fields by order (including mandatory fields)
-        field_definitions = experiment.experiment_fields or {}
-
-        # Convert field_definitions to list and sort by order
-        all_fields = [
-            (field_uuid, field_data)
-            for field_uuid, field_data in field_definitions.items()
-        ]
-        all_fields.sort(key=lambda x: x[1].get("order", 999))
-
-        field_uuids = [field_uuid for field_uuid, _ in all_fields]
-        field_names = [field_data.get("name", "") for _, field_data in all_fields]
-        headers.extend(field_names)
-
-        # Write headers
-        for col_num, header in enumerate(headers):
-            worksheet.write(0, col_num, header, header_format)
-            # Auto-adjust column width based on header length
-            worksheet.set_column(col_num, col_num, max(len(header) + 2, 12))
-
-        # Write data rows
-        row_num = 1
-        for record in records:
-            col_num = 0
-
-            project: Project | None = (
-                record.station.project
-                if isinstance(record.station, SubSurfaceStation)
-                else None
+            # Define formats
+            header_format = workbook.add_format(
+                {
+                    "bold": True,
+                    "bg_color": "#4F46E5",
+                    "font_color": "white",
+                    "border": 1,
+                    "align": "center",
+                    "valign": "vcenter",
+                }
             )
 
-            # Project Name
-            worksheet.write(
-                row_num, col_num, project.name if project else "", cell_format
-            )
-            col_num += 1
+            cell_format = workbook.add_format({"border": 1, "valign": "top"})
 
-            # Project ID
-            worksheet.write(
-                row_num, col_num, str(project.id) if project else "", cell_format
-            )
-            col_num += 1
+            # Build headers from experiment fields
+            headers = [
+                "Project Name",
+                "Project ID",
+                "Station ID",
+                "Station Name",
+                "Longitude",
+                "Latitude",
+            ]
 
-            # Station ID
-            worksheet.write(row_num, col_num, str(record.station.id), cell_format)
-            col_num += 1
+            # Sort ALL experiment fields by order (including mandatory fields)
+            field_definitions = experiment.experiment_fields or {}
 
-            # Station Name
-            worksheet.write(row_num, col_num, record.station.name, cell_format)
-            col_num += 1
+            # Convert field_definitions to list and sort by order
+            all_fields = [
+                (field_uuid, field_data)
+                for field_uuid, field_data in field_definitions.items()
+            ]
+            all_fields.sort(key=lambda x: x[1].get("order", 999))
 
-            # Longitude
-            if record.station.longitude is not None:
-                worksheet.write(row_num, col_num, record.station.longitude, cell_format)
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+            field_uuids = [field_uuid for field_uuid, _ in all_fields]
+            field_names = [field_data.get("name", "") for _, field_data in all_fields]
+            headers.extend(field_names)
 
-            # Latitude
-            if record.station.latitude is not None:
-                worksheet.write(row_num, col_num, record.station.latitude, cell_format)
-            else:
-                worksheet.write(row_num, col_num, "", cell_format)
-            col_num += 1
+            # Write headers
+            for col_num, header in enumerate(headers):
+                worksheet.write(0, col_num, header, header_format)
+                # Auto-adjust column width based on header length
+                worksheet.set_column(col_num, col_num, max(len(header) + 2, 12))
 
-            # All experiment fields (sorted by order, including mandatory fields)
-            record_data = record.data or {}
-            for field_uuid in field_uuids:
-                value = record_data.get(field_uuid, "")
+            # Write data rows
+            row_num = 1
+            for record in records:
+                col_num = 0
 
-                match value:
-                    case None:
-                        value = ""
+                project: Project | None = (
+                    record.station.project
+                    if isinstance(record.station, SubSurfaceStation)
+                    else None
+                )
 
-                    case list() | dict():
-                        # Convert complex types to JSON string
-                        value = json.dumps(value)
-
-                worksheet.write(row_num, col_num, str(value), cell_format)
+                # Project Name
+                worksheet.write(
+                    row_num, col_num, project.name if project else "", cell_format
+                )
                 col_num += 1
 
-            row_num += 1
+                # Project ID
+                worksheet.write(
+                    row_num, col_num, str(project.id) if project else "", cell_format
+                )
+                col_num += 1
 
-        # Close workbook
-        workbook.close()
+                # Station ID
+                worksheet.write(row_num, col_num, str(record.station.id), cell_format)
+                col_num += 1
+
+                # Station Name
+                worksheet.write(row_num, col_num, record.station.name, cell_format)
+                col_num += 1
+
+                # Longitude
+                if record.station.longitude is not None:
+                    worksheet.write(
+                        row_num, col_num, record.station.longitude, cell_format
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # Latitude
+                if record.station.latitude is not None:
+                    worksheet.write(
+                        row_num, col_num, record.station.latitude, cell_format
+                    )
+                else:
+                    worksheet.write(row_num, col_num, "", cell_format)
+                col_num += 1
+
+                # All experiment fields (sorted by order, including mandatory fields)
+                record_data = record.data or {}
+                for field_uuid in field_uuids:
+                    value = record_data.get(field_uuid, "")
+
+                    match value:
+                        case None:
+                            value = ""
+
+                        case list() | dict():
+                            # Convert complex types to JSON string
+                            value = json.dumps(value)
+
+                    worksheet.write(row_num, col_num, str(value), cell_format)
+                    col_num += 1
+
+                row_num += 1
+
+            # Close workbook
         output.seek(0)
 
         # Generate filename with timestamp

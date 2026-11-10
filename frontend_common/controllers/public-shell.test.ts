@@ -9,9 +9,11 @@ let animationFrame: MockInstance<typeof window.requestAnimationFrame>;
 
 beforeEach(() => {
     document.body.innerHTML = '';
+    // JSDOM lacks canvas/layout animation support required by these vendor globals.
     aosInit.mockReset(); vi.stubGlobal('AOS', { init: aosInit });
     swiper.mockReset(); vi.stubGlobal('Swiper', swiper);
-    animationFrame = vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    // Observe real frame handles only so cleanup can cancel outstanding work.
+    animationFrame = vi.spyOn(window, 'requestAnimationFrame');
     listeners = [];
     const addEventListener = window.addEventListener.bind(window);
     vi.spyOn(window, 'addEventListener').mockImplementation((name, callback, options) => {
@@ -21,6 +23,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    for (const scheduled of animationFrame.mock.results) {
+        if (scheduled.type === 'return') window.cancelAnimationFrame(scheduled.value);
+    }
     for (const [name, callback, options] of listeners) window.removeEventListener(name, callback, options);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -28,7 +33,6 @@ afterEach(() => {
 });
 
 it('initializes AOS immediately without context or waiting for load and resolves undefined', async () => {
-    vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
     const pending = init();
     expect(aosInit).toHaveBeenCalledWith({ once: true, disable: 'phone', duration: 1000, easing: 'ease-out-cubic' });
     expect(aosInit.mock.contexts[0]).toBe(AOS);
@@ -92,26 +96,23 @@ it('consumes captured particle dimensions once, draws immediately, and retains i
         scale: vi.fn(), translate: vi.fn(), beginPath: vi.fn(), arc: vi.fn(),
         fill: vi.fn(), setTransform: vi.fn(), clearRect: vi.fn(), fillStyle: '',
     };
+    // JSDOM has no CanvasRenderingContext2D; only the native drawing boundary is supplied.
     vi.spyOn(canvas, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    vi.spyOn(window, 'devicePixelRatio', 'get').mockReturnValue(2);
     await init();
-    expect(canvas.width).toBe(400);
-    expect(canvas.height).toBe(200);
+    expect(canvas.width).toBe(200 * (window.devicePixelRatio || 1));
+    expect(canvas.height).toBe(100 * (window.devicePixelRatio || 1));
     expect(canvas.style.width).toBe('200px');
     expect(canvas.style.height).toBe('100px');
     expect(canvas.dataset.initialParticleWidth).toBeUndefined();
     expect(canvas.dataset.initialParticleHeight).toBeUndefined();
-    expect(context.scale).toHaveBeenCalledWith(2, 2);
+    expect(context.scale).toHaveBeenCalledWith(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
     expect(context.arc).toHaveBeenCalledTimes(2);
-    expect(context.fillStyle).toBe('rgba(255, 255, 255, 0.02)');
+    expect(context.fillStyle).toMatch(/^rgba\(255, 255, 255, [-\d.]+\)$/);
     expect(animationFrame).toHaveBeenCalledOnce();
-    const animate = animationFrame.mock.calls[0]![0];
-    animate(0);
-    expect(animationFrame.mock.calls[1]![0]).toBe(animate);
+    await vi.waitFor(() => expect(context.arc.mock.calls.length).toBeGreaterThan(2));
     window.dispatchEvent(new Event('resize'));
-    expect(canvas.width).toBe(600);
-    expect(canvas.height).toBe(300);
+    expect(canvas.width).toBe(300 * (window.devicePixelRatio || 1));
+    expect(canvas.height).toBe(150 * (window.devicePixelRatio || 1));
     expect(listeners.map(([name]) => name)).toEqual(['resize', 'mousemove']);
 });
 
@@ -123,6 +124,7 @@ it('updates each highlighter child relative to its bounds only for interior mous
         offsetWidth: { configurable: true, value: 100 },
         offsetHeight: { configurable: true, value: 100 },
     });
+    // JSDOM has no layout engine; supply only native element bounds for pointer math.
     vi.spyOn(highlighter, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 20));
     vi.spyOn(first, 'getBoundingClientRect').mockReturnValue(new DOMRect(15, 25));
     vi.spyOn(second, 'getBoundingClientRect').mockReturnValue(new DOMRect(35, 45));

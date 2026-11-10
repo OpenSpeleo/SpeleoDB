@@ -17,6 +17,8 @@ from tomlkit import dumps as toml_dumps
 from tomlkit import parse as toml_parse
 from tomlkit import table
 
+from speleodb.common.constants import COMPASS_TOML_FILENAME
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -220,7 +222,7 @@ class ProjectNFO(BaseModel):
 
 
 class CompassTOML(BaseModel):
-    __FILENAME__ = "compass.toml"
+    __FILENAME__ = COMPASS_TOML_FILENAME
 
     speleodb: SpeleodbNFO
     project: ProjectNFO

@@ -96,21 +96,18 @@ describe('Modal', () => {
             expect(modals[0]!.textContent).toContain('Second');
         });
 
-        it('calls onOpen callback after opening', () => {
-            vi.useFakeTimers();
+        it('calls onOpen callback after opening', async () => {
             const onOpen = vi.fn();
             const html = Modal.base('m1', 'Title', 'Content');
 
             Modal.open('m1', html, onOpen);
 
             expect(onOpen).not.toHaveBeenCalled();
-            vi.advanceTimersByTime(50);
+            await new Promise(resolve => setTimeout(resolve, 50));
             expect(onOpen).toHaveBeenCalledTimes(1);
-            vi.useRealTimers();
         });
 
-        it.each(['close', 'Escape'])('does not initialize a dialog removed by %s before its delayed callback', method => {
-            vi.useFakeTimers();
+        it.each(['close', 'Escape'])('does not initialize a dialog removed by %s before its delayed callback', async method => {
             try {
                 const onOpen = vi.fn(() => document.getElementById('dialog-input')!.focus());
                 Modal.open('m1', Modal.base('m1', 'Title', '<input id="dialog-input">'), onOpen);
@@ -118,28 +115,26 @@ describe('Modal', () => {
                 else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
                 expect(document.getElementById('m1')).toBeNull();
-                expect(() => vi.advanceTimersByTime(50)).not.toThrow();
+                await new Promise(resolve => setTimeout(resolve, 70));
                 expect(onOpen).not.toHaveBeenCalled();
             } finally {
-                vi.useRealTimers();
+                Modal.close('m1');
             }
         });
 
-        it('initializes only the current dialog after replacement with the same id', () => {
-            vi.useFakeTimers();
+        it('initializes only the current dialog after replacement with the same id', async () => {
             try {
                 const staleSetup = vi.fn();
                 const currentSetup = vi.fn(() => document.getElementById('current-input')!.focus());
                 Modal.open('m1', Modal.base('m1', 'Previous', '<input id="previous-input">'), staleSetup);
                 Modal.open('m1', Modal.base('m1', 'Current', '<input id="current-input">'), currentSetup);
-                vi.advanceTimersByTime(50);
+                await new Promise(resolve => setTimeout(resolve, 50));
 
                 expect(staleSetup).not.toHaveBeenCalled();
                 expect(currentSetup).toHaveBeenCalledOnce();
                 expect(document.activeElement).toBe(document.getElementById('current-input'));
-                Modal.close('m1');
             } finally {
-                vi.useRealTimers();
+                Modal.close('m1');
             }
         });
 

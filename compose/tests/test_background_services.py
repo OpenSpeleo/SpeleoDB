@@ -49,7 +49,7 @@ NATIVE_THREAD_VARIABLES: tuple[str, ...] = (
             "speleodb.background_jobs.tasks.maintain_background_jobs",
             "background_control",
         ),
-        ("speleodb.surveys.tasks.refresh_all_projects_geojson", "background_control"),
+        ("speleodb.surveys.tasks.reset_project_history", "background_control"),
         ("speleodb.surveys.tasks.refresh_project_geojson", "background_control"),
         ("speleodb.users.tasks.get_users_count", "background_control"),
         ("celery.backend_cleanup", "background_control"),
@@ -186,7 +186,7 @@ def worker_script_environment(transactional_db: None) -> dict[str, str]:
 @contextmanager
 def running_script_worker(
     environment: dict[str, str], tmp_path: Path
-) -> Iterator[tuple[subprocess.Popen[bytes], Celery, str]]:
+) -> Iterator[tuple[subprocess.Popen[bytes], Celery, str, dict[str, Any]]]:
     previous_app: Celery = get_current_app()
     broker_url: str = environment["TEST_CELERY_BROKER_URL"]
     key_prefix: str = environment["SPELEODB_TEST_BROKER_PREFIX"]
@@ -209,6 +209,7 @@ def running_script_worker(
         try:
             deadline: float = time.monotonic() + WORKER_START_TIMEOUT_SECONDS
             hostname: str | None = None
+            statistics: dict[str, Any] | None = None
             while time.monotonic() < deadline:
                 assert process.poll() is None, log_path.read_text()
                 # This broker namespace contains only the worker started here.
@@ -223,10 +224,12 @@ def running_script_worker(
                     ]
                     if matches:
                         [hostname] = matches
+                        statistics = replies[hostname]
                         break
                 time.sleep(0.2)
             assert hostname is not None, log_path.read_text()
-            yield process, application, hostname
+            assert statistics is not None
+            yield process, application, hostname, statistics
         finally:
             process.terminate()
             try:
@@ -255,6 +258,7 @@ def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limi
             process,
             application,
             hostname,
+            statistics,
         ):
             assert hostname not in names
             names.add(hostname)
@@ -267,13 +271,9 @@ def test_worker_script_runs_both_queues_with_unique_names_and_native_thread_limi
                 "exports",
                 "background_control",
             }
-            statistics: dict[str, Any] | None = inspector.stats()
-            assert statistics is not None
-            assert statistics[hostname]["pool"]["max-concurrency"] == 1
-            assert statistics[hostname]["pool"]["implementation"].endswith(
-                ".prefork:TaskPool"
-            )
-            assert statistics[hostname]["prefetch_count"] == 1
+            assert statistics["pool"]["max-concurrency"] == 1
+            assert statistics["pool"]["implementation"].endswith(".prefork:TaskPool")
+            assert statistics["prefetch_count"] == 1
             command: list[str] = (
                 Path(f"/proc/{process.pid}/cmdline").read_text().split("\0")
             )

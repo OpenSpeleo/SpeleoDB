@@ -459,15 +459,9 @@ def test_repair_does_not_hide_other_xml_errors_or_change_line_columns(
     assert error.value.details["source_line"] == offending_line
 
 
-def test_unrelated_xml_errors_do_not_retry_namespace_repair() -> None:
+def test_namespace_text_does_not_hide_unrelated_xml_errors() -> None:
     source = b"<kml><name>xsi: is just text</wrong></kml>"
-    with (
-        patch(
-            "speleodb.gis.gis_layer_processing.kml._repair_missing_xsi_namespace",
-            side_effect=AssertionError("Unrelated XML errors must not retry parsing"),
-        ),
-        pytest.raises(GISLayerProcessingError) as error,
-    ):
+    with pytest.raises(GISLayerProcessingError) as error:
         analyze_kml_kmz_bytes(source, filename="bad.kml")
     assert error.value.code == ProcessingErrorCode.XML_INVALID
 

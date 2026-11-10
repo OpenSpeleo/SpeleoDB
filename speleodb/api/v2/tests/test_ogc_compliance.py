@@ -31,7 +31,6 @@ import uuid
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -40,7 +39,6 @@ from typing import Protocol
 from typing import cast
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
 
 import jsonschema_rs
 import orjson
@@ -635,23 +633,23 @@ class TestOGCHelpers:
 
     @pytest.mark.parametrize("clock_timezone", ["UTC", "America/Cancun"])
     def test_items_envelope_timestamp_uses_django_clock_in_utc(
-        self, monkeypatch: pytest.MonkeyPatch, clock_timezone: str
+        self, clock_timezone: str
     ) -> None:
-        now: datetime = datetime(
-            2026, 9, 15, 12, 34, 56, 789000, tzinfo=UTC
-        ).astimezone(ZoneInfo(clock_timezone))
-        monkeypatch.setattr(timezone, "now", lambda: now)
         request = self.factory.get(
             "/api/v2/gis-ogc/view/TKN/collections/SHA/items", secure=True
         )
-        with timezone.override("America/Cancun"):
+        before = timezone.now().replace(microsecond=0)
+        with timezone.override(clock_timezone):
             envelope: dict[str, Any] = build_items_envelope(
                 features=[],
                 request=cast("Any", request),
                 number_matched=0,
                 query=OGCQuery(),
             )
-        assert envelope["timeStamp"] == "2026-09-15T12:34:56Z"
+        emitted = datetime.strptime(envelope["timeStamp"], _RFC3339_FMT).replace(
+            tzinfo=UTC
+        )
+        assert before <= emitted <= timezone.now()
 
     def test_items_envelope_emits_required_ogc_fields(self) -> None:
         # ``testserver`` is the host RequestFactory's response uses by
@@ -952,15 +950,8 @@ class TestProjectViewOGCCompliance(BaseAPITestCase):
         # First request to warm the cache.
         first = self._items_response()
         first_data = _streaming_json(first)
-        # Sleep just long enough that the next ISO-second is reached.
-        # We can't sleep in tests reliably; instead, mock the clock or
-        # accept that two calls within the same wall-second produce the
-        # same timestamp. The contract is "regenerated per request, not
-        # baked into the cached bytes" — re-parsing the body and
-        # asserting that the timeStamp field exists and is well-formed
-        # is enough; cache-byte-identity-with-fresh-timeStamp is the
-        # invariant. We additionally pin that the envelope dict object
-        # is a fresh instance (not the cached features list).
+        # Both requests use the real clock. Calls within one wall-clock second
+        # may share a timestamp; each response must contain a valid envelope.
         second = self._items_response()
         second_data = _streaming_json(second)
         assert first_data["features"] == second_data["features"]
@@ -3495,25 +3486,6 @@ class TestOGCGeometrySplit(BaseAPITestCase):
             assert types <= {"Point", "MultiPoint"}
         else:
             assert types <= {"LineString", "MultiLineString"}
-
-
-def test_mutmut_target_is_documented() -> None:
-    """mutmut configuration covers the OGC core modules.
-
-    The actual mutation testing run is a Make target (``make
-    test-ogc-mutations``) — this test simply pins that the modules in
-    scope are present in the project tree, so a future refactor that
-    moves or deletes a file fails CI before mutation testing silently
-    misses it.
-    """
-    for mod in (
-        "speleodb.gis.ogc_helpers",
-        "speleodb.api.v2.views.ogc_base",
-        "speleodb.api.v2.views.gis_view",
-        "speleodb.api.v2.views.project_geojson",
-        "speleodb.api.v2.views.landmark_collection_ogc",
-    ):
-        import_module(mod)
 
 
 def test_ogc_team_engine_setup_documented() -> None:

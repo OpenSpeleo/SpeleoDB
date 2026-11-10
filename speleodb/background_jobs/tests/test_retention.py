@@ -30,8 +30,6 @@ if TYPE_CHECKING:
 
     from speleodb.users.models import User
 
-pytestmark = pytest.mark.django_db
-
 
 def _old_failed_job(user: User) -> BackgroundJob:
     job = BackgroundJob.objects.create(requester=user, state=JobState.FAILED)
@@ -42,6 +40,7 @@ def _old_failed_job(user: User) -> BackgroundJob:
     return job
 
 
+@pytest.mark.django_db
 def test_history_retention_preserves_recent_active_and_unremoved_objects() -> None:
     old = _old_failed_job(UserFactory.create())
     recent = _old_failed_job(UserFactory.create())
@@ -63,6 +62,7 @@ def test_history_retention_preserves_recent_active_and_unremoved_objects() -> No
     }
 
 
+@pytest.mark.django_db
 def test_retention_rechecks_a_retry_accepted_after_candidate_selection() -> None:
     user = UserFactory.create()
     job = _old_failed_job(user)
@@ -100,6 +100,7 @@ def test_retention_rechecks_a_retry_accepted_after_candidate_selection() -> None
     assert job.attempts.count() == 2  # noqa: PLR2004
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize("action", [retry_export, request_notification])
 def test_pruned_jobs_return_a_controlled_unavailable_error(
     action: Callable[[BackgroundJob, User], object],
