@@ -64,6 +64,7 @@
     "controller-private-navigation": "frontend_common/controllers/private-navigation.ts",
     "controller-error-page": "frontend_common/controllers/error-page.ts",
     "controller-private-map": "frontend_common/controllers/private-map.ts",
+    "controller-project-revision-map": "frontend_common/controllers/project-revision-map.ts",
     "controller-public-gis": "frontend_common/controllers/public-gis.ts",
     "controller-landmark-details": "frontend_common/controllers/landmark-details.ts",
     "controller-permission-modal": "frontend_common/controllers/permission-modal.ts",

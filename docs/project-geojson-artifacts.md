@@ -144,3 +144,49 @@ relations once per project. Artifact ordering and URL/revision pairing remain
 unchanged. The endpoint query regression asserts actual accessible records and
 mutex/commit values while comparing query counts as projects are added. OGC
 callers do not load these unrelated serializer fields.
+
+## Historical map links
+
+Revision history offers a dedicated read-only map for each commit that has a
+stored GeoJSON artifact. Desktop and mobile actions use the same full source
+SHA. The authenticated map route scopes both commit and artifact to the selected
+project and requires at least `READ_ONLY`, including active team grants.
+`WEB_VIEWER` users cannot open historical maps. Revision history, source
+downloads, and Git browsing retain their existing permission requirements. The
+primary “View history on map” action opens the most recent non-creation commit
+in the historical viewer. If it has no artifact, the viewer shows its
+unavailable state rather than substituting an older commit. Projects with no
+visible commits have no main map action.
+
+The historical map's Project History panel lists recorded history in canonical
+newest-first date order, excluding only commits with message
+`[Automated] Project Creation` and author `SpeleoDB`, matching the
+revision-history page. Dates, short truncated messages and authors identify
+revisions; each card shows its date, time, message and author. The page heading
+shows only the project name. The panel sizes to its content within the map width
+and shares the private project panel's styling, header divider and spacing;
+commit hashes remain in URLs and inert data only. The selected revision is
+highlighted, and choosing another available revision replaces the survey in the
+existing map without reloading the page. The camera refocuses on the selected
+survey while display settings remain in place. Revisions without generated
+artifacts remain visible as unavailable entries. History metadata and artifacts
+are loaded in one joined query, and each available artifact receives its own
+signed download URL after project access is checked. URLs and revision
+identities are inert metadata; switching requires no new REST endpoint.
+
+The HTML response is private and non-cacheable. Each signed artifact URL has the
+existing one-hour lifetime. The selected revision shares the exact signed URL
+from its history entry with the shared read-only renderer. Refreshing the page
+rechecks access and renews the history artifact URLs. Regeneration can replace
+that artifact; a historical link does not preserve older exporter outputs.
+Basemap changes retain the selected survey. Current annotations and editing
+tools are excluded.
+
+Missing artifacts show an unavailable page and never fall back to the newest
+survey or trigger conversion. Existing administrator generation tools remain
+responsible for creating or repairing artifacts. The separate revision-history
+listing still loads availability in one project-scoped query without signing
+artifact URLs. The historical map request performs indexed lookups without Git
+access, conversion, or a new API endpoint. Regression tests cover exact
+older-artifact storage readback, direct and team permissions, revoked access,
+cross-project isolation, and missing-map behavior.

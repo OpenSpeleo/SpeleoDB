@@ -88,6 +88,7 @@ from frontend_private.views import ToolDMP2Json
 from frontend_private.views import ToolDMPDoctor
 from frontend_private.views import ToolXLSToArianeDMP
 from frontend_private.views import ToolXLSToCompass
+from frontend_private.views.project import ProjectRevisionMapView
 from frontend_private.views.user import ExportsView
 
 app_name = "private"
@@ -115,6 +116,11 @@ project_patterns: list[URLPattern | URLResolver] = [
     ),
     path("mutexes/", ProjectMutexesView.as_view(), name="project_mutexes"),
     path("revisions/", ProjectRevisionHistoryView.as_view(), name="project_revisions"),
+    path(
+        "revisions/<gitsha:hexsha>/map/",
+        ProjectRevisionMapView.as_view(),
+        name="project_revision_map",
+    ),
     path(
         "browser/<gitsha:hexsha>/",
         ProjectGitExplorerView.as_view(),

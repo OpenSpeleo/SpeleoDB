@@ -9,14 +9,21 @@ from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import PermissionLevel
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import ProjectMutex
 from speleodb.surveys.models import TeamProjectPermission
 from speleodb.users.models import SurveyTeam
@@ -383,6 +390,25 @@ class ProjectRevisionHistoryView(_BaseProjectView):
         except ObjectDoesNotExist, PermissionError:
             return redirect(reverse("private:projects"))
 
+        project: Project = data["project"]
+        data["revision_map_urls"] = {
+            sha: reverse(
+                "private:project_revision_map",
+                kwargs={"project_id": project.pk, "hexsha": sha},
+            )
+            for sha in project.geojsons.values_list("commit_id", flat=True)
+        }
+        latest_revision = project.commits.exclude(
+            message="[Automated] Project Creation", author_name="SpeleoDB"
+        ).first()
+        data["latest_revision_map_url"] = (
+            reverse(
+                "private:project_revision_map",
+                kwargs={"project_id": project.pk, "hexsha": latest_revision.pk},
+            )
+            if latest_revision is not None
+            else None
+        )
         return super().get(request, *args, **data, **kwargs)
 
 
@@ -427,3 +453,84 @@ class ProjectGitInstructionsView(_BaseProjectView):
         data["default_branch"] = settings.DJANGO_GIT_BRANCH_NAME
 
         return super().get(request, *args, **data, **kwargs)
+
+
+@method_decorator(never_cache, name="dispatch")
+class ProjectRevisionMapView(AuthenticatedTemplateView):
+    """Render only the stored artifact of an authorized, exact source revision."""
+
+    template_name = "pages/project/revision_map.html"
+
+    def get(  # type: ignore[override]
+        self,
+        request: AuthenticatedHttpRequest,
+        project_id: str,
+        hexsha: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> HttpResponse:
+        if len(hexsha) != 40:  # noqa: PLR2004 # Full Git SHA-1 identity only.
+            raise Http404("Revision not found")
+        project = get_object_or_404(Project, pk=project_id)
+        try:
+            permission = project.get_best_permission(request.user)
+        except NotAuthorizedError as exc:
+            raise PermissionDenied("Insufficient project permissions") from exc
+        if permission.level < PermissionLevel.READ_ONLY:
+            raise PermissionDenied("Insufficient project permissions")
+
+        commit = get_object_or_404(ProjectCommit, project=project, pk=hexsha.lower())
+        artifact = ProjectGeoJSON.objects.filter(project=project, commit=commit).first()
+        context = self.get_context_data(**kwargs)
+        context.update(
+            project=project,
+            commit=commit,
+            artifact=artifact,
+            mapbox_api_token=settings.MAPBOX_API_TOKEN,
+        )
+        revisions: list[dict[str, Any]] = []
+        for revision in project.commits.exclude(
+            message="[Automated] Project Creation", author_name="SpeleoDB"
+        ).select_related("geojson"):
+            revision_artifact: ProjectGeoJSON | None = getattr(
+                revision, "geojson", None
+            )
+            if (
+                revision_artifact is not None
+                and revision_artifact.project_id != project.pk
+            ):
+                revision_artifact = None
+            geojson_url = (
+                revision_artifact.get_signed_download_url()
+                if revision_artifact is not None
+                else None
+            )
+            selected = revision.pk == commit.pk
+            revisions.append(
+                {
+                    "url": reverse(
+                        "private:project_revision_map",
+                        kwargs={"project_id": project.pk, "hexsha": revision.pk},
+                    ),
+                    "date": revision.authored_date,
+                    "message": revision.message,
+                    "author_name": revision.author_name,
+                    "selected": selected,
+                    "available": revision_artifact is not None,
+                    "commit_sha": revision.pk,
+                    "artifact_revision": (
+                        revision_artifact.geojson_revision
+                        if revision_artifact is not None
+                        else None
+                    ),
+                    "geojson_url": geojson_url,
+                }
+            )
+            if selected:
+                context["geojson_url"] = geojson_url
+        context["revisions"] = revisions
+        if artifact is None:
+            return self.render_to_response(context, status=404)
+        if "geojson_url" not in context:
+            context["geojson_url"] = artifact.get_signed_download_url()
+        return self.render_to_response(context)

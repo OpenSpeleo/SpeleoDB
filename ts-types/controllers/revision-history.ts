@@ -1,1 +1,1 @@
-export interface RevisionHistoryContext { projectId: string }
+export interface RevisionHistoryContext { projectId: string; revisionMapUrls: Record<string, string> }

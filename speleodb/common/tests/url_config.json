@@ -2718,6 +2718,12 @@
   "decorators": ""
  },
  {
+  "url": "/private/project/<uuid:project_id>/revisions/<gitsha:hexsha>/map/",
+  "module": "frontend_private.views.project.ProjectRevisionMapView",
+  "name": "private:project_revision_map",
+  "decorators": ""
+ },
+ {
   "url": "/private/project/<uuid:project_id>/upload/",
   "module": "frontend_private.views.project.ProjectUploadView",
   "name": "private:project_upload",

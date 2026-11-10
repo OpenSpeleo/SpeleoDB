@@ -9,6 +9,7 @@ import shutil
 import signal
 import subprocess
 from contextlib import suppress
+from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
@@ -17,10 +18,13 @@ import pytest
 from django.test import modify_settings
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from speleodb.common.enums import PermissionLevel
 from speleodb.gis.models import GISView
+from speleodb.gis.models import ProjectGeoJSON
 from speleodb.surveys.models import Project
+from speleodb.surveys.models import ProjectCommit
 from speleodb.surveys.models import ProjectMutex
 from speleodb.surveys.models import UserProjectPermission
 from speleodb.testing.gitlab_pool import canonical_project
@@ -45,6 +49,44 @@ def controller_routes(user: User) -> dict[str, str]:
     return {
         "project": reverse("private:project_details", kwargs={"project_id": project.id})
     }
+
+
+def historical_revision_records(user: User) -> tuple[str, list[str]]:
+    """Seed map metadata; browser HTTP fixtures own the external storage boundary."""
+    project = canonical_project(PermissionLevel.READ_ONLY)
+    UserProjectPermission.objects.create(
+        project=project, target=user, level=PermissionLevel.READ_ONLY
+    )
+    now = timezone.now()
+    artifacts: list[ProjectGeoJSON] = []
+    for index, letter in enumerate(("a", "b")):
+        commit = ProjectCommit.objects.create(
+            id=letter * 40,
+            project=project,
+            author_name="Browser Diver",
+            author_email="browser-diver@example.test",
+            authored_date=now - timedelta(days=1 - index),
+            message="Older survey" if index == 0 else "Newer survey",
+        )
+        artifacts.append(
+            ProjectGeoJSON(
+                project=project,
+                commit=commit,
+                file=f"browser-history/{letter}.geojson",
+            )
+        )
+    # The browser CI job deliberately has no storage service. Persist only file
+    # identities; Playwright fulfills these exact signed paths with small survey
+    # inputs while the real page, controller and renderer perform all switching.
+    # Backend regression tests separately verify actual storage and signed reads.
+    ProjectGeoJSON.objects.bulk_create(artifacts)
+    return (
+        reverse(
+            "private:project_revision_map",
+            kwargs={"project_id": project.pk, "hexsha": artifacts[0].commit_id},
+        ),
+        [urlsplit(artifact.get_signed_download_url()).path for artifact in artifacts],
+    )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -76,6 +118,7 @@ def test_viewer_browser_workloads(
     assert bun is not None, "Bun is required for browser workload checks"
     # Inherit the GitLab audit ledger. Credentials remain in the subprocess
     # environment, never its arguments or browser network trace artifacts.
+    historical_url, historical_paths = historical_revision_records(user)
     browser_environment: dict[str, str] = {
         **os.environ,
         "VIEWER_BROWSER_BASE_URL": live_server.url,
@@ -105,6 +148,10 @@ def test_viewer_browser_workloads(
             env={
                 **browser_environment,
                 "VIEWER_BROWSER_BOUND_RECORDS": json.dumps(bound_records),
+                "VIEWER_BROWSER_HISTORICAL_URL": historical_url,
+                "VIEWER_BROWSER_HISTORICAL_ARTIFACT_PATHS": json.dumps(
+                    historical_paths
+                ),
             },
             text=True,
             start_new_session=True,

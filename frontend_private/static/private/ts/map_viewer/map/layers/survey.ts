@@ -19,6 +19,7 @@ interface SurveyLayerOwner {
 const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
 interface ProjectGeoJSONLoadOptions {
+    throwOnError?: boolean;
     transformData?: (data: ViewerGeoJSON, isCurrent: () => boolean) => Promise<ViewerGeoJSON>;
     isCurrent?: () => boolean;
 }
@@ -149,6 +150,8 @@ export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode'
 
         if (boundsCoordinates) {
             State.projectBounds.set(String(projectId), new Renderer.LngLatBounds(boundsCoordinates[0], boundsCoordinates[1]));
+        } else {
+            State.projectBounds.delete(String(projectId));
         }
         await this.scheduleDisplayUpdate('depth');
 
@@ -157,8 +160,8 @@ export async function addProjectGeoJSON(this: Pick<SurveyLayerOwner, 'colorMode'
             console.error(`Error loading GeoJSON for project ${projectId}`, e);
             if (options.transformData) {
                 await this.scheduleDisplayUpdate('depth');
-                throw e;
             }
+            if (options.transformData || options.throwOnError) throw e;
         }
     }
 }

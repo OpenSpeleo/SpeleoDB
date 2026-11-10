@@ -10,13 +10,13 @@ let commits: RevisionCommit[];
 beforeEach(() => {
     commits = [{ id: '1234567890', message: '<message>', author_name: '<Diver>', authored_date: '2026-01-01T12:00:00Z', author_email: 'diver@example.com', dt_since: '1 day', parent_ids: [], tree: [], url: 'javascript:bad', formats: [{ name: '<DMP>', download_url: '/survey.dmp' }] }];
     server.handle(() => ({ json: { commits } }));
-    document.body.innerHTML = '<div id="loading_spinner"></div><div id="mobile-revision-container"></div><table><tbody id="commit-table-container"><tr id="commit-template" style="display:none"><td><span class="font-medium"></span></td><td><span class="font-medium"></span></td><td><span class="text-center"></span></td><td><span class="font-medium"></span></td><td><a class="revision_explorer"></a><ul id="format-download-container"><li id="format-download-template" style="display:none"><a></a></li></ul></td></tr></tbody></table>';
+    document.body.innerHTML = '<div id="loading_spinner"></div><div id="mobile-revision-container"></div><table><tbody id="commit-table-container"><tr id="commit-template" style="display:none"><td><span class="font-medium"></span></td><td><span class="font-medium"></span></td><td><span class="text-center"></span></td><td><span class="font-medium"></span></td><td><span class="revision-map-slot"></span><a class="revision_explorer"></a><ul id="format-download-container"><li id="format-download-template" style="display:none"><a></a></li></ul></td></tr></tbody></table>';
 });
 afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
 it('waits for load then uses the generated operation and renders independent mobile and desktop rows', async () => {
     // JSDOM's read-only document state cannot revisit an unfinished page load.
     vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading');
-    const pending = init({ projectId: 'project' });
+    const pending = init({ projectId: 'project', revisionMapUrls: {} });
     expect(server.requests).toHaveLength(0);
     window.dispatchEvent(new Event('load'));
     await expect(pending).resolves.toBeUndefined();
@@ -35,14 +35,14 @@ it('waits for load then uses the generated operation and renders independent mob
 it('skips only the exact automated project creation pair', async () => {
     commits.push({ ...commits[0]!, author_name: 'SpeleoDB', message: '[Automated] Project Creation' });
     commits.push({ ...commits[0]!, author_name: 'Diver', message: '[Automated] Project Creation', formats: [] });
-    await init({ projectId: 'project' });
+    await init({ projectId: 'project', revisionMapUrls: {} });
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(2);
 });
 it.each(['2026-11-10T08:18:00Z', '2026-07-10T08:18:00Z'])(
     'displays %s in the browser timezone without a timezone suffix on mobile and desktop', async authoredDate => {
         commits[0]!.authored_date = authoredDate;
-        await init({ projectId: 'project' });
+        await init({ projectId: 'project', revisionMapUrls: {} });
         const mobileDate = $('.revision-meta-item').last().find('span').text();
         const desktopDate = $('#commit-table-container tr').first().find('td').eq(2).text();
         const date = new Date(authoredDate);
@@ -55,16 +55,31 @@ it.each(['2026-11-10T08:18:00Z', '2026-07-10T08:18:00Z'])(
     },
 );
 it('repeated initialization appends mobile rows after removing its sole desktop template', async () => {
-    await init({ projectId: 'project' });
+    await init({ projectId: 'project', revisionMapUrls: {} });
     vi.spyOn(console, 'error');
-    await init({ projectId: 'project' });
+    await init({ projectId: 'project', revisionMapUrls: {} });
     expect($('.revision-item').length).toBe(2);
     expect($('#commit-table-container tr').length).toBe(1);
     expect(console.error).toHaveBeenCalledWith('#format-download-template not found.');
 });
 it('hides the spinner on HTTP errors without rejecting initialization', async () => {
     server.reply({ status: 403, json: { detail: 'Denied' } });
-    await expect(init({ projectId: 'project' })).resolves.toBeUndefined();
+    await expect(init({ projectId: 'project', revisionMapUrls: {} })).resolves.toBeUndefined();
     expect($('#loading_spinner')[0]!.style.display).toBe('none');
     expect($('.revision-item')).toHaveLength(0);
+});
+it('offers exact historical maps on desktop and mobile and marks missing artifacts unavailable', async () => {
+    const sha = 'a'.repeat(40);
+    commits[0] = { ...commits[0]!, id: sha };
+    commits.push({ ...commits[0], id: 'b'.repeat(40) });
+    const url = `/private/project/project/revisions/${sha}/map/`;
+    await init({ projectId: 'project', revisionMapUrls: { [sha]: url } });
+    for (const container of ['#mobile-revision-container', '#commit-table-container']) {
+        const links = $(`${container} a.revision-map`);
+        expect(links).toHaveLength(1);
+        expect(links.attr('href')).toBe(url);
+        expect(links.attr('target')).toBe('_blank');
+        expect(links.attr('rel')).toContain('noopener');
+        expect($(`${container} .revision-map-unavailable`)).toHaveLength(1);
+    }
 });

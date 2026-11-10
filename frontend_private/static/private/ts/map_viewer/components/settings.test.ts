@@ -10,7 +10,9 @@ import { Layers } from '../map/layers.ts';
 import { MapSettings } from './settings.ts';
 import { MapManagersMenu } from './managers_menu.ts';
 
-const template = readFileSync('frontend_private/templates/pages/map_viewer.html', 'utf8');
+const template = readFileSync('frontend_private/templates/pages/map_viewer.html', 'utf8')
+    .replace('{% include "snippets/map_settings_dialog.html" %}', readFileSync('frontend_private/templates/snippets/map_settings_dialog.html', 'utf8'))
+    .replace('{% include "snippets/map_settings_button.html" %}', readFileSync('frontend_private/templates/snippets/map_settings_button.html', 'utf8'));
 type TestDialog = Omit<HTMLDialogElement, 'showModal' | 'close'> & { showModal: Mock<() => void>; close: Mock<() => void> };
 let dialog: TestDialog;
 let managers: { surveyStations: Mock; surfaceStations: Mock; landmarks: Mock };
@@ -422,4 +424,21 @@ it('tears down listeners before a repeated init with missing dialog markup', () 
     expect(MapSettings.applyRevision).toBe(revision + 1);
     expect(MapSettings.dialog).toBeNull();
     expect(MapSettings.trigger).toBeNull();
+});
+
+it('keeps historical Settings focused on survey appearance and depth', () => {
+    MapSettings.init({ surveyOnly: true });
+    expect(dialog.querySelector('[data-category]')).toBeNull();
+    expect(dialog.querySelector('[data-station-type]')).toBeNull();
+    expect(dialog.querySelector('[data-display-preference="geometryLabelsVisible"]')).toBeNull();
+    dialog.querySelector<HTMLInputElement>('[name="map-settings-color-mode"][value="depth"]')!.click();
+    expect(State.displayPreferences.colorMode).toBe('depth');
+    const input = dialog.querySelector<HTMLInputElement>('#map-settings-depth-value')!;
+    input.value = '20';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(State.displayPreferences.depthLimitFeet).not.toBeNull();
+    document.getElementById('map-settings-reset')!.click();
+    expect(State.displayPreferences.colorMode).toBe('project');
+    expect(State.displayPreferences.depthLimitFeet).toBeNull();
 });

@@ -4,19 +4,45 @@
 
 The SpeleoDB map viewer is a **MapLibre GL JS** based application for
 visualizing cave survey data, stations, landmarks, exploration leads, GPS
-tracks, and safety cylinders. It has two entry points:
+tracks, and safety cylinders. It has three entry points:
 
-| Entry point | File                                                    | Purpose                                                                                                                                                                                           |
-| ----------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Private** | `frontend_private/static/private/ts/map_viewer/main.ts` | Full-featured viewer for authenticated users. Supports CRUD on stations, landmarks, exploration leads, cylinder installs, GPS tracks, drag-and-drop, context menus, and permission-gated actions. |
-| **Public**  | `frontend_public/static/ts/gis_view_main.ts`            | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`.                                      |
+| Entry point    | File                                                    | Purpose                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Private**    | `frontend_private/static/private/ts/map_viewer/main.ts` | Full-featured viewer for authenticated users. Supports CRUD on stations, landmarks, exploration leads, cylinder installs, GPS tracks, drag-and-drop, context menus, and permission-gated actions. |
+| **Public**     | `frontend_public/static/ts/gis_view_main.ts`            | Read-only viewer for publicly shared GIS Views. Displays survey GeoJSON only — no stations, landmarks, context menus, or editing. Accessed via a `gisToken`.                                      |
+| **Historical** | `frontend_common/controllers/project-revision-map.ts`   | Authenticated read-only viewer for one exact project revision. Uses the shared read-only composition.                                                                                             |
 
 The root contracts in `ts-types/domain/viewer-composition.ts` compose the narrow
 map capabilities consumed by their real modules. They add no runtime adapters or
 validation: independent requests still start before map readiness, and
 registered async callbacks retain their existing settlement behavior.
 
-Both entry points share core modules located in
+Historical project maps use the authenticated `project-revision-map` controller.
+Django authorizes the project and supplies signed URLs for its available
+historical artifacts. The controller and public GIS entrypoint both use
+`map_viewer/read_only_viewer.ts`: the public entrypoint supplies its generated
+API loader, while the historical controller supplies only its authorized page
+data. Style replacement reloads the same selected artifact; no latest-project
+request or private editing tools are initialized. Download failures display an
+error and settle the loading overlay without selecting another revision.
+Revision selection uses the composition's `showProject()` handle to replace the
+survey source and fit the new bounds without recreating the map. Display
+settings, basemap and fullscreen state survive selection. The controller updates
+the selected row and browser history only after a successful display;
+Back/Forward uses the same handle and accepts uppercase commit URLs like the
+Django route. Superseded downloads cannot publish geometry or move the camera. A
+failed selection retains the previous survey and selection. Refreshing the
+historical page renews its signed URLs after authorization.
+
+The composition regression tests load historical geometry through real HTTP
+fixtures, retain it across style changes, and cover failed downloads without a
+fallback to current data. Existing public/private composition tests protect the
+shared renderer extraction and public geographic bounds. Public initial loading
+still frames successfully loaded surveys or the geographic boundary when another
+artifact fails; a failed historical selection retains its previous camera
+instead.
+
+All entry points share core modules located in
 `frontend_private/static/private/ts/map_viewer/`. The public viewer imports them
 via relative paths (e.g. `../../../frontend_private/...`).
 

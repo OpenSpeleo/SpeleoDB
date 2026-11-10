@@ -1,0 +1,115 @@
+{% extends "base_private.html" %}
+
+{% load vite_assets %}
+
+{% block title %}{{ project.name }} — Revision history{% endblock title %}
+{% block extra_css %}
+  {% vite_styles 'style-shared-modal' 'style-map-viewer' %}
+  {% if artifact %}
+    {% vite_preload 'controller-project-revision-map' %}
+  {% endif %}
+{% endblock extra_css %}
+{% block content %}
+  <div id="map-viewer-shell" class="map-viewer-shell historical-viewer">
+    <main class="grow">
+      <div class="map-viewer-content px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl center-x">
+        <div class="map-viewer-header">
+          <div class="map-viewer-heading">
+            <div class="historical-title-row">
+              <a class="map-viewer-action historical-back"
+                 href="{% url 'private:project_revisions' project_id=project.id %}"
+                 aria-label="Back to revision history"
+                 title="Back to revision history">
+                <svg class="w-5 h-5"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m12 19-7-7 7-7m-7 7h14" />
+                </svg>
+              </a>
+              <h1 class="text-xl md:text-2xl text-slate-100 font-bold">{{ project.name }}</h1>
+            </div>
+          </div>
+          {% if artifact %}
+            <div id="page-actions" class="map-viewer-actions">{% include "snippets/map_settings_button.html" %}</div>
+          {% endif %}
+        </div>
+        <div class="map-viewer-map-frame min-h-[600px] bg-slate-800 shadow-lg rounded-xs border border-slate-700 relative flex flex-col">
+          {% if artifact %}
+            <div id="map" class="map-canvas grow w-full rounded-xs relative"></div>
+            <div id="loading-overlay" class="loading-overlay">
+              <div class="loading-spinner"></div>
+              <div class="loading-text">Loading revision</div>
+              <div class="loading-subtext">Preparing the survey map…</div>
+            </div>
+          {% else %}
+            <div class="historical-unavailable">
+              <h2 class="text-xl text-slate-100">Map unavailable</h2>
+              <p>This revision has no generated map. Select another revision from the history.</p>
+            </div>
+          {% endif %}
+          <details class="historical-revisions absolute top-4 left-4 bg-srgb-slate-800-95 backdrop-blur-xs border-2 border-slate-600 rounded-lg shadow-xl p-4 z-[5]"
+                   open>
+            <summary class="flex justify-between items-center text-white font-semibold text-sm">
+              <span>Project History</span><span class="historical-revision-count">{{ revisions|length }}</span><svg viewBox="0 0 24 24"
+                                                                                                                    fill="none"
+                                                                                                                    stroke="currentColor"
+                                                                                                                    stroke-width="2"
+                                                                                                                    aria-hidden="true">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </summary>
+            <p class="historical-revision-status" role="status" aria-live="polite"></p>
+            <nav class="historical-revision-list flow-y-1 overflow-y-auto custom-scrollbar"
+                 aria-label="Project history">
+              {% for revision in revisions %}
+                {% if revision.available %}
+                  <a class="historical-revision{% if revision.selected %} is-selected{% endif %}"
+                     href="{{ revision.url }}"
+                     data-geojson-url="{{ revision.geojson_url }}"
+                     {% if revision.selected %}aria-current="page"{% endif %}>
+                    <span class="historical-revision-date">{{ revision.date|date:"M j, Y" }} at {{ revision.date|date:"H:i" }}</span>
+                    <span class="historical-revision-message"
+                          title="{{ revision.message }}">{{ revision.message|truncatechars:80 }}</span>
+                    <span class="historical-revision-author">by {{ revision.author_name }}</span>
+                  </a>
+                {% else %}
+                  <div class="historical-revision is-unavailable" aria-disabled="true">
+                    <span class="historical-revision-date">{{ revision.date|date:"M j, Y" }} at {{ revision.date|date:"H:i" }}</span>
+                    <span class="historical-revision-message"
+                          title="{{ revision.message }}">{{ revision.message|truncatechars:80 }}</span>
+                    <span class="historical-revision-author">by {{ revision.author_name }}</span>
+                    <span class="historical-unavailable-label">Map unavailable</span>
+                  </div>
+                {% endif %}
+{% empty %}<p class="historical-subtitle">No revisions yet.</p>{% endfor %}
+  </nav>
+  </details>
+  </div>
+  </div>
+  </main>
+  {% if artifact %}
+    {% include "snippets/map_settings_dialog.html" with survey_only=True %}
+  {% endif %}
+  </div>
+{% endblock content %}
+{% block inline_extra_js %}
+  {% if artifact %}
+    <script type="application/json"
+            data-speleodb-controller="project-revision-map">
+      {
+        "mapboxToken": "{{ mapbox_api_token|escapejs }}",
+        "commitSha": "{{ commit.id|escapejs }}",
+        "artifactRevision": "{{ artifact.geojson_revision|escapejs }}",
+        "project": {
+          "id": "{{ project.id }}",
+          "name": "{{ project.name|escapejs }}",
+          "color": "{{ project.color|escapejs }}",
+          "geojson_file": "{{ geojson_url|escapejs }}"
+        }
+      }
+    </script>
+  {% endif %}
+{% endblock inline_extra_js %}

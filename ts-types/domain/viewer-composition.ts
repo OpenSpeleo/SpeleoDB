@@ -1,3 +1,4 @@
+import type { PublicGISView } from '@speleodb/api';
 import type { MapCoreMap } from './map-core.ts';
 import type { LegendMap } from './map-depth-legend.ts';
 import type { ProjectMapInput } from './map-config.ts';
@@ -8,6 +9,11 @@ import type { ViewerNavigationMap } from './map-runtime.ts';
 
 export type PublicViewerMap = MapCoreMap & LegendMap & { setMaxZoom(zoom: number): unknown };
 export type { PublicGISView as PublicViewerData } from '@speleodb/api';
+export interface ReadOnlyViewerData {
+    view_name: string;
+    projects: readonly ProjectMapInput[];
+    geographic_bound?: PublicGISView['geographic_bound'];
+}
 export interface PublicViewerLoadOptions { fetchProjects?: boolean; fitCamera?: boolean; hideOverlay?: boolean }
 
 export type PrivateViewerMap = MapCoreMap & LegendMap & EditorMap & InteractionMap & MeasurementToolMap & ViewerNavigationMap & { addControl(control: { onAdd(map: MeasurementToolMap): HTMLElement; onRemove(): void }, position: 'top-right'): unknown };

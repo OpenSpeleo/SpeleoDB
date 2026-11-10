@@ -2645,3 +2645,32 @@ select.form-input:focus {
 .map-provider-attribution img {
     display: block;
 }
+
+/* Historical surveys share the private viewer shell and display settings. */
+.historical-title-row { display: flex; align-items: center; gap: .75rem; }
+.historical-back { flex: 0 0 2.5rem; width: 2.5rem; min-height: 2.5rem; padding: 0; border-radius: .5rem; }
+.historical-back:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.historical-subtitle { margin-top: .375rem; color: #94a3b8; font-size: .8125rem; }
+.historical-revisions { width: max-content; max-width: calc(100% - 5rem); }
+.historical-revisions summary { gap: .625rem; cursor: pointer; list-style: none; }
+.historical-revisions[open] summary { margin-bottom: .75rem; border-bottom: 1px solid #475569; padding-bottom: .5rem; }
+.historical-revisions summary::-webkit-details-marker { display: none; }
+.historical-revisions summary svg { width: 1rem; height: 1rem; margin-left: auto; flex-shrink: 0; }
+.historical-revisions:not([open]) summary svg { transform: rotate(-90deg); }
+.historical-revision-count { color: #94a3b8; font-size: .75rem; font-weight: 400; }
+.historical-revision-list { max-height: min(50vh, 400px); }
+.historical-revision { display: flex; flex-direction: column; gap: .3rem; padding: .75rem; margin-top: .25rem; border: 1px solid transparent; border-radius: .5rem; }
+.historical-revision:hover { background: rgb(148 163 184 / .08); }
+.historical-revision.is-selected { background: rgb(99 102 241 / .16); border-color: rgb(129 140 248 / .4); }
+.historical-revision-date { color: #e2e8f0; font-size: .8125rem; font-weight: 600; }
+.historical-revision-message { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #94a3b8; font-size: .75rem; }
+.historical-revision-author, .historical-unavailable-label { color: #94a3b8; font-size: .6875rem; overflow-wrap: anywhere; }
+.historical-revision.is-unavailable { opacity: .55; }
+.historical-revision:focus-visible, .historical-revisions summary:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.historical-unavailable { margin: auto; max-width: 24rem; padding: 2rem; color: #94a3b8; text-align: center; }
+
+.historical-viewer #page-actions.map-viewer-actions { width: auto; grid-template-columns: 1fr; margin-left: auto; }
+.historical-viewer .map-viewer-heading { max-width: 100%; overflow-wrap: anywhere; }
+
+.historical-revision-status { padding: 0 1rem .5rem; color: #a5b4fc; font-size: .75rem; }
+.historical-revision-status:empty { display: none; }

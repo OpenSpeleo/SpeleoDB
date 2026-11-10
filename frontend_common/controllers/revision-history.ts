@@ -7,6 +7,17 @@ import type { RevisionHistoryContext } from '../../ts-types/controllers/revision
 import { afterWindowLoad } from '../readiness.ts';
 import { sanitizeUrl } from '../../frontend_private/static/private/ts/xss-helpers.ts';
 
+function mapAction(url: string | undefined) {
+    const safeUrl = url ? sanitizeUrl(url) : '';
+    const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>';
+    if (!safeUrl || safeUrl === '#') {
+        return $('<span class="revision-map-unavailable" title="No map is available for this revision" aria-label="Map unavailable"></span>')
+            .append(icon, $('<span></span>').text('No map'));
+    }
+    return $('<a class="revision-map" target="_blank" rel="noopener noreferrer" title="View this revision on the map"></a>')
+        .attr('href', safeUrl).append(icon, $('<span></span>').text('View map'));
+}
+
 export async function init(context: RevisionHistoryContext) {
     registerAlpineBindings(revisionBindings);
     await afterWindowLoad();
@@ -51,6 +62,7 @@ export async function init(context: RevisionHistoryContext) {
                         var $explorerLink = $('<a class="text-indigo-400 hover:text-indigo-300"><svg class="w-6 h-6 stroke-current" stroke-width="1.5" fill="none" viewBox="2.25 3.25 19.5 18.5"><path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2" /></svg></a>');
                         $explorerLink.attr('href', sanitizeUrl(commit.url));
                         $actions.append($explorerLink);
+                        $actions.append(mapAction(context.revisionMapUrls[commit.id]));
 
                         $header.append($actions);
                         $mobileItem.append($header);
@@ -79,6 +91,7 @@ export async function init(context: RevisionHistoryContext) {
 
                         // Remove the "hidden" style (make it visible)
                         $row.removeAttr('style');
+                        $row.find('.revision-map-slot').append(mapAction(context.revisionMapUrls[commit.id]));
 
                         // Populate the row with commit data
                         // ---------------------------------------------------------------------

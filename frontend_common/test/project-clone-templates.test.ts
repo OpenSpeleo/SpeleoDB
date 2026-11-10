@@ -89,7 +89,7 @@ it('revision history displays commit and download clones after removing source I
             },
         ],
     });
-    const initialization = initRevisionHistory({ projectId: 'project' });
+    const initialization = initRevisionHistory({ projectId: 'project', revisionMapUrls: {} });
     window.dispatchEvent(new Event('load'));
     await initialization;
     const rows = document.querySelectorAll('#commit-table-container > tr');

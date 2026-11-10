@@ -63,12 +63,13 @@ export async function login(page: Page, credentials: BrowserLoginCredentials = {
 interface ViewerFixtureOptions {
     readOnly?: boolean;
     publicUrl?: string;
+    historicalUrl?: string;
     emptyProjects?: boolean;
     apiResponses?: Record<string, unknown>;
 }
 
 /** Small deterministic responses exercise real pages, controls, and MapLibre rendering. */
-export async function installFixture(page: Page, { readOnly = false, publicUrl = '', emptyProjects = false, apiResponses = {} }: ViewerFixtureOptions = {}) {
+export async function installFixture(page: Page, { readOnly = false, publicUrl = '', historicalUrl = '', emptyProjects = false, apiResponses = {} }: ViewerFixtureOptions = {}) {
     const selectedProjects = (emptyProjects ? [] : projects)
         .map(project => readOnly ? { ...project, permission: 'READ_ONLY' } : project);
     const gates = new Map<string, Promise<void>>();
@@ -113,7 +114,7 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
         else if (path.includes('geojson')) data = empty;
         await route.fulfill({ json: data });
     });
-    await page.goto(publicUrl || '/private/map_viewer/');
+    await page.goto(historicalUrl || publicUrl || '/private/map_viewer/');
     // Use the toolbar's normal UI to uncover the top-right viewer controls.
     const hideDebugToolbar = page.getByRole('link', { name: 'Hide »', exact: true });
     if (await hideDebugToolbar.isVisible()) await hideDebugToolbar.click();

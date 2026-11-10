@@ -28,7 +28,7 @@ function createSwitch(id: string, label: string, preference: string) {
     return row;
 }
 
-/** Private viewer presentation only; shared map modules own preference effects. */
+/** Viewer presentation only; shared map modules own preference effects. */
 export const MapSettings = {
     dialog: null as HTMLDialogElement | null,
     trigger: null as HTMLElement | null,
@@ -37,14 +37,18 @@ export const MapSettings = {
     depthDraftDirty: false,
     applyRevision: 0,
 
-    init({ managers = {} }: { managers?: ManagerLaunchers } = {}) {
+    init({ managers = {}, surveyOnly = false }: { managers?: ManagerLaunchers; surveyOnly?: boolean } = {}) {
         this.destroy();
         this.dialog = document.getElementById('map-settings-dialog') as HTMLDialogElement | null;
         this.trigger = document.getElementById('map-settings-button');
         if (!this.dialog || !this.trigger) return;
-        this.renderVisibility();
+        if (surveyOnly) {
+            this.dialog.querySelector('#map-settings-visibility')?.replaceChildren();
+        } else {
+            this.renderVisibility();
+            MapManagersMenu.init({ managers });
+        }
         this.setError('');
-        MapManagersMenu.init({ managers });
 
         this.listen(this.trigger, 'click', () => this.open());
         this.dialog.querySelectorAll<HTMLInputElement>('[data-settings-close]').forEach(button => {
@@ -228,7 +232,8 @@ export const MapSettings = {
     sync() {
         if (!this.dialog || !State.displayPreferences) return;
         const preferences = State.displayPreferences;
-        this.dialog.querySelector<HTMLInputElement>('[data-display-preference="geometryLabelsVisible"]')!.checked = preferences.geometryLabelsVisible;
+        const geometryLabels = this.dialog.querySelector<HTMLInputElement>('[data-display-preference="geometryLabelsVisible"]');
+        if (geometryLabels) geometryLabels.checked = preferences.geometryLabelsVisible;
         this.syncDepthLimit();
         this.dialog.querySelectorAll<HTMLInputElement>('[name="map-settings-color-mode"]').forEach(input => {
             input.checked = input.value === preferences.colorMode;
@@ -239,9 +244,12 @@ export const MapSettings = {
         this.dialog.querySelectorAll<HTMLInputElement>('[data-station-type]').forEach(input => {
             input.checked = preferences.stationTypes[input.dataset.stationType as DisplayStationType];
         });
-        this.dialog.querySelector<HTMLFieldSetElement>('.map-settings-types')!.disabled = !preferences.categories.surveyStations;
+        const stationTypes = this.dialog.querySelector<HTMLFieldSetElement>('.map-settings-types');
+        const typeCount = this.dialog.querySelector<HTMLElement>('#map-settings-type-count');
+        if (!stationTypes || !typeCount) return;
+        stationTypes.disabled = !preferences.categories.surveyStations;
         const count = DEFAULTS.DISPLAY.STATION_TYPES.filter(type => preferences.stationTypes[type.id]).length;
-        this.dialog.querySelector<HTMLElement>('#map-settings-type-count')!.textContent = preferences.categories.surveyStations
+        typeCount.textContent = preferences.categories.surveyStations
             ? `${count} of ${DEFAULTS.DISPLAY.STATION_TYPES.length} selected`
             : 'Survey stations off';
     },

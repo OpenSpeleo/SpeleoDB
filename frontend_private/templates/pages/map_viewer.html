@@ -101,25 +101,7 @@
                         tabindex="-1">Landmarks</button>
               </div>
             </div>
-            <button type="button"
-                    id="map-settings-button"
-                    class="map-viewer-action map-viewer-action--settings"
-                    aria-haspopup="dialog"
-                    aria-controls="map-settings-dialog"
-                    aria-expanded="false">
-              <svg viewBox="0 0 24 24"
-                   fill="none"
-                   stroke="currentColor"
-                   stroke-width="1.8"
-                   stroke-linecap="round"
-                   stroke-linejoin="round"
-                   aria-hidden="true">
-                <path d="M4 7h9m4 0h3M4 17h3m4 0h9" />
-                <circle cx="15" cy="7" r="2" />
-                <circle cx="9" cy="17" r="2" />
-              </svg>
-              <span>Settings</span>
-            </button>
+            {% include "snippets/map_settings_button.html" %}
           </div>
         </div>
         <!-- Table -->
@@ -267,120 +249,7 @@
         </div>
       </div>
     </main>
-    <dialog id="map-settings-dialog"
-            class="map-settings-dialog"
-            aria-labelledby="map-settings-title"
-            aria-describedby="map-settings-description">
-      <div class="map-settings-frame">
-        <header class="map-settings-header">
-          <div>
-            <h2 id="map-settings-title" tabindex="-1">Settings</h2>
-            <p id="map-settings-description">Choose how your map looks.</p>
-          </div>
-          <button type="button"
-                  class="map-settings-close"
-                  data-settings-close
-                  aria-label="Close settings">
-            <svg viewBox="0 0 24 24"
-                 fill="none"
-                 stroke="currentColor"
-                 stroke-width="2"
-                 stroke-linecap="round"
-                 aria-hidden="true">
-              <path d="m6 6 12 12M6 18 18 6" />
-            </svg>
-          </button>
-        </header>
-        <div class="map-settings-body">
-          <section class="map-settings-section"
-                   aria-labelledby="map-settings-appearance-title">
-            <h3 id="map-settings-appearance-title">Appearance</h3>
-            <fieldset class="map-settings-color-mode"
-                      aria-describedby="map-settings-color-help">
-              <legend>Color mode</legend>
-              <div class="map-settings-segments">
-                <label>
-                  <input type="radio" name="map-settings-color-mode" value="project" />
-                  <span>By Survey</span>
-                </label>
-                <label>
-                  <input type="radio" name="map-settings-color-mode" value="depth" />
-                  <span>By Depth</span>
-                </label>
-                <label>
-                  <input type="radio" name="map-settings-color-mode" value="shot" />
-                  <span>By Section</span>
-                </label>
-              </div>
-            </fieldset>
-            <details id="map-settings-depth-limit" class="map-settings-depth-limit" hidden>
-              <summary>
-                <span>Depth limit</span>
-                <span id="map-settings-depth-summary" class="map-settings-depth-summary">Full range</span>
-                <svg viewBox="0 0 24 24"
-                     fill="none"
-                     stroke="currentColor"
-                     stroke-width="2"
-                     aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8 10 4 4 4-4" />
-                </svg>
-              </summary>
-              <div class="map-settings-depth-body">
-                <div class="map-settings-depth-intro">
-                  <strong>Bring back color detail</strong>
-                  <p>One very deep cave can compress the color scale, making shallower passages look alike. Set a limit to spread the colors across the depths you want to compare.</p>
-                </div>
-                <label for="map-settings-depth-value">Maximum depth</label>
-                <div class="map-settings-depth-controls">
-                  <input id="map-settings-depth-value"
-                         type="number"
-                         step="any"
-                         inputmode="decimal"
-                         placeholder="Full range"
-                         autocomplete="off"
-                         aria-describedby="map-settings-depth-help map-settings-depth-error" />
-                  <fieldset class="map-settings-segments map-settings-depth-units">
-                    <legend class="sr-only">Depth units</legend>
-                    <label>
-                      <input type="radio" name="map-settings-depth-unit" value="m" /><span>Meters</span>
-                    </label>
-                    <label>
-                      <input type="radio" name="map-settings-depth-unit" value="ft" /><span>Feet</span>
-                    </label>
-                  </fieldset>
-                </div>
-                <p id="map-settings-depth-help">Colors and depth readings stop at this limit.</p>
-                <p id="map-settings-depth-error"
-                   class="map-settings-depth-error"
-                   role="alert"
-                   hidden></p>
-                <button id="map-settings-depth-clear"
-                        type="button"
-                        class="map-settings-depth-clear"
-                        hidden>Reset to Full Depth Range</button>
-              </div>
-            </details>
-          </section>
-          <section class="map-settings-section"
-                   aria-labelledby="map-settings-visibility-title">
-            <h3 id="map-settings-visibility-title">Map visibility</h3>
-            <p class="map-settings-help">Individual project and item selections are preserved. Markers appear at the appropriate zoom.</p>
-            <div id="map-settings-visibility"></div>
-          </section>
-        </div>
-        <p id="map-settings-error"
-           class="map-settings-error"
-           role="alert"
-           hidden></p>
-        <footer class="map-settings-footer">
-          <button type="button"
-                  id="map-settings-reset"
-                  class="map-settings-reset"
-                  aria-label="Reset display settings">Reset</button>
-          <button type="button" class="map-settings-dismiss" data-settings-close>Close</button>
-        </footer>
-      </div>
-    </dialog>
+    {% include "snippets/map_settings_dialog.html" %}
     <!-- Cylinder Install/Details Modal -->
     <div id="cylinder-modal"
          class="hidden fixed inset-0 bg-srgb-black-50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
