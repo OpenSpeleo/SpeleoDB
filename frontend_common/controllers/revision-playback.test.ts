@@ -140,20 +140,28 @@ it('keeps elapsed progress across speed changes and pause while the displayed re
     expect((document.getElementById('revision-speed') as HTMLInputElement).value).toBe('0');
     expect(document.getElementById('revision-speed-value')!.textContent).toBe('1×');
     expect(document.getElementById('revision-timeline')!.style.getPropertyValue('--revision-speed-position')).toBe('50%');
-    button('revision-play').click();
-    await vi.waitFor(() => expect(playheadPosition()).toBeGreaterThan(5));
-    const beforeSpeedChange = playheadPosition();
+    // Observe actual frames at slow speed so polling cannot miss the partial
+    // progress needed to exercise pause/resume during a short default dwell.
     changeSpeed('0.1');
     expect(document.getElementById('revision-speed-value')!.textContent).toBe('0.1×');
+    button('revision-play').click();
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    const beforeSpeedChange = playheadPosition();
+    expect(beforeSpeedChange).toBeGreaterThan(0);
+    changeSpeed('1');
+    expect(document.getElementById('revision-speed-value')!.textContent).toBe('1×');
     expect(playheadPosition()).toBeGreaterThanOrEqual(beforeSpeedChange);
     expect(document.querySelector('.revision-tick.is-current')!.getAttribute('data-revision-index')).toBe('0');
     button('revision-play').click();
     const paused = playheadPosition();
+    expect(paused).toBeGreaterThan(0);
+    expect(paused).toBeLessThan(100);
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     expect(playheadPosition()).toBe(paused);
     button('revision-play').click();
     expect(playheadPosition()).toBe(paused);
-    await vi.waitFor(() => expect(playheadPosition()).toBeGreaterThan(paused));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(playheadPosition()).toBeGreaterThan(paused);
     expect(location.pathname).toBe(`/revisions/${initialSha}/`);
 });
 

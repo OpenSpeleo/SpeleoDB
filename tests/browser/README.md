@@ -41,6 +41,12 @@ sleeps. Rendered feature visibility and renderer-idle checks support workflow
 assertions and native pointer targeting; private source counters are not browser
 evidence.
 
+Viewer startup waits for the real map-created probe and `map.loaded()` before
+checking that the loading overlay is hidden. Static toolbar and overlay
+visibility do not establish that a lazy controller has created the map. An
+absent probe keeps the readiness wait pending under the existing startup
+timeout.
+
 Controller readiness observes the normal bootstrap and reports initialization
 errors immediately. Authentication is reused once per worker; every test has a
 fresh browser context and independent preferences. Controlled mutations exercise

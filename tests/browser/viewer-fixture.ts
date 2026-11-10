@@ -119,8 +119,10 @@ export async function installFixture(page: Page, { readOnly = false, publicUrl =
     const hideDebugToolbar = page.getByRole('link', { name: 'Hide »', exact: true });
     if (await hideDebugToolbar.isVisible()) await hideDebugToolbar.click();
     await expect(page.locator(publicUrl ? '#color-mode-button' : '#map-settings-button')).toBeVisible();
+    // Static controls and overlay visibility can settle before the lazy map
+    // controller starts. Wait for its real map-created event before dereferencing.
+    await page.waitForFunction(() => '__viewerEvidence' in window && window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     await expect(page.locator('#loading-overlay')).toBeHidden({ timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
-    await page.waitForFunction(() => window.__viewerEvidence.map.loaded(), undefined, { timeout: BROWSER_TEST_BUDGETS.viewerStartupMs });
     return { gates };
 }
 

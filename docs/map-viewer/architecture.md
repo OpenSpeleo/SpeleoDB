@@ -50,31 +50,33 @@ the bottom of the map. Narrow layouts stack this metadata and reserve space for
 the map's navigation controls. The native speed range uses a logarithmic scale:
 0.1× at the left, 1× at the midpoint, and 10× at the right. Its numeric label
 and accessible value report the actual multiplier, while speed changes preserve
-elapsed progress. Playback controls sit above the dot timeline in two fixed
-rows. A single centered slate tray with rounded corners, a fine outline, and a
-restrained shadow groups the controls. Its desktop width is capped so the
-revision counter and speed control remain visually connected to the centered
-Play button. Unboxed step controls and the fine dot rail keep secondary actions
-quiet. The map uses its full height without a reserved footer. The player stays
-at the bottom edge, above only the device safe area, without changing its width.
-Historical maps fit the available viewport at every width, so the shared desktop
-minimum height cannot push the player offscreen. A flexible canvas wrapper keeps
-the map and player aligned in fullscreen. The distance scales sit at the native
-bottom-right edge. Their historical width uses the renderer's native scale
-option, preserving accurate distance labels. On narrow maps, compact scale
-spacing and clearance at the end of the timeline keep both visible without
-moving the player or changing its outer width. The historical viewer omits the
-depth legend and attribution controls, leaving no credit strip below the scales.
-Other viewers retain their attribution. Camera framing uses the shared
-visible-viewport calculation to fit within the available space around overlays,
-including short fullscreen views. Reaching the last revision stops quietly; Play
-restarts from the beginning.
+elapsed progress. Animation frames and control events measure elapsed progress
+with the same monotonic performance clock. Playback controls sit above the dot
+timeline in two fixed rows. A single centered slate tray with rounded corners, a
+fine outline, and a restrained shadow groups the controls. Its desktop width is
+capped so the revision counter and speed control remain visually connected to
+the centered Play button. Unboxed step controls and the fine dot rail keep
+secondary actions quiet. The map uses its full height without a reserved footer.
+The player stays at the bottom edge, above only the device safe area, without
+changing its width. Historical maps fit the available viewport at every width,
+so the shared desktop minimum height cannot push the player offscreen. A
+flexible canvas wrapper keeps the map and player aligned in fullscreen. The
+distance scales sit at the native bottom-right edge. Their historical width uses
+the renderer's native scale option, preserving accurate distance labels. On
+narrow maps, compact scale spacing and clearance at the end of the timeline keep
+both visible without moving the player or changing its outer width. The
+historical viewer omits the depth legend and attribution controls, leaving no
+credit strip below the scales. Other viewers retain their attribution. Camera
+framing uses the shared visible-viewport calculation to fit within the available
+space around overlays, including short fullscreen views. Reaching the last
+revision stops quietly; Play restarts from the beginning.
 
-Historical camera motion runs at 30% of its former speed. Its base duration is
-capped by the playback interval before applying that speed multiplier. Playback
-waits for a longer camera move instead of cutting it off to meet the next
-interval. Reduced motion removes camera animation, and pausing or dragging
-interrupts it.
+At the displayed 1× speed, playback uses a 400 ms dwell and a 300 ms camera
+transition. Both base timings are five times faster, with the displayed 0.1×–10×
+scale unchanged. The camera's base duration is capped by the playback interval
+before applying its motion multiplier. Playback waits for a longer camera move
+instead of cutting it off to meet the next interval. Reduced motion removes
+camera animation, and pausing or dragging interrupts it.
 
 Native map gestures already interrupt camera easing while preserving the active
 drag. The historical movement listener only settles its pending camera wait;

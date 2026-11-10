@@ -235,10 +235,11 @@ export function initRevisionPlayback(context: ProjectRevisionMapContext, viewer:
     }
     function queueFrame() {
         if (frame !== null || !playing || disposed || (pending && !pending.committed)) return;
-        frame = requestAnimationFrame(now => {
+        frame = requestAnimationFrame(() => {
             frame = null;
             if (!playing || disposed) return;
-            captureProgress(now);
+            // Frames and control events must measure elapsed time on the same clock.
+            captureProgress(performance.now());
             if (fraction >= 1) {
                 if (!pending) {
                     const revision = revisions[indexOf(displayed) + 1];
