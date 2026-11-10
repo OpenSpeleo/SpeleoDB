@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from django.test import Client
 from django.test import TestCase
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
@@ -196,6 +197,20 @@ class TestBannerLockedByCurrentUser(ProjectLockBannerTestBase):
         assert expected_url in html
         assert ENABLE_EDITION_LINK_TEXT not in html
         assert READONLY_NO_ACCESS_TEXT not in html
+
+    @override_settings(
+        DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT=5,
+        DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT=150,
+        DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT=7,
+    )
+    def test_upload_form_uses_git_limits(self) -> None:
+        html = self._get_page("project_upload")
+
+        context = controller_context(html, "project-upload")
+        assert {
+            "individual": context["maxFileSizeMb"],
+            "total": context["maxTotalSizeMb"],
+        } == {"individual": 5, "total": 7}
 
 
 class TestConditionalLinkHiding(ProjectLockBannerTestBase):

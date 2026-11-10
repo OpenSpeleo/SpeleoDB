@@ -85,6 +85,62 @@ source-save confirmation. Downloads return the selected revision's file as an
 attachment. See [project capabilities](project-formats.md) for validation and
 conversion support.
 
+## Upload validation
+
+`FileUploadView` owns server validation after the existing write-access and
+edition-lock checks. It trims surrounding message whitespace and replaces each
+newline group and surrounding whitespace with `. `, then checks the normalized
+character count against `ProjectCommit.message`'s declared `max_length`. Unicode
+characters count as characters, rather than encoded bytes. Raw input can exceed
+the limit when trimming brings it within bounds, or fit the limit but exceed it
+after newline replacement. The OpenAPI operation describes this normalization; a
+raw-input `maxLength` would describe the wrong contract.
+
+Three independent settings own artifact limits:
+
+- `DJANGO_UPLOAD_TOTAL_FILES_LIMIT`: maximum number of uploaded artifacts.
+- `DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT`: maximum bytes per artifact,
+  fixed at 5 MiB in `config/settings/base.py`.
+- `DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT`: maximum combined artifact bytes,
+  fixed at 7 MiB in `config/settings/base.py`.
+
+These size settings apply only to `projects/{id}/upload/{fileformat}/` and its
+web form. A commit's combined limit measures the artifacts in that upload, not
+the size of the repository or resulting Git objects. General uploads, including
+station resources, log attachments, GPX and GIS layers, continue to use
+`DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT`. The Git limits are common Django
+settings, with no environment-variable overrides or Railway variables.
+Application deployment activates them independently of the general-upload
+allowance.
+
+One MiB is `1024**2` bytes. Both byte limits are inclusive: the exact boundary
+is accepted, and one byte over is rejected. Size errors report MiB and the
+applicable setting. These limits measure the uploaded artifact bytes, excluding
+multipart overhead, expanded archive contents and generated Compass metadata.
+The web form already uses these settings for its client-side checks.
+
+Message and artifact validation returns the existing HTTP 400 error envelope
+before checkout synchronization, processing, commits or pushes. Early validation
+prevents a message rejected by PostgreSQL from entering Git history, without
+changing storage, permissions, history reconstruction or upload bookkeeping. It
+adds only a string-length check and retains the existing file-size pass. There
+is no migration, message truncation, history rewriting, skipped historical
+commit or exception suppression. Existing affected histories require manual
+repair; these checks prevent future invalid uploads and do not repair them.
+
+The real upload integration suite covers normalized message boundaries, newline
+expansion, trimming and multibyte Unicode; it checks Git and PostgreSQL
+messages. Rejection cases compare local/remote HEAD, checkout contents, revision
+rows and upload bookkeeping. A subsequent upload after a normal mutex handoff
+checks that another writer can still use the project. Small real artifacts and
+scoped settings exercise aggregate and individual inclusive byte boundaries,
+exact committed bytes and independent file-count enforcement, using the
+canonical GitLab pool and real request transactions. Run these cases, the upload
+and project-history suites, schema checks and the complete backend suite inside
+`speleodb-monorepo-django` from `/app`; review the GitLab audit and cleanup. SDK
+snapshots import the reviewed backend schema bytes and regenerate operation
+documentation without changing SDK signatures or package versions.
+
 ## Empty revision downloads
 
 Every existing revision supports an Everything ZIP download, including the empty

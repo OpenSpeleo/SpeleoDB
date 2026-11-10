@@ -199,9 +199,14 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             f"Accepted fileformat values: {', '.join(FileFormat.upload_choices)}. "
             "At most "
             f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} files are accepted; each "
-            f"file is limited to {settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} "
-            "MiB. The current combined-byte limit is "
-            f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT * 1024 * 1204} bytes."
+            "file is limited to "
+            f"{settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} "
+            "MiB and their combined size is limited to "
+            f"{settings.DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT} MiB. "
+            "Size limits are inclusive and measure uploaded artifact bytes. "
+            "Commit messages are trimmed and newline groups are replaced with '. ' "
+            "before applying the "
+            f"{ProjectCommit._meta.get_field('message').max_length}-character limit."  # noqa: SLF001 - Django's public metadata API.
         ),
         request={"multipart/form-data": ProjectUploadRequestSerializer},
         responses={
@@ -258,6 +263,19 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                 # Remove front and back `\n\r and spaces and in the middle`
                 commit_message = re.sub(r"(?:\s*\n\s*)+", ". ", commit_message.strip())
 
+                message_max_length = ProjectCommit._meta.get_field("message").max_length  # noqa: SLF001 - Django's public metadata API.
+                assert message_max_length is not None
+                if len(commit_message) > message_max_length:
+                    return upload_input_error(
+                        {
+                            "error": (
+                                "The normalized commit message exceeds the limit of "
+                                f"{message_max_length} characters."
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
                 # Verify there's at least one file
                 if not files:
                     return upload_input_error(
@@ -301,16 +319,15 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     # Check if file size exceeds globally set limit
                     if (
                         file.size
-                        > settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
-                        * 1024
-                        * 1024
+                        > settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
+                        * 1024**2
                     ):
                         return upload_input_error(
                             {
                                 "error": (
                                     f"The file size for `{file.name}` "
-                                    f"[{file.size / 1024.0 / 1204.0} Mb], exceeds the limit: "  # noqa: E501
-                                    f"{settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} Mb"  # noqa: E501
+                                    f"[{file.size / 1024**2} MiB], exceeds the limit: "
+                                    f"{settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} MiB"  # noqa: E501
                                 )
                             },
                             status=status.HTTP_400_BAD_REQUEST,
@@ -327,14 +344,16 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                 if (
                     total_filesize
-                    > settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT * 1024 * 1204
+                    > settings.DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT * 1024**2
                 ):
                     return upload_input_error(
                         {
                             "error": (
                                 f"The total file size submitted: "
-                                f"[{total_filesize / 1024.0 / 1204.0} Mb], exceeds the "
-                                f"limit: {settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT} Mb"
+                                f"[{total_filesize / 1024**2} MiB], exceeds the "
+                                "limit: "
+                                f"{settings.DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT} "
+                                "MiB"
                             )
                         },
                         status=status.HTTP_400_BAD_REQUEST,

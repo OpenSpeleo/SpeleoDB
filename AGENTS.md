@@ -11,6 +11,12 @@ workflow requirements may have changed.
 
 ## Git commits run on the host only
 
+When the user asks to commit, you are ONLY allowed to execute
+`git commit -m '...'`, using the existing staging area. Do not inspect status or
+diffs, run tests or checks, modify files, stage or unstage anything, or perform
+any other operation. An explicit additional instruction from the user authorizes
+only that additional action.
+
 **NEVER execute `git commit` inside Docker or a devcontainer.** Run every
 authorized commit directly on the host from the owning repository checkout. This
 includes commits invoked indirectly by scripts, tools, skills, or subagents; do
@@ -484,6 +490,24 @@ When touching shared behavior, explicitly verify both entrypoints are still
 valid.
 
 ## Testing Requirements
+
+### Test-driven development
+
+For bug fixes and behavior changes, follow test-driven development:
+
+1. Before changing production behavior, add a focused behavioral test that
+   reproduces the defect or expresses the required behavior. Run it and confirm
+   that it fails for the intended reason.
+2. Implement the smallest root-cause correction. Keep the regression's expected
+   behavior intact.
+3. Rerun the regression, relevant boundary and state-preservation cases, and
+   required broader checks. Refactor only while this coverage remains passing.
+
+Tests must exercise consequential application behavior using the repository's
+established test boundaries. Record the observed failure and passing
+verification. Missing prerequisites and stop requests must be reported; unrun
+checks cannot establish completion. Do not claim broader guarantees than the
+verified scenarios support.
 
 The owner's stop/resume directives take precedence over every test/check
 requirement in this file. When tests are authorized, run **every test inside the

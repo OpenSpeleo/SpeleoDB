@@ -191,9 +191,11 @@ class ProjectUploadView(_BaseProjectView):
         project: Project = data["project"]
 
         data["limit_individual_filesize"] = (
-            settings.DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
+            settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
         )
-        data["limit_total_filesize"] = settings.DJANGO_UPLOAD_TOTAL_FILESIZE_MB_LIMIT
+        data["limit_total_filesize"] = (
+            settings.DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT
+        )
         data["limit_number_files"] = settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT
 
         # Redirect users who don't own the mutex

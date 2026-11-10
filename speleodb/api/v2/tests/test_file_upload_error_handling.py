@@ -208,6 +208,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
         content: bytes | None = None,
         message: str = "integration failure upload",
         fileformat: FileFormat = FileFormat.ARIANE_TML,
+        extra_artifacts: list[SimpleUploadedFile] | None = None,
     ) -> Response:
         artifact: SimpleUploadedFile = SimpleUploadedFile(
             filename,
@@ -222,7 +223,7 @@ class UploadErrorHandlingTests(SentryEventTestCase):
                     "fileformat": fileformat.label.lower(),
                 },
             ),
-            {"artifact": artifact, "message": message},
+            {"artifact": [artifact, *(extra_artifacts or [])], "message": message},
             format="multipart",
             headers={"authorization": f"Token {self.token.key}"},
         )
@@ -248,6 +249,134 @@ class UploadErrorHandlingTests(SentryEventTestCase):
             == self.original_commit_ids
         )
         assert self._remote_head() == self.original_head
+
+    def _checkout_contents(self) -> dict[pathlib.Path, bytes]:
+        return {
+            path.relative_to(self.repo.path): path.read_bytes()
+            for path in self.repo.path.rglob("*")
+            if path.is_file() and ".git" not in path.relative_to(self.repo.path).parts
+        }
+
+    @parameterized.expand(
+        [
+            ("plain", "x" * 1025),
+            ("newline_expansion", "x" * 1022 + "\ny"),
+        ]
+    )
+    def test_oversized_normalized_message_preserves_upload_state(
+        self, name: str, message: str
+    ) -> None:
+        contents = self._checkout_contents()
+
+        response = self._do_upload(message=message)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, (
+            name,
+            response.data,
+        )
+        assert "1024" in response.data["error"]
+        assert "normalized" in response.data["error"].lower()
+        assert message not in response.data["error"]
+        self._assert_no_upload_writes()
+        assert self.repo.head.commit.hexsha == self.original_head
+        assert self._checkout_contents() == contents
+
+        # The next writer must be able to use the same project and its history.
+        self.project.release_mutex(self.user)
+        self.user = canonical_user("B")
+        self.token = TokenFactory.create(user=self.user)
+        UserProjectPermissionFactory.create(
+            target=self.user,
+            project=self.project,
+            level=PermissionLevel.READ_AND_WRITE,
+        )
+        EmailAddress.objects.get_or_create(
+            user=self.user, email=self.user.email, verified=True, primary=True
+        )
+        self.project.acquire_mutex(self.user)
+        accepted = self._do_upload(message="Valid upload after mutex handoff")
+        assert accepted.status_code == status.HTTP_200_OK, accepted.data
+        commit = ProjectCommit.objects.get(pk=accepted.data["hexsha"])
+        assert commit.project_id == self.project.id
+        assert commit.message == "Valid upload after mutex handoff"
+        assert self._remote_head() == commit.id
+
+    @parameterized.expand(
+        [
+            ("plain_boundary", "x" * 1024, "x" * 1024),
+            ("newline_boundary", "x" * 1021 + "\ny", "x" * 1021 + ". y"),
+            ("trimmed_boundary", " \r\n" + "x" * 1024 + "\n ", "x" * 1024),
+            ("unicode_boundary", "é" * 1024, "é" * 1024),
+        ]
+    )
+    def test_normalized_message_boundary_is_preserved(
+        self, name: str, message: str, expected: str
+    ) -> None:
+        response = self._do_upload(message=message)
+
+        assert response.status_code == status.HTTP_200_OK, (name, response.data)
+        commit = ProjectCommit.objects.get(pk=response.data["hexsha"])
+        assert commit.message == expected
+        git_message = self.repo.commit(commit.id).message
+        if isinstance(git_message, bytes):
+            git_message = git_message.decode("utf-8")
+        assert git_message.rstrip("\n") == expected
+        assert self._remote_head() == commit.id
+
+    @parameterized.expand(
+        [
+            ("aggregate_boundary", (2048, 2048), status.HTTP_200_OK),
+            ("aggregate_over", (2048, 2049), status.HTTP_400_BAD_REQUEST),
+            ("individual_boundary", (3072,), status.HTTP_200_OK),
+            ("individual_over", (3073,), status.HTTP_400_BAD_REQUEST),
+            ("file_count_over", (1, 1, 1), status.HTTP_400_BAD_REQUEST),
+        ]
+    )
+    @override_settings(
+        DJANGO_GIT_COMMIT_TOTAL_FILESIZE_MB_LIMIT=4 / 1024,
+        DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT=3 / 1024,
+        DJANGO_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT=1 / 1024,
+        DJANGO_UPLOAD_TOTAL_FILES_LIMIT=2,
+    )
+    def test_uploaded_artifact_limits(
+        self, name: str, sizes: tuple[int, ...], expected_status: int
+    ) -> None:
+        contents = self._checkout_contents()
+        artifacts = [
+            SimpleUploadedFile(f"size-{index}.txt", b"x" * size)
+            for index, size in enumerate(sizes)
+        ]
+
+        response = self._do_upload(
+            filename="size-0.txt",
+            content=b"x" * sizes[0],
+            fileformat=FileFormat.AUTO,
+            extra_artifacts=artifacts[1:],
+        )
+
+        assert response.status_code == expected_status, response.data
+        if expected_status == status.HTTP_200_OK:
+            commit = ProjectCommit.objects.get(pk=response.data["hexsha"])
+            assert self._remote_head() == commit.id
+            for index, size in enumerate(sizes):
+                assert (
+                    self.repo.commit(commit.id)
+                    .tree.get_file(pathlib.Path(f"documents/size-{index}.txt"))
+                    .content.getvalue()
+                    == b"x" * size
+                )
+        else:
+            error = response.data["error"]
+            if name == "file_count_over":
+                assert "Too many files" in error
+                assert "maximum number of files allowed: 2" in error
+            else:
+                limit = 4 / 1024 if name == "aggregate_over" else 3 / 1024
+                assert f"{sum(sizes) / 1024**2} MiB" in error
+                assert f"{limit} MiB" in error
+            self._assert_no_upload_writes()
+            assert self.repo.head.commit.hexsha == self.original_head
+            assert self._checkout_contents() == contents
 
     def test_repaired_account_upload_with_stale_empty_name_succeeds(self) -> None:
         self.user.name = DEFAULT_USER_NAME
