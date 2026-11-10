@@ -696,16 +696,6 @@ class GitRepo(Repo):
             raise FileExistsError
         return cls.from_repo(super().init(path=path))
 
-    def pull(self) -> None:
-        origin = self.remotes.origin
-        retry_git_operation(
-            origin.pull,
-            self.active_branch.name,
-            ff_only=True,
-            remote_url=origin.url,
-            action="pull",
-        )
-
     def fetch(self) -> None:
         origin = self.remotes.origin
         retry_git_operation(
@@ -724,47 +714,26 @@ class GitRepo(Repo):
             action="configure origin for",
         )
 
-    def _checkout_branch_or_commit_and_maybe_pull(
-        self, hexsha: str | None = None, branch_name: str | None = None
-    ) -> None:
-        if hexsha and branch_name:
-            raise ValueError(
-                f"`{hexsha=}` and `{branch_name=}` can not be set simultaneously."
-            )
-
-        if hexsha is None and branch_name is None:
-            raise ValueError(
-                f"`{hexsha=}` and `{branch_name=}` can not be both set to `None`."
-            )
-
-        if hexsha:
-            try:
-                self.commit(hexsha)
-            except ValueError, git.BadName, git.BadObject:
-                self.fetch()
-            # Checkout errors (e.g. dirty files) do not imply missing objects.
-            self.git.checkout(hexsha)
-            return
-
-        assert branch_name is not None
-        if branch_name not in self.heads:
-            self.fetch()
-            remote_ref = f"origin/{branch_name}"
-            if branch_name not in self.remotes.origin.refs:
-                raise GitBaseError(f"Remote branch {branch_name!r} does not exist")
-            self.git.checkout("--track", "-b", branch_name, remote_ref)
-        else:
-            # Return from detached historical checkouts before pulling.
-            self.git.checkout(branch_name)
-        self.pull()
-
-    def checkout_default_branch_and_pull(self) -> None:
-        self._checkout_branch_or_commit_and_maybe_pull(
-            branch_name=settings.DJANGO_GIT_BRANCH_NAME
-        )
+    def reset_default_branch_to_remote(self) -> None:
+        """Replace the application checkout with the authoritative remote branch."""
+        self.fetch()
+        branch_name: str = settings.DJANGO_GIT_BRANCH_NAME
+        if branch_name not in self.remotes.origin.refs:
+            raise GitBaseError(f"Remote branch {branch_name!r} does not exist")
+        remote_ref: git.RemoteReference = self.remotes.origin.refs[branch_name]
+        remote_commit: GitCommit = self.commit(remote_ref.name)
+        # Force checkout resets the branch, index and tracked files together,
+        # including from detached HEAD. Fetch must succeed before discarding work.
+        self.git.checkout("--force", "-B", branch_name, remote_commit.hexsha)
+        self.active_branch.set_tracking_branch(remote_ref)
 
     def checkout_commit(self, hexsha: str) -> None:
-        self._checkout_branch_or_commit_and_maybe_pull(hexsha=hexsha)
+        try:
+            self.commit(hexsha)
+        except ValueError, git.BadName, git.BadObject:
+            self.fetch()
+        # Checkout errors (e.g. dirty files) do not imply missing objects.
+        self.git.checkout(hexsha)
 
     def _commit_project(self, message: str, *, author: git.Actor) -> GitCommit:
         # IndexFile.commit starts hooks outside the Git command wrapper. The CLI

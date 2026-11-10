@@ -133,20 +133,96 @@ class GitCheckoutTests(TestCase):
         assert self.remote.commit(self.branch).hexsha == original_sha
         assert not repo.head.is_valid()
 
-    def test_return_from_historical_commit_pulls_default_branch_updates(self) -> None:
+    def test_return_from_historical_commit_resets_to_remote_default_branch(
+        self,
+    ) -> None:
         original_sha: str = self._push_revision("first version")
         repo: GitRepo = self._clone()
         repo.checkout_commit(original_sha)
         assert repo.head.is_detached
         latest_sha: str = self._push_revision("latest version")
 
-        repo.checkout_default_branch_and_pull()
+        repo.reset_default_branch_to_remote()
 
         assert repo.active_branch.name == self.branch
         assert repo.head.commit.hexsha == latest_sha
         assert (repo.path / "README.txt").read_text(
             encoding="utf-8"
         ) == "latest version"
+
+    def test_default_sync_discards_local_only_commits(self) -> None:
+        remote_sha: str = self._push_revision("remote version")
+        repo: GitRepo = self._clone()
+        readme: Path = repo.path / "README.txt"
+        readme.write_text("unpublished local version", encoding="utf-8")
+        repo.index.add(["README.txt"])
+        repo.index.commit("Unpublished local revision", author=self.actor)
+
+        repo.reset_default_branch_to_remote()
+
+        assert repo.head.commit.hexsha == remote_sha
+        assert readme.read_text(encoding="utf-8") == "remote version"
+
+    def test_default_sync_replaces_divergent_history_and_dirty_tracked_files(
+        self,
+    ) -> None:
+        self._push_revision("original version")
+        repo: GitRepo = self._clone()
+        readme: Path = repo.path / "README.txt"
+        readme.write_text("local branch version", encoding="utf-8")
+        repo.index.add(["README.txt"])
+        repo.index.commit("Local branch revision", author=self.actor)
+        remote_sha: str = self._push_revision("remote branch version")
+        readme.write_text("uncommitted local changes", encoding="utf-8")
+        sentinel: Path = repo.path / "local-work.txt"
+        sentinel.write_text("unrelated untracked file", encoding="utf-8")
+
+        repo.reset_default_branch_to_remote()
+
+        assert repo.active_branch.name == self.branch
+        assert repo.head.commit.hexsha == remote_sha
+        assert readme.read_text(encoding="utf-8") == "remote branch version"
+        assert sentinel.read_text(encoding="utf-8") == "unrelated untracked file"
+        assert not repo.is_dirty()
+
+    def test_default_sync_accepts_rewritten_remote_history(self) -> None:
+        self._push_revision("original version")
+        repo: GitRepo = self._clone()
+        self.seed.git.checkout("--orphan", "replacement")
+        (self.root / "seed" / "README.txt").write_text(
+            "rewritten remote version", encoding="utf-8"
+        )
+        self.seed.index.add(["README.txt"])
+        rewritten: git.Commit = self.seed.index.commit(
+            "Replacement history", author=self.actor, committer=self.actor
+        )
+        self.seed.git.push("--force", "origin", f"HEAD:{self.branch}")
+
+        repo.reset_default_branch_to_remote()
+
+        assert repo.head.commit.hexsha == rewritten.hexsha
+        assert (repo.path / "README.txt").read_text(
+            encoding="utf-8"
+        ) == "rewritten remote version"
+
+    def test_default_sync_replaces_untracked_file_obstructing_remote_path(
+        self,
+    ) -> None:
+        self._push_revision("original version")
+        repo: GitRepo = self._clone()
+        (repo.path / "survey.txt").write_text("untracked local copy", encoding="utf-8")
+        (self.root / "seed" / "survey.txt").write_text(
+            "authoritative remote copy", encoding="utf-8"
+        )
+        self.seed.index.add(["survey.txt"])
+        remote_sha: str = self._push_revision("remote version")
+
+        repo.reset_default_branch_to_remote()
+
+        assert repo.head.commit.hexsha == remote_sha
+        assert (repo.path / "survey.txt").read_text(
+            encoding="utf-8"
+        ) == "authoritative remote copy"
 
     def test_missing_local_branch_uses_updated_remote_tracking_ref(self) -> None:
         original_sha: str = self._push_revision("first version")
@@ -155,7 +231,7 @@ class GitCheckoutTests(TestCase):
         repo.delete_head(self.branch, force=True)
         latest_sha: str = self._push_revision("latest version")
 
-        repo.checkout_default_branch_and_pull()
+        repo.reset_default_branch_to_remote()
 
         assert repo.active_branch.name == self.branch
         assert repo.head.commit.hexsha == latest_sha
@@ -175,28 +251,26 @@ class GitCheckoutTests(TestCase):
         sentinel.write_text("keep me", encoding="utf-8")
 
         with pytest.raises(GitBaseError):
-            repo.checkout_default_branch_and_pull()
+            repo.reset_default_branch_to_remote()
 
         assert repo.active_branch.name == "other"
         assert repo.head.commit.hexsha == original_sha
         assert self.branch not in repo.heads
         assert sentinel.read_text(encoding="utf-8") == "keep me"
 
-    def test_dirty_default_checkout_preserves_files_without_fetching(self) -> None:
+    def test_default_sync_discards_dirty_files_after_detached_checkout(self) -> None:
         original_sha: str = self._push_revision("first version")
-        self._push_revision("latest version")
+        latest_sha: str = self._push_revision("latest version")
         repo: GitRepo = self._clone()
         repo.git.checkout(original_sha)
         readme: Path = repo.path / "README.txt"
         readme.write_text("uncommitted changes", encoding="utf-8")
 
-        repo.remotes.origin.set_url(str(self.root / "missing.git"))
-        with pytest.raises(GitCommandError, match="would be overwritten"):
-            repo.checkout_default_branch_and_pull()
+        repo.reset_default_branch_to_remote()
 
-        assert repo.head.is_detached
-        assert repo.head.commit.hexsha == original_sha
-        assert readme.read_text(encoding="utf-8") == "uncommitted changes"
+        assert repo.active_branch.name == self.branch
+        assert repo.head.commit.hexsha == latest_sha
+        assert readme.read_text(encoding="utf-8") == "latest version"
 
     def test_dirty_commit_checkout_is_not_treated_as_missing_commit(self) -> None:
         original_sha: str = self._push_revision("first version")
@@ -234,9 +308,13 @@ class GitCheckoutTests(TestCase):
         assert repo.head.is_detached
         assert repo.head.commit.hexsha == latest_sha
 
-    def test_pull_outage_preserves_existing_branch_and_files(self) -> None:
+    def test_fetch_failure_preserves_detached_head_and_dirty_files(self) -> None:
         original_sha: str = self._push_revision("first version")
+        self._push_revision("latest version")
         repo: GitRepo = self._clone()
+        repo.git.checkout(original_sha)
+        readme: Path = repo.path / "README.txt"
+        readme.write_text("uncommitted changes", encoding="utf-8")
         sentinel: Path = repo.path / "local-work.txt"
         sentinel.write_text("keep me", encoding="utf-8")
 
@@ -244,10 +322,11 @@ class GitCheckoutTests(TestCase):
         with pytest.raises(
             GitBaseError, match="does not appear to be a git repository"
         ):
-            repo.checkout_default_branch_and_pull()
+            repo.reset_default_branch_to_remote()
 
-        assert repo.active_branch.name == self.branch
+        assert repo.head.is_detached
         assert repo.head.commit.hexsha == original_sha
+        assert readme.read_text(encoding="utf-8") == "uncommitted changes"
         assert sentinel.read_text(encoding="utf-8") == "keep me"
 
     def test_fetch_outage_does_not_create_missing_branch(self) -> None:
@@ -262,7 +341,7 @@ class GitCheckoutTests(TestCase):
         with pytest.raises(
             GitBaseError, match="does not appear to be a git repository"
         ):
-            repo.checkout_default_branch_and_pull()
+            repo.reset_default_branch_to_remote()
 
         assert repo.head.is_detached
         assert repo.head.commit.hexsha == original_sha
@@ -305,7 +384,7 @@ class GitDownloadCheckoutTests(BaseProjectTestCaseMixin):
         assert result is not None
         return result
 
-    def test_latest_download_restores_default_branch_and_pulls_updates(self) -> None:
+    def test_latest_download_resets_default_branch_to_remote(self) -> None:
         filename: str = self.processor.get_filename_for_download(self.target)
 
         assert filename == self.target.name

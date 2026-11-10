@@ -320,52 +320,20 @@ class CommitAndPushRetryTests(LocalGitTests):
         assert self.remote.commit(self.repo.active_branch.name).hexsha == original
 
 
-class PullAndFetchRetryTests(LocalGitTests):
+class FetchErrorTests(LocalGitTests):
     def test_description_reads_git_description_without_recursing(self) -> None:
         description: pathlib.Path = pathlib.Path(self.repo.git_dir) / "description"
         description.write_text("A project description\n")
         assert self.repo.description == "A project description"
 
-    def test_pull_and_fetch_retry_when_real_remote_returns(self) -> None:
-        for operation in ("pull", "fetch"):
-            with self.subTest(operation=operation):
-                trace: pathlib.Path = self.root / "git-trace.json"
-                trace.unlink(missing_ok=True)
-                remote_path: pathlib.Path = pathlib.Path(self.remote.git_dir)
-                unavailable: pathlib.Path = self.root / "unavailable.git"
-                remote_path.rename(unavailable)
-                restored: threading.Thread = self._release_after_first_retry(
-                    unavailable, remote_path
-                )
-                with self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs:
-                    getattr(self.repo, operation)()
-                restored.join(timeout=6)
-                assert not restored.is_alive()
-                assert "does not appear to be a git repository" in "\n".join(
-                    logs.output
-                )
-                assert (
-                    self.repo.head.commit.hexsha
-                    == self.remote.commit(self.repo.active_branch.name).hexsha
-                )
-
-    def test_pull_and_fetch_raise_redacted_errors_after_exhaustion(self) -> None:
+    @override_settings(DJANGO_GIT_RETRY_ATTEMPTS=1)
+    def test_fetch_raises_redacted_error(self) -> None:
         self.repo.remotes.origin.set_url(self.remote_url)
-        for operation in ("pull", "fetch"):
-            with (
-                self.subTest(operation=operation),
-                self.assertLogs("speleodb.utils.helpers", level="DEBUG") as logs,
-                pytest.raises(
-                    GitBaseError, match=f"Impossible to {operation}"
-                ) as raised,
-            ):
-                getattr(self.repo, operation)()
-            assert len(logs.records) == RETRY_ATTEMPTS - 1
-            assert_credentials_redacted(
-                "\n".join([*traceback.format_exception(raised.value), *logs.output])
-            )
-            assert raised.value.__cause__ is None
-            assert raised.value.__context__ is None
+        with pytest.raises(GitBaseError, match="Impossible to fetch") as raised:
+            self.repo.fetch()
+        assert_credentials_redacted("\n".join(traceback.format_exception(raised.value)))
+        assert raised.value.__cause__ is None
+        assert raised.value.__context__ is None
 
     def test_set_origin_url_raises_redacted_error_after_config_lock(self) -> None:
         lock: pathlib.Path = pathlib.Path(self.repo.git_dir) / "config.lock"

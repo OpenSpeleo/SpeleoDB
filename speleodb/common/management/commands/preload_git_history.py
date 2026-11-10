@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
             try:
                 git_repo = project.git_repo
-                git_repo.checkout_default_branch_and_pull()
+                git_repo.reset_default_branch_to_remote()
                 project.construct_git_history_from_project(git_repo)
 
             except Exception:

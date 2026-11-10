@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import tempfile
 import zipfile
@@ -46,9 +47,7 @@ class TestEmptyDumpDownload(BaseAPIProjectTestCase):
             assert response.status_code == status.HTTP_200_OK
             assert isinstance(response, StreamingHttpResponse)
             assert not response.is_async
-            try:
+            with contextlib.closing(response):
                 payload = b"".join(response.streaming_content)
-            finally:
-                response.close()
             with zipfile.ZipFile(io.BytesIO(payload)) as archive:
                 assert archive.namelist() == []

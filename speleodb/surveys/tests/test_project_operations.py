@@ -133,7 +133,7 @@ def test_reset_reconstructs_initial_history_purges_all_artifacts_and_preserves_r
         assert stages[-1] == "history_rebuilt"
         repository = project.git_repo
         assert repository.remotes.origin.url == str(remote)
-        project.checkout_commit_or_default_pull_branch()
+        project.checkout_commit_or_reset_default_branch()
         assert repository.head.commit.hexsha == hashes[-1]
         # A manual rerun starts from zero and reconstructs the same remote again.
         again = project.reset_git_history()

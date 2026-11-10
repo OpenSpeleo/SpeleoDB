@@ -646,11 +646,13 @@ class Project(models.Model):
         self.construct_git_history_from_project(git_repo=git_repo)
         return hexsha
 
-    def checkout_commit_or_default_pull_branch(self, hexsha: str | None = None) -> None:
+    def checkout_commit_or_reset_default_branch(
+        self, hexsha: str | None = None
+    ) -> None:
         git_repo = self.git_repo
         self.ensure_git_origin(git_repo)
         if hexsha is None:
-            git_repo.checkout_default_branch_and_pull()
+            git_repo.reset_default_branch_to_remote()
         else:
             git_repo.checkout_commit(hexsha=hexsha)
         self.construct_git_history_from_project(git_repo=git_repo)

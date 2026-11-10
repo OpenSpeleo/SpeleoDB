@@ -8,9 +8,9 @@ the remote repository; PostgreSQL's `ProjectCommit` rows are a rebuildable
 history cache. A `ProjectFactory` creates only a database row. The initial Git
 commit is created when the repository is first initialized, not by the factory.
 
-The preload command calls `project.git_repo`, checks out and pulls the default
-branch, and reconstructs database history. It logs per-project failures and
-continues processing, then removes each local working copy in `finally`.
+The preload command calls `project.git_repo`, resets the default branch to its
+remote revision, and reconstructs database history. It logs per-project failures
+and continues processing, then removes each local working copy in `finally`.
 Consequently, a failed clone leaves no history to cache. An assertion about
 missing commits can be a symptom of an earlier remote failure.
 
@@ -82,7 +82,7 @@ prove a real 404 or a deletion mark; a connection failure is never success.
 
 ## Git subprocess retries and working-copy recovery
 
-Clone, fetch, pull, push, and credential-bearing origin configuration share a
+Clone, fetch, push, and credential-bearing origin configuration share a
 five-attempt Git retry policy and 1/2/4/8-second backoff. Before a failure
 reaches the retry logger, URL credentials and known encoded/decoded token values
 are removed from the command, status, stderr, and stdout. The final
@@ -113,39 +113,52 @@ rewritten, and the fallback adds no SQL or network calls.
 Initial publication explicitly selects the configured unborn branch and never
 pulls from an empty remote. Existing commits or remote refs prohibit initial
 publication: an unset remote HEAD does not establish that a repository is empty.
-Normal checkout switches to an existing local branch before a fast-forward-only
-pull, including when returning from detached historical commits. A missing local
-branch is created only from a verified remote-tracking branch after a successful
-pruning fetch. Dirty-worktree, missing-branch, and transport failures propagate
-instead of creating an arbitrary branch. Historical commits already available
-locally need no network request.
+GitLab is authoritative for the application checkout. Every default-branch sync
+first performs a forced, pruning fetch and verifies the configured remote
+branch. `GitRepo.reset_default_branch_to_remote()` then force-creates the local
+branch at that fetched commit and resets the index and tracked files, including
+when HEAD was detached. This has hard-reset semantics: local-only commits,
+divergent history and uncommitted tracked changes are discarded from the active
+checkout. The branch setting in `config/settings/base.py` selects `master`.
+There is no merge or fast-forward requirement. Unrelated untracked files remain;
+untracked paths obstructing tracked remote files are replaced by Git. No blanket
+clean is performed. A failed fetch or absent remote branch leaves HEAD and files
+unchanged instead of resetting to a stale cached ref.
 
-Download processors use the same rules: a latest-version download restores and
-updates the default branch, while fetching a missing historical commit leaves
-the current checkout unchanged. Both use `Project.ensure_git_origin()` before
-network access, so a changed GitLab token, host, or group is repaired on
-downloads as well as normal checkout. Already-local historical downloads need no
-repair or remote access.
+`Project.checkout_commit_or_reset_default_branch()` owns synchronization
+followed by database-history reconstruction. Upload preparation, the Git
+explorer, blob lookup fallback, latest downloads, preload and clone recovery
+share the same default-branch policy. Explicit historical checkouts still select
+the requested commit, and historical commits already available locally need no
+network request.
+
+Download processors use the same rules: a latest-version download resets the
+default branch to its fetched remote revision, while fetching a missing
+historical commit leaves the current checkout unchanged. Both use
+`Project.ensure_git_origin()` before network access, so a changed GitLab token,
+host, or group is repaired on downloads as well as normal checkout.
+Already-local historical downloads need no repair or remote access.
 
 The project wrapper repairs an incorrect origin URL in place using the same
 canonical URL builder as creation. It never deletes and reclones a working copy
-merely because checkout or pull failed; transient outages are not evidence of
-local corruption, and deleting files can destroy uncommitted work. History is
-rebuilt only after successful checkout/pull. Actual object corruption requires
-an explicit recovery decision rather than an automatic destructive fallback.
+merely because checkout or fetch failed; transient outages are not evidence of
+local corruption. History is rebuilt only after successful checkout/reset.
+Actual object corruption requires an explicit recovery decision rather than an
+automatic destructive fallback.
 
 Local bare-repository regressions cover initialization, detached checkout,
-remote updates, missing branches, dirty files, URL repair, and outage
-preservation. Retry tests assert credential-safe logs and tracebacks for each
-remote operation. Successful existing-branch pulls need no preliminary fetch;
-only an absent local branch or commit adds one. Failure backoff gives the remote
-time to recover but does not classify authentication or corrupt-object Git
-stderr as transient.
+remote updates, local-ahead and divergent branches, rewritten remote history,
+dirty tracked files, untracked-path collisions, missing branches and failure
+before reset. The explorer API regression verifies that divergent local history
+cannot prevent reading a requested revision. Every default sync needs one fetch;
+historical reads fetch only missing objects. Credential-redaction tests protect
+remote error reporting. Failure backoff gives the remote time to recover but
+does not classify authentication or corrupt-object Git stderr as transient.
 
 ## Tests and external dependencies
 
 `test_preload_git_history.py` uses temporary Git working directories and real
-GitLab remotes. Clone, checkout, pull, commit traversal, and database
+GitLab remotes. Clone, checkout, reset, commit traversal, and database
 reconstruction execute normally. The tests verify reconstruction after the
 command removes its working copies, then clone the remote again to prove that
 cleanup preserved its history. They require the live-service test mode.
@@ -191,8 +204,8 @@ local behavior but does not establish the health of CI's remote GitLab service.
 calls `sentry_sdk.capture_exception`, and returns a JSON HTTP 500 response.
 Django also logs returned 5xx responses, so an additional request error log does
 not imply the exception escaped its handler. The checkout error wording covers
-the preceding default-branch pull too; inspect the underlying sanitized Git
-failure to identify which operation failed.
+the preceding default-branch fetch/reset too; inspect the underlying sanitized
+Git failure to identify which operation failed.
 
 The `git-view` controller currently logs failed explorer requests to the browser
 console without rendering an error notice. Treat missing UI feedback separately

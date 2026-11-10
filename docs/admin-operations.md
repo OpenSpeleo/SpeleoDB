@@ -77,9 +77,12 @@ history reset while the project is idle and avoid editing or submitting other
 work for that project until the reset finishes.
 
 Reset replaces the worker's local checkout with the validated clone. Other
-services continue to use their ordinary Git pull and checkout behavior. Checkout
-deletion is restricted to the UUID-owned directory below the configured root and
-rejects symlinks and path escapes.
+services synchronize their default branch by fetching and hard-resetting to the
+authoritative remote revision, discarding local-only commits and tracked
+changes. Explicit historical reads still select the requested commit. See
+[GitLab reliability](gitlab-reliability.md) for failure ordering and
+untracked-file behavior. Checkout deletion is restricted to the UUID-owned
+directory below the configured root and rejects symlinks and path escapes.
 
 ## Implementation boundaries
 

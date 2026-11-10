@@ -379,9 +379,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                             )
                             auto_compass_toml_generated = True
 
-                with timed_section("Git Project - Checkout and Pull"):
+                with timed_section("Git Project - Synchronize with Remote"):
                     # Make sure the project is update to ToT (Top of Tree)
-                    project.checkout_commit_or_default_pull_branch()
+                    project.checkout_commit_or_reset_default_branch()
 
                 with timed_section("Project Edition - File Adding - Git Commit & Push"):
                     uploaded_files: list[pathlib.Path] = []
@@ -684,9 +684,9 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
     ) -> Response | FileResponse:
         project = self.get_object()
 
-        # Using a retry-loop to prevent "pulling the repo" first.
+        # Look for the blob locally before synchronizing the repository.
         # If - by any chance - the blob is already known by GIT, we can reply fast
-        # Otherwise, we detect the blob to not be found and pull the repo
+        # Otherwise, we detect the blob to not be found and synchronize the repo
         # and try again.
         for retry_attempt in range(2):
             with contextlib.suppress(GitBlobNotFoundError):
@@ -696,8 +696,8 @@ class BlobDownloadView(GenericAPIView[Project], SDBAPIViewMixin):
                 )
 
             if retry_attempt == 0:
-                # Ensure we pull the project to update just in case
-                project.checkout_commit_or_default_pull_branch()
+                # Reset to the remote default branch before searching again.
+                project.checkout_commit_or_reset_default_branch()
 
         return ErrorResponse(
             {"error": f"Object id=`{hexsha}` not found."},

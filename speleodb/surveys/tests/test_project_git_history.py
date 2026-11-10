@@ -121,7 +121,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
     def test_checkout_default_branch_constructs_history(self) -> None:
         self.repo.checkout_commit(self.original_sha)
 
-        self.project.checkout_commit_or_default_pull_branch()
+        self.project.checkout_commit_or_reset_default_branch()
 
         assert self.repo.active_branch.name == settings.DJANGO_GIT_BRANCH_NAME
         assert self.repo.head.commit.hexsha == self.latest_sha
@@ -132,7 +132,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
         ) == {self.original_sha, self.latest_sha}
 
     def test_checkout_specific_commit_constructs_history(self) -> None:
-        self.project.checkout_commit_or_default_pull_branch(hexsha=self.original_sha)
+        self.project.checkout_commit_or_reset_default_branch(hexsha=self.original_sha)
 
         assert self.repo.head.is_detached
         assert self.repo.head.commit.hexsha == self.original_sha
@@ -148,7 +148,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
         with pytest.raises(
             GitCommandError, match=r"reference is not a tree|unable to read tree"
         ) as error:
-            self.project.checkout_commit_or_default_pull_branch(hexsha=missing_sha)
+            self.project.checkout_commit_or_reset_default_branch(hexsha=missing_sha)
 
         assert error.value.status == 128  # noqa: PLR2004
         assert error.value.command[-2:] == ["checkout", missing_sha]
@@ -162,7 +162,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
         readme: pathlib.Path = self.repo.path / "README.txt"
         readme.write_text("uncommitted changes", encoding="utf-8")
         with pytest.raises(GitCommandError, match="would be overwritten"):
-            self.project.checkout_commit_or_default_pull_branch(
+            self.project.checkout_commit_or_reset_default_branch(
                 hexsha=self.original_sha
             )
 
@@ -184,7 +184,7 @@ class TestCheckoutCommitOrDefaultBranch(BaseProjectTestCaseMixin):
             ),
             pytest.raises(GitBaseError, match="not allowed"),
         ):
-            self.project.checkout_commit_or_default_pull_branch()
+            self.project.checkout_commit_or_reset_default_branch()
 
         assert sentinel.read_text(encoding="utf-8") == "keep me"
         assert self.repo.head.commit.hexsha == self.latest_sha
@@ -241,7 +241,7 @@ class TestGitRepoRemoteConfigurationRepair(BaseAPIProjectTestCase):
         )
 
         original_sha: str = git_repo.head.commit.hexsha
-        self.project.checkout_commit_or_default_pull_branch()
+        self.project.checkout_commit_or_reset_default_branch()
 
         assert git_repo.head.commit.hexsha == original_sha
         assert sentinel.read_text(encoding="utf-8") == "preserve local work"

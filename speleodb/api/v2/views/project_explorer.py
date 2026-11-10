@@ -92,8 +92,8 @@ class ProjectGitExplorerApiView(GenericAPIView[Project], SDBAPIViewMixin):
         user = self.get_user()
         project = self.get_object()
         try:
-            # Checkout default branch and pull repository.
-            project.checkout_commit_or_default_pull_branch()
+            # Reset the default branch to the authoritative remote revision.
+            project.checkout_commit_or_reset_default_branch()
             commit = project.git_repo.commit(hexsha)
 
             # Collect all the commits and sort them by date

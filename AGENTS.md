@@ -87,10 +87,16 @@ environment installation. Report missing prerequisites instead.
 - Prefer a library's existing native `with` protocol when the resource belongs
   to one lexical scope. Verify that the installed class actually supports it; do
   not assume that a file-like response is a context manager.
-- Remove redundant cleanup and cleanup-only `try/finally` blocks. When cleanup
-  is required and no native context exists, a standard-library context may be
-  appropriate. Retain explicit closure when ownership spans methods, a streamed
-  response, a shared fixture or a required shutdown sequence.
+- Never add manual `.close()` calls or cleanup-only `try/finally` blocks for
+  resources owned within one lexical scope, including tests. Use the native
+  `with` protocol when supported; otherwise use `contextlib.closing(resource)`
+  when closure is required. Django `FileResponse`/`StreamingHttpResponse`
+  objects consumed entirely in a test use `contextlib.closing(response)`; their
+  streaming type does not justify a manual `finally: response.close()` block.
+- Retain explicit closure only when ownership actually spans methods or a shared
+  fixture, or a required shutdown sequence cannot be expressed by a local
+  context. Explain that concrete lifetime requirement beside the closure. Remove
+  redundant cleanup instead of wrapping it in another abstraction.
 - Do not add GitRepo `.close()` calls, `closing(repo)` wrappers, active-handle
   caches or custom checkout lifetime protocols as an unsolicited cleanup
   feature. A repository directory is not an open file.
@@ -98,7 +104,7 @@ environment installation. Report missing prerequisites instead.
   equivalent hidden context registration for ordinary resources. Prefer local
   `with` blocks and simple fixtures with clear ownership. Do not rename a
   rejected wrapper and keep the same design.
-- Do create custom context/disposal protocols to eliminate the spelling
+- Do not create custom context/disposal protocols to eliminate the spelling
   `.close()`. Keep necessary ownership, scope and shutdown ordering visible.
 
 ### Preserve API scope and real execution status

@@ -186,7 +186,7 @@ class BaseFileProcessor:
         if not isinstance(target_f, Path):
             target_f = Path(target_f)
 
-        # 1. Fetch the commit requested by the user - pull repository if needed.
+        # 1. Resolve the requested commit, synchronizing the default branch if needed.
         try:
             if hexsha is not None and not self.validate_hexsha(hexsha):
                 raise ValueError(f"Invalid Git SHA value: `{hexsha}`.")
@@ -206,7 +206,7 @@ class BaseFileProcessor:
             else:
                 # A previous historical request may have left HEAD detached.
                 self.project.ensure_git_origin(git_repo)
-                git_repo.checkout_default_branch_and_pull()
+                git_repo.reset_default_branch_to_remote()
                 commit = git_repo.head.commit
 
             if commit is None:

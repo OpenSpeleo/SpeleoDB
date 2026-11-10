@@ -193,7 +193,7 @@ class GitlabManagerCls(metaclass=SingletonMetaClass):
             if not git_repo.head.is_valid():
                 if git_repo.remotes.origin.refs:
                     # An unset/stale remote HEAD does not imply an empty remote.
-                    git_repo.checkout_default_branch_and_pull()
+                    git_repo.reset_default_branch_to_remote()
                 else:
                     git_repo.publish_first_commit()
         else:

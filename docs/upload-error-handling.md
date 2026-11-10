@@ -13,7 +13,7 @@ Client PUT /api/v2/projects/<id>/upload/<format>/
   ▼
 FileUploadView.put()
   ├─ validate input
-  ├─ checkout_commit_or_default_pull_branch()   ← git pull / clone
+  ├─ checkout_commit_or_reset_default_branch()  ← fetch and reset / clone
   │    └─ construct_git_history_from_project()  ← sync ProjectCommit rows
   ├─ processor.add_to_project(file)             ← write to working tree
   ├─ commit_and_push_project()                  ← git add/commit/push

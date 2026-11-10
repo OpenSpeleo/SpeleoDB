@@ -215,6 +215,39 @@ class ProjectExplorerSentryTests(ProjectSentryTestCase):
             headers={"authorization": self.auth},
         )
 
+    def test_git_explorer_resets_divergent_checkout_before_reading_revision(
+        self,
+    ) -> None:
+        local_file: pathlib.Path = self.repo.path / "local-only.txt"
+        local_file.write_text("unpublished local changes", encoding="utf-8")
+        self.repo.index.add(["local-only.txt"])
+        actor: git.Actor = git.Actor("Reporting test", "reporting@example.test")
+        self.repo.index.commit("Local-only revision", author=actor, committer=actor)
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            git.Repo.clone_from(
+                GitlabCredentials.get().project_url(self.project.id), directory
+            ) as upstream,
+        ):
+            remote_file: pathlib.Path = pathlib.Path(directory) / "upstream.txt"
+            remote_file.write_text("upstream revision", encoding="utf-8")
+            upstream.index.add(["upstream.txt"])
+            remote_sha: str = upstream.index.commit(
+                "Remote revision", author=actor, committer=actor
+            ).hexsha
+            upstream.git.push("origin", settings.DJANGO_GIT_BRANCH_NAME)
+
+        response: Response = self._explore(self.original_head)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["commit"]["hexsha"] == self.original_head
+        assert self.repo.head.commit.hexsha == remote_sha
+        assert not local_file.exists()
+        assert (self.repo.path / "upstream.txt").read_text(
+            encoding="utf-8"
+        ) == "upstream revision"
+        assert not self.sentry_events
+
     def test_git_explorer_missing_commit_returns_500_with_sentry(self) -> None:
         assert self._explore(self.original_head).status_code == status.HTTP_200_OK
         absent_sha: str = uuid.uuid4().hex + uuid.uuid4().hex[:8]
