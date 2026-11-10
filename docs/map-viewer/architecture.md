@@ -630,14 +630,15 @@ imports its existing module root:
 | `landmark-details` | `frontend_private/static/private/ts/landmark_collection/details_main.ts` |
 
 Common map modules become shared chunks. Public pages do not preload or fetch
-the private map controller. Vite compiles assets on explicit request while
-Django remains the server. Both build modes use hashed filenames; production is
-minified and development mode includes source maps. Run
+the private map controller. The local Django launcher starts Vite asset watching
+while Django remains the only server. Both build modes use hashed filenames;
+production is minified and development mode includes source maps. Run
 `docker exec -w /app speleodb-monorepo-django bun run build`, wait for success,
-then refresh the browser. No asset watcher or reload client runs at startup. For
-automatic rebuilds on save, explicitly run `bun run dev` from `/app` in the
-container. Refresh the browser after each successful rebuild, and stop the
-watcher before running a production build or final browser checks.
+then refresh the browser. Local startup completes an initial checked build
+before serving templates and supervises the asset watcher alongside Django.
+There is no browser reload client. Refresh after each successful rebuild, and
+stop the local webserver and its watcher before a finite production build or
+final browser checks.
 
 ### Tailwind CSS
 

@@ -59,8 +59,9 @@ bootstrap, and lazy route controllers. Shared imports become shared chunks.
 Explicit builds write hashed files and `.vite/manifest.json` directly under
 `speleodb/common/static/speleodb/vite/`. Production output is minified; an
 explicit development-mode build includes source maps. Django serves the compiled
-files after the user refreshes the browser. The opt-in `dev` watcher rebuilds on
-save; page refreshes stay manual, with no reload client or generation polling.
+files after the user refreshes the browser. The local Django launcher starts the
+`dev` watcher, which rebuilds on save; page refreshes stay manual, with no
+reload client or generation polling.
 
 All SpeleoDB-authored CSS/JS belongs in the graph as an entry, transitive
 module, test, or intentionally removed source. Templates load it with
@@ -101,14 +102,15 @@ The Prettier hook uses prek's `bun` language for installation and an explicit
 alone does not override the upstream executable's shebang. Validate hook runtime
 selection as well as package-script execution.
 
-For automatic frontend rebuilds in local development, run
-`docker exec -w /app speleodb-monorepo-django bun run dev`, wait for each
-successful build, then refresh the browser manually. Type checks and ownership
-audits run once before watching; subsequent saves compile only. Stop the watcher
-before running `bun run build` for final evidence and verifying the served
-manifest hash. The migration-era Tailwind compiler retained some removed utility
-candidates during long-running watch sessions; finite clean builds avoid that
-state.
+The local Django launcher starts automatic frontend rebuilds. Wait for each
+successful build in the webserver logs, then refresh the browser manually. Use
+`docker exec -w /app speleodb-monorepo-django bun run dev` only when Django was
+launched independently and no watcher is already running. Type checks and
+ownership audits run once before watching; subsequent saves compile only. Stop
+the local webserver and its watcher before running `bun run build` for final
+evidence and verifying the served manifest hash. The migration-era Tailwind
+compiler retained some removed utility candidates during long-running watch
+sessions; finite clean builds avoid that state.
 
 ## Django and deployment
 
@@ -119,11 +121,12 @@ duplicate, or wrong-type entries fail loudly. DEBUG/test may fall back to
 registry-derived stable names before the first explicit build. URLs pass through
 Django static storage, preserving local serving and S3/CloudFront behavior.
 
-`compose/start` installs locked dependencies and launches Django without an
-asset build or watcher. Start `dev` explicitly for watched builds, or use
-`build` for a finite production build. Neither `dev` nor `start` launches
-Django; `start` remains a finite asset-build alias. See
-[development builds](vite-assets.md#development-builds).
+`compose/start` installs locked dependencies, completes `build:assets`, then
+supervises Django and the `dev` watcher in separate process groups. Exiting
+either process stops both, including their children. Use `build` for a finite
+production build with the local webserver stopped. Neither the package scripts
+`dev` nor `start` launches Django; `start` remains a finite asset-build alias.
+See [development builds](vite-assets.md#development-builds).
 
 Railpack retains the Python provider and uses Mise to activate Bun from
 `.bun-version`. It checks the runtime version, performs the guarded frozen

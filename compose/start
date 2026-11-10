@@ -16,6 +16,38 @@ else
     bun install --frozen-lockfile
 fi
 
-# Frontend assets are rebuilt explicitly with `bun run build`, followed by a
-# manual browser refresh. Django remains the only HTTP server.
-exec python manage.py runserver_plus 0000:8000
+# Build before serving templates, including on a fresh checkout. Retain older
+# hashed assets so already-open pages can finish their deferred imports.
+bun run build:assets --emptyOutDir=false
+
+# Give the watcher and Django their own process groups: Bun's script children
+# and Django's reloader must stop with their owning local server.
+set -m
+asset_pid=""
+django_pid=""
+
+stop_children() {
+    trap '' INT TERM
+    for service_pid in "$asset_pid" "$django_pid"; do
+        if [[ -n "$service_pid" ]]; then
+            kill -TERM -- "-$service_pid" 2>/dev/null || true
+        fi
+    done
+    wait || true
+}
+
+trap stop_children EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Django remains the only HTTP server; watched asset builds need a manual
+# browser refresh. If either process exits, stop the other instead of serving
+# templates with a dead watcher and stale frontend code.
+bun run dev &
+asset_pid=$!
+python manage.py runserver_plus 0000:8000 &
+django_pid=$!
+
+exit_status=0
+wait -n "$asset_pid" "$django_pid" || exit_status=$?
+exit "$exit_status"

@@ -149,8 +149,10 @@ emits assets. `build` performs those checks before deleting existing output;
 command aliases are removed. `start` remains a finite alias for `bun run build`.
 `dev` runs the type checks and audits once, then watches source changes and
 rebuilds development assets. Browser refresh stays manual, and Django remains
-the only HTTP server. Stop the watcher before production builds or final checks.
-See [development builds](vite-assets.md#development-builds).
+the only HTTP server. Local `compose/start` completes an initial checked build
+and starts `dev` alongside Django. Stop that local webserver and its watcher
+before production builds or final checks. See
+[development builds](vite-assets.md#development-builds).
 
 Run installs and verification in the existing application container at `/app`.
 Verify frozen reinstall, compiler identities, typed-lint rejection, full unit

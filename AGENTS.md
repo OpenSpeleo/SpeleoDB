@@ -322,13 +322,17 @@ lives in typed function-valued bindings with inert template identifiers.
   application event attributes, compatibility globals, or direct first-party
   `{% static %}` references. CDN/vendored libraries and Django's generated
   `url_reverse.js` remain external globals in their established order.
-- Run `docker exec -w /app speleodb-monorepo-django bun run dev` for automatic
-  asset rebuilds on save. Type checks and source/template audits run once before
-  the Vite build watcher starts; subsequent rebuilds compile only. Wait for a
-  successful build, then refresh the browser manually. Retain old hashed assets
-  while watching so open pages can finish deferred imports. Restart the watcher
-  after registry or Vite configuration edits. `build` and `start` remain finite
-  production builds. Stop the watcher before production builds or final browser
+- Local `compose/start` completes `bun run build:assets` before serving
+  templates, then supervises Django and `bun run dev` together for automatic
+  asset rebuilds on save. Do not start a second watcher. Use
+  `docker exec -w /app speleodb-monorepo-django bun run dev` only when Django
+  was started independently without the local launcher. Type checks and
+  source/template audits run once before the Vite build watcher starts;
+  subsequent rebuilds compile only. Wait for a successful build, then refresh
+  the browser manually. Retain old hashed assets while watching so open pages
+  can finish deferred imports. Restart the watcher after registry or Vite
+  configuration edits. `build` and `start` remain finite production builds. Stop
+  the local webserver and its watcher before production builds or final browser
   checks, then run `docker exec -w /app speleodb-monorepo-django bun run build`
   and confirm the manifest hash actually served by Django. Django remains the
   only server; do not add reload clients, generation polling, a Vite development
@@ -349,9 +353,13 @@ lives in typed function-valued bindings with inert template identifiers.
 
 ### Related system hooks
 
-- Dev container/webserver bootstrap: `compose/start` installs dependencies and
-  launches Django without an asset build or watcher. Start `dev` explicitly for
-  watched builds, or run `build` for a finite production build.
+- Dev container/webserver bootstrap: `compose/start` installs dependencies,
+  completes an initial checked asset build, and starts Django with the asset
+  watcher. Both process groups and their children stop together. Local Compose
+  mounts the checkout's launcher at `/start`; restart the container after
+  launcher edits, and recreate it when the Compose mount changes. Startup and
+  watched builds retain older hashed assets. Run finite production builds with
+  the local webserver and its watcher stopped.
 - Railpack image build: `railpack.json` (Bun from `.bun-version` via Mise,
   guarded frozen install followed by `bun run build`).
 - Railway service configuration: `.railway/railway.ts` is the sole authority;

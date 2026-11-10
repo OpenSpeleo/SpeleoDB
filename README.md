@@ -50,7 +50,12 @@ report:
 
 ### Building frontend assets
 
-Start automatic asset rebuilds in the running application container:
+Local container startup builds the frontend assets before serving Django, then
+keeps the asset watcher running alongside it. Refresh the browser manually after
+each successful rebuild shown in the webserver logs.
+
+If Django was started independently without `compose/start`, start one watcher
+in the running application container:
 
 ```bash
 docker exec -w /app speleodb-monorepo-django bun run dev
@@ -60,16 +65,20 @@ Leave the command running while editing. After each successful rebuild, refresh
 the browser manually. Type checks and source/template audits run once at
 startup; subsequent saves compile without repeating them.
 
-For a clean production build, stop the watcher and run:
+For a clean production build, stop the local webserver and its watcher, then
+run:
 
 ```bash
 docker exec -w /app speleodb-monorepo-django bun run build
 ```
 
 Wait for the build to finish, then refresh the browser. `bun run start` remains
-a finite production build alias. Container startup launches Django without
-building or watching frontend assets. See [Vite assets](docs/vite-assets.md) for
-the build and serving contract.
+a finite production build alias. The local launcher owns both process groups and
+stops them together. Local Compose mounts `compose/start` at `/start`, so a
+container restart picks up launcher changes without an image rebuild. Recreate
+existing containers once to apply a changed Compose mount. Startup and watched
+builds retain older hashed assets for open pages. See
+[Vite assets](docs/vite-assets.md) for the build and serving contract.
 
 ### Celery
 

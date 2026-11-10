@@ -13,10 +13,10 @@ Django application into a Vite-served SPA.
 `frontend_common/entries.json` names every route-owned entry. Both
 `vite.config.ts` and Django resolve that registry; a name cannot silently mean
 different source files on each side. Production output is content-hashed and
-minified under `speleodb/common/static/speleodb/vite/`, with source maps off. An
-explicitly started development build watcher writes hashed files directly to
-that output directory, with source maps, and rebuilds after source edits.
-Browser refresh stays manual; container startup does not start a build watcher.
+minified under `speleodb/common/static/speleodb/vite/`, with source maps off.
+The local Django launcher starts a development build watcher that writes hashed
+files directly to that output directory, with source maps, and rebuilds after
+source edits. Browser refresh stays manual.
 
 One graph does not mean one payload. Tailwind is shared, shell/route styles stay
 isolated where cascade ownership matters, route controllers are lazy, and common
@@ -165,7 +165,21 @@ test modules; Vitest globals must never reach a browser controller chunk.
 
 ## Development builds
 
-Start the opt-in watcher in the already-running application container:
+Local `compose/start` first completes
+`bun run build:assets --emptyOutDir=false`, so Django never starts against
+missing or stale startup assets, while open pages retain their older hashed
+imports. It then runs Django and `bun run dev` together. Source edits rebuild
+automatically; refresh the browser after the successful build message in the
+webserver logs.
+
+The launcher owns both process groups, including the Bun script children and
+Django reloader. Stopping it terminates both groups; if either process exits,
+the launcher stops its sibling and exits with the completed process status. This
+lifecycle belongs to the local container launcher, not Django autoreload or
+production deployment.
+
+Do not start a second watcher against the same output directory. For a Django
+process launched independently of `compose/start`, start its watcher explicitly:
 
 ```bash
 docker exec -w /app speleodb-monorepo-django bun run dev
@@ -181,9 +195,11 @@ loop.
 Watch builds retain older hashed assets so a page opened before a rebuild can
 still finish deferred imports. Restart the watcher after changing the entry
 registry or Vite configuration; registry changes also require the Django process
-restart described above. Stop the watcher before running production builds,
-pre-commit checks, or final browser verification: they share its output
-directory.
+restart described above. Stop the local webserver before running production
+builds, pre-commit checks, or final browser verification: its watcher shares the
+output directory. For manual inspection of a finite build, launch
+`python manage.py runserver_plus 0000:8000` from `/app` after the build; this
+standalone command does not start a watcher.
 
 For a clean finite production build, run:
 
@@ -194,9 +210,13 @@ docker exec -w /app speleodb-monorepo-django bun run build
 Wait for a successful result, then refresh the browser. The build checks types
 and source/template ownership before cleaning and emitting assets. `start`
 remains an alias for that finite build. `compose/start` installs the locked
-dependencies and launches Django; it does not build assets or start an asset
-watcher. A fresh checkout needs either the first successful watched build or an
-explicit finite build before frontend pages can use compiled assets.
+dependencies, completes an initial checked asset build, and supervises Django
+with the asset watcher. The initial finite build and the watcher each run their
+normal startup checks; subsequent watched saves compile only. Local Compose
+mounts the checkout's `compose/start` at `/start` over the image's copy. Restart
+the container after launcher edits; no image rebuild is needed. Existing
+containers must be recreated once when adopting a changed Compose mount. The
+monorepo override inherits this mount and continues using the same `/start`.
 
 Builds write hashed files and the manifest directly, without a staging or
 immutable-generation publication layer. Django's asset tags share one manifest

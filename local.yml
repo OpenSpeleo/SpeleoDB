@@ -23,6 +23,8 @@ x-django: &django
       condition: service_completed_successfully
   volumes:
     - .:/app:z
+    # Read the checkout's launcher at startup, including with a cached image.
+    - ./compose/start:/start:ro,z
     - type: volume
       source: speleodb_local_web_node_modules
       target: /app/node_modules
