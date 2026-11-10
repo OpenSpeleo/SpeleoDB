@@ -29,9 +29,6 @@ class DumpProcessor(BaseFileProcessor):
                 item for item in commit.tree.traverse() if isinstance(item, GitFile)
             ]
 
-            if not commit_files:
-                raise RuntimeError(f"No file found in commit: `{commit.hexsha}`")
-
             for file in commit_files:
                 zipf.writestr(
                     str(file.path),

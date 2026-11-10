@@ -84,3 +84,11 @@ format, or `auto` for upload detection. Uploads use multipart `artifact` and
 source-save confirmation. Downloads return the selected revision's file as an
 attachment. See [project capabilities](project-formats.md) for validation and
 conversion support.
+
+## Empty revision downloads
+
+Every existing revision supports an Everything ZIP download, including the empty
+initial revision. Empty revisions return a valid ZIP with no entries rather than
+a server error. Nonempty archives retain their original paths and bytes. The
+authenticated empty-download regression uses a real local Git repository; no
+additional queries or conversion work are introduced.
