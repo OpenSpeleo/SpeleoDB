@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from pydantic import ValidationError as PydanticValidationError
 
 from speleodb.gis.models import Experiment
+from speleodb.gis.models.experiment import ExperimentFieldDefinition
 from speleodb.gis.models.experiment import ExperimentFieldsDict
 from speleodb.gis.models.experiment import FieldType
 from speleodb.gis.models.experiment import MandatoryFieldUuid
@@ -772,7 +773,7 @@ class TestExperimentModel:
 
 
 class TestExperimentFieldSanitization:
-    """Test that ExperimentFieldDefinition sanitizes name and options."""
+    """Test that ExperimentFieldDefinition sanitizes field names."""
 
     def test_pure_html_field_name_rejected(self) -> None:
         """A name that is only HTML tags gets stripped to empty and fails min_length."""
@@ -794,47 +795,14 @@ class TestExperimentFieldSanitization:
         assert "<" not in field_def.name
         assert "Temperature" in field_def.name
 
-    def test_zalgo_stripped_from_field_name(self) -> None:
-        zalgo = "Z\u0300\u0301\u0302\u0303\u0304\u0305a\u0300\u0301l\u0300g\u0300o"
+    def test_scientific_field_name_preserves_case_and_accents(self) -> None:
         field_def = ExperimentFieldDefinition(
-            name=zalgo,
+            name="<b>pH Température (mg/L)</b>",
             type=FieldType.TEXT,
             required=False,
             order=0,
         )
-        assert field_def.name == "Zalgo"
-
-    def test_html_stripped_from_select_options(self) -> None:
-        field_def = ExperimentFieldDefinition(
-            name="Pick One",
-            type=FieldType.SELECT,
-            required=False,
-            order=0,
-            options=[
-                "<b>Bold</b> Option",
-                "Normal Option",
-            ],
-        )
-        assert field_def.options is not None
-        for opt in field_def.options:
-            assert "<" not in opt
-            assert ">" not in opt
-        assert "Bold Option" in field_def.options
-        assert "Normal Option" in field_def.options
-
-    def test_pure_html_option_rejected(self) -> None:
-        """An option that is only HTML tags sanitizes to empty and is rejected."""
-        with pytest.raises(PydanticValidationError):
-            ExperimentFieldDefinition(
-                name="Pick One",
-                type=FieldType.SELECT,
-                required=False,
-                order=0,
-                options=[
-                    '<script>alert("xss")</script>',
-                    "Normal Option",
-                ],
-            )
+        assert field_def.name == "pH Température (mg/L)"
 
     def test_normal_name_preserved(self) -> None:
         field_def = ExperimentFieldDefinition(
@@ -844,3 +812,16 @@ class TestExperimentFieldSanitization:
             order=0,
         )
         assert field_def.name == "Temperature (C)"
+
+
+@pytest.mark.parametrize("options", [42, "Alpha", {"Alpha": "Beta"}])
+def test_select_options_reject_non_list_json(options: object) -> None:
+    with pytest.raises(PydanticValidationError):
+        ExperimentFieldDefinition.model_validate(
+            {
+                "name": "Pick One",
+                "type": FieldType.SELECT,
+                "order": 0,
+                "options": options,
+            }
+        )

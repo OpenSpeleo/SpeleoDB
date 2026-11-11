@@ -224,7 +224,7 @@ class TestSanitizeFieldName:
     """Test cases for the accent-preserving sanitize_field_name function."""
 
     def test_accented_characters_preserved(self) -> None:
-        """Accented Latin letters survive unlike sanitize_text."""
+        """Accented Latin letters survive the field-label normalization."""
         assert sanitize_field_name("café") == "café"
         assert sanitize_field_name("résumé") == "résumé"
         assert sanitize_field_name("naïve") == "naïve"
@@ -268,3 +268,8 @@ class TestSanitizeFieldName:
 
     def test_ampersand_preserved(self) -> None:
         assert sanitize_field_name("A & B") == "A & B"
+
+
+def test_format_characters_cannot_reset_combining_mark_limit() -> None:
+    text = "Z" + "\u0300\u200b" * 10
+    assert sanitize_text(text) == "Z\u0300\u0300\u0300"

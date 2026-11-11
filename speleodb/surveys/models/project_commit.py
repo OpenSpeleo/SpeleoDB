@@ -9,9 +9,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
-from speleodb.utils.sanitize import sanitize_text
-
 from speleodb.surveys.models import Project
+from speleodb.utils.sanitize import sanitize_text
 
 if TYPE_CHECKING:
     from speleodb.git_engine.core import GitCommit

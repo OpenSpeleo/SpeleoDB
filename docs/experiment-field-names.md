@@ -33,7 +33,8 @@ Field names are sanitized via `sanitize_field_name()` (defined in
 5. Collapses whitespace and strips edges.
 
 Accented characters (`é`, `ñ`, `ü`, etc.) are **preserved**. This differs from
-`sanitize_text()`, which strips accents as an anti-zalgo measure.
+`sanitize_text()`, which preserves ordinary accents but caps stacked combining
+marks. Scientific field labels retain their existing NFC-only policy.
 
 ### Where sanitization is applied
 

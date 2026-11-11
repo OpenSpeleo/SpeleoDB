@@ -30,7 +30,6 @@ from speleodb.gis.models.utils import generate_random_token
 from speleodb.users.models import User
 from speleodb.utils.pydantic_utils import pydantic_to_django_validation_error
 from speleodb.utils.sanitize import sanitize_field_name
-from speleodb.utils.sanitize import sanitize_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -130,17 +129,6 @@ class ExperimentFieldDefinition(PydanticBaseModel):
         if isinstance(v, str):
             return sanitize_field_name(v)
         return v
-
-    @field_validator("options", mode="before")
-    @classmethod
-    def sanitize_options(cls, v: list[str] | None) -> list[str] | None:
-        """Sanitize each option string and reject empty results."""
-        if v is None:
-            return v
-        sanitized = [sanitize_text(opt) if isinstance(opt, str) else opt for opt in v]
-        if any(opt == "" for opt in sanitized):
-            raise ValueError("Option values must not be empty after sanitization")
-        return sanitized
 
     @model_validator(mode="after")
     def validate_field(self) -> ExperimentFieldDefinition:
