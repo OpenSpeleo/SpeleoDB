@@ -81,9 +81,12 @@ class ProjectReleaseApiView(GenericAPIView[Project], SDBAPIViewMixin):
         comment = request_data.get("comment", "")
 
         try:
+            comment = serializers.CharField(
+                required=False, allow_blank=True
+            ).run_validation(comment)
             project.release_mutex(user=user, comment=comment)
 
-        except (ValidationError, PermissionError) as e:
+        except (ValidationError, serializers.ValidationError, PermissionError) as e:
             http_status = (
                 status.HTTP_403_FORBIDDEN
                 if isinstance(e, PermissionError)

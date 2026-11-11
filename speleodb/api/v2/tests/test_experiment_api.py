@@ -2799,3 +2799,135 @@ class TestExperimentListSerializerN1Protection(BaseAPITestCase):
         assert eager_by_id[first_id]["can_delete"] is False
         assert eager_by_id[last_id]["can_write"] is True
         assert eager_by_id[last_id]["can_delete"] is True
+
+
+@pytest.mark.django_db
+def test_field_rename_preserves_existing_select_option_values() -> None:
+    field_id = Experiment.generate_field_uuid()
+    options = ["<b>Good</b>", "Fair"]
+    experiment = ExperimentFactory.create(
+        experiment_fields={
+            field_id: {
+                "name": "Quality",
+                "type": "select",
+                "required": False,
+                "order": 2,
+                "options": options,
+            }
+        }
+    )
+    serializer = ExperimentSerializer(
+        experiment,
+        partial=True,
+        data={
+            "experiment_fields": [
+                {
+                    "id": field_id,
+                    "name": "Water Quality",
+                    "type": "select",
+                    "required": False,
+                    "options": options,
+                }
+            ]
+        },
+    )
+    assert serializer.is_valid(), serializer.errors
+    serializer.save()
+    experiment.refresh_from_db()
+    assert experiment.experiment_fields[field_id]["name"] == "Water Quality"
+    assert experiment.experiment_fields[field_id]["options"] == options
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("dictionary_input", [False, True])
+@pytest.mark.parametrize(
+    ("options", "expected"),
+    [(["<b>Bon</b>", "café"], ["Bon", "café"]), (["<img src=x>"], None)],
+)
+def test_new_select_options_are_sanitized(
+    dictionary_input: bool, options: list[str], expected: list[str] | None
+) -> None:
+    field_id = Experiment.generate_field_uuid()
+    definition = {
+        "name": "Quality",
+        "type": "select",
+        "required": False,
+        "order": 2,
+        "options": options,
+    }
+    serializer = ExperimentSerializer(
+        partial=True,
+        data={
+            "experiment_fields": {field_id: definition}
+            if dictionary_input
+            else [definition]
+        },
+    )
+    if expected is None:
+        assert not serializer.is_valid()
+        assert "empty after sanitization" in str(serializer.errors)
+    else:
+        assert serializer.is_valid(), serializer.errors
+        fields = serializer.validated_data["experiment_fields"]
+        quality = next(field for field in fields.values() if field["name"] == "Quality")
+        assert quality["options"] == expected
+
+
+def test_new_select_options_do_not_resanitize_field_names() -> None:
+    serializer = ExperimentSerializer(
+        partial=True,
+        data={
+            "experiment_fields": [
+                {
+                    "name": "&lt;b&gt;Quality&lt;/b&gt;",
+                    "type": "select",
+                    "required": False,
+                    "options": ["Good"],
+                }
+            ]
+        },
+    )
+    assert serializer.is_valid(), serializer.errors
+    names = [
+        field["name"]
+        for field in serializer.validated_data["experiment_fields"].values()
+    ]
+    assert "<b>Quality</b>" in names
+
+
+@pytest.mark.parametrize("options", [42, "Alpha", {"Alpha": "Beta"}, [42]])
+def test_new_dictionary_select_options_reject_invalid_types(options: object) -> None:
+    serializer = ExperimentSerializer(
+        partial=True,
+        data={
+            "experiment_fields": {
+                Experiment.generate_field_uuid(): {
+                    "name": "Quality",
+                    "type": "select",
+                    "required": False,
+                    "order": 2,
+                    "options": options,
+                }
+            }
+        },
+    )
+    assert not serializer.is_valid()
+    assert "Options must be a list of strings" in str(serializer.errors)
+
+
+def test_new_select_options_reject_marks_without_a_base_character() -> None:
+    serializer = ExperimentSerializer(
+        partial=True,
+        data={
+            "experiment_fields": [
+                {
+                    "name": "Quality",
+                    "type": "select",
+                    "required": False,
+                    "options": [" \u0301"],
+                }
+            ]
+        },
+    )
+    assert not serializer.is_valid()
+    assert "empty after sanitization" in str(serializer.errors)

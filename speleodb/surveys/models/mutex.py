@@ -7,6 +7,7 @@ from django.db.models import indexes
 
 from speleodb.surveys.models import Project
 from speleodb.users.models import User
+from speleodb.utils.sanitize import sanitize_text
 
 
 class ProjectMutex(models.Model):
@@ -60,5 +61,5 @@ class ProjectMutex(models.Model):
     def release_mutex(self, user: User, comment: str) -> None:
         self.is_active = False
         self.closing_user = user.email
-        self.closing_comment = comment
+        self.closing_comment = sanitize_text(comment)
         self.save()

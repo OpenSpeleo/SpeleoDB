@@ -121,10 +121,14 @@ validation after that transformation.
 
 `speleodb/utils/sanitize.py` owns both transformations:
 
-- `sanitize_text`: remove tags with `nh3`, decode HTML entities, decompose
-  Unicode to NFD, remove combining marks, recompose to NFC, remove
-  non-whitespace control/format characters, collapse spaces/tabs, and trim
-  edges. Accents are deliberately removed by this variant.
+- `sanitize_text`: remove tags with `nh3`, decode HTML entities, remove
+  non-whitespace control/format characters, decompose Unicode to NFD, cap
+  combining marks per base character, recompose to NFC, collapse spaces/tabs,
+  and trim edges. The limit in `MAX_COMBINING_MARKS_PER_CHAR` preserves ordinary
+  accents while bounding stacked marks. Control removal precedes counting so
+  invisible separators cannot reset the limit. Whitespace cannot anchor
+  combining marks; orphan marks are removed so they cannot masquerade as
+  nonempty labels.
 - `sanitize_field_name`: remove tags and decode entities, preserve accents with
   NFC normalization, then apply the same control/whitespace cleanup. Experiment
   field names use this variant through their schema validator.
@@ -134,3 +138,28 @@ other ingestion paths make render-side escaping necessary even after a value has
 passed a sanitizer. `StationTagSerializer.validate_color` separately requires
 six-digit hex colors; frontend validation remains necessary at the rendering
 boundary.
+
+Git commit ingestion sanitizes new database commit messages and author names;
+the Git objects and existing database rows retain their original identity. Mutex
+release sanitizes the closing comment while persisting its normal release state
+and closing user. The release endpoint validates comments using its declared
+character-field semantics before changing lock state: numeric JSON becomes text,
+while null, boolean, list and object values return a validation error and
+preserve the active lock. Both ingestion paths use `sanitize_text`.
+
+Experiment field names retain their case-preserving `sanitize_field_name`
+policy. `ExperimentSerializer.validate_experiment_fields` sanitizes options only
+for newly introduced fields, after schema validation, and rejects options that
+become empty. Both list and dictionary inputs use this boundary. Existing option
+strings identify stored measurements and remain immutable: a field rename must
+not rewrite those values or reject unchanged options because of a new sanitizer.
+The model and admin keep their established ownership: direct ORM inputs are
+trusted, and experiment fields are read-only in admin.
+
+Regression coverage exercises malformed option types, new option ingestion,
+existing option preservation during edits, Unicode accents and mark-limit
+bypass, real local Git history ingestion, and persisted mutex release state.
+These transformations add linear local string processing and no database
+queries. The revision-history controller uses `.text()` for mobile and desktop
+commit metadata, including pre-existing rows that have never passed these
+sanitizers.

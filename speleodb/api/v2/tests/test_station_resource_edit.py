@@ -83,7 +83,7 @@ def test_multipart_edit_preserves_type_and_persists_replacement_content(
         assert detail.data["resource_type"] == resource_type
         if resource_type == StationResourceType.NOTE:
             # The model normalizes accented text while retaining other Unicode.
-            assert resource.text_content == "Updated note cafe 🦇"
+            assert resource.text_content == "Updated note café 🦇"
             assert detail.data["text_content"] == resource.text_content
             assert detail.data["file"] is None
         else:

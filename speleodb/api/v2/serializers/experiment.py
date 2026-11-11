@@ -543,6 +543,26 @@ class ExperimentSerializer(
                 "experiment_fields must be a list or dictionary."
             )
 
+        existing_fields = self.instance.experiment_fields if self.instance else {}
+        for field_id, field_data in value.items():
+            # Existing option strings identify persisted record values.
+            if field_id in existing_fields:
+                continue
+            if not isinstance(field_data, dict):
+                raise serializers.ValidationError("Each field must be a dictionary.")
+            options = field_data.get("options")
+            if options is None:
+                continue
+            if not isinstance(options, list) or any(
+                not isinstance(option, str) for option in options
+            ):
+                raise serializers.ValidationError("Options must be a list of strings.")
+            sanitized_options = [sanitize_text(option) for option in options]
+            if any(not option for option in sanitized_options):
+                raise serializers.ValidationError(
+                    "Option values must not be empty after sanitization"
+                )
+            value[field_id] = {**field_data, "options": sanitized_options}
         return value
 
     def to_representation(self, instance: Experiment) -> dict[str, Any]:

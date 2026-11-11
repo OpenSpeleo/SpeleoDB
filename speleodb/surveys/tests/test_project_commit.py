@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import TYPE_CHECKING
 
+import git
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -12,8 +14,13 @@ from django.utils import timezone
 
 from speleodb.api.v2.tests.factories import ProjectCommitFactory
 from speleodb.api.v2.tests.factories import ProjectFactory
+from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models.mutex import ProjectMutex
 from speleodb.users.tests.factories import UserFactory
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestProjectCommitModel(TestCase):
@@ -275,3 +282,62 @@ class TestProjectCommitModel(TestCase):
         )
 
         assert commit.tree == {}
+
+
+@pytest.mark.django_db
+def test_import_git_commit_sanitizes_text_and_preserves_history(tmp_path: Path) -> None:
+    project = ProjectFactory.create()
+    message = '<script>alert("xss")</script> café Z' + "\u0300" * 6
+    with GitRepo.init(tmp_path / "history") as repository:
+        assert isinstance(repository, GitRepo)
+        repository.index.commit(
+            "Parent", author=git.Actor("Diver", "diver@example.com")
+        )
+        parent = repository.head.commit
+        repository.index.commit(
+            message,
+            author=git.Actor("Renée\u200b", "diver@example.com"),
+        )
+        original = repository.commit()
+        commit = ProjectCommit.get_or_create_from_commit(project, original)
+        commit.refresh_from_db()
+        assert commit.message == "café Z\u0300\u0300\u0300"
+        assert commit.author_name == "Renée"
+        assert commit.author_email == "diver@example.com"
+        assert commit.parent_ids == [parent.hexsha]
+        assert commit.id == original.hexsha
+        assert original.message == message
+
+        # Reimport must preserve the existing row rather than rewriting history.
+        ProjectCommit.objects.filter(pk=commit.pk).update(message="Stored history")
+        existing = ProjectCommit.get_or_create_from_commit(project, original)
+        assert existing.pk == commit.pk
+        assert existing.message == "Stored history"
+
+
+class TestMutexClosingCommentSanitization(TestCase):
+    """Test that ProjectMutex.release_mutex sanitizes the closing comment."""
+
+    def setUp(self) -> None:
+        self.user = UserFactory.create()
+        self.project = ProjectFactory.create(created_by=self.user.email)
+        self.mutex = ProjectMutex.objects.create(
+            project=self.project, user=self.user, is_active=True
+        )
+
+    def test_html_stripped_from_closing_comment(self) -> None:
+        self.mutex.release_mutex(self.user, '<script>alert("xss")</script> done')
+        self.mutex.refresh_from_db()
+        assert "<script>" not in self.mutex.closing_comment
+        assert self.mutex.closing_comment == "done"
+        assert not self.mutex.is_active
+        assert self.mutex.closing_user == self.user.email
+
+    def test_zalgo_stripped_from_closing_comment(self) -> None:
+        zalgo = "Z\u0300\u0301\u0302\u0303a\u0300\u0301l\u0300g\u0300o"
+        self.mutex.release_mutex(self.user, f"{zalgo} release")
+        self.mutex.refresh_from_db()
+        assert (
+            self.mutex.closing_comment
+            == "Z\u0300\u0301\u0302à\u0301l\u0300g\u0300o release"
+        )

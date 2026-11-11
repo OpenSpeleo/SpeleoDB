@@ -565,3 +565,45 @@ class TestProjectListLatestCommit(BaseAPITestCase):
             )
         assert query_counts[0] > 0
         assert query_counts[1:] == [query_counts[0]] * 2
+
+
+class TestProjectReleaseCommentValidation(BaseAPIProjectTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.set_test_project_permission(
+            level=PermissionLevel.ADMIN, permission_type=PermissionType.USER
+        )
+        self.project.acquire_mutex(user=self.user)
+
+    @parameterized.expand([(42, "42"), (3.5, "3.5")])
+    def test_numeric_comment_is_stored_as_text(
+        self, comment: float, expected: str
+    ) -> None:
+        mutex = self.project.active_mutex
+        assert mutex is not None
+        response = self.client.post(
+            reverse("api:v2:project-release", kwargs={"id": self.project.id}),
+            data={"comment": comment},
+            format="json",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        mutex.refresh_from_db()
+        assert not mutex.is_active
+        assert mutex.closing_comment == expected
+
+    @parameterized.expand([(["comment"],), ({"text": "comment"},), (None,), (True,)])
+    def test_invalid_comment_preserves_active_lock(self, comment: object) -> None:
+        mutex = self.project.active_mutex
+        assert mutex is not None
+        response = self.client.post(
+            reverse("api:v2:project-release", kwargs={"id": self.project.id}),
+            data={"comment": comment},
+            format="json",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        mutex.refresh_from_db()
+        assert mutex.is_active
+        assert mutex.closing_comment == ""
+        assert mutex.closing_user == ""

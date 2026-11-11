@@ -10,6 +10,7 @@ from django.db import models
 from django.utils import timezone
 
 from speleodb.surveys.models import Project
+from speleodb.utils.sanitize import sanitize_text
 
 if TYPE_CHECKING:
     from speleodb.git_engine.core import GitCommit
@@ -117,13 +118,13 @@ class ProjectCommit(models.Model):
             id=commit.hexsha,
             defaults={
                 "project": project,
-                "author_name": commit.author.name or "",
+                "author_name": sanitize_text(commit.author.name or ""),
                 "author_email": commit.author.email or "",
                 "authored_date": datetime.fromtimestamp(
                     commit.authored_date,
                     tz=timezone.get_current_timezone(),
                 ),
-                "message": message,
+                "message": sanitize_text(message),
                 "parent_ids": [parent.hexsha for parent in commit.parents],
                 "tree": commit.tree_to_json(),
             },
