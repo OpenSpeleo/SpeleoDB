@@ -1,0 +1,344 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+---
+language: en-US
+early_access: false
+tone_instructions: >-
+  Review as a principal engineer who teaches clearly. Explain concrete
+  failures, their impact, and the smallest sound fix. Be direct, not
+  combative. Include diagrams only when they clarify nontrivial flows; avoid
+  decoration and praise.
+
+reviews:
+  profile: assertive
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  high_level_summary_instructions: >-
+    Explain the user-visible behavior change, affected boundaries, and
+    material risks. Distinguish verified test results from missing
+    verification. Include a diagram only when it explains an interaction
+    better than a short paragraph.
+  collapse_walkthrough: true
+  review_status: true
+  review_details: true
+  review_progress: true
+  fail_commit_status: true
+  sequence_diagrams: true
+  poem: false
+  in_progress_fortune: false
+  auto_approvals:
+    enabled: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+    ignore_title_keywords:
+      - '[wip]'
+    labels:
+      - '!skip-review'
+      - '!no-review'
+    base_branches:
+      - '^master$'
+      - '^dev$'
+  # Exclude generated output and local state, not source or dependency locks.
+  path_filters:
+    - '!**/node_modules/**'
+    - '!**/.git/**'
+    - '!.venv/**'
+    - '!.uv/**'
+    - '!.workdir/**'
+    - '!.artifacts/**'
+    - '!speleodb/common/static/speleodb/vite/**'
+  path_instructions:
+    - path: '**/*'
+      instructions: >-
+        Follow AGENTS.md and docs/coding-rules.md. Prioritize correctness,
+        permission enforcement, data preservation, XSS at rendering
+        boundaries, error handling, and consequential regression coverage.
+        Keep fixes proportional to this low-traffic application. Do not
+        propose speculative coordination infrastructure, compatibility layers,
+        or tests that merely repeat implementation details. Report observed
+        verification separately from suggested checks; do not claim unrun
+        tests passed. Each finding must identify severity, affected lines, a
+        reachable failure scenario, and the smallest correction. Trace callers
+        before alleging a defect; consolidate duplicate symptoms of one cause.
+        Treat uncertain context as unknown. Do not enforce stale documentation
+        over current owner directives; report the concrete discrepancy.
+    - path: '**/*.py'
+      instructions: >-
+        Trace endpoint permissions, serializer validation, model invariants,
+        persistence, and background tasks together. Check tenant isolation,
+        immutable identities, failed-operation state preservation, transaction
+        boundaries, query amplification, and original exception propagation.
+        Preserve unrelated API status codes, error envelopes, and schemas.
+        Reuse TaskResultStatus and established model ownership. Python
+        exception syntax and imports must follow docs/coding-rules.md; do not
+        suggest older syntax or dependency versions over the authoritative
+        project manifests.
+    - path: 'speleodb/**/migrations/*.py'
+      instructions: >-
+        Read preceding migration state and dependent migrations. Verify
+        constraint names, defaults, data preservation, and forward/reverse
+        behavior against actual historical models. Flag destructive operations
+        and compatibility problems with historical inserts. Do not request
+        migrations merely to support an implementation abstraction.
+    - path: '**/*.ts'
+      instructions: >-
+        Trace callers and shared contracts before recommending changes. Check
+        stale asynchronous results, cancellation, lifecycle cleanup,
+        permission enforcement, and public/private map parity. Use shared
+        modules rather than duplicated behavior. Keep constants in their
+        established owners, API calls on generated operations, and application
+        behavior in typed Vite controllers. Inspect untrusted values at HTML,
+        URL, and CSS sinks; input sanitization does not replace output
+        encoding. Flag unsupported runtime APIs against the actual Bun/browser
+        configuration.
+    - path: '**/templates/**/*.html'
+      instructions: >-
+        Check output escaping, attribute quoting, safe URL handling, and
+        stable DOM hooks against their controllers. Reject executable inline
+        application scripts and event attributes. Preserve Vite asset loading,
+        inert JSON context, typed Alpine bindings, and the documented
+        public/private dark mode contract. Never treat hidden UI controls as
+        authorization.
+    - path: '**/{test*.py,conftest.py,factories.py,*.spec.ts,*.test.ts}'
+      instructions: >-
+        Require tests for concrete application failures and meaningful
+        boundary cases, including persistence and state preservation after
+        failure. Avoid framework-mechanics, factory-echo, and mock-call-count
+        tests. Use real clocks and established fixtures; mocks require an
+        unavoidable external boundary. Do not invent retry failures or
+        concurrency harnesses. Respect container-only execution, fixture size
+        and GitLab creation budgets. Backend behavior belongs in pytest,
+        frontend logic in Vitest, and only complex browser-dependent
+        interactions in Playwright.
+    - path: '**/*.md'
+      instructions: >-
+        Cross-check changed documentation with the actual referenced code,
+        manifests, commands, tests, and configuration in both directions.
+        Verify API names, signatures, permissions, statuses, errors, state
+        transitions, ownership, and performance claims. Identify stale paths,
+        superseded interfaces, and descriptions of planned behavior presented
+        as shipped. If code behavior changes, check that affected docs were
+        updated. Cite the concrete mismatch and smallest correction, not
+        speculative documentation.
+    - path: '{compose/**,config/**,.railway/**,.devcontainer/**}'
+      instructions: >-
+        Check startup ordering, process shutdown, secret handling, service
+        references, and standalone/container assumptions. Railway settings
+        belong in .railway/railway.ts; application deployment does not apply
+        that file. Verify any claimed rollout against provided deployment
+        evidence. Do not introduce services, locks, schedules, or recovery
+        infrastructure without a product requirement.
+    - path: '{railpack.json,local.yml}'
+      instructions: >-
+        Trace configured commands and mounts into compose scripts and the
+        development/production documentation. Preserve health dependencies,
+        process supervision, existing volumes, and standalone deployment
+        behavior. Configuration syntax alone does not prove runtime health.
+    - path: '**/{pyproject.toml,uv.lock,package.json,bun.lock}'
+      instructions: >-
+        Check direct and transitive compatibility, declared runtime pins,
+        lockfile agreement, hook/tool alignment, and documented dependency
+        blockers. Inspect CI permissions and untrusted PR inputs. Do not
+        bypass failed checks, weaken security gates, or treat lockfiles as
+        irrelevant generated output. Keep standalone web dependency resolution
+        separate from monorepo development overlays.
+    - path: '{.pre-commit-config.yaml,.github/**}'
+      instructions: >-
+        Verify hook/tool pins against project manifests, CI permissions, and
+        untrusted PR inputs. Keep required checks enabled and preserve
+        dependency update scheduling/grouping. Do not recommend privileged
+        workflow execution of untrusted pull request code or replacing tests
+        with weaker checks.
+    - path: '{.bun-version,bunfig.toml}'
+      instructions: >-
+        Verify the declared Bun version agrees with packageManager, engines,
+        containers, and CI. Preserve Bun execution for package scripts and
+        subprocesses. Do not silently switch runtime or introduce another
+        JavaScript package manager.
+    - path: 'speleodb/surveys/**'
+      instructions: >-
+        Keep history, checkout, purge, and conversion behavior on Project.
+        Trace destructive operations through actual Git and storage ownership.
+        Failed replacement must preserve usable prior artifacts; unexpected
+        conversion errors must fail the task, even after partial progress.
+        Explicit reruns must not become automatic retry/recovery
+        infrastructure. Preserve the separate export-job lifecycle. Do not add
+        repository close calls or lifetime wrappers without a concrete
+        resource requirement.
+    - path: 'speleodb/background_jobs/**'
+      instructions: >-
+        Trace task publication, worker signatures, TaskResultStatus
+        transitions, and original exception serialization together. A broker
+        receipt is not task completion. Do not report partial conversion or
+        upload failure as success. Preserve established export behavior and
+        explicit project operation reruns; do not generalize one lifecycle
+        into the other.
+  pre_merge_checks:
+    docstrings:
+      mode: 'off'
+    title:
+      mode: warning
+      requirements: >-
+        Describe the concrete problem or resulting behavior. Do not require a
+        particular commit-message convention or an issue number.
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: Behavior and documentation agreement
+        mode: warning
+        instructions: >-
+          For changed behavior or architecture, verify that affected
+          documentation describes the implemented result. Warn when a concrete
+          contradiction or missing explanation of the changed contract exists;
+          cite both relevant locations. Pass when there is no behavioral or
+          architectural change, or existing documentation remains accurate. Do
+          not demand docs for routine formatting or test-only changes.
+      - name: Sensitive output protection
+        mode: warning
+        instructions: >-
+          Warn when changed logging, error responses, templates, or
+          diagnostics expose credentials, API tokens, signed URLs, or private
+          user/project data to an unauthorized audience. Trace the value and
+          its audience; cite the concrete disclosure path. Pass for correctly
+          redacted output, authorized data responses, and clearly dummy
+          fixture values. Do not exempt real secrets merely because they
+          appear in a test or example.
+      - name: Scope and proportionality
+        mode: warning
+        instructions: >-
+          Compare the diff with requirements stated by the maintainer or in
+          the linked issue and PR description. Warn about unrelated behavior,
+          refactors, persistent state, queues, services, or speculative
+          recovery and coordination machinery without an evidenced
+          requirement. Pass when changes are necessary for the stated
+          behavior. Report insufficient context when the intended scope cannot
+          be established; never invent requirements or treat an unverified
+          claim as maintainer approval.
+      - name: Consequential regression coverage
+        mode: warning
+        instructions: >-
+          For changed application behavior, identify the concrete failure and
+          inspect relevant existing and new tests. Warn when consequential new
+          behavior or a bug fix lacks proportionate coverage, especially
+          permissions, stored data, and failure-state preservation. Existing
+          coverage can suffice for refactors; skip formatting and docs-only
+          changes. Use established pytest, Vitest, and browser boundaries, not
+          file adjacency or test counts. Distinguish test presence from
+          passing execution; missing run evidence is unknown, not proof of
+          failure.
+      - name: API and persisted data integrity
+        mode: warning
+        instructions: >-
+          Check changed API routes, permissions, statuses, error shapes, task
+          signatures, persisted identifiers, and storage formats against their
+          callers, schemas, and documented semantics. Warn when a concrete
+          breaking change is undisclosed or affected in-scope callers remain
+          stale. Pass for unchanged contracts or intentional changes with
+          aligned callers and documentation. Do not demand aliases, dual
+          paths, or compatibility shims for hypothetical consumers;
+          compatibility requires an explicit requirement. For input
+          transformations, verify types before string operations, validate
+          empty results after normalization, and preserve persisted choice
+          values and other identities. Warn when repeated sanitization changes
+          valid stored data or a rejected mutation leaves partial state.
+          Output encoding remains required even when input is sanitized.
+      - name: Shared map behavior coverage
+        mode: warning
+        instructions: >-
+          For shared map changes, trace both private-map and public-gis
+          entrypoints and affected controllers. Warn when an applicable caller
+          retains stale behavior, a shared fix is duplicated, or one viewer
+          fails to initialize. Preserve deliberate permission and feature
+          differences. Pass for changes confined to a demonstrated
+          viewer-specific defect or when all applicable callers are aligned.
+          Report uncertain applicability explicitly; neither a promise of
+          follow-up work nor a fake success response proves coverage.
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+  tools:
+    github-checks:
+      enabled: true
+    eslint:
+      enabled: true
+      config_file: eslint.config.ts
+    ruff:
+      enabled: true
+      config_file: pyproject.toml
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    actionlint:
+      enabled: true
+    hadolint:
+      enabled: true
+
+chat:
+  auto_reply: true
+  art: false
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - AGENTS.md
+      - files: docs/coding-rules.md
+        applyTo: '**/*'
+      - files: docs/xss-protection.md
+        applyTo: '**/*'
+      - files: docs/admin-operations.md
+        applyTo: 'speleodb/surveys/**,speleodb/background_jobs/**'
+      - files: docs/ci-gitlab-testing.md
+        applyTo: 'speleodb/testing/**,**/conftest.py,**/factories.py'
+      - files: docs/map-viewer/architecture.md
+        applyTo: >-
+          frontend_private/static/private/ts/map_viewer/**,
+          frontend_public/static/ts/gis_view_main.ts,
+          frontend_common/controllers/{private-map,public-gis}.ts
+      - files: docs/dependency-updates.md
+        applyTo: '**/{pyproject.toml,uv.lock,package.json,bun.lock}'
+
+code_generation:
+  docstrings:
+    path_instructions:
+      - path: '**/*'
+        instructions: >-
+          Follow AGENTS.md and docs/coding-rules.md. Preserve existing
+          comments unless the code makes them factually incorrect. Explain
+          meaningful contracts, side effects, errors, and ownership; do not
+          narrate obvious implementation steps or invent guarantees to
+          increase coverage.
+  unit_tests:
+    path_instructions:
+      - path: '**/*'
+        instructions: >-
+          Follow AGENTS.md's test-driven and controlled-boundary requirements.
+          Reproduce a consequential application failure before changing
+          behavior. Use existing pytest, Vitest, and browser boundaries, real
+          clocks, and minimal fixtures. Avoid unnecessary mocks, synthetic
+          retry failures, concurrency harnesses, and implementation-detail
+          tests. Run checks only in the existing application container; do not
+          install prerequisites or claim success for unrun checks. Honor stop
+          requests.

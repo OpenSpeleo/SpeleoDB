@@ -115,6 +115,10 @@ Unlike product docs, these files prioritize:
 
 ### Quality and Testing
 
+- [CodeRabbit reviews](coderabbit.md)
+  - Review profile, automation, repository guidance, and configuration
+    validation.
+
 - [Vite assets](vite-assets.md)
   - Logical entries, template/controller integration, live registry and asset
     coherence, and production verification.
