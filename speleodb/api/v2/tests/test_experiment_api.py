@@ -2913,3 +2913,21 @@ def test_new_dictionary_select_options_reject_invalid_types(options: object) -> 
     )
     assert not serializer.is_valid()
     assert "Options must be a list of strings" in str(serializer.errors)
+
+
+def test_new_select_options_reject_marks_without_a_base_character() -> None:
+    serializer = ExperimentSerializer(
+        partial=True,
+        data={
+            "experiment_fields": [
+                {
+                    "name": "Quality",
+                    "type": "select",
+                    "required": False,
+                    "options": [" \u0301"],
+                }
+            ]
+        },
+    )
+    assert not serializer.is_valid()
+    assert "empty after sanitization" in str(serializer.errors)

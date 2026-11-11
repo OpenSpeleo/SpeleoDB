@@ -126,7 +126,9 @@ validation after that transformation.
   combining marks per base character, recompose to NFC, collapse spaces/tabs,
   and trim edges. The limit in `MAX_COMBINING_MARKS_PER_CHAR` preserves ordinary
   accents while bounding stacked marks. Control removal precedes counting so
-  invisible separators cannot reset the limit.
+  invisible separators cannot reset the limit. Whitespace cannot anchor
+  combining marks; orphan marks are removed so they cannot masquerade as
+  nonempty labels.
 - `sanitize_field_name`: remove tags and decode entities, preserve accents with
   NFC normalization, then apply the same control/whitespace cleanup. Experiment
   field names use this variant through their schema validator.
@@ -140,7 +142,10 @@ boundary.
 Git commit ingestion sanitizes new database commit messages and author names;
 the Git objects and existing database rows retain their original identity. Mutex
 release sanitizes the closing comment while persisting its normal release state
-and closing user. Both use `sanitize_text`.
+and closing user. The release endpoint validates comments using its declared
+character-field semantics before changing lock state: numeric JSON becomes text,
+while null, boolean, list and object values return a validation error and
+preserve the active lock. Both ingestion paths use `sanitize_text`.
 
 Experiment field names retain their case-preserving `sanitize_field_name`
 policy. `ExperimentSerializer.validate_experiment_fields` sanitizes options only

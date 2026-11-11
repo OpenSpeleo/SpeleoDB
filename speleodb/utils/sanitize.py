@@ -60,7 +60,7 @@ def sanitize_text(value: str) -> str:
     value = unicodedata.normalize("NFD", value)
 
     # 5. Cap combining marks per base character (blocks Zalgo, keeps accents).
-    #    Marks before any base character are dropped entirely.
+    #    Marks without a preceding non-whitespace base are dropped entirely.
     result: list[str] = []
     has_base = False
     mark_count = 0
@@ -71,7 +71,7 @@ def sanitize_text(value: str) -> str:
                 if mark_count <= MAX_COMBINING_MARKS_PER_CHAR:
                     result.append(ch)
         else:
-            has_base = True
+            has_base = not ch.isspace()
             mark_count = 0
             result.append(ch)
     value = "".join(result)

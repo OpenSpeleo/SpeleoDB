@@ -273,3 +273,8 @@ class TestSanitizeFieldName:
 def test_format_characters_cannot_reset_combining_mark_limit() -> None:
     text = "Z" + "\u0300\u200b" * 10
     assert sanitize_text(text) == "Z\u0300\u0300\u0300"
+
+
+def test_whitespace_does_not_anchor_combining_marks() -> None:
+    assert sanitize_text(" \u0301\t\u0300\n\u0302") == ""
+    assert sanitize_text("café \u0301 next") == "café next"
