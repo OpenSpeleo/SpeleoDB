@@ -41,7 +41,7 @@ content before storing the original file bytes. See the
 ## Conversion behavior
 
 Ariane, Compass, and Stalagmight support survey conversion. Stalagmight uses
-`StalagMightInterface.from_file()` from `openspeleo_lib.interfaces`, followed by
+`StalagmightInterface.from_file()` from `openspeleo_lib.interfaces`, followed by
 the common `survey_to_geojson()` exporter. Explicit STALAGMIGHT and AUTO uploads
 request background generation when the project software matches the source.
 SQLite integrity validation and byte-for-byte storage happen before scheduling;

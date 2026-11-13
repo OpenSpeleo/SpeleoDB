@@ -23,7 +23,10 @@ from django.test import TestCase
 from django_celery_results.models import TaskResult
 from git import Actor
 from openspeleo_lib.geojson import survey_to_geojson
-from openspeleo_lib.interfaces import StalagMightInterface
+from openspeleo_lib.interfaces import StalagmightInterface
+from openspeleo_lib.loop_closure.presets import (
+    LengthAzimuthWeightedLeastSquaresHorizontalSolver,
+)
 
 from speleodb.background_jobs.archive_sources import GitSource
 from speleodb.background_jobs.operations import schedule_operation
@@ -201,7 +204,12 @@ def test_native_generation_uses_common_exporter(
     commit, repository = local_source
     source = repository.path / "stalagmight.stalx"
     expected = orjson.loads(
-        orjson.dumps(survey_to_geojson(StalagMightInterface.from_file(source)))
+        orjson.dumps(
+            survey_to_geojson(
+                StalagmightInterface.from_file(source),
+                loop_closure_solver=LengthAzimuthWeightedLeastSquaresHorizontalSolver,
+            )
+        )
     )
     generation = _queue(commit)
     _run(commit, generation)
@@ -212,7 +220,7 @@ def test_native_generation_uses_common_exporter(
         actual = orjson.loads(stored.read())
     assert actual == expected
     anchor, entrance, branch = actual["features"]
-    assert anchor["geometry"]["coordinates"] == [0.0, 0.0]
+    assert anchor["geometry"]["coordinates"] == [-70.0, 40.0]
     assert entrance["id"] == str(NATIVE_SHOT_ID)
     assert entrance["properties"] == {
         "id": 1,
@@ -223,9 +231,11 @@ def test_native_generation_uses_common_exporter(
     # The hidden jump advances the leg's origin, the native correction points it
     # east, and the merged section starts exactly at that leg's destination.
     coordinates = entrance["geometry"]["coordinates"]
-    assert coordinates[0][0] > 0
+    assert coordinates[0][0] > anchor["geometry"]["coordinates"][0]
     assert coordinates[1][0] > coordinates[0][0]
-    assert coordinates[0][1] == coordinates[1][1] == 0
+    assert (
+        coordinates[0][1] == coordinates[1][1] == anchor["geometry"]["coordinates"][1]
+    )
     assert branch["geometry"]["coordinates"][0] == coordinates[1]
     assert branch["properties"]["color"] == "#336699"
     assert source.read_bytes() == stalagmight_bytes()

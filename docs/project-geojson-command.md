@@ -38,6 +38,13 @@ Omitting a selection, selecting both modes, passing an invalid or unknown UUID,
 selecting an excluded project, or combining `--project_type` with `--project`
 raises `CommandError`. These validation failures happen before repository work.
 
+New conversions use the format-specific presets selected by
+`Project.build_geojson()`: spatial inverse-length weighted L1 for Compass,
+length/azimuth weighted horizontal closure for Stalagmight, and reference
+inverse-length horizontal CG for Ariane. Existing stored artifacts retain their
+previous geometry until explicitly recomputed. See
+[loop closure](survey-loop-closure.md) for source and anchor policies.
+
 ## Schedule independent project rebuilds
 
 Use **Django admin → Background operations → Operations** to schedule one
@@ -87,11 +94,11 @@ coordinate conversion exceptions; its soft interruption remains best effort and
 the hard limit is the final bound.
 
 Disk-backed clones and per-project tasks reduce shared state and isolate worker
-failures. They do not bound all converter memory: the Compass solver can still
-allocate large dense arrays for a large survey. Do not treat this transition as
-a fix for the observed solver OOM, or automatically repeat a failing project.
-Ensure scratch has enough disk space for a full clone and one extracted
-revision.
+failures. They do not bound all converter memory: the native solvers still
+allocate workspaces that grow with survey size. Compass's L1 backend assembles
+its model sparsely, but that does not establish a memory bound for a large
+project or authorize automatically repeating a failed conversion. Ensure scratch
+has enough disk space for a full clone and one extracted revision.
 
 ## History traversal and artifact replacement
 

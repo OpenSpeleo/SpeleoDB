@@ -43,14 +43,17 @@ objects for existing signed URLs; only explicit history reset purges them. See
 
 Ariane coordinates come from explicit Latitude/Longitude fields. Comments do not
 supply coordinates or declination. Stalagmight conversion uses OpenSpeleo's
-native SQLite adapter and common exporter. Compass loads MAK/DAT projects
-through `compass_lib.interface.CompassInterface.load_project()` and uses its
-existing coordinate solver and GeoJSON exporter. Its project model differs from
-the shared OpenSpeleo `Survey` returned by the Ariane and Stalagmight
-interfaces. Invalid data does not become guessed map coordinates. Missing
-sources, empty surveys and absent usable anchors are skips; invalid surveys fail
-while preserving earlier artifacts. Solver memory requirements are unchanged by
-disk-backed source workspaces.
+native SQLite adapter and common exporter with its length/azimuth weighted
+horizontal preset. Ariane uses its reference inverse-length horizontal CG
+preset. Compass loads MAK/DAT projects through
+`compass_lib.interface.CompassInterface.load_project()` and selects its spatial
+inverse-length weighted L1 preset. Its project model differs from the shared
+OpenSpeleo `Survey` returned by the Ariane and Stalagmight interfaces. Invalid
+data does not become guessed map coordinates. Missing sources, empty surveys and
+absent usable anchors are skips; invalid surveys fail while preserving earlier
+artifacts. Solver memory requirements are unchanged by disk-backed source
+workspaces. See [format-specific loop closure](survey-loop-closure.md) for the
+selected presets, anchor policies, and source-safety boundaries.
 
 Deploy matching web and worker code together, draining old generation work and
 cleaning journaled unpublished objects before table removal. The detailed

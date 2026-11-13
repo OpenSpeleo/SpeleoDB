@@ -17,7 +17,7 @@ from typing import Any
 import compass_lib.geojson
 from compass_lib.geojson import project_to_geojson
 from compass_lib.interface import CompassInterface
-from compass_lib.solver.sparse import SparseSolver
+from compass_lib.loop_closure.presets import InverseLengthWeightedL1SpatialSolver
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
@@ -34,11 +34,18 @@ from django.db.models.functions import Coalesce
 from django.db.utils import IntegrityError
 from django.utils import timezone
 from django_countries.fields import CountryField
+from openspeleo_lib.enums import ArianeShotType
 from openspeleo_lib.errors import EmptySurveyError
 from openspeleo_lib.geojson import NoKnownAnchorError
 from openspeleo_lib.geojson import survey_to_geojson
 from openspeleo_lib.interfaces import ArianeInterface
-from openspeleo_lib.interfaces import StalagMightInterface
+from openspeleo_lib.interfaces import StalagmightInterface
+from openspeleo_lib.loop_closure.presets import (
+    InverseLengthWeightedConjugateGradientHorizontalSolver,
+)
+from openspeleo_lib.loop_closure.presets import (
+    LengthAzimuthWeightedLeastSquaresHorizontalSolver,
+)
 
 from speleodb.background_jobs.archive_sources import mirror_project
 from speleodb.background_jobs.archive_sources import project_git_source
@@ -61,8 +68,6 @@ if TYPE_CHECKING:
     from datetime import datetime
     from typing import Any
     from typing import Self
-
-    from openspeleo_lib.models import Survey
 
     from speleodb.gis.models import ExplorationLead
     from speleodb.gis.models import ProjectGeoJSON
@@ -828,53 +833,55 @@ class Project(models.Model):
             )
 
     def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
-        """Build the GeoJSON from the survey file on disk."""
-        interface: type[ArianeInterface | StalagMightInterface]
-        match self.type:
-            case ProjectType.ARIANE:
-                interface = ArianeInterface
-            case ProjectType.STALAGMIGHT:
-                interface = StalagMightInterface
-            case ProjectType.COMPASS:
-                try:
-                    project = CompassInterface.load_project(file)
+        """Export using the source software's native loop-closure preset."""
+        if not self.supports_geojson:
+            raise GeoJSONGenerationError(
+                f"This project type is not supported yet: `{self.type}`."
+            )
+        try:
+            match self.type:
+                case ProjectType.COMPASS:
                     return project_to_geojson(
-                        project,
+                        CompassInterface.load_project(file),
                         include_stations=False,
                         include_legs=True,
                         include_passages=False,
                         include_anchors=True,
                         color_by_origin=False,
-                        solver=SparseSolver(),
+                        loop_closure=InverseLengthWeightedL1SpatialSolver,
                     )
-
-                except compass_lib.geojson.NoKnownAnchorError:
-                    raise
-
-                except FileNotFoundError as e:
-                    logger.error(f"File does not exists `{file}`.")  # noqa: TRY400
-                    raise GeoJSONGenerationError from e
-
-                except Exception as e:
-                    reraise_task_timeout(e)
-                    logger.error(  # noqa: TRY400
-                        f"Error processing file `{file}`. Not a valid Compass Project"
-                    )
-                    raise GeoJSONGenerationError from e
-
-            case _:
-                raise GeoJSONGenerationError(
-                    f"This project type is not supported yet: `{self.type}`."
+                case ProjectType.ARIANE:
+                    survey = ArianeInterface.from_file(file)
+                    solver = InverseLengthWeightedConjugateGradientHorizontalSolver
+                case ProjectType.STALAGMIGHT:
+                    survey = StalagmightInterface.from_file(file)
+                    solver = LengthAzimuthWeightedLeastSquaresHorizontalSolver
+                case _:
+                    # Unsupported types were rejected before conversion began.
+                    raise AssertionError(self.type)  # noqa: TRY301
+            # Keep expected omissions as skips before native preparation, whose
+            # missing-control validation otherwise raises a generic ValueError.
+            stations = [
+                shot
+                for shot in survey.shots
+                if not shot.excluded and shot.shot_type != ArianeShotType.CLOSURE
+            ]
+            if not stations:
+                raise EmptySurveyError(  # noqa: TRY301 - expected omission
+                    "The survey has no active stations."
                 )
-
-        try:
-            survey: Survey = interface.from_file(file)
-            return survey_to_geojson(survey)
-
-        except EmptySurveyError, NoKnownAnchorError:
+            if not any(shot.is_geolocation_known() for shot in stations):
+                raise NoKnownAnchorError(  # noqa: TRY301 - expected omission
+                    "The survey has no usable geographic anchor."
+                )
+            return survey_to_geojson(survey, loop_closure_solver=solver)
+        except (
+            EmptySurveyError,
+            NoKnownAnchorError,
+            compass_lib.geojson.NoKnownAnchorError,
+        ):
             raise
-
-        except Exception as e:
-            reraise_task_timeout(e)
-            logger.error(f"Error processing {self.type} survey file `{file}`.")  # noqa: TRY400
-            raise GeoJSONGenerationError from e
+        except Exception as error:
+            reraise_task_timeout(error)
+            logger.exception("Error processing %s survey file `%s`.", self.type, file)
+            raise GeoJSONGenerationError from error

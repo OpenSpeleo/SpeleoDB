@@ -317,6 +317,29 @@ wheels = [
 ]
 
 [[package]]
+name = "cave-closure"
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/04/fcd5b24259e42f0b14e6342474cff11506564b92af64ae55b3606e8afe47/cave_closure-0.0.6.tar.gz", hash = "sha256:9886f9ce9f4d644cec0184c4544bc35c618c1fe34d93d8335a26046187374d09", size = 17135001, upload-time = "2026-11-14T08:49:25.584Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/8b/7a80afde2915d151bcde8602189ae430cba684e8ab7844f6df0b7b24220e/cave_closure-0.0.6-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:7d0078da4391f176eca1dd6e3ddcbabaa330095bf7d4b6f21a435864d1d0a374", size = 2886313, upload-time = "2026-11-14T08:48:57.786Z" },
+    { url = "https://files.pythonhosted.org/packages/af/0b/e90701d9c8a9b53009c604458c05520dc73624d77c9f174babdb1709d3c3/cave_closure-0.0.6-cp311-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:d413cdfebf2fce1851f1229206f05996288735c9e7e63a1b9bea2521ba44b7fa", size = 3408025, upload-time = "2026-11-14T08:49:00.247Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/df/37633e675bd55a48a72a292f05b1be60b92816b406c62cfadc81ced2ffbc/cave_closure-0.0.6-cp311-abi3-manylinux_2_39_x86_64.whl", hash = "sha256:30a43e015b7d0833103a00632581e65941ccde00cad38a0c9a3002f87b9b55f5", size = 3980267, upload-time = "2026-11-14T08:49:02.013Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/f6/720d4f9376ecb59be76808aa4b7a45ab545c32ff874282ab4c2cdacb203d/cave_closure-0.0.6-cp311-abi3-win_amd64.whl", hash = "sha256:388cc792d349961a973a85ea8f54eaf662b89ca7718e0156f937e69cca002e04", size = 3102193, upload-time = "2026-11-14T08:49:03.796Z" },
+    { url = "https://files.pythonhosted.org/packages/59/50/558ebdf0250dbc563f61e41e08afe1f368c33d936ce5adffc35b6b8c3dd2/cave_closure-0.0.6-cp311-abi3-win_arm64.whl", hash = "sha256:e756bd4a8f47f06bcc4c58f65d012909af731d6adf21a5365d3ff3f1a5ab20c0", size = 2575516, upload-time = "2026-11-14T08:49:05.554Z" },
+    { url = "https://files.pythonhosted.org/packages/63/ad/f17c23c3e9e51b54ea4d427a47b0ac2b12939e904dda8b9cf5508f9799b9/cave_closure-0.0.6-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:f9041b51f754aa993d8a64ee92f021957b0b604e001edcb878397db9956ac0c6", size = 2878547, upload-time = "2026-11-14T08:49:07.439Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/e5/47b069a0d8c74c813e63cb618120b3c45a016dfdfc0dc881ee2a6c7f243e/cave_closure-0.0.6-cp314-cp314t-manylinux_2_39_aarch64.whl", hash = "sha256:34e1a89ad3a66af23180a27f6eb60137931e468c249c29908bae7525b44d2bd0", size = 3404792, upload-time = "2026-11-14T08:49:09.259Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/16/ffaaa04cb9ba6e2d4911ea6b149bf12a4162adcb32e2bbed329e40a49911/cave_closure-0.0.6-cp314-cp314t-manylinux_2_39_x86_64.whl", hash = "sha256:cb36f09652f216d5a478526752e73f909418a7b56fe73a408578eb807a6b0d43", size = 3973008, upload-time = "2026-11-14T08:49:10.937Z" },
+    { url = "https://files.pythonhosted.org/packages/90/80/2981da2234b421f93cf863f67b9cbd315d8801dba5cbc679fdc3887b0ac4/cave_closure-0.0.6-cp314-cp314t-win_amd64.whl", hash = "sha256:dd278cadeb4ebd6417ef2bae9f86ffdd7ab0d180a3e2f8ed3d84090a24a3a6a8", size = 3093752, upload-time = "2026-11-14T08:49:12.738Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/f3/3777cba2da464a26cba685acca81deac95c14ad7de2fed85a61d1e6d0b7a/cave_closure-0.0.6-cp314-cp314t-win_arm64.whl", hash = "sha256:a54ab5ad0a8d8f35147ce067652a61a55e3cf9c7aa9063f3e355ca1970dd3604", size = 2568132, upload-time = "2026-11-14T08:49:14.506Z" },
+    { url = "https://files.pythonhosted.org/packages/45/0a/588954143417079f55066f0b909aa4331b085d9591d2d819da76e86d09f4/cave_closure-0.0.6-cp315-abi3.abi3t-macosx_11_0_arm64.whl", hash = "sha256:058f3c52a918a5ebddb0c7fe80ee6c4139498fd8aa16c487af68a7561f4cdb88", size = 2886507, upload-time = "2026-11-14T08:49:16.536Z" },
+    { url = "https://files.pythonhosted.org/packages/89/4e/30d7fb09e2d8929e7008a24d629c60d7a71bcb05ebd31b2d6ad6aa7e0511/cave_closure-0.0.6-cp315-abi3.abi3t-manylinux_2_39_aarch64.whl", hash = "sha256:437eab61e97f177afd4b6532f6086f8cf59951416a86cc5aff411abe91d93d74", size = 3414808, upload-time = "2026-11-14T08:49:18.231Z" },
+    { url = "https://files.pythonhosted.org/packages/82/71/8add591861c166ab68957f5d885027dc7a9423b765cc63bf252f7639bf89/cave_closure-0.0.6-cp315-abi3.abi3t-manylinux_2_39_x86_64.whl", hash = "sha256:4149fc077ff8713860ccbf6d05bf16b027ebb43de320a041b3421262e37b80cc", size = 3988063, upload-time = "2026-11-14T08:49:20.01Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/e7/f91b29914a3fc5f0ab4b043145572aaca48eef7599c340c1a47e1f056c10/cave_closure-0.0.6-cp315-abi3.abi3t-win_amd64.whl", hash = "sha256:908ebad2072dcd9ef920c334ae6a5a5b6feecf3a4bb0b9dea07717141becc8be", size = 3111088, upload-time = "2026-11-14T08:49:21.755Z" },
+    { url = "https://files.pythonhosted.org/packages/44/37/8eb0788b36e917a182c8aa943157582769abf83b525d47013d9c54df4d67/cave_closure-0.0.6-cp315-abi3.abi3t-win_arm64.whl", hash = "sha256:2589a011aa82a668ac72a1182398d742b92f2cc161b305935c49746e486ad751", size = 2579507, upload-time = "2026-11-14T08:49:23.615Z" },
+]
+
+[[package]]
 name = "celery"
 version = "5.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -512,9 +535,10 @@ wheels = [
 
 [[package]]
 name = "compass-lib"
-version = "0.0.9"
+version = "0.0.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "cave-closure" },
     { name = "geojson" },
     { name = "numpy" },
     { name = "orjson" },
@@ -526,9 +550,9 @@ dependencies = [
     { name = "shapely" },
     { name = "utm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/ca/f03bedfb7825702e0a7e80ff076a3c2b56c39e3c57a8d2cfb9f78507dafb/compass_lib-0.0.9.tar.gz", hash = "sha256:bf98732614836da9c184e2304f42ceb70934b51a6d477161333788cc87a53b26", size = 88312, upload-time = "2026-09-22T05:07:45.927Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c1/0d/d36c2430b4d16c788a71a5445c8dd736225641ccfd3807afce81296912a5/compass_lib-0.0.11.tar.gz", hash = "sha256:19416a0a57b63a4373e0e494e30c0903e53030923490704ad68434337f594527", size = 83957, upload-time = "2026-11-14T08:54:06.684Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/00/4b06f1b705a3ce43a1168f43d1ebfc4f50a2a60fe0408a768410a232c85c/compass_lib-0.0.9-py3-none-any.whl", hash = "sha256:ea54fc82b2f7b8fbc89f7ebbf04cdf0f56724a51be3c6c70874668ad914fde29", size = 105319, upload-time = "2026-09-22T05:07:44.108Z" },
+    { url = "https://files.pythonhosted.org/packages/76/fc/cddcaa9a6d969f9c42b8eda087a8058adf8dd6da53ff41df6822e32384ab/compass_lib-0.0.11-py3-none-any.whl", hash = "sha256:3a6016866f6dfc6b5af78a73b4bfd6da69b70bab408c7f4b8f23c0a0512b44eb", size = 91827, upload-time = "2026-11-14T08:54:05.194Z" },
 ]
 
 [[package]]
@@ -1808,34 +1832,34 @@ wheels = [
 
 [[package]]
 name = "openspeleo-core"
-version = "0.0.6"
+version = "0.0.7"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dc/4a/2b008af25ffe22368a687604a57e40cd0b89c8a0abd35398b85e1f349b48/openspeleo_core-0.0.6.tar.gz", hash = "sha256:5ace03a01d0ecfd475ebce2d98c748d1ff5390b1ce2953d7322f16ef601d7a5d", size = 1034413, upload-time = "2026-09-27T21:46:49.57Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/31/7c/268c205827bc3a9950a8830574a6497a285569813d7dcb9d1d8fd06e1e2a/openspeleo_core-0.0.7.tar.gz", hash = "sha256:60d9975ec4a9aabb84b1fa0500b6cc24054bc7a18863fac5ac8056f4ddff4068", size = 1003526, upload-time = "2026-11-14T08:05:08.215Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/94/0d3a9664040a5660e83d7195e756243f99f54b94a0f6e7a3bb67d8b5db1b/openspeleo_core-0.0.6-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:5184438b4bc92fc2a649cde1330be988329f4e584807fc08ac602a4e30971726", size = 426338, upload-time = "2026-09-27T21:46:26.683Z" },
-    { url = "https://files.pythonhosted.org/packages/8b/99/40beff7d0cdaca875a254fc17bcdd6dbaf3e7b2cf746bd4172eca673999e/openspeleo_core-0.0.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:04b30005b6658f1b85c61dae3fe73b0a898e5b52eaad7796fcc08b54c708f656", size = 404124, upload-time = "2026-09-27T21:46:28.117Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/ad/796e4b6a2c65ef8b6a728190de39440dee20237f6d67105d3961774fe5e9/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:dbb8a09817404391d971f271afee5d822f8e138fbc5561f40c986b7990285469", size = 429321, upload-time = "2026-09-27T21:46:29.417Z" },
-    { url = "https://files.pythonhosted.org/packages/a6/06/c4a01d69773a91ede433f4f64ecf67356022c050542a32a9e8b0fc95f0b2/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:30364a8e8a46319ef7883b12f5b4363f4882086329563b148de6fcb497dd8ac2", size = 435290, upload-time = "2026-09-27T21:46:30.902Z" },
-    { url = "https://files.pythonhosted.org/packages/68/a5/29985f3cb01d00f7946c274872f192c60e01fcefccdf6234961f74dee842/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:6ad42ec58d75f1da3f39b2cafb0a25dae0c06459ff50a719f8110303f2e79c9d", size = 470204, upload-time = "2026-09-27T21:46:32.341Z" },
-    { url = "https://files.pythonhosted.org/packages/91/b7/88ec92cf98d4a0c7aa1dd830e00a871b09222ccb9e6e175fd96225de27c8/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:1d1d06bc6ddd1d972742b7ed87139e05ac6a8ee02a34cfec4d07e24f01fa160f", size = 473825, upload-time = "2026-09-27T21:46:33.662Z" },
-    { url = "https://files.pythonhosted.org/packages/db/74/b7e058148e339ce422b0071adacaeafb157a309746087dba17a97f6307ae/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9dbc36c72e35d8cbe2d1cbb3a86d4b7d52407db74f6886fc607de248501842d4", size = 444898, upload-time = "2026-09-27T21:46:34.935Z" },
-    { url = "https://files.pythonhosted.org/packages/cc/32/afff935edce2551e3fae25971cbf53d8fc09e5014cc30cadb853f0a72f82/openspeleo_core-0.0.6-cp314-cp314-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:97e3b592c5873a0ab377b174e3c28f0ea54bf095785c45f8a38af1316630a3f7", size = 462806, upload-time = "2026-09-27T21:46:36.334Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/66/58722624bbafbc624ab0b0fef81fa88e2ab478413e736cb95707bebc4c40/openspeleo_core-0.0.6-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:a59f49ff25768a955bf9446ab0f3857a2c8710aecbbb66e7d042e061184bc2a1", size = 608066, upload-time = "2026-09-27T21:46:37.582Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/ae/2290a6c2efdab8dab9174585191ee0d4cda193ac729f60be215f6ccbb9a2/openspeleo_core-0.0.6-cp314-cp314-musllinux_1_2_armv7l.whl", hash = "sha256:8b76afe1ec96c3485ef65126f28fc05ca20186ed65f257bd0bc091342cac05b6", size = 713840, upload-time = "2026-09-27T21:46:39.212Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/1a/ad9aa067c9e15db3e126320f0770703ddfd9323b9ce27cfa5dbccba079b4/openspeleo_core-0.0.6-cp314-cp314-musllinux_1_2_i686.whl", hash = "sha256:6dd18fc37c87cf5f5ae0620413b8a477f158dd9cb049073ee29ca49df17bfc37", size = 678804, upload-time = "2026-09-27T21:46:41.027Z" },
-    { url = "https://files.pythonhosted.org/packages/53/62/7e95c5285d3431a031f2aa9c0e90371f99a370b9ad822cf413e1fd454538/openspeleo_core-0.0.6-cp314-cp314-musllinux_1_2_ppc64le.whl", hash = "sha256:a109bf931e1d35587bf8a08d4a70ae2f9e410ec5613b78c99935902ff386d91d", size = 606854, upload-time = "2026-09-27T21:46:42.339Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/d4/22eb5fac305e57dcd2a8262147ab815ac6f28c172ccf531949b9d90d1907/openspeleo_core-0.0.6-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:fc34c815cb85f64d25f81b7d7b5fda7aa13f4498130f5ba32114e23de7afcf97", size = 657913, upload-time = "2026-09-27T21:46:44.357Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/00/53e6684e70bb4761ce20074edc42142ed410556818c491fe0e676f85085a/openspeleo_core-0.0.6-cp314-cp314-win32.whl", hash = "sha256:fcb052b20b599596fde0e3518248e067a7373a223ced45aa1ecb64b6da95b73c", size = 342318, upload-time = "2026-09-27T21:46:45.661Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/90/62c5c5cc8469b4ea480d900c812dd79e79af61655920c34b8bf638bf1869/openspeleo_core-0.0.6-cp314-cp314-win_amd64.whl", hash = "sha256:b30eacb09e789f0233e1697d99a06d110790c862cf7b15876e3cf0717d4a68f3", size = 352809, upload-time = "2026-09-27T21:46:46.906Z" },
-    { url = "https://files.pythonhosted.org/packages/9b/04/19a10e311adfd747ec9554f893a7d364f57b11bc7a97775ef42dbe033b33/openspeleo_core-0.0.6-cp314-cp314-win_arm64.whl", hash = "sha256:49aba36eb6cea93e9a8664aee19f9b10721857f14e7b0f0db0366a4ffd970924", size = 339426, upload-time = "2026-09-27T21:46:48.337Z" },
+    { url = "https://files.pythonhosted.org/packages/03/63/d377a4434595bfb80dc02202e254b54b857981363a4919bcf5bdde892363/openspeleo_core-0.0.7-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:8c111dcfdb57dbb101019e1b311060c84b9cd27e46d043be910d01f576cc3263", size = 377034, upload-time = "2026-11-14T08:04:47.08Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/5b/e78913f5fac5b000a02efe2dae1ecd331d5e0653b592b27246cc66ef4409/openspeleo_core-0.0.7-cp311-abi3-manylinux1_i686.manylinux_2_5_i686.whl", hash = "sha256:6586d774540dd7f1d1462d8d19632266ff7580703bb9074934f8bcc275c50017", size = 441200, upload-time = "2026-11-14T08:04:48.939Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/6d/f6d39b3905e7e018d39e8848c2f8ed76937d9d2cfd065946bf388ffaf1e7/openspeleo_core-0.0.7-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:f277dabd5f0828f557fc70a1f7de62467f9eb429f4c12856d44cd2a5fc844dd3", size = 408592, upload-time = "2026-11-14T08:04:50.428Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/01/ed2588e4e84470d32888b94101eade97d390ce4466f27f17988bc0d9a130/openspeleo_core-0.0.7-cp311-abi3-manylinux2014_armv7l.manylinux_2_17_armv7l.whl", hash = "sha256:307015602dcc3feecd9cf7f6a8734948131bf55b73804037a6de7640fe11bb74", size = 412428, upload-time = "2026-11-14T08:04:51.748Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/c0/523ac5e1b3aca5c6564d3831c409d537a5a3c79be4b97b5a9c1b27b66f7b/openspeleo_core-0.0.7-cp311-abi3-manylinux2014_ppc64.manylinux_2_17_ppc64.whl", hash = "sha256:d0ba1d1038fd21db89eb45a353e8bd1c5f2755846e0de979f357f1a8cba35d86", size = 443383, upload-time = "2026-11-14T08:04:53.002Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/7c/7147d4363d4503a6955089a03d137b87384055c87ae7a8738dc3aed25ed3/openspeleo_core-0.0.7-cp311-abi3-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:34283c7beaccf7b989c1324e70bd324138334080a53d30473da3bf16e772152a", size = 443843, upload-time = "2026-11-14T08:04:54.278Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/78/c5d52b438410763296438a4297d3771455a53c0d0c8e1dd00b49cfbaaa74/openspeleo_core-0.0.7-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4578abe3fd791ff3f597a525289f69737db910596e6d7e51fb7e593b1b3d0272", size = 408486, upload-time = "2026-11-14T08:04:55.51Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/39/51853d9b92c4efaf15c4586eb04a7c8a9c220c4302acc49d46d87e0edca0/openspeleo_core-0.0.7-cp311-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7ac2063de3480aae8631ed33a3a547efc6af5f13c183d4288e6837a6de5fe235", size = 587172, upload-time = "2026-11-14T08:04:57.005Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/52/9fa17ea54d4f8f8ec5b7b6ab4ee5e852e422be1f2a04c3e14d1102e8091f/openspeleo_core-0.0.7-cp311-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:51b5bf933b11589cc59b13d3ff58c62c1ff26f46a2f5c712b5648146a43c1f2e", size = 689011, upload-time = "2026-11-14T08:04:58.333Z" },
+    { url = "https://files.pythonhosted.org/packages/17/91/135231ce189d99878af2733a5230e1165d345bf49ca2e6c0f779df65718f/openspeleo_core-0.0.7-cp311-abi3-musllinux_1_2_i686.whl", hash = "sha256:7de00cc815084c80b22e5b8ea1d629172fdd7dd745c61b05b7692222e345e1cb", size = 657092, upload-time = "2026-11-14T08:04:59.941Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/4e/f8631dd9bbe0df5ff50bc05c4f146c1207f005e597204745f074a7e0ca56/openspeleo_core-0.0.7-cp311-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:8b5bf542931fa973978e76d3a790388181f0a9c34237d34385433b869afb5a7b", size = 576641, upload-time = "2026-11-14T08:05:01.308Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/19/340c16c0f4da06469adc7a11530c992a09c3eda25d4d4722f399cb52ac2d/openspeleo_core-0.0.7-cp311-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a5e66dde2f593da67ccc6eb6531dcc5f00f131128f02bbb780ee635f589657d1", size = 620253, upload-time = "2026-11-14T08:05:02.643Z" },
+    { url = "https://files.pythonhosted.org/packages/75/ce/54afc7778fa95221b62a3d4f49fe71e4c30534eecb3eb214eb30c8b76569/openspeleo_core-0.0.7-cp311-abi3-win32.whl", hash = "sha256:3dc0b4585d2cf02b63658e8c52118d8fcac9045647c6e8f48897c83e45e5232e", size = 318033, upload-time = "2026-11-14T08:05:04.286Z" },
+    { url = "https://files.pythonhosted.org/packages/91/51/0d50667c2fb993a505efbc6d14db9489838c7f0cf4fceebebdd2dcc03248/openspeleo_core-0.0.7-cp311-abi3-win_amd64.whl", hash = "sha256:1994960182b23bf78812d8cfe166b6ba96e282d60e68725c00658fffd3cc765a", size = 321178, upload-time = "2026-11-14T08:05:05.52Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/21/7a9b71d311e6b73da280140289a2829e3756f754124a39315ceb3290d7d3/openspeleo_core-0.0.7-cp311-abi3-win_arm64.whl", hash = "sha256:e17ca980696ced4d51b6a67e1c39cbad9638b37bd1f0913371ca863cac6c1937", size = 320640, upload-time = "2026-11-14T08:05:06.896Z" },
 ]
 
 [[package]]
 name = "openspeleo-lib"
-version = "0.0.22"
+version = "0.0.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
+    { name = "cave-closure" },
     { name = "dicttoxml2" },
     { name = "frozendict" },
     { name = "geojson" },
@@ -1848,9 +1872,9 @@ dependencies = [
     { name = "stalagmight-lib" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/f5/514544e45ccb8d999b85a83a993dfca1981a98c1b466be8ca299e3ee7e96/openspeleo_lib-0.0.22.tar.gz", hash = "sha256:c3e619fa2abbee8c910793aeb71a0840fd093b9e276941cdd36827797fdc16b0", size = 140736, upload-time = "2026-11-09T21:03:59.738Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/3a/dbdb18e8dc0d3a07ee14fd8e41bdd22ee54e6ca136a9d8bd0be274020190/openspeleo_lib-0.0.23.tar.gz", hash = "sha256:627fe1cefe9fdc8603b1e68a17d743e8a4b0b3abfd9f5584c6b829e385be9efb", size = 68521, upload-time = "2026-11-14T15:03:25.161Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/cc/0bd700ec24e69f062785a533c5dc3c08afaeb15712876f0a90f54b446be8/openspeleo_lib-0.0.22-py3-none-any.whl", hash = "sha256:7949c045434d41b0542f2655043a96e08e74d52c7edd081e9a3ce4fc2192d827", size = 48383, upload-time = "2026-11-09T21:03:58.434Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/1d/8126a450df0cc2fc7ebf71255f9dc16b2d291e34835b81b93c9e7318e328/openspeleo_lib-0.0.23-py3-none-any.whl", hash = "sha256:100774a3e67b4682294061ca6c635f7549a41d98fad4116c3010f7875a19ce55", size = 63848, upload-time = "2026-11-14T15:03:23.722Z" },
 ]
 
 [[package]]
@@ -2704,6 +2728,7 @@ dependencies = [
     { name = "av" },
     { name = "boto3" },
     { name = "botocore" },
+    { name = "cave-closure" },
     { name = "celery" },
     { name = "compass-lib" },
     { name = "dict-hash" },
@@ -2795,9 +2820,10 @@ requires-dist = [
     { name = "av", specifier = "==19.0.2" },
     { name = "boto3", specifier = "==1.43.123" },
     { name = "botocore", specifier = "==1.43.123" },
+    { name = "cave-closure", specifier = "==0.0.6" },
     { name = "celery", specifier = "==5.6.3" },
     { name = "celery-types", marker = "extra == 'local'", specifier = "==0.26.0" },
-    { name = "compass-lib", specifier = "==0.0.9" },
+    { name = "compass-lib", specifier = "==0.0.11" },
     { name = "coverage", marker = "extra == 'local'", specifier = "==7.17.0" },
     { name = "cryptography", marker = "extra == 'local'", specifier = "==50.0.2" },
     { name = "cryptography", marker = "extra == 'production'", specifier = "==50.0.2" },
@@ -2843,7 +2869,7 @@ requires-dist = [
     { name = "mnemo-lib", specifier = "==0.0.9" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==2.3.1" },
     { name = "nh3", specifier = "==0.3.7" },
-    { name = "openspeleo-lib", specifier = "==0.0.22" },
+    { name = "openspeleo-lib", specifier = "==0.0.23" },
     { name = "orjson", specifier = "==3.13.0" },
     { name = "parameterized", marker = "extra == 'local'", specifier = "==0.9.0" },
     { name = "pillow", specifier = "==13.0.0" },
@@ -2900,14 +2926,14 @@ wheels = [
 
 [[package]]
 name = "stalagmight-lib"
-version = "0.0.1"
+version = "0.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/47/eb4d63fb775e45a9f1af34804745c443c4ba2ae49737cb400a5728ee6238/stalagmight_lib-0.0.1.tar.gz", hash = "sha256:a2f2a889fd12ab288cec1629c6524fdbfd9bb1111b2eb8d5b42779d6dbc7652c", size = 97234, upload-time = "2026-11-09T19:27:56.562Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/8b/a27c0cdc1237fa0e7f75f4418e808a3b118f56be971d21c78a0733b15ed3/stalagmight_lib-0.0.2.tar.gz", hash = "sha256:3d6cf2f1d0f1300751ec7ebdb781f7c84c30e81b6b90316c607118547d3524da", size = 102028, upload-time = "2026-11-13T21:55:30.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/0b/96e98348d82a381df8767573621e5e4813cdd0d4473fd3ad08e77194829e/stalagmight_lib-0.0.1-py3-none-any.whl", hash = "sha256:987f3c101337f5e3fef4f96cbe6fd9956c5bfe1cc4460a39c00f43c9afd89ca8", size = 25965, upload-time = "2026-11-09T19:27:55.396Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/73/81976fa33744283158a72262ae3f819f1be6c93d0fa3ee83ad2e46e0ae1c/stalagmight_lib-0.0.2-py3-none-any.whl", hash = "sha256:705428558bb1f91cfa0f811b39bf0c4a9bbd368ab02e794b53b50e1d0bc2386b", size = 29305, upload-time = "2026-11-13T21:55:29.018Z" },
 ]
 
 [[package]]

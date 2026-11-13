@@ -1,4 +1,4 @@
-FROM python:3.14.10-bookworm
+FROM python:3.14.10-trixie
 
 ARG BUILD_ENVIRONMENT=local
 ARG APP_HOME=/app
@@ -33,8 +33,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev \
     # Translations dependencies
     gettext \
-    # Automatic Reloads
-    watchman \
     # FFMPEG for video processing
     ffmpeg \
     # cleaning up unused files
@@ -57,7 +55,9 @@ RUN BUN_VERSION="$(tr -d '[:space:]' < /tmp/.bun-version)" \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # The standalone image remains Rust-free. The monorepo devcontainer enables
-# this layer because it develops the local PyO3-backed openspeleo_core package.
+# this layer because it develops the local PyO3-backed openspeleo_core and
+# cave-closure packages. The latter builds HiGHS with CMake and uses libclang
+# to generate its native bindings.
 # Keep it before the Python dependency layer so changing application
 # dependencies does not invalidate the comparatively expensive toolchain.
 ARG DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=0
@@ -65,13 +65,19 @@ ENV RUSTUP_HOME=/usr/local/rustup
 ENV CARGO_HOME=/usr/local/cargo
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 RUN if [ "${DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN}" = "1" ]; then \
-    curl --proto '=https' --tlsv1.2 -sSf \
+    apt-get update \
+    && apt-get install --no-install-recommends -y cmake g++ libclang-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl --proto '=https' --tlsv1.2 -sSf \
         https://sh.rustup.rs -o /tmp/rustup-init.sh \
     && sh /tmp/rustup-init.sh \
         -y \
         --no-modify-path \
         --profile minimal \
-        --default-toolchain stable \
+        --default-toolchain 1.99.0 \
+        --component clippy,rustfmt \
+    && rustc --version \
+    && cargo clippy --version \
     && rm /tmp/rustup-init.sh \
     && chmod -R a+rX "${CARGO_HOME}" "${RUSTUP_HOME}"; \
     fi

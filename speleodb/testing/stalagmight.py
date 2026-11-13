@@ -40,6 +40,7 @@ def stalagmight_bytes(
 
     The ordinary leg changes depth by six metres. Setting its length below six
     creates a valid native survey whose impossible geometry the exporter rejects.
+    The synthetic datum avoids the common model's unknown-coordinate sentinel.
     """
     with closing(sqlite3.connect(":memory:")) as database, database:
         database.executescript(SCHEMA)
@@ -64,7 +65,7 @@ def stalagmight_bytes(
             ],
         )
         if anchored:
-            database.execute("INSERT INTO zero_datums VALUES(1, 1, 0, 0, 0, 0)")
+            database.execute("INSERT INTO zero_datums VALUES(1, 1, 0, 40, -70, 0)")
         database.execute(
             "INSERT INTO station_merges VALUES(1, 1, 2, 2, 0, '2026-01-01T00:00:00Z')"
         )

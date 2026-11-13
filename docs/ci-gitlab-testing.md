@@ -16,6 +16,11 @@ overlap another run using that group. A `test` environment isolates the service;
 it does not by itself configure GitHub Actions or prove that its secrets point
 at that service.
 
+Cleanup lifecycle subprocesses preserve the inherited `PYTHONPATH` alongside the
+web root so monorepo source libraries resolve consistently with the parent test
+process. Replacing it with only the web root can load older installed packages
+and fail Django startup before the intended GitLab authentication check.
+
 ## Repository budget and ownership
 
 A complete Django test invocation may create **at most nine GitLab projects**.

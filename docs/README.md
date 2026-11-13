@@ -46,6 +46,10 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- [Survey loop closure](survey-loop-closure.md)
+  - Shared solver configuration, conversion defaults, measurement provenance,
+    and source-preserving exports.
+
 - [Project software and conversion capabilities](project-formats.md)
   - Software choices, Stalagmight storage, exporter eligibility, retained maps,
     schema/SDK ownership, and verification.

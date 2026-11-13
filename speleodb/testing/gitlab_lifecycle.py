@@ -194,7 +194,10 @@ def assert_make_cleanup_lifecycle(
     environment.update(
         {
             "DJANGO_SETTINGS_MODULE": "inherited_settings_must_not_be_used",
-            "PYTHONPATH": str(BASE_DIR),
+            # Keep configured monorepo library sources available in the child.
+            "PYTHONPATH": os.pathsep.join(
+                filter(None, (str(BASE_DIR), environment.get("PYTHONPATH")))
+            ),
             "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}",
             "GITLAB_GROUP_ID": str(group.id),
             "GITLAB_GROUP_NAME": str(group.full_path),
@@ -220,7 +223,9 @@ def assert_make_cleanup_lifecycle(
             assert_remote_deleted(client, remote.id)
         else:
             assert result.returncode != 0
-            assert "GitlabAuthenticationError (HTTP 401)" in result.stderr
+            assert "GitlabAuthenticationError (HTTP 401)" in result.stderr, (
+                result.stderr
+            )
             assert not client.projects.get(remote.id).marked_for_deletion_at
 
     # The two subprocesses cover Make's settings and flag wiring. Repeating the
