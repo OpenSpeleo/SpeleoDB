@@ -1855,7 +1855,7 @@ wheels = [
 
 [[package]]
 name = "openspeleo-lib"
-version = "0.0.23"
+version = "0.0.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argparse" },
@@ -1872,9 +1872,9 @@ dependencies = [
     { name = "stalagmight-lib" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/23/3a/dbdb18e8dc0d3a07ee14fd8e41bdd22ee54e6ca136a9d8bd0be274020190/openspeleo_lib-0.0.23.tar.gz", hash = "sha256:627fe1cefe9fdc8603b1e68a17d743e8a4b0b3abfd9f5584c6b829e385be9efb", size = 68521, upload-time = "2026-11-14T15:03:25.161Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/49/eb58a9de1fa747b9e65e6cde95b4a57dd12a31aab53b318c3bcb77c36908/openspeleo_lib-0.0.24.tar.gz", hash = "sha256:5085beb58ce3dfbce7c4b6afb6ff020e62a7b8f99c3298f165b1161343a1a6a0", size = 72031, upload-time = "2026-11-14T17:52:49.683Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/1d/8126a450df0cc2fc7ebf71255f9dc16b2d291e34835b81b93c9e7318e328/openspeleo_lib-0.0.23-py3-none-any.whl", hash = "sha256:100774a3e67b4682294061ca6c635f7549a41d98fad4116c3010f7875a19ce55", size = 63848, upload-time = "2026-11-14T15:03:23.722Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/bc/3dfd5e4c73eed3ebf9951a386d30703e956f29ce13b5b109615af5202e7b/openspeleo_lib-0.0.24-py3-none-any.whl", hash = "sha256:4ff2af80c447a08b4248bed066d828e38f8ab5992f14c71b6d1fa2d76f6bbe32", size = 65822, upload-time = "2026-11-14T17:52:48.313Z" },
 ]
 
 [[package]]
@@ -2869,7 +2869,7 @@ requires-dist = [
     { name = "mnemo-lib", specifier = "==0.0.9" },
     { name = "mypy", marker = "extra == 'local'", specifier = "==2.3.1" },
     { name = "nh3", specifier = "==0.3.7" },
-    { name = "openspeleo-lib", specifier = "==0.0.23" },
+    { name = "openspeleo-lib", specifier = "==0.0.24" },
     { name = "orjson", specifier = "==3.13.0" },
     { name = "parameterized", marker = "extra == 'local'", specifier = "==0.9.0" },
     { name = "pillow", specifier = "==13.0.0" },
