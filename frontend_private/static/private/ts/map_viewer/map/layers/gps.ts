@@ -1,3 +1,4 @@
+import { MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import { Renderer } from '../renderer.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerGeoJSON } from '../../../../../../../ts-types/domain/map-geometry.ts';
@@ -19,7 +20,6 @@ interface GPSLayerOwner {
     setGPSTrackLoading(id: EntityId, loading: boolean): void;
     reorderLayers(): Promise<ViewerUpdateResult> | undefined;
 }
-const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
 // GPS tracks default to OFF (false) - explicit true required to be visible
 // No persistence - visibility is session-only
@@ -119,7 +119,7 @@ export async function addGPSTrackLayer(this: Pick<GPSLayerOwner, 'reorderLayers'
         type: 'line',
         source: sourceId,
         filter: ['==', '$type', 'LineString'],
-        minzoom: ZOOM_LEVELS.GPS_TRACK_LINE,
+        minzoom: MAP_LAYER_MIN_ZOOM.GPS_TRACK_LINE,
         layout: {
             'line-join': 'round',
             'line-cap': 'round'

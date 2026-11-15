@@ -9220,7 +9220,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExplorationLeadRequest'
+              type: object
+              description: Serializer for ExplorationLead model.
+              properties:
+                description:
+                  type: string
+                  description: Optional description of the lead
+                headings:
+                  type: array
+                  items:
+                    type: number
+                    format: double
+                    minimum: 0
+                    maximum: 360
+                    exclusiveMaximum: true
+                  maxItems: 3
+                latitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-90, 90].
+                longitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-180, 180].
+              required:
+              - latitude
+              - longitude
           application/x-www-form-urlencoded:
             schema:
               type: object
@@ -9229,6 +9266,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -9256,6 +9305,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -9402,7 +9463,41 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedExplorationLeadRequest'
+              type: object
+              description: Serializer for ExplorationLead model.
+              properties:
+                description:
+                  type: string
+                  description: Optional description of the lead
+                headings:
+                  type: array
+                  items:
+                    type: number
+                    format: double
+                    minimum: 0
+                    maximum: 360
+                    exclusiveMaximum: true
+                  maxItems: 3
+                latitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-90, 90].
+                longitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-180, 180].
           application/x-www-form-urlencoded:
             schema:
               type: object
@@ -9411,6 +9506,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -9435,6 +9542,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -24341,7 +24460,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExplorationLeadRequest'
+              type: object
+              description: Serializer for ExplorationLead model.
+              properties:
+                description:
+                  type: string
+                  description: Optional description of the lead
+                headings:
+                  type: array
+                  items:
+                    type: number
+                    format: double
+                    minimum: 0
+                    maximum: 360
+                    exclusiveMaximum: true
+                  maxItems: 3
+                latitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-90, 90].
+                longitude:
+                  oneOf:
+                  - type: number
+                  - type: boolean
+                    x-drf-form-unrepresentable: true
+                  - type: string
+                    pattern: ^\s*[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?\s*$
+                  description: Numeric coordinate (booleans become 0/1; numeric strings
+                    accept digit-separating underscores), rounded to seven decimal
+                    places before validation within [-180, 180].
+              required:
+              - latitude
+              - longitude
           application/x-www-form-urlencoded:
             schema:
               type: object
@@ -24350,6 +24506,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -24377,6 +24545,18 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
+                headings:
+                  type: string
+                  description: JSON-encoded value.
+                  x-json-schema:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 360
+                      exclusiveMaximum: true
+                    maxItems: 3
                 latitude:
                   oneOf:
                   - type: number
@@ -51698,6 +51878,15 @@ components:
         description:
           type: string
           description: Optional description of the lead
+        headings:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 360
+            exclusiveMaximum: true
+          maxItems: 3
         latitude:
           type: number
           format: double
@@ -51727,6 +51916,7 @@ components:
       - created_by
       - creation_date
       - description
+      - headings
       - id
       - latitude
       - longitude
@@ -51737,6 +51927,15 @@ components:
       properties:
         description:
           type: string
+        headings:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 360
+            exclusiveMaximum: true
+          maxItems: 3
         created_by:
           type: string
         creation_date:
@@ -51752,6 +51951,7 @@ components:
       - created_by
       - creation_date
       - description
+      - headings
       - modified_date
       - project
     ExplorationLeadGeoJSON:
@@ -51798,6 +51998,16 @@ components:
         description:
           type: string
           description: Optional description of the lead
+        headings:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 360
+            exclusiveMaximum: true
+          maxItems: 3
+          x-drf-json-form: true
         latitude:
           oneOf:
           - type: number
@@ -54337,6 +54547,16 @@ components:
         description:
           type: string
           description: Optional description of the lead
+        headings:
+          type: array
+          items:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 360
+            exclusiveMaximum: true
+          maxItems: 3
+          x-drf-json-form: true
         latitude:
           oneOf:
           - type: number

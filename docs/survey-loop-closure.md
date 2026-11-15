@@ -19,10 +19,17 @@ The former `SurveyLoopClosure` Gaussian wrapper and its optional model argument
 are removed; callers simply request the project's GeoJSON.
 
 ```python
-geojson = project.build_geojson(source_file)
+result = project.build_geojson(source_file)
+geojson = result.geojson
 ```
 
 ## Measurements, controls, and format boundaries
+
+The result also carries native resolved-shot observations for
+[exploration lead import](exploration-lead-import.md). These use the same solved
+coordinates without adding a numerical pass or exposing comments in survey
+GeoJSON. Provenance retains the native TO endpoint when traversal reverses a
+shot.
 
 Compass loads MAK/DAT through `CompassInterface.load_project()` and passes its
 own project model to `project_to_geojson()`. The export keeps the existing leg,

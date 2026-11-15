@@ -18,7 +18,6 @@ export BLIS_NUM_THREADS="${BLIS_NUM_THREADS:-1}"
 SPELEODB_CELERY_WORKER_RUNTIME=false python manage.py check
 export SPELEODB_CELERY_WORKER_RUNTIME=true
 
-# Explicit restarts preserve long-running export attempts during development.
 # Host-networked Compose replicas share %h, so each worker needs its own name.
 read -r worker_id < /proc/sys/kernel/random/uuid
 exec celery -A config.celery_app --skip-checks worker --loglevel INFO \

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from speleodb.gis.models import ProjectGeoJSON
     from speleodb.surveys.models import Project
     from speleodb.surveys.models import ProjectCommit
+    from speleodb.surveys.models.project import ResolvedSurveyShot
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def replace_project_geojson(
     data: dict[str, Any],
     *,
     replace_existing: bool = True,
+    source_shots: tuple[ResolvedSurveyShot, ...] = (),
 ) -> ProjectGeoJSON:
     """Upload first, atomically replace the row, and retain the previous blob.
 
@@ -81,6 +83,7 @@ def replace_project_geojson(
                 # deletion. A rollback must leave the previous download usable.
                 project.geojsons.filter(pk=commit.pk).delete()
             replacement.save(force_insert=True)
+            project.sync_exploration_leads(commit, source_shots)
             if previous is not None:
                 transaction.on_commit(
                     lambda: logger.info(

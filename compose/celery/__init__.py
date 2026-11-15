@@ -1,0 +1,1 @@
+"""Local Celery launch support."""

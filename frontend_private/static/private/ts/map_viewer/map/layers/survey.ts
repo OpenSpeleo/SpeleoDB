@@ -1,3 +1,4 @@
+import { MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import { Renderer } from '../renderer.ts';
 import type { RendererGeoJSONSource, RendererLayer } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { PreparedProject } from '../../../../../../../ts-types/domain/map-preparation.ts';
@@ -19,7 +20,6 @@ interface SurveyLayerOwner {
     applyProjectLayerVisibility(id: EntityId, visibilityOverride?: boolean, layerIds?: string[]): void;
     scheduleDisplayUpdate(...concerns: DisplayConcern[]): Promise<ViewerUpdateResult>;
 }
-const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 
 interface ProjectGeoJSONLoadOptions {
     signal?: AbortSignal;
@@ -117,7 +117,7 @@ function surveyLayers(projectId: EntityId, sourceId: string, colorMode: ColorMod
         type: 'line',
         source: sourceId,
         filter: ['==', '$type', 'LineString'],
-        minzoom: ZOOM_LEVELS.PROJECT_LINE,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_LINE,
         layout: {
             'line-join': 'round',
             'line-cap': 'round'
@@ -136,7 +136,7 @@ function surveyLayers(projectId: EntityId, sourceId: string, colorMode: ColorMod
         type: 'symbol',
         source: sourceId,
         filter: ['all', ['==', '$type', 'LineString'], ['has', 'section_name']],
-        minzoom: ZOOM_LEVELS.PROJECT_LINE_LABEL,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_LINE_LABEL,
         layout: {
             'text-field': ['get', 'section_name'],
             'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
@@ -159,7 +159,7 @@ function surveyLayers(projectId: EntityId, sourceId: string, colorMode: ColorMod
         type: 'symbol',
         source: sourceId,
         filter: ['==', '$type', 'Point'],
-        minzoom: ZOOM_LEVELS.PROJECT_ENTRY_SYMBOL,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_ENTRY_SYMBOL,
         layout: {
             'text-field': '★',
             'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],

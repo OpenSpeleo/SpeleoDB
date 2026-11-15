@@ -44,6 +44,7 @@ from speleodb.gis.models import ProjectGeoJSON
 from speleodb.gis.project_geojson_services import replace_project_geojson
 from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
+from speleodb.surveys.models.project import ResolvedSurveyShot
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -149,6 +150,72 @@ def test_invalid_replacement_keeps_previous_artifact(
     assert artifact_storage.exists(artifact.file.name)
     with artifact.file.open("rb") as source:
         assert orjson.loads(source.read()) == POINT_DATA
+
+
+@pytest.mark.django_db
+def test_publication_imports_leads_and_preserves_deleted_source(
+    artifact: ProjectGeoJSON,
+    artifact_storage: FileSystemStorage,
+) -> None:
+    shot = ResolvedSurveyShot(
+        uuid=None,
+        shot_id="2",
+        from_id="1",
+        namespace=(),
+        length_m=10,
+        azimuth=45,
+        comment="Full comment !E! !NNW!",
+        longitude=3,
+        latitude=4,
+    )
+    project = artifact.project
+    replace_project_geojson(project, artifact.commit, LINE_DATA, source_shots=(shot,))
+    lead = project.exploration_leads.get()
+    assert lead.coordinates == (3, 4)
+    assert lead.headings == [90, 337.5]
+    lead.delete()
+    # Removing history artifacts does not remove the deletion evidence.
+    project.geojsons.all().delete()
+    replace_project_geojson(project, artifact.commit, LINE_DATA, source_shots=(shot,))
+    assert not project.exploration_leads.exists()
+    expected_tombstones = 2  # Native endpoints and measured shot geometry.
+    assert (
+        project.exploration_lead_sources.filter(lead__isnull=True).count()
+        == expected_tombstones
+    )
+
+
+@pytest.mark.django_db
+def test_lead_import_failure_rolls_back_artifact_replacement(
+    artifact: ProjectGeoJSON,
+    artifact_storage: FileSystemStorage,
+    tmp_path: Path,
+) -> None:
+    previous_files = set(tmp_path.rglob("*.json"))
+    previous_revision = artifact.geojson_revision
+    malformed_source = ResolvedSurveyShot(
+        uuid="invalid native UUID",
+        shot_id="2",
+        from_id="1",
+        namespace=(),
+        length_m=10,
+        azimuth=45,
+        comment="!N!",
+        longitude=3,
+        latitude=4,
+    )
+    with pytest.raises(ValueError, match="UUID"):
+        replace_project_geojson(
+            artifact.project,
+            artifact.commit,
+            LINE_DATA,
+            source_shots=(malformed_source,),
+        )
+    artifact.refresh_from_db()
+    assert artifact.geojson_revision == previous_revision
+    assert set(tmp_path.rglob("*.json")) == previous_files
+    assert not artifact.project.exploration_leads.exists()
+    assert not artifact.project.exploration_lead_sources.exists()
 
 
 @pytest.mark.django_db

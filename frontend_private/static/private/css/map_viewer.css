@@ -530,6 +530,15 @@ input[type="number"] {
     font-family: inherit;
 }
 
+#lead-description,
+#lead-description-edit {
+    min-height: 0;
+}
+
+#lead-heading-compass {
+    margin-top: -20px;
+}
+
 .form-label {
     display: block;
     color: #e2e8f0;
@@ -539,6 +548,12 @@ input[type="number"] {
 }
 
 /* .btn-primary, .btn-secondary, .btn-danger are in shared-modal.css */
+
+#lead-details-modal .exploration-lead-action {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 0.5rem;
+}
 
 .btn-warning {
     background: linear-gradient(135deg, #f59e0b, #d97706);

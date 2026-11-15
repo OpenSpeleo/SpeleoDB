@@ -27,6 +27,12 @@ omissions are explained skips; unexpected conversion errors fail the task. Run a
 history reset while the project is idle. Avoid editing or submitting other work
 for that project until the reset finishes.
 
+The latest recorded revision also imports exploration leads from native shot
+comments and learns source aliases without changing existing lead rows. New lead
+and signature writes share artifact publication's database transaction.
+Historical recomputation cannot create leads or learn aliases. See
+[source identity, deletion retention and directions](exploration-lead-import.md).
+
 Git handles close and temporary sources are removed on success, ordinary failure
 and soft timeout. Workspace cleanup preserves active worker directories; later
 sweeps remove abandoned local directories. Hard kill cannot run cleanup. Without

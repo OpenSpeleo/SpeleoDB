@@ -342,10 +342,11 @@ connections without contacting a broker. Real conversion and export regressions
 verify immediate terminal results, stored artifacts and notification delivery;
 these local tests do not establish deployed configuration or live connectivity.
 
-The worker intentionally has no source auto-reloader: editing a Python file must
-not terminate an archive mid-generation. Restart it explicitly after code
-changes. Compose gives it 120 seconds to stop gracefully; application attempt
-recovery handles longer interrupted work.
+Local Compose runs the worker and Beat through the development source watcher. A
+Python edit requests warm shutdown and waits for the old process to finish
+before starting its replacement. Active worker tasks can finish before the new
+code loads. Explicit container shutdown retains Compose's 120-second grace
+period; production services retain their ordinary launchers without a watcher.
 
 The `celery-worker` service uses the explicit container name
 `${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker`, matching the other
@@ -519,16 +520,46 @@ For local development, generated repositories and scratch files under `.workdir`
 must not restart Django while exports or tests run. The local settings select
 Werkzeug's stat reloader and exclude `.workdir` paths; normal application code
 changes still reload. This also avoids watchdog/inotify directory-removal races
-on Docker bind mounts. Bind-mounted Python changes require restarting the
-affected Celery worker or Beat after its checks pass; neither process reloads
-that code automatically. Do not restart/recreate Django to load those changes.
+on Docker bind mounts.
 
-The Docker image copies the worker and Beat launchers to `/start-celeryworker`
-and `/start-celerybeat`. Changes to `compose/celery/worker/start` or
-`compose/celery/beat/start` require an image rebuild through the normal approved
-Compose/devcontainer lifecycle. Restarting an existing container retains its old
-copied launcher. After rebuilding, verify that the worker is ready and its
-startup banner reports task events **OFF**.
+Both local Celery services use `python -m compose.celery.autoreload`, with
+`worker` or `beat` as the final argument. The shared development launcher uses
+the already-declared `watchfiles` dependency and starts the corresponding
+`compose/celery/<service>/start` directly from the mounted checkout. It watches
+application Python packages and source packages exposed by `PYTHONPATH`, which
+includes the monorepo's shared survey-library overlays. Tests, `.workdir`,
+`.artifacts`, bytecode, editor temporary files and non-Python edits are ignored.
+The watcher avoids repository/build roots when selecting overlay packages.
+
+Edits send SIGINT to the service's process group. Celery's prefork children
+ignore that signal while the worker performs warm shutdown and joins its pool;
+Beat synchronizes and releases its existing database lease. Replacement is
+sequential, so two scheduler generations do not overlap. There is no forced
+termination timeout for a code reload: a running task delays the reload until it
+finishes. Container stop retains the existing Compose grace period. Unexpected
+service exits propagate to Compose's existing restart policy.
+
+Changing the local Compose command requires an initial normal Compose
+reconciliation. From the standalone web checkout use
+`docker compose -f local.yml up -d celery-worker celery-beat`. In the monorepo,
+retain the existing project name and complete Compose file list recorded on the
+running containers, including Dev Containers overlays, and run the same `up -d`
+service selection. Do not use `--no-deps`: setup and dependency health gates
+remain part of startup. A plain restart cannot apply a changed Compose command.
+This command change needs no image rebuild and does not change Django's
+launcher.
+
+Python source edits then reload automatically. Shell launcher or watcher-module
+changes still require restarting the affected local service; the source-mounted
+launcher is read on startup. Native extensions still require their normal
+rebuild before restarting the affected service. Production continues using the
+copied ordinary launchers and requires its normal image/deployment workflow.
+
+Verify readiness in each service's logs, a single Beat scheduler, and worker
+task events **OFF**. `compose/tests/test_celery_autoreload.py` exercises real
+filesystem notifications, ignored generated/test changes, application and shared
+library edits, sequential warm replacement, and child-process cleanup without
+using the development broker or database.
 
 ## Task history and scheduler health
 

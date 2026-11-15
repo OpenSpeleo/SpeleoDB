@@ -1,3 +1,5 @@
+import { createHeadingCompass } from '@speleodb/map-viewer/heading-compass';
+import type { LeadWrite } from '../../../../../../ts-types/domain/station-records.ts';
 import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import { State } from '../state.ts';
@@ -18,16 +20,6 @@ export const ExplorationLeadUI = {
     showCreateModal(coordinates: readonly [unknown, unknown], lineName: string, projectId: EntityId) {
         const formHtml = `
             <form id="create-lead-form" class="flow-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Description *</label>
-                    <textarea id="lead-description" rows="4" required
-                        class="form-input form-textarea"
-                        placeholder="Describe the exploration lead..."></textarea>
-                    <p class="text-xs text-slate-400 mt-2">
-                        💡 <strong>Tip:</strong> Describe how the lead looks like - direction (N/S/E/W),
-                        up or down, big or small passage, sidemount or backmount access, water flow, etc.
-                    </p>
-                </div>
                 <div class="bg-srgb-slate-700-50 rounded-lg p-3 text-sm text-slate-300">
                     <div class="flex items-center gap-2 mb-1">
                         <img src="${getRuntimeContext().icons.explorationLead}" class="w-4 h-4">
@@ -36,6 +28,20 @@ export const ExplorationLeadUI = {
                     <div class="text-xs text-slate-400 mt-1">
                         Lat: ${Number(coordinates[1]).toFixed(7)}, Lon: ${Number(coordinates[0]).toFixed(7)}
                     </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Description *</label>
+                    <textarea id="lead-description" rows="2" required
+                        class="form-input form-textarea"
+                        placeholder="Describe the exploration lead..."></textarea>
+                    <p class="text-xs text-slate-400 mt-2">
+                        💡 <strong>Tip:</strong> Describe how the lead looks like - direction (N/S/E/W),
+                        up or down, big or small passage, sidemount or backmount access, water flow, etc.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="block text-sm font-medium text-slate-300 mb-2">Directions</h3>
+                    <div id="lead-heading-compass"></div>
                 </div>
             </form>
         `;
@@ -55,11 +61,17 @@ export const ExplorationLeadUI = {
 
         const html = Modal.base('create-lead-modal', 'Mark Exploration Lead', formHtml, footer, 'max-w-md');
 
+        let headings: number[] = [];
+        let compass: ReturnType<typeof createHeadingCompass> | undefined;
         Modal.open('create-lead-modal', html, () => {
+            compass = createHeadingCompass(document.getElementById('lead-heading-compass')!, {
+                headings, onChange: value => { headings = value; },
+            });
             (document.getElementById('lead-description') as HTMLTextAreaElement).focus();
 
             (document.getElementById('create-lead-form') as HTMLFormElement).onsubmit = async (e) => {
                 e.preventDefault();
+                if (!compass?.reportValidity()) return;
                 const description = (document.getElementById('lead-description') as HTMLTextAreaElement).value.trim();
                 if (!description) return;
 
@@ -71,7 +83,7 @@ export const ExplorationLeadUI = {
 
                 try {
                     // Create via API
-                    const lead = await ExplorationLeadManager.createLead(projectId, coordinates, description);
+                    const lead = await ExplorationLeadManager.createLead(projectId, coordinates, description, headings);
 
                     // Update state with lineName
                     const stateData = State.explorationLeads.get(lead.id);
@@ -95,7 +107,7 @@ export const ExplorationLeadUI = {
                     btnLoading.classList.add('hidden');
                 }
             };
-        });
+        }, () => compass?.dispose());
     },
 
     /**
@@ -149,13 +161,15 @@ export const ExplorationLeadUI = {
                 <!-- Description (editable if has write access) -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <textarea id="lead-description-edit" rows="4"
+                    <textarea id="lead-description-edit" rows="2"
                         class="form-input form-textarea"
                         placeholder="Describe the exploration lead..."
                         ${!hasWriteAccess ? 'disabled' : ''}>${Utils.escapeHtml(lead.description || '')}</textarea>
-                    <p class="text-xs text-slate-400 mt-2">
-                        💡 Direction, size, access type (sidemount/backmount), water flow, etc.
-                    </p>
+                </div>
+
+                <div>
+                    <h3 class="block text-sm font-medium text-slate-300 mb-2">Directions</h3>
+                    <div id="lead-heading-compass"></div>
                 </div>
             </div>
         `;
@@ -166,9 +180,9 @@ export const ExplorationLeadUI = {
 
         if (hasWriteAccess) {
             footer = `
-                ${hasAdminAccess ? '<button id="delete-lead-btn" class="btn-danger mr-auto">🗑️ Delete</button>' : ''}
-                <button data-close-modal="lead-details-modal" class="btn-secondary">Cancel</button>
-                <button id="save-lead-btn" class="btn-primary">
+                ${hasAdminAccess ? '<button id="delete-lead-btn" class="btn-danger exploration-lead-action">🗑️ Delete</button>' : ''}
+                <button data-close-modal="lead-details-modal" class="btn-secondary exploration-lead-action">Cancel</button>
+                <button id="save-lead-btn" class="btn-primary exploration-lead-action">
                     <span id="save-lead-btn-text">Save Changes</span>
                     <span id="save-lead-btn-loading" class="hidden">
                         <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -182,7 +196,16 @@ export const ExplorationLeadUI = {
 
         const html = Modal.base('lead-details-modal', 'Exploration Lead Details', content, footer, 'max-w-md');
 
+        const originalHeadings = [...(lead.headings ?? [])];
+        let headings = [...originalHeadings];
+        let compass: ReturnType<typeof createHeadingCompass> | undefined;
         Modal.open('lead-details-modal', html, () => {
+            compass = createHeadingCompass(document.getElementById('lead-heading-compass')!, {
+                headings, readOnly: !hasWriteAccess, onChange: value => { headings = value; },
+            });
+            const descriptionInput = document.getElementById('lead-description-edit') as HTMLTextAreaElement;
+            // Compare against the DOM value because textarea parsing normalizes line endings.
+            const originalDescription = descriptionInput.value;
             // Delete handler (admin only)
             const deleteBtn = (document.getElementById('delete-lead-btn') as HTMLElement);
             if (deleteBtn) {
@@ -195,7 +218,16 @@ export const ExplorationLeadUI = {
             const saveBtn = (document.getElementById('save-lead-btn') as HTMLElement);
             if (saveBtn) {
                 saveBtn.onclick = async () => {
-                    const newDescription = (document.getElementById('lead-description-edit') as HTMLTextAreaElement).value.trim();
+                    if (!compass?.reportValidity()) return;
+                    const changes: LeadWrite = {};
+                    if (descriptionInput.value !== originalDescription) changes.description = descriptionInput.value.trim();
+                    if (headings.length !== originalHeadings.length || headings.some((value, index) => value !== originalHeadings[index])) {
+                        changes.headings = [...headings];
+                    }
+                    if (!Object.keys(changes).length) {
+                        Modal.close('lead-details-modal');
+                        return;
+                    }
 
                     // Show loading state
                     const btnText = (document.getElementById('save-lead-btn-text') as HTMLElement);
@@ -205,7 +237,9 @@ export const ExplorationLeadUI = {
 
                     try {
                         // Update via API
-                        await ExplorationLeadManager.updateLead(leadId, { description: newDescription });
+                        await ExplorationLeadManager.updateLead(leadId, changes);
+                        Layers.refreshExplorationLeadsLayer();
+                        void Layers.reorderLayers();
 
                         Utils.showNotification('success', 'Exploration lead updated!');
                         Modal.close('lead-details-modal');
@@ -219,7 +253,7 @@ export const ExplorationLeadUI = {
                     }
                 };
             }
-        });
+        }, () => compass?.dispose());
     },
 
     /**

@@ -1,4 +1,4 @@
-import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
+import { GLOBE_ATMOSPHERE_LAYER_ID, MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { CheckedTileProtocol, MapSourceControl, MapSourceMap, RasterStyle, SourceStyleLayer } from '../../../../../../ts-types/domain/map-sources.ts';
 interface FixtureLayer { id: string; layout?: { visibility?: 'visible' | 'none' }; beforeId?: string | undefined }
 import { ViewerUpdates } from '../viewer_updates.ts';
@@ -133,6 +133,7 @@ describe('MapSources', () => {
             id: 'speleo-base-raster-layer',
             type: 'raster',
             source: 'speleo-base-raster-source',
+            minzoom: MAP_LAYER_MIN_ZOOM.BASEMAP_RASTER,
         });
     });
 
@@ -257,6 +258,7 @@ describe('MapSources', () => {
                 id: 'speleo-base-raster-layer',
                 type: 'raster',
                 source: 'speleo-base-raster-source',
+                minzoom: MAP_LAYER_MIN_ZOOM.BASEMAP_RASTER,
             }),
             'background'
         );

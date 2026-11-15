@@ -36,6 +36,7 @@ Unlike product docs, these files prioritize:
     isolated Compose projects, signed URL flow, production boundaries,
     diagnostics, and regression coverage
 - [Shared map packages and MapLibre integration](map-viewer/shared-packages.md)
+- [Survey-derived exploration leads and directions](exploration-lead-import.md)
 
 - `map-viewer/architecture.md`
   - module dependency graph, private vs public comparison, initialization

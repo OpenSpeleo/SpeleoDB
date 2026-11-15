@@ -72,6 +72,7 @@ class ExplorationLeadAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 "fields": (
                     "project",
                     "description",
+                    "headings",
                 )
             },
         ),

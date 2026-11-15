@@ -1,4 +1,4 @@
-import { GLOBE_ATMOSPHERE_LAYER_ID } from '@speleodb/map-viewer';
+import { GLOBE_ATMOSPHERE_LAYER_ID, MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import { Renderer } from './renderer.ts';
 import type { MapSourceDefinition, MapSourceMap, MapSourceControl, MapSourceChangeEvent, RasterStyle, RasterSourceOptions, BackgroundLayer, CheckedTileProtocol } from '../../../../../../ts-types/domain/map-sources.ts';
 import type { ViewerUpdateContext } from '@speleodb/map-viewer/update-scheduler';
@@ -109,6 +109,7 @@ function buildRasterStyle(source: MapSourceDefinition, accessToken = ''): Raster
                 id: RASTER_LAYER_ID,
                 type: 'raster',
                 source: RASTER_SOURCE_ID,
+                minzoom: MAP_LAYER_MIN_ZOOM.BASEMAP_RASTER,
             }
         ],
     };
@@ -151,7 +152,7 @@ function* mapSourceChanges(map: MapSourceMap, source: MapSourceDefinition, acces
     }
     if (source.type === 'raster') {
         map.addSource(RASTER_SOURCE_ID, buildRasterSourceConfig(source, accessToken));
-        map.addLayer({ id: RASTER_LAYER_ID, type: 'raster', source: RASTER_SOURCE_ID },
+        map.addLayer({ id: RASTER_LAYER_ID, type: 'raster', source: RASTER_SOURCE_ID, minzoom: MAP_LAYER_MIN_ZOOM.BASEMAP_RASTER },
             base.find(layer => map.getLayer(layer.id))?.id);
     }
 }

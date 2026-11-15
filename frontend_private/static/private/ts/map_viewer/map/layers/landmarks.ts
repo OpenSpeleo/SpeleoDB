@@ -3,7 +3,6 @@ import { createLandmarkLayers, landmarkColorExpression, landmarkHaloExpression }
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
-import { DEFAULTS } from '../../defaults.ts';
 import type { MapPointCollection, RendererLayer, LandmarkPointProperties } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { DisplayCategory } from '../../../../../../../ts-types/domain/map-display.ts';
 import { removeLayersAndSource, addOwnedSource, getSourceData } from './source_lifecycle.ts';
@@ -18,7 +17,6 @@ export function disposeLandmarkIcons() {
     renderIcons = null;
 }
 
-const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 interface LandmarkLayerOwner {
     setCategoryVisibility(category: DisplayCategory, visible: boolean): Promise<ViewerUpdateResult> | undefined;
 }
@@ -62,7 +60,6 @@ export function addLandmarkLayer(data: MapPointCollection<LandmarkPointPropertie
         if (State.map !== map || (refresh && !map.getSource(sourceId))) return;
         const layers = createLandmarkLayers({
             sourceId, markerId: 'landmarks-layer', labelId: 'landmarks-labels',
-            markerMinZoom: ZOOM_LEVELS.LANDMARK_SYMBOL, labelMinZoom: ZOOM_LEVELS.LANDMARK_LABEL,
             markerSize: ['interpolate', ['linear'], ['zoom'], 6, 10, 10, 14, 14, 20, 18, 28],
             labelSize: ['interpolate', ['linear'], ['zoom'], 10, 10, 14, 12, 18, 14],
             color: landmarkColorExpression(), haloColor: landmarkHaloExpression(),

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import uuid
+from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -34,6 +36,7 @@ from speleodb.background_jobs.operations import schedule_uploaded_geojson
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
 from speleodb.gis.models import ProjectGeoJSON
+from speleodb.gis.project_geojson_services import replace_project_geojson
 from speleodb.gis.tasks import generate_project_geojson
 from speleodb.git_engine.core import GitRepo
 from speleodb.surveys.models import Project
@@ -169,7 +172,7 @@ def test_task_reads_requested_sha_after_new_upload(
         case _:
             raise ValueError(f"Unsupported source project type: {commit.project.type}")
     expected = orjson.loads(
-        orjson.dumps(commit.project.build_geojson(repository.path / filename))
+        orjson.dumps(commit.project.build_geojson(repository.path / filename).geojson)
     )
     generation = _queue(commit)
     (repository.path / filename).write_bytes(b"not a survey")
@@ -240,6 +243,54 @@ def test_native_generation_uses_common_exporter(
     assert branch["properties"]["color"] == "#336699"
     assert source.read_bytes() == stalagmight_bytes()
     assert not list(Path(settings.GEOJSON_GENERATION_SCRATCH_DIR).iterdir())
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("local_source", [ProjectType.STALAGMIGHT], indirect=True)
+def test_force_recompute_reparses_only_latest_source_comments(
+    local_source: tuple[ProjectCommit, GitRepo],
+    artifact_storage: FileSystemStorage,
+    tmp_path: Path,
+) -> None:
+    initial, repository = local_source
+    project = initial.project
+    source = repository.path / "stalagmight.stalx"
+    actor = Actor("Surveyor", "surveyor@example.test")
+    records: list[ProjectCommit] = []
+    comments = [(2, "Historical-only !n!"), (3, "decorate black, stag, !s! !down!")]
+    for shot_id, comment in comments:
+        with closing(sqlite3.connect(":memory:")) as database, database:
+            database.deserialize(source.read_bytes())
+            database.execute("UPDATE shots SET comment = NULL")
+            database.execute(
+                "UPDATE shots SET comment = ? WHERE id = ?", (comment, shot_id)
+            )
+            database.commit()
+            source.write_bytes(database.serialize())
+        repository.index.add(["stalagmight.stalx"])
+        repository.index.commit(comment, author=actor, committer=actor)
+        record = ProjectCommit.get_or_create_from_commit(
+            project, repository.head.commit
+        )
+        records.append(record)
+        # An artifact produced before this feature has no imported lead records.
+        replace_project_geojson(project, record, project.build_geojson(source).geojson)
+    project.convert_geojson_history(repository, tmp_path)
+    assert not project.exploration_leads.exists()
+    project.convert_geojson_history(repository, tmp_path, force_recompute=True)
+    lead = project.exploration_leads.get()
+    assert lead.description == comments[-1][1]
+    assert lead.headings == [180]
+    lead_id = lead.pk
+    lead.description = "User's revised description"
+    lead.headings = []
+    lead.save()
+    project.convert_geojson_history(repository, tmp_path, force_recompute=True)
+    lead.refresh_from_db()
+    assert project.exploration_leads.get().pk == lead_id
+    assert lead.description == "User's revised description"
+    assert lead.headings == []
+    assert project.geojsons.filter(commit__in=records).count() == len(records)
 
 
 @pytest.mark.django_db
@@ -469,7 +520,9 @@ def test_malformed_compass_history_fails_task_and_preserves_valid_revision(
 ) -> None:
     first, repository = local_source
     expected = orjson.loads(
-        orjson.dumps(first.project.build_geojson(repository.path / "sample.mak"))
+        orjson.dumps(
+            first.project.build_geojson(repository.path / "sample.mak").geojson
+        )
     )
     manifest = repository.path / "compass.toml"
     manifest.write_text(

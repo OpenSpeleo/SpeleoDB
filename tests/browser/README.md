@@ -18,17 +18,18 @@ claim that a unit test certifies browser pixel output.
 
 ## Retained workflows
 
-| File                            | Scenarios per engine | Browser-specific failure protected                                                                                                                                             |
-| ------------------------------- | -------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `controllers-parity.spec.ts`    |                    2 | Native file removal or rejected upload loses retained state; contenteditable Tab navigation and row operations lose focus or data.                                             |
-| `viewer-gestures.spec.ts`       |                    4 | Wheel/projection crossings change pan direction; releasing one touch loses the remaining contact.                                                                              |
-| `viewer-parity.spec.ts`         |                    5 | Public/private composition or country/project gates lose visibility across changes; focus/fullscreen interaction, measurement cancellation, or drawing history/discard breaks. |
-| `viewer-responsiveness.spec.ts` |                    2 | Pending GPS work ignores the final toggle intent; GIS geometry visibility changes disturb other geometry types or surveys.                                                     |
-| `resource-edit.spec.ts`         |                    1 | Rejected note/file editing loses input or the native file selection.                                                                                                           |
-| `historical-revisions.spec.ts`  |                    1 | Revision selection or Back reloads the page, replaces the map, loses settings, or fails to refocus the selected survey.                                                        |
-| `gis-view-bound.spec.ts`        |                    1 | A public boundary disappears when changing sources, or a rejected bound selection loses its draft.                                                                             |
+| File                                | Scenarios per engine | Browser-specific failure protected                                                                                                                                             |
+| ----------------------------------- | -------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `controllers-parity.spec.ts`        |                    2 | Native file removal or rejected upload loses retained state; contenteditable Tab navigation and row operations lose focus or data.                                             |
+| `viewer-gestures.spec.ts`           |                    4 | Wheel/projection crossings change pan direction; releasing one touch loses the remaining contact.                                                                              |
+| `viewer-parity.spec.ts`             |                    5 | Public/private composition or country/project gates lose visibility across changes; focus/fullscreen interaction, measurement cancellation, or drawing history/discard breaks. |
+| `viewer-responsiveness.spec.ts`     |                    2 | Pending GPS work ignores the final toggle intent; GIS geometry visibility changes disturb other geometry types or surveys.                                                     |
+| `exploration-lead-headings.spec.ts` |                    1 | Tabs lose keyboard focus or select the wrong heading; gestures lose pointer ownership (native touch in Chromium).                                                              |
+| `resource-edit.spec.ts`             |                    1 | Rejected note/file editing loses input or the native file selection.                                                                                                           |
+| `historical-revisions.spec.ts`      |                    1 | Revision selection or Back reloads the page, replaces the map, loses settings, or fails to refocus the selected survey.                                                        |
+| `gis-view-bound.spec.ts`            |                    1 | A public boundary disappears when changing sources, or a rejected bound selection loses its draft.                                                                             |
 
-All 16 scenarios run in Chromium and WebKit, serially with one worker and zero
+All 17 scenarios run in Chromium and WebKit, serially with one worker and zero
 retries. Use one representative of shared form/table implementations. Additional
 browser variants need a distinct complex failure, rather than another icon,
 color, value or page using the same controller.

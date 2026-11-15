@@ -103,14 +103,14 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-    command: /start-celeryworker
+    command: [python, -m, compose.celery.autoreload, worker]
     stop_grace_period: 120s
     restart: unless-stopped
 
   celery-beat:
     <<: *celery-worker
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_beat"
-    command: /start-celerybeat
+    command: [python, -m, compose.celery.autoreload, beat]
 
   # A different Redis process isolates Pub/Sub events and remote-control
   # traffic, which Redis logical database numbers alone do not isolate.

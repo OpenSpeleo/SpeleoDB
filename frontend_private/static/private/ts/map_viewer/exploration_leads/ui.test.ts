@@ -150,10 +150,10 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
     });
     afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
     it('keeps the create callback async, rejects empty descriptions and updates the existing cached object on success', async () => {
-        const cached: ViewerExplorationLead = { id: 'lead', coordinates: [1, 2], lineName: '', description: '', projectId: null, createdAt: undefined }; State.explorationLeads.set('lead', cached);
+        const cached: ViewerExplorationLead = { id: 'lead', coordinates: [1, 2], lineName: '', description: '', headings: [], projectId: null, createdAt: undefined }; State.explorationLeads.set('lead', cached);
         ExplorationLeadManager.createLead.mockResolvedValue({
             id: 'lead', project: 'project', longitude: 1, latitude: 2,
-            description: 'Passage', created_by: 'tester@example.test',
+            description: 'Passage', headings: [], created_by: 'tester@example.test',
             creation_date: '2026-01-01T00:00:00Z', modified_date: '2026-01-01T00:00:00Z',
         });
         const coordinates: [number, number] = [1, 2];
@@ -163,7 +163,7 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         await form.onsubmit!(new Event('submit') as SubmitEvent); expect(ExplorationLeadManager.createLead).not.toHaveBeenCalled();
         (document.getElementById('lead-description') as HTMLTextAreaElement).value = '  Passage  ';
         await form.onsubmit!(new Event('submit') as SubmitEvent);
-        expect(ExplorationLeadManager.createLead).toHaveBeenCalledExactlyOnceWith('project', coordinates, 'Passage');
+        expect(ExplorationLeadManager.createLead).toHaveBeenCalledExactlyOnceWith('project', coordinates, 'Passage', []);
         expect(State.explorationLeads.get('lead')).toBe(cached); expect(cached.lineName).toBe('<Line>');
         expect(Layers.refreshExplorationLeadsLayer).toHaveBeenCalledTimes(1); expect(Layers.reorderLayers).toHaveBeenCalledTimes(1);
         expect(Modal.close).toHaveBeenCalledWith('create-lead-modal');

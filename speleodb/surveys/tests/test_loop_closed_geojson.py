@@ -235,7 +235,7 @@ def test_project_uses_source_format_loop_closure(
         case _:
             raise AssertionError(project_type)
     original = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
-    actual = Project(type=project_type).build_geojson(path)
+    actual = Project(type=project_type).build_geojson(path).geojson
     actual, expected, measured = (
         orjson.loads(orjson.dumps(output)) for output in (actual, expected, measured)
     )
@@ -256,7 +256,7 @@ def test_single_anchor_stalagmight_closes_without_dropping_depths(
     path = _stalagmight_file(tmp_path)
     measured = survey_to_geojson(StalagmightInterface.from_file(path))
     actual = orjson.loads(
-        orjson.dumps(Project(type=ProjectType.STALAGMIGHT).build_geojson(path))
+        orjson.dumps(Project(type=ProjectType.STALAGMIGHT).build_geojson(path).geojson)
     )
     start, *legs = actual["features"]
     assert start["geometry"]["coordinates"] == [-70.0, 40.0]
@@ -291,7 +291,7 @@ def test_ariane_closes_target_and_preserves_recorded_depths(tmp_path: Path) -> N
     path = _ariane_file(tmp_path)
     measured = survey_to_geojson(ArianeInterface.from_file(path))
     actual = orjson.loads(
-        orjson.dumps(Project(type=ProjectType.ARIANE).build_geojson(path))
+        orjson.dumps(Project(type=ProjectType.ARIANE).build_geojson(path).geojson)
     )
     start, *legs = actual["features"]
     assert start["geometry"]["coordinates"] == [-70.0, 40.0]
@@ -305,7 +305,7 @@ def test_compass_l1_retains_short_leg_elevation_and_fixed_controls(
     tmp_path: Path,
 ) -> None:
     path = _compass_file(tmp_path)
-    actual = Project(type=ProjectType.COMPASS).build_geojson(path)
+    actual = Project(type=ProjectType.COMPASS).build_geojson(path).geojson
     legs = [
         feature
         for feature in actual["features"]

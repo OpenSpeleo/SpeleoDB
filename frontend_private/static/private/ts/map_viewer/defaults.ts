@@ -4,8 +4,8 @@ import type { DisplayCategory, DisplayStationType } from '../../../../../ts-type
 import geometryContract from '@speleodb/map-core/geometry-contract.json' with { type: 'json' };
 
 // ============================================================
-// DEFAULTS — single source of truth for every tuneable constant
-// in the map viewer. No magic numbers anywhere else.
+// DEFAULTS — web viewer configuration. Shared rendering policy
+// belongs to @speleodb/map-viewer and is consumed directly.
 // ============================================================
 export const DEFAULTS = Object.freeze({
     HISTORY: {
@@ -119,22 +119,6 @@ export const DEFAULTS = Object.freeze({
     GPS_TRACK_RENDER: {
         DETAIL_WIDTH: 6,
         CLOSE_WIDTH: 7,
-    },
-
-    ZOOM_LEVELS: {
-        PROJECT_LINE: 0,
-        PROJECT_LINE_LABEL: 14,
-        PROJECT_ENTRY_SYMBOL: 10,
-        LANDMARK_SYMBOL: 12,
-        LANDMARK_LABEL: 16,
-        SURFACE_STATION_SYMBOL: 12,
-        SURFACE_STATION_LABEL: 16,
-        SUBSURFACE_STATION_SYMBOL: 12,
-        SUBSURFACE_STATION_LABEL: 16,
-        CYLINDER_INSTALL_SYMBOL: 12,
-        CYLINDER_INSTALL_LABEL: 16,
-        EXPLORATION_LEAD_SYMBOL: 12,
-        GPS_TRACK_LINE: 0,
     },
 
     SNAP: {

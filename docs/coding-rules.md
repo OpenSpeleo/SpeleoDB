@@ -9,17 +9,16 @@ merging.
 
 ### Map constants have one leaf owner and a stable `config.ts` facade
 
-**Every tuneable constant** in the map viewer must be defined in the `DEFAULTS`
-object defined in `map_viewer/defaults.ts` and re-exported unchanged from
+**Every web-specific tuneable constant** in the map viewer must be defined in
+the `DEFAULTS` object in `map_viewer/defaults.ts` and re-exported unchanged from
 `config.ts`. The leaf owns constants only, avoiding a dependency cycle through
 Config, API, utilities and notifications. Existing feature imports may continue
 using the `config.ts` facade; foundational helpers import the leaf directly. Do
 not copy or deep-freeze its nested objects. Shared standards and common renderer
 policy belong in `@speleodb/map-core` or `@speleodb/map-viewer`; the app's
-`DEFAULTS` facade imports and re-exports those values rather than duplicating
-them. App-specific tunables and overrides remain in `defaults.ts`. No magic
-numbers, thresholds, durations, zoom levels, colors, sizes, or configuration
-values anywhere else.
+adapters import those values directly rather than duplicating or renaming them.
+App-specific tunables remain in `defaults.ts`. No magic numbers, thresholds,
+durations, zoom levels, colors, sizes, or configuration values anywhere else.
 
 ```javascript
 // BAD — hardcoded constant in a random module
@@ -33,12 +32,16 @@ import { DEFAULTS } from "../config.ts";
 // ...then use DEFAULTS.DRAG.THRESHOLD_PX, DEFAULTS.MAP.LIMITED_MAX_ZOOM, etc.
 ```
 
-The `DEFAULTS` object is organized by category:
+Shared rendering policies belong to `@speleodb/map-viewer` and are imported
+directly. `MAP_LAYER_MIN_ZOOM` owns the entire layer visibility table for web
+and mobile; there are no app-specific visibility overrides. The `DEFAULTS`
+object holds web configuration. Fixtures and assertions also reference the
+shared keys; do not duplicate visibility numbers in tests. Web configuration is
+organized by category:
 
 | Category                | Examples                                                                                                                                                    |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DEFAULTS.MAP`          | style URL, center, zoom levels, fit bounds padding                                                                                                          |
-| `DEFAULTS.ZOOM_LEVELS`  | min zoom per layer type                                                                                                                                     |
 | `DEFAULTS.SNAP`         | magnetic snap radius                                                                                                                                        |
 | `DEFAULTS.DRAG`         | drag threshold, query padding                                                                                                                               |
 | `DEFAULTS.UI`           | mobile breakpoint, notification duration, truncation lengths, `COUNTRY_GROUP_TRANSITION_MS`                                                                 |
@@ -46,8 +49,9 @@ The `DEFAULTS` object is organized by category:
 | `DEFAULTS.COLORS`       | `DEFAULT_STATION`, `FALLBACK` (`#94a3b8` — used when model color is not yet loaded), `DEPTH_NONE`/`DEPTH_SHALLOW`/`DEPTH_MID`/`DEPTH_DEEP` (depth gradient) |
 | `DEFAULTS.STORAGE_KEYS` | localStorage key names: `COUNTRY_COLLAPSED`, `COUNTRY_VISIBILITY`, `PROJECTS_COUNTRY_COLLAPSED`, plus project/network visibility keys                       |
 
-When adding a new feature that needs a tuneable value, add it to `DEFAULTS`
-first, then import it where needed.
+When adding a new tuneable value, define it in the owning shared package when it
+is common policy, or in `DEFAULTS` when it is web-specific, then import it where
+needed.
 
 ### No unescaped user data in HTML sinks
 

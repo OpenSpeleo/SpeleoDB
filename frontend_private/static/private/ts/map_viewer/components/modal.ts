@@ -27,11 +27,11 @@ export const Modal = {
         `;
     },
 
-    open(id: string, html: string, onOpen: (() => void) | null = null) {
+    open(id: string, html: string, onOpen: (() => void) | null = null, onClose: (() => void) | null = null) {
         this.close(id);
         getMapOverlayHost().insertAdjacentHTML('beforeend', html);
         const element = document.getElementById(id);
-        openMapDialog(element, { onClose: () => element!.remove(), dismissOnBackdrop: false });
+        openMapDialog(element, { onClose: () => { onClose?.(); element!.remove(); }, dismissOnBackdrop: false });
 
         // Attach standard close handlers to ALL elements with data-close-modal
         const closeBtns = document.querySelectorAll<HTMLElement>(`[data-close-modal="${id}"]`);

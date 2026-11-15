@@ -361,7 +361,7 @@ class TestFileUploadGeoJSON(BaseAPIProjectTestCase):
                 artifact = ProjectGeoJSON.objects.get(commit_id=str(data["hexsha"]))
                 with artifact.file.open("rb") as stored:
                     assert orjson.loads(stored.read()) == orjson.loads(
-                        orjson.dumps(self.project.build_geojson(source))
+                        orjson.dumps(self.project.build_geojson(source).geojson)
                     )
             else:
                 assert not TaskResult.objects.filter(

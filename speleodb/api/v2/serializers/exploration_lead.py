@@ -7,13 +7,62 @@ from decimal import InvalidOperation
 from typing import Any
 from typing import ClassVar
 
+from drf_spectacular.utils import extend_schema_field
 from geojson import Feature  # type: ignore[attr-defined]
 from geojson import Point  # type: ignore[attr-defined]
 from rest_framework import serializers
 
+from speleodb.common.constants import EXPLORATION_LEAD_MAX_HEADINGS
+from speleodb.common.constants import HEADING_FULL_CIRCLE
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models.explo_lead import validate_headings
 from speleodb.utils.gps_utils import format_coordinate
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
+
+
+@extend_schema_field(
+    {
+        "type": "number",
+        "format": "double",
+        "minimum": 0,
+        "maximum": HEADING_FULL_CIRCLE,
+        "exclusiveMaximum": True,
+    }
+)
+class HeadingField(serializers.FloatField):
+    """Finite clockwise bearing, including north and excluding a second full turn."""
+
+    def to_internal_value(self, data: Any) -> float:
+        if isinstance(data, bool):
+            raise serializers.ValidationError("Headings must be numbers.")
+        value = super().to_internal_value(data)
+        validate_headings([value])
+        return value
+
+
+@extend_schema_field(
+    {
+        "type": "array",
+        "items": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "maximum": HEADING_FULL_CIRCLE,
+            "exclusiveMaximum": True,
+        },
+        "maxItems": EXPLORATION_LEAD_MAX_HEADINGS,
+    }
+)
+class HeadingsField(serializers.JSONField):
+    """Accept a heading array, JSON-encoded for multipart and URL-encoded forms."""
+
+    def to_internal_value(self, data: Any) -> Any:
+        values = super().to_internal_value(data)
+        return serializers.ListField(
+            child=HeadingField(),
+            max_length=EXPLORATION_LEAD_MAX_HEADINGS,
+            validators=[validate_headings],
+        ).run_validation(values)
 
 
 class ExplorationLeadSerializer(
@@ -23,11 +72,14 @@ class ExplorationLeadSerializer(
 
     sanitized_fields: ClassVar[list[str]] = ["description"]
 
+    headings = HeadingsField(required=False)
+
     class Meta:
         model = ExplorationLead
         fields = [
             "id",
             "description",
+            "headings",
             "latitude",
             "longitude",
             "project",
@@ -81,6 +133,7 @@ class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLe
         fields = [
             "id",
             "description",
+            "headings",
             "latitude",
             "longitude",
             "created_by",
@@ -95,6 +148,7 @@ class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLe
             geometry=Point((float(instance.longitude), float(instance.latitude))),  # type: ignore[no-untyped-call]
             properties={
                 "description": instance.description,
+                "headings": instance.headings,
                 "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
                 "modified_date": instance.modified_date.isoformat(),

@@ -112,6 +112,7 @@ SPELEODB_CELERY_WORKER_RUNTIME: bool = env.bool(
 DJANGO_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.postgres",
     "django.contrib.sessions",
     "django.contrib.sites",
     "django.contrib.messages",

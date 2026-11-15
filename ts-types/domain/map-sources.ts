@@ -23,6 +23,7 @@ export interface RasterLayer {
     id: string;
     type: 'raster';
     source: string;
+    minzoom?: number;
     layout?: RendererLayout;
 }
 export interface BackgroundLayer {

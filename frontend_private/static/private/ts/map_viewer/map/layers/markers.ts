@@ -1,11 +1,12 @@
+import { buildExplorationLeadCones } from '@speleodb/map-core';
+import { createExplorationLeadConeLayer, EXPLORATION_LEAD_CONE_SOURCE_OPTIONS, MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { CylinderInstallGeoJSONCollection } from '@speleodb/api';
 import { formatDate } from '../../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
 import type { ViewerUpdateResult } from '@speleodb/map-viewer/update-scheduler';
 import { State } from '../../state.ts';
-import { DEFAULTS } from '../../defaults.ts';
 import type { Feature, FeatureCollection, Point } from 'geojson';
-import type { RendererValue, MapPointCollection } from '../../../../../../../ts-types/domain/renderer.ts';
+import type { RendererValue, RendererLayer, MapPointCollection } from '../../../../../../../ts-types/domain/renderer.ts';
 import type { CylinderInstallRecord } from '../../../../../../../ts-types/domain/fleet-records.ts';
 import { API } from '../../api.ts';
 import { getRuntimeContext } from '../../runtime_context.ts';
@@ -13,7 +14,6 @@ import { removeLayersAndSource, addOwnedSource, getSourceData, setOwnedSourceDat
 // Track whether custom marker images have been loaded
 let markerImagesLoaded = false;
 export const PROJECT_SCOPED_MARKER_PROPERTY = 'project_id';
-const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 interface MarkerLayerOwner {
     refreshExplorationLeadsLayer(): void;
     reorderLayers(): Promise<ViewerUpdateResult> | undefined;
@@ -139,7 +139,7 @@ export async function loadMarkerImages() {
 /**
  * Add an exploration lead marker to the map
  */
-export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshExplorationLeadsLayer' | 'reorderLayers'>, id: EntityId, coordinates: [number, number], lineName = 'Survey Line', description = '', projectId: EntityId | null = null) {
+export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshExplorationLeadsLayer' | 'reorderLayers'>, id: EntityId, coordinates: [number, number], lineName = 'Survey Line', description = '', projectId: EntityId | null = null, headings: readonly number[] = []) {
     const map = State.map;
     if (!map) return;
 
@@ -149,6 +149,7 @@ export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshEx
         coordinates,
         lineName,
         description,
+        headings: [...headings],
         projectId,
         createdAt: new Date().toISOString()
     });
@@ -172,7 +173,7 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
 
     // Build GeoJSON from state
     // MapLibre requires promoteId for string IDs - include id in properties
-    const features = Array.from(State.explorationLeads.values()).map((marker): Feature<Point, { id: EntityId; lineName: string; project_id: string | null }> => ({
+    const features = Array.from(State.explorationLeads.values()).map((marker): Feature<Point, { id: EntityId; lineName: string; headings: number[]; project_id: string | null }> => ({
         type: 'Feature',
         id: marker.id,
         geometry: {
@@ -181,11 +182,12 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
         },
         properties: withProjectScopedMarkerProperties({
             id: marker.id,
-            lineName: marker.lineName
+            lineName: marker.lineName,
+            headings: marker.headings ?? []
         }, marker.projectId)
     }));
 
-    const geojson: FeatureCollection<Point, { id: EntityId; lineName: string; project_id: string | null }> = {
+    const geojson: FeatureCollection<Point, { id: EntityId; lineName: string; headings: number[]; project_id: string | null }> = {
         type: 'FeatureCollection',
         features
     };
@@ -206,7 +208,7 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
                 id: layerId,
                 type: 'symbol',
                 source: sourceId,
-                minzoom: ZOOM_LEVELS.EXPLORATION_LEAD_SYMBOL,
+                minzoom: MAP_LAYER_MIN_ZOOM.EXPLORATION_LEAD_SYMBOL,
                 layout: {
                     'icon-image': 'exploration-lead-icon',
                     'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 18, 0.6],
@@ -223,7 +225,7 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
                 id: layerId,
                 type: 'circle',
                 source: sourceId,
-                minzoom: ZOOM_LEVELS.EXPLORATION_LEAD_SYMBOL,
+                minzoom: MAP_LAYER_MIN_ZOOM.EXPLORATION_LEAD_SYMBOL,
                 paint: {
                     'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 12],
                     'circle-color': '#EF4444',
@@ -233,6 +235,21 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
                 }
             });
         }
+    }
+
+    const coneSourceId = 'exploration-leads-cones-source';
+    const coneLayerId = 'exploration-leads-cones-layer';
+    const cones = buildExplorationLeadCones(geojson);
+    if (map.getSource(coneSourceId)) {
+        setOwnedSourceData(map.getSource(coneSourceId)!, cones);
+    } else {
+        addOwnedSource(map, coneSourceId, { type: 'geojson', data: cones, ...EXPLORATION_LEAD_CONE_SOURCE_OPTIONS });
+    }
+    if (!map.getLayer(coneLayerId)) {
+        map.addLayer(createExplorationLeadConeLayer({
+            sourceId: coneSourceId,
+            layerId: coneLayerId,
+        }) as RendererLayer);
     }
 
     this.applyProjectScopedMarkerVisibility();
@@ -446,7 +463,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
             id: layerId,
             type: 'symbol',
             source: sourceId,
-            minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_SYMBOL,
+            minzoom: MAP_LAYER_MIN_ZOOM.CYLINDER_INSTALL_SYMBOL,
             layout: {
                 'icon-image': 'cylinder-icon',
                 'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.8, 18, 1.2],
@@ -464,7 +481,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
             id: layerId,
             type: 'symbol',
             source: sourceId,
-            minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_SYMBOL,
+            minzoom: MAP_LAYER_MIN_ZOOM.CYLINDER_INSTALL_SYMBOL,
             layout: {
                 'text-field': '●',
                 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -485,7 +502,7 @@ export function addCylinderInstallsLayer(this: Pick<MarkerLayerOwner, 'applyProj
         id: labelLayerId,
         type: 'symbol',
         source: sourceId,
-        minzoom: ZOOM_LEVELS.CYLINDER_INSTALL_LABEL,
+        minzoom: MAP_LAYER_MIN_ZOOM.CYLINDER_INSTALL_LABEL,
         layout: {
             'text-field': getCylinderInstallLabelExpression(),
             'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],

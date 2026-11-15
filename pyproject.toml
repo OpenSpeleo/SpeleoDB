@@ -69,8 +69,8 @@ dependencies = [
     # ------------------------------------------------------------------------------
     "cave-closure==0.0.6",    # https://github.com/OpenSpeleo/cave-closure
     "mnemo-lib==0.0.9",       # https://github.com/OpenSpeleo/pytool_mnemo_lib
-    "compass-lib==0.0.11",    # https://github.com/OpenSpeleo/pytool_compass_lib
-    "openspeleo-lib==0.0.24", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
+    "compass-lib==0.0.12",    # https://github.com/OpenSpeleo/pytool_compass_lib
+    "openspeleo-lib==0.0.25", # https://github.com/OpenSpeleo/pytool_openspeleo_lib
 
     # Git Management
     # ------------------------------------------------------------------------------

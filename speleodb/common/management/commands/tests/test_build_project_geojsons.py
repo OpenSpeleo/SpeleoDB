@@ -440,7 +440,9 @@ class TestBuildProjectGeoJSONs(TestCase):
                 project_type=ProjectType.STALAGMIGHT,
                 artifact_paths=[native],
             )
-            expected = orjson.loads(orjson.dumps(self.project.build_geojson(native)))
+            expected = orjson.loads(
+                orjson.dumps(self.project.build_geojson(native).geojson)
+            )
             source = (
                 self.source_directory / StalagmightFileProcessor.TARGET_SAVE_FILENAME
             )

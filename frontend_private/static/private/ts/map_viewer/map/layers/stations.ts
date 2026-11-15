@@ -5,7 +5,6 @@ import { State } from '../../state.ts';
 import { DEFAULTS } from '../../defaults.ts';
 import type { MapPointCollection, PointProperties, RendererLayer } from '../../../../../../../ts-types/domain/renderer.ts';
 import { removeLayersAndSource, addOwnedSource, getSourceData } from './source_lifecycle.ts';
-const ZOOM_LEVELS = DEFAULTS.ZOOM_LEVELS;
 interface StationLayerOwner {
     applyProjectLayerVisibility(id: EntityId): void;
     applyNetworkLayerVisibility(id: EntityId): void;
@@ -65,8 +64,6 @@ export function addSubSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyPr
     // Add Label Layer for all station types
     const layers = createStationLayers({
         sourceId, circleId: circleLayerId, labelId: labelLayerId,
-        markerMinZoom: ZOOM_LEVELS.SUBSURFACE_STATION_SYMBOL,
-        labelMinZoom: ZOOM_LEVELS.SUBSURFACE_STATION_LABEL,
         markerSize: ['interpolate', ['linear'], ['zoom'], 14, 5, 18, 8],
         iconSize: ['interpolate', ['linear'], ['zoom'], 14, 0.6, 18, 1.0],
         labelSize: 12,
@@ -141,8 +138,6 @@ export function addSurfaceStationLayer(this: Pick<StationLayerOwner, 'applyNetwo
     // Add Label Layer
     const layers = createSurfaceStationLayers({
         sourceId, markerId: symbolLayerId, labelId: labelLayerId,
-        markerMinZoom: ZOOM_LEVELS.SURFACE_STATION_SYMBOL,
-        labelMinZoom: ZOOM_LEVELS.SURFACE_STATION_LABEL,
         markerSize: ['interpolate', ['linear'], ['zoom'], 14, 16, 18, 24],
         labelSize: 12,
         color: ['coalesce', ['get', 'color'], DEFAULTS.COLORS.DEFAULT_STATION],

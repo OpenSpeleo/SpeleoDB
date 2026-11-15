@@ -121,7 +121,7 @@ describe('State', () => {
             State.projectLayerStates.set('test', true);
             State.effectiveProjectVisibility.set('test', false);
             State.allStations.set('s1', { id: 's1' });
-            State.explorationLeads.set('e1', { id: 'e1', coordinates: [1, 2], lineName: 'Survey Line', description: '', projectId: 'p1', createdAt: undefined });
+            State.explorationLeads.set('e1', { id: 'e1', coordinates: [1, 2], lineName: 'Survey Line', description: '', headings: [], projectId: 'p1', createdAt: undefined });
             State.gpsTrackCache.set('t1', { type: 'FeatureCollection', features: [] });
 
             State.resetLayerState();

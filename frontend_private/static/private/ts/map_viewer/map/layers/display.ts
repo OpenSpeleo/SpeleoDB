@@ -157,7 +157,7 @@ export function applyCategoryVisibility(this: Pick<DisplayLayerOwner, 'applyProj
             applyLayerVisibility(['landmarks-layer', 'landmarks-labels'], visible);
             break;
         case 'explorationLeads':
-            applyLayerVisibility(['exploration-leads-layer'], visible);
+            applyLayerVisibility(['exploration-leads-layer', 'exploration-leads-cones-layer'], visible);
             break;
         case 'cylinders':
             applyLayerVisibility(['cylinder-installs-layer', 'cylinder-installs-labels'], visible);

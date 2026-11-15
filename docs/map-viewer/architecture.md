@@ -549,19 +549,24 @@ the icon manually. Do not interpolate user or API data into that constant.
 
 ### Zoom-Level Visibility
 
-Each layer type has a `minzoom` threshold defined in `ZOOM_LEVELS`:
+All layer minimum zooms come from `MAP_LAYER_MIN_ZOOM` in
+`@speleodb/map-viewer`, shared with mobile. Shared marker builders apply these
+values directly; project, GPS, cylinder and lead marker adapters import the same
+table. App-local zoom tables and builder overrides have been removed:
 
 | Layer Type                   | Min Zoom                |
 | ---------------------------- | ----------------------- |
-| Project survey lines         | 8                       |
+| Raster basemaps              | 0                       |
+| GIS geometry and aliases     | 0                       |
+| Project survey lines         | 0                       |
 | Project line labels          | 14                      |
 | Project entry points (stars) | 10                      |
-| GPS track lines              | 8                       |
+| GPS track lines              | 0                       |
 | Landmarks                    | 12 (symbol), 16 (label) |
 | Subsurface stations          | 12 (symbol), 16 (label) |
 | Surface stations             | 12 (symbol), 16 (label) |
 | Cylinder installs            | 12 (symbol), 16 (label) |
-| Exploration leads            | 12                      |
+| Exploration leads and cones  | 15                      |
 
 ---
 

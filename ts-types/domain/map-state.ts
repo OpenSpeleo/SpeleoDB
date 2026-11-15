@@ -15,6 +15,7 @@ export interface ViewerExplorationLead {
     coordinates: Position;
     lineName: string;
     description: string;
+    headings: number[];
     projectId: EntityId | null;
     createdAt: string | undefined;
     createdBy?: string | undefined;

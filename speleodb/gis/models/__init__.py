@@ -5,6 +5,7 @@
 
 # Project Related Models
 from speleodb.gis.models.explo_lead import ExplorationLead
+from speleodb.gis.models.explo_lead import ExplorationLeadSource
 from speleodb.gis.models.project_geojson import ProjectGeoJSON
 
 # GPS Track Related Models
@@ -72,6 +73,7 @@ __all__ = [
     "ExperimentRecord",
     "ExperimentUserPermission",
     "ExplorationLead",
+    "ExplorationLeadSource",
     "GISGeometry",
     "GISGeometryUserPermission",
     "GISLayer",

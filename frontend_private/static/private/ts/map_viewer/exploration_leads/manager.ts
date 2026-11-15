@@ -83,6 +83,7 @@ export const ExplorationLeadManager = {
                         id: featureId,
                         coordinates: coords,
                         description: feature.properties.description || '',
+                        headings: [...(feature.properties.headings ?? [])],
                         projectId: projectId,
                         lineName: 'Survey Line',
                         createdAt: feature.properties.creation_date,
@@ -129,13 +130,15 @@ export const ExplorationLeadManager = {
      * @param {string} projectId - The project UUID
      * @param {Array} coordinates - [lng, lat] coordinates
      * @param {string} description - Lead description
+     * @param {Array} headings - Saved compass directions, empty when unset
      * @returns {Promise<Object>} The created lead data
      */
-    async createLead(projectId: EntityId, coordinates: readonly [unknown, unknown], description: string) {
+    async createLead(projectId: EntityId, coordinates: readonly [unknown, unknown], description: string, headings: readonly number[] = []) {
         const leadData = {
             latitude: Number(coordinates[1]).toFixed(7),
             longitude: Number(coordinates[0]).toFixed(7),
-            description: description
+            description: description,
+            headings: [...headings]
         };
 
         const lead = await API.createExplorationLead(projectId, leadData);
@@ -149,6 +152,7 @@ export const ExplorationLeadManager = {
             id: lead.id,
             coordinates: [Number(lead.longitude), Number(lead.latitude)],
             description: lead.description || '',
+            headings: [...(lead.headings ?? [])],
             projectId: projectId,
             lineName: 'Survey Line',
             createdAt: lead.creation_date,
@@ -165,7 +169,7 @@ export const ExplorationLeadManager = {
     /**
      * Update an existing exploration lead
      * @param {string} leadId - The lead UUID
-     * @param {Object} data - Data to update (description, latitude, longitude)
+     * @param {Object} data - Data to update (description, headings, latitude, longitude)
      * @returns {Promise<Object>} The updated lead data
      */
     async updateLead(leadId: EntityId, data: LeadWrite) {
@@ -181,9 +185,12 @@ export const ExplorationLeadManager = {
             State.explorationLeads.set(leadId, {
                 ...existing,
                 coordinates: [Number(lead.longitude), Number(lead.latitude)],
-                description: lead.description || ''
+                description: lead.description || '',
+                headings: [...(lead.headings ?? [])]
             });
         }
+
+        this.invalidateCache();
 
         console.log(`✅ Updated exploration lead: ${leadId}`);
         return lead;

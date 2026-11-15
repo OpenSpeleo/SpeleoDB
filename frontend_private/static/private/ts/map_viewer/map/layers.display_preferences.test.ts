@@ -1,3 +1,4 @@
+import { MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry, Point } from 'geojson';
 import type { Mock } from 'vitest';
 import { cylinderInstallFixture } from '../../../../../../frontend_common/test/api-fixtures.ts';
@@ -108,7 +109,7 @@ it('keeps survey lines enabled at country scale with thin continuous overview st
     expect(layer).toMatchObject({
         type: 'line',
         filter: ['==', '$type', 'LineString'],
-        minzoom: 0,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_LINE,
         paint: { 'line-color': '#123456', 'line-opacity': 1 },
     });
     for (const [zoom, width] of [[0, 1], [5, 1], [7.99, 1], [8, 1], [10, 1.25], [11.5, 1.4375], [12, 1.5], [14, 2], [16, 5], [17, 5.5], [18, 6], [20, 6]] as const) {
@@ -124,7 +125,7 @@ it('keeps GPS tracks visible at overview zooms without changing track geometry, 
     const layer = currentMap().getLayer('gps-track-line-t1');
     expect(source).toMatchObject({ tolerance: 0, data });
     expect(layer).toMatchObject({
-        minzoom: 0,
+        minzoom: MAP_LAYER_MIN_ZOOM.GPS_TRACK_LINE,
         filter: ['==', '$type', 'LineString'],
         paint: { 'line-color': '#abcdef', 'line-dasharray': [0.1, 1.5] },
     });
@@ -162,7 +163,7 @@ it.each(['project', 'depth', 'shot'])('preserves overview rendering and visibili
     await Layers.addProjectGeoJSON('p1', '/rebuilt.geojson');
     expect(currentMap().getSource('project-geojson-p1').tolerance).toBe(0);
     expect(currentMap().getLayer('project-layer-p1')).toMatchObject({
-        minzoom: 0,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_LINE,
         layout: { visibility: 'none' },
         paint: { 'line-width': originalWidth, 'line-color': expectedColor },
     });
@@ -185,7 +186,7 @@ it('shows cave entrances by default and composes their category with project and
     expect(visibility('project-points-p2')).toBe('none');
     expect(currentMap().getLayer('project-points-p1')).toMatchObject({
         filter: ['==', '$type', 'Point'],
-        minzoom: DEFAULTS.ZOOM_LEVELS.PROJECT_ENTRY_SYMBOL,
+        minzoom: MAP_LAYER_MIN_ZOOM.PROJECT_ENTRY_SYMBOL,
         layout: { 'text-field': '★' },
     });
 

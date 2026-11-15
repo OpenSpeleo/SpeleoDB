@@ -4,17 +4,24 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import math
 import pathlib
+import re
 import shutil
 import uuid
+from collections import defaultdict
+from collections import deque
 from dataclasses import asdict
 from dataclasses import dataclass
+from decimal import Decimal
+from hashlib import sha256
 from itertools import chain
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from typing import Any
 
 import compass_lib.geojson
+import orjson
 from compass_lib.geojson import project_to_geojson
 from compass_lib.interface import CompassInterface
 from compass_lib.loop_closure.presets import InverseLengthWeightedL1SpatialSolver
@@ -49,6 +56,8 @@ from openspeleo_lib.loop_closure.presets import (
 
 from speleodb.background_jobs.archive_sources import mirror_project
 from speleodb.background_jobs.archive_sources import project_git_source
+from speleodb.common.constants import EXPLORATION_LEAD_MAX_HEADINGS
+from speleodb.common.constants import HEADING_FULL_CIRCLE
 from speleodb.common.enums import ColorPalette
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import ProjectVisibility
@@ -60,6 +69,7 @@ from speleodb.git_engine.gitlab_manager import GitlabCredentials
 from speleodb.git_engine.gitlab_manager import GitlabManager
 from speleodb.utils.exceptions import GeoJSONGenerationError
 from speleodb.utils.exceptions import reraise_task_timeout
+from speleodb.utils.gps_utils import format_coordinate
 from speleodb.utils.s3_storages import GeoJSONStorage
 from speleodb.utils.timing_ctx import timed_section
 
@@ -69,7 +79,10 @@ if TYPE_CHECKING:
     from typing import Any
     from typing import Self
 
+    import openspeleo_lib
+
     from speleodb.gis.models import ExplorationLead
+    from speleodb.gis.models import ExplorationLeadSource
     from speleodb.gis.models import ProjectGeoJSON
     from speleodb.gis.models import SubSurfaceStation
     from speleodb.git_engine.core import GitCommit
@@ -82,6 +95,52 @@ if TYPE_CHECKING:
     from speleodb.users.models import User
 
 logger = logging.getLogger(__name__)
+
+LEAD_CARDINALS = {
+    name: index * 22.5
+    for index, name in enumerate(
+        (
+            "N",
+            "NNE",
+            "NE",
+            "ENE",
+            "E",
+            "ESE",
+            "SE",
+            "SSE",
+            "S",
+            "SSW",
+            "SW",
+            "WSW",
+            "W",
+            "WNW",
+            "NW",
+            "NNW",
+        )
+    )
+}
+LEAD_MARKER = re.compile(r"!(" + "|".join(LEAD_CARDINALS) + r"|[0-9]+)!")
+
+
+@dataclass(frozen=True)
+class ResolvedSurveyShot:
+    """Native observation and its original destination after map conversion."""
+
+    uuid: str | None
+    shot_id: str
+    from_id: str
+    namespace: tuple[str, ...]
+    length_m: float | None
+    azimuth: float | None
+    comment: str | None
+    longitude: float
+    latitude: float
+
+
+@dataclass(frozen=True)
+class GeoJSONBuildResult:
+    geojson: dict[str, Any]
+    shots: tuple[ResolvedSurveyShot, ...]
 
 
 @dataclass
@@ -227,6 +286,7 @@ class Project(models.Model):
 
     commits: models.QuerySet[ProjectCommit]
     exploration_leads: models.QuerySet[ExplorationLead]
+    exploration_lead_sources: models.QuerySet[ExplorationLeadSource]
     geojsons: models.QuerySet[ProjectGeoJSON]
     mutexes: models.QuerySet[ProjectMutex]
     stations: models.QuerySet[SubSurfaceStation]
@@ -726,6 +786,322 @@ class Project(models.Model):
             ProjectType.STALAGMIGHT,
         }
 
+    @staticmethod
+    def exploration_headings(comment: str | None) -> list[float]:
+        """Take up to three distinct valid directions, ignoring malformed markers."""
+        headings: list[float] = []
+        for match in LEAD_MARKER.finditer((comment or "").upper()):
+            token = match.group(1)
+            heading = LEAD_CARDINALS.get(token)
+            if heading is None and token.isascii() and token.isdigit():
+                # Strip padding before conversion so even a very long invalid token
+                # cannot exceed Python's integer-input limit or abort conversion.
+                digits = token.lstrip("0") or "0"
+                if len(digits) <= len(str(HEADING_FULL_CIRCLE)):
+                    value = int(digits)
+                    if value < HEADING_FULL_CIRCLE:
+                        heading = float(value)
+            if heading is not None and heading not in headings:
+                headings.append(heading)
+                if len(headings) == EXPLORATION_LEAD_MAX_HEADINGS:
+                    break
+        return headings
+
+    def _lead_signatures(
+        self,
+        shot: ResolvedSurveyShot,
+    ) -> list[tuple[int, str, Any]]:
+        """UUID payloads are unscoped; the database lookup always scopes the project."""
+        payloads: list[tuple[int, Any]] = []
+        if shot.uuid is not None:
+            payloads.append(
+                (
+                    self.exploration_lead_sources.model.Kind.UUID,
+                    str(uuid.UUID(shot.uuid)),
+                )
+            )
+        namespace = [self.type, *shot.namespace]
+        payloads.append(
+            (
+                self.exploration_lead_sources.model.Kind.ENDPOINTS,
+                [namespace, shot.shot_id, shot.from_id],
+            )
+        )
+        if shot.length_m is not None and shot.azimuth is not None:
+            if math.isfinite(shot.length_m) and math.isfinite(shot.azimuth):
+                length = Decimal(str(shot.length_m))
+                azimuth = Decimal(str(shot.azimuth % 360))
+                payloads.append(
+                    (
+                        self.exploration_lead_sources.model.Kind.MEASUREMENT,
+                        [
+                            namespace,
+                            shot.shot_id,
+                            format(length.normalize(), "f"),
+                            format(azimuth.normalize(), "f"),
+                        ],
+                    )
+                )
+        return [
+            (kind, sha256(orjson.dumps(payload)).hexdigest(), payload)
+            for kind, payload in payloads
+        ]
+
+    @transaction.atomic
+    def sync_exploration_leads(
+        self,
+        commit: ProjectCommit,
+        shots: list[ResolvedSurveyShot] | tuple[ResolvedSurveyShot, ...],
+    ) -> None:
+        """Import new sources and learn aliases without changing existing leads."""
+        # Bypass prefetched history: a queued conversion may have become historical.
+        if not shots or commit.project_id != self.pk:
+            return
+        # Git timestamps can tie or run backwards. A recorded descendant always
+        # supersedes its ancestors, regardless of when metadata was reconstructed.
+        parent_ids = {
+            parent
+            for parents in self.commits.order_by().values_list("parent_ids", flat=True)
+            for parent in parents
+        }
+        if (
+            self.commits.exclude(pk__in=parent_ids).values_list("pk", flat=True).first()
+            != commit.pk
+        ):
+            return
+        candidates = [(shot, self._lead_signatures(shot)) for shot in shots]
+        digests = {
+            digest for _, signatures in candidates for _, digest, _ in signatures
+        }
+        if not digests:
+            return
+        sources = {
+            (source.kind, source.digest): source
+            for source in self.exploration_lead_sources.filter(
+                digest__in=digests
+            ).select_related("lead")
+        }
+        signature_members: dict[tuple[int, str], list[int]] = defaultdict(list)
+        payloads: dict[tuple[int, str], Any] = {}
+        candidate_keys: list[list[tuple[int, str]]] = []
+        for index, (_, signatures) in enumerate(candidates):
+            keys: list[tuple[int, str]] = []
+            for kind, digest, payload in signatures:
+                key = (kind, digest)
+                existing = sources.get(key)
+                if (existing is not None and existing.payload != payload) or (
+                    key in payloads and payloads[key] != payload
+                ):
+                    raise ValueError("Exploration lead signature digest collision.")
+                payloads[key] = payload
+                signature_members[key].append(index)
+                keys.append(key)
+            candidate_keys.append(keys)
+
+        def connected_groups(
+            keys_by_candidate: list[list[tuple[int, str]]], maximum_kind: int
+        ) -> list[list[int]]:
+            """Visit each observation and signature once per priority pass."""
+            groups: list[list[int]] = []
+            visited: set[int] = set()
+            expanded: set[tuple[int, str]] = set()
+            for index in range(len(candidates)):
+                if index in visited:
+                    continue
+                group: list[int] = []
+                pending = deque([index])
+                visited.add(index)
+                while pending:
+                    current = pending.popleft()
+                    group.append(current)
+                    for key in keys_by_candidate[current]:
+                        if key[0] > maximum_kind or key in expanded:
+                            continue
+                        expanded.add(key)
+                        for neighbor in signature_members[key]:
+                            if neighbor not in visited:
+                                visited.add(neighbor)
+                                pending.append(neighbor)
+                groups.append(group)
+            return groups
+
+        # Deletion propagates before any new UUID or endpoint can claim a live
+        # owner. A chain of current aliases cannot resurrect a deleted source.
+        deleted: set[int] = set()
+        deleted_keys: set[tuple[int, str]] = set()
+        suppressed_leads: set[uuid.UUID] = set()
+        for group in connected_groups(
+            candidate_keys, self.exploration_lead_sources.model.Kind.MEASUREMENT
+        ):
+            group_keys = {key for index in group for key in candidate_keys[index]}
+            matches = [sources[key] for key in group_keys if key in sources]
+            if any(source.lead_id is None for source in matches):
+                deleted.update(group)
+                deleted_keys.update(group_keys)
+                suppressed_leads.update(
+                    source.lead_id for source in matches if source.lead_id is not None
+                )
+
+        # Persisted signatures never change owner. Only unclaimed signatures can
+        # transmit a newly learned identity, and never at a stronger priority than
+        # the evidence that established it. Three bounded graph passes preserve
+        # known UUID owners when weaker endpoint signatures connect their shots.
+        unclaimed_keys = [
+            [key for key in keys if key not in sources] for keys in candidate_keys
+        ]
+        assignments: dict[int, tuple[int, uuid.UUID | None]] = {}
+        groups: list[list[int]] = []
+        for priority in self.exploration_lead_sources.model.Kind.values:
+            groups = connected_groups(unclaimed_keys, priority)
+            for group in groups:
+                owners: set[uuid.UUID] = set()
+                ambiguous = False
+                for index in group:
+                    if index in deleted:
+                        continue
+                    if index in assignments:
+                        owner = assignments[index][1]
+                        if owner is None:
+                            ambiguous = True
+                        else:
+                            owners.add(owner)
+                    else:
+                        matches = [
+                            sources[key]
+                            for key in candidate_keys[index]
+                            if key in sources and key[0] <= priority
+                        ]
+                        if matches:
+                            owner = min(matches, key=lambda source: source.kind).lead_id
+                            assert owner is not None
+                            owners.add(owner)
+                if ambiguous or owners:
+                    owner = (
+                        next(iter(owners))
+                        if len(owners) == 1 and not ambiguous
+                        else None
+                    )
+                    for index in group:
+                        if index not in deleted and index not in assignments:
+                            assignments[index] = (priority, owner)
+
+        leads: dict[uuid.UUID, ExplorationLead] = {
+            source.lead_id: source.lead
+            for source in sources.values()
+            if source.lead_id is not None and source.lead is not None
+        }
+        new_leads: dict[uuid.UUID, ExplorationLead] = {}
+        coordinates = [
+            (
+                Decimal(str(format_coordinate(shot.longitude))),
+                Decimal(str(format_coordinate(shot.latitude))),
+            )
+            for shot, _ in candidates
+        ]
+        for group in groups:
+            if any(index in deleted or index in assignments for index in group):
+                continue
+            if len({coordinates[index] for index in group}) != 1:
+                logger.warning(
+                    "Conflicting exploration lead destinations in project %s "
+                    "for a new source",
+                    self.pk,
+                )
+                continue
+            annotated = [
+                index
+                for index in group
+                if self.exploration_headings(candidates[index][0].comment)
+            ]
+            if not annotated:
+                continue
+            # Duplicate native observations at one location must select the same
+            # initial comment even when conversion traverses them in reverse.
+            selected = min(
+                annotated,
+                key=lambda index: (
+                    candidates[index][0].shot_id,
+                    candidates[index][0].from_id,
+                    candidates[index][0].uuid or "",
+                    candidates[index][0].namespace,
+                    candidates[index][0].comment or "",
+                ),
+            )
+            shot = candidates[selected][0]
+            lead = self.exploration_leads.model(
+                project=self,
+                description=shot.comment or "",
+                headings=self.exploration_headings(shot.comment),
+                created_by=commit.author_email or self.created_by,
+            )
+            leads[lead.pk] = new_leads[lead.pk] = lead
+            for index in group:
+                assignments[index] = (
+                    self.exploration_lead_sources.model.Kind.MEASUREMENT,
+                    lead.pk,
+                )
+
+        # Check destinations before learning aliases, so equally strong
+        # contradictory observations cannot claim a new source identity.
+        destinations: dict[uuid.UUID, tuple[int, tuple[Decimal, Decimal]]] = {}
+        conflicts: set[uuid.UUID] = set()
+        for index, (priority, owner) in assignments.items():
+            if owner is None:
+                logger.warning(
+                    "Conflicting exploration lead identities in project %s",
+                    self.pk,
+                )
+                continue
+            previous = destinations.get(owner)
+            if previous is None or priority < previous[0]:
+                destinations[owner] = (priority, coordinates[index])
+                conflicts.discard(owner)
+            elif priority == previous[0] and coordinates[index] != previous[1]:
+                conflicts.add(owner)
+        for owner, (_, destination) in destinations.items():
+            if owner in conflicts:
+                logger.warning(
+                    "Conflicting exploration lead destinations "
+                    "in project %s for lead %s",
+                    self.pk,
+                    owner,
+                )
+                continue
+            if owner in suppressed_leads:
+                continue
+            if owner in new_leads:
+                lead = new_leads[owner]
+                lead.longitude, lead.latitude = destination
+        pending_sources: list[ExplorationLeadSource] = []
+        for key, members in signature_members.items():
+            if key in sources:
+                continue
+            source_lead: ExplorationLead | None = None
+            if key not in deleted_keys:
+                source_owners = {
+                    assignments[index][1] if index in assignments else None
+                    for index in members
+                }
+                if len(source_owners) != 1 or None in source_owners:
+                    continue
+                owner = next(iter(source_owners))
+                assert owner is not None
+                if owner in conflicts or owner in suppressed_leads:
+                    continue
+                source_lead = leads[owner]
+            pending_sources.append(
+                self.exploration_lead_sources.model(
+                    project=self,
+                    lead=source_lead,
+                    kind=key[0],
+                    digest=key[1],
+                    payload=payloads[key],
+                    source_format=self.type,
+                )
+            )
+        self.exploration_leads.model.objects.bulk_create(list(new_leads.values()))
+        self.exploration_lead_sources.model.objects.bulk_create(pending_sources)
+
     def convert_geojson_history(
         self,
         git_repo: GitRepo,
@@ -735,6 +1111,10 @@ class Project(models.Model):
         revision: str | None = None,
     ) -> ConversionSummary:
         """Continue conversion failures, preserving old artifacts until replacement."""
+        # Even an unusable HEAD must supersede historical annotations. Establish
+        # the complete ancestry before publishing any successfully converted source.
+        self.construct_git_history_from_project(git_repo)
+        head_revision = git_repo.head.commit.hexsha
         summary = ConversionSummary()
         first_error: Exception | None = None
         commits = (
@@ -764,15 +1144,18 @@ class Project(models.Model):
                             commit.hexsha,
                         )
                         continue
-                    data = self.build_geojson(source)
+                    result = self.build_geojson(source)
                     record = self.commits.model.get_or_create_from_commit(
                         project=self, commit=commit
                     )
                     replace_project_geojson(
                         self,
                         record,
-                        data,
+                        result.geojson,
                         replace_existing=force_recompute,
+                        source_shots=result.shots
+                        if commit.hexsha == head_revision
+                        else (),
                     )
                     summary.generated += 1
             except NoKnownAnchorError, compass_lib.geojson.NoKnownAnchorError:
@@ -832,16 +1215,24 @@ class Project(models.Model):
                 revision=revision,
             )
 
-    def build_geojson(self, file: pathlib.Path) -> dict[str, Any]:
+    def build_geojson(self, file: pathlib.Path) -> GeoJSONBuildResult:
         """Export using the source software's native loop-closure preset."""
         if not self.supports_geojson:
             raise GeoJSONGenerationError(
                 f"This project type is not supported yet: `{self.type}`."
             )
+        shots: list[ResolvedSurveyShot] = []
+        data: dict[str, Any]
+
+        def collect(
+            shot: compass_lib.ResolvedShot | openspeleo_lib.ResolvedShot,
+        ) -> None:
+            shots.append(ResolvedSurveyShot(**asdict(shot)))
+
         try:
             match self.type:
                 case ProjectType.COMPASS:
-                    return project_to_geojson(
+                    data = project_to_geojson(
                         CompassInterface.load_project(file),
                         include_stations=False,
                         include_legs=True,
@@ -849,7 +1240,9 @@ class Project(models.Model):
                         include_anchors=True,
                         color_by_origin=False,
                         loop_closure=InverseLengthWeightedL1SpatialSolver,
+                        on_resolved_shot=collect,
                     )
+                    return GeoJSONBuildResult(data, tuple(shots))
                 case ProjectType.ARIANE:
                     survey = ArianeInterface.from_file(file)
                     solver = InverseLengthWeightedConjugateGradientHorizontalSolver
@@ -874,7 +1267,10 @@ class Project(models.Model):
                 raise NoKnownAnchorError(  # noqa: TRY301 - expected omission
                     "The survey has no usable geographic anchor."
                 )
-            return survey_to_geojson(survey, loop_closure_solver=solver)
+            data = survey_to_geojson(
+                survey, loop_closure_solver=solver, on_resolved_shot=collect
+            )
+            return GeoJSONBuildResult(data, tuple(shots))
         except (
             EmptySurveyError,
             NoKnownAnchorError,

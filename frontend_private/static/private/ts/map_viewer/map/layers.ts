@@ -105,7 +105,8 @@ import { cancelLazyOverlays } from './layers/lazy_overlay.ts';
 const PROJECT_SCOPED_MARKER_LAYER_IDS = Object.freeze([
     'cylinder-installs-layer',
     'cylinder-installs-labels',
-    'exploration-leads-layer'
+    'exploration-leads-layer',
+    'exploration-leads-cones-layer'
 ]);
 
 export const Layers = {

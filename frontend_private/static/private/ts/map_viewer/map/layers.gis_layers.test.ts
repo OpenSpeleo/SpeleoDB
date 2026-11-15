@@ -1,3 +1,4 @@
+import { MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { ViewerMap } from '../../../../../../ts-types/domain/map-state.ts';
 import type { RendererLayer, RendererSourceOptions, RendererValue, RendererPopupOptions } from '../../../../../../ts-types/domain/renderer.ts';
 import type { RendererGlobal, ViewerGeoJSON, DisplayGeometryType, RenderGeometryType } from '../../../../../../ts-types/domain/map-geometry.ts';
@@ -119,8 +120,8 @@ describe('GIS Layer display', () => {
             0, 1, 8, 1, 12, 1.5, 14, 1.5, 16, 1.5, 18, 1.5]);
         expect(line!.paint!['line-width']).toEqual(['interpolate', ['linear'], ['zoom'],
             0, 1, 8, 1, 12, 1.5, 14, 2, 16, 2.5, 18, 2.5]);
-        expect(outline!.minzoom ?? 0).toBe(0);
-        expect(line!.minzoom ?? 0).toBe(0);
+        expect(outline!.minzoom).toBe(MAP_LAYER_MIN_ZOOM.GIS_GEOMETRY);
+        expect(line!.minzoom).toBe(MAP_LAYER_MIN_ZOOM.GIS_GEOMETRY);
         expect(line!.paint!['line-color']).toBe('#6366f1');
     });
 
