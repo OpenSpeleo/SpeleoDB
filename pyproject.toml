@@ -52,7 +52,7 @@ dependencies = [
     "ffmpeg-python==0.2.0", # https://github.com/kkroening/ffmpeg-python
     "Pillow==13.0.0",       # https://github.com/python-pillow/Pillow
     "pillow-heif==1.8.1",   # https://github.com/bigcat88/pillow_heif
-    "PyMuPDF==2.0",         # https://github.com/pymupdf/PyMuPDF
+    "PyMuPDF==2.1",         # https://github.com/pymupdf/PyMuPDF
 
     # GeoJSON & GIS
     # ------------------------------------------------------------------------------
