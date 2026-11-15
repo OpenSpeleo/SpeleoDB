@@ -28,7 +28,7 @@
     "check:shared-packages": "bun scripts/check-shared-package-pins.ts"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.0",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
