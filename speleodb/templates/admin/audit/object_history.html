@@ -1,0 +1,48 @@
+{% extends "admin/object_history.html" %}
+
+{% load i18n %}
+
+{% block content %}
+  <div id="content-main">
+    <div id="change-history" class="module">
+      {% if action_list %}
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{% translate "Date/time" %}</th>
+              <th scope="col">{% translate "Administrator email" %}</th>
+              <th scope="col">{% translate "Action" %}</th>
+              <th scope="col">{% translate "Description" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for action in action_list %}
+              <tr>
+                <th scope="row">{{ action.action_time|date:"DATETIME_FORMAT" }}</th>
+                <td>{{ action.actor_email }}</td>
+                <td>{{ action.get_action_flag_display }}</td>
+                <td>{{ action.get_change_message }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <nav class="paginator" aria-label="History pagination">
+          {% if pagination_required %}
+            {% for page in page_range %}
+              {% if page == action_list.paginator.ELLIPSIS %}
+                {{ page }}
+              {% elif page == action_list.number %}
+                <span aria-current="page">{{ page }}</span>
+              {% else %}
+                <a href="?{{ page_var }}={{ page }}">{{ page }}</a>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {{ action_list.paginator.count }} {% translate "entries" %}
+        </nav>
+      {% else %}
+        <p>{% translate "This object has no recorded administrator actions." %}</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

@@ -14,8 +14,6 @@ from uuid import uuid4
 from celery import current_app
 from celery.result import GroupResult as CeleryGroupResult
 from django.conf import settings
-from django.contrib.admin.models import CHANGE
-from django.contrib.admin.models import LogEntry
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
@@ -25,6 +23,7 @@ from speleodb.background_jobs.dispatch import dispatch_task
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
 from speleodb.surveys.models import Project
+from speleodb.users.models import LogEntry
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -169,15 +168,6 @@ def _create_task(
         content_encoding="utf-8",
         meta=json.dumps(metadata),
     )
-    if requester is not None:
-        LogEntry.objects.log_actions(
-            user_id=requester.pk,
-            queryset=Project.objects.filter(pk=project.pk),
-            action_flag=CHANGE,
-            change_message=json.dumps(
-                {"operation": operation, "task_id": task_id, "force": force}
-            ),
-        )
     return task_id
 
 
@@ -195,6 +185,7 @@ def schedule_operation(
     if not isinstance(force, bool):
         raise TypeError("Invalid force setting.")
     with transaction.atomic():
+        selected: Project | None = None
         if operation == "all":
             if project_id is not None:
                 raise ValueError("Global recomputation does not accept a project.")
@@ -207,15 +198,18 @@ def schedule_operation(
             ):
                 raise ValueError("This project does not support GeoJSON generation.")
             projects = Project.objects.filter(pk=selected.pk)
-        task_ids = [
-            _create_task(
-                project,
-                "project" if operation == "all" else operation,
-                force=force,
-                requester=requester,
+        task_ids: list[str] = []
+        targets: list[dict[str, str]] = []
+        for project in projects.iterator():
+            task_ids.append(
+                _create_task(
+                    project,
+                    "project" if operation == "all" else operation,
+                    force=force,
+                    requester=requester,
+                )
             )
-            for project in projects.iterator()
-        ]
+            targets.append({"id": str(project.pk), "name": project.name})
         group_id = str(uuid4()) if operation == "all" else None
         if group_id is not None:
             CeleryGroupResult(
@@ -223,6 +217,29 @@ def schedule_operation(
                 [current_app.AsyncResult(task_id) for task_id in task_ids],
                 app=current_app,
             ).save()
+        LogEntry.record(
+            actor_email=requester.email,
+            action_flag=LogEntry.Action.ACTION,
+            obj=selected,
+            model_label=Project._meta.label_lower,  # noqa: SLF001
+            object_repr="All eligible projects",
+            change_message=(
+                "Requested Git history rebuild."
+                if operation == "history"
+                else (
+                    f"Requested GeoJSON recomputation for {len(task_ids)} project(s). "
+                    f"Force recompute: {'on' if force else 'off'}."
+                )
+            ),
+            details={
+                "operation": operation,
+                "force": force,
+                "project_count": len(task_ids),
+                "targets": targets,
+                "task_ids": task_ids,
+                "group_id": group_id,
+            },
+        )
         transaction.on_commit(lambda: _publish(task_ids))
     return OperationReceipt(task_ids, group_id)
 

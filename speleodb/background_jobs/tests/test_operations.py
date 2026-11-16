@@ -10,7 +10,6 @@ from unittest.mock import patch
 import pytest
 from celery import current_app
 from celery.app.task import Context
-from django.contrib.admin.models import LogEntry
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError
 from django.db import connection
@@ -27,6 +26,7 @@ from speleodb.background_jobs.operations import receipt_task_ids
 from speleodb.background_jobs.operations import schedule_operation
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -108,6 +108,9 @@ def test_batch_records_independent_tasks_and_partial_publication(
         json.loads(TaskResult.objects.get(task_id=task_id).meta)["publication"]
         for task_id in receipt.task_ids
     ] == ["confirmed", "ambiguous", "unattempted"]
+    audit = LogEntry.objects.get(actor_email=user.email)
+    assert audit.details["task_ids"] == receipt.task_ids
+    assert audit.details["group_id"] == receipt.group_id
 
 
 @pytest.mark.usefixtures("operation_queue")
@@ -124,6 +127,8 @@ def test_rerun_is_new_execution_and_keeps_force(
         row = TaskResult.objects.get(task_id=first.task_ids[0])
         second = schedule_operation(requester=user, **get_operation_parameters(row))
     assert first.task_ids != second.task_ids
+    expected_requests = 2
+    assert LogEntry.objects.filter(actor_email=user.email).count() == expected_requests
     assert (
         get_operation_parameters(TaskResult.objects.get(task_id=second.task_ids[0]))[
             "force"
@@ -148,6 +153,7 @@ def test_duplicate_delivery_cannot_claim_started_or_completed_execution() -> Non
     result.refresh_from_db()
     assert result.status == TaskResultStatus.SUCCESS
     assert json.loads(result.result) == {"generated": 1}
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.usefixtures("operation_queue")
@@ -158,6 +164,7 @@ def test_scheduling_requires_active_superuser(active: bool, superuser: bool) -> 
     with pytest.raises(PermissionDenied):
         schedule_operation("all", requester=user)
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.usefixtures("operation_queue")
@@ -211,11 +218,12 @@ def test_rolled_back_submission_never_publishes(
         submit_then_roll_back()
     assert operation_queue.qsize() == 0
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.usefixtures("operation_queue")
 @pytest.mark.django_db
-def test_execution_outcome_is_audited(
+def test_execution_keeps_only_the_administrators_request(
     django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
 ) -> None:
     user: User = UserFactory.create(is_superuser=True)
@@ -225,11 +233,71 @@ def test_execution_outcome_is_audited(
     with operation_execution(receipt.task_ids[0]) as execution:
         assert execution is not None
         execution.complete({"processed": 1, "generated": 1})
-    audit = LogEntry.objects.filter(user=user, object_id=str(project.pk)).latest(
-        "action_time"
-    )
-    assert json.loads(audit.change_message)["stage"] == "completed"
-    assert json.loads(audit.change_message)["summary"]["generated"] == 1
+    audit = LogEntry.objects.get(actor_email=user.email)
+    assert audit.object_id == str(project.pk)
+    assert audit.model_label == "surveys.project"
+    assert audit.action_flag == LogEntry.Action.ACTION
+    assert audit.change_message.startswith("Requested GeoJSON recomputation")
+    assert audit.details["task_ids"] == receipt.task_ids
+    assert "stage" not in audit.details
+    result = TaskResult.objects.get(task_id=receipt.task_ids[0])
+    assert result.status == TaskResultStatus.SUCCESS
+    assert json.loads(result.result)["generated"] == 1
+    with operation_execution(receipt.task_ids[0]) as duplicate:
+        assert duplicate is None
+    assert LogEntry.objects.filter(actor_email=user.email).count() == 1
+
+
+@pytest.mark.usefixtures("operation_queue")
+@pytest.mark.django_db
+def test_global_request_is_one_admin_action(
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    user: User = UserFactory.create(is_superuser=True)
+    projects: list[Project] = [
+        ProjectFactory.create(type=ProjectType.ARIANE),
+        ProjectFactory.create(type=ProjectType.COMPASS),
+    ]
+    with django_capture_on_commit_callbacks(execute=True):
+        receipt = schedule_operation("all", requester=user, force=True)
+    assert len(receipt.task_ids) == len(projects)
+    audit = LogEntry.objects.get(actor_email=user.email)
+    assert audit.action_flag == LogEntry.Action.ACTION
+    assert audit.model_label == "surveys.project"
+    assert audit.object_id is None
+    assert audit.details == {
+        "operation": "all",
+        "force": True,
+        "project_count": 2,
+        "targets": [
+            {"id": str(project.pk), "name": project.name}
+            for project in sorted(projects, key=lambda item: item.pk)
+        ],
+        "task_ids": receipt.task_ids,
+        "group_id": receipt.group_id,
+    }
+    for task_id in receipt.task_ids:
+        with operation_execution(task_id) as execution:
+            assert execution is not None
+            execution.complete({"generated": 1})
+    assert LogEntry.objects.filter(actor_email=user.email).count() == 1
+
+
+@pytest.mark.usefixtures("operation_queue")
+@pytest.mark.django_db
+def test_empty_global_request_retains_the_administrators_action(
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+    operation_queue: SimpleQueue,
+) -> None:
+    user: User = UserFactory.create(is_superuser=True)
+    ProjectFactory.create(type=ProjectType.OTHER)
+    with django_capture_on_commit_callbacks(execute=True):
+        receipt = schedule_operation("all", requester=user)
+    assert receipt.task_ids == []
+    assert operation_queue.qsize() == 0
+    audit = LogEntry.objects.get(actor_email=user.email)
+    assert audit.details["project_count"] == 0
+    assert audit.details["group_id"] == receipt.group_id
 
 
 @pytest.mark.usefixtures("operation_queue")
@@ -256,13 +324,15 @@ def test_terminal_failure_always_contains_a_celery_decodable_exception() -> None
 
 @pytest.mark.usefixtures("operation_queue")
 @pytest.mark.django_db(transaction=True)
-def test_deleted_requester_audit_failure_preserves_operation_exception(
+def test_deleted_requester_keeps_audit_and_original_operation_exception(
     tmp_path: Path,
 ) -> None:
     assert connection.vendor == "postgresql"
     user: User = UserFactory.create(is_superuser=True)
     project: Project = ProjectFactory.create(type=ProjectType.ARIANE)
     receipt = schedule_operation("project", requester=user, project_id=project.pk)
+    audit = LogEntry.objects.get(actor_email=user.email)
+    actor_email = user.email
     user.delete()
     missing_source = tmp_path / "missing-survey"
     with (
@@ -277,6 +347,10 @@ def test_deleted_requester_audit_failure_preserves_operation_exception(
     error = current_app.backend.exception_to_python(json.loads(result.result))
     assert isinstance(error, FileNotFoundError)
     assert error.args == raised.value.args
+    audit.refresh_from_db()
+    assert audit.actor_email == actor_email
+    assert audit.details["task_ids"] == receipt.task_ids
+    assert LogEntry.objects.count() == 1
 
 
 @pytest.mark.usefixtures("operation_queue")

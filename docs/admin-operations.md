@@ -9,6 +9,11 @@ separate full-width row.
 Export jobs retain their existing permissions and lifecycle. Task results and
 group results remain in their owning applications with their existing URLs.
 
+Each accepted operation request creates one permanent administrator
+[audit entry](admin-audit-logging.md), attributed to the administrator's email
+snapshot. A global request records its complete scope once. Task execution and
+child work do not add audit entries; their outcomes belong in TaskResult.
+
 ## Available actions
 
 Recompute project GeoJSONs processes the complete supported history of one
@@ -94,9 +99,10 @@ receipts. The admin forms and views use the custom `SpeleoDBAdminSite` while
 workers retain Django's lightweight admin configuration.
 
 Execution failures log their original traceback before failure bookkeeping.
-Bookkeeping errors, including an audit insert after requester deletion, log
-their own traceback and leave the original exception to propagate to Celery.
-This adds no retry or recovery behavior.
+Bookkeeping errors log their own traceback and leave the original exception to
+propagate to Celery. Workers perform no admin audit inserts. Deleting a
+requester preserves the submitted action's email snapshot without affecting
+execution. This adds no retry or recovery behavior.
 
 Regression coverage uses small local Git histories for manifest materialization
 and mixed conversion outcomes, a sequential PostgreSQL execution after requester
@@ -128,3 +134,8 @@ Verify a project recomputation, an isolated history reset and a small batch.
 Inspect task results, runtime logs, reconstructed history and stored artifacts.
 Implementation and schema generation do not authorize production execution or
 publication. No Railway service-setting change is required.
+
+The administrator audit-table cutover has its own
+[migration and verification order](admin-audit-logging.md#migration-and-cutover).
+Pause administrator writes and drain old operation workers before copying the
+historical log; otherwise old processes could write entries after the snapshot.

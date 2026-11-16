@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
-from django.contrib.admin.models import LogEntry
 from django.urls import resolve
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +20,7 @@ from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
 from speleodb.background_jobs.models import JobState
 from speleodb.common.enums import TaskResultStatus
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -334,11 +334,14 @@ class TestUserExports(BaseAPITestCase):
         assert response.status_code == status.HTTP_302_FOUND
         failed.refresh_from_db()
         assert failed.state == JobState.QUEUED
-        assert LogEntry.objects.filter(
-            user=staff,
-            object_id=str(failed.pk),
-            change_message__contains="new export attempt",
-        ).exists()
+        assert (
+            LogEntry.objects.filter(
+                actor_email=staff.email,
+                object_id=str(failed.pk),
+                change_message__contains="new export attempt",
+            ).count()
+            == 1
+        )
 
     def test_admin_superuser_has_authorized_download_and_task_history(self) -> None:
         superuser: User = UserFactory.create(is_staff=True, is_superuser=True)

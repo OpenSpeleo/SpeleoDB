@@ -13,14 +13,11 @@ from typing import Any
 from celery import current_app
 from celery import current_task
 from django.conf import settings
-from django.contrib.admin.models import CHANGE
-from django.contrib.admin.models import LogEntry
 from django.db import transaction
 from django.utils import timezone
 from django_celery_results.models import TaskResult
 
 from speleodb.common.enums import TaskResultStatus
-from speleodb.surveys.models import Project
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -41,26 +38,8 @@ class OperationExecution:
             meta=json.dumps(self.metadata), date_done=timezone.now()
         )
 
-    def audit_outcome(self) -> None:
-        requester_id = self.metadata.get("requester_id")
-        if requester_id is not None:
-            LogEntry.objects.log_actions(
-                user_id=requester_id,
-                queryset=Project.objects.filter(pk=self.metadata["project_id"]),
-                action_flag=CHANGE,
-                change_message=json.dumps(
-                    {
-                        "task_id": self.task_id,
-                        "operation": self.metadata["operation"],
-                        "stage": self.metadata["stage"],
-                        "summary": self.metadata.get("summary"),
-                    }
-                ),
-            )
-
     def complete(self, summary: dict[str, Any]) -> None:
         self.progress("completed", summary=summary)
-        self.audit_outcome()
         TaskResult.objects.filter(task_id=self.task_id).update(
             status=TaskResultStatus.SUCCESS, result=json.dumps(summary)
         )
@@ -119,7 +98,6 @@ def operation_execution(task_id: str) -> Iterator[OperationExecution | None]:
             TaskResult.objects.filter(task_id=task_id).update(
                 status=TaskResultStatus.FAILURE, result=json.dumps(failure)
             )
-            execution.audit_outcome()
         except Exception:
             logger.exception("Failed to record failure for operation %s", task_id)
         raise

@@ -28,6 +28,9 @@ Unlike product docs, these files prioritize:
   - Celery worker/Beat operations, read-only Django task results, housekeeping
     result policy, retention, scheduler health, startup order, isolated tests,
     and retired monitoring resources.
+- [Administrator audit history](admin-audit-logging.md)
+  - Explicit administrator actions, permanent email snapshots, Django admin
+    integration, historical migration, and optional task-noise cleanup.
 - [Git backup and Gogs operations](git-backup-operations.md)
   - Shared Railway configuration, memory tuning, persistent storage, backup
     verification, and configuration ownership.

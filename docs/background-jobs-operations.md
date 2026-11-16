@@ -617,6 +617,13 @@ an immediate purge of historical rows. Retained unsuccessful housekeeping
 results follow the same expiry. Application export history has its separate
 90-day policy and preserves records needed for pending cleanup.
 
+These limits do not apply to the permanent
+[administrator audit](admin-audit-logging.md). An explicit administrator task
+request is recorded once with an email snapshot and receipt identifiers; worker
+execution and scheduler dispatch create no admin audit entries. Expired task
+results may no longer be inspectable, but the original administrator action and
+its recorded scope remain available.
+
 Check Beat logs, process health, advisory-lock ownership, and the Periodic tasks
 admin to diagnose scheduling. `last_run_at` and `total_run_count` indicate
 scheduler dispatch, not successful worker execution. Successful housekeeping

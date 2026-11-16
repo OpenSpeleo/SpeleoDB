@@ -45,6 +45,7 @@ from speleodb.surveys.models.project import ConversionFailedError
 from speleodb.surveys.tasks import refresh_project_geojson
 from speleodb.testing.stalagmight import NATIVE_SHOT_ID
 from speleodb.testing.stalagmight import stalagmight_bytes
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.exceptions import GeoJSONGenerationError
 
@@ -462,6 +463,7 @@ def test_immediate_upload_execution_records_conversion_outcome(
     )
     generation = _queue(commit)
     generation.refresh_from_db()
+    assert not LogEntry.objects.exists()
     assert generation.status == (
         TaskResultStatus.FAILURE if invalid_geometry else TaskResultStatus.SUCCESS
     )

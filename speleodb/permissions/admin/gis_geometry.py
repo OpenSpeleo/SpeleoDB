@@ -111,12 +111,19 @@ class GISGeometryUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg
         geometries: list[GISGeometry] = self._lock_geometries(queryset)
         timestamp = timezone.now()
         actor: User = request.user  # type: ignore[assignment]
-        count: int = queryset.filter(
-            gis_geometry__in=geometries, is_active=True
-        ).update(is_active=False, deactivated_by=actor, modified_date=timestamp)
+        changed = list(
+            queryset.filter(gis_geometry__in=geometries, is_active=True).select_related(
+                "user", "gis_geometry"
+            )
+        )
+        count: int = queryset.filter(pk__in=[obj.pk for obj in changed]).update(
+            is_active=False, deactivated_by=actor, modified_date=timestamp
+        )
         GISGeometry.objects.filter(id__in=[obj.id for obj in geometries]).update(
             modified_date=timestamp
         )
+        for permission in changed:
+            self.log_change(request, permission, "Revoked geometry access.")
         self.message_user(request, f"Revoked {count} access permissions.")
 
     @admin.action(description="Restore selected access", permissions=["change"])
@@ -126,10 +133,17 @@ class GISGeometryUserPermissionAdmin(admin.ModelAdmin):  # type: ignore[type-arg
     ) -> None:
         geometries: list[GISGeometry] = self._lock_geometries(queryset)
         timestamp = timezone.now()
-        count: int = queryset.filter(
-            gis_geometry__in=geometries, is_active=False
-        ).update(is_active=True, deactivated_by=None, modified_date=timestamp)
+        changed = list(
+            queryset.filter(
+                gis_geometry__in=geometries, is_active=False
+            ).select_related("user", "gis_geometry")
+        )
+        count: int = queryset.filter(pk__in=[obj.pk for obj in changed]).update(
+            is_active=True, deactivated_by=None, modified_date=timestamp
+        )
         GISGeometry.objects.filter(id__in=[obj.id for obj in geometries]).update(
             modified_date=timestamp
         )
+        for permission in changed:
+            self.log_change(request, permission, "Restored geometry access.")
         self.message_user(request, f"Restored {count} access permissions.")

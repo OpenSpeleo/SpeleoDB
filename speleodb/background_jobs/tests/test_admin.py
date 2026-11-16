@@ -20,6 +20,7 @@ from speleodb.background_jobs.operation_views import CONFIRMATION_SALT
 from speleodb.background_jobs.operations import TASK_NAMES
 from speleodb.common.enums import ProjectType
 from speleodb.common.enums import TaskResultStatus
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -83,6 +84,7 @@ def test_custom_routes_reject_other_users(
             client.post(reverse(f"admin:{name}", kwargs=kwargs)).status_code == expected
         )
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.django_db
@@ -126,6 +128,7 @@ def test_uuid_validation_and_project_resolution(
     assert str(project.pk) in response.content.decode()
     assert "retired and orphaned" in response.content.decode()
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.django_db
@@ -145,6 +148,7 @@ def test_history_confirmation_and_rerun_are_destructive(
     )
     assert "GeoJSON regeneration will be skipped" in response.content.decode()
     assert response.context_data is not None
+    assert not LogEntry.objects.exists()
     with django_capture_on_commit_callbacks(execute=True):
         response = admin_client.post(
             reverse("admin:operations_confirm"),
@@ -157,6 +161,11 @@ def test_history_confirmation_and_rerun_are_destructive(
     metadata = json.loads(result.meta)
     assert metadata["requester_id"] == str(admin_user.pk)
     assert metadata["project_id"] == str(project.pk)
+    audit = LogEntry.objects.get(actor_email=admin_user.email)
+    assert audit.action_flag == LogEntry.Action.ACTION
+    assert audit.object_id == str(project.pk)
+    assert audit.change_message == "Requested Git history rebuild."
+    assert audit.details["task_ids"] == [result.task_id]
     message = operation_queue.get(block=False)
     assert message.headers["id"] == result.task_id
     message.ack()
@@ -173,6 +182,7 @@ def test_history_confirmation_and_rerun_are_destructive(
         ).status_code
         == HTTPStatus.FORBIDDEN
     )
+    assert LogEntry.objects.count() == 1
 
 
 @pytest.mark.django_db
@@ -197,6 +207,7 @@ def test_project_eligibility_and_force(
     response = admin_client.post(reverse("admin:operations"), data)
     assert "unsupported" in response.content.decode()
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
     project.type = ProjectType.COMPASS
     project.save()
     with django_capture_on_commit_callbacks(execute=True):
@@ -212,6 +223,10 @@ def test_project_eligibility_and_force(
     second = TaskResult.objects.exclude(pk=first.pk).get()
     assert json.loads(second.meta)["force"] is True
     assert operation_queue.qsize() == TaskResult.objects.count()
+    assert (
+        LogEntry.objects.filter(actor_email=admin_user.email).count()
+        == TaskResult.objects.count()
+    )
 
 
 @pytest.mark.django_db
@@ -235,6 +250,11 @@ def test_global_count_and_scheduling(
     assert json.loads(result.meta)["project_id"] == str(project.pk)
     assert json.loads(result.meta)["force"] is False
     assert operation_queue.qsize() == 1
+    audit = LogEntry.objects.get()
+    assert audit.action_flag == LogEntry.Action.ACTION
+    assert audit.object_id is None
+    assert audit.details["task_ids"] == [result.task_id]
+    assert audit.details["project_count"] == 1
 
 
 def _task(project: Project, operation: str = "project") -> TaskResult:
@@ -285,6 +305,9 @@ def test_receipt_honest_status_and_supported_rerun(
     assert repeated.task_id != result.task_id
     assert json.loads(repeated.meta)["force"] is True
     assert json.loads(repeated.meta)["requester_id"] == str(admin_user.pk)
+    audit = LogEntry.objects.get(actor_email=admin_user.email)
+    assert audit.details["task_ids"] == [repeated.task_id]
+    assert audit.details["force"] is True
     metadata = json.loads(result.meta)
     metadata["summary"] = {
         "processed": 2,
@@ -361,6 +384,7 @@ def test_csrf_on_operations_and_confirmation(
     )
     assert response.status_code == HTTPStatus.OK
     assert not TaskResult.objects.exists()
+    assert not LogEntry.objects.exists()
 
 
 @pytest.mark.django_db

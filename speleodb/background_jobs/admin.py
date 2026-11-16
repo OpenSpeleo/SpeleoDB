@@ -21,6 +21,7 @@ from django_celery_results.admin import TaskResultAdmin as CeleryTaskResultAdmin
 from django_celery_results.models import GroupResult
 from django_celery_results.models import TaskResult
 
+from speleodb.background_jobs import periodic_admin  # noqa: F401 - Register the audited schedule admin.
 from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt

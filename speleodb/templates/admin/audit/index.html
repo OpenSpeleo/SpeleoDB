@@ -1,0 +1,26 @@
+{% extends "admin/index.html" %}
+
+{% load i18n %}
+
+{% block sidebar %}
+  <div id="content-related">
+    <div class="module" id="recent-actions-module">
+      <h2>{% translate "Recent actions" %}</h2>
+      <h3>{% translate "My actions" %}</h3>
+      {% if recent_admin_actions %}
+        <ul class="actionlist">
+          {% for entry in recent_admin_actions %}
+            <li>
+              <a href="{% url 'admin:users_logentry_change' entry.pk %}">{{ entry.get_action_flag_display }}: {{ entry.object_repr }}</a>
+              <br />
+              <span class="mini quiet">{{ entry.get_change_message }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>{% translate "None available" %}</p>
+      {% endif %}
+      <p><a href="{% url 'admin:users_logentry_changelist' %}">{% translate "View full admin history" %}</a></p>
+    </div>
+  </div>
+{% endblock %}

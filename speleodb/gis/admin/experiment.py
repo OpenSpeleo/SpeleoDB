@@ -19,6 +19,9 @@ from speleodb.gis.models import Experiment
 from speleodb.gis.models import ExperimentRecord
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from django.forms.formsets import BaseFormSet
     from django.http import HttpRequest
 
 
@@ -224,7 +227,6 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     def response_change(self, request: HttpRequest, obj: Experiment) -> Any:
         """Handle refresh token button click."""
         if "_refresh_token" in request.POST:
-            obj.refresh_gis_token()
             self.message_user(
                 request, "GIS token has been refreshed successfully.", level="success"
             )
@@ -248,6 +250,20 @@ class ExperimentAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         if not change:  # Only on creation, not on edit
             obj.created_by = request.user.email  # type: ignore[union-attr]
         super().save_model(request, obj, form, change)
+        if change and "_refresh_token" in request.POST:
+            obj.refresh_gis_token()
+
+    def construct_change_message(
+        self,
+        request: HttpRequest,
+        form: forms.Form,
+        formsets: Iterable[BaseFormSet[Any]],
+        add: bool = False,
+    ) -> list[dict[str, dict[str, list[str]]]]:
+        message = super().construct_change_message(request, form, formsets, add)
+        if not add and "_refresh_token" in request.POST:
+            message.append({"changed": {"fields": ["GIS token (refreshed)"]}})
+        return message
 
 
 @admin.register(ExperimentRecord)

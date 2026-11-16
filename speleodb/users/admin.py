@@ -9,9 +9,9 @@ from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin.models import LogEntry
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from import_export import resources
 from import_export.admin import ExportMixin
 from rest_framework.authtoken.admin import TokenAdmin as _TokenAdmin
@@ -20,6 +20,7 @@ from rest_framework.authtoken.models import TokenProxy
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import AccountEvent
+from speleodb.users.models import LogEntry
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
@@ -27,6 +28,7 @@ from speleodb.utils.admin_filters import SurveyTeamCountryFilter
 from speleodb.utils.admin_filters import UserCountryFilter
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django.forms.models import ModelForm
     from django.http import HttpRequest
 
@@ -152,6 +154,18 @@ admin.site.unregister(EmailAddress)
 @admin.register(EmailAddress)
 class EmailAddressAdmin(_EmailAddressAdmin):
     autocomplete_fields: tuple[str] = ("user",)  # type: ignore[misc]
+
+    @admin.action(description="Mark selected email addresses as verified")
+    @transaction.atomic
+    def make_verified(
+        self, request: HttpRequest, queryset: QuerySet[EmailAddress]
+    ) -> None:
+        candidate_ids = list(
+            queryset.filter(verified=False).values_list("pk", flat=True)
+        )
+        super().make_verified(request, queryset)
+        for address in queryset.filter(pk__in=candidate_ids, verified=True):
+            self.log_change(request, address, "Marked email address as verified.")
 
     def get_form(  # type: ignore[override]
         self, request: HttpRequest, obj: EmailAddress | None = None, **kwargs: Any
@@ -288,29 +302,43 @@ class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     # to have a date-based drilldown navigation in the admin page
     date_hierarchy = "action_time"
 
-    # to filter the resultes by users, content types and action flags
-    list_filter = ["user", "content_type", "action_flag"]
+    # Filter by the actor and model snapshots, and the action classification.
+    list_filter = ["actor_email", "model_label", "action_flag"]
 
     # when searching the user will be able to search in both object_repr and
     # change_message
-    search_fields = ["object_repr", "change_message"]
+    search_fields = ["actor_email", "object_id", "object_repr", "change_message"]
 
     list_display = [
         "action_time",
-        "user",
-        "content_type",
+        "actor_email",
+        "model_label",
         "action_flag",
+        "object_repr",
+        "get_change_message",
     ]
+    readonly_fields = (
+        "action_time",
+        "actor_email",
+        "model_label",
+        "object_id",
+        "object_repr",
+        "action_flag",
+        "get_change_message",
+        "details",
+    )
+    fields = readonly_fields
+    actions = None
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
     def has_change_permission(
-        self, request: HttpRequest, obj: EmailAddress | None = None
+        self, request: HttpRequest, obj: LogEntry | None = None
     ) -> bool:
-        return request.user.is_superuser
+        return False
 
     def has_delete_permission(
-        self, request: HttpRequest, obj: EmailAddress | None = None
+        self, request: HttpRequest, obj: LogEntry | None = None
     ) -> bool:
-        return request.user.is_superuser
+        return False

@@ -7,21 +7,29 @@ from typing import Any
 from typing import cast
 
 from django.contrib.admin import AdminSite
+from django.contrib.admin import ModelAdmin
 from django.contrib.admin.views.autocomplete import AutocompleteJsonView
 from django.urls import path
 from django.urls import reverse
 
 from speleodb.background_jobs import operation_views
+from speleodb.common.admin_audit import AuditModelAdmin
 from speleodb.surveys.models import Project
+from speleodb.users.models import LogEntry
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from uuid import UUID
 
     from django.db.models import Model
+    from django.db.models import QuerySet
     from django.http import HttpRequest
     from django.http import HttpResponse
+    from django.template.response import TemplateResponse
     from django.urls import URLPattern
     from django.urls import URLResolver
+
+    from speleodb.users.models import User
 
 
 class ProjectAutocompleteJsonView(AutocompleteJsonView):
@@ -33,6 +41,40 @@ class ProjectAutocompleteJsonView(AutocompleteJsonView):
 
 
 class SpeleoDBAdminSite(AdminSite):
+    index_template = "admin/audit/index.html"
+
+    def register(
+        self,
+        model_or_iterable: type[Model] | Iterable[type[Model]],
+        admin_class: type[ModelAdmin[Any]] | None = None,
+        **options: Any,
+    ) -> None:
+        admin_class = admin_class or ModelAdmin
+        if not issubclass(admin_class, AuditModelAdmin):
+            admin_class = type(
+                f"Audited{admin_class.__name__}",
+                (AuditModelAdmin, admin_class),
+                {"__module__": admin_class.__module__},
+            )
+        super().register(model_or_iterable, admin_class, **options)
+
+    # Django annotates its own model here; all site consumers use ours.
+    def get_log_entries(self, request: HttpRequest) -> QuerySet[LogEntry]:  # type: ignore[override]
+        return LogEntry.objects.all()
+
+    def index(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> TemplateResponse:
+        return super().index(
+            request,
+            {
+                "recent_admin_actions": self.get_log_entries(request).filter(
+                    actor_email=cast("User", request.user).email
+                )[:10],
+                **(extra_context or {}),
+            },
+        )
+
     def autocomplete_view(self, request: HttpRequest) -> HttpResponse:
         # View.as_view has a broad response annotation; this view returns JSON.
         return cast(

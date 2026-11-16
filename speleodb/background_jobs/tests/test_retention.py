@@ -22,6 +22,7 @@ from speleodb.background_jobs.services import ExportUnavailableError
 from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_export
 from speleodb.background_jobs.tasks import delete_expired_artifacts
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -43,6 +44,15 @@ def _old_failed_job(user: User) -> BackgroundJob:
 @pytest.mark.django_db
 def test_history_retention_preserves_recent_active_and_unremoved_objects() -> None:
     old = _old_failed_job(UserFactory.create())
+    audit = LogEntry.record(
+        actor_email=old.requester.email,
+        action_flag=LogEntry.Action.ACTION,
+        obj=old,
+        change_message="Requested an export retry.",
+    )
+    LogEntry.objects.filter(pk=audit.pk).update(
+        action_time=timezone.now() - timedelta(days=365)
+    )
     recent = _old_failed_job(UserFactory.create())
     active = _old_failed_job(UserFactory.create())
     pending = _old_failed_job(UserFactory.create())
@@ -55,6 +65,9 @@ def test_history_retention_preserves_recent_active_and_unremoved_objects() -> No
     delete_expired_artifacts.run()
 
     assert not BackgroundJob.objects.filter(pk=old.pk).exists()
+    audit.refresh_from_db()
+    assert audit.object_id == str(old.pk)
+    assert audit.change_message == "Requested an export retry."
     assert set(BackgroundJob.objects.values_list("pk", flat=True)) == {
         recent.pk,
         active.pk,

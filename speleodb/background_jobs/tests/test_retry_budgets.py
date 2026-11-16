@@ -5,12 +5,11 @@ from __future__ import annotations
 import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from typing import cast
 
 import pytest
 from celery import current_app
 from django.contrib import admin
-from django.contrib.admin.models import CHANGE
-from django.contrib.admin.models import LogEntry
 from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import PermissionDenied
@@ -18,7 +17,6 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 from django.utils import timezone
 
-from speleodb.background_jobs.admin import BackgroundJobAdmin
 from speleodb.background_jobs.models import BackgroundJob
 from speleodb.background_jobs.models import JobArtifact
 from speleodb.background_jobs.models import JobAttempt
@@ -35,6 +33,7 @@ from speleodb.background_jobs.storage import upload_archive
 from speleodb.background_jobs.tasks import delete_expired_artifacts
 from speleodb.background_jobs.tasks import maintain_background_jobs
 from speleodb.background_jobs.tasks import send_export_notification
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 from speleodb.utils.s3_storages import ExportStorage
 
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     from kombu.simple import SimpleQueue
     from pytest_django.fixtures import Settings
 
+    from speleodb.background_jobs.admin import BackgroundJobAdmin
     from speleodb.users.models import User
 
 
@@ -269,19 +269,24 @@ def test_cleanup_exhaustion_retains_rows_and_admin_retry_is_audited(
         operator = UserFactory.create(is_staff=True)
         request = RequestFactory().post("/admin/background_jobs/backgroundjob/")
         request.user = operator
-        model_admin = BackgroundJobAdmin(BackgroundJob, admin.site)
+        model_admin = cast(
+            "BackgroundJobAdmin", admin.site.get_model_admin(BackgroundJob)
+        )
         SessionMiddleware(lambda _request: HttpResponse()).process_request(request)
         MessageMiddleware(lambda _request: HttpResponse()).process_request(request)
         model_admin.retry_cleanup(request, BackgroundJob.objects.filter(pk=job.pk))
         attempt.refresh_from_db()
         assert attempt.cleanup_attempts == 0
         assert attempt.cleanup_error == "Deletion failed (ValueError)."
-        assert LogEntry.objects.filter(
-            user=operator,
-            object_id=str(job.pk),
-            action_flag=CHANGE,
-            change_message__contains="Reset cleanup retry budget",
-        ).exists()
+        assert (
+            LogEntry.objects.filter(
+                actor_email=operator.email,
+                object_id=str(job.pk),
+                action_flag=LogEntry.Action.CHANGE,
+                change_message__contains="Reset cleanup retry budget",
+            ).count()
+            == 1
+        )
         attempt.object_key = valid_key
         attempt.save(update_fields=["object_key"])
         delete_expired_artifacts.run()

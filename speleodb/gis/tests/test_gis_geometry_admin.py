@@ -20,6 +20,7 @@ from speleodb.gis.geometry_services import create_gis_geometry
 from speleodb.gis.geometry_services import update_gis_geometry
 from speleodb.gis.models import GISGeometry
 from speleodb.gis.models import GISGeometryUserPermission
+from speleodb.users.models import LogEntry
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -212,3 +213,45 @@ def test_admin_access_actions_are_soft_reversible_and_lock_the_geometry() -> Non
     assert response.status_code == status.HTTP_302_FOUND
     permission.refresh_from_db()
     assert not permission.is_active
+
+
+@pytest.mark.django_db
+def test_admin_permission_actions_record_only_changed_permissions() -> None:
+    user = UserFactory.create(is_staff=True, is_superuser=True)
+    reader = UserFactory.create()
+    geometry = create_gis_geometry(
+        GISGeometry(name="Audited shape", geojson=LINE), user
+    )
+    permission = GISGeometryUserPermission.objects.create(
+        user=reader, gis_geometry=geometry, level=PermissionLevel.READ_ONLY
+    )
+    client = Client()
+    client.force_login(user)
+    url: str = reverse("admin:permissions_gisgeometryuserpermissionproxy_changelist")
+    payload: dict[str, Any] = {
+        "action": "revoke_access",
+        "_selected_action": [permission.pk],
+    }
+    assert client.post(url, payload).status_code == status.HTTP_302_FOUND
+    permission.refresh_from_db()
+    assert not permission.is_active
+    entries = LogEntry.objects.filter(object_id=str(permission.pk))
+    assert entries.count() == 1
+    assert "Revoked" in entries.get().get_change_message()
+    assert client.post(url, payload).status_code == status.HTTP_302_FOUND
+    assert entries.count() == 1
+    payload["action"] = "restore_access"
+    assert client.post(url, payload).status_code == status.HTTP_302_FOUND
+    permission.refresh_from_db()
+    assert permission.is_active
+    expected_messages = ["Revoked geometry access.", "Restored geometry access."]
+    assert (
+        list(entries.order_by("action_time").values_list("change_message", flat=True))
+        == expected_messages
+    )
+    geometry.deactivate(user)
+    assert client.post(url, payload).status_code == status.HTTP_302_FOUND
+    assert (
+        list(entries.order_by("action_time").values_list("change_message", flat=True))
+        == expected_messages
+    )
