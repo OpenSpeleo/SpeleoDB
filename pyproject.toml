@@ -62,7 +62,7 @@ dependencies = [
     "jsonschema-rs==0.60.3", # https://github.com/Stranger6667/jsonschema
     "orjson==3.13.0",        # https://github.com/ijl/orjson
     "pyproj==3.8.0",         # https://github.com/pyproj4/pyproj
-    "pyshp==3.1.7",          # https://github.com/GeospatialPython/pyshp
+    "pyshp==3.1.8",          # https://github.com/GeospatialPython/pyshp
     "shapely==2.2.0",        # https://github.com/shapely/shapely
 
     # Speleo Libraries
