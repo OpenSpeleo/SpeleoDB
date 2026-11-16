@@ -105,8 +105,10 @@ are disabled. The stored `celery.backend_cleanup` schedule remains owned by
 `install_background_schedules`, and workers retain result recording and the
 30-day result-retention policy. The scheduler sets the message `ignore_result`
 option from the same lightweight housekeeping policy as the worker, without
-importing task implementations. Actual tasks keep results, including work
-published by Beat. No database schema change is needed.
+importing task implementations. Housekeeping explicitly publishes `True`;
+unregistered ordinary task names publish `None`, leaving result storage to the
+worker's task policy. Actual tasks keep results, including work published by
+Beat. No database schema change is needed.
 
 ### Worker runtime and execution-slot memory
 

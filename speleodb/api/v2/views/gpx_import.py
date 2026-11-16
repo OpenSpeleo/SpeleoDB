@@ -152,6 +152,16 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
 
         file = files[0]
 
+        # Check file type
+        if (
+            not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile))
+            or file.size is None
+        ):
+            return ErrorResponse(
+                {"error": f"Unknown artifact received: `{file.name}`"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if file size exceeds globally set limit
         if (
             file.size
@@ -168,12 +178,6 @@ class GPXImportView(GenericAPIView[Project], SDBAPIViewMixin):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check file type
-        if not isinstance(file, (InMemoryUploadedFile, TemporaryUploadedFile)):
-            return ErrorResponse(
-                {"error": f"Unknown artifact received: `{file.name}`"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         # ~~~~~~~~~~~~~~~~~~~~ END of Form Data Validation ~~~~~~~~~~~~~~~~~~~~ #
 
         # ~~~~~~~~~~~~~~~~~~~~~ START of parsing GPX file ~~~~~~~~~~~~~~~~~~~~~ #

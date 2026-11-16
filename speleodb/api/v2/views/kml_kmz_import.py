@@ -224,7 +224,7 @@ class KMLKMZInspectView(GenericAPIView[Landmark], SDBAPIViewMixin):
             analysis = _analyze_request(request)
             if isinstance(analysis, ErrorResponse):
                 return analysis
-            filename = request.FILES["file"].name or "source"
+            filename = request.FILES.getlist("file")[0].name or "source"
             suggested_name = safe_upload_filename(
                 PurePosixPath(filename.replace("\\", "/")).stem
             )
