@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from collections.abc import Sequence
 
+    from rest_framework.renderers import BaseRenderer
     from rest_framework.request import Request
     from rest_framework.response import Response
 
@@ -122,7 +123,7 @@ class ViewNameMiddleware:
 
 
 class DRFWrapResponseMiddleware:
-    renderers: Sequence[str]
+    renderers: Sequence[type[BaseRenderer]]
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         # One-time configuration and initialization.

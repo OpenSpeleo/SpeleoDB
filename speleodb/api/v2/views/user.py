@@ -78,7 +78,7 @@ class UserInfo(GenericAPIView[User]):
 
 class UserAuthTokenView(ObtainAuthToken, SDBAPIViewMixin):
     serializer_class = AuthTokenSerializer
-    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES  # type: ignore[assignment]
+    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
 
     @extend_schema(responses={200: AuthTokenResponseSerializer, 401: API_ERROR})
     @extend_schema(operation_id="v2_user_auth_token_retrieve")

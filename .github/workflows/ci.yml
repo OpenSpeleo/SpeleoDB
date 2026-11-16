@@ -275,7 +275,7 @@ jobs:
     container:
       # Match @playwright/test in package.json. Browsers and OS libraries are
       # preinstalled, avoiding a large APT download on every runner.
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --ipc=host
 
     services:

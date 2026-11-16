@@ -91,7 +91,8 @@ def test_beat_loader_and_publication_stay_small_and_do_not_import_tasks(
     assert observed["peak_rss_bytes"] <= BEAT_MEMORY_LIMIT_BYTES
     assert observed["backend"] == "DisabledBackend"
     assert observed["task"] == "speleodb.users.tasks.get_users_count"
-    assert observed["ignore_result"] is False
+    # Unregistered task names defer result storage to the worker's task policy.
+    assert observed["ignore_result"] is None
     assert observed["id"] == observed["sent_id"]
     forbidden_prefixes: tuple[str, ...] = (
         "config.settings.base",
@@ -177,7 +178,7 @@ def test_minimal_scheduler_publishes_housekeeping_policy_without_task_imports(
         "speleodb.background_jobs.tasks.maintain_background_jobs": True,
         "speleodb.background_jobs.tasks.delete_expired_artifacts": True,
         "celery.backend_cleanup": True,
-        "speleodb.users.tasks.get_users_count": False,
+        "speleodb.users.tasks.get_users_count": None,
     }
     assert observed["backend"] == "DisabledBackend"
     assert not any(name.startswith("speleodb.") for name in observed["tasks"])

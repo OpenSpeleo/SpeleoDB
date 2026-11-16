@@ -326,9 +326,10 @@ def test_tick_publishes_real_message_and_preserves_entry_options(
         message = queue.get(block=False)
         assert message.headers["task"] == runtime.task.task
         # Kombu's stub narrows header values to strings, although Celery uses
-        # JSON booleans here. Keep the received value's runtime type explicit.
+        # JSON booleans or null here. Keep the value's runtime type explicit.
         ignore_result: object = message.headers["ignore_result"]
-        assert ignore_result is False
+        # This unregistered task defers result storage to its worker-side policy.
+        assert ignore_result is None
         message.ack()
         assert queue.qsize() == 0
 

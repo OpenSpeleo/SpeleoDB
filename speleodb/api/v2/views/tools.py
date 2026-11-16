@@ -238,12 +238,11 @@ class ToolDMP2JSON(APIView):
     ) -> Response | FileResponse:
         try:
             # Get the uploaded file
-            if "file" not in request.FILES:
+            uploaded_file = request.FILES.get("file")
+            if uploaded_file is None:
                 return ErrorResponse(
                     {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
                 )
-
-            uploaded_file = request.FILES["file"]
 
             if uploaded_file.size == 0:
                 return ErrorResponse(
@@ -252,7 +251,8 @@ class ToolDMP2JSON(APIView):
                 )
 
             # Validate file extension
-            if not uploaded_file.name.lower().endswith(".dmp"):
+            filename = uploaded_file.name
+            if filename is None or not filename.lower().endswith(".dmp"):
                 return ErrorResponse(
                     {"error": "Invalid file type. Only .dmp files are allowed"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -260,7 +260,7 @@ class ToolDMP2JSON(APIView):
 
             # Save to temporary file and parse
             with tempfile.TemporaryDirectory() as tmpdir:
-                dmp_file_path = Path(tmpdir) / uploaded_file.name
+                dmp_file_path = Path(tmpdir) / filename
 
                 # Write uploaded file to disk
                 with dmp_file_path.open("wb") as f:
@@ -347,15 +347,16 @@ class ToolDMPDoctor(APIView):
         self, request: Request, *args: Any, **kwargs: Any
     ) -> Response | FileResponse:
         # Get the uploaded file
-        if "file" not in request.FILES:
+        uploaded_file = request.FILES.get("file")
+        if uploaded_file is None:
             return ErrorResponse(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        uploaded_file = request.FILES["file"]
-
         # Validate file extension
-        if not uploaded_file.name.lower().endswith(".dmp"):
+        if uploaded_file.name is None or not uploaded_file.name.lower().endswith(
+            ".dmp"
+        ):
             return ErrorResponse(
                 {"error": "Invalid file type. Only .dmp files are allowed"},
                 status=status.HTTP_400_BAD_REQUEST,

@@ -70,8 +70,8 @@ class ExponentialBackoffDatabaseScheduler(DatabaseScheduler):
             "on_revive": self._check_publish_retry,
         }
         entry.options = {**options, "retry_policy": policy}
-        # Minimal Beat sends unknown task names directly. Celery's send_task
-        # defaults to ignore_result=False, which overrides worker annotations.
+        # Minimal Beat sends unknown task names directly. Apply housekeeping
+        # policy explicitly; ordinary tasks defer result storage to the worker.
         if entry.task in HOUSEKEEPING_TASK_NAMES:
             entry.options["ignore_result"] = True
         try:

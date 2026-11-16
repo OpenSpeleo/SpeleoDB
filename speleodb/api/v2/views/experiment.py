@@ -8,6 +8,7 @@ import logging
 import re
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
 import xlsxwriter
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -88,8 +89,8 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
                     isinstance(error.detail, dict)
                     and "experiment_fields" in error.detail
                 ):
-                    # Type ignore: error.detail can be dict[str, Any] for DRF
-                    error_data = error.detail
+                    # Named fields identify DRF's string-keyed error mappings.
+                    error_data = cast("dict[str, Any]", error.detail)
             elif (
                 hasattr(error, "error_dict") and "experiment_fields" in error.error_dict  # pyright: ignore[reportAttributeAccessIssue]
             ):
@@ -108,7 +109,7 @@ class ExperimentApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             constraint_error_dict: dict[str, Any] | None = None
             if isinstance(error, ValidationError) and hasattr(error, "detail"):
                 if isinstance(error.detail, dict) and "__all__" in error.detail:
-                    constraint_error_dict = error.detail
+                    constraint_error_dict = cast("dict[str, Any]", error.detail)
             elif hasattr(error, "error_dict") and "__all__" in error.error_dict:  # pyright: ignore[reportAttributeAccessIssue]
                 constraint_error_dict = error.error_dict  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -245,8 +246,8 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
                     isinstance(error.detail, dict)
                     and "experiment_fields" in error.detail
                 ):
-                    # Type ignore: error.detail can be dict[str, Any] for DRF
-                    error_data = error.detail
+                    # Named fields identify DRF's string-keyed error mappings.
+                    error_data = cast("dict[str, Any]", error.detail)
             elif (
                 hasattr(error, "error_dict") and "experiment_fields" in error.error_dict  # pyright: ignore[reportAttributeAccessIssue]
             ):
@@ -265,7 +266,7 @@ class ExperimentSpecificApiView(GenericAPIView[Experiment], SDBAPIViewMixin):
             constraint_error_dict: dict[str, Any] | None = None
             if isinstance(error, ValidationError) and hasattr(error, "detail"):
                 if isinstance(error.detail, dict) and "__all__" in error.detail:
-                    constraint_error_dict = error.detail
+                    constraint_error_dict = cast("dict[str, Any]", error.detail)
             elif hasattr(error, "error_dict") and "__all__" in error.error_dict:  # pyright: ignore[reportAttributeAccessIssue]
                 constraint_error_dict = error.error_dict  # pyright: ignore[reportAttributeAccessIssue]
 

@@ -243,7 +243,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
             # ~~~~~~~~~~~~~~~~~~ START of Form Data Validation ~~~~~~~~~~~~~~~~~~ #
             with timed_section("Form Data Validation"):
                 try:
-                    files = request.FILES.getlist("artifact")
+                    uploads = request.FILES.getlist("artifact")
                 except KeyError:
                     return upload_input_error(
                         {"error": "Uploaded file(s) `artifact` is/are missing."},
@@ -277,7 +277,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     )
 
                 # Verify there's at least one file
-                if not files:
+                if not uploads:
                     return upload_input_error(
                         {"error": "No files uploaded"},
                         status=status.HTTP_400_BAD_REQUEST,
@@ -285,11 +285,11 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                 # Verify there's a maximum of `DJANGO_UPLOAD_TOTAL_FILES_LIMIT` files
                 # uploaded in one API call.
-                if len(files) > settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT:
+                if len(uploads) > settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT:
                     return upload_input_error(
                         {
                             "error": (
-                                f"Too many files uploaded. Received {len(files)} "
+                                f"Too many files uploaded. Received {len(uploads)} "
                                 "files, maximum number of files allowed: "
                                 f"{settings.DJANGO_UPLOAD_TOTAL_FILES_LIMIT}."
                             )
@@ -300,7 +300,7 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                 # ================== COMPASS ZIP =================== #
                 # Only one file allowed for Compass ZIP uploads
                 if fileformat_f == FileFormat.COMPASS_ZIP:
-                    if len(files) != 1:
+                    if len(uploads) != 1:
                         return upload_input_error(
                             {
                                 "error": (
@@ -313,34 +313,41 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
 
                 # Verify the total size and each individual file size doesn't exceed the
                 # global limit
+                files: list[InMemoryUploadedFile | TemporaryUploadedFile] = []
                 total_filesize = 0
-                for file in files:
-                    total_filesize += file.size
+                for upload in uploads:
+                    # Check file type
+                    if (
+                        not isinstance(
+                            upload, (InMemoryUploadedFile, TemporaryUploadedFile)
+                        )
+                        or upload.size is None
+                    ):
+                        return upload_input_error(
+                            {"error": f"Unknown artifact received: `{upload.name}`"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+                    total_filesize += upload.size
                     # Check if file size exceeds globally set limit
                     if (
-                        file.size
+                        upload.size
                         > settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT
                         * 1024**2
                     ):
                         return upload_input_error(
                             {
                                 "error": (
-                                    f"The file size for `{file.name}` "
-                                    f"[{file.size / 1024**2} MiB], exceeds the limit: "
+                                    f"The file size for `{upload.name}` "
+                                    f"[{upload.size / 1024**2} MiB], "
+                                    "exceeds the limit: "
                                     f"{settings.DJANGO_GIT_UPLOAD_INDIVIDUAL_FILESIZE_MB_LIMIT} MiB"  # noqa: E501
                                 )
                             },
                             status=status.HTTP_400_BAD_REQUEST,
                         )
 
-                    # Check file type
-                    if not isinstance(
-                        file, (InMemoryUploadedFile, TemporaryUploadedFile)
-                    ):
-                        return upload_input_error(
-                            {"error": f"Unknown artifact received: `{file.name}`"},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    files.append(upload)
 
                 if (
                     total_filesize
@@ -408,7 +415,9 @@ class FileUploadView(GenericAPIView[Project], SDBAPIViewMixin):
                     for file in files:
                         if fileformat_f == FileFormat.COMPASS_ZIP:
                             # Verify .zip extension (case-insensitive)
-                            if not file.name.lower().endswith(".zip"):
+                            if file.name is None or not file.name.lower().endswith(
+                                ".zip"
+                            ):
                                 return upload_input_error(
                                     {
                                         "error": (
