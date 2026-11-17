@@ -11,6 +11,9 @@ Unlike product docs, these files prioritize:
 
 ## Topics
 
+- [Email delivery](email-delivery.md): disposable Mailpit development inbox,
+  SMTP configuration, production boundaries, and verification.
+
 ### Architecture and System Design
 
 - [Frontend dates](frontend-dates.md)

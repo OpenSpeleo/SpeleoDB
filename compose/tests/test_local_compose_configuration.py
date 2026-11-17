@@ -178,3 +178,17 @@ def test_node_modules_preparation_migrates_legacy_root_volume(
         path_stat = path.stat()
         assert path_stat.st_uid == owner.pw_uid
         assert path_stat.st_gid == owner.pw_gid
+
+
+def test_local_mail_senders_wait_for_loopback_mailpit() -> None:
+    compose_config: dict[str, Any] = yaml.safe_load(
+        (REPOSITORY_ROOT / "local.yml").read_text(encoding="utf-8")
+    )
+    services: dict[str, Any] = compose_config["services"]
+    assert services["mailpit"]["ports"] == [
+        "127.0.0.1:1025:1025",
+        "127.0.0.1:8025:8025",
+    ]
+    assert "volumes" not in services["mailpit"]
+    for name in ("django", "django-webserver", "celery-worker", "celery-beat"):
+        assert services[name]["depends_on"]["mailpit"]["condition"] == "service_healthy"

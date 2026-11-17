@@ -15,12 +15,14 @@
     // Do not let Dev Containers rewrite only the interactive service's UID.
     "updateRemoteUserUID": false,
     "workspaceFolder": "/app",
-    // VS Code tunnel only: Docker still uses host networking and publishes no
-    // container port. This makes port 8000 appear automatically in Ports.
+    // VS Code tunnels expose Django and the Mailpit inbox in remote sessions.
+    // Django uses host networking; Mailpit publishes its ports on host loopback.
     "forwardPorts": [
-        8000
+        8000,
+        8025
     ],
     "portsAttributes": {
+        "8025": {"label": "Mailpit inbox", "onAutoForward": "notify"},
         "8000": {
             "label": "SpeleoDB Django",
             "onAutoForward": "notify"
@@ -82,9 +84,7 @@
                 // Docker
                 "ms-azuretools.vscode-docker",
                 // Env
-                "IronGeek.vscode-env",
-                // EML Viewer
-                "joel-harkes.emlviewer"
+                "IronGeek.vscode-env"
             ]
         }
     },

@@ -19,6 +19,8 @@ x-django: &django
   image: speleodb_local_django
   user: dev-user
   depends_on:
+    mailpit:
+      condition: service_healthy
     setup:
       condition: service_completed_successfully
   volumes:
@@ -44,6 +46,14 @@ x-django: &django
   network_mode: "host"
 
 services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_mailpit"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
   django:
     <<: *django
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_django"
@@ -99,6 +109,8 @@ services:
     <<: *django
     container_name: "${COMPOSE_INSTANCE_PREFIX:-speleodb}_local_celery_worker"
     depends_on:
+      mailpit:
+        condition: service_healthy
       setup:
         condition: service_completed_successfully
       redis:

@@ -2,25 +2,17 @@
 
 from __future__ import annotations
 
-import os
 import socket
-from typing import TYPE_CHECKING
 
 from debug_toolbar.settings import PANELS_DEFAULTS
-from django.core.mail.backends.filebased import EmailBackend
-from django.utils import timezone
 
 from config.settings.base import *  # noqa: F403
 from config.settings.base import AWS_STORAGE_BUCKET_NAME
 from config.settings.base import INSTALLED_APPS
 from config.settings.base import LOGGING
-from config.settings.base import MAILERS
 from config.settings.base import MIDDLEWARE
 from config.settings.base import SPELEODB_CELERY_WORKER_RUNTIME
 from config.settings.base import env
-
-if TYPE_CHECKING:
-    from typing import Any
 
 # GENERAL
 # ------------------------------------------------------------------------------
@@ -94,34 +86,21 @@ CACHES = {
 # ------------------------------------------------------------------------------
 
 
-class EmailEMLBackend(EmailBackend):
-    """
-    Class that writes email into a specified location, using the `.eml` extension,
-    rather than the default `.log` one
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
-        fname = f"{timestamp}-{abs(id(self))}.eml"
-        self._fname = os.path.join(self.file_path, fname)  # noqa: PTH118
-
-
 # https://docs.djangoproject.com/en/dev/ref/settings/#mailers
 MAILERS = {
     "default": {
-        **MAILERS["default"],
         "BACKEND": env(
             "DJANGO_EMAIL_BACKEND",
-            default="config.settings.local.EmailEMLBackend",
+            default="django.core.mail.backends.smtp.EmailBackend",
         ),
     },
 }
-if MAILERS["default"]["BACKEND"] in {
-    "config.settings.local.EmailEMLBackend",
-    "django.core.mail.backends.filebased.EmailBackend",
-}:
-    MAILERS["default"]["OPTIONS"] = {"file_path": "./.workdir/emails"}
+if MAILERS["default"]["BACKEND"] == "django.core.mail.backends.smtp.EmailBackend":
+    MAILERS["default"]["OPTIONS"] = {
+        "host": env.str("DJANGO_EMAIL_HOST", default="localhost"),
+        "port": env.int("DJANGO_EMAIL_PORT", default=1025),
+        "timeout": 5,
+    }
 
 # django-debug-toolbar
 # ------------------------------------------------------------------------------
