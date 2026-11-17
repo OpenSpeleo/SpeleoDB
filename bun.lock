@@ -5,9 +5,9 @@
     "": {
       "name": "speleodb",
       "dependencies": {
-        "@speleodb/api": "0.7.0",
-        "@speleodb/map-core": "0.5.0",
-        "@speleodb/map-viewer": "0.4.0",
+        "@speleodb/api": "0.7.1",
+        "@speleodb/map-core": "0.5.1",
+        "@speleodb/map-viewer": "0.5.1",
         "maplibre-gl": "github:DEKHTIARJonathan/maplibre-gl-js#hotpatch",
       },
       "devDependencies": {
@@ -41,7 +41,7 @@
     "fsevents",
   ],
   "overrides": {
-    "@speleodb/map-core": "0.5.0",
+    "@speleodb/map-core": "0.5.1",
   },
   "packages": {
     "@cacheable/memory": ["@cacheable/memory@2.2.0", "", { "dependencies": { "@cacheable/utils": "^2.5.0", "@keyv/bigmap": "^1.3.1", "hookified": "^1.15.1", "keyv": "^5.6.0" } }, "sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ=="],
@@ -158,11 +158,11 @@
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.1.1", "", {}, "sha512-glFIJDvLNDtJhT9qrMFWLPbvS+skxgt4L0K8Ei2YtnhPysAJnsI7nyxSJxKj4ADeKX0OLjC4ntRkwpLOoS3rwA=="],
 
-    "@speleodb/api": ["@speleodb/api@0.7.0", "", {}, "sha512-BVQCmuq9vUge+/8tUyxjoipoGDMHCTgn8/uG6K3DksR5E54xG5YysmkFzcWJAIXlPUfrgES4F+CotiwE0LkfGg=="],
+    "@speleodb/api": ["@speleodb/api@0.7.1", "", {}, "sha512-rntTW/DoA6ePqsGJM6dPNXsojZuBdVimt9NeZ2yjKIuYR9yu8UXwQNiDKbKg6TP1A1csGHr3O+WzCXnBF1O1XA=="],
 
-    "@speleodb/map-core": ["@speleodb/map-core@0.5.0", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-NJZBCRRrOqVvXDa8w99FrbVCvQRYZ9q+zo30c1Dg5+h9zCYEGJzwcXdUyy52jHZPaxJroPFr65ibkf7ddoPO4g=="],
+    "@speleodb/map-core": ["@speleodb/map-core@0.5.1", "", { "dependencies": { "@types/geojson": "7946.0.16", "@types/polylabel": "2.0.0", "polylabel": "2.1.0" } }, "sha512-qgXOnwbGfgvnmns6O6qZVXA4OHyIHCXUHvfogQliujB6pI8gUu5Wq73Wt98TgzHiB/OxIp7j3yHCjdzu2R1b5A=="],
 
-    "@speleodb/map-viewer": ["@speleodb/map-viewer@0.4.0", "", { "dependencies": { "@speleodb/map-core": ">=0.5.0 <1.0.0" }, "peerDependencies": { "@playwright/test": ">=1.63.0 <2.0.0", "maplibre-gl": ">=6.14.0 <7.0.0" }, "optionalPeers": ["@playwright/test"] }, "sha512-eMNMS3k4MUfOSAWWwqn4KxPiYta7+jGxWYZlPYvvNViNsyX1WVzUBrss6wkDpKKEjBRTsnRpah9LhZ7EFDICIg=="],
+    "@speleodb/map-viewer": ["@speleodb/map-viewer@0.5.1", "", { "dependencies": { "@speleodb/map-core": ">=0.5.1 <1.0.0" }, "peerDependencies": { "@playwright/test": ">=1.63.0 <2.0.0", "maplibre-gl": ">=6.14.0 <7.0.0" }, "optionalPeers": ["@playwright/test"] }, "sha512-5dkt7MO8VMXBIS5aQydkP0k9IWPkCwiBMURibVD6hYybTX3lX2/GQ/fM4W7jIUPhf6ss2YN7VwVyQFG8EYx/mQ=="],
 
     "@tailwindcss/forms": ["@tailwindcss/forms@0.5.11", "", { "dependencies": { "mini-svg-data-uri": "^1.2.3" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || >= 3.0.0-alpha.1 || >= 4.0.0-alpha.20 || >= 4.0.0-beta.1" } }, "sha512-h9wegbZDPurxG22xZSoWtdzc41/OlNEUQERNqI/0fOwa2aVlWGu7C35E/x6LDyD3lgtztFSSjKZyuVM0hxhbgA=="],
 

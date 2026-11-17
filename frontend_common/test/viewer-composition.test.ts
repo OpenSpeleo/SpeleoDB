@@ -59,7 +59,7 @@ class VendorMap implements GlobeAtmosphereMap {
     setPaintProperty(id: string, name: string, value: unknown) { Object.assign(this.layers.get(id)!.paint ??= {}, { [name]: value }); }
     setFilter(id: string, filter: unknown) { Object.assign(this.layers.get(id)!, { filter }); }
     moveLayer() {}
-    async loadImage(_url: string) { return { data: {} }; }
+    async loadImage(_url: string) { return { data: { width: 1, height: 1, data: new Uint8Array([239, 68, 68, 255]) } }; }
 
     addImage(id: string) { this.images.add(id); }
     fitBounds(bounds: unknown, options: unknown) { this.fits.push({ bounds, options }); setTimeout(() => { void this.fire('moveend'); }, this.cameraDurationMs); }

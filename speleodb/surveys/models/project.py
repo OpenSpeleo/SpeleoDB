@@ -1031,7 +1031,10 @@ class Project(models.Model):
             lead = self.exploration_leads.model(
                 project=self,
                 description=shot.comment or "",
-                headings=self.exploration_headings(shot.comment),
+                directions=[
+                    {"heading": heading, "checked": False}
+                    for heading in self.exploration_headings(shot.comment)
+                ],
                 created_by=commit.author_email or self.created_by,
             )
             leads[lead.pk] = new_leads[lead.pk] = lead

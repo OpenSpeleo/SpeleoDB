@@ -5,14 +5,12 @@ from __future__ import annotations
 import logging
 import math
 import uuid
+from typing import TypedDict
 
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models.lookups import IsNull
-from django.db.models.lookups import LessThanOrEqual
 
 from speleodb.common.constants import EXPLORATION_LEAD_MAX_HEADINGS
 from speleodb.common.constants import HEADING_FULL_CIRCLE
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_headings(values: list[float]) -> None:
-    """An unset direction list is empty; every supplied direction is renderable."""
+    """Validate bearings; the original headings migration also imports this callable."""
     if len(values) > EXPLORATION_LEAD_MAX_HEADINGS or any(
         isinstance(value, bool)
         or not isinstance(value, int | float)
@@ -33,6 +31,35 @@ def validate_headings(values: list[float]) -> None:
         raise ValidationError(
             "Supply up to three headings from 0 inclusive to 360 exclusive."
         )
+
+
+class ExplorationLeadDirection(TypedDict):
+    heading: float | None
+    checked: bool
+
+
+def default_directions() -> list[ExplorationLeadDirection]:
+    """An undirected lead still has an independent completion state."""
+    return [{"heading": None, "checked": False}]
+
+
+def validate_directions(values: object) -> None:
+    if (
+        not isinstance(values, list)
+        or not 1 <= len(values) <= EXPLORATION_LEAD_MAX_HEADINGS
+    ):
+        raise ValidationError("Supply one to three lead directions.")
+    for direction in values:
+        if (
+            not isinstance(direction, dict)
+            or set(direction) != {"heading", "checked"}
+            or not isinstance(direction["checked"], bool)
+        ):
+            raise ValidationError(
+                "Each direction requires a heading and a boolean checked state."
+            )
+        if direction["heading"] is not None:
+            validate_headings([direction["heading"]])
 
 
 class ExplorationLead(models.Model):
@@ -52,16 +79,11 @@ class ExplorationLead(models.Model):
         help_text="Optional description of the lead",
     )
 
-    headings = ArrayField(
-        models.FloatField(),
-        default=list,
-        db_default=[],
-        blank=True,
-        size=EXPLORATION_LEAD_MAX_HEADINGS,
-        validators=[validate_headings],
-        help_text=(
-            "Up to three directions clockwise from geographic north; empty is unset."
-        ),
+    directions = models.JSONField(
+        default=default_directions,
+        db_default=[{"heading": None, "checked": False}],
+        validators=[validate_directions],
+        help_text="One to three leads, each with a nullable bearing and checked state.",
     )
 
     # Station coordinates
@@ -107,38 +129,20 @@ class ExplorationLead(models.Model):
         ordering = ["-modified_date"]
         constraints = [
             models.CheckConstraint(
-                name="exploration_lead_valid_headings",
-                condition=(
-                    models.Q(headings__len__lte=3)
-                    & LessThanOrEqual(
-                        models.Func(
-                            "headings",
-                            function="array_ndims",
-                            output_field=models.IntegerField(),
-                        ),
-                        models.Value(1),
-                    )
-                    & IsNull(
-                        models.Func(
-                            "headings",
-                            models.Value(None, output_field=models.FloatField()),
-                            function="array_position",
-                            output_field=models.IntegerField(),
-                        ),
-                        rhs=True,
-                    )
-                    & (
-                        models.Q(headings__len=0)
-                        | models.Q(headings__0__gte=0, headings__0__lt=360)
-                    )
-                    & (
-                        models.Q(headings__len__lte=1)
-                        | models.Q(headings__1__gte=0, headings__1__lt=360)
-                    )
-                    & (
-                        models.Q(headings__len__lte=2)
-                        | models.Q(headings__2__gte=0, headings__2__lt=360)
-                    )
+                name="exploration_lead_valid_directions",
+                condition=models.Func(
+                    "directions",
+                    models.Value(
+                        '$.type() == "array" && $.size() >= 1 && $.size() <= 3 '
+                        '&& !exists($[*] ? (@.type() != "object" '
+                        "|| !exists(@.heading) || !exists(@.checked) "
+                        '|| @.checked.type() != "boolean" '
+                        '|| !(@.heading.type() == "null" '
+                        '|| (@.heading.type() == "number" '
+                        "&& @.heading >= 0 && @.heading < 360))))"
+                    ),
+                    function="jsonb_path_match",
+                    output_field=models.BooleanField(),
                 ),
             ),
         ]
@@ -149,6 +153,13 @@ class ExplorationLead(models.Model):
 
     def __str__(self) -> str:
         return f"[Project: `{self.project.name}`] Exploration Lead: {self.id}"
+
+    @property
+    def is_fully_checked(self) -> bool:
+        """Completion is derived, so it cannot disagree with individual leads."""
+        return bool(self.directions) and all(
+            direction["checked"] for direction in self.directions
+        )
 
     @property
     def coordinates(self) -> tuple[float, float] | None:

@@ -6,6 +6,7 @@ import uuid
 from dataclasses import replace
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from typing import Any
 
 import pytest
 from django.db import IntegrityError
@@ -106,10 +107,14 @@ def test_import_preserves_existing_lead_and_retains_new_signatures(
     project.sync_exploration_leads(source_commit, [shot])
     lead = project.exploration_leads.get()
     assert lead.description == shot.comment
-    assert lead.headings == [0, 90, 22]
+    assert lead.directions == [
+        {"heading": 0, "checked": False},
+        {"heading": 90, "checked": False},
+        {"heading": 22, "checked": False},
+    ]
     assert lead.created_by == source_commit.author_email
     lead.description = "User description"
-    lead.headings = [337.5]
+    lead.directions = [{"heading": 337.5, "checked": False}]
     lead.save()
     saved_values = project.exploration_leads.values().get(pk=lead.pk)
     moved = replace(shot, uuid=str(uuid.uuid4()), longitude=-86, comment="no markers")
@@ -221,7 +226,7 @@ def test_native_uuid_normalization_survives_format_and_namespace_changes(
     project.sync_exploration_leads(source_commit, [shot])
     original = project.exploration_leads.get()
     original.description = "Description maintained in the map"
-    original.headings = []
+    original.directions = [{"heading": None, "checked": False}]
     original.save()
 
     project.type = ProjectType.STALAGMIGHT
@@ -246,7 +251,7 @@ def test_native_uuid_normalization_survives_format_and_namespace_changes(
     assert project.exploration_leads.get().pk == original.pk
     assert original.coordinates == (-87, 20)
     assert original.description == "Description maintained in the map"
-    assert original.headings == []
+    assert original.directions == [{"heading": None, "checked": False}]
 
 
 @pytest.mark.django_db
@@ -278,7 +283,7 @@ def test_endpoint_identity_survives_unavailable_measurements(
     project.sync_exploration_leads(source_commit, [source_shot()])
     original = project.exploration_leads.get()
     original.description = "Keep this user description"
-    original.headings = [123]
+    original.directions = [{"heading": 123, "checked": False}]
     original.save()
     project.sync_exploration_leads(
         source_commit,
@@ -295,7 +300,7 @@ def test_endpoint_identity_survives_unavailable_measurements(
     assert project.exploration_leads.get().pk == original.pk
     assert original.coordinates == (-87, 20)
     assert original.description == "Keep this user description"
-    assert original.headings == [123]
+    assert original.directions == [{"heading": 123, "checked": False}]
 
 
 @pytest.mark.django_db
@@ -327,7 +332,7 @@ def test_manual_lead_at_same_location_is_not_claimed_or_overwritten(
         longitude=-87,
         latitude=20,
         description="Manually entered observation",
-        headings=[123],
+        directions=[{"heading": 123, "checked": False}],
         created_by="manual@example.test",
     )
     modified_date = manual.modified_date
@@ -338,7 +343,7 @@ def test_manual_lead_at_same_location_is_not_claimed_or_overwritten(
     imported.refresh_from_db()
     assert manual.coordinates == (-87, 20)
     assert manual.description == "Manually entered observation"
-    assert manual.headings == [123]
+    assert manual.directions == [{"heading": 123, "checked": False}]
     assert manual.modified_date == modified_date
     assert not manual.sources.exists()
     assert imported.coordinates == (-87, 20)
@@ -359,13 +364,13 @@ def test_unannotated_source_does_not_prevent_later_import(
     )
     lead = project.exploration_leads.get()
     assert lead.description == "decorate black, stag, !s! !down!"
-    assert lead.headings == [180]
+    assert lead.directions == [{"heading": 180, "checked": False}]
     project.sync_exploration_leads(source_commit, [])
     project.sync_exploration_leads(source_commit, [source_shot(comment=comment)])
     lead.refresh_from_db()
     assert project.exploration_leads.get().pk == lead.pk
     assert lead.description == "decorate black, stag, !s! !down!"
-    assert lead.headings == [180]
+    assert lead.directions == [{"heading": 180, "checked": False}]
 
 
 @pytest.mark.django_db
@@ -566,16 +571,33 @@ def test_new_sources_with_conflicting_destinations_do_not_depend_on_order(
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "headings", [[360], [-1], [float("nan")], [float("inf")], [None], [0, 1, 2, 3]]
+    "directions",
+    [
+        [],
+        {},
+        [0],
+        None,
+        [{"heading": 360, "checked": False}],
+        [{"heading": -1, "checked": False}],
+        [{"heading": True, "checked": False}],
+        [{"heading": 90, "checked": "true"}],
+        [{"heading": 90, "checked": 1}],
+        [{"heading": 90, "checked": None}],
+        [{"heading": 90}],
+        [{"checked": False}],
+        [{"heading": [], "checked": False}],
+        [{"heading": {}, "checked": False}],
+        [{"heading": 0, "checked": False}] * 4,
+    ],
 )
-def test_database_rejects_invalid_heading_arrays(
-    project: Project, headings: list[float]
+def test_database_rejects_invalid_direction_arrays(
+    project: Project, directions: Any
 ) -> None:
     with pytest.raises(IntegrityError), transaction.atomic():
         ExplorationLead.objects.create(
             project=project,
             longitude=-87,
             latitude=20,
-            headings=headings,
+            directions=directions,
             created_by="surveyor@example.test",
         )

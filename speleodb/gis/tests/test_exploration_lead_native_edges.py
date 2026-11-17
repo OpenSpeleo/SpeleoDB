@@ -129,7 +129,10 @@ def test_compass_reversed_duplicates_exclusions_and_native_namespaces(
     result = publish(native_commit, path)
     project = native_commit.project
     lead = project.exploration_leads.get()
-    assert (lead.description, lead.headings) == ("First !N!", [0])
+    assert (lead.description, lead.directions) == (
+        "First !N!",
+        [{"heading": 0, "checked": False}],
+    )
     assert [shot.comment for shot in result.shots] == ["First !N!", "Second !S!"]
     assert all(
         (shot.shot_id, shot.from_id, shot.namespace, shot.uuid)
@@ -151,16 +154,16 @@ def test_compass_reversed_duplicates_exclusions_and_native_namespaces(
     assert lead.coordinates == pytest.approx(anchor, abs=1e-6)
     assert lead.coordinates != pytest.approx(leg[-1][:2], abs=1e-7)
     lead.description = "User notes at anchored destination"
-    lead.headings = []
+    lead.directions = [{"heading": None, "checked": False}]
     lead.save()
     survey.shots.reverse()
     save_project(path, source)
     publish(native_commit, path)
     lead.refresh_from_db()
     assert project.exploration_leads.get().pk == lead.pk
-    assert (lead.description, lead.headings) == (
+    assert (lead.description, lead.directions) == (
         "User notes at anchored destination",
-        [],
+        [{"heading": None, "checked": False}],
     )
 
     # With no native UUID, both the DAT path and survey name distinguish sources.
@@ -175,9 +178,9 @@ def test_compass_reversed_duplicates_exclusions_and_native_namespaces(
     expected_lead_count += 1
     assert project.exploration_leads.count() == expected_lead_count
     lead.refresh_from_db()
-    assert (lead.description, lead.headings) == (
+    assert (lead.description, lead.directions) == (
         "User notes at anchored destination",
-        [],
+        [{"heading": None, "checked": False}],
     )
 
 
@@ -200,7 +203,7 @@ def test_stalagmight_schema_upgrade_retains_live_and_deleted_native_rows(
     deleted_sources = set(deleted.sources.values_list("pk", flat=True))
     deleted.delete()
     lead.description = "User notes survive schema upgrade"
-    lead.headings = []
+    lead.directions = [{"heading": None, "checked": False}]
     lead.save()
     saved_values = project.exploration_leads.values().get(pk=lead.pk)
     native_ids = {(shot.shot_id, shot.from_id) for shot in initial.shots}
@@ -315,6 +318,9 @@ def test_tml_start_closure_and_excluded_comments_do_not_create_leads(
     result = publish(native_commit, path)
     assert {shot.shot_id for shot in result.shots} == {"75", "90"}
     lead = native_commit.project.exploration_leads.get()
-    assert (lead.description, lead.headings) == ("Live !N!", [0])
+    assert (lead.description, lead.directions) == (
+        "Live !N!",
+        [{"heading": 0, "checked": False}],
+    )
     publish(native_commit, path)
     assert native_commit.project.exploration_leads.get().pk == lead.pk

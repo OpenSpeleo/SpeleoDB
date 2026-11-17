@@ -1,3 +1,4 @@
+import { createDefaultExplorationLeadDirections, type ExplorationLeadDirection } from '@speleodb/map-core';
 import type { LeadWrite } from '../../../../../../ts-types/domain/station-records.ts';
 import type { LeadFeatureCollection } from '../../../../../../ts-types/domain/map-entities.ts';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
@@ -83,7 +84,7 @@ export const ExplorationLeadManager = {
                         id: featureId,
                         coordinates: coords,
                         description: feature.properties.description || '',
-                        headings: [...(feature.properties.headings ?? [])],
+                        directions: feature.properties.directions.map(direction => ({ ...direction })),
                         projectId: projectId,
                         lineName: 'Survey Line',
                         createdAt: feature.properties.creation_date,
@@ -130,15 +131,15 @@ export const ExplorationLeadManager = {
      * @param {string} projectId - The project UUID
      * @param {Array} coordinates - [lng, lat] coordinates
      * @param {string} description - Lead description
-     * @param {Array} headings - Saved compass directions, empty when unset
+     * @param {Array} directions - Saved headings and independent checked statuses
      * @returns {Promise<Object>} The created lead data
      */
-    async createLead(projectId: EntityId, coordinates: readonly [unknown, unknown], description: string, headings: readonly number[] = []) {
+    async createLead(projectId: EntityId, coordinates: readonly [unknown, unknown], description: string, directions: readonly ExplorationLeadDirection[] = createDefaultExplorationLeadDirections()) {
         const leadData = {
             latitude: Number(coordinates[1]).toFixed(7),
             longitude: Number(coordinates[0]).toFixed(7),
             description: description,
-            headings: [...headings]
+            directions: directions.map(direction => ({ ...direction }))
         };
 
         const lead = await API.createExplorationLead(projectId, leadData);
@@ -152,7 +153,7 @@ export const ExplorationLeadManager = {
             id: lead.id,
             coordinates: [Number(lead.longitude), Number(lead.latitude)],
             description: lead.description || '',
-            headings: [...(lead.headings ?? [])],
+            directions: lead.directions.map(direction => ({ ...direction })),
             projectId: projectId,
             lineName: 'Survey Line',
             createdAt: lead.creation_date,
@@ -169,7 +170,7 @@ export const ExplorationLeadManager = {
     /**
      * Update an existing exploration lead
      * @param {string} leadId - The lead UUID
-     * @param {Object} data - Data to update (description, headings, latitude, longitude)
+     * @param {Object} data - Data to update (description, directions, latitude, longitude)
      * @returns {Promise<Object>} The updated lead data
      */
     async updateLead(leadId: EntityId, data: LeadWrite) {
@@ -186,7 +187,7 @@ export const ExplorationLeadManager = {
                 ...existing,
                 coordinates: [Number(lead.longitude), Number(lead.latitude)],
                 description: lead.description || '',
-                headings: [...(lead.headings ?? [])]
+                directions: lead.directions.map(direction => ({ ...direction }))
             });
         }
 

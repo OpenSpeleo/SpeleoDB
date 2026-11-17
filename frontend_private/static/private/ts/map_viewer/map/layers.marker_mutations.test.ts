@@ -77,7 +77,7 @@ it('publishes station refresh synchronously on Window and returns a promise', as
 it('loads images sequentially, skips existing images and fills a missing image on a later map', async () => {
     configureRuntimeContext({ icons: { cylinderOrange: '/cylinder', explorationLead: '/lead', biology: '/biology', bone: '/bone', artifact: '/artifact', geology: '/geology' } });
     const images = new Set<string>();
-    const image = {} as RendererImage;
+    const image: RendererImage = { width: 1, height: 1, data: new Uint8Array([239, 68, 68, 255]) };
     const loadImage = vi.fn(async (_url: string) => ({ data: image }));
     const addImage = vi.fn((id: string) => { images.add(id); });
     State.map = { hasImage: (id: string) => images.has(id), loadImage, addImage } as unknown as ViewerMap;
@@ -88,5 +88,5 @@ it('loads images sequentially, skips existing images and fills a missing image o
     images.delete('bone-station-icon');
     await Layers.loadMarkerImages();
     expect(loadImage.mock.calls[6]?.[0]).toBe('/bone');
-    expect(addImage).toHaveBeenCalledTimes(7);
+    expect(addImage).toHaveBeenCalledTimes(8);
 });

@@ -133,6 +133,18 @@ export const MapSettings = {
         ].sort((first, second) => first.label.localeCompare(second.label, undefined, { sensitivity: 'base' }));
         controls.forEach(category => {
             container.append(createSwitch(category.id, category.label, category.preference));
+            if (category.id === 'explorationLeads') {
+                const checked = createSwitch('showCheckedExplorationLeads', 'Checked Exploration Leads', 'displayPreference');
+                checked.classList.add('map-settings-lead-status');
+                const description = document.createElement('span');
+                description.id = 'map-settings-checked-leads-description';
+                description.className = 'sr-only';
+                const input = checked.querySelector('input')!;
+                input.setAttribute('aria-label', 'Checked Exploration Leads');
+                input.setAttribute('aria-describedby', description.id);
+                checked.append(description);
+                container.append(checked);
+            }
             if (category.id !== 'surveyStations') return;
             const details = document.createElement('details');
             details.className = 'map-settings-station-types';
@@ -174,6 +186,8 @@ export const MapSettings = {
             void Layers.setColorMode(input.value);
         } else if (input.dataset.displayPreference === 'geometryLabelsVisible') {
             void Layers.setGeometryLabelsVisible(input.checked);
+        } else if (input.dataset.displayPreference === 'showCheckedExplorationLeads') {
+            void Layers.setCheckedExplorationLeadsVisible(input.checked);
         } else if (input.dataset.category) {
             void Layers.setCategoryVisibility(input.dataset.category as DisplayCategory, input.checked);
         } else if (input.dataset.stationType) {
@@ -234,6 +248,16 @@ export const MapSettings = {
         const preferences = State.displayPreferences;
         const geometryLabels = this.dialog.querySelector<HTMLInputElement>('[data-display-preference="geometryLabelsVisible"]');
         if (geometryLabels) geometryLabels.checked = preferences.geometryLabelsVisible;
+        const checkedLeads = this.dialog.querySelector<HTMLInputElement>('[data-display-preference="showCheckedExplorationLeads"]');
+        if (checkedLeads) {
+            checkedLeads.checked = preferences.showCheckedExplorationLeads;
+            checkedLeads.disabled = !preferences.categories.explorationLeads;
+            const description = this.dialog.querySelector<HTMLElement>('#map-settings-checked-leads-description')!;
+            description.textContent = checkedLeads.disabled
+                ? 'Turn on Exploration leads to show checked leads.'
+                : 'Show fully checked leads on the map.';
+            checkedLeads.title = description.textContent;
+        }
         this.syncDepthLimit();
         this.dialog.querySelectorAll<HTMLInputElement>('[name="map-settings-color-mode"]').forEach(input => {
             input.checked = input.value === preferences.colorMode;

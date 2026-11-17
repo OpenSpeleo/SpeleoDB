@@ -1,3 +1,4 @@
+import { createDefaultExplorationLeadDirections } from '@speleodb/map-core';
 import { createHeadingCompass } from '@speleodb/map-viewer/heading-compass';
 import type { LeadWrite } from '../../../../../../ts-types/domain/station-records.ts';
 import { formatDateTime } from '../../../../../../frontend_common/presentation/dates.ts';
@@ -61,11 +62,11 @@ export const ExplorationLeadUI = {
 
         const html = Modal.base('create-lead-modal', 'Mark Exploration Lead', formHtml, footer, 'max-w-md');
 
-        let headings: number[] = [];
+        let directions = createDefaultExplorationLeadDirections();
         let compass: ReturnType<typeof createHeadingCompass> | undefined;
         Modal.open('create-lead-modal', html, () => {
             compass = createHeadingCompass(document.getElementById('lead-heading-compass')!, {
-                headings, onChange: value => { headings = value; },
+                directions, onChange: value => { directions = value; },
             });
             (document.getElementById('lead-description') as HTMLTextAreaElement).focus();
 
@@ -83,7 +84,7 @@ export const ExplorationLeadUI = {
 
                 try {
                     // Create via API
-                    const lead = await ExplorationLeadManager.createLead(projectId, coordinates, description, headings);
+                    const lead = await ExplorationLeadManager.createLead(projectId, coordinates, description, directions);
 
                     // Update state with lineName
                     const stateData = State.explorationLeads.get(lead.id);
@@ -196,12 +197,12 @@ export const ExplorationLeadUI = {
 
         const html = Modal.base('lead-details-modal', 'Exploration Lead Details', content, footer, 'max-w-md');
 
-        const originalHeadings = [...(lead.headings ?? [])];
-        let headings = [...originalHeadings];
+        const originalDirections = lead.directions.map(direction => ({ ...direction }));
+        let directions = originalDirections.map(direction => ({ ...direction }));
         let compass: ReturnType<typeof createHeadingCompass> | undefined;
         Modal.open('lead-details-modal', html, () => {
             compass = createHeadingCompass(document.getElementById('lead-heading-compass')!, {
-                headings, readOnly: !hasWriteAccess, onChange: value => { headings = value; },
+                directions, readOnly: !hasWriteAccess, onChange: value => { directions = value; },
             });
             const descriptionInput = document.getElementById('lead-description-edit') as HTMLTextAreaElement;
             // Compare against the DOM value because textarea parsing normalizes line endings.
@@ -221,8 +222,8 @@ export const ExplorationLeadUI = {
                     if (!compass?.reportValidity()) return;
                     const changes: LeadWrite = {};
                     if (descriptionInput.value !== originalDescription) changes.description = descriptionInput.value.trim();
-                    if (headings.length !== originalHeadings.length || headings.some((value, index) => value !== originalHeadings[index])) {
-                        changes.headings = [...headings];
+                    if (directions.length !== originalDirections.length || directions.some((value, index) => value.heading !== originalDirections[index]?.heading || value.checked !== originalDirections[index]?.checked)) {
+                        changes.directions = directions.map(direction => ({ ...direction }));
                     }
                     if (!Object.keys(changes).length) {
                         Modal.close('lead-details-modal');

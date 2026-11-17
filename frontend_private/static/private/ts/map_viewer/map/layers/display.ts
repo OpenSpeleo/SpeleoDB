@@ -130,6 +130,13 @@ export function setGeometryLabelsVisible(this: Pick<DisplayLayerOwner, 'emitDisp
     return this.scheduleDisplayUpdate('geometry-labels');
 }
 
+export function setCheckedExplorationLeadsVisible(this: Pick<DisplayLayerOwner, 'emitDisplayPreferencesChanged' | 'scheduleDisplayUpdate'>, visible: boolean) {
+    if (State.displayPreferences.showCheckedExplorationLeads === visible) return;
+    State.displayPreferences.showCheckedExplorationLeads = visible;
+    this.emitDisplayPreferencesChanged();
+    return this.scheduleDisplayUpdate('categories');
+}
+
 export function setStationTypeVisibility(this: Pick<DisplayLayerOwner, 'emitDisplayPreferencesChanged' | 'scheduleDisplayUpdate'>, type: DisplayStationType, visible: unknown) {
     if (!Object.hasOwn(State.displayPreferences.stationTypes, type) || typeof visible !== 'boolean') return;
     if (State.displayPreferences.stationTypes[type] === visible) return;

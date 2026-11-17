@@ -4,6 +4,57 @@ import { expectRenderedFeatures, installFixture, login, projectId, waitForViewer
 const leadId = '80000000-0000-4000-8000-000000000001';
 const coordinates: [number, number] = [-86.998, 20.001];
 
+test('completed leads can be revealed and reopened through the map settings and editor', async ({ page }) => {
+    await login(page);
+    const lead = {
+        id: leadId, project: projectId(0), description: 'Three passages',
+        directions: [0, 180, 270].map(heading => ({ heading, checked: false })),
+        is_fully_checked: false, latitude: coordinates[1], longitude: coordinates[0],
+        created_by: 'Browser surveyor', creation_date: '2026-01-01T12:00:00Z',
+        modified_date: '2026-01-01T12:00:00Z',
+    };
+    await installFixture(page, { apiResponses: {
+        '/api/v2/exploration-leads/geojson/': { type: 'FeatureCollection', features: [{
+            type: 'Feature', id: leadId,
+            geometry: { type: 'Point', coordinates }, properties: lead,
+        }] },
+    } });
+    // The HTTP boundary completes edits so native dialog/map visibility can be
+    // exercised together. Backend tests own persistence and validation.
+    await page.route(`**/api/v2/exploration-leads/${leadId}/`, async route => {
+        Object.assign(lead, route.request().postDataJSON());
+        lead.is_fully_checked = lead.directions.every(direction => direction.checked);
+        await route.fulfill({ json: lead });
+    });
+    await page.locator('#panel-toggle').click();
+    await expectRenderedFeatures(page, 'exploration-leads-layer', true);
+    await waitForViewerIdle(page);
+    const point = await page.evaluate(value => window.__viewerEvidence.map.project(value), coordinates);
+    await page.locator('canvas.maplibregl-canvas').click({ position: point });
+    const modal = page.locator('#lead-details-modal');
+    await modal.getByRole('button', { name: 'Check all', exact: true }).click();
+    await modal.getByRole('button', { name: 'Save Changes', exact: true }).click();
+    await expect(modal).toHaveCount(0);
+    await expectRenderedFeatures(page, 'exploration-leads-layer', false);
+
+    await page.locator('#map-settings-button').click();
+    const settings = page.locator('#map-settings-dialog');
+    await settings.getByRole('switch', { name: 'Checked Exploration Leads', exact: true }).check();
+    await settings.getByRole('button', { name: 'Close', exact: true }).click();
+    await expectRenderedFeatures(page, 'exploration-leads-layer', true);
+    await page.locator('canvas.maplibregl-canvas').click({ position: point });
+    await modal.getByRole('tab', { name: 'Lead 2', exact: true }).click();
+    await modal.getByRole('button', { name: 'Mark unchecked', exact: true }).click();
+    await expect(modal.getByRole('tab', { name: 'Lead 2', exact: true })).toHaveAttribute('aria-description', 'Unchecked');
+    await modal.getByRole('button', { name: 'Save Changes', exact: true }).click();
+    await expect(modal).toHaveCount(0);
+    await page.locator('#map-settings-button').click();
+    await settings.getByRole('switch', { name: 'Checked Exploration Leads', exact: true }).uncheck();
+    await settings.getByRole('button', { name: 'Close', exact: true }).click();
+    await expectRenderedFeatures(page, 'exploration-leads-layer', true);
+    await expectRenderedFeatures(page, 'exploration-leads-cones-layer', true);
+});
+
 test('exploration lead compass preserves independent directions through pointer capture and keyboard editing', async ({ page, browserName }) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -13,7 +64,7 @@ test('exploration lead compass preserves independent directions through pointer 
             type: 'Feature', id: leadId,
             geometry: { type: 'Point', coordinates },
             properties: {
-                project: projectId(0), description: 'Three passages', headings: [0, 180, 270],
+                project: projectId(0), description: 'Three passages', directions: [0, 180, 270].map(heading => ({ heading, checked: false })), is_fully_checked: false,
                 created_by: 'Browser surveyor', creation_date: '2026-01-01T12:00:00Z',
                 modified_date: '2026-01-01T12:00:00Z',
             },

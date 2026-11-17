@@ -106,6 +106,7 @@ describe('ExplorationLeadUI coordinate formatting', () => {
                 id: 'lead-1',
                 coordinates: [6.123456789, 46.987654321],
                 description: 'Test lead',
+                directions: [{ heading: null, checked: false }],
                 projectId: 'p1',
                 lineName: 'Line A',
             } as unknown as ViewerExplorationLead);
@@ -122,6 +123,7 @@ describe('ExplorationLeadUI coordinate formatting', () => {
                 id: 'lead-2',
                 coordinates: ['6.5', '46.5'],
                 description: 'Test lead',
+                directions: [{ heading: null, checked: false }],
                 projectId: 'p1',
                 lineName: 'Line B',
             } as unknown as ViewerExplorationLead);
@@ -150,10 +152,10 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
     });
     afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ''; });
     it('keeps the create callback async, rejects empty descriptions and updates the existing cached object on success', async () => {
-        const cached: ViewerExplorationLead = { id: 'lead', coordinates: [1, 2], lineName: '', description: '', headings: [], projectId: null, createdAt: undefined }; State.explorationLeads.set('lead', cached);
+        const cached: ViewerExplorationLead = { id: 'lead', coordinates: [1, 2], lineName: '', description: '', directions: [{ heading: null, checked: false }], projectId: null, createdAt: undefined }; State.explorationLeads.set('lead', cached);
         ExplorationLeadManager.createLead.mockResolvedValue({
             id: 'lead', project: 'project', longitude: 1, latitude: 2,
-            description: 'Passage', headings: [], created_by: 'tester@example.test',
+            is_fully_checked: false, description: 'Passage', directions: [{ heading: null, checked: false }], created_by: 'tester@example.test',
             creation_date: '2026-01-01T00:00:00Z', modified_date: '2026-01-01T00:00:00Z',
         });
         const coordinates: [number, number] = [1, 2];
@@ -163,7 +165,7 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         await form.onsubmit!(new Event('submit') as SubmitEvent); expect(ExplorationLeadManager.createLead).not.toHaveBeenCalled();
         (document.getElementById('lead-description') as HTMLTextAreaElement).value = '  Passage  ';
         await form.onsubmit!(new Event('submit') as SubmitEvent);
-        expect(ExplorationLeadManager.createLead).toHaveBeenCalledExactlyOnceWith('project', coordinates, 'Passage', []);
+        expect(ExplorationLeadManager.createLead).toHaveBeenCalledExactlyOnceWith('project', coordinates, 'Passage', [{ heading: null, checked: false }]);
         expect(State.explorationLeads.get('lead')).toBe(cached); expect(cached.lineName).toBe('<Line>');
         expect(Layers.refreshExplorationLeadsLayer).toHaveBeenCalledTimes(1); expect(Layers.reorderLayers).toHaveBeenCalledTimes(1);
         expect(Modal.close).toHaveBeenCalledWith('create-lead-modal');
@@ -179,7 +181,7 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         expect(Modal.close).not.toHaveBeenCalled();
     });
     it.each([[false, false], [true, false], [true, true]])('retains scoped write=%s/delete=%s controls', (write, remove) => {
-        State.explorationLeads.set('lead', { id: 'lead', coordinates: [1, 2], projectId: 'project', description: '<script>text</script>' } as unknown as ViewerExplorationLead);
+        State.explorationLeads.set('lead', { id: 'lead', coordinates: [1, 2], directions: [{ heading: null, checked: false }], projectId: 'project', description: '<script>text</script>' } as unknown as ViewerExplorationLead);
         Config.getScopedAccess.mockReturnValue({ read: true, write, delete: remove });
         ExplorationLeadUI.showDetailsModal('lead');
         expect(Config.getScopedAccess).toHaveBeenCalledWith('project', 'project');
@@ -193,7 +195,7 @@ describe('ExplorationLeadUI mutation and permission contracts', () => {
         expect(Utils.showNotification).toHaveBeenCalledWith('error', 'Exploration lead not found'); expect(Modal.open).not.toHaveBeenCalled();
     });
     it('retains the UI receiver for delete navigation and trims updates, including empty descriptions', async () => {
-        State.explorationLeads.set('lead', { id: 'lead', coordinates: [1, 2], projectId: 'project', lineName: 'Line' } as unknown as ViewerExplorationLead);
+        State.explorationLeads.set('lead', { id: 'lead', coordinates: [1, 2], directions: [{ heading: null, checked: false }], projectId: 'project', lineName: 'Line' } as unknown as ViewerExplorationLead);
         Config.getScopedAccess.mockReturnValue({ read: true, write: true, delete: true });
         const confirm = vi.spyOn(ExplorationLeadUI, 'showDeleteConfirmModal').mockImplementation(() => {});
         ExplorationLeadUI.showDetailsModal('lead');

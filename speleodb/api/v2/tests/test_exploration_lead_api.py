@@ -286,6 +286,7 @@ class TestExplorationLeadCRUDOperations(BaseAPIProjectTestCase):
 
         data: dict[str, Any] = {
             "description": "Updated description",
+            "directions": [{"heading": None, "checked": True}],
         }
 
         match method:
@@ -322,6 +323,8 @@ class TestExplorationLeadCRUDOperations(BaseAPIProjectTestCase):
 
         resp_data = response.data
         assert resp_data["description"] == data["description"]
+        assert resp_data["directions"] == data["directions"]
+        assert resp_data["is_fully_checked"] is True
 
         if method == "PUT":
             assert resp_data["latitude"] == data["latitude"]

@@ -1,3 +1,5 @@
+import type { ExpressionSpecification } from 'maplibre-gl';
+import { explorationLeadFilter } from '@speleodb/map-viewer';
 import {
     PROJECT_SCOPED_MARKER_PROPERTY,
     loadMarkerImages,
@@ -66,6 +68,7 @@ import {
     emitDisplayPreferencesChanged,
     setCategoryVisibility,
     setGeometryLabelsVisible,
+    setCheckedExplorationLeadsVisible,
     setStationTypeVisibility,
     revealCategory,
     applyCategoryVisibility,
@@ -85,7 +88,7 @@ import {
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { ColorMode } from '../../../../../../ts-types/domain/map-display.ts';
 
-import type { RendererLngLat, RendererValue } from '../../../../../../ts-types/domain/renderer.ts';
+import type { RendererLngLat } from '../../../../../../ts-types/domain/renderer.ts';
 import type { GISPopupFeature } from '../../../../../../ts-types/domain/map-layers.ts';
 
 import type { ViewerUpdateContext } from '@speleodb/map-viewer/update-scheduler';
@@ -129,6 +132,7 @@ export const Layers = {
     emitDisplayPreferencesChanged,
     setCategoryVisibility,
     setGeometryLabelsVisible,
+    setCheckedExplorationLeadsVisible,
     setStationTypeVisibility,
     revealCategory,
     applyCategoryVisibility,
@@ -189,7 +193,7 @@ export const Layers = {
      * Filter expression for markers tied to project visibility.
      * Markers without project scoping remain visible.
      */
-    getProjectScopedMarkerFilter: function (): RendererValue {
+    getProjectScopedMarkerFilter: function (): ExpressionSpecification {
         const visibleProjectIds = this.getVisibleProjectIds();
         return [
             'any',
@@ -209,7 +213,9 @@ export const Layers = {
         const filter = this.getProjectScopedMarkerFilter();
         PROJECT_SCOPED_MARKER_LAYER_IDS.forEach((layerId) => {
             if (map.getLayer(layerId)) {
-                map.setFilter(layerId, filter);
+                map.setFilter(layerId, layerId === 'exploration-leads-layer'
+                    ? explorationLeadFilter(State.displayPreferences.showCheckedExplorationLeads, filter) ?? filter
+                    : filter);
             }
         });
         this.applyCategoryVisibility('explorationLeads');

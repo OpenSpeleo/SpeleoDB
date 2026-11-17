@@ -2,10 +2,12 @@ import type { DisplayPreferences } from '../../../../../ts-types/domain/map-disp
 import type { ViewerState } from '../../../../../ts-types/domain/map-state.ts';
 import { DEFAULTS } from './config.ts';
 import { ViewerUpdates } from './viewer_updates.ts';
+import { EXPLORATION_LEAD_SHOW_CHECKED_DEFAULT } from '@speleodb/map-viewer';
 
 export function createDefaultDisplayPreferences(): DisplayPreferences {
     return {
         geometryLabelsVisible: DEFAULTS.DISPLAY.GEOMETRY_LABELS_VISIBLE,
+        showCheckedExplorationLeads: EXPLORATION_LEAD_SHOW_CHECKED_DEFAULT,
         colorMode: DEFAULTS.DISPLAY.COLOR_MODE as DisplayPreferences['colorMode'],
         depthLimitFeet: DEFAULTS.DEPTH.LIMIT_FEET,
         depthUnit: DEFAULTS.DEPTH.UNIT as DisplayPreferences['depthUnit'],

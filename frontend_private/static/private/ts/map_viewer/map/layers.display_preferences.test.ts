@@ -1,3 +1,4 @@
+import { explorationLeadFilter } from '@speleodb/map-viewer';
 import { MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { Feature, FeatureCollection, Geometry as GeoJSONGeometry, Point } from 'geojson';
 import type { Mock } from 'vitest';
@@ -333,7 +334,7 @@ it('keeps landmarks, leads and cylinders gated through creation and project chan
     }
     await Layers.setCategoryVisibility('explorationLeads', true);
     expect(visibility('exploration-leads-layer')).toBe('visible');
-    expect(currentMap().getLayer('exploration-leads-layer').filter).toEqual(Layers.getProjectScopedMarkerFilter());
+    expect(currentMap().getLayer('exploration-leads-layer').filter).toEqual(explorationLeadFilter(false, Layers.getProjectScopedMarkerFilter()));
 });
 
 it('localizes cylinder marker date labels without changing the editable installation date', () => {

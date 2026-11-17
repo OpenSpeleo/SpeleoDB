@@ -7,6 +7,7 @@ export type DisplayConcern = 'projects' | 'networks' | 'categories' | 'depth' | 
 
 export interface DisplayPreferences {
     geometryLabelsVisible: boolean;
+    showCheckedExplorationLeads: boolean;
     colorMode: ColorMode;
     depthLimitFeet: number | null;
     depthUnit: DepthUnit;
@@ -17,6 +18,7 @@ export interface DisplayPreferences {
 /** Untrusted persisted fields remain unknown until the existing field-specific checks. */
 export interface StoredDisplayPreferences {
     geometryLabelsVisible?: unknown;
+    showCheckedExplorationLeads?: unknown;
     version?: unknown;
     colorMode?: unknown;
     depthLimitFeet?: unknown;

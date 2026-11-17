@@ -1,5 +1,5 @@
-import { buildExplorationLeadCones } from '@speleodb/map-core';
-import { createExplorationLeadConeLayer, EXPLORATION_LEAD_CONE_SOURCE_OPTIONS, MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
+import { buildExplorationLeadCones, createDefaultExplorationLeadDirections, isExplorationLeadFullyChecked, type ExplorationLeadDirection } from '@speleodb/map-core';
+import { createExplorationLeadConeLayer, createExplorationLeadMarkerLayer, createCheckedExplorationLeadIcon, EXPLORATION_LEAD_CONE_SOURCE_OPTIONS, EXPLORATION_LEAD_ICON_IDS, MAP_LAYER_MIN_ZOOM } from '@speleodb/map-viewer';
 import type { CylinderInstallGeoJSONCollection } from '@speleodb/api';
 import { formatDate } from '../../../../../../../frontend_common/presentation/dates.ts';
 import type { EntityId } from '../../../../../../../ts-types/domain/identifiers.ts';
@@ -81,7 +81,8 @@ export async function loadMarkerImages() {
 
     const requiredImageIds = [
         'cylinder-icon',
-        'exploration-lead-icon',
+        EXPLORATION_LEAD_ICON_IDS.unchecked,
+        EXPLORATION_LEAD_ICON_IDS.checked,
         'biology-station-icon',
         'bone-station-icon',
         'artifact-station-icon',
@@ -100,9 +101,12 @@ export async function loadMarkerImages() {
         }
 
         // Load exploration lead SVG
-        if (!map.hasImage('exploration-lead-icon')) {
+        if (!map.hasImage(EXPLORATION_LEAD_ICON_IDS.unchecked) || !map.hasImage(EXPLORATION_LEAD_ICON_IDS.checked)) {
             const leadImage = await loadImage(getRuntimeContext().icons.explorationLead);
-            map.addImage('exploration-lead-icon', leadImage);
+            if (!map.hasImage(EXPLORATION_LEAD_ICON_IDS.unchecked)) map.addImage(EXPLORATION_LEAD_ICON_IDS.unchecked, leadImage);
+            if (!map.hasImage(EXPLORATION_LEAD_ICON_IDS.checked)) {
+                map.addImage(EXPLORATION_LEAD_ICON_IDS.checked, createCheckedExplorationLeadIcon(leadImage));
+            }
         }
 
         // Load biology icon for biology stations
@@ -139,7 +143,7 @@ export async function loadMarkerImages() {
 /**
  * Add an exploration lead marker to the map
  */
-export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshExplorationLeadsLayer' | 'reorderLayers'>, id: EntityId, coordinates: [number, number], lineName = 'Survey Line', description = '', projectId: EntityId | null = null, headings: readonly number[] = []) {
+export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshExplorationLeadsLayer' | 'reorderLayers'>, id: EntityId, coordinates: [number, number], lineName = 'Survey Line', description = '', projectId: EntityId | null = null, directions: readonly ExplorationLeadDirection[] = createDefaultExplorationLeadDirections()) {
     const map = State.map;
     if (!map) return;
 
@@ -149,7 +153,7 @@ export function addExplorationLeadMarker(this: Pick<MarkerLayerOwner, 'refreshEx
         coordinates,
         lineName,
         description,
-        headings: [...headings],
+        directions: directions.map(direction => ({ ...direction })),
         projectId,
         createdAt: new Date().toISOString()
     });
@@ -173,7 +177,7 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
 
     // Build GeoJSON from state
     // MapLibre requires promoteId for string IDs - include id in properties
-    const features = Array.from(State.explorationLeads.values()).map((marker): Feature<Point, { id: EntityId; lineName: string; headings: number[]; project_id: string | null }> => ({
+    const features = Array.from(State.explorationLeads.values()).map((marker): Feature<Point, { id: EntityId; lineName: string; directions: ExplorationLeadDirection[]; is_fully_checked: boolean; project_id: string | null }> => ({
         type: 'Feature',
         id: marker.id,
         geometry: {
@@ -183,11 +187,12 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
         properties: withProjectScopedMarkerProperties({
             id: marker.id,
             lineName: marker.lineName,
-            headings: marker.headings ?? []
+            directions: marker.directions.map(direction => ({ ...direction })),
+            is_fully_checked: isExplorationLeadFullyChecked(marker.directions)
         }, marker.projectId)
     }));
 
-    const geojson: FeatureCollection<Point, { id: EntityId; lineName: string; headings: number[]; project_id: string | null }> = {
+    const geojson: FeatureCollection<Point, { id: EntityId; lineName: string; directions: ExplorationLeadDirection[]; is_fully_checked: boolean; project_id: string | null }> = {
         type: 'FeatureCollection',
         features
     };
@@ -202,39 +207,13 @@ export function refreshExplorationLeadsLayer(this: Pick<MarkerLayerOwner, 'apply
             promoteId: 'id'
         });
 
-        // Add layer with red exclamation mark icon
-        if (map.hasImage('exploration-lead-icon')) {
-            map.addLayer({
-                id: layerId,
-                type: 'symbol',
-                source: sourceId,
-                minzoom: MAP_LAYER_MIN_ZOOM.EXPLORATION_LEAD_SYMBOL,
-                layout: {
-                    'icon-image': 'exploration-lead-icon',
-                    'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 18, 0.6],
-                    'icon-allow-overlap': true,
-                    'icon-ignore-placement': true
-                },
-                paint: {
-                    'icon-opacity': 1
-                }
-            });
-        } else {
-            // Fallback: use a circle marker if image not loaded
-            map.addLayer({
-                id: layerId,
-                type: 'circle',
-                source: sourceId,
-                minzoom: MAP_LAYER_MIN_ZOOM.EXPLORATION_LEAD_SYMBOL,
-                paint: {
-                    'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 12],
-                    'circle-color': '#EF4444',
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff',
-                    'circle-opacity': 1
-                }
-            });
-        }
+        // Shared marker styling includes completion, icon fallback and zoom policy.
+        map.addLayer(createExplorationLeadMarkerLayer({
+            sourceId,
+            layerId,
+            iconAvailable: map.hasImage(EXPLORATION_LEAD_ICON_IDS.unchecked) && map.hasImage(EXPLORATION_LEAD_ICON_IDS.checked),
+            showChecked: State.displayPreferences.showCheckedExplorationLeads,
+        }) as RendererLayer);
     }
 
     const coneSourceId = 'exploration-leads-cones-source';

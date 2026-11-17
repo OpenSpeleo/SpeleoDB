@@ -15,6 +15,7 @@ from rest_framework import serializers
 from speleodb.common.constants import EXPLORATION_LEAD_MAX_HEADINGS
 from speleodb.common.constants import HEADING_FULL_CIRCLE
 from speleodb.gis.models import ExplorationLead
+from speleodb.gis.models.explo_lead import validate_directions
 from speleodb.gis.models.explo_lead import validate_headings
 from speleodb.utils.gps_utils import format_coordinate
 from speleodb.utils.serializer_mixins import SanitizedFieldsMixin
@@ -40,29 +41,54 @@ class HeadingField(serializers.FloatField):
         return value
 
 
+class CheckedField(serializers.BooleanField):
+    """Status is a JSON boolean, never a truthy string or integer."""
+
+    def to_internal_value(self, data: Any) -> bool:
+        if not isinstance(data, bool):
+            raise serializers.ValidationError("Checked must be a boolean.")
+        return data
+
+
+class ExplorationLeadDirectionSerializer(serializers.Serializer[dict[str, Any]]):
+    heading = HeadingField(allow_null=True)
+    checked = CheckedField()
+
+
 @extend_schema_field(
     {
         "type": "array",
         "items": {
-            "type": "number",
-            "format": "double",
-            "minimum": 0,
-            "maximum": HEADING_FULL_CIRCLE,
-            "exclusiveMaximum": True,
+            "type": "object",
+            "required": ["heading", "checked"],
+            "properties": {
+                "heading": {
+                    "type": "number",
+                    "format": "double",
+                    "nullable": True,
+                    "minimum": 0,
+                    "maximum": HEADING_FULL_CIRCLE,
+                    "exclusiveMaximum": True,
+                },
+                "checked": {"type": "boolean"},
+            },
         },
+        "minItems": 1,
         "maxItems": EXPLORATION_LEAD_MAX_HEADINGS,
     }
 )
-class HeadingsField(serializers.JSONField):
-    """Accept a heading array, JSON-encoded for multipart and URL-encoded forms."""
+class DirectionsField(serializers.JSONField):
+    """Accept complete entries, JSON-encoded for multipart and URL-encoded forms."""
 
     def to_internal_value(self, data: Any) -> Any:
         values = super().to_internal_value(data)
-        return serializers.ListField(
-            child=HeadingField(),
+        directions = serializers.ListField(
+            child=ExplorationLeadDirectionSerializer(),
+            min_length=1,
             max_length=EXPLORATION_LEAD_MAX_HEADINGS,
-            validators=[validate_headings],
         ).run_validation(values)
+        validate_directions(directions)
+        return directions
 
 
 class ExplorationLeadSerializer(
@@ -72,14 +98,16 @@ class ExplorationLeadSerializer(
 
     sanitized_fields: ClassVar[list[str]] = ["description"]
 
-    headings = HeadingsField(required=False)
+    directions = DirectionsField(required=False)
+    is_fully_checked = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = ExplorationLead
         fields = [
             "id",
             "description",
-            "headings",
+            "directions",
+            "is_fully_checked",
             "latitude",
             "longitude",
             "project",
@@ -133,7 +161,8 @@ class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLe
         fields = [
             "id",
             "description",
-            "headings",
+            "directions",
+            "is_fully_checked",
             "latitude",
             "longitude",
             "created_by",
@@ -148,10 +177,11 @@ class ExplorationLeadGeoJSONSerializer(serializers.ModelSerializer[ExplorationLe
             geometry=Point((float(instance.longitude), float(instance.latitude))),  # type: ignore[no-untyped-call]
             properties={
                 "description": instance.description,
-                "headings": instance.headings,
+                "directions": instance.directions,
+                "is_fully_checked": instance.is_fully_checked,
                 "created_by": instance.created_by,
                 "creation_date": instance.creation_date.isoformat(),
                 "modified_date": instance.modified_date.isoformat(),
-                "project": str(instance.project.id),
+                "project": str(instance.project_id),
             },
         )

@@ -281,16 +281,16 @@ def test_force_recompute_reparses_only_latest_source_comments(
     project.convert_geojson_history(repository, tmp_path, force_recompute=True)
     lead = project.exploration_leads.get()
     assert lead.description == comments[-1][1]
-    assert lead.headings == [180]
+    assert lead.directions == [{"heading": 180, "checked": False}]
     lead_id = lead.pk
     lead.description = "User's revised description"
-    lead.headings = []
+    lead.directions = [{"heading": None, "checked": False}]
     lead.save()
     project.convert_geojson_history(repository, tmp_path, force_recompute=True)
     lead.refresh_from_db()
     assert project.exploration_leads.get().pk == lead_id
     assert lead.description == "User's revised description"
-    assert lead.headings == []
+    assert lead.directions == [{"heading": None, "checked": False}]
     assert project.geojsons.filter(commit__in=records).count() == len(records)
 
 

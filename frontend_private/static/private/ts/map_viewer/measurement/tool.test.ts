@@ -235,7 +235,7 @@ it.each(['station', 'cylinder-install', 'exploration-lead'])('rolls back %s coor
     const feature = { id: 'entity', layer: { id: layerId }, geometry: { type: 'Point', coordinates: [1, 1] }, properties: { project_id: projectId, color: originalColor } } as TestFeature;
     map.addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [feature] } });
     map.addLayer({ id: layerId });
-    if (kind === 'exploration-lead') State.explorationLeads.set('entity', { id: 'entity', coordinates: [1, 1], projectId } as NonNullable<ReturnType<typeof State.explorationLeads.get>>);
+    if (kind === 'exploration-lead') State.explorationLeads.set('entity', { id: 'entity', coordinates: [1, 1], projectId, directions: [{ heading: null, checked: false }] } as NonNullable<ReturnType<typeof State.explorationLeads.get>>);
     map.queryRenderedFeatures.mockReturnValue([feature]);
     const complete = vi.fn();
     Interactions.handlers.onStationDragEnd = complete;

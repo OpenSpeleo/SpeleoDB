@@ -1,4 +1,5 @@
 import type { Position } from 'geojson';
+import type { ExplorationLeadDirection } from '@speleodb/map-core';
 import type { EntityId } from './identifiers.ts';
 import type { DisplayConcern, DisplayPreferences, DepthDomain } from './map-display.ts';
 import type { CameraBounds, DisplayGeometryType, ViewerGeoJSON } from './map-geometry.ts';
@@ -15,7 +16,7 @@ export interface ViewerExplorationLead {
     coordinates: Position;
     lineName: string;
     description: string;
-    headings: number[];
+    directions: ExplorationLeadDirection[];
     projectId: EntityId | null;
     createdAt: string | undefined;
     createdBy?: string | undefined;

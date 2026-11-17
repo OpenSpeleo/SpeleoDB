@@ -6,8 +6,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from speleodb.api.v2.serializers.exploration_lead import HeadingField
-from speleodb.common.constants import EXPLORATION_LEAD_MAX_HEADINGS
+from speleodb.api.v2.serializers.exploration_lead import DirectionsField
 from speleodb.common.enums import SubSurfaceStationType
 from speleodb.gis.models import Landmark
 
@@ -53,9 +52,8 @@ class ExplorationLeadFeaturePropertiesSerializer(
     serializers.Serializer[dict[str, Any]]
 ):
     description = serializers.CharField()
-    headings = serializers.ListField(
-        child=HeadingField(), max_length=EXPLORATION_LEAD_MAX_HEADINGS
-    )
+    directions = DirectionsField()
+    is_fully_checked = serializers.BooleanField(read_only=True)
     created_by = serializers.CharField()
     creation_date = serializers.DateTimeField()
     modified_date = serializers.DateTimeField()

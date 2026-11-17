@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from pathlib import Path
 
+    from speleodb.gis.models.explo_lead import ExplorationLeadDirection
+
 
 @dataclass
 class NativeSurvey:
@@ -210,9 +212,17 @@ def native_survey(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("user_headings", [[], [12.5, 270.0]], ids=["reset", "edited"])
+@pytest.mark.parametrize(
+    "user_directions",
+    [
+        [{"heading": None, "checked": True}],
+        [{"heading": 12.5, "checked": True}, {"heading": 270.0, "checked": False}],
+        [{"heading": 12.5, "checked": True}, {"heading": 270.0, "checked": True}],
+    ],
+    ids=["undirected-checked", "partly-checked", "fully-checked"],
+)
 def test_changed_native_shot_preserves_user_edits(
-    native_survey: NativeSurvey, user_headings: list[float]
+    native_survey: NativeSurvey, user_directions: list[ExplorationLeadDirection]
 ) -> None:
     survey = native_survey
     comment = "decorate black, stag, !s! !down!"
@@ -221,9 +231,9 @@ def test_changed_native_shot_preserves_user_edits(
     first = survey.commit("Annotated native source")
     survey.convert()
     lead = survey.project.exploration_leads.get()
-    assert (lead.description, lead.headings, lead.created_by) == (
+    assert (lead.description, lead.directions, lead.created_by) == (
         comment,
-        [180],
+        [{"heading": 180, "checked": False}],
         first.author_email,
     )
     original = survey.resolved(survey.shot_id)
@@ -239,7 +249,7 @@ def test_changed_native_shot_preserves_user_edits(
         ).exists()
     assert survey.project.exploration_lead_sources.filter(lead=lead).exists()
     lead.description = "User's field notes; keep this exactly"
-    lead.headings = user_headings
+    lead.directions = user_directions
     lead.longitude += Decimal("0.001")
     lead.latitude += Decimal("0.001")
     lead.save()
@@ -347,9 +357,9 @@ def test_force_recompute_imports_only_latest_native_comments(
     assert not survey.project.exploration_leads.exists()
     survey.convert(force=True)
     lead = survey.project.exploration_leads.get()
-    assert (lead.description, lead.headings) == (
+    assert (lead.description, lead.directions) == (
         "decorate black, stag, !s! !down!",
-        [180],
+        [{"heading": 180, "checked": False}],
     )
     assert set(survey.project.geojsons.values_list("commit_id", flat=True)) == {
         old.pk,
@@ -407,7 +417,10 @@ def test_history_uses_descendant_not_timestamp_or_metadata_creation_order(
         survey.project.commits.all().delete()
     survey.convert(force=True)
     lead = survey.project.exploration_leads.get()
-    assert (lead.description, lead.headings) == ("Latest shot !E!", [90])
+    assert (lead.description, lead.directions) == (
+        "Latest shot !E!",
+        [{"heading": 90, "checked": False}],
+    )
     survey.convert(force=True)
     assert survey.project.exploration_leads.get().pk == lead.pk
 
@@ -424,7 +437,10 @@ def test_changed_native_uuid_learns_alias_without_overwriting_lead(
     survey.commit("Original UUID")
     survey.convert()
     lead = survey.project.exploration_leads.get()
-    lead.description, lead.headings = "Edited by user", []
+    lead.description, lead.directions = (
+        "Edited by user",
+        [{"heading": None, "checked": True}],
+    )
     lead.save()
     replacement_uuid = str(uuid4())
     survey.edit(
@@ -437,7 +453,10 @@ def test_changed_native_uuid_learns_alias_without_overwriting_lead(
     survey.convert()
     lead.refresh_from_db()
     assert survey.project.exploration_leads.get().pk == lead.pk
-    assert (lead.description, lead.headings) == ("Edited by user", [])
+    assert (lead.description, lead.directions) == (
+        "Edited by user",
+        [{"heading": None, "checked": True}],
+    )
     assert survey.project.exploration_lead_sources.filter(
         kind=ExplorationLeadSource.Kind.UUID, payload=replacement_uuid, lead=lead
     ).exists()
@@ -446,4 +465,7 @@ def test_changed_native_uuid_learns_alias_without_overwriting_lead(
     survey.convert()
     lead.refresh_from_db()
     assert survey.project.exploration_leads.get().pk == lead.pk
-    assert (lead.description, lead.headings) == ("Edited by user", [])
+    assert (lead.description, lead.directions) == (
+        "Edited by user",
+        [{"heading": None, "checked": True}],
+    )

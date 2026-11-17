@@ -172,7 +172,10 @@ def test_publication_imports_leads_and_preserves_deleted_source(
     replace_project_geojson(project, artifact.commit, LINE_DATA, source_shots=(shot,))
     lead = project.exploration_leads.get()
     assert lead.coordinates == (3, 4)
-    assert lead.headings == [90, 337.5]
+    assert lead.directions == [
+        {"heading": 90, "checked": False},
+        {"heading": 337.5, "checked": False},
+    ]
     lead.delete()
     # Removing history artifacts does not remove the deletion evidence.
     project.geojsons.all().delete()

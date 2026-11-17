@@ -18,10 +18,14 @@ let lead: ReturnType<typeof initialLead>;
 let allowWrites: boolean;
 let requests: { method: string; body: Record<string, unknown> }[];
 
+function uncheckedDirections(headings: number[]) {
+    return (headings.length ? headings : [null]).map(heading => ({ heading, checked: false }));
+}
+
 function initialLead() {
     return {
         id: 'lead', project: 'project', latitude: '46.5', longitude: '6.5',
-        description: '  Original !N!\nFull comment  ', headings: [0, 90],
+        description: '  Original !N!\nFull comment  ', directions: uncheckedDirections([0, 90]),
         created_by: 'surveyor@example.test', creation_date: '2026-01-01T00:00:00Z',
         modified_date: '2026-01-01T00:00:00Z',
     };
@@ -98,10 +102,10 @@ afterEach(async () => {
 
 it('loads headings and keeps changed directions after a project reload instead of restoring stale cached GeoJSON', async () => {
     await ExplorationLeadManager.loadLeadsForProject('project');
-    expect(State.explorationLeads.get('lead')).toMatchObject({ headings: [0, 90] });
-    await ExplorationLeadManager.updateLead('lead', { headings: [270] });
+    expect(State.explorationLeads.get('lead')).toMatchObject({ directions: uncheckedDirections([0, 90]) });
+    await ExplorationLeadManager.updateLead('lead', { directions: uncheckedDirections([270]) });
     await ExplorationLeadManager.loadLeadsForProject('project');
-    expect(State.explorationLeads.get('lead')).toMatchObject({ headings: [270] });
+    expect(State.explorationLeads.get('lead')).toMatchObject({ directions: uncheckedDirections([270]) });
     expect(requests.filter(request => request.method === 'GET')).toHaveLength(2);
 });
 
@@ -112,7 +116,7 @@ async function openDetails() {
 }
 
 it('does not rewrite imported comments or fractional headings when saving an unchanged detail form', async () => {
-    lead.headings = [337.5, 359.9];
+    lead.directions = uncheckedDirections([337.5, 359.9]);
     await openDetails();
     expect(directionInput(1).valueAsNumber).toBe(338);
     expect(directionInput(2).valueAsNumber).toBe(0);
@@ -120,7 +124,7 @@ it('does not rewrite imported comments or fractional headings when saving an unc
     await save.onclick!(new dom.window.MouseEvent('click') as unknown as PointerEvent);
     expect(requests.filter(request => request.method === 'PATCH')).toEqual([]);
     expect(lead.description).toBe(initialLead().description);
-    expect(lead.headings).toEqual([337.5, 359.9]);
+    expect(lead.directions).toEqual(uncheckedDirections([337.5, 359.9]));
 });
 
 function directionInput(index: number) {
@@ -150,35 +154,37 @@ it('saves direction-only edits without resending the source comment and unsets t
     await openDetails();
     changeDirection(1, 338);
     await saveDetails();
-    expect(requests.at(-1)).toEqual({ method: 'PATCH', body: { headings: [338, 90] } });
+    expect(requests.at(-1)).toEqual({ method: 'PATCH', body: { directions: uncheckedDirections([338, 90]) } });
     expect(lead.description).toBe(initialLead().description);
     await openDetails();
     compassButton('Remove direction').click();
     expect(directionInput(1).valueAsNumber).toBe(90);
     compassButton('Remove direction').click();
     await saveDetails();
-    expect(requests.at(-1)).toEqual({ method: 'PATCH', body: { headings: [] } });
-    expect(State.explorationLeads.get('lead')!.headings).toEqual([]);
+    expect(requests.at(-1)).toEqual({ method: 'PATCH', body: { directions: uncheckedDirections([]) } });
+    expect(State.explorationLeads.get('lead')!.directions).toEqual(uncheckedDirections([]));
 });
 
 it('keeps direction and description drafts visible after the server rejects a save', async () => {
     await openDetails();
     changeDirection(2, 135);
+    setChecked(2, true);
     (document.getElementById('lead-description-edit') as HTMLTextAreaElement).value = 'User draft';
     allowWrites = false;
     await saveDetails();
     expect(document.getElementById('lead-details-modal')).not.toBeNull();
     expect(directionInput(2).valueAsNumber).toBe(135);
+    expect(isChecked(2)).toBe(true);
     expect((document.getElementById('lead-description-edit') as HTMLTextAreaElement).value).toBe('User draft');
     expect(document.getElementById('save-lead-btn-loading')!.classList.contains('hidden')).toBe(true);
-    expect(State.explorationLeads.get('lead')!.headings).toEqual([0, 90]);
+    expect(State.explorationLeads.get('lead')!.directions).toEqual(uncheckedDirections([0, 90]));
 });
 
 it('discards cancelled direction edits and renders directions without mutation controls for read-only users', async () => {
     await openDetails();
     changeDirection(1, 180);
     document.querySelector<HTMLButtonElement>('#lead-details-modal [data-close-modal]')!.click();
-    expect(State.explorationLeads.get('lead')!.headings).toEqual([0, 90]);
+    expect(State.explorationLeads.get('lead')!.directions).toEqual(uncheckedDirections([0, 90]));
     expect(requests.every(request => request.method === 'GET')).toBe(true);
     Config._projects![0]!.permissions = 'READ_ONLY';
     ExplorationLeadUI.showDetailsModal('lead');
@@ -194,7 +200,7 @@ it('creates a lead with three independently selected directions', async () => {
     ExplorationLeadUI.showCreateModal([6.5, 46.5], 'Survey', 'project');
     await vi.waitFor(() => expect(document.querySelector<HTMLFormElement>('#create-lead-form')!.onsubmit).toBeTypeOf('function'));
     (document.getElementById('lead-description') as HTMLTextAreaElement).value = 'Multiple passages';
-    compassButton('Add direction').click();
+    compassButton('Set direction').click();
     compassButton('Add direction').click();
     compassButton('Add direction').click();
     const editor = directionInput(1);
@@ -208,16 +214,118 @@ it('creates a lead with three independently selected directions', async () => {
     await form.onsubmit!(new dom.window.Event('submit') as unknown as SubmitEvent);
     expect(requests.at(-1)).toEqual({ method: 'POST', body: {
         latitude: '46.5000000', longitude: '6.5000000',
-        description: 'Multiple passages', headings: [23, 123, 300],
+        description: 'Multiple passages', directions: uncheckedDirections([23, 123, 300]),
     } });
-    expect(State.explorationLeads.get('lead')).toMatchObject({ headings: [23, 123, 300], lineName: 'Survey' });
+    expect(State.explorationLeads.get('lead')).toMatchObject({ directions: uncheckedDirections([23, 123, 300]), lineName: 'Survey' });
 });
 
 it.each([22.5, 399])('keeps invalid direction %s open instead of silently saving its previous value', async (value) => {
     await openDetails();
     changeDirection(1, value);
+    compassButton('Mark checked').click();
+    compassButton('Check all').click();
+    expect(isChecked(1)).toBe(false);
+    expect(isChecked(2)).toBe(false);
     await saveDetails();
     expect(document.getElementById('lead-details-modal')).not.toBeNull();
     expect(directionInput(1).valueAsNumber).toBe(value);
     expect(requests.every(request => request.method === 'GET')).toBe(true);
+});
+
+function isChecked(index: number) {
+    return compassButton(`Lead ${index}`).getAttribute('aria-description') === 'Checked';
+}
+
+function setChecked(index: number, value: boolean) {
+    directionInput(index);
+    if (isChecked(index) !== value) compassButton(value ? 'Mark checked' : 'Mark unchecked').click();
+    expect(isChecked(index)).toBe(value);
+}
+
+it('scopes completion actions to the selected lead and permits both bulk operations on a mixed draft', async () => {
+    await openDetails();
+    expect(isChecked(1)).toBe(false);
+    setChecked(1, true);
+    directionInput(2);
+    expect(isChecked(1)).toBe(true);
+    expect(isChecked(2)).toBe(false);
+    expect(compassButton('Check all').disabled).toBe(false);
+    expect(compassButton('Uncheck all').disabled).toBe(false);
+    compassButton('Check all').click();
+    expect(isChecked(1)).toBe(true);
+    expect(isChecked(2)).toBe(true);
+    expect(compassButton('Check all').disabled).toBe(true);
+    setChecked(2, false);
+    compassButton('Uncheck all').click();
+    expect(isChecked(1)).toBe(false);
+    expect(isChecked(2)).toBe(false);
+    expect(compassButton('Uncheck all').disabled).toBe(true);
+    setChecked(1, true);
+    expect(requests.every(request => request.method === 'GET')).toBe(true);
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: 0, checked: true }, { heading: 90, checked: false }]);
+});
+
+it('saves checked status with its heading, preserving the comment and checked state on later heading edits', async () => {
+    await openDetails();
+    setChecked(1, true);
+    expect(State.explorationLeads.get('lead')!.directions[0]!.checked).toBe(false);
+    await saveDetails();
+    expect(requests.at(-1)).toEqual({ method: 'PATCH', body: { directions: [
+        { heading: 0, checked: true }, { heading: 90, checked: false },
+    ] } });
+    expect(lead.description).toBe(initialLead().description);
+    await openDetails();
+    changeDirection(1, 180);
+    await saveDetails();
+    expect(lead.directions[0]).toEqual({ heading: 180, checked: true });
+    await ExplorationLeadManager.loadLeadsForProject('project');
+    expect(State.explorationLeads.get('lead')!.directions).toEqual(lead.directions);
+});
+
+it('applies bulk status edits as a draft and preserves checked states after removing another entry', async () => {
+    await openDetails();
+    compassButton('Check all').click();
+    document.querySelector<HTMLButtonElement>('#lead-details-modal [data-close-modal]')!.click();
+    expect(requests.every(request => request.method === 'GET')).toBe(true);
+    expect(State.explorationLeads.get('lead')!.directions.every(direction => !direction.checked)).toBe(true);
+    await openDetails();
+    compassButton('Check all').click();
+    compassButton('Remove direction').click();
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: 90, checked: true }]);
+    await openDetails();
+    compassButton('Remove direction').click();
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: null, checked: true }]);
+});
+
+it('reopens all entries and makes newly added directions unchecked without resetting existing checked status', async () => {
+    lead.directions = [{ heading: null, checked: true }];
+    await openDetails();
+    compassButton('Set direction').click();
+    compassButton('Add direction').click();
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: 0, checked: true }, { heading: 90, checked: false }]);
+    await openDetails();
+    compassButton('Check all').click();
+    await saveDetails();
+    await openDetails();
+    compassButton('Uncheck all').click();
+    await saveDetails();
+    expect(lead.directions).toEqual(uncheckedDirections([0, 90]));
+});
+
+it('sets an undirected checked entry at the three-lead limit and preserves duplicate headings when removing it', async () => {
+    lead.directions = [{ heading: 90, checked: false }, { heading: null, checked: true }, { heading: 90, checked: true }];
+    await openDetails();
+    directionInput(2);
+    compassButton('Set direction').click();
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: 90, checked: false }, { heading: 0, checked: true }, { heading: 90, checked: true }]);
+    await openDetails();
+    directionInput(2);
+    compassButton('Remove direction').click();
+    await saveDetails();
+    expect(lead.directions).toEqual([{ heading: 90, checked: false }, { heading: 90, checked: true }]);
 });

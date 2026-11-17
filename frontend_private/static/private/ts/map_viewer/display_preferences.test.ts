@@ -297,3 +297,21 @@ it.each([undefined, null, 'false', false, true])('restores geometry labels only 
     DisplayPreferences.reset();
     expect(readSavedPreferences().geometryLabelsVisible).toBe(true);
 });
+
+it.each([undefined, null, 'true', false, true])('restores checked-lead visibility only from an explicit boolean: %j', showCheckedExplorationLeads => {
+    localStorage.setItem(storageKey, JSON.stringify({
+        version: DEFAULTS.DISPLAY.STORAGE_VERSION,
+        showCheckedExplorationLeads,
+        categories: { explorationLeads: false },
+    }));
+    DisplayPreferences.init({ persist: true });
+    expect(State.displayPreferences).toMatchObject({
+        showCheckedExplorationLeads: showCheckedExplorationLeads === true,
+        categories: { explorationLeads: false },
+    });
+    DisplayPreferences.reset();
+    expect(readSavedPreferences()).toMatchObject({
+        showCheckedExplorationLeads: false,
+        categories: { explorationLeads: true },
+    });
+});

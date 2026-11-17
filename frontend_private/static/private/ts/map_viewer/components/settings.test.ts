@@ -49,7 +49,7 @@ describe('private map Settings', () => {
             .toEqual(['caveEntrances', 'explorationLeads', 'landmarks', 'cylinders', 'surfaceStations', 'surveyStations']);
         expect([...dialog.querySelectorAll('#map-settings-visibility > label > span:first-child')]
             .map(label => label.textContent)).toEqual([
-            'Cave entrances', 'Exploration leads', 'Geometry labels', 'Landmarks',
+            'Cave entrances', 'Exploration leads', 'Checked Exploration Leads', 'Geometry labels', 'Landmarks',
             'Safety cylinders', 'Surface stations', 'Survey stations',
         ]);
         expect([...dialog.querySelectorAll('.map-settings-types > label > span:first-child')]
@@ -441,4 +441,27 @@ it('keeps historical Settings focused on survey appearance and depth', () => {
     document.getElementById('map-settings-reset')!.click();
     expect(State.displayPreferences.colorMode).toBe('project');
     expect(State.displayPreferences.depthLimitFeet).toBeNull();
+});
+
+it('preserves checked-lead visibility under its disabled category and resets it off', () => {
+    const checked = dialog.querySelector<HTMLInputElement>('[data-display-preference="showCheckedExplorationLeads"]')!;
+    const category = dialog.querySelector<HTMLInputElement>('[data-category="explorationLeads"]')!;
+    const description = () => document.getElementById(checked.getAttribute('aria-describedby') ?? '')?.textContent;
+    expect(description()).toBe('Show fully checked leads on the map.');
+    expect(checked.checked).toBe(false);
+    checked.click();
+    expect(State.displayPreferences.showCheckedExplorationLeads).toBe(true);
+    category.click();
+    expect(checked.disabled).toBe(true);
+    expect(checked.checked).toBe(true);
+    expect(description()).toBe('Turn on Exploration leads to show checked leads.');
+    category.click();
+    expect(checked.disabled).toBe(false);
+    expect(checked.checked).toBe(true);
+    expect(description()).toBe('Show fully checked leads on the map.');
+    flushPreferenceWrites();
+    expect(JSON.parse(localStorage.getItem(DEFAULTS.STORAGE_KEYS.DISPLAY_PREFERENCES)!)).toMatchObject({ showCheckedExplorationLeads: true });
+    MapSettings.reset();
+    expect(checked.checked).toBe(false);
+    expect(category.checked).toBe(true);
 });

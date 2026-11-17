@@ -9226,14 +9226,24 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: array
                   items:
-                    type: number
-                    format: double
-                    minimum: 0
-                    maximum: 360
-                    exclusiveMaximum: true
+                    type: object
+                    required:
+                    - heading
+                    - checked
+                    properties:
+                      heading:
+                        type: number
+                        format: double
+                        nullable: true
+                        minimum: 0
+                        maximum: 360
+                        exclusiveMaximum: true
+                      checked:
+                        type: boolean
+                  minItems: 1
                   maxItems: 3
                 latitude:
                   oneOf:
@@ -9266,17 +9276,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -9305,17 +9325,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -9469,14 +9499,24 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: array
                   items:
-                    type: number
-                    format: double
-                    minimum: 0
-                    maximum: 360
-                    exclusiveMaximum: true
+                    type: object
+                    required:
+                    - heading
+                    - checked
+                    properties:
+                      heading:
+                        type: number
+                        format: double
+                        nullable: true
+                        minimum: 0
+                        maximum: 360
+                        exclusiveMaximum: true
+                      checked:
+                        type: boolean
+                  minItems: 1
                   maxItems: 3
                 latitude:
                   oneOf:
@@ -9506,17 +9546,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -9542,17 +9592,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -24466,14 +24526,24 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: array
                   items:
-                    type: number
-                    format: double
-                    minimum: 0
-                    maximum: 360
-                    exclusiveMaximum: true
+                    type: object
+                    required:
+                    - heading
+                    - checked
+                    properties:
+                      heading:
+                        type: number
+                        format: double
+                        nullable: true
+                        minimum: 0
+                        maximum: 360
+                        exclusiveMaximum: true
+                      checked:
+                        type: boolean
+                  minItems: 1
                   maxItems: 3
                 latitude:
                   oneOf:
@@ -24506,17 +24576,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -24545,17 +24625,27 @@ paths:
                 description:
                   type: string
                   description: Optional description of the lead
-                headings:
+                directions:
                   type: string
                   description: JSON-encoded value.
                   x-json-schema:
                     type: array
                     items:
-                      type: number
-                      format: double
-                      minimum: 0
-                      maximum: 360
-                      exclusiveMaximum: true
+                      type: object
+                      required:
+                      - heading
+                      - checked
+                      properties:
+                        heading:
+                          type: number
+                          format: double
+                          nullable: true
+                          minimum: 0
+                          maximum: 360
+                          exclusiveMaximum: true
+                        checked:
+                          type: boolean
+                    minItems: 1
                     maxItems: 3
                 latitude:
                   oneOf:
@@ -51878,15 +51968,28 @@ components:
         description:
           type: string
           description: Optional description of the lead
-        headings:
+        directions:
           type: array
           items:
-            type: number
-            format: double
-            minimum: 0
-            maximum: 360
-            exclusiveMaximum: true
+            type: object
+            required:
+            - heading
+            - checked
+            properties:
+              heading:
+                type: number
+                format: double
+                nullable: true
+                minimum: 0
+                maximum: 360
+                exclusiveMaximum: true
+              checked:
+                type: boolean
+          minItems: 1
           maxItems: 3
+        is_fully_checked:
+          type: boolean
+          readOnly: true
         latitude:
           type: number
           format: double
@@ -51916,8 +52019,9 @@ components:
       - created_by
       - creation_date
       - description
-      - headings
+      - directions
       - id
+      - is_fully_checked
       - latitude
       - longitude
       - modified_date
@@ -51927,15 +52031,28 @@ components:
       properties:
         description:
           type: string
-        headings:
+        directions:
           type: array
           items:
-            type: number
-            format: double
-            minimum: 0
-            maximum: 360
-            exclusiveMaximum: true
+            type: object
+            required:
+            - heading
+            - checked
+            properties:
+              heading:
+                type: number
+                format: double
+                nullable: true
+                minimum: 0
+                maximum: 360
+                exclusiveMaximum: true
+              checked:
+                type: boolean
+          minItems: 1
           maxItems: 3
+        is_fully_checked:
+          type: boolean
+          readOnly: true
         created_by:
           type: string
         creation_date:
@@ -51951,7 +52068,8 @@ components:
       - created_by
       - creation_date
       - description
-      - headings
+      - directions
+      - is_fully_checked
       - modified_date
       - project
     ExplorationLeadGeoJSON:
@@ -51998,14 +52116,24 @@ components:
         description:
           type: string
           description: Optional description of the lead
-        headings:
+        directions:
           type: array
           items:
-            type: number
-            format: double
-            minimum: 0
-            maximum: 360
-            exclusiveMaximum: true
+            type: object
+            required:
+            - heading
+            - checked
+            properties:
+              heading:
+                type: number
+                format: double
+                nullable: true
+                minimum: 0
+                maximum: 360
+                exclusiveMaximum: true
+              checked:
+                type: boolean
+          minItems: 1
           maxItems: 3
           x-drf-json-form: true
         latitude:
@@ -54547,14 +54675,24 @@ components:
         description:
           type: string
           description: Optional description of the lead
-        headings:
+        directions:
           type: array
           items:
-            type: number
-            format: double
-            minimum: 0
-            maximum: 360
-            exclusiveMaximum: true
+            type: object
+            required:
+            - heading
+            - checked
+            properties:
+              heading:
+                type: number
+                format: double
+                nullable: true
+                minimum: 0
+                maximum: 360
+                exclusiveMaximum: true
+              checked:
+                type: boolean
+          minItems: 1
           maxItems: 3
           x-drf-json-form: true
         latitude:

@@ -21,21 +21,43 @@ email, with the project creator as fallback. Comments are displayed as escaped
 plain text. The normal description-editing API retains its sanitization policy;
 heading-only edits omit unchanged descriptions.
 
-`headings` is an array of at most three finite numbers in the half-open range
-`[0, 360)`. An empty array means unset. JSON requests send a numeric array;
-multipart and URL-encoded requests send a JSON-encoded string, such as
-`[90, 270]` or `[]`. API PATCH omission preserves the value; an explicit empty
-array resets it. Existing leads receive an empty array during migration.
-Model/API validation and PostgreSQL constraints enforce the range, array size
-and absence of null elements. The API and the lead GeoJSON properties expose the
-same array. The singular `heading` field is not used.
+`directions` contains one to three complete entries with `heading` and `checked`
+keys. Each heading is a finite bearing in `[0, 360)` or `null`; each checked
+state is a JSON boolean. Duplicate bearings are allowed and remain independent.
+An undirected lead is represented by `[{"heading": null, "checked": false}]` and
+can be checked without setting a bearing. Newly imported entries start
+unchecked.
+
+JSON requests send the structured array directly. Multipart and URL-encoded
+requests send the same array as a JSON-encoded string. PATCH omission preserves
+the existing entries; a supplied nonempty array replaces them atomically. A
+nullable bearing clears only that bearing, preserving its checked state. Entry
+removal removes its state with it; the retained entries stay together. Model/API
+validation and PostgreSQL constraints enforce the required entry structure,
+boolean states, bearing bounds and list size. Existing update permissions apply
+to checking, with no separate mutation endpoint.
+
+`is_fully_checked` is read-only and derived from the entries in both the API and
+lead GeoJSON. It is true only when every entry is checked. Clients cannot write
+an aggregate state independently of its directions. Status-only edits omit an
+unchanged description, retaining the exact original survey comment.
+
+The migration converts saved numeric headings into unchecked entries, retaining
+order, duplicates and fractional bearings. Empty heading arrays become one
+undirected unchecked entry. The SQL backfill preserves parent IDs, descriptions,
+coordinates, creator, timestamps and source records. Reversing the migration
+restores numeric bearings in order but necessarily loses checked states and
+undirected entries, which the earlier schema cannot represent. The backend and
+both apps adopt this contract together; the former numeric `headings` API field
+is removed.
 
 After creation, survey processing never updates an existing lead row. Its
-description, directions, coordinates, creator and timestamps remain unchanged,
-including when a user has moved the lead or reset every direction. Changed
-measurements, anchors, comments and solved coordinates do not move an existing
-lead. A recognized source may add identity aliases without changing its lead; a
-source that disappears leaves its existing lead in place.
+description, directions and checked states, coordinates, creator and timestamps
+remain unchanged, including when a user has moved the lead or reset every
+direction. Changed measurements, anchors, comments and solved coordinates do not
+move an existing lead. Checked states and edited lead bearings never participate
+in source matching. A recognized source may add identity aliases without
+changing its lead; a source that disappears leaves its existing lead in place.
 
 ## Exactly what counts as an existing source
 
@@ -163,9 +185,10 @@ existing projects. History rebuilds only synchronize the latest revision.
 
 ## Web, mobile and shared package ownership
 
-`@speleodb/map-core` owns heading arithmetic and geographic cone geometry.
-`@speleodb/map-viewer` owns the cone layer specification and DOM compass. Web
-and mobile own modal state, permissions, storage and map lifecycle integration.
+`@speleodb/map-core` owns structured direction validation, completion rules and
+geographic cone geometry. `@speleodb/map-viewer` owns marker/cone styling,
+completion filters and the editable/read-only DOM compass. Web and mobile own
+modal state, permissions, storage and map lifecycle integration.
 
 The compact compass supports up to three directions. Its shaded face has fine
 15-degree ticks, a highlighted north marker and a two-tone red needle. A slim
@@ -175,13 +198,14 @@ compass center for precise numeric editing. Its centered text uses a
 three-character field and whole degrees. Existing fractional bearings are
 rounded for display without changing their stored values; new edits through the
 compass use whole degrees. Prominent plus and minus controls add a heading and
-remove the selected heading; removing the last heading unsets the direction.
-There is no Reset All action. Switching tabs preserves the mounted dial and
-editor and all direction values. Pointer/touch adjustment and keyboard editing
-remain available. Changes remain drafts until saved; cancellation discards them
-and failed saves preserve them. Read-only web users and mobile users retain tab
-navigation without edit controls. Saved directions do not subscribe to
-device-heading sensors.
+remove the selected entry; removing the last heading unsets its direction while
+preserving its checked state. Setting that undirected lead's heading again also
+preserves status. An additional entry starts unchecked. There is no Reset All
+action. Switching tabs preserves the mounted dial and editor and all direction
+values. Pointer/touch adjustment and keyboard editing remain available. Changes
+remain drafts until saved; cancellation discards them and failed saves preserve
+them. Read-only web users and mobile users retain tab navigation without edit
+controls. Saved directions do not subscribe to device-heading sensors.
 
 Web lead dialogs retain their original presentation: the details panel is first
 and always expanded, the description is underneath, and the compass follows the
@@ -193,19 +217,62 @@ The editable details footer divides the available width equally between its
 action buttons, with 12px gaps. The shared modal's normal presentation is
 unchanged.
 
-Each direction creates a fifteen-metre geographic sector with a
-forty-five-degree opening, red fill at eighty-percent opacity, above the lead
-marker. The cone shares its marker's zoom threshold
+Each unchecked entry with a heading creates a fifteen-metre geographic sector
+with a forty-five-degree opening, red fill at eighty-percent opacity, above the
+lead marker. The cone shares its marker's zoom threshold
 (`MAP_LAYER_MIN_ZOOM.EXPLORATION_LEAD_SYMBOL`, set to 15 in
 `@speleodb/map-viewer` for both web and mobile) and project/category/country
 visibility. Both marker variants consume that constant and the cone builder
 applies it directly. It has no minimum pixel enlargement and is naturally small
-at overview zooms. Geometry updates when coordinates or headings change,
-including drag rollback, and is restored with the existing style lifecycle.
+at overview zooms. Geometry updates when coordinates, headings or checked states
+change, including drag rollback, and is restored with the existing style
+lifecycle.
 
-Mobile stores headings in its existing overlay GeoJSON cache. Older cached
-records without headings display as unset; no cache migration is required.
-Public web viewers retain their existing policy and do not gain lead access.
+A compact single-row panel beneath the selector shows the selected lead and its
+Checked or Unchecked status. A direct Mark checked or Mark unchecked button
+changes that entry. When multiple entries exist, compact Check all and Uncheck
+all buttons sit above the compass, aligned to the right and outside the panel.
+They fit their labels, with solid slate fills, visible borders and bright
+semibold text. Disabled actions remain muted. There is no checkbox or separate
+progress footer, and the lead tabs keep their normal geometry. Checked tabs use
+muted green text with a fine bottom accent, separate from the filled selection
+treatment.
+
+Both bulk actions are directly available; an action is disabled when every entry
+already has that status. Native buttons follow the dialog's normal keyboard
+navigation. Changes remain drafts for the open ExplorationLead, saved with Save
+Changes; descriptions are omitted when unchanged. Read-only users can select
+every bearing in the same compass. Bulk actions and the bottom status panel are
+omitted; checked state remains visible on the tabs.
+
+The Checked Exploration Leads display preference defaults off and is local to
+each app. When every entry is checked, the marker is hidden unless that
+preference is on; then it uses green artwork at 75% opacity, with no cones.
+Partially checked leads retain their normal marker and only unchecked bearings
+produce cones. The marker's circle fallback follows the same color/opacity rule,
+including its outline. Shared code derives green artwork from the bundled normal
+raster while retaining the white symbol and alpha, without another asset
+request.
+
+Category, country and project gates still apply. Disabling the Exploration leads
+category retains the subordinate preference; reset restores it off. The setting
+is a muted, smaller row indented beneath its parent, without a card or badge.
+Its tooltip and accessible description explain the parent gate when disabled.
+Web settings switches keep the native checkbox as the pointer target; decorative
+sliders do not intercept clicks, including in the completion/reopening workflow.
+Filtering retains all records and does not refetch or regenerate cone geometry.
+Hidden markers are excluded from hit testing. Shared filters are reapplied when
+project visibility or map style changes, preventing completed leads from
+reappearing unexpectedly.
+
+Mobile caches all direction/status entries in its existing overlay GeoJSON. Its
+local migration converts cached numeric headings into unchecked entries,
+preserving cache timestamps and unrelated downloads. Empty or older unset data
+becomes one undirected unchecked entry. A successful normal overlay sync
+refreshes statuses independently of survey commits; failures retain the last
+successful offline snapshot. The setting works offline. Mobile has no checked
+state mutation controls or writes. Public web viewers retain their existing
+policy and do not gain lead access.
 
 ## Verification and rollout
 
@@ -213,8 +280,8 @@ Backend regressions cover parsing, real constraints and persistence, signature
 priority/history, project isolation, deletion, latest-only changes and atomic
 publication. Small native source fixtures exercise reverse traversal and solved
 destinations. Frontend tests cover requests, draft state, visibility, movement,
-offline data and shared geometry; browser tests cover native compass
-interaction.
+offline data and shared geometry; browser tests cover native compass interaction
+and hiding, revealing and reopening completed leads.
 
 ### Native-file regression pipeline
 
@@ -233,16 +300,25 @@ configured test object store, and the isolated PostgreSQL test database. The
 fixture removes only its own project's storage prefix. It provisions no GitLab
 repositories and does not replace parsers, matching, publication or ORM calls.
 
-| Boundary                  | Regression coverage                                                                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initial import            | Lowercase markers; complete original comment; correct native TO location; invalid tokens ignored                                                              |
-| User ownership            | Every persisted lead field, including manually edited coordinates and modification time, survives forced recomputation and future commits                     |
-| Slight shot corrections   | Small length and azimuth changes plus a different comment retain the same lead ID via native endpoints; the existing lead row remains unchanged               |
-| UUID changes              | A changed native UUID and measurement retain the same lead and learn the new UUID; a subsequent native ID change still matches without replacing user content |
-| Deletion                  | Changed measurements, comments and UUIDs cannot resurrect a deleted lead; tombstones survive artifact removal and metadata reconstruction                     |
-| Existing artifacts        | Ordinary recomputation skips them; forced recomputation parses comments and imports only the newest revision                                                  |
-| History failures          | Missing or invalid HEAD sources cannot import historical annotations when metadata is absent; unexpected conversion failures remain failures                  |
-| Tied or backdated commits | Reconstructed history, including partially retained metadata, respects parent/child relationships rather than timestamps or metadata insertion order          |
+| Boundary                  | Regression coverage                                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial import            | Lowercase markers; complete original comment; correct native TO location; invalid tokens ignored                                                                                 |
+| User ownership            | Every persisted lead field, including partial/full checked states, undirected checked leads, edited coordinates and modification time, survives recomputation and future commits |
+| Slight shot corrections   | Small length and azimuth changes plus a different comment retain the same lead ID via native endpoints; the existing lead row remains unchanged                                  |
+| UUID changes              | A changed native UUID and measurement retain the same lead and learn the new UUID; a subsequent native ID change still matches without replacing user content                    |
+| Deletion                  | Changed measurements, comments and UUIDs cannot resurrect a deleted lead; tombstones survive artifact removal and metadata reconstruction                                        |
+| Existing artifacts        | Ordinary recomputation skips them; forced recomputation parses comments and imports only the newest revision                                                                     |
+| History failures          | Missing or invalid HEAD sources cannot import historical annotations when metadata is absent; unexpected conversion failures remain failures                                     |
+| Tied or backdated commits | Reconstructed history, including partially retained metadata, respects parent/child relationships rather than timestamps or metadata insertion order                             |
+
+`test_exploration_lead_headings.py` covers complete direction writes across all
+supported request encodings, every checked-state combination for one through
+three entries, duplicate bearings, undirected state, omission, partial removal,
+invalid-write preservation and REST/GeoJSON agreement. The API permission matrix
+also performs checked-state writes.
+`test_exploration_lead_directions_migration.py` executes the actual migration in
+both directions, preserving historical rows and source tombstones and restoring
+the latest schema afterward.
 
 `test_exploration_lead_import.py` retains the smaller matching matrix: project
 isolation, manual leads, UUID normalization and priority, unavailable or wrapped
@@ -270,6 +346,8 @@ container:
 
 ```sh
 docker exec -w /app speleodb-monorepo-django pytest \
+  speleodb/gis/tests/test_exploration_lead_headings.py \
+  speleodb/gis/tests/test_exploration_lead_directions_migration.py \
   speleodb/gis/tests/test_exploration_lead_import.py \
   speleodb/gis/tests/test_exploration_lead_pipeline.py \
   speleodb/gis/tests/test_exploration_lead_native_edges.py \

@@ -1,3 +1,4 @@
+import { createDefaultExplorationLeadDirections } from '@speleodb/map-core';
 import type { EntityId } from '../../../../../../ts-types/domain/identifiers.ts';
 import type { StationRecord, LeadWrite } from '../../../../../../ts-types/domain/station-records.ts';
 import type { ViewerLandmark, ViewerLandmarkCollection, LandmarkFeatureProperties } from '../../../../../../ts-types/domain/map-entities.ts';
@@ -38,6 +39,7 @@ function makeLeadFeature(id: string, projectId: EntityId, coords = [6.5, 46.5]) 
         properties: {
             project: projectId,
             description: `Lead ${id}`,
+            directions: createDefaultExplorationLeadDirections(), is_fully_checked: false,
             creation_date: '2025-01-01T00:00:00Z',
             created_by: 'tester',
         },
@@ -205,6 +207,7 @@ describe('ExplorationLeadManager', () => {
                 latitude: '46.5000000',
                 longitude: '6.5000000',
                 description: 'A new lead',
+                directions: createDefaultExplorationLeadDirections(), is_fully_checked: false,
                 creation_date: '2025-01-01',
                 created_by: 'tester',
             };
@@ -220,7 +223,7 @@ describe('ExplorationLeadManager', () => {
         });
 
         it('formats coordinates to 7 decimal places', async () => {
-            API.createExplorationLead.mockResolvedValue({ id: 'l1', latitude: '46.5', longitude: '6.5' });
+            API.createExplorationLead.mockResolvedValue({ id: 'l1', latitude: '46.5', longitude: '6.5', directions: createDefaultExplorationLeadDirections(), is_fully_checked: false });
 
             await ExplorationLeadManager.createLead('p1', [6.123456789, 46.987654321], 'desc');
 
@@ -230,7 +233,7 @@ describe('ExplorationLeadManager', () => {
         });
 
         it('handles string coordinates without throwing', async () => {
-            API.createExplorationLead.mockResolvedValue({ id: 'l2', latitude: '46.5', longitude: '6.5' });
+            API.createExplorationLead.mockResolvedValue({ id: 'l2', latitude: '46.5', longitude: '6.5', directions: createDefaultExplorationLeadDirections(), is_fully_checked: false });
 
             await ExplorationLeadManager.createLead('p1', ['6.123456789', '46.987654321'], 'desc');
 
@@ -269,6 +272,7 @@ describe('ExplorationLeadManager', () => {
                 id: 'l1',
                 latitude: '47.0',
                 longitude: '7.0',
+                directions: createDefaultExplorationLeadDirections(), is_fully_checked: false,
                 description: 'Updated',
             });
 
@@ -327,6 +331,7 @@ describe('ExplorationLeadManager', () => {
                 id: 'l1',
                 latitude: '47.5',
                 longitude: '7.5',
+                directions: createDefaultExplorationLeadDirections(), is_fully_checked: false,
                 description: '',
             });
 
@@ -345,6 +350,7 @@ describe('ExplorationLeadManager', () => {
                 id: 'l1',
                 latitude: '47.5',
                 longitude: '7.5',
+                directions: createDefaultExplorationLeadDirections(), is_fully_checked: false,
                 description: '',
             });
 
@@ -387,7 +393,7 @@ describe('ExplorationLeadManager shared in-flight cache', () => {
         const second = ExplorationLeadManager.ensureAllLeadsLoaded();
         expect(first).not.toBe(second);
         expect(API.getAllProjectExplorationLeadsGeoJSON).toHaveBeenCalledOnce();
-        const feature = { type: 'Feature', id: 'cache-id', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { project: 'cache-project', network: 'cache-project' } };
+        const feature = { type: 'Feature', id: 'cache-id', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { directions: createDefaultExplorationLeadDirections(), is_fully_checked: false, project: 'cache-project', network: 'cache-project' } };
         settle({ type: 'FeatureCollection', features: [feature] });
         await expect(first).resolves.toBeUndefined();
         await expect(second).resolves.toBeUndefined();
