@@ -52,8 +52,10 @@ class TestProjectTypePresentation(TestCase):
         response = self.client.get(reverse("private:projects"))
         assert response.status_code == status.HTTP_200_OK
         html = response.content.decode()
+        color_class = re.escape(get_project_type_color(ProjectType.STALAGMIGHT))
         badges = re.findall(
-            r'<div class="[^"]*\bbg-teal-600\b[^"]*">\s*STALAGMIGHT\s*</div>',
+            rf'<div class="[^"]*(?<!\S){color_class}(?![^\s"])[^"]*">'
+            r"\s*STALAGMIGHT\s*</div>",
             html,
         )
         assert len(badges) == 2  # noqa: PLR2004 - mobile card and desktop row

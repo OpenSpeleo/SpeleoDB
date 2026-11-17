@@ -35,12 +35,12 @@
           </h1>
         </div>
         <!-- Right: Actions -->
-        <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
           <!-- Unlock All button -->
           {% csrf_token %}
           <button type="button"
                   id="btn_release_all_locks"
-                  class="btn bg-sky-500 hover:bg-sky-600 text-white mr-4">
+                  class="btn bg-sky-500 hover:bg-sky-600 text-white">
             <svg class="w-4 h-4 stroke-current opacity-50 shrink-0"
                  fill="none"
                  stroke-width="2"
@@ -82,27 +82,24 @@
                 {% for proj_data in country_projects %}
                   <div class="project-card">
                     <div class="project-card-header">
-                      <div class="project-card-title">{{ proj_data.project.name }}</div>
-                      <div class="project-card-actions">
-                        {% if proj_data.active_mutex %}
-                          {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
-                            <div class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full cursor-pointer">
-                              <img class="btn-unlock"
-                                   src="{% static 'private/media/unlock.png' %}"
-                                   data-project_id="{{ proj_data.project.id }}"
-                                   width="28"
-                                   height="28"
-                                   alt="Unlock" />
-                            </div>
-                          {% endif %}
-                        {% endif %}
+                      <div class="project-card-title">
                         <a href="{% url 'private:project_details' project_id=proj_data.project.id %}"
-                           class="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 rounded-full transition">
-                          <img class="ml-1"
-                               src="{% static 'private/media/right_arrow.svg' %}"
-                               width="20"
-                               height="20"
-                               alt="View" />
+                           class="project-name-link">{{ proj_data.project.name }}</a>
+                      </div>
+                      <div class="project-card-actions">
+                        <a href="{% url 'private:project_details' project_id=proj_data.project.id %}"
+                           class="project-open-button"
+                           title="Open project"
+                           aria-label="Open project: {{ proj_data.project.name }}">
+                          <span>Open</span>
+                          <svg class="w-4 h-4 shrink-0"
+                               fill="none"
+                               stroke="currentColor"
+                               stroke-width="1.75"
+                               viewBox="0 0 24 24"
+                               aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6l6 6-6 6" />
+                          </svg>
                         </a>
                       </div>
                     </div>
@@ -112,7 +109,7 @@
                         <div class="project-card-badge">
                           {% get_project_type_color proj_data.project.type as type_bg_color %}
                           {% get_project_type_display proj_data.project.type as type_display %}
-                          <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
+                          <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-[#373737] {{ type_bg_color }}">
                             {{ type_display }}
                           </div>
                         </div>
@@ -153,12 +150,19 @@
                       </div>
                       <div class="project-card-row">
                         <span class="project-card-label">Last Edit</span>
-                        <span class="project-card-value">{% local_date proj_data.project.modified_date %}</span>
+                        <span class="project-card-value"><time datetime="{{ proj_data.project.modified_date|date:'c' }}"
+                                                               data-local-date="date">{{ proj_data.project.modified_date|date:"M j, Y" }}</time></span>
                       </div>
                       {% if proj_data.active_mutex.user %}
                         <div class="project-card-row">
                           <span class="project-card-label">Current Editor</span>
-                          <span class="project-card-value project-card-editor">{{ proj_data.active_mutex.user.email }}</span>
+                          {% if proj_data.active_mutex.user == user %}
+                            {% include "snippets/project_unlock_button.html" with project=proj_data.project editor=proj_data.active_mutex.user %}
+                          {% elif proj_data.level_label == "ADMIN" %}
+                            {% include "snippets/project_unlock_button.html" with project=proj_data.project editor=proj_data.active_mutex.user force_unlock=True %}
+                          {% else %}
+                            <span class="project-card-value project-card-editor project-editor-email">{{ proj_data.active_mutex.user.email }}</span>
+                          {% endif %}
                         </div>
                         <div class="project-card-row">
                           <span class="project-card-label">Editing Since</span>
@@ -196,7 +200,7 @@
               <!-- Table header -->
               <thead class="text-xs font-semibold uppercase text-slate-400 bg-slate-900 border-t border-b border-slate-700 sticky top-16 z-10">
                 <tr>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 w-[17%]">
+                  <th class="px-2 first:pl-5 last:pr-5 py-3">
                     <div class="font-semibold text-center">Project Name</div>
                   </th>
                   <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
@@ -217,13 +221,13 @@
                   <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
                     <div class="font-semibold text-center">Last Edit</div>
                   </th>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 w-[13%]">
-                    <div class="font-semibold text-center">Current Editor</div>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3 w-[112px]">
+                    <span class="sr-only">Current Editor</span>
                   </th>
                   <th class="px-2 first:pl-5 last:pr-5 py-3 w-[9%]">
                     <div class="font-semibold text-center">Editing Since</div>
                   </th>
-                  <th class="px-2 first:pl-5 last:pr-5 py-3 w-[8%]"></th>
+                  <th class="px-2 first:pl-5 last:pr-5 py-3 w-[124px]"></th>
                 </tr>
               </thead>
               <!-- Table body: grouped by country -->
@@ -249,14 +253,17 @@
                     <tr class="country-group-row">
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="text-center">
-                          <span class="font-medium text-slate-100">{{ proj_data.project.name }}</span>
+                          <span class="font-medium text-slate-100">
+                            <a href="{% url 'private:project_details' project_id=proj_data.project.id %}"
+                               class="project-name-link">{{ proj_data.project.name }}</a>
+                          </span>
                         </div>
                       </td>
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="text-center">
                           {% get_project_type_color proj_data.project.type as type_bg_color %}
                           {% get_project_type_display proj_data.project.type as type_display %}
-                          <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-white {{ type_bg_color }}">
+                          <div class="inline-flex font-medium rounded-full text-center px-2.5 py-0.5 text-[#373737] {{ type_bg_color }}">
                             {{ type_display }}
                           </div>
                         </div>
@@ -304,12 +311,19 @@
                         </div>
                       </td>
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
-                        <div class="text-center">{% local_date proj_data.project.modified_date %}</div>
+                        <div class="text-center"><time datetime="{{ proj_data.project.modified_date|date:'c' }}"
+                                                       data-local-date="date">{{ proj_data.project.modified_date|date:"M j, Y" }}</time></div>
                       </td>
                       <td class="px-2 first:pl-5 last:pr-5 py-3">
                         <div class="text-center">
-                          {% if proj_data.active_mutex.user %}
-                            {{ proj_data.active_mutex.user.email }}
+                          {% if proj_data.active_mutex.user == user %}
+                            {% include "snippets/project_unlock_button.html" with project=proj_data.project editor=proj_data.active_mutex.user %}
+                          {% elif proj_data.active_mutex.user %}
+                            {% if proj_data.level_label == "ADMIN" %}
+                              {% include "snippets/project_unlock_button.html" with project=proj_data.project editor=proj_data.active_mutex.user force_unlock=True %}
+                            {% else %}
+                              <span class="project-editor-email">{{ proj_data.active_mutex.user.email }}</span>
+                            {% endif %}
                           {% else %}
                             -
                           {% endif %}
@@ -324,26 +338,22 @@
                           {% endif %}
                         </div>
                       </td>
-                      <td class="px-1 py-3 overflow-hidden">
-                        <div class="flex items-center justify-center gap-1 min-w-0">
-                          {% if proj_data.active_mutex %}
-                            {% if proj_data.active_mutex.user == user or proj_data.level_label == "ADMIN" %}
-                              <div class="w-10 aspect-square min-w-0 shrink flex items-center justify-center bg-slate-700 rounded-full cursor-pointer">
-                                <img class="btn-unlock max-w-[75%] max-h-[75%]"
-                                     src="{% static 'private/media/unlock.png' %}"
-                                     data-project_id="{{ proj_data.project.id }}"
-                                     alt="Icon Unlock" />
-                              </div>
-                            {% endif %}
-                          {% endif %}
-                          <div class="w-10 aspect-square min-w-0 shrink bg-slate-700 rounded-full">
-                            <a class="flex items-center justify-center w-full h-full"
-                               href="{% url 'private:project_details' project_id=proj_data.project.id %}">
-                              <img class="w-5 h-5"
-                                   src="{% static 'private/media/right_arrow.svg' %}"
-                                   alt="Icon Open" />
-                            </a>
-                          </div>
+                      <td class="px-2 last:pr-5 py-3 overflow-hidden">
+                        <div class="flex flex-wrap items-center justify-center gap-1 min-w-0">
+                          <a class="project-open-button"
+                             href="{% url 'private:project_details' project_id=proj_data.project.id %}"
+                             title="Open project"
+                             aria-label="Open project: {{ proj_data.project.name }}">
+                            <span>Open</span>
+                            <svg class="w-4 h-4 shrink-0"
+                                 fill="none"
+                                 stroke="currentColor"
+                                 stroke-width="1.75"
+                                 viewBox="0 0 24 24"
+                                 aria-hidden="true">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6l6 6-6 6" />
+                            </svg>
+                          </a>
                         </div>
                       </td>
                     </tr>
@@ -359,7 +369,7 @@
   {% include "snippets/modal_success.html" %}
   {% include "snippets/modal_error.html" %}
   {% include "snippets/modal_confirmation_mass_unlock.html" %}
-  {% include "snippets/modal_confirmation_unlock.html" %}
+  {% include "snippets/modal_confirmation_unlock.html" with show_current_editor=True %}
 {% endblock content %}
 {% block extra_js %}
   <script src="{% url 'url_reverse.js' %}"></script>

@@ -32,6 +32,7 @@
         }
 
         .project-card-title {
+            min-width: 0;
             font-size: 18px;
             font-weight: 600;
             color: #e2e8f0;
@@ -154,8 +155,8 @@
      * 4=Revisions 5=Permission 6=GPS 7=LastEdit 8=Editor
      * 9=EditingSince 10=Actions
      *
-     * When a column is hidden its percentage is redistributed so
-     * visible columns still sum to 100% (required by table-fixed).
+     * Lock and Open retain fixed pixel widths. The name column absorbs the
+     * remainder after visible data columns take their percentage widths.
      */
 
     /* < 1700px: hide Collaborators (col 3) + Editing Since (col 9) — 8 columns */
@@ -165,14 +166,11 @@
         .projects-table th:nth-child(9),
         .projects-table td:nth-child(9) { display: none; }
 
-        .projects-table th:nth-child(1)  { width: 21%; }
         .projects-table th:nth-child(2)  { width: 11%; }
         .projects-table th:nth-child(4)  { width:  8%; }
         .projects-table th:nth-child(5)  { width: 12%; }
         .projects-table th:nth-child(6)  { width: 12%; }
         .projects-table th:nth-child(7)  { width: 11%; }
-        .projects-table th:nth-child(8)  { width: 16%; }
-        .projects-table th:nth-child(10) { width:  9%; }
     }
 
     /* < 1500px: also hide Revisions (col 4) — 7 columns */
@@ -180,40 +178,190 @@
         .projects-table th:nth-child(4),
         .projects-table td:nth-child(4) { display: none; }
 
-        .projects-table th:nth-child(1)  { width: 23%; }
         .projects-table th:nth-child(2)  { width: 13%; }
         .projects-table th:nth-child(5)  { width: 14%; }
         .projects-table th:nth-child(6)  { width: 13%; }
         .projects-table th:nth-child(7)  { width: 12%; }
-        .projects-table th:nth-child(8)  { width: 16%; }
-        .projects-table th:nth-child(10) { width:  9%; }
     }
 
-    /* < 1450px: also hide Current Editor (col 8) — 6 columns */
-    @media (max-width: 1449px) {
-        .projects-table th:nth-child(8),
-        .projects-table td:nth-child(8) { display: none; }
-
-        .projects-table th:nth-child(1)  { width: 28%; }
-        .projects-table th:nth-child(2)  { width: 15%; }
-        .projects-table th:nth-child(5)  { width: 16%; }
-        .projects-table th:nth-child(6)  { width: 15%; }
-        .projects-table th:nth-child(7)  { width: 15%; }
-        .projects-table th:nth-child(10) { width: 11%; }
-    }
-
-    /* < 1300px: also hide Last Edit (col 7) — 5 columns */
+    /* < 1300px: also hide Last Edit (col 7) — 6 columns */
     @media (max-width: 1299px) {
         .projects-table th:nth-child(7),
         .projects-table td:nth-child(7) { display: none; }
 
-        .projects-table th:nth-child(1)  { width: 33%; }
         .projects-table th:nth-child(2)  { width: 18%; }
         .projects-table th:nth-child(5)  { width: 19%; }
         .projects-table th:nth-child(6)  { width: 17%; }
-        .projects-table th:nth-child(10) { width: 13%; }
     }
 
 .project-card-value.project-card-editor {
     font-size: 13px;
+}
+
+.project-name-link {
+    color: inherit;
+    text-decoration: none;
+    text-underline-offset: 3px;
+    overflow-wrap: anywhere;
+}
+
+.project-name-link:hover,
+.project-name-link:focus-visible {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.project-open-button {
+    display: inline-flex;
+    width: 6rem;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--color-sky-500);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-open-button:hover,
+.project-open-button:focus-visible {
+    background: var(--color-sky-600);
+}
+
+.project-open-button:focus-visible {
+    outline: 2px solid var(--color-sky-400);
+    outline-offset: 2px;
+}
+
+.project-unlock-button {
+    display: inline-flex;
+    width: 6rem;
+    white-space: nowrap;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid rgba(248, 113, 113, 0.5);
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.project-unlock-button:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #f87171;
+    color: #fecaca;
+}
+
+.project-unlock-button:focus-visible {
+    outline: 2px solid #f87171;
+    outline-offset: 2px;
+}
+
+#modal_confirmation_unlock {
+    margin: 0;
+    background: rgba(2, 6, 23, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+#modal_confirmation_unlock > div {
+    border: 1px solid rgba(248, 113, 113, 0.65);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 32px rgba(239, 68, 68, 0.12);
+}
+
+#modal_confirmation_unlock > div > .p-5 {
+    display: block;
+    padding: 28px 24px;
+}
+
+#modal_confirmation_unlock > div > .p-5 > .shrink-0 {
+    margin: 0 auto 16px;
+}
+
+#modal_confirmation_unlock > div > .p-5 > .w-full {
+    margin-left: 0;
+}
+
+#project-unlock-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.force-unlock-editor {
+    display: block;
+    margin: 20px 0;
+    padding: 20px 16px;
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    border-radius: 12px;
+    background: #0f172a;
+}
+
+.force-unlock-editor-label {
+    display: block;
+    margin-bottom: 10px;
+    color: #fca5a5;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+#project-unlock-editor-email {
+    display: block;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.force-unlock-editor-status {
+    display: block;
+    margin-top: 8px;
+    color: #cbd5e1;
+}
+
+.force-unlock-warning {
+    display: block;
+    margin-bottom: 8px;
+    color: #fca5a5;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.force-unlock-explanation {
+    display: block;
+    color: #cbd5e1;
+    line-height: 1.6;
+}
+
+#modal_confirmation_unlock .flow-x-2 {
+    gap: 12px;
+}
+
+#modal_confirmation_unlock .flow-x-2 > button {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+
+.project-editor-email {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }

@@ -12,7 +12,7 @@ The previous profile editing form is now available at `/private/profile/` (URL
 name `private:user_profile`), accessible via the "Profile" sidebar item and the
 header user dropdown.
 
-## Metrics Displayed
+## Dashboard Data
 
 | Metric                | Source                                   | Query                                                                                        |
 | --------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -26,6 +26,22 @@ header user dropdown.
 | Commits Over Time     | `ProjectCommit`                          | TruncMonth aggregation in Django's configured local timezone, 12-month window, total vs user |
 | Contribution Calendar | `ProjectCommit`                          | Raw per-commit ISO timestamps for user, last 365 days (client groups by local date)          |
 | Recent Activity       | `ProjectCommit`                          | Last 15 commits across all accessible projects                                               |
+
+The top row displays three compact cards: Survey Projects links to My Survey
+Projects (`private:projects`), Teams links to My Teams (`private:teams`), and
+Your Contributions is informational. The row uses a full-width auto-fitting grid
+with equal-width cards, wrapping them as space narrows without increasing card
+height. Card padding and metric values retain their existing responsive sizing.
+Titles sit beside their icons with bright, semibold text. Survey Projects and
+Teams use the same icon shapes as their sidebar destinations. All three cards
+highlight with an indigo background, bright border, and glow on hover; linked
+cards also show this highlight on keyboard focus. All three top action buttons
+share the same hover and keyboard focus styles and transition timing. The View
+All Projects and Open Survey Map quick actions use the same icon shapes as their
+sidebar destinations, My Survey Projects and GIS Survey Map.
+
+Stations, landmarks, and GPS track counts remain available in the API response
+but are not displayed as dashboard cards.
 
 ## API Endpoint
 
@@ -139,6 +155,10 @@ constructor and configuration use; no Chart runtime package is bundled.
 ## Project software counts
 
 Project counts by software include Stalagmight through the existing permission-
-scoped database aggregation. The chart displays Stalagmight with its explicit
-teal color rather than the unknown-type fallback. See
+scoped database aggregation. The chart references `PROJECT_TYPE_COLORS` in
+`speleodb/surveys/templatetags/project_types.py`, the same mapping used for
+software badges. The `get_project_type_colors` tag renders hidden swatches using
+the canonical badge classes; the controller reads their computed background
+colors and passes them to `buildProjectsChartConfig`. No software palette is
+maintained in JavaScript. Unknown software uses the canonical Other swatch. See
 [project capabilities](project-formats.md) for the software choice contract.

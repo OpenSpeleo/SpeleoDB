@@ -1,3 +1,4 @@
+import { formatPermissionLabel } from '../presentation/permissions.ts';
 import { formatDateTime } from '../presentation/dates.ts';
 import { v2GpsTracksList, getV2GpsTrackExportGpxUrl } from '@speleodb/api';
 import { apiData, webApiOptions } from '../api/client.ts';
@@ -18,15 +19,6 @@ function routeUrl(routeName: 'private:gps_track_details', trackId: EntityId) {
     const route = globalThis.Urls?.[routeName];
     if (typeof route !== 'function') return '';
     return sanitizeUrl(route(trackId));
-}
-
-function normalizedPermissionLabel(label: string | null | undefined) {
-    if (!label) return 'Unknown';
-    return String(label)
-        .toLowerCase()
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
 }
 
 function permissionPillClass(label: string | null | undefined) {
@@ -83,7 +75,7 @@ export function buildTrackListMarkup(tracks: GISListRecord[], openIconUrl = '') 
     }
 
     const tableHtml = tracks.map((track, index) => {
-        const permissionLabel = normalizedPermissionLabel(track.user_permission_level_label);
+        const permissionLabel = formatPermissionLabel(track.user_permission_level_label);
         return `
             <tr>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center font-medium text-slate-100">${index + 1}</div></td>
@@ -101,7 +93,7 @@ export function buildTrackListMarkup(tracks: GISListRecord[], openIconUrl = '') 
     }).join('');
 
     const cardsHtml = tracks.map(track => {
-        const permissionLabel = normalizedPermissionLabel(track.user_permission_level_label);
+        const permissionLabel = formatPermissionLabel(track.user_permission_level_label);
         return `
             <div class="track-card">
                 <div class="track-card-header">

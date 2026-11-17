@@ -181,7 +181,7 @@ class GPSTrackFrontendViewsTest(BaseUserTestCaseMixin, TestCase):
         assert context["entityId"] == str(self.track.id)
         assert context["fieldName"] == "level"
         assert "Read Only" in content
-        assert "Read And Write" in content
+        assert "Read &amp; Write" in content
         assert "Admin" in content
         assert "Web Viewer" not in content
 

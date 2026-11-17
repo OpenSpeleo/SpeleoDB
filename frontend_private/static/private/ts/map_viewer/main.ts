@@ -578,7 +578,27 @@ export async function initPrivateMapViewer() {
         GISLayersPanel.refreshList();
     }
 
-    function fitInitialCamera() {
+    async function fitInitialCamera() {
+        const projectId = new URLSearchParams(window.location.search).get('project');
+        if (projectId) {
+            if (!Config.getProjectById(projectId)) {
+                Utils.showNotification('error', 'This project has no available survey map or you no longer have access.');
+                return;
+            }
+            ProjectPanel.revealProject(projectId);
+            await Layers.whenDisplayApplied();
+            const bounds = State.projectBounds.get(projectId);
+            if (bounds) {
+                map.fitBounds(bounds, {
+                    padding: DEFAULTS.MAP.FIT_BOUNDS_PADDING,
+                    maxZoom: DEFAULTS.MAP.FIT_BOUNDS_MAX_ZOOM,
+                    duration: 0,
+                });
+            } else {
+                Utils.showNotification('warning', 'This project has no survey geometry to focus on.');
+            }
+            return;
+        }
         const urlParams = getUrlParams();
 
         if (urlParams.lat !== null && urlParams.long !== null) {
@@ -695,7 +715,7 @@ export async function initPrivateMapViewer() {
         GeometryEditor.restoreLayers();
         void Layers.reorderLayers();
 
-        if (fitCamera) fitInitialCamera();
+        if (fitCamera) await fitInitialCamera();
         if (hideOverlay) hideLoadingOverlay();
 
         console.log('✅ Map Data Loaded (Projects, GeoJSON, Stations, Landmarks)');

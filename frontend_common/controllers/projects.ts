@@ -2,18 +2,43 @@ import { v2UserReleaseAllLocksDestroy, v2ProjectsReleaseCreateWithJson, v2Projec
 import { apiData, webApiOptions } from '../api/client.ts';
 import type { ProjectsContext } from '../../ts-types/controllers/projects.ts';
 import type { EntityId } from '../../ts-types/domain/identifiers.ts';
+import { containDialogTab } from '../../frontend_private/static/private/ts/map_viewer/components/dialog_focus.ts';
 import { showApiErrorModal } from '../../frontend_private/static/private/ts/forms/api_errors.ts';
 
 export function init(context: ProjectsContext) {
-    $("body").click(function() {
+    const unlockModal = document.getElementById('modal_confirmation_unlock');
+    const unlockCancel = unlockModal?.querySelector<HTMLButtonElement>('button:not(#btn_confirmed_unlock)');
+    let unlockTrigger: HTMLElement | null = null;
+
+    function closeUnlockConfirmation() {
+        $(unlockModal!).hide();
+        unlockTrigger?.focus();
+        unlockTrigger = null;
+    }
+
+    unlockCancel?.addEventListener('click', event => {
+        event.stopPropagation();
+        closeUnlockConfirmation();
+    });
+    unlockModal?.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            closeUnlockConfirmation();
+        } else {
+            containDialogTab(event, unlockModal);
+        }
+    });
+
+    $("body").click(function(event) {
             if ($("#modal_success").is(":visible")) {
                 $("#modal_success").hide();
             }
             if ($("#modal_error").is(":visible")) {
                 $("#modal_error").hide();
             }
-            if ($("#modal_confirmation_unlock").is(":visible")) {
-                $("#modal_confirmation_unlock").hide();
+            if (unlockModal?.style.display === 'flex' && event.target === unlockModal) {
+                closeUnlockConfirmation();
             }
             if ($("#modal_confirmation_mass_unlock").is(":visible")) {
                 $("#modal_confirmation_mass_unlock").hide();
@@ -42,19 +67,12 @@ export function init(context: ProjectsContext) {
             return false; // prevent default
         });
 
-        $('.btn-unlock').click(function (e) {
-            console.log("Unlocking project: " + ($(this).data('project_id') as EntityId));
-            $('#btn_confirmed_unlock').data('project_id', ($(this).data('project_id') as EntityId));
-            $("#modal_confirmation_unlock").css('display', 'flex');
-            return false; // prevent default
-        });
-
-        $('#btn_confirmed_unlock').click(function () {
+        function unlockProject(projectId: EntityId) {
             $("#error_div").hide();
             $("#success_div").hide();
-            $("#modal_confirmation_unlock").hide();
+            closeUnlockConfirmation();
 
-            void apiData(v2ProjectsReleaseCreateWithJson(String($(this).data('project_id')), {}, undefined, webApiOptions())).then(function () {
+            void apiData(v2ProjectsReleaseCreateWithJson(String(projectId), {}, undefined, webApiOptions())).then(function () {
                     $("#modal_success_txt").html("The project has been unlocked for edition.");
                     $("#modal_success").css('display', 'flex');
 
@@ -63,6 +81,29 @@ export function init(context: ProjectsContext) {
                         window.location.reload();
                     }, 2000);
             }).catch(showApiErrorModal);
+        }
+
+        $('.btn-unlock').click(function (event) {
+            const projectId = $(this).data('project_id') as EntityId;
+            if ($(this).attr('data-force-unlock') === 'true') {
+                $('#btn_confirmed_unlock').data('project_id', projectId);
+                $('#project-unlock-modal-title').text('Force unlock project?');
+                $('#project-unlock-editor-email').text($(this).attr('data-editor-email') || 'Unknown');
+                $('#btn_confirmed_unlock').text('Force Unlock');
+                unlockTrigger = event.currentTarget;
+                $("#modal_confirmation_unlock").css('display', 'flex');
+                unlockModal?.setAttribute('role', 'dialog');
+                unlockModal?.setAttribute('aria-modal', 'true');
+                unlockModal?.setAttribute('aria-labelledby', 'project-unlock-modal-title');
+                unlockCancel?.focus();
+            } else {
+                unlockProject(projectId);
+            }
+            return false; // prevent default
+        });
+
+        $('#btn_confirmed_unlock').click(function () {
+            unlockProject($(this).data('project_id') as EntityId);
             return false; // prevent default
         });
 

@@ -1,0 +1,9 @@
+<button type="button"
+        class="btn-unlock project-unlock-button"
+        data-project_id="{{ project.id }}"
+        data-editor-email="{{ editor.email }}"
+        data-force-unlock="{% if force_unlock %}true{% else %}false{% endif %}"
+        title="{% if force_unlock %}Force Unlock{% else %}Unlock project{% endif %}"
+        aria-label="{% if force_unlock %}Force unlock{% else %}Unlock{% endif %} project: {{ project.name }}">
+  {% if force_unlock %}Force Unlock{% else %}Unlock{% endif %}
+</button>

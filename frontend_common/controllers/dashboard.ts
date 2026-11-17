@@ -22,9 +22,6 @@ export function init() {
             $('#stat-projects').text(formatNumber(summary.total_projects));
             $('#stat-teams').text(formatNumber(summary.total_teams));
             $('#stat-commits').text(formatNumber(summary.user_commits));
-            $('#stat-stations').text(formatNumber(summary.total_stations_created));
-            $('#stat-landmarks').text(formatNumber(summary.total_landmarks));
-            $('#stat-gps-tracks').text(formatNumber(summary.total_gps_tracks));
         }
 
         function showStatCardErrors() {
@@ -76,7 +73,11 @@ export function init() {
             var ctx = document.getElementById('projects-chart') as HTMLCanvasElement | null;
             if (!ctx) return;
 
-            var config = buildProjectsChartConfig(projectsByType);
+            const softwareColors: Record<string, string> = {};
+            document.querySelectorAll<HTMLElement>('#project-software-colors [data-project-type]').forEach(swatch => {
+                softwareColors[swatch.dataset.projectType!] = getComputedStyle(swatch).backgroundColor;
+            });
+            var config = buildProjectsChartConfig(projectsByType, softwareColors);
 
             if (config.isEmpty) {
                 $(ctx).hide();

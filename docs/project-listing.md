@@ -48,6 +48,64 @@ ProjectListingView (frontend_private/views/project.py)
 
 ---
 
+## Permission Labels
+
+Permission badges and selectors display `READ_AND_WRITE` as "Read & Write".
+Django templates use the shared `normalize` filter, while JavaScript-rendered
+GPS track and GIS overlay lists use
+`frontend_common/presentation/permissions.ts`. Stored permission identifiers,
+form option values, API payloads, and authorization rules are unchanged.
+
+## Project Navigation
+
+Project names in desktop rows and mobile cards link to
+`private:project_details`, the same destination as the Open button. Names retain
+their normal text styling until the name itself is hovered or keyboard-focused,
+when a white underline reveals the link.
+
+Desktop rows and mobile cards use a sky-blue "Open" button with a right-arrow
+icon linking to `private:project_details`. Its visible background and minimum
+height of 40px make the action easy to identify and click. Background and hover
+colors match Unlock All (`sky-500` and `sky-600`), with a visible keyboard focus
+outline. Each button includes an "Open project" tooltip and a project-specific
+accessible label.
+
+The private map viewer also supports `private:map_viewer?project=<project_id>`
+deep links.
+
+The private map viewer handles the project parameter after survey data loads. It
+reveals the project through `ProjectPanel.revealProject`, including its country
+gate, waits for display updates, and fits the project's survey bounds without a
+camera animation. Other project visibility choices remain intact. An unavailable
+project or missing survey geometry produces a notification. The project
+parameter takes priority over the existing coordinate shortcut.
+
+## Unlock Controls
+
+Open, Unlock, and Force Unlock share a fixed width of 6rem and the same height.
+Their desktop column has a fixed width of 112px, including cell padding, and
+remains visible at every desktop breakpoint. The Open column is fixed at 124px,
+allowing 20px of right padding against the table border while retaining the 6rem
+button. The Project Name column absorbs the remaining table width. The lock
+column heading is visually hidden; page-header actions wrap on narrow screens.
+
+When the signed-in user owns a project's active lock, the lock column shows a
+soft red "Unlock" button in place of their email. Project administrators see
+only a "Force Unlock" button for another user's lock. Other editors' emails
+remain visible to users without that action. Mobile cards retain the same
+owner/admin controls in their Current Editor row.
+
+Controls share `snippets/project_unlock_button.html` and the existing release
+endpoint. Normal Unlock releases the signed-in user's lock immediately. Force
+Unlock opens a confirmation modal showing the current editor's email and
+releases only after confirmation. Editor emails are inserted as text. The Force
+Unlock modal dims and blurs the page, highlights the current editor in a large
+high-contrast panel, and places a red unsaved-changes warning above the actions.
+Both paths keep the existing success and error feedback. Force Unlock moves
+keyboard focus to Cancel, keeps Tab navigation inside the modal, and returns
+focus to the triggering button on Cancel or Escape. Selecting the editor email
+does not dismiss the modal.
+
 ## Country Grouping
 
 The template iterates over `projects_by_country` and renders a collapsible
@@ -92,30 +150,37 @@ Both are registered in `speleodb/surveys/templatetags/project_colors.py`.
 
 ---
 
+## Last Edit Display
+
+Last Edit shows the month, day, and year without a time in both desktop rows and
+mobile cards. The timestamp remains intact in the `time` element; the shared
+browser date formatter uses date-only display in the user's local timezone.
+Editing Since retains its existing timestamp display.
+
 ## Layout Decisions
 
 ### Fixed column widths (`table-fixed`)
 
-The desktop table uses `table-fixed` with explicit percentage widths on every
-`<th>`. This prevents column widths from shifting when country groups are
-expanded or collapsed. With `table-auto`, hidden rows caused the browser to
-recalculate column widths based only on visible content, creating a jarring
-layout shift.
+The desktop table uses `table-fixed` with fixed pixel widths for the two action
+columns, percentage widths for data columns, and an auto-sized name column. This
+prevents column widths from shifting when country groups are expanded or
+collapsed. With `table-auto`, hidden rows caused the browser to recalculate
+column widths based only on visible content, creating a jarring layout shift.
 
-Column width allocation (must sum to 100%):
+Column width allocation (Project Name takes the remainder):
 
-| Column          | Width | Rationale            |
-| --------------- | ----- | -------------------- |
-| Project Name    | 17%   | Longest text content |
-| Software        | 9%    | Short badge          |
-| Collaborators   | 8%    | Single number        |
-| Revisions       | 7%    | Single number        |
-| Permission      | 10%   | Badge text varies    |
-| GPS Coordinates | 10%   | "Google Maps" link   |
-| Last Edit       | 9%    | Date (YYYY/MM/DD)    |
-| Current Editor  | 13%   | Email address        |
-| Editing Since   | 9%    | Date (YYYY/MM/DD)    |
-| Actions         | 8%    | 1-2 icon buttons     |
+| Column          | Width | Rationale                 |
+| --------------- | ----- | ------------------------- |
+| Project Name    | auto  | Remaining width           |
+| Software        | 9%    | Short badge               |
+| Collaborators   | 8%    | Single number             |
+| Revisions       | 7%    | Single number             |
+| Permission      | 10%   | Badge text varies         |
+| GPS Coordinates | 10%   | "Google Maps" link        |
+| Last Edit       | 9%    | Date (YYYY/MM/DD)         |
+| Current Editor  | 112px | Unlock button and padding |
+| Editing Since   | 9%    | Date (YYYY/MM/DD)         |
+| Actions         | 124px | Open button and padding   |
 
 ### Page-level scroll (no container scrollbar)
 
@@ -153,6 +218,8 @@ would occur if restoration waited for DOMContentLoaded.
 ## Software badges
 
 Software choices and labels come from `ProjectType`. The project-type template
-tags own badge colors for both desktop rows and mobile cards; Stalagmight uses
-the teal badge. See [project capabilities](project-formats.md) for software,
-file-format, and map-conversion boundaries.
+tags own badge colors for both desktop rows and mobile cards. Badge labels use
+dark gray (`#373737`) for contrast with the light palette. The dashboard chart
+references the same canonical mapping. See
+[project capabilities](project-formats.md) for software, file-format, and
+map-conversion boundaries.

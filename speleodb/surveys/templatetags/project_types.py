@@ -16,13 +16,13 @@ register = template.Library()
 # Color mapping for each project type (survey software)
 # Using distinctive Tailwind CSS background classes
 PROJECT_TYPE_COLORS: dict[str, str] = {
-    ProjectType.ARIANE: "bg-sky-600",
-    ProjectType.COMPASS: "bg-emerald-600",
-    ProjectType.STALAGMIGHT: "bg-teal-600",
-    ProjectType.STICKMAPS: "bg-violet-600",
-    ProjectType.THERION: "bg-amber-600",
-    ProjectType.WALLS: "bg-red-500",
-    ProjectType.OTHER: "bg-slate-500",
+    ProjectType.ARIANE: "bg-[#99E5EA]",
+    ProjectType.COMPASS: "bg-[#BCADEC]",
+    ProjectType.STALAGMIGHT: "bg-[#F0C17A]",
+    ProjectType.STICKMAPS: "bg-[#F99099]",
+    ProjectType.THERION: "bg-[#9FE88E]",
+    ProjectType.WALLS: "bg-[#C9E885]",
+    ProjectType.OTHER: "bg-[#BCBCBC]",
 }
 
 
@@ -33,9 +33,15 @@ def get_project_types() -> list[str]:
 
 
 @register.simple_tag
+def get_project_type_colors() -> dict[str, str]:
+    """Expose the canonical badge classes to template-owned visualizations."""
+    return PROJECT_TYPE_COLORS
+
+
+@register.simple_tag
 def get_project_type_color(project_type: str) -> str:
     """Return the CSS background color class for a project type."""
-    return PROJECT_TYPE_COLORS.get(project_type, "bg-slate-500")
+    return PROJECT_TYPE_COLORS.get(project_type, PROJECT_TYPE_COLORS[ProjectType.OTHER])
 
 
 @register.simple_tag

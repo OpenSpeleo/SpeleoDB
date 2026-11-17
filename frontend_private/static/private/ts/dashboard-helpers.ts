@@ -110,16 +110,10 @@ export function buildCommitsChartConfig(commitsOverTime: MonthlyContributions[])
     };
 }
 
-export function buildProjectsChartConfig(projectsByType: ProjectTypeCounts): ProjectsChartConfig {
-    var colorMap = {
-        ariane:     '#6366f1',
-        compass:    '#22d3ee',
-        stalagmight: '#0d9488',
-        therion:    '#f59e0b',
-        stickmaps:  '#10b981',
-        walls:      '#f43f5e',
-        other:      '#64748b'
-    };
+export function buildProjectsChartConfig(
+    projectsByType: ProjectTypeCounts,
+    colorMap: Record<string, string>,
+): ProjectsChartConfig {
     var labels: string[] = [];
     var values: number[] = [];
     var colors: string[] = [];
@@ -128,7 +122,7 @@ export function buildProjectsChartConfig(projectsByType: ProjectTypeCounts): Pro
         if (projectsByType[key]! > 0) {
             labels.push(key.charAt(0).toUpperCase() + key.slice(1));
             values.push(projectsByType[key]!);
-            colors.push(colorMap[key as keyof typeof colorMap] || '#64748b');
+            colors.push(colorMap[key] || colorMap.other || 'transparent');
         }
     }
     return {

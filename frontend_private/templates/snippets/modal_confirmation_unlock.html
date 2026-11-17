@@ -2,14 +2,24 @@
 
 {% block confirmation_modal_id %}modal_confirmation_unlock{% endblock %}
 {% block modal_header %}
-  Unlocking the project ?
+  <span id="project-unlock-modal-title">Unlock project?</span>
 {% endblock %}
 {% block modal_content %}
-  This action will unlock the project.
-  <br />
-  This will allow other users to modify the project.
-  <br />
-  Any unsaved modification might be potentially lost.
+  {% if show_current_editor %}
+    <span class="force-unlock-editor">
+      <span class="force-unlock-editor-label">Currently editing</span>
+      <strong id="project-unlock-editor-email"></strong>
+      <span class="force-unlock-editor-status">Has an active editing lock</span>
+    </span>
+    <span class="force-unlock-warning">Their unsaved changes may be lost.</span>
+    <span class="force-unlock-explanation">Force unlocking releases their lock and allows someone else to edit this project.</span>
+  {% else %}
+    This action will unlock the project.
+    <br />
+    This will allow other users to modify the project.
+    <br />
+    Any unsaved modification might be potentially lost.
+  {% endif %}
 {% endblock %}
 {% block confirm_button_txt %}
   Yes, Unlock it!

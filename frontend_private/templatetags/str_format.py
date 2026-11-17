@@ -9,4 +9,5 @@ register = template.Library()
 
 @register.filter()
 def normalize(value: str) -> str:
-    return value.replace("_", " ").title()
+    label = value.replace("_", " ").title()
+    return "Read & Write" if label == "Read And Write" else label

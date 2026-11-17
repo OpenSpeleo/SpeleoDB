@@ -68,7 +68,7 @@ def test_projects_show_modification_and_actual_lock_creation_in_both_layouts() -
         "pages/projects.html", projects_by_country={"United States": [project_data]}
     )
     dates = displayed_dates(page)
-    assert all(mode == "datetime" for _, mode in dates)
+    assert [mode for _, mode in dates] == ["date", "datetime", "date", "datetime"]
     assert [dt.datetime.fromisoformat(value) for value, _ in dates] == [
         modified,
         acquired,

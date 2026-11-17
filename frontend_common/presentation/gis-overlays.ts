@@ -1,3 +1,4 @@
+import { formatPermissionLabel } from './permissions.ts';
 import { formatDateTime } from './dates.ts';
 import { getV2GisLayersSourceRetrieveUrl } from '@speleodb/api';
 import type { GISListRecord, GISListPresentation, GISDetailsRoute } from '../../ts-types/controllers/gis-lists.ts';
@@ -11,12 +12,6 @@ export const SUPPORTED_FORMATS_LABEL = 'KML, KMZ, GeoJSON, TopoJSON, or a zipped
 function routeUrl(routeName: GISDetailsRoute, layerId: EntityId) {
     const route = globalThis.Urls?.[routeName];
     return typeof route === 'function' ? sanitizeUrl(route(layerId)) : '';
-}
-
-function normalizedPermissionLabel(label: string | null | undefined) {
-    if (!label) return 'Unknown';
-    return String(label).toLowerCase().split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
 function permissionPillClass(label: string | null | undefined) {
@@ -82,7 +77,7 @@ export function buildGISOverlayListMarkup(layers: GISListRecord[], openIconUrl =
 
     const sortedLayers = [...layers].sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }));
     const tableHtml = sortedLayers.map((layer, index) => {
-        const permissionLabel = normalizedPermissionLabel(layer.user_permission_level_label);
+        const permissionLabel = formatPermissionLabel(layer.user_permission_level_label);
         return `
             <tr>
                 <td class="px-2 first:pl-5 last:pr-5 py-3"><div class="text-center font-medium text-slate-100">${index + 1}</div></td>
@@ -101,7 +96,7 @@ export function buildGISOverlayListMarkup(layers: GISListRecord[], openIconUrl =
     }).join('');
 
     const cardsHtml = sortedLayers.map(layer => {
-        const permissionLabel = normalizedPermissionLabel(layer.user_permission_level_label);
+        const permissionLabel = formatPermissionLabel(layer.user_permission_level_label);
         return `
             <div class="track-card gis-layer-card">
                 <div class="track-card-header">

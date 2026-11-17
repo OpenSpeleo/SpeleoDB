@@ -57,7 +57,7 @@ describe('GPS Tracks rendered list contract', () => {
             can_write: true,
         })]);
 
-        expect(document.body.textContent).toContain('Read And Write');
+        expect(document.body.textContent).toContain('Read & Write');
         expect(document.querySelectorAll('img[src$="right_arrow.svg"]')).toHaveLength(2);
         expect(document.querySelectorAll('.btn-edit-track')).toHaveLength(0);
         expect(document.querySelectorAll('.btn-delete-track')).toHaveLength(0);

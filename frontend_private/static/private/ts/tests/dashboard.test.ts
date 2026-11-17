@@ -237,10 +237,7 @@ describe('Dashboard helpers', () => {
             document.body.innerHTML =
                 '<div id="stat-projects"></div>' +
                 '<div id="stat-teams"></div>' +
-                '<div id="stat-commits"></div>' +
-                '<div id="stat-stations"></div>' +
-                '<div id="stat-landmarks"></div>' +
-                '<div id="stat-gps-tracks"></div>';
+                '<div id="stat-commits"></div>';
         });
 
         it('updates DOM elements with values', async () => {
@@ -500,48 +497,49 @@ describe('Dashboard helpers', () => {
     });
 
     describe('buildProjectsChartConfig', () => {
+        const softwareColors = { other: '#123456', stalagmight: '#abcdef' };
         it('returns a doughnut chart type', () => {
-            expect(buildProjectsChartConfig({ ariane: 3 }).type).toBe('doughnut');
+            expect(buildProjectsChartConfig({ ariane: 3 }, softwareColors).type).toBe('doughnut');
         });
 
         it('capitalizes type labels', () => {
-            const config = buildProjectsChartConfig({ ariane: 3, compass: 2 });
+            const config = buildProjectsChartConfig({ ariane: 3, compass: 2 }, softwareColors);
             expect(config.data.labels).toEqual(['Ariane', 'Compass']);
         });
 
         it('maps values correctly', () => {
-            const config = buildProjectsChartConfig({ ariane: 3, compass: 2 });
+            const config = buildProjectsChartConfig({ ariane: 3, compass: 2 }, softwareColors);
             expect(config.data.datasets[0].data).toEqual([3, 2]);
         });
 
-        it('shows Stalagmight with its dedicated color', () => {
-            const config = buildProjectsChartConfig({ stalagmight: 2 });
+        it('uses the supplied Stalagmight badge color', () => {
+            const config = buildProjectsChartConfig({ stalagmight: 2 }, softwareColors);
             expect(config.data.labels).toEqual(['Stalagmight']);
             expect(config.data.datasets[0].data).toEqual([2]);
-            expect(config.data.datasets[0].backgroundColor).toEqual(['#0d9488']);
-            expect(config.colors).toEqual(['#0d9488']);
+            expect(config.data.datasets[0].backgroundColor).toEqual([softwareColors.stalagmight]);
+            expect(config.colors).toEqual([softwareColors.stalagmight]);
             expect(config.isEmpty).toBe(false);
         });
 
         it('omits Stalagmight when its count is zero', () => {
-            const config = buildProjectsChartConfig({ stalagmight: 0 });
+            const config = buildProjectsChartConfig({ stalagmight: 0 }, softwareColors);
             expect(config.data.labels).toEqual([]);
             expect(config.data.datasets[0].data).toEqual([]);
             expect(config.isEmpty).toBe(true);
         });
 
         it('skips zero-count types', () => {
-            const config = buildProjectsChartConfig({ ariane: 3, compass: 0, therion: 1 });
+            const config = buildProjectsChartConfig({ ariane: 3, compass: 0, therion: 1 }, softwareColors);
             expect(config.data.labels).toEqual(['Ariane', 'Therion']);
             expect(config.data.datasets[0].data).toEqual([3, 1]);
         });
 
         it('isEmpty is true when all types are zero', () => {
-            expect(buildProjectsChartConfig({}).isEmpty).toBe(true);
+            expect(buildProjectsChartConfig({}, softwareColors).isEmpty).toBe(true);
         });
 
         it('isEmpty is false when data exists', () => {
-            expect(buildProjectsChartConfig({ ariane: 1 }).isEmpty).toBe(false);
+            expect(buildProjectsChartConfig({ ariane: 1 }, softwareColors).isEmpty).toBe(false);
         });
     });
 

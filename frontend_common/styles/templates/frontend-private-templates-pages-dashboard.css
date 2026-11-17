@@ -1,13 +1,29 @@
-.stat-card {
+.dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+        gap: 1rem;
+    }
+    .stat-card {
+        min-width: 0;
+        text-decoration: none;
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
         border: 1px solid rgba(100, 116, 139, 0.3);
         border-radius: 12px;
         padding: 20px;
         transition: all 0.3s ease;
     }
-    .stat-card:hover {
-        border-color: rgba(99, 102, 241, 0.4);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    .stat-card:hover,
+    a.stat-card:focus-visible,
+    .quick-action-btn:hover,
+    .quick-action-btn:focus-visible {
+        background: linear-gradient(135deg, rgba(67, 56, 202, 0.35) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-color: #818cf8;
+        box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.45), 0 6px 20px rgba(99, 102, 241, 0.25);
+    }
+    a.stat-card:focus-visible,
+    .quick-action-btn:focus-visible {
+        outline: 2px solid #818cf8;
+        outline-offset: 3px;
     }
     .stat-value {
         font-size: 2rem;
@@ -16,10 +32,9 @@
         line-height: 1;
     }
     .stat-label {
-        font-size: 0.8125rem;
-        color: #94a3b8;
-        font-weight: 500;
-        margin-top: 6px;
+        font-size: 0.875rem;
+        color: #e2e8f0;
+        font-weight: 600;
     }
     .skeleton-pulse {
         background: linear-gradient(90deg, rgba(51,65,85,0.4) 25%, rgba(71,85,105,0.5) 50%, rgba(51,65,85,0.4) 75%);
@@ -217,14 +232,9 @@
         color: #e2e8f0;
         font-weight: 500;
         font-size: 0.8125rem;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         text-decoration: none;
         white-space: nowrap;
-    }
-    .quick-action-btn:hover {
-        border-color: rgba(99, 102, 241, 0.5);
-        background: rgba(99, 102, 241, 0.1);
-        color: #a5b4fc;
     }
 
     @media (max-width: 640px) {

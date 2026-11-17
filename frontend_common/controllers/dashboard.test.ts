@@ -19,18 +19,18 @@ beforeEach(() => {
     // JSDOM has no canvas renderer; only the third-party chart renderer is isolated.
     Chart = vi.fn(function () {});
     window.Chart = Chart as unknown as DashboardChartConstructor;
-    document.body.innerHTML = '<div id="stat-cards"><span class="stat-value" id="stat-projects"></span><span class="stat-value" id="stat-teams"></span><span class="stat-value" id="stat-commits"></span><span class="stat-value" id="stat-stations"></span><span class="stat-value" id="stat-landmarks"></span><span class="stat-value" id="stat-gps-tracks"></span></div><canvas id="commits-chart"></canvas><canvas id="projects-chart"></canvas><div id="projects-chart-empty" class="hidden"></div><table id="contribution-heatmap"></table><span id="heatmap-total-count"></span><div id="recent-activity"></div>';
+    document.body.innerHTML = '<div id="stat-cards"><span class="stat-value" id="stat-projects"></span><span class="stat-value" id="stat-teams"></span><span class="stat-value" id="stat-commits"></span></div><div id="project-software-colors" hidden><span data-project-type="compass" style="background-color: rgb(12, 34, 56)"></span></div><canvas id="commits-chart"></canvas><canvas id="projects-chart"></canvas><div id="projects-chart-empty" class="hidden"></div><table id="contribution-heatmap"></table><span id="heatmap-total-count"></span><div id="recent-activity"></div>';
 });
 afterEach(() => { vi.unstubAllGlobals(); delete (window as unknown as {Chart?: unknown}).Chart; document.body.innerHTML = ''; });
 it('fetches immediately and renders the real stat, chart and 53-week heatmap implementations', async () => {
     expect(init()).toBeUndefined();
     await vi.waitFor(() => expect($('#stat-projects').text()).toBe('7'));
     expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v2/user/dashboard-stats/' });
-    expect($('#stat-cards .stat-value').map(function () { return $(this).text(); }).get()).toEqual(['7', '2', '12', '30', '0', '1']);
+    expect($('#stat-cards .stat-value').map(function () { return $(this).text(); }).get()).toEqual(['7', '2', '12']);
     expect(Chart).toHaveBeenCalledTimes(2);
     const monthFormatter = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short' });
     expect(Chart.mock.calls[0]![1]).toMatchObject({ type: 'line', data: { labels: [monthFormatter.format(new Date(2026, 0, 1))], datasets: [{ data: [12], fill: true }, { data: [7], fill: true }] } });
-    expect(Chart.mock.calls[1]![1]).toMatchObject({ type: 'doughnut', data: { labels: ['Compass'] } });
+    expect(Chart.mock.calls[1]![1]).toMatchObject({ type: 'doughnut', data: { labels: ['Compass'], datasets: [{ backgroundColor: ['rgb(12, 34, 56)'] }] } });
     expect($('#contribution-heatmap tbody tr').length).toBe(7);
     expect($('#contribution-heatmap tbody tr').first().find('td').length).toBe(54);
     const today = new Date();
@@ -63,5 +63,5 @@ it('renders an empty project chart and the HTTP error state', async () => {
     expect($('#projects-chart-empty').hasClass('hidden')).toBe(false);
     server.reply({ status: 403, json: { detail: 'Denied' } }); init();
     await vi.waitFor(() => expect($('#recent-activity').text()).toBe('Failed to load activity'));
-    expect($('#stat-cards .stat-value').map(function () { return $(this).text(); }).get()).toEqual(['-', '-', '-', '-', '-', '-']);
+    expect($('#stat-cards .stat-value').map(function () { return $(this).text(); }).get()).toEqual(['-', '-', '-']);
 });

@@ -16,7 +16,7 @@ beforeEach(() => {
     server.reply({ json: [{ id: '7', commit_count: 0 }] });
     setBrowserUrl(`${server.origin}/private/projects/`);
     localStorage.clear();
-    document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn_release_all_locks"></button><button id="btn_confirmed_mass_unlock"></button><button class="btn-unlock" data-project_id="7"></button><button id="btn_confirmed_unlock"></button><div id="modal_confirmation_mass_unlock" style="display:none"></div><div id="modal_confirmation_unlock" style="display:none"></div><div id="modal_success"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><span class="async_revision" data-id="revision-7" data-project_id="7"></span><span id="revision-7"></span><span class="async_revision" data-id="revision-8" data-project_id="8"></span><span id="revision-8"></span><div class="country-group" data-country-code="MX"><button class="country-group-header"></button></div>';
+    document.body.innerHTML = '<input name="csrfmiddlewaretoken" value="csrf"><button id="btn_release_all_locks"></button><button id="btn_confirmed_mass_unlock"></button><button class="btn-unlock" data-project_id="7"></button><div id="modal_confirmation_mass_unlock" style="display:none"></div><div id="modal_confirmation_unlock" style="display:none"><div><span id="project-unlock-modal-title"></span><strong id="project-unlock-editor-email"></strong><button id="cancel-unlock">Cancel</button><button id="btn_confirmed_unlock"></button></div></div><div id="modal_success"><span id="modal_success_txt"></span></div><div id="modal_error" style="display:none"><span id="modal_error_txt"></span></div><span class="async_revision" data-id="revision-7" data-project_id="7"></span><span id="revision-7"></span><span class="async_revision" data-id="revision-8" data-project_id="8"></span><span id="revision-8"></span><div class="country-group" data-country-code="MX"><button class="country-group-header"></button></div>';
 });
 afterEach(() => {
     $('body').off('click');
@@ -61,14 +61,47 @@ it('opens mass confirmation and sends DELETE with CSRF, shared errors and delaye
     await vi.waitFor(() => expect(window.location.hash).toBe('#projects'), { timeout: 3000 });
 });
 
-it('uses the clicked project ID in the subsequent single-project POST', async () => {
+it.each([false, true])('releases the clicked project with confirmation only for force unlock (%s)', async (forceUnlock) => {
     await initialize();
-    $('.btn-unlock').trigger('click');
-    expect($('#btn_confirmed_unlock').data('project_id')).toBe(7);
     server.reply({ json: {} });
-    $('#btn_confirmed_unlock').trigger('click');
+    $('.btn-unlock').attr('data-force-unlock', String(forceUnlock)).trigger('click');
+    if (forceUnlock) {
+        expect($('#modal_confirmation_unlock').css('display')).toBe('flex');
+        expect($('#btn_confirmed_unlock').data('project_id')).toBe(7);
+        expect(server.requests).toHaveLength(1);
+        $('#btn_confirmed_unlock').trigger('click');
+    } else {
+        expect($('#modal_confirmation_unlock').css('display')).toBe('none');
+    }
     await vi.waitFor(() => expect($('#modal_success_txt').text()).toBe('The project has been unlocked for edition.'));
     expect(server.requests[1]).toMatchObject({ method: 'POST', path: '/api/v2/projects/7/release/', headers: { 'x-csrftoken': 'csrf', 'content-type': 'application/json' }, body: '{}' });
+});
+
+it('keeps force-unlock email readable and keyboard navigation inside the confirmation until dismissed', async () => {
+    await initialize();
+    const trigger = document.querySelector<HTMLButtonElement>('.btn-unlock')!;
+    const modal = document.getElementById('modal_confirmation_unlock')!;
+    const cancel = document.getElementById('cancel-unlock')!;
+    const confirm = document.getElementById('btn_confirmed_unlock')!;
+    trigger.dataset.forceUnlock = 'true';
+    trigger.dataset.editorEmail = '<editor>&example.test';
+    trigger.focus();
+    trigger.click();
+    expect(document.activeElement).toBe(cancel);
+    expect(document.getElementById('project-unlock-editor-email')!.textContent).toBe('<editor>&example.test');
+    expect(document.querySelector('#project-unlock-editor-email editor')).toBeNull();
+    expect(modal.getAttribute('aria-modal')).toBe('true');
+    confirm.focus();
+    confirm.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(cancel);
+    cancel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(confirm);
+    document.getElementById('project-unlock-editor-email')!.click();
+    expect(modal.style.display).toBe('flex');
+    confirm.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(modal.style.display).toBe('none');
+    expect(document.activeElement).toBe(trigger);
+    expect(server.requests).toHaveLength(1);
 });
 
 it('toggles country collapse using click and keyboard and writes the existing storage key', async () => {
