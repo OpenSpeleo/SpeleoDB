@@ -2680,6 +2680,7 @@ select.form-input:focus {
 }
 
 /* Historical surveys share the private viewer shell and display settings. */
+.historical-viewer .map-viewer-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 .historical-title-row { display: flex; align-items: center; gap: .75rem; }
 .historical-back { flex: 0 0 2.75rem; width: 2.75rem; min-height: 2.75rem; padding: 0; border-radius: .625rem; }
 .historical-subtitle { margin-top: .375rem; color: #94a3b8; font-size: .8125rem; }
