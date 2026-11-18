@@ -1,12 +1,7 @@
-# Map Viewer Depth Coloring (Agent Edition)
+# Map Viewer Depth Coloring
 
-This file is the Markdown agent-oriented conversion of:
-
-- `docs/map_viewer_depth_coloring.rst`
-
-For the expanded architecture and implementation guidance, see:
-
-- `docs/map-viewer/depth-domain-reactivity.md`
+For cache ownership, private limits, and validation, see
+[Depth domain reactivity](depth-domain-reactivity.md).
 
 ## Overview
 
@@ -68,8 +63,8 @@ Depth legend and cursor behavior is centralized in:
 
 ## Complexity
 
-| Operation                   | Before             | After                                       |
-| --------------------------- | ------------------ | ------------------------------------------- |
-| GeoJSON load                | O(total features)  | O(total features) + per-project cache write |
-| Project toggle (depth mode) | O(active features) | O(active projects)                          |
-| Memory                      | GeoJSON only       | GeoJSON + one domain object per project     |
+| Operation                   | Cost                                                       |
+| --------------------------- | ---------------------------------------------------------- |
+| GeoJSON load                | Feature/coordinate traversal and a per-project cache write |
+| Project toggle (depth mode) | O(active projects), without feature traversal              |
+| Additional domain storage   | One domain object per project plus the merged domain       |

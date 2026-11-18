@@ -315,7 +315,7 @@ most 32 Unicode codepoints. Blank aliases produce no label; the geometry name is
 not a substitute. API and browser validation reject excess characters without
 truncating. Django admin omits the browser's UTF-16 `maxlength` attribute while
 retaining server validation, so astral characters use the same limit there.
-Existing records migrate to empty strings.
+Absent aliases and descriptions are represented by empty strings.
 
 Web editing uses the shared alias validator from `@speleodb/map-core`; Django
 uses the checked geometry contract. Shared contract tests prevent limits
@@ -335,8 +335,9 @@ anchors and styles and remains read-only for geometries.
 Tests cover empty and Unicode aliases, metadata-only updates, descriptions,
 optimistic conflicts, constant-query listing, migration defaults, archived
 metadata, independent visibility, cached sources, settings restore/reset and
-shared contracts. Both private and public web entrypoints still build; these
-private records are not exposed through public GIS views or new OGC endpoints.
+shared contracts. The private collection is not exposed through public GIS views
+or Geometry-specific OGC endpoints. A configured Geographic Bound exposes only
+its selected polygon and public rendering metadata as described above.
 
 Standalone rollout requires published `@speleodb/map-core` and
 `@speleodb/map-viewer` releases that include the alias, label, and icon exports,

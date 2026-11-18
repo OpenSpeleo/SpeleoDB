@@ -25,8 +25,8 @@ JavaScript candidates with `bun outdated`, then use the isolated Bun refresh
 below for authorized major upgrades. Run `uv lock --upgrade` for the complete
 Python graph. Finally inspect `uv tree --outdated --depth 1`; an older direct
 dependency is acceptable only when the resolver proves a concrete upstream
-constraint, which must be logged in `AGENTS.md` in the form
-`Can't update A until X is satisfied`.
+constraint. Record the blocker and point to the authoritative dependency
+metadata; do not duplicate release pins in documentation.
 
 Run `prek update` and review all hook changes as part of the same refresh. Hooks
 that wrap project tools, including ruff and djLint, must remain aligned with the
@@ -71,10 +71,11 @@ application runtime cost.
 
 ### Dependency upgrades
 
-`bun run update` (also exposed as `make update`) runs `bun update --latest` for
-all dependencies, including major upgrades, then refreshes Browserslist data.
-Review peer constraints and resolver warnings before accepting the refreshed
-graph.
+`bun run update` runs `bun update --latest` for all dependencies, including
+major upgrades, then refreshes Browserslist data. `make update` instead runs
+`bun update -i`, `bun run lock --upgrade`, `uv run uv-bump`,
+`uv lock --upgrade`, and `uv tree --outdated --depth 1`. Review peer constraints
+and resolver warnings before accepting either refreshed graph.
 
 Resolve the Bun lockfile independently of `node_modules`. Copy the combined
 `package.json`, `bun.lock`, `bunfig.toml`, and `.bun-version` into an empty
@@ -82,9 +83,9 @@ operating-system temporary directory outside every checkout. Use that directory
 as the actual working directory and the Bun release selected by `.bun-version`;
 run `bun update --latest '*' --lockfile-only --ignore-scripts` once to refresh
 the combined graph. Quote the pattern so the shell cannot expand it. Validate
-the resulting manifest and lockfile before copying both back. This is an
-intentional dependency-update workflow, not the workflow for a package-manager
-transition that must preserve existing versions.
+the resulting manifest and lockfile before copying both back. Copying resolver
+output back is an intentional dependency update and requires review of both
+files.
 
 The generated text lockfile must meet all of these conditions:
 
@@ -95,7 +96,7 @@ The generated text lockfile must meet all of these conditions:
   bundled entries inherit their parent archive's integrity and must not acquire
   fabricated independent checksums;
 - optional platform archive identities and required nested versions remain
-  represented, subject to the platform-filter limits below;
+  represented;
 - explicit `trustedDependencies` approvals cover only reviewed lifecycle
   scripts; the current approvals are `esbuild` and `fsevents`;
 - `test -s bun.lock && bun install --frozen-lockfile` succeeds from `/app` in
@@ -108,14 +109,10 @@ linker configured for the existing tool and subprocess layout. Inspect
 Compare lock graphs by package identity and resolved edges, rather than treating
 physical hoisting differences as version changes.
 
-Do not require byte-for-byte platform-field equality when comparing imported
-locks. The pinned Bun importer uses `none` for CPU targets `loong64`,
-`mips64el`, `riscv64`, and `wasm32`, and OS targets `netbsd` and `openharmony`;
-it also omits the source lock's `libc` field. Preserve all archive identities,
-checksums, and resolved dependency/peer edges despite those representation
-changes. Record the limits and verify native dependency loading on supported
-Linux/container and developer platforms. Unchanged archive identities alone do
-not establish successful installation on every upstream platform.
+Preserved optional archives do not prove installation parity across platforms.
+Review their CPU/OS filters and verify native dependency loading on supported
+container and developer platforms; see the
+[lockfile platform limitation](bun-tooling.md#intent).
 
 Dependabot uses the `bun` ecosystem for this workspace and updates `bun.lock`.
 The Browserslist workflow uses `bunx --bun update-browserslist-db@latest` and
@@ -149,8 +146,8 @@ change. Dependency updates must not add runtime queries, frontend work, or new
 services; any performance change should come only from the selected upstream
 implementations.
 
-The DRF 3.18 typing contract accurately models parsed request data as either a
-JSON object or array. Object-only handlers narrow that shape through
+The DRF typing contract accurately models parsed request data as either a JSON
+object or array. Object-only handlers narrow that shape through
 `require_mapping_request_data()` before indexing, mutation, or permission
 parsing. The shared guard returns object data unchanged and raises DRF
 `ParseError` for arrays, producing a deterministic HTTP 400 instead of an
@@ -163,11 +160,12 @@ retains shape validation.
 ## Verification
 
 After clean JavaScript and Python installs, run the production Vite build,
-JavaScript lint and unit tests, the full Django/Python test suite, and
+JavaScript lint, `make test` (backend, frontend, and browser targets), and
 `prek run -a`. Container-build validation proves the deployment toolchain and
 native wheels still install. Review the final manifest and lockfile diff for
 unrelated packages, nonportable paths, missing checksums, and unapproved install
-scripts before creating the single `[Dependency Update]` commit.
+scripts before publication. Staging, commits, and pushes require their own
+explicit authorization under `AGENTS.md`.
 
 Tests should assert graph properties rather than duplicate installed release
 numbers from manifests: package presence, manifest/lock agreement, portable
@@ -176,3 +174,6 @@ Do not pin package releases, lockfile format numbers, or versioned install keys
 in unit tests merely to repeat the resolver output. Product formats, protocol
 versions, and intentionally frozen compatibility fixtures remain valid version
 contracts.
+
+Contributor guidance:
+[Tooling and package-manager changes](agent-practices.md#tooling-and-package-manager-changes).

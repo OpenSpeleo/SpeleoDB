@@ -104,11 +104,11 @@ The CLI validates identities more strictly than GitPython's former direct
 serialization. At the commit boundary, missing/whitespace-only author names and
 names made entirely of Git-disallowed characters use `NO NAME`; author email,
 configured committer, and usable names are preserved. This includes period-only
-names rejected by the deployed Git 2.39.5. Account validation, database repair,
-and a nonblank-name constraint prevent new unnamed rows; the fallback also
-protects stale in-memory users. See [user identity](user-identity.md) for the
-signup lifecycle, migration, and regression coverage. Historical commits are not
-rewritten, and the fallback adds no SQL or network calls.
+names rejected by Git. Account validation, database repair, and a nonblank-name
+constraint prevent new unnamed rows; the fallback also protects stale in-memory
+users. See [user identity](user-identity.md) for the signup lifecycle,
+migration, and regression coverage. Historical commits are not rewritten, and
+the fallback adds no SQL or network calls.
 
 Initial publication explicitly selects the configured unborn branch and never
 pulls from an empty remote. Existing commits or remote refs prohibit initial
@@ -169,7 +169,8 @@ does not classify authentication or corrupt-object Git stderr as transient.
 GitLab remotes. Clone, checkout, reset, commit traversal, and database
 reconstruction execute normally. The tests verify reconstruction after the
 command removes its working copies, then clone the remote again to prove that
-cleanup preserved its history. They require the live-service test mode.
+cleanup preserved its history. They run by default and require the configured
+GitLab service.
 
 `test_gitlab_manager.py` exercises the actual python-gitlab client against the
 configured GitLab service. Coverage includes initial publication, existing and
@@ -178,12 +179,12 @@ and the absence of a duplicate POST when cloning an existing remote.
 `test_git_retry.py` uses actual Git commands to verify retries and sanitized
 diagnostics in both retry logs and final tracebacks.
 
-Existing GitLab integration coverage remains in separate test modules, including
-`speleodb/git_engine/tests/test_tree_to_json.py` and
-`speleodb/surveys/tests/test_project_git_history.py`. Those tests retain their
-`skip_if_lighttest` marker and require provisioned GitLab and storage services.
-Their service availability is distinct from the command's history-cache
-behavior.
+GitLab history integration coverage also lives in
+`speleodb/surveys/tests/test_project_git_history.py` and requires provisioned
+GitLab and storage services. The `skip_if_lighttest` marker deselects tests only
+when `--light` is explicitly requested; the default backend suite runs them.
+`speleodb/git_engine/tests/test_tree_to_json.py` instead exercises serialization
+with local Git repositories and needs no GitLab provisioning.
 
 ### Diagnosing CI stalls
 
@@ -197,8 +198,7 @@ identifies slow phases when the run completes. These diagnostics require no
 extra dependency.
 
 Tests must not hold a competing scheduler lock solely to exhaust its backoff
-budget. The former full-budget standby test has been removed; the diagnostic
-threshold is a hang guard, not a target test duration.
+budget. The diagnostic threshold is a hang guard, not a target test duration.
 
 GitHub can delay displaying an unfinished progress line, so the last visible
 module is not proof that it owns the blocked operation. Inspect the stack dump
@@ -292,25 +292,5 @@ pure-Python client with its existing 15-second request timeout and explicit
 transient-write opt-in. `compose/setup` invokes provisioning as a module so it
 can import this policy without initializing Django.
 
-## Confirmed September 2026 CI stall
-
-Run `34997387739`, job `104476947867`, dumped its stack at 2026-09-15 16:52:14
-UTC inside python-gitlab's `handle_retry_on_status` sleep. The blocked operation
-was project creation in the first Compass upload test; the last visible
-exploration-lead test and its teardown had completed. The installed SDK accepts
-a server-directed delay outside its HTTP timeout, even when the retry count is
-finite. The stack confirms that waiting path; it does not reveal the exact HTTP
-status or header value. The application now owns bounded retry sleeps. Earlier
-synthetic delay-header regressions were removed when GitLab tests were converted
-to real services; do not treat connection refusal coverage as verification of
-those HTTP-header sequences.
-
-The later project-creation 429 investigation also removed duplicate creation
-POSTs and lazy repository provisioning during upload cleanup. Upload failure
-tests now require successful real provisioning and assert the intended exception
-and persisted transaction outcome. See
-[real GitLab integration tests](ci-gitlab-testing.md) for the CI service
-boundary, authentication evidence, and quota uncertainty.
-
-See [bounded retries](bounded-retries.md) for the broader retry audit and
-verification status.
+See [bounded retries](bounded-retries.md) for startup, transport and durable
+recovery limits.

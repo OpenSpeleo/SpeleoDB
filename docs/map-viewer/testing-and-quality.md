@@ -1,21 +1,33 @@
 # Map Viewer: Testing and Quality Playbook
 
-This document explains how agents should validate map viewer work before
-considering a change complete.
+**Agent Documentation & Practices.** This maintained playbook defines map viewer
+verification boundaries and reproducible commands. It records no past run
+results; reports and timings belong outside the checkout.
 
 ## Core Commands (Existing Application Container Only)
 
 - Lint JavaScript:
-  - `docker exec -w /app speleodb_local_django bun run lint:frontend`
+  - `docker exec -w /app speleodb-monorepo-django bun run lint:frontend`
 - Run frontend unit tests:
-  - `docker exec -w /app speleodb_local_django bun run test:frontend`
+  - `docker exec -w /app speleodb-monorepo-django bun run test:frontend`
 - Run backend tests:
-  - `docker exec -w /app speleodb_local_django pytest <targets>`
+  - `docker exec -w /app speleodb-monorepo-django pytest <targets>`
 - Clean production build:
-  - `docker exec -w /app speleodb_local_django bun run build`
+  - `docker exec -w /app speleodb-monorepo-django bun run build`
+
+`Makefile` defines `make test` as backend pytest (`test-py`), frontend Vitest
+(`test-frontend`), and the browser wrapper (`test-browser`). To run all three:
+
+```bash
+docker exec -w /app speleodb-monorepo-django make test
+```
 
 Do not start another stack or run tests on the host. Run GitLab-backed tests
-serially under the repository audit contract.
+serially under the repository audit contract. Before a finite production build
+or final browser checks, stop the local webserver and its watcher; browser
+verification must use the resulting assets served by Django. Missing
+prerequisites are reported, not installed without an explicit request. Honor
+stop requests and report unrun checks.
 
 ## Distance ruler verification
 
@@ -68,10 +80,10 @@ transition band, lift one finger, and wait for actual camera motion to finish
 without a camera setter or new touch. The held finger's next 48-pixel drag must
 move the geographic anchor along its twelve-step path with the same one-pixel
 axis limit. Full release must allow camera motion to finish. The pause catches
-MapLibre 6.14's partial-release inertia resetting a live contact; immediate
-dragging alone can pass before the faulty cleanup runs. Engine-owned unit tests
-cover the underlying corrections; these browser cases protect their integration
-into the application's UI. See
+partial-release inertia resetting a live contact; immediate dragging alone can
+pass before the faulty cleanup runs. Engine-owned unit tests cover the
+underlying corrections; these browser cases protect their integration into the
+application's UI. See
 [MapLibre integration](shared-packages.md#web-renderer-and-providers).
 
 Named Playwright steps separate viewer startup, wheel crossings, sampled pans,
@@ -87,16 +99,15 @@ engine contact handling but does not certify native iOS delivery. Neither path
 uses fixed sleeps, retries, geometric tolerance expansion or private handler
 mutation. Touch-path JSON attachments retain the before state and every sample.
 
-The former duplicate source-load matrix and 24,000-feature revisions are absent
-from UI/UX coverage. Source installation, asynchronous updates, cancellation and
-retry contracts belong in the existing Vitest map-layer suites; provider
-projection configuration is covered by `map/mapbox_provider.test.ts`. The
-browser scenarios retain actual wheel, pointer and touch delivery because a
-DOM-only test cannot establish the rendered camera's response. Their duration
-includes real render frames and natural gesture completion. Investigate runs
-over five seconds using measured step durations. Prefer fewer representative
-scenarios to exhaustive renderer matrices while retaining the original failure
-conditions, meaningful intermediate screen positions and actual native input.
+Source installation, asynchronous updates, cancellation and retry contracts
+belong in the existing Vitest map-layer suites; provider projection
+configuration is covered by `map/mapbox_provider.test.ts`. The browser scenarios
+retain actual wheel, pointer and touch delivery because a DOM-only test cannot
+establish the rendered camera's response. Their duration includes real render
+frames and natural gesture completion. Investigate runs over five seconds using
+measured step durations. Prefer fewer representative scenarios to exhaustive
+renderer matrices while retaining the original failure conditions, meaningful
+intermediate screen positions and actual native input.
 
 Run this coverage through the existing application container, after building
 assets, with PostgreSQL configured as described in
@@ -125,8 +136,8 @@ a React camera wrapper in another application.
   matrix, rank model, scope routing
 - `frontend_private/.../map_viewer/config.loading.test.ts` — project/network/GPS
   loading, caching, setPublicProjects
-- `frontend_private/.../map_viewer/state.test.ts` — state fields, init() reset
-  behavior
+- `frontend_private/.../map_viewer/state.test.ts` — state fields,
+  resetLayerState() behavior
 
 ### Map modules
 
@@ -177,7 +188,7 @@ a React camera wrapper in another application.
 
 - matrix coverage for project/network levels
 - scope routing via station metadata
-- backward compatibility helpers stay aligned
+- existing convenience helpers delegate to central policy
 
 ### Depth coloring and scale
 
@@ -199,7 +210,7 @@ a React camera wrapper in another application.
 ### Settings and modal flows
 
 - four equal-width toolbar actions with readable mobile labels and green Import
-  GPS
+  GPX/KML
 - native dialog focus, keyboard containment, dismissal, and browser persistence
 - separate Managers menu, manager/details/Back handoff, and single manager
   launch
@@ -216,8 +227,9 @@ See [Settings design](settings.md) for the complete behavioral contract.
 
 When frontend build scripts, registry entries, or Tailwind sources change:
 
-1. run `docker exec -w /app speleodb-monorepo-django bun run build` and wait for
-   success before refreshing the browser
+1. stop the local webserver and its watcher, run
+   `docker exec -w /app speleodb-monorepo-django bun run build`, and wait for
+   success before serving the built assets and refreshing the browser
 2. ensure no "No utility classes were detected" warnings
 3. validate `.vite/manifest.json`, `style-app`, the bootstrap, and all map
    controller entries are generated under
@@ -236,19 +248,16 @@ When frontend build scripts, registry entries, or Tailwind sources change:
   browser, renderer and native input. See the
   [browser suite guide](../../tests/browser/README.md) for setup, timing targets
   and the boundaries of this evidence.
-- JS lint is enforced via pre-commit (`lint-map-viewer-js`).
+- JS lint is enforced via pre-commit (`lint-frontend`).
 - Browserslist DB refresh runs in a scheduled workflow:
   - `.github/workflows/update_browserslist_db.yml`
 
-## Practical Agent Checklist
+## Review criteria
 
-Before finalizing changes:
-
-1. lint clean
-2. tests clean
-3. no duplicated logic introduced where centralized API exists
-4. docs updated for architecture-impacting behavior
-5. public/private parity confirmed for shared map features
+Review shared behavior in both public and private entrypoints, preserve
+centralized permission/state APIs, and update architecture documentation with
+behavior changes. Report the checks actually run and their outcome; a passed
+lint or build does not establish that unrun tests passed.
 
 ## Boundary evidence
 
@@ -257,12 +266,12 @@ assertions, real rendered Django templates for route contracts, and configured
 storage for storage/rollback evidence. Browser tests are exclusively UI/UX: use
 small deterministic fixtures and controlled server responses to exercise the
 real renderer, forms, native input, focus, loading feedback and error recovery.
-Verify frontend logic with Vitest. Both lower layers run under `make test`. Pure
-frontend rendering should be directly callable with its real helpers so
-capability and XSS checks do not replace the behavior under test. A mocked HTTP
-failure is unit-level control-flow evidence; it does not establish real
-transaction, transport, storage compensation, or browser behavior. Use the real
-integration paths for those claims, following the shared
+Verify frontend logic with Vitest. `make test` includes both lower layers and
+the browser suite. Pure frontend rendering should be directly callable with its
+real helpers so capability and XSS checks do not replace the behavior under
+test. A mocked HTTP failure is unit-level control-flow evidence; it does not
+establish real transaction, transport, storage compensation, or browser
+behavior. Use the real integration paths for those claims, following the shared
 [GitLab test contract](../ci-gitlab-testing.md) where applicable.
 
 ### Viewer startup composition
@@ -282,5 +291,6 @@ The composition renderer double implements the shared `GlobeAtmosphereMap`
 contract, including style readiness, sky state, and custom-layer storage. Its
 hydration cases dispatch `style.load` before `load` and after style replacement
 to exercise real atmosphere installation and recreation for both viewer roots,
-alongside survey-source restoration. GPU resource creation and visual appearance
-remain browser responsibilities.
+alongside survey-source restoration. The double does not establish GPU resource
+creation or visual appearance. Inspect those with the actual renderer when
+needed; cosmetic assertions do not belong in the automated UI suite.

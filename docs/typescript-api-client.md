@@ -212,26 +212,7 @@ For a consumer upgrade:
    the monorepo integration graph. An unpublished package is a release gate;
    workspace success does not prove that a standalone clone can install it.
 
-### Updating from 0.2 to 0.3
-
-The corrected contract introduces an optional query position before request
-options for DRF operations. Preserve the full argument order: path arguments,
-body when present, query, then options. Use `undefined` for an unused query;
-otherwise keep existing filters in the query object. This applies to GET and
-DELETE as well as request-body methods. Passing `webApiOptions()` in the query
-position can lose the browser client, CSRF, cancellation, or progress behavior.
-Typecheck each caller rather than inserting arguments into authentication or OGC
-operations whose signatures differ.
-
-Two media declarations also change the web imports:
-
-- GIS-layer creation now uses `v2GisLayersCreate`, replacing
-  `v2GisLayersCreateWithFormData`, because its required file permits only
-  multipart input.
-- Experiment-record JSON creation now uses
-  `v2StationsExperimentRecordsCreateWithJson`, replacing
-  `v2StationsExperimentRecordsCreate`, because the contract separately describes
-  JSON and form input.
+## Form-specific contracts
 
 Full experiment-record writes require a measurement-date string; build that
 field explicitly instead of casting a generic dynamic object to the generated
@@ -243,12 +224,11 @@ form-created records can reject subsequent PUT/PATCH because the server
 preserves that submitter array; do not imply that accepting an array response
 makes it a valid write value.
 
-Review the other newly expressed input requirements at their owning form
-boundary: geometry updates require `expected_revision`, resource creation must
-satisfy its note/file union, and select experiment fields require options.
-Preserve existing revision conflict handling and partial-edit omission
-semantics. Do not relax these generated requirements with casts or optional DTO
-copies.
+Review generated input requirements at their owning form boundary: geometry
+updates require `expected_revision`, resource creation must satisfy its
+note/file union, and select experiment fields require options. Preserve existing
+revision conflict handling and partial-edit omission semantics. Do not relax
+these generated requirements with casts or optional DTO copies.
 
 Run web checks from `/app` in the existing application container, following
 `AGENTS.md`, for example `bun run typecheck`, `bun run lint:frontend`,
@@ -256,22 +236,23 @@ Run web checks from `/app` in the existing application container, following
 frontend fixtures exercise generated requests rather than mocking the SDK. The
 browser-adapter regression holds real fetch and XHR responses for eleven
 seconds, verifies completion and caller cancellation, and checks finite per-call
-overrides without replacing clocks. `tests/browser/resource-edit.spec.ts` uses
-the rendered viewer edit form to save a note and a replacement document through
-real Django endpoints. It checks the PATCH body, independently reads saved
-values and S3 bytes, and reloads the viewer to verify persistence. Run it
-through the Django browser wrapper with the configured test S3 service and
-bucket; `tests/browser/resource_fixtures.py` supplies isolated station/resource
-rows and removes their uploaded objects afterwards. No application HTTP response
-or browser transport is replaced. Manually constructing a create-shaped
-`FormData` does not exercise disabled edit controls. The Django view tests parse
-the rendered controller JSON and verify resource identities, permission flags,
-form configuration, and navigation. Update those assertions alongside controller
-context changes; an API URL appearing elsewhere in the page does not prove that
-a form targets the correct entity. The shared test parser also rejects duplicate
-controller JSON keys. The Django upload integration test covers stored
-artifacts, authenticated CSRF, progress/cancellation, and ambiguous failure
-behavior against real endpoints.
+overrides without replacing clocks.
+
+`tests/browser/resource-edit.spec.ts` uses the rendered viewer edit form to
+verify disabled type controls and retained note/file drafts after server
+rejection. It controls the external API response to exercise that UI failure;
+backend resource persistence and storage readback belong in pytest. Use the
+Django browser wrapper through `make test-browser`. `make test` includes this
+wrapper alongside backend and frontend tests.
+
+The Django view tests parse the rendered controller JSON and verify resource
+identities, permission flags, form configuration, and navigation. Update those
+assertions alongside controller context changes; an API URL appearing elsewhere
+in the page does not prove that a form targets the correct entity. The shared
+test parser also rejects duplicate controller JSON keys. The Django upload
+integration test covers session authentication, rendered CSRF, rejection without
+CSRF, and exact stored artifact bytes. Progress, cancellation, and ambiguous
+failure handling belong to the frontend transport and controller tests.
 
 Generated operations do not automatically introduce retries or caching. Keep
 existing request coalescing, state caches, bulk list reads, and explicit refresh

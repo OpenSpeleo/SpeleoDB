@@ -29,14 +29,12 @@ integrity. Bundled package entries inherit integrity from their containing
 archive rather than carrying an independent checksum. Audit dependency edges,
 optional platform variants, and nested versions when changing the graph.
 
-Archive identity preservation does not imply identical platform metadata. The
-pinned Bun importer maps unsupported CPU targets `loong64`, `mips64el`,
-`riscv64`, and `wasm32` to `none`, maps unsupported OS targets `netbsd` and
-`openharmony` to `none`, and omits the source lock's `libc` field. Those
-archives and their checksums remain in the graph, but the converted filters
-cannot prove installation parity on every upstream platform. Verify native
-package loading on the supported container and developer platforms; keep these
-representation limits explicit when comparing locks.
+Archive identity does not establish platform installability. The committed lock
+includes optional archives whose CPU or OS filter is `none`; retaining those
+archives and checksums does not make them selectable on their upstream targets.
+Native dependency loading must be verified on the supported container and
+developer platforms. Lock comparisons must distinguish preserved package
+identities from platform-filter representation and actual native-tool support.
 
 The manifest explicitly trusts only `esbuild` and `fsevents` dependency
 lifecycle scripts through `trustedDependencies`. This includes the optional
@@ -84,18 +82,21 @@ Django-generated `url_reverse.js` remain outside Vite.
 - `bun run pre-commit`: the same clean production build contract.
 - `bun run lint:frontend` and `bun run test:frontend`: source quality gates.
 - `bun run typecheck`: strict checking across three environments.
-- `bun run typecheck:development`: unit/browser tests, upload subprocesses,
-  tools and Railway authoring.
-- `bun run test:browser`: the existing Playwright browser suite.
+- `bun run typecheck:development`: unit/browser tests, tools and Railway
+  authoring.
+- `bun run test:browser`: the existing Playwright browser suite; use
+  `make test-browser` for its Django live-server wrapper.
+- `make test`: backend, frontend, and browser targets from the Makefile.
 
 `bun run` executes the existing Vite, Vitest/jsdom, Playwright, lint, and
-typecheck scripts with Bun. The browser-upload subprocess uses the same runtime.
-Retain the existing Vitest configuration and argument forwarding; `bun test`
-selects a different test runner. Package executables used outside scripts run
-through `bunx --bun`. Use `bun outdated` to inspect releases and
-`bun update --interactive` to select updates. `bun run update` and `make update`
-run `bun update --latest` for all dependencies, followed by the Browserslist
-data refresh. See [Dependency Updates](dependency-updates.md).
+typecheck scripts with Bun. Retain the existing Vitest configuration and
+argument forwarding; `bun test` selects a different test runner. Package
+executables used outside scripts run through `bunx --bun`. Use `bun outdated` to
+inspect releases and `bun update --interactive` to select updates.
+`bun run update` runs `bun update --latest` for all dependencies, followed by
+the Browserslist data refresh. `make update` runs interactive Bun updates, the
+standalone lock refresh, Python direct updates, and uv resolution; the Makefile
+owns that sequence. See [Dependency Updates](dependency-updates.md).
 
 The Prettier hook uses prek's `bun` language for installation and an explicit
 `bun run --bun prettier` entry for execution. Selecting an installation language
@@ -108,9 +109,8 @@ successful build in the webserver logs, then refresh the browser manually. Use
 launched independently and no watcher is already running. Type checks and
 ownership audits run once before watching; subsequent saves compile only. Stop
 the local webserver and its watcher before running `bun run build` for final
-evidence and verifying the served manifest hash. The migration-era Tailwind
-compiler retained some removed utility candidates during long-running watch
-sessions; finite clean builds avoid that state.
+evidence and verifying the served manifest hash. Finite clean builds ensure
+validation uses the current source set and removes accumulated watch output.
 
 ## Django and deployment
 
@@ -145,23 +145,19 @@ propagation never publishes assets or invokes deployment services.
 For an intentional dependency refresh, resolve from the manifest and existing
 text lockfile in an empty external directory, independently of `node_modules`.
 Use the workflow in [Dependency Updates](dependency-updates.md), then verify a
-guarded frozen install without rewriting the lock. A package-manager transition
-preserves the direct specifications, exact package/version/integrity identities,
-and resolved dependency edges, including optional platform variants, except for
-explicitly authorized compatibility changes. Do not run general
-dependency-update commands during a transition. Different physical hoisting does
-not authorize changing a package version.
+guarded frozen install without rewriting the lock. Different physical hoisting
+does not authorize changing a package version.
 
 Verification covers the full Vitest suite, JavaScript lint, Railway
 typechecking, a clean production build, and the browser cases relevant to the
 change. Tooling contract tests check the shared version authorities,
 frozen-install commands, script trust, lock metadata, and deployment automation.
 They also assert Bun execution for scripts and spawned tools, so a compatible
-API surface cannot conceal a different runtime. Run the migrated JavaScript and
-TypeScript checks inside the existing application container. Preserve historical
-browser timing and memory limitations when reporting results. The package
-manager adds no application runtime work; native tool loading and output
-coherence prove the build remains usable without changing frontend behavior.
+API surface cannot conceal a different runtime. Run JavaScript and TypeScript
+checks inside the existing application container and report the scope actually
+exercised. The package manager adds no application runtime work; native tool
+loading and output coherence prove the build remains usable without changing
+frontend behavior.
 
 Deployment verification also checks `collectstatic` and production module
 MIME/CORS behavior. Full dependency refreshes retain the broader Python and hook
@@ -170,28 +166,24 @@ gates described in [Dependency Updates](dependency-updates.md).
 ## Monorepo command scope
 
 Here, root JavaScript commands mean the web application's `apps/web` root. Run
-installs and tests in the already-running application container at `/app`. That
-standalone bind mount prevents Bun's ancestor-workspace discovery from selecting
-the enclosing monorepo and its separate lockfile. Changing directories to
+web checks in the already-running application container at `/app`. The local
+launcher selects the monorepo installer when `SPELEODB_LOCAL_PACKAGES=1`; that
+installer consumes the root integration lock in an isolated Linux workspace.
+Standalone mode uses the guarded frozen web lock install. The `/app` mount
+prevents accidental ancestor-workspace discovery; changing directories to
 `apps/web` on the host alone does not establish this isolation. The named
 `/app/node_modules` volume also keeps Linux native packages separate from the
 host's architecture. For a web-scoped change, run the web commands and prek
 hooks; enclosing aggregate commands can enter unrelated applications. Do not
 start a new stack for verification.
 
-## Reference searches
-
-Case-insensitive searches for obsolete tooling commands need semantic review.
-DOM APIs, JSON tree nodes, pytest identifiers, Celery worker names, product
-anode fields, vendor source, CDN URLs, source maps, and checksums are not
-migration targets. Parent-monorepo helper paths retain their actual names
-because the web application does not own those files. Report the remaining
-categories with the search result rather than claiming zero literal matches or
-modifying unrelated interfaces and artifacts.
-
-Native TypeScript 7 checks the full source graph with `allowJs: false`. A
-TypeScript 6 compiler API alias supports typed ESLint. Source and template
+The native TypeScript checker checks the full source graph with
+`allowJs: false`. A separate compiler API package supports typed ESLint;
+`package.json` owns both package aliases and their versions. Source and template
 audits enforce zero authored JavaScript and executable template expressions,
 with exact vendor/generated exceptions. See
 [TypeScript architecture](typescript-architecture.md) for environment
 boundaries, compiler compatibility and build enforcement.
+
+Contributor guidance:
+[Tooling and package-manager changes](agent-practices.md#tooling-and-package-manager-changes).

@@ -8,18 +8,14 @@ Field names are user-supplied free-text labels.
 
 ## Design Intent
 
-Field names are stored **exactly as the user typed them** -- no case
-transformation is applied. This preserves scientific notation, chemical
-formulas, and unit abbreviations that would be broken by automatic titlecasing
-(e.g. `mg/L-N` must not become `Mg/L-N`).
+Field names preserve the user's letter case; sanitization still applies as
+described below. This preserves scientific notation, chemical formulas, and unit
+abbreviations that would be broken by automatic titlecasing (e.g. `mg/L-N` must
+not become `Mg/L-N`).
 
-### Historical note
-
-Prior to this change, field names were titlecased via Python's `str.title()`
-(backend) and a JS `toTitleCase()` (frontend). This mangled scientific terms and
-was removed. Existing data in the database may still contain `.title()`-d names
-from the old behavior. This is a known cosmetic inconsistency; no data migration
-was performed because the stored names are still valid and readable.
+Existing stored labels retain their saved case, including labels titlecased by
+older application behavior. Case-preserving validation does not reconstruct the
+original spelling or automatically rewrite those labels.
 
 ## Sanitization
 
@@ -57,8 +53,11 @@ Two fields named `"pH Level"` and `"ph level"` are considered duplicates.
 
 Every experiment has two mandatory fields identified by fixed UUIDs:
 
-- `Measurement Date` (UUID `00000000-...0001`)
-- `Submitter Email` (UUID `00000000-...0002`)
+- `Measurement Date`
+- `Submitter Email`
+
+Their canonical identities are defined by `MandatoryFieldUuid` in
+`speleodb/gis/models/experiment.py`.
 
 During experiment creation (when fields have no UUID), mandatory fields are
 matched by **exact string equality** against their canonical names. The frontend
@@ -80,17 +79,10 @@ editor and its mutable `ExperimentFields` facade. Its jQuery reference is
 captured during import and its generated field counter survives repeated
 initialization. Validation compares trimmed, case-insensitive names without
 rewriting input values; multiple-choice labels are escaped before rendering.
-Direct tests cover repeated wiring, duplicate-name styling, incomplete fields,
-and delegated tag editing. Erased DOM assertions retain the existing failure
-when required field inputs are absent.
+Tests cover duplicate-name styling, incomplete fields, and delegated tag
+editing.
 
-The Django admin widget has its own controller,
-`frontend_common/controllers/admin-experiment-field.ts`. It preserves mandatory
-records, existing slugs/hashes, and immutable field controls when serializing
-custom fields. It uses the shared `escapeHtml` helper at the name and option
-attribute values and the displayed slug before building HTML. Quotes, tags,
-entity-like text and event-handler payloads therefore remain literal field
-values. Escaping applies only to presentation: dataset slugs, stored values and
-hashes retain their original identity, and serialization still reads the input
-values normally. Controller tests cover attribute and element breakouts plus
-display/serialization round trips; encoding adds only local string work.
+Django admin presents experiment field definitions as read-only JSON through
+`ExperimentAdmin.raw_experiment_fields_json` in
+`speleodb/gis/admin/experiment.py`. Schema changes use the experiment API and
+private field editor; the admin form does not expose field-schema editing.

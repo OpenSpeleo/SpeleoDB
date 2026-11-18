@@ -117,7 +117,7 @@ publication is pending, and explicit uncertain-result handling. After successful
 publication, a failed map refresh is reported separately so users do not upload
 the same content again. See [Map file import](map-viewer/import.md).
 
-## Verification and extension
+## Verification
 
 Tests run inside the existing web container as described by `AGENTS.md`.
 Frontend tests use real jQuery, actual DOM controls, generated operations, and a
@@ -133,12 +133,7 @@ responses, and UI settlement. MapLibre renderer replacement is limited to tests
 where JSDOM cannot provide its required WebGL context. Live Django upload tests
 also verify stored artifacts and authenticated CSRF behavior.
 
-When adding a form, first confirm the endpoint's audited schema and generated
-operation. Reuse the applicable form primitive, add a typed controller context,
-build the callback, and cover its DOM-to-HTTP behavior. Run `bun run typecheck`,
-`bun run lint:frontend`, `bun run audit:api`, `bun run test:frontend`, and the
-production build. The AST API audit prevents first-party raw transport calls
-from returning under aliases or new endpoint strings.
+Contributor guidance: [Form extensions](agent-practices.md#form-extensions).
 
 ## Settings panel sizing
 

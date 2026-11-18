@@ -105,10 +105,11 @@ immutability, invalid input, empty results, scheduling and cancellation. Viewer
 tests verify clipped sources, extents/depth, hidden empty projects, style
 reloads and null-bound parity. Browser cases use the existing Django/Playwright
 harness with small deterministic HTTP responses and database-only dashboard
-records. They check the real rendered polygon fill, outline, alias and color
-across style changes, and native selection, error recovery and save feedback.
-They do not upload surveys, inspect map sources, assert request payloads or read
-back a browser mutation. Exact clipping and renderer configuration remain in
+records. They check polygon visibility across style changes and native selection
+with retained draft values after a rejected save. Alias and color configuration
+are covered by the frontend composition tests. They do not upload surveys,
+inspect map sources, assert request payloads or read back a browser mutation.
+Exact clipping and renderer configuration remain in
 `frontend_common/test/viewer-composition.test.ts`; selected UUID/null payloads
 remain in `frontend_common/controllers/gis-view-form.test.ts`. The pytest suites
 `speleodb/gis/tests/test_gis_view_geographic_bound.py` and

@@ -67,9 +67,8 @@ Sensor rendering; experiments remain station-detail records, not map markers.
 preferences before private layers load. Public initialization uses
 `persist: false`, establishing defaults without reading private storage.
 Map-data resets preserve preferences. Malformed fields use defaults; unavailable
-storage leaves controls usable for the visit. Retired preference fields from the
-earlier linework/overlay controls are ignored, so removed controls cannot leave
-content hidden.
+storage leaves controls usable for the visit. Unrecognized preference fields are
+ignored and cannot hide content outside the supported controls.
 
 Display, project, network, and country preferences update in memory before any
 storage write. `schedulePreferenceWrite()` coalesces each storage key until a
@@ -105,8 +104,8 @@ and the legend's narrow map capability live in `map-depth-legend.ts`. Init and
 Reset replace the preference object; teardown flushes persistence and retains
 that object. Panel registries preserve their singleton identity across teardown,
 while panel teardown unregisters its DOM from the shared menu stack. Tests cover
-repeated initialization, pending requests, focus, and retained callbacks so
-translation does not silently change cleanup behavior.
+repeated initialization, pending requests, focus, retained callbacks, and
+cleanup ownership.
 
 ## Visibility composition
 
@@ -169,12 +168,7 @@ The private fullscreen host contains the same toolbar, map, and static overlays.
 outside this viewer. Download anchors keep their existing placement. This is a
 container contract, not a rewrite of entity APIs.
 
-## Extension, performance, and verification
-
-Add category metadata/defaults in `DEFAULTS.DISPLAY`, compose its gate in the
-renderer and lifecycle paths, and add regression coverage. Reuse Settings rows;
-do not duplicate state or permission matrices. Document stable DOM hooks and
-escape user/API values.
+## Performance and verification
 
 Category switches update tracked MapLibre layout/filter properties without
 record fetches, bulk selection, GeoJSON reconstruction, style resets, or camera
@@ -190,16 +184,11 @@ Only current renderer failures produce an error; superseded operations do not
 raise a failure notification. The source menu also selects and closes before its
 queued raster/style changes, and removal cancels queued source work.
 
-Run tests only in the existing application container. Cover real rendered
-templates, persistence, visibility composition, late loads, public isolation,
-manager focus, and editor keyboard isolation. Entrance regressions additionally
-cover legacy preference restoration, data refresh/reconstruction, basemap
-switching, project/country gate preservation, and unchanged linework/depth data.
-Inspect the authenticated browser at 320/390px, tablet, desktop, short
-landscape, fullscreen, 200% zoom, and reduced motion. Run the manual clean
-build, refresh the browser, and verify manifest-matching served assets before
-final screenshots. Check bounds/focus/network behavior as well as visuals, and
-record actual results in external temporary verification notes.
+Regression coverage includes real rendered templates, persistence, visibility
+composition, late loads, public isolation, manager focus, and editor keyboard
+isolation. Entrance regressions additionally cover legacy preference
+restoration, data refresh/reconstruction, basemap switching, project/country
+gate preservation, and unchanged linework/depth data.
 
 Concurrency coverage must exercise the actual control handlers: reverse a switch
 while its load is unresolved, change destination across panel types, hide a
@@ -207,3 +196,5 @@ pending destination, and replace/remove the map. Assert immediate checked state,
 stable focused elements, newest final visibility, and absence of stale camera
 moves. Persistence tests verify one write for a burst, pagehide flushing,
 country-gate decisions before storage flush, and private/public isolation.
+
+Contributor guidance: [Map settings](../agent-practices.md#map-settings).

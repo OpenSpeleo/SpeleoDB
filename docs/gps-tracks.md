@@ -22,10 +22,12 @@ valid because GPS Tracks have no public viewer or tokenized public endpoint.
 | READ_AND_WRITE |       Yes       |      Yes       |      No      |   No   |
 | ADMIN          |       Yes       |      Yes       |     Yes      |  Yes   |
 
-Every new track receives an active ADMIN permission for its creator. The data
-migration establishes the same invariant for legacy tracks. Permission revokes
-are soft deletes: the row remains as inactive history and POST owns
-reactivation. PUT only updates an active row.
+Every new track receives an active ADMIN permission for its creator. For
+pre-sharing tracks, `gis.0038_gpstrack_sharing` backfills that grant from the
+existing owner relation. This preserves owner access when permission rows become
+authoritative; creator-email provenance is not a runtime authorization fallback.
+Permission revokes are soft deletes: the row remains as inactive history and
+POST owns reactivation. PUT only updates an active row.
 
 GPS Tracks are top-level collaborative entities and are never hard-deleted by
 the product API or Django admin. DELETE marks the track inactive, deactivates
@@ -77,8 +79,7 @@ import/storage contract is intentionally outside this feature.
 `/private/gps-tracks/` is the listing and import entry point. Its desktop rows
 and mobile cards provide Export GPX plus the same circular right-arrow Open
 control used by the Project and Surface Network listings. Open leads to
-`/private/gps-track/<uuid>/`; metadata editing is no longer split into an inline
-listing modal.
+`/private/gps-track/<uuid>/`; metadata editing uses the track settings page.
 
 The per-track workflow uses the standard responsive settings shell:
 
@@ -114,14 +115,13 @@ Vite build. Repository tests must run inside the devcontainer.
 ## Shared GPX import dialog
 
 `frontend_private/static/private/ts/gpx_import.ts` retains a single selected
-file and CSRF token behind the mutable `GPXImport` facade. The upload remains a
-multipart PUT with same-origin credentials. Successful imports dispatch landmark
-refresh before GPS-track refresh; the latter carries `{deactivateAll: true}`.
-Request failures render text and settle the upload promise after resetting its
-button. The finite backend shape lives in `ts-types/domain/gpx-import.ts`; its
-assertion adds no runtime validation.
+file behind the `GPXImport` facade. The generated `v2ImportGpxUpdate` operation
+sends a multipart PUT through the common browser adapter, which owns current
+CSRF headers and same-origin credentials. When imported objects exist, success
+dispatches landmark refresh before GPS-track refresh; the latter carries
+`{deactivateAll: true}`. Request failures render text and reset the upload
+button.
 
 Direct tests exercise file validation, empty success, request/header/body
-contracts, refresh order, success timeout, and repeated initialization's
-existing duplicate listener registration. The migration adds no file copying or
-processing beyond the existing browser FormData operation.
+contracts, refresh order, and success feedback. The browser sends the selected
+file without making a transformed copy.

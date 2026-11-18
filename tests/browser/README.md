@@ -1,5 +1,7 @@
 # Complex browser workflows
 
+**Agent Documentation & Practices — browser testing guide for contributors.**
+
 Browser tests cover complex behavior that depends on a real browser: native
 input combined with state transitions, asynchronous work and recovery, or
 interaction between map tools, dialogs and visibility scopes. Keep real compiled
@@ -12,27 +14,28 @@ color checks or GPU-frame captures. Screenshots are failure diagnostics only.
 
 Backend permissions, persistence, serialization, API contracts and processing
 belong in pytest. Frontend logic, form wiring, request payloads, caching,
-scheduling, renderer configuration and asset contracts belong in Vitest. Both
-lower layers run under `make test`. Removing cosmetic browser coverage does not
-claim that a unit test certifies browser pixel output.
+scheduling, renderer configuration and asset contracts belong in Vitest.
+`make test` runs backend, frontend, and browser tests. Use `make test-py` or
+`bun run test:frontend` to run the lower layers separately.
 
-## Retained workflows
+## Workflow coverage
 
-| File                                | Scenarios per engine | Browser-specific failure protected                                                                                                                                                       |
-| ----------------------------------- | -------------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `controllers-parity.spec.ts`        |                    2 | Native file removal or rejected upload loses retained state; contenteditable Tab navigation and row operations lose focus or data.                                                       |
-| `viewer-gestures.spec.ts`           |                    4 | Wheel/projection crossings change pan direction; releasing one touch loses the remaining contact.                                                                                        |
-| `viewer-parity.spec.ts`             |                    5 | Public/private composition or country/project gates lose visibility across changes; focus/fullscreen interaction, measurement cancellation, or drawing history/discard breaks.           |
-| `viewer-responsiveness.spec.ts`     |                    2 | Pending GPS work ignores the final toggle intent; GIS geometry visibility changes disturb other geometry types or surveys.                                                               |
-| `exploration-lead-headings.spec.ts` |                    2 | Tabs lose keyboard focus or select the wrong heading; gestures lose pointer ownership (native touch in Chromium); saved completion and display gates prevent revealing/reopening a lead. |
-| `resource-edit.spec.ts`             |                    1 | Rejected note/file editing loses input or the native file selection.                                                                                                                     |
-| `historical-revisions.spec.ts`      |                    1 | Revision selection or Back reloads the page, replaces the map, loses settings, or fails to refocus the selected survey.                                                                  |
-| `gis-view-bound.spec.ts`            |                    1 | A public boundary disappears when changing sources, or a rejected bound selection loses its draft.                                                                                       |
+| File                                | Browser-specific failure protected                                                                                                                                                       |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `controllers-parity.spec.ts`        | Native file removal or rejected upload loses retained state; contenteditable Tab navigation and row operations lose focus or data.                                                       |
+| `viewer-gestures.spec.ts`           | Wheel/projection crossings change pan direction; releasing one touch loses the remaining contact.                                                                                        |
+| `viewer-parity.spec.ts`             | Public/private composition or country/project gates lose visibility across changes; focus/fullscreen interaction, measurement cancellation, or drawing history/discard breaks.           |
+| `viewer-responsiveness.spec.ts`     | Pending GPS work ignores the final toggle intent; GIS geometry visibility changes disturb other geometry types or surveys.                                                               |
+| `exploration-lead-headings.spec.ts` | Tabs lose keyboard focus or select the wrong heading; gestures lose pointer ownership (native touch in Chromium); saved completion and display gates prevent revealing/reopening a lead. |
+| `resource-edit.spec.ts`             | Rejected note/file editing loses input or the native file selection.                                                                                                                     |
+| `historical-revisions.spec.ts`      | Revision selection or Back reloads the page, replaces the map, loses settings, or fails to refocus the selected survey.                                                                  |
+| `gis-view-bound.spec.ts`            | A public boundary disappears when changing sources, or a rejected bound selection loses its draft.                                                                                       |
 
-All 18 scenarios run in Chromium and WebKit, serially with one worker and zero
-retries. Use one representative of shared form/table implementations. Additional
-browser variants need a distinct complex failure, rather than another icon,
-color, value or page using the same controller.
+The suite runs in Chromium and WebKit, serially with one worker and zero
+retries. `bun run test:browser --list` shows the current cases. Use one
+representative of shared form/table implementations. Additional browser variants
+need a distinct complex failure, rather than another icon, color, value or page
+using the same controller.
 
 Use small deterministic HTTP responses and loading gates. The map fixture has
 two small surveys, a short GPS line and tiny nested GIS geometry. Provider
@@ -57,7 +60,9 @@ chains. Resource editing starts from independently seeded responses.
 ## Running
 
 Run in the existing application container with other CPU-intensive checks
-stopped, after a checked production build:
+stopped. Stop the local webserver and its asset watcher before running the
+checked production build, as described in
+[the asset guide](../../docs/vite-assets.md):
 
 ```bash
 bun run build
@@ -65,10 +70,10 @@ pytest tests/browser/test_django_browser.py --gitlab-audit-deny-create \
   -o faulthandler_timeout=1860 --durations=20
 ```
 
-Install matching Chromium/WebKit binaries and system libraries first. The
-wrapper uses PostgreSQL and pytest's isolated test database. If the local test
-dotenv selects a different connection, set `TEST_DATABASE_URL` explicitly; never
-point tests directly at the development database.
+Matching Chromium/WebKit binaries and system libraries must already be
+available. The wrapper uses PostgreSQL and pytest's isolated test database. If
+the local test dotenv selects a different connection, set `TEST_DATABASE_URL`
+explicitly; never point tests directly at the development database.
 
 The wrapper uses Django's normal URL configuration and standard `collectstatic`
 with a temporary static root. It creates a verified user and public GIS view.

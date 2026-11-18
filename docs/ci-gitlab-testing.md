@@ -1,5 +1,7 @@
 # Real GitLab integration tests
 
+**Agent Documentation & Practices — maintained guidance for contributors.**
+
 ## Intent and ownership
 
 The API, repository manager, archive jobs, and maintenance commands use a real
@@ -152,10 +154,9 @@ it manually to remove stale leftovers from interrupted or failed cleanup. The
 unrestricted `make wipe_gitlab_test` command remains available for manual
 maintenance only when no tests are active.
 
-Deploy the safe cleanup workflow to the default branch before enabling parallel
-CI on other branches: an older scheduled workflow still performs a full wipe.
-Verification covers age boundaries and malformed dates plus preservation of a
-real, fresh lifecycle repository before its normal deletion.
+Keep the default branch's manual cleanup workflow age-filtered when allowing
+parallel branch jobs. Coverage includes age boundaries, malformed dates, and
+preservation of a fresh lifecycle repository before its normal deletion.
 
 ## Isolation when reusing a remote
 
@@ -200,41 +201,6 @@ rollback, lease restoration, and session cleanup have separate responsibilities.
 Keep real upload rollback tests on `TransactionTestCase` with
 `ATOMIC_REQUESTS=True`; pooling must not weaken their transaction assertions.
 
-## What the September 2026 failure established
-
-The supplied GitHub job log contains a real HTTP 429 response to project
-creation. CI used GitLab.com, while the local Compose service was GitLab 18.7.0.
-These are different servers with different service policies and load. A passing
-local run therefore did not establish that the CI endpoint had remaining
-capacity.
-
-Two application behaviors amplified the failure:
-
-1. Repository acquisition attempted project creation even when the remote
-   already existed. A rejected duplicate POST still consumes server work and can
-   count against a creation quota.
-2. Upload error cleanup accessed the lazy `project.git_repo` property. After
-   creation failed, cleanup attempted creation again, with a fresh retry budget.
-
-Five attempts with 1/2/4/8-second delays cannot resolve a quota whose window is
-longer than that retry budget. Increasing retries adds traffic and delays.
-GitLab documents a project-creation limiter introduced in 19.3 behind
-`namespace_create_rate_limit`, with a default of 200 requests per day per user.
-Its creation check and response wording are consistent with the observed error,
-but the supplied log does not identify GitLab.com's enabled flag or effective
-threshold. Do not present that exact quota as confirmed for the failed job.
-Response headers, a request ID and server-side evidence are needed to identify
-the effective limiter. See
-[GitLab project API rate limits](https://docs.gitlab.com/rate_limits/api/projects/)
-and
-[the implementation change](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/245318).
-
-Authentication does not exempt a caller from rate limits. Production API clients
-pass the configured token, and the real-service regression verifies that
-outgoing requests carry it and that `/user` returns the authenticated identity.
-That verifies the tested configuration; it does not reveal a GitHub secret's
-value or prove the historical job's identity.
-
 ## Repository and cleanup boundaries
 
 `GitlabManager._ensure_remote_project()` first looks up the exact namespace and
@@ -263,26 +229,24 @@ status and body. See [GitLab reliability](gitlab-reliability.md).
 - Assert the intended failure itself: an actual Git index lock, rejecting Git
   hook, invalid GitLab credential, malformed input, or SQL constraint violation.
   HTTP 500 alone is insufficient because an unrelated outage can also return it.
-- Use `TransactionTestCase` for upload rollback checks on SQLite and PostgreSQL,
-  with `ATOMIC_REQUESTS=True`. Query persisted rows after the request
-  transaction exits; the surrounding transaction of `TestCase` cannot prove that
-  rollback.
+- Use `TransactionTestCase` for upload rollback checks on PostgreSQL, with
+  `ATOMIC_REQUESTS=True`. Query persisted rows after the request transaction
+  exits; the surrounding transaction of `TestCase` cannot prove that rollback.
 - Import rollback tests install a temporary, owner-scoped unique-name constraint
   through Django's schema editor. Two same-name records at different coordinates
-  produce a real second-insert failure on both engines. Native signals prove the
-  first insert succeeded, then database and storage reads prove rollback. The
-  constraint is removed afterward; no model, ORM method, or response is
-  replaced. Do not rely on PostgreSQL-only VARCHAR enforcement for portable
-  failure input.
+  produce a real second-insert failure. Native signals prove the first insert
+  succeeded, then database and storage reads prove rollback. The constraint is
+  removed afterward; no model, ORM method, or response is replaced. Do not rely
+  on PostgreSQL-only VARCHAR enforcement for portable failure input.
 - Observe the real Sentry SDK's `before_send` event hook with external delivery
   disabled. This proves exception/event construction, not remote Sentry
   delivery.
 - Observe real SDK response hooks to check token presence, response bodies,
   request counts, and the absence of a duplicate creation POST. Observation must
   not replace or manufacture responses.
-- Exercise transport refusal through a reserved, non-listening local socket.
-  This validates actual connection errors and bounded retry attempts. It does
-  not claim coverage for synthetic 429/5xx response sequences or server headers.
+- Single-attempt transport checks use a reserved, non-listening local socket
+  with retries disabled. Do not manufacture outages solely to force backoff, or
+  infer coverage of 429/5xx sequences or server retry headers.
 - Reuse canonical repositories for existing-repository behavior. Reserve fresh
   UUIDs and subgroups for the five allocated lifecycles above; per-test remote
   creation is forbidden. Cleanup suppresses only confirmed absence and respects
@@ -309,16 +273,6 @@ Disposable repositories need normal pushes and force resets for isolated leases.
 The development group's protection policy is left to GitLab's defaults.
 Provisioning still uses the application manager and UUID names.
 
-This also avoids a demonstrated local GitLab 18.7 cache inconsistency: after a
-successful protection-rule deletion, the rule list was empty while
-`ProtectedBranch.protected?` remained true and branch authorization denied an
-otherwise permitted owner. Repeated pushes did not repair it. For an affected
-existing repository, verify the missing rules and refresh only that project's
-`ProtectedBranches::CacheService`; do not flush the whole GitLab cache or add
-application retry logic. Group defaults prevent creating and deleting the
-automatic protection rule for future test repositories. This is infrastructure
-configuration, not a second repository creation path.
-
 The existing real bootstrap test checks the configured policy, and real upload
 and lease restoration tests verify normal pushes and history resets. No extra
 repositories are allocated for this coverage.
@@ -340,8 +294,9 @@ promise settlement, and the distinction between server rejection and ambiguous
 network or unreadable responses. These tests use the actual generated SDK and
 JSDOM XMLHttpRequest; the local server supplies controlled responses to exercise
 frontend policy, without claiming to verify Django behavior. Backend format
-validation, permissions, and storage integration remain in pytest. The separate
-browser suite is reserved for UI/UX verification.
+validation, permissions, and storage integration remain in pytest. The browser
+suite is reserved for UI/UX verification. `make test` includes it alongside
+backend and frontend tests; `make test-py` runs only the backend scope.
 
 ## Running and validating tests
 
@@ -349,13 +304,13 @@ Run every test inside the already-running application container. Do not start
 another stack or execute pytest on the host. From the repository root:
 
 ```sh
-docker exec -w /app speleodb_local_django make test-py
+docker exec -w /app speleodb-monorepo-django make test-py
 ```
 
 For a targeted check, invoke pytest through the same container:
 
 ```sh
-docker exec -w /app speleodb_local_django pytest speleodb/git_engine/tests/test_gitlab_lifecycle.py
+docker exec -w /app speleodb-monorepo-django pytest speleodb/git_engine/tests/test_gitlab_lifecycle.py
 ```
 
 Use `--gitlab-audit-deny-create` for bounded investigations of accidental
@@ -391,10 +346,8 @@ authoritative.
 
 Relevant targets include the GitLab API-policy, manager and lifecycle suites,
 upload error handling, proxy, archive initialization, preload history, cleanup
-commands, audit/pool contract checks, and local provisioning. Verification
-results and measured creation counts belong in the task's review record; this
-document describes the required behavior rather than claiming a particular run
-passed.
+commands, audit/pool contract checks, and local provisioning. Record
+run-specific results and measured creation counts outside durable documentation.
 
 The lookup-first path adds a bounded existence lookup to new creation and
 removes a rejected POST from existing-remote acquisition. Acquisition HTTP 404

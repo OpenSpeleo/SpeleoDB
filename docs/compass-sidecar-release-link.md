@@ -86,12 +86,10 @@ installer size.
 
 ## Testing and Operational Verification
 
-`CompassSidecarReleaseFetchTests` uses controlled responses and a monotonic
-clock to test successful extraction, caching, URL validation, retryable and
-permanent failures, the exponential delay sequence, and the budget shared by
-release and asset requests. Tests also verify that exhaustion returns and caches
-`None` without further requests, and that the view renders its releases-page
-fallback.
+`CompassSidecarReleaseFetchTests` covers successful extraction, caching, URL
+validation, permanent failures, unreachable endpoints, and the request budget
+shared by release and asset lookups. The shared-budget case uses real elapsed
+time. View tests cover the releases-page fallback.
 
 The live GitHub check remains in the ordinary suite without an offline skip. It
 validates a direct MSI URL and metadata when available, or the explicit cached

@@ -1,6 +1,6 @@
 # Map Viewer: Permissions and Access Model
 
-Agent-focused reference for permission logic used by map viewer modules.
+Permission policy and scope routing used by map viewer modules.
 
 ## Design Intent
 
@@ -15,7 +15,11 @@ In particular:
 
 ## Source of Truth
 
-All access checks should route through:
+Frontend project/network action checks route through the central Config APIs.
+Backend permissions remain authoritative for every request; UI gating is not an
+authorization boundary. Landmark actions consume backend-derived flags.
+
+The frontend project/network policy lives in:
 
 - `frontend_private/static/private/ts/map_viewer/config.ts`
 
@@ -26,8 +30,7 @@ Use these methods preferentially:
 - `Config.hasScopedAccess(scopeType, scopeId, action)`
 - `Config.getStationAccess(station)`
 
-Backward-compatible wrappers are still present, but should map directly to
-central APIs:
+The existing convenience helpers delegate directly to these central APIs:
 
 - `hasProjectReadAccess`, `hasProjectWriteAccess`, `hasProjectAdminAccess`
 - `hasNetworkReadAccess`, `hasNetworkWriteAccess`, `hasNetworkAdminAccess`
@@ -121,20 +124,8 @@ Coverage includes:
 - invalid action fallback
 - fail-closed behavior on internal errors
 
-## Regression Checklist
-
-When touching permission code:
-
-1. Ensure all new checks use central Config APIs.
-2. Verify no special-case feature bypasses write/delete rules.
-3. Run:
-   - `bun run lint:frontend`
-   - `bun run test:frontend`
-4. Confirm UI and action availability is consistent for:
-   - `WEB_VIEWER`
-   - `READ_ONLY`
-   - `READ_AND_WRITE`
-   - `ADMIN`
+Contributor guidance:
+[Map permission changes](../agent-practices.md#map-permission-changes).
 
 ## Geographic Bound is display-only
 

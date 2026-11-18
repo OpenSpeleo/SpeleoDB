@@ -56,7 +56,7 @@ its own `200`/`304` operation.
 
 ## Environment and reproducible export
 
-Use the repository's Python 3.14 environment and committed `uv.lock`:
+Use the Python environment declared in `pyproject.toml` and committed `uv.lock`:
 
 ```sh
 uv sync --extra local --frozen
@@ -121,8 +121,8 @@ contract must produce the same bytes.
 DRF-spectacular, the installed allauth exporter, and the focused OGC document
 all produce OpenAPI 3.0.3. Composition retains their dialect, including OGC's
 advertised `conf/oas30`, instead of claiming a version conversion that has not
-been performed. A future move to 3.1 requires upgrading and testing all three
-sources together.
+been performed. Any dialect change requires validating all three sources
+together.
 
 Component names from authentication and OGC are prefixed with `Auth` and `OGC`.
 Every local reference is rewritten exactly once, including references in shared
@@ -156,9 +156,8 @@ adds no database queries and requires no stored-history migration.
 
 Regression coverage exercises database readback, UTC wire precision, timezone
 and daylight-saving boundaries, real-clock relative ages, and rendered local
-presentation and folder ordering. Schema adoption includes both generated SDK
-snapshots; Rust revision fields deserialize as UTC datetimes. No legacy
-slash-date parser or alternate API field is retained.
+presentation and folder ordering. Both generated SDK snapshots carry the same
+timestamp contract; Rust revision fields deserialize as UTC datetimes.
 
 ## Changing an endpoint
 
@@ -344,7 +343,7 @@ calls.
 Export history accepts positive page numbers and DRF's `page=last`; invalid or
 out-of-range pages return 404. Initial sensor-list validation can return an
 `errors` object keyed by invalid row index, for example
-`{"errors":{"0":{"name":["This field is required."]}}}`. DRF 3.18's configured
+`{"errors":{"0":{"name":["This field is required."]}}}`. DRF's configured
 dictionary format omits valid rows; it does not emit the older error array with
 empty placeholders. The sensor-create error schema bounds ordinary field errors
 and indexed child errors separately from parser errors. Endpoint tests verify
@@ -376,13 +375,12 @@ GET query. Spreadsheet tools return validation errors for missing required
 inputs instead of leaking KeyError/TypeError as server errors.
 
 `HeadlessAwareHijackUserMiddleware` preserves Django's session-aware lazy user
-for only the two mounted allauth **app** route prefixes. The original
-django-hijack cookie-user closure prevented allauth from switching to the
-X-Session-Token user. Positive app-token flows, missing/invalid tokens, both
-mounts, and browser hijack state have real regressions. Browser requests
-continue through the normal hijack middleware. The configured allauth schema
-also corrects actual 410 session expiry payloads and overlapping
-authentication-method alternatives.
+for only the two mounted allauth **app** route prefixes. This allows allauth to
+switch from the cookie user to the X-Session-Token user. Positive app-token
+flows, missing/invalid tokens, both mounts, and browser hijack state have real
+regressions. Browser requests continue through the normal hijack middleware. The
+configured allauth schema also corrects actual 410 session expiry payloads and
+overlapping authentication-method alternatives.
 
 The separate `HeadlessPhoneFeatureMiddleware` checks the resolved
 phone-management and verification views and current signup settings. When phone
@@ -470,9 +468,9 @@ and validation do not perform those operations.
   explicit `schema=None`, non-DRF views, conditional URL configuration, and
   imported allauth/OGC sources. Add an explicit source adapter rather than
   excluding the URL.
-- **CI counterpart drift:** confirm the intended SDK repository/ref and review
-  its source record against the fresh backend export. Updating a package version
-  alone cannot synchronize the contract.
+- **Monorepo snapshot drift:** compare the checked-out SDK snapshots and their
+  source records with the backend export. Updating a package version alone
+  cannot synchronize the contract.
 
 ## GIS View Geographic Bound
 

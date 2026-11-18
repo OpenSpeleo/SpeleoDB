@@ -52,14 +52,13 @@ retain their original 2 px and 5 px widths from zoom 16 onward.
 
 Every GeoJSON source used by these line layers sets simplification tolerance to
 zero to retain short lines and polygon detail. This does not guarantee that
-every shot is visible at every scale: Mapbox quantizes coordinates to an integer
-tile grid, so sufficiently short shots can collapse to a single position before
-rendering. Subpixel passages can also overlap on screen. Raising the source's
-maximum zoom cannot recover precision in tiles requested at low zoom. See the
-renderer's
-[coordinate transform](https://github.com/mapbox/geojson-vt/blob/v4.0.2/src/transform.js)
-and
-[degenerate-line handling](https://github.com/mapbox/mapbox-gl-js/blob/v3.12.0/src/data/bucket/line_bucket.ts).
+every shot is visible at every scale: the renderer quantizes coordinates to an
+integer tile grid, so sufficiently short shots can collapse to a single position
+before rendering. Subpixel passages can also overlap on screen. Raising the
+source's maximum zoom cannot recover precision in tiles requested at low zoom.
+When investigating precision, inspect coordinate transformation and
+degenerate-line handling in the installed renderer selected by `package.json`
+and `bun.lock`.
 
 Rendering below zoom 8 means more visible surveys and GPS tracks may be
 processed together. Disabling simplification for GIS imports and other line
@@ -146,14 +145,5 @@ Context menu icon rendering is cache-backed to avoid repeated network fetches.
 Do not regress into rebuilding image URLs in ways that re-trigger network loads
 on every menu open.
 
-## Validation expectations
-
-When changing these feature areas:
-
-- run `bun run lint:frontend`
-- run `bun run test:frontend`
-- verify private/public parity for shared map behavior
-
-For the broader validation playbook, see:
-
-- `docs/map-viewer/testing-and-quality.md`
+Contributor guidance:
+[Map feature changes](../agent-practices.md#map-feature-changes).

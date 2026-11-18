@@ -23,8 +23,8 @@ share its displayed color.
 ## Rendering ownership
 
 `DEFAULTS.DISPLAY.COLOR_MODES` defines the supported internal values: `project`,
-`depth`, and `shot` (displayed as By Section). The label change keeps saved
-selections unchanged. `Colors.isValidColorMode()` validates both preference
+`depth`, and `shot` (displayed as By Section). Saved preferences use these
+internal values. `Colors.isValidColorMode()` validates both preference
 restoration and runtime changes. The existing storage version and default remain
 unchanged; resetting returns to By Survey. Public initialization does not read
 private preferences and retains its two-mode controls.
@@ -56,11 +56,10 @@ The existing native radio group provides keyboard selection and visible focus.
 Helper text describes Ariane, Compass, and missing-color behavior. The selected
 mode remains available for mixed and legacy datasets, with no availability scan.
 
-Run frontend tests only in the existing application container. Regression
-coverage exercises actual template controls, persistence/reset, public
-preference isolation, depth hover cleanup, per-project paint fallback, late
-loading, replacement data, and layer reconstruction. Source properties include
-opaque, transparent, absent, and invalid colors. Expression conversion behavior
-should also be verified through the map renderer rather than inferred from
-mocked paint calls. Browser verification should cover narrow screens, short
-landscape, keyboard focus, and 200% zoom after a clean production asset build.
+Regression coverage exercises actual template controls, persistence/reset,
+public preference isolation, depth hover cleanup, per-project paint fallback,
+late loading, replacement data, and layer reconstruction. Source properties
+include opaque, transparent, absent, and invalid colors.
+
+Contributor guidance:
+[Survey section colors](../agent-practices.md#survey-section-colors).

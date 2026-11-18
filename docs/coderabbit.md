@@ -1,11 +1,16 @@
 # CodeRabbit reviews
 
+**Agent Documentation & Practices — maintained guidance for contributors.**
+
 The root `.coderabbit.yaml` configures reviews for the standalone web
 repository. The assertive profile asks for detailed findings with a principal
 engineer's teaching tone: explain the concrete failure, its impact, and a
 proportional fix. Useful diagrams remain enabled; poems, fortunes, and chat
 artwork are disabled. CI remains authoritative for actual test and build
 execution.
+
+The review guidance below describes the maintained agent policy configured in
+`.coderabbit.yaml`.
 
 ## Review coverage
 

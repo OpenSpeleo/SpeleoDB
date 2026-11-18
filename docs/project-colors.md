@@ -1,7 +1,7 @@
 # Project & GPS Track Colors
 
-> Agent-focused documentation for the color system spanning Django models, API
-> serializers, Django templates, and the JS map viewer.
+The color system spans Django models, API serializers, templates, and the map
+viewer.
 
 ---
 
@@ -59,12 +59,9 @@ color = models.CharField(
 Both default to `ColorPalette.random_color`, producing a random palette entry at
 creation time. Format: 7-character hex string (`#rrggbb`).
 
-### Migrations
-
-- `speleodb/surveys/migrations/0027_project_color.py` — adds `Project.color`
-  with `RunPython` to assign random colors to existing rows.
-- `speleodb/gis/migrations/0035_gpstrack_color.py` — adds `GPSTrack.color` with
-  the same pattern.
+For existing records, `surveys.0027_project_color` and `gis.0035_gpstrack_color`
+assign and persist one random palette color per row. These are migration-time
+assignments, not colors regenerated when a viewer loads or a record is read.
 
 ---
 
@@ -89,19 +86,19 @@ Both serializers implement `validate_color()`:
 ### `{% get_project_color_palette %}`
 
 Simple tag that returns `ColorPalette.COLORS`. Used by the color picker UI on
-`details.html`, `new.html`, and the GPS track edit modal to render preset
-swatches.
+`details.html`, `new.html`, and GPS track details to render preset swatches.
 
 ### `{{ code|country_flag }}`
 
 Filter that converts an ISO alpha-2 country code to its emoji flag. Co-located
-in the same templatetags file. See `docs/project-listing.md` for usage context.
+in the same templatetags file. See [project listing](project-listing.md) for
+usage context.
 
 ---
 
 ## Color Picker UI
 
-**Pages:** `details.html`, `new.html` (projects), GPS track edit modal
+**Pages:** project details and creation, GPS track details
 
 The color picker renders:
 
@@ -181,4 +178,4 @@ The public viewer does not have GPS tracks.
 | `frontend_private/static/private/ts/map_viewer/config.ts`     | `loadProjects()`, `loadGPSTracks()`, `setPublicProjects()`, `getGPSTrackById()` |
 | `frontend_private/templates/pages/project/details.html`       | Color picker UI (projects)                                                      |
 | `frontend_private/templates/pages/project/new.html`           | Color picker UI (new project)                                                   |
-| `frontend_private/templates/pages/gps_tracks.html`            | GPS track color dots and edit modal                                             |
+| `frontend_private/templates/pages/gps_tracks.html`            | GPS track color dots and settings links                                         |

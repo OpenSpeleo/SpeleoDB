@@ -1,15 +1,15 @@
 # Map Viewer: Depth Domain Reactivity
 
-Agent-focused documentation for the depth coloring refactor in the private and
-public map viewers.
+Depth coloring, visibility, and scale ownership in the private and public map
+viewers.
 
 ## Feature Intent
 
 Depth coloring must react immediately when projects are shown/hidden, without
 re-scanning every feature on every toggle.
 
-The previous behavior was effectively feature-count driven during interactions.
-The current behavior is project-count driven during interactions.
+Interactions merge cached project domains, so their work scales with project
+count rather than feature count.
 
 ## Engineering Scope
 
@@ -41,7 +41,8 @@ Depth mode uses a two-stage model:
 
 ### Stage A: Per-project domain cache
 
-At GeoJSON ingest time (`processGeoJSON(projectId, data)`), each project gets:
+At GeoJSON ingest time, `prepareProjectGeoJSON(data, { isCurrent })` in
+`map/preparation.ts` derives:
 
 - line feature depth fields:
   - `depth_val` (canonical raw depth)
@@ -49,11 +50,9 @@ At GeoJSON ingest time (`processGeoJSON(projectId, data)`), each project gets:
 - a stored domain in `State.projectDepthDomains`:
   - `{ min: 0, max: <project max depth> }` or `null`
 
-Helpers involved:
-
-- `buildSectionDepthAverageMap(...)`
-- `resolveLineDepthValue(...)`
-- `computeProjectDepthDomain(...)`
+Preparation accumulates section depth averages and resolves line depths with
+`resolveLineDepthValue(...)`. The loader publishes the completed domain only
+while the source is current. Pure depth helpers remain in `map/depth.ts`.
 
 ### Stage B: Active merged domain
 
@@ -111,15 +110,14 @@ This module is reused by both private/public entrypoints.
 ### Private depth limit
 
 Settings → Appearance → By Depth reveals a collapsed **Depth limit** disclosure.
-The collapsed row uses muted text with no highlighted border, background, or
-value; the expanded control carries the selected-state styling. Its summary
-shows Full range or the configured maximum, so the active limit stays
-discoverable without leaving a large form open. Expanding it exposes one numeric
-field and a Meters/Feet toggle. The field accepts positive finite values;
-clearing it or choosing **Reset to Full Depth Range** restores the
-visible-project range. Validation happens while typing, but map updates happen
-on blur/change or Enter. Invalid drafts retain the last applied limit and show
-an inline error.
+The collapsed row uses muted text without highlighted border or background; the
+expanded control carries the selected-state styling. Its summary shows Full
+range or the configured maximum, so the active limit stays discoverable without
+leaving a large form open. Expanding it exposes one numeric field and a
+Meters/Feet toggle. The field accepts positive finite values; clearing it or
+choosing **Reset to Full Depth Range** restores the visible-project range.
+Validation happens while typing, but map updates happen on blur/change or Enter.
+Invalid drafts retain the last applied limit and show an inline error.
 
 The limit is a fixed **0–X scale**, including when all visible surveys are
 shallower than X. Deeper lines saturate at the deepest color and hover readings
@@ -162,11 +160,11 @@ source rebuild is needed.
 
 ### Complexity targets
 
-| Operation            | Previous expectation | Current expectation              |
-| -------------------- | -------------------- | -------------------------------- |
-| GeoJSON load         | O(total features)    | O(total features) + cache write  |
-| Toggle in depth mode | O(active features)   | O(active projects)               |
-| Memory               | GeoJSON only         | GeoJSON + one domain per project |
+| Operation                 | Cost                                                            |
+| ------------------------- | --------------------------------------------------------------- |
+| GeoJSON load              | Feature/coordinate traversal plus one cached domain per project |
+| Toggle in depth mode      | O(active projects), without feature traversal                   |
+| Additional domain storage | One domain per project plus the active domain                   |
 
 Limit changes also cost O(projects), with no feature traversal or network
 request. Unit-only changes emit a domain event to update labels and the
@@ -188,24 +186,6 @@ Watch for these common mistakes:
 - splitting legend logic across entrypoints instead of using `DepthLegend`
 - updating only private or only public entrypoint wiring
 
-## Required Validation
-
-After depth-domain changes, run inside the existing application container:
-
-- `docker exec -w /app speleodb_local_django bun run lint:frontend`
-- `docker exec -w /app speleodb_local_django bun run test:frontend`
-- `docker exec -w /app speleodb_local_django bun run build`
-
-And manually verify:
-
-1. depth mode project hide/show updates color scale immediately
-2. all-hidden projects in depth mode shows `N/A`
-3. shared automatic behavior remains aligned; private limits do not leak
-   publicly
-4. limit/unit edits update labels and the current hover without another mouse
-   move
-5. project/country toggles and delayed loading retain a configured scale
-
 ## Test Coverage Map
 
 ### Unit and integration-style frontend tests
@@ -218,8 +198,9 @@ And manually verify:
   - fixed limits, country gates, late loads, clearing, reset and repaint
     boundaries
 - `frontend_private/static/private/ts/map_viewer/map/layers.depth_limit_performance.test.ts`
-  - ingest 20,000 lines once, then enforce no feature reads, downloads or source
-    rebuilds across 100 limit/unit/visibility cycles; no timing thresholds
+  - prepare small representative surveys, then forbid feature reads, downloads,
+    or source rebuilds during limit/unit/visibility changes; no timing
+    thresholds
 - `frontend_private/static/private/ts/map_viewer/components/depth_legend.test.ts`
   - gauge labels, fractional limits, units, saturation and legacy hover behavior
 - `frontend_private/static/private/ts/map_viewer/components/settings.test.ts`
@@ -230,12 +211,7 @@ And manually verify:
 - `frontend_public/static/ts/gis_view_main.test.ts`
   - public entrypoint initialization and depth-legend wiring
 
-## Implementation Notes for Agents
-
-- Keep domain APIs pure where possible (`map/depth.ts`).
-- Keep map mutation concentrated in layer/legend modules.
-- Prefer extending existing helpers over introducing parallel utilities.
-- If event payload shape changes, update all listeners and tests together.
+## Control and type contracts
 
 The expanded control explains why the cap exists: one unusually deep cave can
 compress the shared scale and hide differences in shallower passages. It uses
@@ -257,3 +233,6 @@ parsing retains the existing numeric coercion and unit-labelled fallback. A
 supplied section-average map is reused without rescanning point features. The
 colocated depth suite checks these contracts as well as unit conversion and
 domain merging; typing does not add validation or alter cache ownership.
+
+Contributor guidance:
+[Depth coloring changes](../agent-practices.md#depth-coloring-changes).

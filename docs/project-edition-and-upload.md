@@ -23,19 +23,20 @@ with the same IDs. The Lock Management page supplies its own controller context
 so each page initializes the mutex controller exactly once.
 
 `frontend_common/controllers/mutex-lock.ts` attaches the existing
-`forms/mutex_lock.ts` helper. Acquisition uses the established POST and CSRF
-transport and immediately reloads after success. Its button stays disabled while
-the request is pending, preventing repeated clicks. Unlock actions retain their
-existing success feedback and reload delay. Error rendering continues to use the
-shared escaping-aware AJAX error helper.
+`forms/mutex_lock.ts` helper. Acquisition uses `v2ProjectsAcquireCreate` through
+the shared browser API adapter and immediately reloads after success. Its button
+stays disabled while the request is pending, preventing repeated clicks. Unlock
+actions retain their existing success feedback and reload delay. Error rendering
+continues to use the shared escaping-aware API error helper.
 
 Revision uploads use native form semantics: the footer's **Upload Revision**
 button is `type="submit"` with `form="file_upload_form"`. The `project-upload`
 controller handles the form's `submit` event and prevents native navigation.
 Enter in the revision title and clicking the button therefore run the same
-validation and multipart PUT request. An invalid title or a failed upload keeps
-the title and selected files available for correction or retry. Successful
-uploads retain their existing revisions-page navigation.
+validation and multipart PUT request through `v2ProjectsUpload`. An invalid
+title or a failed upload keeps the title and selected files available for
+correction or retry. Successful uploads retain their existing revisions-page
+navigation.
 
 This design avoids a separate keyboard handler, duplicated permission rules, and
 an extra lock-management page request. It adds no polling, backend queries, or
@@ -53,17 +54,21 @@ additional upload requests.
   exercises native form submission; it does not synthesize an Enter key's
   browser default action or perform actual navigation.
 - Run JavaScript tests, focused Django tests, lint, and a clean Vite production
-  build inside `speleodb_local_django`. The Django tests are database-only and
-  require no GitLab repositories.
+  build inside `speleodb-monorepo-django`. The Django tests are database-only
+  and require no GitLab repositories.
 
 Project settings do not display or poll map-generation status. Background
-generation and its status API remain independent of this page.
+generation records execution in Celery TaskResult; there is no separate
+generation-status API. Source upload success does not guarantee a usable map.
+See [background generation](project-geojson-background.md) for execution and
+manual recovery.
 
-The typed project-upload controller retains its load barrier and multipart
-submission flow. Its direct initialization tests cover file count, individual
-and aggregate size limits, removal/reset, escaped filenames, repeated submit
-wiring, delayed missing-context failure and map-status feedback. The wire
-integration cases retain real local HTTP requests through jQuery.
+The project-upload controller uses multipart submission through the generated
+API client. Its tests cover native form submission, file removal, inert
+filenames, title/file preservation after rejection, source-save feedback and
+navigation, and file count and individual/aggregate size limits. The integration
+cases use real local HTTP requests; source-save feedback does not report
+conversion completion.
 
 ## File API
 
@@ -123,10 +128,10 @@ Message and artifact validation returns the existing HTTP 400 error envelope
 before checkout synchronization, processing, commits or pushes. Early validation
 prevents a message rejected by PostgreSQL from entering Git history, without
 changing storage, permissions, history reconstruction or upload bookkeeping. It
-adds only a string-length check and retains the existing file-size pass. There
-is no migration, message truncation, history rewriting, skipped historical
-commit or exception suppression. Existing affected histories require manual
-repair; these checks prevent future invalid uploads and do not repair them.
+adds only a string-length check and retains the existing file-size pass.
+Validation does not truncate messages or rewrite history. Existing invalid
+histories require a separate manual repair; upload validation does not repair
+them.
 
 The real upload integration suite covers normalized message boundaries, newline
 expansion, trimming and multibyte Unicode; it checks Git and PostgreSQL

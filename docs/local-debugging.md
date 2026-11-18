@@ -67,7 +67,8 @@ that:
 Run it with:
 
 ```bash
-pytest speleodb/common/tests/test_local_debug_toolbar_settings.py
+docker exec -w /app speleodb-monorepo-django pytest \
+  speleodb/common/tests/test_local_debug_toolbar_settings.py
 ```
 
 When investigating local latency, benchmark requests only after stopping any

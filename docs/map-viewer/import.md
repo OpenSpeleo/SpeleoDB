@@ -72,18 +72,16 @@ server parser for landmarks.
   another display attempt without republishing. Direct GeoJSON upload still
   stores one object without conversion.
 
-Known malformed or unsupported KML input now receives a structured HTTP 422
-processing response, including on the existing landmark PUT route; its old
-generic HTTP 500 parse response is intentionally replaced. Unexpected failures
-remain errors, and upload exceptions retain Sentry reporting. Successful legacy
-landmark responses remain HTTP 200 with the existing `landmarks_created` field.
+Known malformed or unsupported KML input receives a structured HTTP 422
+processing response, including on the landmark PUT route. Unexpected failures
+remain errors, and upload exceptions retain Sentry reporting. Successful
+landmark responses use HTTP 200 with the `landmarks_created` field.
 
 Inspection and confirmation are synchronous independent requests. Confirmation
 validates the retained file again and rechecks destination permissions. There is
 no staged upload, import-session model, worker, polling, or migration. The
 second upload and parse are a deliberate tradeoff for avoiding temporary-data
-ownership and job lifecycle infrastructure. Do not introduce those mechanisms
-without a new product requirement and measured need.
+ownership and job lifecycle infrastructure.
 
 The importer controller owns form state and transport. Shared dialog lifecycle
 owns focus containment, fullscreen hosting, background isolation, and dismissal
@@ -93,9 +91,8 @@ failure and expose the failure to the importer instead of replacing the map with
 empty data.
 
 The private map loads the scoped importer stylesheet through the registered
-`style-map-import` Vite style entry, before controller initialization. Keep new
-styles reachable from the logical style registry so both production loading and
-the asset-graph check can verify them.
+`style-map-import` Vite style entry, before controller initialization. The
+logical style registry owns production loading and asset-graph verification.
 
 ## Content rules
 
@@ -123,15 +120,16 @@ Limits are centralized in the processing package. Upload, expanded primary KML,
 and generated GeoJSON use the configured source-byte ceiling. Additional limits
 bound archive entries, XML nesting, placemarks, and coordinate positions. A
 bounded central-directory scan counts actual KMZ records before `ZipFile` can
-allocate per-entry objects; declared entry counts alone are not trusted. Enforce
-limits while reading/traversing and never decompress unused archive assets.
+allocate per-entry objects; declared entry counts alone are not trusted. Limits
+apply during reading and traversal; unused archive assets are not decompressed.
 
 ## Failure and interaction contracts
 
 - Backdrop clicks do not dismiss uploads. Escape and explicit close work while
   idle; inspection can be abandoned without writes.
 - Confirmation disables duplicate submission, form changes, and dismissal, and
-  installs a temporary browser navigation warning. Remove it on every exit path.
+  installs a temporary browser navigation warning that is removed on every exit
+  path.
 - Show on map also blocks dismissal until loading and camera placement finish; a
   failed display restores the action without creating another import.
 - Only transferred bytes receive percentage progress; server processing is
@@ -153,42 +151,30 @@ Parser tests cover real fixtures, point-only and mixed nested geometry, polygon
 holes, accurate warnings, Unicode/HTML metadata, malformed XML, unsafe or
 ambiguous archives, and limit boundaries with small configurable budgets. API
 tests cover side-effect-free inspection, permissions, duplicates, exact source
-preservation, one-file/one-layer publication, rollback, and legacy consumers.
+preservation, one-file/one-layer publication, rollback, and response contracts.
 
 Frontend tests cover intent and request state, stale responses, guarded
 dismissal, safe DOM text, persistent results, strict refresh errors, and
-explicit navigation. Browser checks exercise actual imports, source download,
-keyboard, narrow/mobile layouts, fullscreen, and production assets. All tests
-run inside the existing application container; full backend runs retain the
-audited GitLab budget.
+explicit navigation. Browser automation is reserved for complex UI workflows;
+API persistence and source-download contracts belong in backend tests.
 
 Measure representative parsing time and memory separately from browser
 rendering. Changing display preferences must not trigger file reinspection or
 feature rescans. Public and private viewers continue using their shared
 rendering modules.
 
-Fresh-process measurements in the local application container (Django startup
-excluded from elapsed time; peak RSS includes Django):
-
-| Fixture                                               | Analysis time | Peak RSS |
-| ----------------------------------------------------- | ------------- | -------- |
-| 736-place sample KML                                  | 0.370 s       | 226 MiB  |
-| US states KMZ, 288 polygon parts                      | 0.881 s       | 262 MiB  |
-| Protected areas KMZ, 366 points and 781 polygon parts | 3.756 s       | 400 MiB  |
-
-The process baseline was approximately 221 MiB. Fixture inspection reports stay
-below 3 KiB, enforced by regression tests. These observations describe analysis,
-not a capacity guarantee or database-publication benchmark. Landmark publication
-retains the existing per-coordinate transactional duplicate handling; large
-landmark imports also incur database work.
+Inspection report sizes are bounded by regression tests. Parsing and analysis
+costs are separate from publication: landmark creation also performs
+collection-scoped transactional duplicate handling and database writes. Measure
+those stages independently when investigating an import's resource use.
 
 The browser session is typed in `ts-types/domain/data-import.ts`; imported-map
 navigation has its own `ImportedMapResult` contract. `data_import.ts` retains
-one mutable session and its generation counter. The two upload facade names
-still reference the same function. Type annotations do not turn refresh failure
-into upload failure or move the camera before the explicit Show action.
-Characterization covers stale inspection responses, multipart field/method
-selection, locked dismissal, ambiguous completion, and refresh retry state.
+one mutable session and its generation counter. Refresh failure remains distinct
+from upload failure, and the camera does not move before the explicit Show
+action. Characterization covers stale inspection responses, multipart
+field/method selection, locked dismissal, ambiguous completion, and refresh
+retry state.
 
 `import_model.ts` owns report eligibility and count normalization.
 `import_presentation.ts` owns the review, writable-collection options, progress,
@@ -197,9 +183,10 @@ DOM lookups to presentation without copying state; eligibility, dismissal locks,
 and progress refresh run at their existing points during rendering. The owner
 retains inspection/upload transport, generation checks, cancellation, listeners,
 and map refresh/navigation. Renderers neither start requests nor mutate the
-session. Original exported helper names remain direct aliases, as do the two
-upload methods. Keeping the new modules beside `data_import.ts` preserves the
-existing explicit Tailwind source ownership. The owner tests cover progress,
-reinitialization, stale inspection responses, upload methods and bodies,
-permission-revoked collection options, and refresh failure after successful
-publication.
+session. The modules beside `data_import.ts` share its explicit Tailwind source
+ownership. The owner tests cover progress, reinitialization, stale inspection
+responses, upload methods and bodies, permission-revoked collection options, and
+refresh failure after successful publication.
+
+Contributor guidance:
+[Map import changes](../agent-practices.md#map-import-changes).

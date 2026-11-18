@@ -4,9 +4,8 @@
 
 Vite is SpeleoDB's one compiler, dependency graph, and manifest for application
 CSS and TypeScript, emitting browser JavaScript. Django still owns routing,
-templates, authentication, static URL generation, and every HTTP response. This
-boundary removes duplicated Tailwind/esbuild orchestration without turning the
-Django application into a Vite-served SPA.
+templates, authentication, static URL generation, and every HTTP response. Vite
+supplies build artifacts without serving the Django application as an SPA.
 
 ## Registry and output
 
@@ -23,11 +22,10 @@ isolated where cascade ownership matters, route controllers are lazy, and common
 imports become shared chunks. The browser receives only the bootstrap, declared
 controller branches, applicable styles, and established vendors for the route.
 
-The chunk warning limit is 1,500 kB to accommodate the approximately 1,142 kB
-minified MapLibre and map-layer chunk. Only map routes load this renderer;
-normal pages retain their smaller controller branches. The limit avoids a
-recurring warning for that known baseline without changing loading or splitting
-behavior.
+The chunk warning limit in `vite.config.ts` accommodates the bundled MapLibre
+and map-layer chunk. Only map routes load this renderer; normal pages retain
+their smaller controller branches. The limit avoids a recurring warning for that
+known baseline without changing loading or splitting behavior.
 
 ## Template integration
 
@@ -80,10 +78,10 @@ into Vite must preserve its former template-block position.
 
 ### TypeScript source delivery boundary
 
-TypeScript modules remain beside their original static-directory owners during
-translation, but are compiler inputs rather than downloadable static assets.
-`CompiledStaticFilesConfig` adds `*.ts` to Django's standard
-[`ignore_patterns`](https://docs.djangoproject.com/en/6.0/ref/contrib/staticfiles/#customizing-the-ignored-pattern-list),
+TypeScript modules live beside their static-directory owners but are compiler
+inputs rather than downloadable static assets. `CompiledStaticFilesConfig` adds
+`*.ts` to Django's standard
+[`ignore_patterns`](https://docs.djangoproject.com/en/stable/ref/contrib/staticfiles/#customizing-the-ignored-pattern-list),
 retaining its default exclusions. Django owns collection traversal and matching;
 there is no custom collection filter. This excludes `.ts` and `.d.ts` files
 without changing deployment commands.
@@ -113,15 +111,15 @@ collecting and during each live-server test, so other tests retain their
 original storage configuration. This is necessary because pytest-django
 recognizes only the literal `django.contrib.staticfiles` entry when choosing
 finder-backed serving; an explicit `AppConfig` uses its normal collected-file
-handler instead. Browser and upload integration tests therefore exercise the
-standard collected artifact. A real HTTP contract compares the served compiled
-script with its build output, checks vendor delivery, and verifies raw
-TypeScript returns 404, starting from an absolute CDN URL as used in CI.
-Static-view tests consume streaming responses through Django's test client
-instead of calling `response.close()` directly; the client's wrapper preserves
-the enclosing database transaction while closing the file. Run these contracts
-on PostgreSQL as well as local SQLite, whose in-memory backend ignores
-connection closes and can mask teardown errors.
+handler instead. Live-server tests therefore exercise the standard collected
+artifact. A real HTTP contract compares the served compiled script with its
+build output, checks vendor delivery, and verifies raw TypeScript returns 404,
+starting from an absolute CDN URL as used in CI. Static-view tests consume
+streaming responses through Django's test client instead of calling
+`response.close()` directly; the client's wrapper preserves the enclosing
+database transaction while closing the file. Run these contracts on the
+configured PostgreSQL test database; SQLite in-memory behavior cannot establish
+the same connection-lifetime contract.
 
 ## Verification and performance
 
@@ -134,34 +132,13 @@ duplicate initialization, runtime map context, and delegated map actions.
 Page stylesheet-count and cascade-order assertions identify logical entry
 filenames in the compiled manifest. Final browser evidence starts from a clean
 production build. Release verification compares manifest-served hashes, route
-request graphs, computed styles, behavior, accessibility, pixels, and
-transfer/parse/init/style-recalculation performance against the preserved
-baseline.
+request graphs and relevant behavior against the intended release. Follow
+`tests/browser/README.md`: automated browser coverage belongs to complex UI/UX
+workflows, not static styling or pixel comparisons. Performance benchmarks
+require separate authorization.
 
-## Adding entries to a running application
-
-Register and build a new logical entry before a live shared template references
-it. The registry is cached for the Django process lifetime even in DEBUG;
-manifest mtime reload does not reload `entries.json`. Restart the Django process
-after registry edits and verify it resolves the new entry. Confirm the manifest
-entry and asset hash actually served by Django before reporting the new route
-ready.
-
-When extracting a static inline style, preserve every declaration and add the
-replacement class even to a tag that previously had no other attributes.
-Unlayered application CSS can override layered utilities, so verify computed
-styles on the real route. Keep runtime inline sizing/visibility effective; avoid
-`!important` on properties changed by map resizing or modal state.
-
-When editing live templates and their CSS/controllers together, wait for a
-successful watched or finite build before refreshing the page. Otherwise Django
-can serve new controls with old handlers/styles. Smoke-test an integrated slice
-on the authenticated route early, including primary actions and served hashes.
-Clean-build for final browser evidence.
-
-Controller discovery must retain the negative `!./controllers/*.test.ts` glob
-alongside its positive TypeScript glob. Check a clean production graph excludes
-test modules; Vitest globals must never reach a browser controller chunk.
+Contributor guidance:
+[Vite entry changes](agent-practices.md#vite-entry-changes).
 
 ## Development builds
 
@@ -225,24 +202,18 @@ DEBUG, a subsequent request observes a changed manifest mtime; the user chooses
 when to refresh the page.
 
 Final browser evidence uses a clean finite build, which removes accumulated
-watch output and avoids utility candidates retained by historical long-running
-Tailwind compiler processes. The optional `test:frontend:watch` command runs
-tests only; it does not rebuild assets or refresh pages.
+watch output and establishes assets from the current source set. The optional
+`test:frontend:watch` command runs tests only; it does not rebuild assets or
+refresh pages.
 
 ## Verification boundaries
 
-The original Vite migration demonstrated deterministic builds, watcher
-invalidation, focused manifest/controller tests, a public-route cross-engine
-comparison, and production-shaped local static-file MIME/CORS behavior. Those
-results did not certify the complete authenticated role/map/interaction matrix,
-production S3/CloudFront delivery, deployed lifecycle, or all runtime
-performance budgets. Local static-file checks are not proof of a production CDN
-deployment.
-
 For current changes, run the repository's focused checks inside the existing
 application container and report the routes, engines, data states, and delivery
-environment actually exercised. The checked-in browser suite covers controller
-and template parity alongside viewer responsiveness; it does not replace a full
-baseline/candidate asset migration comparison. Verify runtime performance as
-well as compressed size before making a performance-parity claim. Build hashes
-and historical test counts apply only to the exact revision that produced them.
+environment actually exercised. The checked-in browser suite covers complex
+controller and viewer UI/UX workflows; backend and frontend logic retain their
+pytest/Vitest boundaries. `make test` runs all three layers, while
+`make test-browser` selects the browser wrapper. Local static-file checks do not
+certify production S3/CloudFront delivery. Verify runtime performance as well as
+compressed size before making a performance-parity claim. Build hashes and test
+results apply only to the revision that produced them.

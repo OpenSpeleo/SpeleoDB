@@ -9,10 +9,10 @@ that commit.
 
 Uploads save and push source data before recording optional map-generation work.
 Generation runs in Celery after the source database transaction commits. Upload
-success does not require a usable map. The status API reports pending/failed
-generation, and the last successful artifact remains available. See
+success does not require a usable map. Celery TaskResult records execution
+status, and the last successful artifact remains available. See
 [background generation](project-geojson-background.md) for ordering,
-diagnostics, worker recovery, and testing.
+diagnostics, manual recovery and testing.
 
 ## Shot color contract
 
@@ -80,9 +80,9 @@ Operators can clean up logged retired objects after rollout verification, only
 after all issued signed URLs have expired (the GIS-view API allows up to 24
 hours), active readers have finished, and the object is confirmed absent from
 current artifact references. Account for retained storage when scheduling large
-rebuilds. Failed unpublished replacement uploads attempt immediate cleanup;
-asynchronous generation also journals them for delayed cleanup after a hard kill
-or storage outage, as described in
+rebuilds. Failed unpublished replacement uploads attempt immediate cleanup. A
+hard kill or failed cleanup can leave an orphaned object; the next explicit full
+history reset purges that project namespace, as described in
 [background generation](project-geojson-background.md).
 
 OGC normalized features, single-feature indexes, geometry-group discovery,

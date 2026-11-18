@@ -75,8 +75,8 @@ and all layer settings tabs, using the existing current-route marker.
 `/private/gis-layers/` remains the listing and upload entry point. Each desktop
 row and mobile card provides the source download plus the same circular
 right-arrow Open control used by Project and Surface Network listings. Open
-leads to `/private/gis-layer/<uuid>/`; metadata editing and deletion are no
-longer separate listing modals.
+leads to `/private/gis-layer/<uuid>/`; metadata editing and deletion belong to
+the settings pages.
 
 The opened layer uses the standard responsive settings workflow:
 
@@ -111,8 +111,8 @@ The list/detail serializer returns `file` as the signed renderable GeoJSON URL
 and derives `source_format` from the original filename.
 
 The list and permission querysets annotate access in bulk and prefetch related
-users, respectively. The new workflow does not add per-row requests or model
-queries to listing rendering.
+users, respectively. Listing rendering does not require per-row requests or
+model queries.
 
 ## Conversion fidelity
 
@@ -141,9 +141,9 @@ The KML/KMZ compiler assigns renderer IDs from document position
 Exploded GeometryCollection children derive IDs from that renderer-owned base
 and retain source metadata. Appending a geometry suffix to an untrusted source
 ID would permit a producer to collide with another generated child. Regression
-fixtures should deliberately use that old derived-ID shape. Direct GeoJSON stays
-byte-preserving; this compiler identity policy is not permission to rewrite its
-uploaded source.
+coverage includes producer IDs that resemble generated child IDs. Direct GeoJSON
+stays byte-preserving; this compiler identity policy is not permission to
+rewrite its uploaded source.
 
 ## Publication boundary
 

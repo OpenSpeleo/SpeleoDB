@@ -21,10 +21,9 @@ python manage.py build_project_geojsons --project <project-uuid>
 | `--project_type <type>`                  | Batch          | Restricts the eligible queryset to one `ProjectType`.    |
 | `--force_recompute`, `--force-recompute` | Both           | Safely replaces GeoJSON artifacts that already exist.    |
 
-Every project receives a fresh read-only clone, so the former `--fresh` option
-is removed. Fresh source acquisition and forced artifact replacement are
-separate concepts: without `--force-recompute`, existing artifacts are skipped.
-The former `build_all_project_geojsons` command also remains removed.
+Every project receives a fresh read-only clone. Fresh source acquisition and
+forced artifact replacement are separate concepts: without `--force-recompute`,
+existing artifacts are skipped.
 
 ```bash
 # Backfill missing GeoJSONs for eligible Compass projects.
@@ -131,9 +130,9 @@ revisions before reporting aggregate conversion failure.
 
 Deploy matching application and worker code before submitting operations.
 Already-running workers retain their old task signatures until restarted. Drain
-old work before removing the journal and restart workers with matching code;
-otherwise a task can fail before processing begins. See
-[Operations](admin-operations.md) for coordinated rollout.
+in-flight work and restart workers with matching code when task signatures
+change; otherwise a task can fail before processing begins. See
+[Operations](admin-operations.md#deployment-verification) for verification.
 
 Coverage in `speleodb/background_jobs/tests/test_operations.py` protects direct
 fan-out, force flags and honest partial publication. Conversion and task tests

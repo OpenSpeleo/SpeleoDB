@@ -1,7 +1,7 @@
 # Project Listing Page
 
-> Agent-focused documentation for the `projects.html` template and its
-> supporting view logic.
+This page describes the authenticated project listing and its supporting view
+and controller.
 
 ---
 
@@ -121,8 +121,8 @@ grouped by country. Each section header includes:
 
 Collapse state is stored in `localStorage` under
 `DEFAULTS.STORAGE_KEYS.PROJECTS_COUNTRY_COLLAPSED`
-(`speleo_projects_collapsed_countries`). The inline `<script>` reads and writes
-a JSON array of collapsed ISO country codes (e.g. `["FR", "US"]`).
+(`speleo_projects_collapsed_countries`). The `projects` route controller reads
+and writes a JSON array of collapsed ISO country codes (e.g. `["FR", "US"]`).
 
 This is a separate key from the map viewer's
 `DEFAULTS.STORAGE_KEYS.COUNTRY_COLLAPSED` (`speleo_country_collapsed`), which
@@ -177,16 +177,16 @@ Column width allocation (Project Name takes the remainder):
 | Revisions       | 7%    | Single number             |
 | Permission      | 10%   | Badge text varies         |
 | GPS Coordinates | 10%   | "Google Maps" link        |
-| Last Edit       | 9%    | Date (YYYY/MM/DD)         |
+| Last Edit       | 9%    | Browser-local date        |
 | Current Editor  | 112px | Unlock button and padding |
-| Editing Since   | 9%    | Date (YYYY/MM/DD)         |
+| Editing Since   | 9%    | Browser-local timestamp   |
 | Actions         | 124px | Open button and padding   |
 
 ### Page-level scroll (no container scrollbar)
 
 The table wrapper has **no** `overflow-auto` or `max-h-*` constraint. The table
-grows naturally and the page scrolls via the content column (`base_private.html`
-line ~640: `overflow-y-auto`). This avoids a secondary scrollbar that
+grows naturally and the page scrolls via the content column
+(`base_private.html`: `overflow-y-auto`). This avoids a secondary scrollbar that
 appears/disappears based on the number of projects.
 
 ### Sticky table header
@@ -196,12 +196,12 @@ height (`h-16`), so the table header sticks directly below the site header
 (which is `sticky top-0 z-30`). The lower `z-10` keeps the table header below
 the site header in stacking order.
 
-### Collapse restoration (FOUC prevention)
+### Collapse restoration
 
-Collapsed country groups are restored from `localStorage` via a synchronous
-`<script>` placed immediately after the table/cards markup, **before**
-`$(document).ready()`. This prevents a flash of uncollapsed content (FOUC) that
-would occur if restoration waited for DOMContentLoaded.
+`frontend_common/app.ts` restores collapsed groups from local storage before
+initializing route controllers. The template declares an inert `projects`
+controller context; it contains no executable inline restoration script.
+Unavailable or malformed local storage leaves the groups expanded.
 
 ---
 

@@ -5,27 +5,32 @@
 The standalone SpeleoDB image installs its locked Python dependencies from
 published distributions and remains Rust-free by default. The enclosing monorepo
 can opt into `DOCKER_INCLUDE_MONOREPO_RUST_TOOLCHAIN=1` to develop the
-PyO3-backed `openspeleo_core` web runtime dependency from local source.
+PyO3-backed `openspeleo_core` and `cave_closure` web runtime dependencies from
+local source.
 
-This option installs stable Rust and Cargo before the Dockerfile's Python
-dependency layer. It does not install or build Compass, Tauri, Trunk, wasm-pack,
-Java, mobile tooling, or another application repository.
+This option installs the Rust and Cargo toolchain pinned by the monorepo before
+the Dockerfile's Python dependency layer. It does not install or build Compass,
+Tauri, Trunk, wasm-pack, Java, mobile tooling, or another application
+repository.
 
 ## Editable Build
 
 The root Compose setup runs `.devcontainer/sync-openspeleo-core.sh` before the
-normal Django setup. The helper uses the package's standalone lock and performs
-an inexact uv sync into the image-owned `/opt/speleodb-venv` virtual
-environment. The environment lives outside `/app`, so the application bind mount
-cannot hide it or mix a Linux environment with a host checkout. Inexact
-synchronization is required because the environment also contains the complete
-web dependency graph.
+normal Django setup. The helper uses each package's standalone lock and performs
+inexact uv syncs into the image-owned `/opt/speleodb-venv` virtual environment.
+The environment lives outside `/app`, so the application bind mount cannot hide
+it or mix a Linux environment with a host checkout. Inexact synchronization is
+required because the environment also contains the complete web dependency
+graph.
 
 `openspeleo_core` is a mixed Python/Rust Maturin project. Its editable build
 uses Cargo's `dev` profile explicitly. The Python sources and generated Linux
 extension resolve from the bind-mounted
 `packages/python/openspeleo_core/src_python` tree, while the standalone web lock
 remains independent and continues to resolve PyPI outside the monorepo.
+`cave_closure` uses the same editable dev-profile contract under
+`packages/python/cave-closure/src_python`. The helper checks both declared and
+active Rust toolchains against the root `rust-toolchain.toml` before syncing.
 
 The interactive workspace's post-create step runs the same helper so its Python
 environment records the PEP 660 editable installation as well. Pure-Python
@@ -61,20 +66,22 @@ of these explicitly:
 - `pyproject.toml`;
 - `Cargo.toml`;
 - `Cargo.lock`;
+- `rust-toolchain.toml`;
 - every path matched by `src_rust/**/*`.
 
 Any Rust source change invalidates the cached editable build. Python source is
 not part of the native cache key because editable imports read those files
-directly.
+directly. The `cave_closure` manifest additionally tracks its Python sources,
+stubs, and `py.typed` marker. Each package's `pyproject.toml` owns its cache
+keys.
 
 ## JavaScript Dependency Ownership
 
 The monorepo override gives `/app/node_modules` an explicit volume name derived
 from `COMPOSE_INSTANCE_PREFIX`. The default is
-`speleodb_devcontainer_local_web_node_modules`, which is distinct from the
-standalone Compose project's dependency volume. This prevents a standalone
-root-run `/start` from leaving files that the monorepo's `dev-user` cannot
-replace.
+`speleodb-monorepo-web-node-modules`, which is distinct from the standalone
+Compose project's dependency volume. This prevents a standalone root-run
+`/start` from leaving files that the monorepo's `dev-user` cannot replace.
 
 All monorepo application services mount that same volume at both
 `/app/node_modules` and `/workspace/apps/web/node_modules`. The second mount is
@@ -89,8 +96,11 @@ services themselves run as `dev-user`, so subsequent Bun installs, Vite
 temporary files, prek builds, and editor commands preserve ownership without
 another scan.
 
-Run web dependency installation from `/app`, using
-`test -s bun.lock && bun install --frozen-lockfile`. The standalone application
-mount isolates Bun from the enclosing `/workspace` workspace and its lockfile.
-Running an install from `/workspace/apps/web` can discover the parent workspace;
-reserve that path for hooks that launch the already-installed web tools.
+The launcher runs the monorepo installer selected by
+`SPELEODB_PACKAGE_INSTALLER` when `SPELEODB_LOCAL_PACKAGES=1`. It consumes the
+root integration lock in an isolated Linux workspace and exposes the local
+packages through the dependency volume. Standalone mode instead uses
+`test -s bun.lock && bun install --frozen-lockfile` from `/app`. Do not run a
+native workspace install against `/workspace` bind mounts in the container.
+Reserve `/workspace/apps/web` for hooks that launch already-installed web tools;
+run web checks from `/app`.

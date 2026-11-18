@@ -71,12 +71,12 @@ framing uses the shared visible-viewport calculation to fit within the available
 space around overlays, including short fullscreen views. Reaching the last
 revision stops quietly; Play restarts from the beginning.
 
-At the displayed 1× speed, playback uses a 400 ms dwell and a 300 ms camera
-transition. Both base timings are five times faster, with the displayed 0.1×–10×
-scale unchanged. The camera's base duration is capped by the playback interval
-before applying its motion multiplier. Playback waits for a longer camera move
-instead of cutting it off to meet the next interval. Reduced motion removes
-camera animation, and pausing or dragging interrupts it.
+Playback timing is defined in `DEFAULTS.HISTORY` in `defaults.ts`: the dwell,
+camera duration, and camera speed multiplier determine pacing at the displayed
+1× speed. The camera's base duration is capped by the playback interval before
+applying its motion multiplier. Playback waits for a longer camera move instead
+of cutting it off to meet the next interval. Reduced motion removes camera
+animation, and pausing or dragging interrupts it.
 
 Native map gestures already interrupt camera easing while preserving the active
 drag. The historical movement listener only settles its pending camera wait;
@@ -287,17 +287,16 @@ flowchart TD
 
 Both entrypoints schedule independent work **concurrently**: the map is
 initialized without waiting for data, and independent network requests are
-issued in parallel rather than serially. This is a pure scheduling concern — the
-set of functions called and the final rendered state are unchanged. See
-`data-flow.md` → "Startup Load Scheduling (Parallelism)" for the rationale and
-invariants.
+issued in parallel rather than serially. Rendering waits for its prerequisites
+while independent downloads overlap. See `data-flow.md` → "Startup Load
+Scheduling (Parallelism)" for the rationale and invariants.
 
 ### Private Viewer (`main.ts`)
 
 ```
-DOMContentLoaded
+Vite route controller initialization
 │
-├─ 1. State.resetLayerState()               Reset all mutable runtime state
+├─ 1. State.resetLayerState()               Reset layer data; retain display preferences
 │
 ├─ 2. MapCore.init(token, 'map')            Init map IMMEDIATELY (decoupled from data),
 │     └─ State.map = map                    so style/tiles download while APIs run
@@ -306,7 +305,7 @@ DOMContentLoaded
 │     └─ Map Source comes from localStorage or DEFAULTS.MAP.DEFAULT_SOURCE_ID
 │
 ├─ 3. Kick off in parallel (NOT awaited here):
-│     ├─ configReady = Promise.all([loadProjects, loadNetworks, loadGPSTracks, loadGISLayers])
+│     ├─ configReady = Promise.all([loadProjects, loadNetworks, loadGPSTracks, loadGISLayers, loadGISGeometries])
 │     └─ metadataReady = loadGeoJSONMetadata()   prefetch all-projects GeoJSON metadata
 │
 ├─ 4. Interactions.init(map, handlers)      Wire click, hover, drag, context-menu
@@ -327,6 +326,7 @@ DOMContentLoaded
     │     └─ _applyInitialCountryVisibility()  Enforce country gates on load
     ├─ GPSTracksPanel.init()                Render GPS tracks panel (all OFF by default)
     ├─ GISLayersPanel.init()                Render isolated GIS panel (all OFF by default)
+    ├─ GeometryEditor/GISGeometriesPanel    Initialize private authoring and geometry controls
     ├─ StationTags.init()                   Load user tags + colors
     │
     ├─ Promise.all([                        All independent layer phases concurrently:
@@ -336,26 +336,32 @@ DOMContentLoaded
     │     loadExplorationLeadLayers(),      ├─ exploration leads
     │     loadCylinderInstallLayers(),      ├─ safety cylinders
     │     loadVisibleGPSTrackLayers(),      ├─ visible GPS tracks
-    │     loadVisibleGISLayers(),           └─ desired GIS Layers
+    │     loadVisibleGISLayers(),           ├─ desired GIS Layers
+    │     visible GIS Geometry loads,       └─ desired saved geometries
     │   ])
     ├─ Layers.reorderLayers()               Single authoritative z-order pass
     │
-    ├─ Fly to ?goto= or fitBounds()         Position camera
+    ├─ Reveal ?project=, fly to ?goto=, or fitBounds()
+    │                                       Position camera
     │
     └─ Hide loading overlay                 All data loaded
 ```
 
 ### Public Viewer (`gis_view_main.ts`)
 
+The entrypoint validates context and supplies a generated API loader to
+`initReadOnlyViewer()` in `read_only_viewer.ts`. That composition owns the
+following lifecycle:
+
 ```
-DOMContentLoaded
+Vite route controller initialization
 │
 ├─ 1. Validate context (viewMode === 'public', gisToken present)
 ├─ 2. State.resetLayerState()
 ├─ 3. MapCore.init(token, 'map') + set maxZoom
 │     └─ Map Source comes from the shared registry used by private viewer
 ├─ 4. DepthLegend.init(map)
-├─ 5. pendingViewData = fetchPublicViewData()   prefetch GIS-View GeoJSON (concurrent)
+├─ 5. pendingViewData = loadData()   prefetch GIS-View GeoJSON (concurrent)
 │
 └─ map.on('load')
     │
@@ -388,13 +394,12 @@ Geometry saves merge metadata into existing records with `Object.assign`.
 Geometry coordinates belong to State rather than this metadata cache. Revision
 checks prevent stale responses from overwriting more recent local saves.
 
-The TypeScript configuration/API/utilities/notification cycle retains this
-initialization order and mutable identity. Domain records live under
-`ts-types/domain/`; annotations do not add validation or clone successful
-responses. Strict checking and direct Config/API/Utils/Notification suites cover
-cache and record identity, permission normalization, transport settlement, and
-CSRF source precedence. The translation adds no feature scans or network
-requests.
+The configuration/API/utilities/notification cycle preserves initialization
+order and mutable identity. Domain records live under `ts-types/domain/`;
+annotations do not add validation or clone successful responses. Strict checking
+and direct Config/API/Utils/Notification suites cover cache and record identity,
+permission normalization, transport settlement, and CSRF source precedence. Type
+declarations add no feature scans or network requests.
 
 | Property     | Type    | Purpose                                                                          |
 | ------------ | ------- | -------------------------------------------------------------------------------- |
@@ -414,8 +419,9 @@ Permission model uses ranked levels:
 
 ### `State` — Mutable Runtime State
 
-All fields are reset by `State.resetLayerState()`. Every map is keyed by string
-IDs.
+`State.resetLayerState()` cancels scheduled work and replaces layer/data maps
+and sets. It retains the map instance, tags, current station/project IDs, and
+display preferences. Entity lookup maps use string IDs.
 
 | Field                        | Type                           | Purpose                                                                     |
 | ---------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
@@ -462,7 +468,7 @@ All MapLibre sources and layers follow consistent naming:
 | Exploration Leads   | `exploration-leads-source`            | `exploration-leads-layer`                                                                                                                                                 |
 | Cylinder Installs   | `cylinder-installs-source`            | `cylinder-installs-layer`, `cylinder-installs-labels`                                                                                                                     |
 | GPS Tracks          | `gps-track-source-{trackId}`          | `gps-track-line-{id}`                                                                                                                                                     |
-| GIS Layers          | `gis-layer-source-{layerId}`          | `gis-layer-{layerId}-{fill                                                                                                                                                | outline | line | point}` |
+| GIS Layers          | `gis-layer-source-{layerId}`          | `gis-layer-{layerId}-{role}` (`fill`, `outline`, `line`, `point`)                                                                                                         |
 
 ### Z-Ordering Strategy
 
@@ -490,7 +496,8 @@ All MapLibre sources and layers follow consistent naming:
 - **Visibility**: Toggled via
   `map.setLayoutProperty(layerId, 'visibility', ...)` through centralized
   `applyProjectVisibility()` / `applyProjectScopedMarkerVisibility()`.
-- **Refresh**: Full re-fetch + re-render triggered by `speleo:refresh-*` events.
+- **Refresh**: `speleo:refresh-*` events reload through each manager's
+  cache/fetch policy and redraw the affected layers.
 - **Base map source changes**: `MapSources.applyMapSource()` persists the
   selected source and switches ESRI sources by replacing one
   `speleo-base-raster-layer` below the first SpeleoDB overlay layer. It
@@ -510,8 +517,8 @@ object for tile APIs. Raster tile URLs may include `{accessToken}` for future
 tokenized providers; ESRI hillshade sources do not need a token. ESRI hillshade
 raster sources use provider `maxzoom: 16`: the map can still zoom beyond 16, but
 MapLibre GL overzooms zoom-16 ESRI tiles instead of requesting ESRI zoom 17+
-tiles, which showed unavailable-data imagery in Mexico testing. ESRI Satellite
-uses the public World Imagery raster endpoint with provider `maxzoom: 18`.
+tiles beyond the configured provider coverage. ESRI Satellite uses the public
+World Imagery raster endpoint with provider `maxzoom: 18`.
 `DEFAULTS.MAP.MISSING_TILE_SHA256_HASHES` is a global missing tile image hash
 list applied systematically to every configured raster source, not a
 per-provider opt-in. Matching tile responses are rejected by JavaScript when the
@@ -553,7 +560,7 @@ the icon manually. Do not interpolate user or API data into that constant.
 All layer minimum zooms come from `MAP_LAYER_MIN_ZOOM` in
 `@speleodb/map-viewer`, shared with mobile. Shared marker builders apply these
 values directly; project, GPS, cylinder and lead marker adapters import the same
-table. App-local zoom tables and builder overrides have been removed:
+table. The shared table defines the following thresholds:
 
 | Layer Type                   | Min Zoom                |
 | ---------------------------- | ----------------------- |
@@ -580,8 +587,8 @@ modules. All are dispatched on `window` unless noted.
 
 | Event                              | Payload              | Purpose                                                                |
 | ---------------------------------- | -------------------- | ---------------------------------------------------------------------- |
-| `speleo:refresh-stations`          | `{ projectId }`      | Re-fetch and re-render all stations for a project                      |
-| `speleo:refresh-surface-stations`  | `{ networkId }`      | Re-fetch and re-render surface stations for a network                  |
+| `speleo:refresh-stations`          | `{ projectId }`      | Redraw a project's stations from the manager's bulk cache/fetch policy |
+| `speleo:refresh-surface-stations`  | `{ networkId }`      | Redraw a network's stations from the manager's bulk cache/fetch policy |
 | `speleo:refresh-landmarks`         | (none)               | Re-fetch and re-render all landmarks                                   |
 | `speleo:refresh-gps-tracks`        | `{ deactivateAll? }` | Clear cache, reload GPS track list, optionally hide all visible tracks |
 | `speleo:refresh-cylinder-installs` | (none)               | Re-fetch cylinder installs GeoJSON (dispatched on `document`)          |
@@ -590,7 +597,7 @@ modules. All are dispatched on `window` unless noted.
 
 | Event                              | Payload                                 | Purpose                                                                                                            |
 | ---------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `speleo:color-mode-changed`        | `{ mode: 'project'\|'depth' }`          | Dispatched by `MapCore.setupColorModeToggle()` when user toggles color mode                                        |
+| `speleo:color-mode-changed`        | `{ mode: 'project'\|'depth'\|'shot' }`  | Published by Layers when the color mode changes                                                                    |
 | `speleo:map-source-changed`        | `{ sourceId, reloadRequired: boolean }` | Dispatched by `MapSources.applyMapSource()`; ESRI switches use `reloadRequired: false` and do not rebuild overlays |
 | `speleo:depth-domain-updated`      | `{ domain, available, max }`            | Dispatched by `Layers.emitDepthDomainUpdated()` when merged depth domain changes                                   |
 | `speleo:depth-data-updated`        | `{ domain, available, max }`            | Legacy alias of `depth-domain-updated`                                                                             |
@@ -605,7 +612,7 @@ modules. All are dispatched on `window` unless noted.
 | `refresh-landmarks`         | Landmark CRUD modules                        | `main.ts`             |
 | `refresh-gps-tracks`        | Upload/GPX import modules                    | `main.ts`             |
 | `refresh-cylinder-installs` | `cylinders.ts`                               | `main.ts`             |
-| `color-mode-changed`        | `map/core.ts`                                | `depth_legend.ts`     |
+| `color-mode-changed`        | `map/layers/display.ts`                      | `depth_legend.ts`     |
 | `depth-domain-updated`      | `map/layers.ts`                              | `depth_legend.ts`     |
 | `gps-track-loading-changed` | `map/layers.ts`                              | `gps_tracks_panel.ts` |
 | `gis-layer-loading-changed` | `map/layers.ts`                              | `gis_layers_panel.ts` |
@@ -723,13 +730,13 @@ the public custom stylesheet. Production builds use `--minify`.
 
 ### Key Bun Scripts
 
-| Script                  | Purpose                                                                 |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `bun run dev`           | Automatic development rebuilds; refresh the browser after each build    |
-| `bun run start`         | Finite alias for the clean production build                             |
-| `bun run build`         | Full clean + production build                                           |
-| `bun run lint:frontend` | ESLint across frontend and tooling JS (excludes `dist/` and `vendors/`) |
-| `bun run test:frontend` | Vitest test runner for frontend tests                                   |
+| Script                  | Purpose                                                              |
+| ----------------------- | -------------------------------------------------------------------- |
+| `bun run dev`           | Automatic development rebuilds; refresh the browser after each build |
+| `bun run start`         | Finite alias for the clean production build                          |
+| `bun run build`         | Full clean + production build                                        |
+| `bun run lint:frontend` | ESLint across frontend and tooling TypeScript                        |
+| `bun run test:frontend` | Vitest test runner for frontend tests                                |
 
 ### Integration Points
 
@@ -738,8 +745,8 @@ the public custom stylesheet. Production builds use `--minify`.
 - **CI** (`.github/workflows/ci.yml`): root install, build, JS tests, and lint.
 - **Railway deploy** (`.railway/railway.ts`): Service and deployment settings;
   `railpack.json` owns the production asset build via root Bun commands.
-- **Django**: Templates reference the bundled output files in `dist/`
-  directories.
+- **Django**: Templates use Vite template tags and the generated manifest under
+  `speleodb/common/static/speleodb/vite/`.
 
 The source, bootstrap, and pointer adapters have separate structural contracts
 in `ts-types/domain/map-sources.ts`, `map-core.ts`, and `map-interactions.ts`.
@@ -750,8 +757,8 @@ async protocol; application fetch requests retain their native behavior.
 
 `MapSources.createControl` and `Interactions.setupDragHandlers` retain their
 existing `this` aliases so nested callbacks keep the original facade receiver.
-The two local `no-this-alias` annotations document those literal-translation
-exceptions. Drag state still lives in each attachment closure; tool handoff
+The local `no-this-alias` annotations document the callback receiver
+requirements. Drag state still lives in each attachment closure; tool handoff
 restores transient position and original gesture settings before clearing it.
 Source/control, bootstrap lifecycle, and interaction suites exercise real owner
 methods with finite map fakes; no additional source reload or geometry scan is

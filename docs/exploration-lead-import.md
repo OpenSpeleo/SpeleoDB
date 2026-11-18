@@ -42,14 +42,18 @@ lead GeoJSON. It is true only when every entry is checked. Clients cannot write
 an aggregate state independently of its directions. Status-only edits omit an
 unchanged description, retaining the exact original survey comment.
 
-The migration converts saved numeric headings into unchecked entries, retaining
-order, duplicates and fractional bearings. Empty heading arrays become one
-undirected unchecked entry. The SQL backfill preserves parent IDs, descriptions,
-coordinates, creator, timestamps and source records. Reversing the migration
-restores numeric bearings in order but necessarily loses checked states and
-undirected entries, which the earlier schema cannot represent. The backend and
-both apps adopt this contract together; the former numeric `headings` API field
-is removed.
+### Direction-state data preservation
+
+The direction-state data migration converts saved numeric headings into
+unchecked entries, retaining order, duplicates and fractional bearings. Empty
+heading arrays become one undirected unchecked entry. The SQL backfill preserves
+parent IDs, descriptions, coordinates, creator, timestamps and source records.
+Reversing the migration restores numeric bearings in order but necessarily loses
+checked states and undirected entries, which the earlier schema cannot
+represent. Clients use `directions`; numeric `headings` is not a supported API
+field.
+
+### Imported lead ownership
 
 After creation, survey processing never updates an existing lead row. Its
 description, directions and checked states, coordinates, creator and timestamps
@@ -274,7 +278,7 @@ successful offline snapshot. The setting works offline. Mobile has no checked
 state mutation controls or writes. Public web viewers retain their existing
 policy and do not gain lead access.
 
-## Verification and rollout
+## Verification
 
 Backend regressions cover parsing, real constraints and persistence, signature
 priority/history, project isolation, deletion, latest-only changes and atomic
@@ -360,9 +364,8 @@ The complete backend gate remains
 `docker exec -w /app speleodb-monorepo-django make test-py`. Missing PostgreSQL,
 object storage or other required services are failures, never skipped coverage.
 
-Export the backend OpenAPI contract and regenerate both SDKs through their
-existing workflows. Apply the model migration before matching web and worker
-code runs. Shared library changes must be published and adopted by standalone
-consumer manifests before deploying those consumers; local monorepo overlays
-alone do not establish standalone availability. Package publication, deployment
-and production recomputation are separate authorized operations.
+Schema and shared-library changes follow the existing SDK and standalone package
+workflows. Consumers must resolve compatible published dependencies; local
+monorepo overlays alone do not establish standalone availability. Package
+publication, deployment and production recomputation are separate authorized
+operations.

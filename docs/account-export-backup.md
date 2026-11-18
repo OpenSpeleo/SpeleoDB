@@ -17,8 +17,9 @@ delivers messages. Cache and Celery share Redis, using logical databases 0 and 1
 respectively, with AOF persistence and no eviction. Accepted requests, artifact
 availability, and authorized downloads are determined by application records.
 
-**Celery Beat owns all scheduling. Railway hosts continuously running services;
-there are no Railway cron jobs or cron schedules.**
+**Celery Beat owns application background scheduling.** Railway hosts the
+continuously running worker and scheduler; separate database and Git backup
+services use Railway cron schedules defined in `.railway/railway.ts`.
 
 One Celery worker service consumes both `exports` and `background_control` with
 concurrency one. Add replicas of that service when more capacity is needed; keep
@@ -29,9 +30,10 @@ authorization is checked at download time independently of that delay.
 
 Creation serializes on the requester row and enforces a conditional unique
 constraint for active export jobs. The job and initial attempt commit before
-message publication. A failed publish leaves the attempt dispatchable by the
-one-minute maintenance sweep. Unclaimed messages can be republished after ten
-minutes; duplicate deliveries are ignored without overwriting Celery results.
+message publication. A failed publish consumes that attempt and enters the
+bounded retry cycle. The ten-minute maintenance sweep dispatches due work and
+fails publications left unclaimed beyond their dispatch lease; retries use a new
+attempt. Duplicate deliveries are ignored without overwriting Celery results.
 
 A worker atomically claims the current queued attempt using its expected Celery
 task UUID. It records an execution deadline from `EXPORTS_HARD_TIME_LIMIT` and a
@@ -57,18 +59,19 @@ WEB_VIEWER project access is excluded. It honors that attempt's selected
 resources even if permissions are subsequently revoked. Retries take a fresh
 snapshot. Landmark enumeration does not create a personal collection.
 
-Archive format version 2 adds `geometries/` and renames `gis_layers/` to
-`layers/`. The manifest category names follow those directories. Existing
-generated archives retain their original layout. Each geometry is written
-directly from its database JSON snapshot to `geometries/<name>--<uuid>.geojson`,
-preserving the stored bare LineString/Polygon and coordinate precision. The
-manifest records its revision, name, creator, color, timestamps, size, and
-checksum. Geometry selection reuses the same centralized active
-READ_ONLY-or-higher permission queryset as the API; creator provenance alone
-does not grant access. Small, vertex-bounded geometry documents are loaded with
-the selected rows in one query, so subsequent edits cannot mix a newer shape
-with an older revision. No source S3 read or per-geometry database query is
-needed; the completed ZIP still uses existing export storage.
+Archive format version 2 stores geometries in `geometries/` and imported GIS
+layers in `layers/`. The manifest category names follow those directories.
+Existing generated archives retain their original layout. Each geometry is
+written directly from its database JSON snapshot to
+`geometries/<name>--<uuid>.geojson`, preserving the stored bare
+LineString/Polygon and coordinate precision. The manifest records its revision,
+name, creator, color, timestamps, size, and checksum. Geometry selection reuses
+the same centralized active READ_ONLY-or-higher permission queryset as the API;
+creator provenance alone does not grant access. Small, vertex-bounded geometry
+documents are loaded with the selected rows in one query, so subsequent edits
+cannot mix a newer shape with an older revision. No source S3 read or
+per-geometry database query is needed; the completed ZIP still uses existing
+export storage.
 
 Sources are captured individually; GitLab, database rows, and uploaded objects
 are not an atomic cross-system snapshot. The manifest records captured
@@ -222,20 +225,6 @@ current files, a clean working tree, and preserved historical branches/tags
 after extraction. Zero-commit project tests assert exactly one empty marker file
 and no Git directory. Real download tests verify the filename returned to the
 browser.
-
-The populated GitLab fixture can receive a temporary HTTP 404 when it creates
-the first commit immediately after project creation. Only that initial commit is
-retried, with five attempts and 1/2/4/8-second backoff. A persistent 404 is
-raised with its original details; other HTTP and transport errors propagate
-without this retry because the write may have succeeded. Successful setup adds
-no requests or delay. The production client and later fixture writes retain
-their existing behavior.
-
-`test_gitlab_initial_commit.py` exercises this fixture policy with real HTTP
-responses and the python-gitlab client: immediate success, temporary 404
-recovery, bounded exhaustion, other HTTP failures, and a lost response after
-receiving the write. The live archive test still verifies actual GitLab commits,
-branches, tags, and restored history.
 
 Deploy one reviewed release to web and workers after checking storage access and
 retention configuration. Verify exports from an ordinary active account, a real

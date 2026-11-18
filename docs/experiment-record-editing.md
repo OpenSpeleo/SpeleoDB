@@ -2,50 +2,26 @@
 
 ## Overview
 
-Station-scoped Scientific Experiments now support editing existing experiment
-data records from the private map viewer.
+Station-scoped Scientific Experiments support editing existing experiment data
+records from the private map viewer.
 
 This flow covers `ExperimentRecord` rows attached to a station and an
 experiment. It does not change the separate experiment-definition editor used to
 manage experiment names, metadata, or field schemas.
 
-## Migration / Behavior Change Notes
+## Access and workflow
 
-The frontend now drives record-action state strictly from the selected
-experiment's API flags (`can_write`, `can_delete`), not from the station's
-project or surface network. Three observable changes follow:
+The records tab reads the selected experiment's API flags `can_write` and
+`can_delete`. Add and Edit require experiment WRITE access; a read-only banner
+explains when that access is absent. Writable tables show a delete control,
+enabled only for experiment ADMIN access. Station READ visibility is required
+independently by the backend. Project or surface-network write permission does
+not substitute for experiment write permission.
 
-- A user who previously saw Add / Edit because they had project WRITE on the
-  station, but only READ on the experiment, **no longer sees** those buttons.
-  The records tab renders an inline "Read-only access" banner explaining that
-  experiment-level write access is required. Backend behavior is unchanged:
-  those clicks would always have been rejected by the inline `SDB_WriteAccess`
-  check on the experiment.
-- A user with only project READ on the station but WRITE (or higher) on the
-  experiment **now correctly sees** Add / Edit and can use them. Both layers
-  (station READ via class-level permission and experiment WRITE via the inline
-  check) accept this combination.
-- Delete remains admin-only. Writers still see the delete column, but the
-  control is disabled unless `can_delete` is true.
-- If add/edit/delete returns `403`, the client now re-fetches the experiment
-  list and re-renders from the refreshed flags instead of mutating the cached
-  experiment object in place.
-
-The authoritative client-side signals are the experiment-list payload fields
-`can_write` and `can_delete` (computed by `ExperimentSerializer`). Any future
-record-mutation UI must read those flags directly. Do not re-introduce
-project/network-scope heuristics for record mutations.
-
-## Feature Intent
-
-The map viewer already let users:
-
-- list experiment records for a selected station and experiment
-- add new records
-- delete records (admin only)
-
-Editing completes that workflow so users with write access can correct
-measurement values without deleting and recreating rows.
+After a mutation returns `403`, the client refreshes the experiment list and
+renders the returned capability flags. This prevents stale cached permissions
+from leaving unavailable actions enabled. Editing corrects measurement values
+without deleting and recreating the record.
 
 ## Engineering Scope
 
@@ -173,7 +149,7 @@ identity instead of trusting the client:
 
 Non-object bodies (e.g. JSON arrays or strings) are rejected with `400` and a
 clear `errors.data` message. The view never coerces a non-dict body into a dict
-— that previously hid bugs and could 500 in edge cases.
+because the record payload must be an object.
 
 #### Strict `data` key validation
 
@@ -238,7 +214,7 @@ The focused coverage pins:
 - API error messaging including nested `errors` arrays
 - `403` on add/edit/delete re-fetches experiment permissions and re-renders the
   table from the refreshed flags
-- add and delete regressions after the refactor
+- add and delete behavior alongside editing
 - record modal closes on cancel button, Escape key, and overlay click
 - body `overflow` is preserved across the modal lifecycle — closing the modal
   restores whatever value was in effect before the modal opened (including
@@ -259,8 +235,7 @@ The backend tests pin:
 - `PUT` happy path with submitter-email spoof rejection
 - `PUT` omitted-field removal (full-replacement semantics)
 - `PATCH` merges partial payloads while preserving untouched keys
-- `PATCH {}` is a no-op on `data` (regression guard against the historical
-  wholesale-replace bug)
+- `PATCH {}` is a no-op on `data`
 - `PATCH` cannot spoof submitter email
 - non-dict body returns `400` for `POST`, `PUT`, and `PATCH`
 - unknown `data` key UUIDs are rejected with `400` on `POST`/`PUT`/`PATCH`;
@@ -286,10 +261,10 @@ The backend tests pin:
 
 ## Performance Notes
 
-The refactor intentionally avoids new full-table reloads after add, edit, or
-delete. The selected experiment rows are still fetched once per experiment
-selection, and local row state is mutated in place afterward. The `403` recovery
-path refreshes only the experiment metadata flags, not the full record list.
+Add, edit, and delete update the local table without a full reload. The selected
+experiment rows are still fetched once per experiment selection, and local row
+state is mutated in place afterward. The `403` recovery path refreshes only the
+experiment metadata flags, not the full record list.
 
 This keeps the UI responsive and avoids unnecessary duplicate fetches while also
 centralizing field logic so future changes do not require updating multiple
@@ -309,14 +284,13 @@ context.
 Initialization still resolves before its data request finishes, and refresh
 destroys the current grid before starting another load. Tests cover that timing,
 zero coordinates, field formatting, empty/error states, repeated setup and
-export errors. Types add no feature rescans or additional requests.
+export errors. Refresh uses the same data-loading path.
 
 The TypeScript record UI keeps its field/row cache and modal types in
 `ts-types/domain/station-experiments.ts`. API data still follows the existing
 array/object guards and saved-row validation. Request tokens discard stale row
-loads; typing adds no extra fetches or per-row runtime validation. Tests cover
-permission refresh, stale selection, form values, scroll restoration, and the
-original async submit listener's promise settlement.
+loads. Tests cover permission refresh, stale selection, form values, scroll
+restoration, and the original async submit listener's promise settlement.
 
 ### Field model ownership
 

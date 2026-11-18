@@ -13,10 +13,9 @@ GeoJSON management command all call this model method. Selection belongs on
 
 These are immutable configurations supplied by the numerical libraries. Web does
 not recreate their weights, stopping rules, station substitutions, projection,
-or optimization. All loop-closure calculations stay in `cave_closure`. There is
-no new model field, migration, HTTP parameter, scheduler, or browser control.
-The former `SurveyLoopClosure` Gaussian wrapper and its optional model argument
-are removed; callers simply request the project's GeoJSON.
+or optimization. All loop-closure calculations stay in `cave_closure`. Callers
+request the project's GeoJSON without selecting a solver through an HTTP
+parameter or browser control.
 
 ```python
 result = project.build_geojson(source_file)
@@ -88,11 +87,11 @@ replacement leaves the previous stored artifact intact.
 
 Public/private maps, OGC endpoints, and downloadable archives consume stored
 `ProjectGeoJSON` artifacts. They do not run the solver themselves. Existing
-artifacts are skipped unless an operator explicitly requests recomputation; no
-rebuild, source update, or deployment is triggered by this code change. Use the
-existing admin operation or `build_project_geojsons --force-recompute` workflow
-to replace older artifacts when authorized. Replacement retains the existing
-GeoJSON revision updates and cache invalidation behavior. See
+artifacts are skipped unless an operator explicitly requests recomputation;
+reading a stored artifact does not trigger recomputation. Use the existing admin
+operation or `build_project_geojsons --force-recompute` workflow to replace
+older artifacts when authorized. Replacement retains the existing GeoJSON
+revision updates and cache invalidation behavior. See
 [historical conversion](project-geojson-command.md) and
 [artifact retention](project-geojson-artifacts.md).
 
@@ -105,8 +104,7 @@ matching web and worker application code together. Native Linux wheels must be
 built against a libc baseline supported by the standalone Compose base. An
 editable build with a local Rust toolchain is not proof that the published wheel
 can be installed into the Rust-free standalone image. Keep that image's base and
-the native wheel build baseline compatible. Railway service configuration is
-unchanged.
+the native wheel build baseline compatible.
 
 ## Verification and performance
 

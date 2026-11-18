@@ -1,9 +1,9 @@
 # GIS Geometry: read-only technical specification
 
-Audience: an agent implementing an authenticated GIS Geometry browser, map
-overlay, or data consumer. This specification describes the current resource
-contract and **GET requests only**. It contains no creation, modification,
-deletion, or permission-management operations.
+This reference is for authenticated GIS Geometry browsers, map overlays, and
+data consumers. This specification describes the current resource contract and
+**GET requests only**. It contains no creation, modification, deletion, or
+permission-management operations.
 
 ## 1. Resource and storage
 
@@ -118,8 +118,8 @@ only presentation values.
 Policy constants are owned by
 [`speleodb/gis/geometry_contract.json`](../speleodb/gis/geometry_contract.json).
 Python validation and JavaScript `DEFAULTS.GIS_GEOMETRY` consume that same
-document. Cross-language tests verify agreement. Other agents working in this
-repository must import the existing contract rather than duplicate its values.
+document. Cross-language tests verify agreement. Repository clients consume the
+existing contract rather than duplicating its values.
 
 ## 3. Color and transparency constants
 
@@ -224,7 +224,7 @@ timestamps is unspecified. No accessible records means `[]`, not 404.
 ```json
 [
   {
-    "id": "12345678-1234-4234-8234-123456789abc",
+    "id": "<geometry-uuid>",
     "name": "Survey reference line",
     "alias": "Approach",
     "color": "#377eb8",
@@ -292,7 +292,7 @@ containing all common fields plus:
 
 ```json
 {
-  "id": "12345678-1234-4234-8234-123456789abc",
+  "id": "<geometry-uuid>",
   "name": "Survey reference line",
   "alias": "Approach",
   "description": "Trail from the road to the entrance.",
@@ -453,30 +453,27 @@ curl --fail-with-body \
 curl --fail-with-body \
   -H "Authorization: Bearer ${SPELEODB_API_TOKEN}" \
   -H 'Accept: application/json' \
-  'https://YOUR-SPELEODB-HOST/api/v2/gis-geometries/12345678-1234-4234-8234-123456789abc/'
+  'https://YOUR-SPELEODB-HOST/api/v2/gis-geometries/<geometry-uuid>/'
 
 curl --fail-with-body \
   -H "Authorization: Bearer ${SPELEODB_API_TOKEN}" \
   -H 'Accept: application/json' \
-  'https://YOUR-SPELEODB-HOST/api/v2/gis-geometries/12345678-1234-4234-8234-123456789abc/permissions/'
+  'https://YOUR-SPELEODB-HOST/api/v2/gis-geometries/<geometry-uuid>/permissions/'
 ```
 
-## 11. Acceptance checklist for the implementing agent
+## 11. Read-client verification
 
-- All network operations in this integration use the three documented GET
-  routes.
-- Empty list, each supported permission level, and denied/revoked access work.
-- Collection rendering does not assume coordinates or a pagination envelope.
-- Both geometry types render with correct coordinate order, color, and constant
-  fill transparency. Point is not presented as a supported Geometry type.
-- Polygon closure is excluded from vertex count; bounding-box area is labeled
-  correctly and converted from m² to km² only for display.
-- Full extents remain visible when framing; show/hide state survives delayed
-  responses and failed requests without stale updates winning.
-- Permission-list string levels are not confused with numeric metadata levels.
-- A same-revision permissions change updates access/capability presentation.
-- Cache isolation, safe text/color rendering, malformed responses, non-JSON
-  errors, and timezone offsets are covered.
+Read-client verification should cover the documented GET routes, empty
+collections, supported permission levels, denied/revoked access, and
+metadata-only collection responses. Rendering coverage should check both shape
+types, coordinate order, color and fill opacity, vertex counting, bounding-box
+units, full-extent framing, and explicit visibility choices during delayed or
+failed requests.
+
+Access tests should distinguish permission-list strings from numeric metadata
+levels and handle capability changes without a content revision change. Cache
+isolation, safe text/color rendering, malformed responses, non-JSON errors and
+timezone offsets remain independent client boundaries.
 
 ## 12. Implementation authority and verification references
 
@@ -493,13 +490,13 @@ The repository implementation is authoritative if this document drifts:
 - Rendering constants:
   `frontend_private/static/private/ts/map_viewer/config.ts`.
 - Read integration: `map_viewer/config.ts`, `state.ts`, `map/layers.ts`, and
-  `map/vector_overlay.ts` beneath the same private JavaScript directory.
+  `map/vector_overlay.ts` beneath the same private TypeScript directory.
 - Contract tests: `speleodb/api/v2/tests/test_gis_geometry_api.py`,
   `speleodb/gis/tests/test_gis_geometry.py`,
   `map_viewer/config.geometry_contract.test.ts`, and
   `map_viewer/map/layers.gis_geometries.test.ts`.
 
-Run tests inside the existing `speleodb_local_django` container at `/app`, as
+Run tests inside the existing `speleodb-monorepo-django` container at `/app`, as
 required by `AGENTS.md`. The broader feature design is in
 [`gis-geometries.md`](gis-geometries.md).
 

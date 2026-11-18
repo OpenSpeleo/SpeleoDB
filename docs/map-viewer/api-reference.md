@@ -14,8 +14,8 @@ map HTTP transport or synchronous request path.
 Map requests preserve the current `Utils.getCSRFToken()` fallback (validated
 hidden input, cookie, then configured map context). Ordinary browser controllers
 use the common adapter's request-time hidden input/cookie lookup. Both use
-same-origin session credentials. Public GIS requests retain their explicit
-credential and redirect policy.
+same-origin session credentials. Public GIS metadata uses the same browser
+adapter; its tokenized endpoint does not require a session.
 
 `apiData` unwraps documented 2xx responses and throws `ApiRequestError`
 retaining status, data and headers otherwise. Empty responses remain
@@ -196,7 +196,7 @@ use the same private map loading path as creator-owned tracks.
 | PUT    | `/api/v2/import/gpx/`     | `gpx-import`     | Import GPX and create owner ADMIN access |
 | PUT    | `/api/v2/import/kml_kmz/` | `kml-kmz-import` | Import KML/KMZ file                      |
 
-### 2.7 Cylinder Installs
+### 2.8 Cylinder Installs
 
 **URL file:** `speleodb/api/v2/urls/cylinder_install.py`
 
@@ -216,7 +216,7 @@ use the same private map loading path as creator-owned tracks.
 | `API.getCylinderFleetDetails(id)`   | GET  | Fleet detail         |
 | `API.getCylinderFleetCylinders(id)` | GET  | Cylinders in a fleet |
 
-### 2.8 GIS Views
+### 2.9 GIS Views
 
 **URL file:** `speleodb/api/v2/urls/gis_view.py`
 
@@ -224,10 +224,11 @@ use the same private map loading path as creator-owned tracks.
 | ------ | ------------------------ | --------------- | ---------------------------- |
 | GET    | `/api/v2/gis_view/<id>/` | `gis-view-data` | Fetch GIS view configuration |
 
-GIS Views are saved map configurations (center, zoom, visible layers) that can
-be shared via a public token.
+GIS Views select projects at fixed revisions or their latest available revision,
+with a precise-zoom policy and an optional geographic display bound. They can be
+shared via a public token; the bound does not restrict raw downloads or OGC.
 
-### 2.9 Logs & Resources (standalone)
+### 2.10 Logs & Resources (standalone)
 
 | Method           | URL Pattern               | Name              | Description           |
 | ---------------- | ------------------------- | ----------------- | --------------------- |
@@ -237,7 +238,7 @@ be shared via a public token.
 These complement the station-nested endpoints and allow direct access by
 log/resource UUID.
 
-### 2.10 Sensor Fleets
+### 2.11 Sensor Fleets
 
 | Frontend method                      | HTTP | Description        |
 | ------------------------------------ | ---- | ------------------ |
@@ -245,7 +246,7 @@ log/resource UUID.
 | `API.getSensorFleetDetails(fleetId)` | GET  | Fleet detail       |
 | `API.getSensorFleetSensors(fleetId)` | GET  | Sensors in a fleet |
 
-### 2.11 Experiments
+### 2.12 Experiments
 
 | Frontend method                           | HTTP | Description                      |
 | ----------------------------------------- | ---- | -------------------------------- |
@@ -260,8 +261,8 @@ log/resource UUID.
 path:** `/api/v2/gis-ogc/` **Architecture:** all four families share a single
 `OGCFeatureService` abstraction in `speleodb/api/v2/views/ogc_base.py`, with
 shared compliance helpers in `speleodb/gis/ogc_helpers.py`. Each family (project
-view, project user, landmark single, landmark user) is a ~60-line concrete
-service binding to the same set of generic views.
+view, project user, landmark single, landmark user) binds a concrete service to
+the same set of generic views.
 
 These endpoints implement the
 [OGC API - Features 1.0 Core + GeoJSON](https://docs.ogc.org/is/17-069r4/17-069r4.html)
@@ -272,7 +273,8 @@ standard, enabling interoperability with GIS clients like QGIS and ArcGIS Pro.
 Every OGC family exposes the same six routes:
 
 - `<base>` — landing page (the URL users copy into their GIS client). **No
-  trailing slash** — see `docs/map-viewer/ogc-url-and-geometry-contract.md` §1
+  trailing slash** — see the
+  [URL convention](ogc-url-and-geometry-contract.md#1-url-convention--no-trailing-slashes)
   for the reasoning. Pinned by
   `test_no_ogc_url_pattern_has_inconsistent_trailing_slash`.
 - `<base>/conformance` — conformance declaration
@@ -282,14 +284,8 @@ Every OGC family exposes the same six routes:
 - `<base>/collections/<id>/items/<feature_id>` — single feature
 
 The trailing-slash variants of the landing URL (`view/<token>/`, etc.) return
-**404** — Django's `APPEND_SLASH` only adds slashes, so the hard-break is by
-design. Users re-copy the URL from the integration page (which renders the new
-format automatically through `{% url %}`) and the next paste works.
-
-**Removed in this release** (April 2026 — ws3a): the old bare-token aliases
-(`view/<token>` for collections, `view/<token>/<sha>` for the collection
-metadata, etc.) are gone. They violated the OGC discovery convention by exposing
-a non-landing URL as the user-facing entry point.
+**404**. Django's `APPEND_SLASH` only adds slashes. Copy the canonical landing
+URL from the integration page and follow its discovery links.
 
 ### Response shape (uniform across all four families)
 
@@ -310,11 +306,12 @@ Every `/items` response includes this tested envelope:
 }
 ```
 
-`numberMatched` is the total after `bbox`/`datetime` filtering; `numberReturned`
-is the page size. The envelope is built per-request, NOT cached — `timeStamp`
-reflects the response generation time per OGC Req 29, and the `self` href
-reflects the actual request URL and any representation-changing query parameters
-(proxies that rewrite host/scheme are honoured).
+`numberMatched` is the total after `bbox` filtering (`datetime` is validated but
+does not filter these collections); `numberReturned` is the page size. The
+envelope is built per-request, NOT cached — `timeStamp` reflects the response
+generation time per OGC Req 29, and the `self` href reflects the actual request
+URL and any representation-changing query parameters (proxies that rewrite
+host/scheme are honoured).
 
 Every collection metadata document includes:
 
@@ -373,12 +370,13 @@ without claiming that all GIS platforms prohibit mixed geometries. See the
 [URL and geometry contract](ogc-url-and-geometry-contract.md) for ownership,
 cache behavior, and extension requirements.
 
-The pre-split collection URL `<base>/collections/<sha>` (without `_points` or
+An unsuffixed collection URL `<base>/collections/<sha>` (without `_points` or
 `_lines` suffix) returns **`410 Gone`** with a `Link: rel="alternate"` header
 listing the geometry-typed replacements. The body is written for the human user
 (QGIS / ArcGIS Pro display it) and asks them to re-add the layer from their OGC
-connection. See `docs/map-viewer/ogc-url-and-geometry-contract.md` §2 for the
-full contract and migration story.
+connection. See the
+[geometry contract](ogc-url-and-geometry-contract.md#2-geometry-split-contract--one-collection-per-geometry-group)
+for the response and replacement-link semantics.
 
 ### `service-desc` points to a focused OGC OpenAPI document
 
@@ -392,10 +390,10 @@ GET /api/v2/gis-ogc/openapi/
 
 (URL name: `api:v2:gis-ogc:openapi`).
 
-This endpoint is **not** the global `/api/schema/` document — that one is 684 KB
-and explicitly omits the OGC routes (every OGC view sets `schema = None`), so
-advertising it would cost every connecting ArcGIS Pro / QGIS client a useless
-~700 KB download per session. Instead, the focused document covers ONLY the OGC
+The composed global `/api/schema/` document includes all API families, including
+OGC. `speleodb/api/schema.py` merges the same OGC declarations used by this
+focused service description; `schema = None` on the generic OGC views only
+disables their automatic DRF introspection. The focused document covers the OGC
 route surface (landing / conformance / collections / collection / items /
 feature across all four families) and is **pre-built once at import time**.
 Every request serves the same bytes from memory. The document uses
@@ -456,8 +454,8 @@ personal QGIS connections.
 
 The experiment endpoint is a single-document download, **not** an OGC API -
 Features service. It has no landing/conformance/collections discovery and
-ArcGIS-Pro-style "Add OGC Server" workflows will not follow it. Documented as a
-known limitation; wrapping it in a full OGC tree is out of scope for this PR.
+ArcGIS-Pro-style "Add OGC Server" workflows will not follow it. Use a
+collection-family landing URL for OGC service discovery.
 
 ### 3.4 Landmark Collection endpoints (public, `gis_token`-based)
 
@@ -497,9 +495,9 @@ Declared conformance classes (also returned at `/conformance`):
 
 ### 3.6 Manual smoke test (post-deploy)
 
-Before announcing a release, run the four-step smoke test below against a
-staging or production-clone environment. Each step pins one of the live ArcGIS
-Pro 3.6.1 regression dimensions.
+When verifying a deployment, run the following checks against an authorized
+staging or production-clone environment. They exercise discovery, geometry
+groups, response metadata, and pagination.
 
 1. **QGIS connection** (validates landing-page discovery and geometry-typed
    layers):
@@ -511,7 +509,7 @@ Pro 3.6.1 regression dimensions.
    - Pin: point and line features visible, attribute table populated, no error
      in QGIS log.
 
-2. **ArcGIS Pro 3.6+** (validates the live regression fix):
+2. **ArcGIS Pro** (validates discovery and rendering):
 
    - _Insert ▸ Connections ▸ Add OGC API Server_ and paste the personal-GIS-View
      landing URL.
@@ -524,7 +522,7 @@ Pro 3.6.1 regression dimensions.
 3. **`curl` envelope sanity** (validates per-request semantics):
 
    ```sh
-   # Landing URL is slash-free now; collection IDs are <sha>_<group>.
+   # Landing URL is slash-free; collection IDs are <sha>_<group>.
    curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY" | jq '.links[].rel'
    curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections" | jq '.collections[].id'
    curl -s "https://staging.speleodb.org/api/v2/gis-ogc/user/$KEY/collections/${SHA}_lines/items" | jq '{numberMatched, numberReturned, timeStamp, links: [.links[].rel]}'
@@ -562,8 +560,8 @@ The private map viewer (`main.ts`) relies on Django session authentication:
 1. User logs in via the Django auth system (session cookie set).
 2. Every API request includes `credentials: 'same-origin'` to send the session
    cookie.
-3. A CSRF token is included via the `X-CSRFToken` header (read from the
-   `csrftoken` cookie by `Utils.getCSRFToken()`).
+3. A CSRF token is included via the `X-CSRFToken` header. `Utils.getCSRFToken()`
+   checks the validated hidden input, cookie, then map context.
 4. Permission checks happen server-side per the project/network permission
    matrix. The frontend pre-loads the permission map into `Config` and uses
    `Config.hasProjectAccess()` / `Config.hasScopedAccess()` to gate UI actions
@@ -607,8 +605,8 @@ formatting, and install-date field validation. `stations/sensors.ts` retains
 sensor requests, fleet caches, sorting/filter state, and the asynchronous
 station lookup. It obtains write access from `Config.getScopedAccess` for the
 actual project or surface network before passing that result to the renderer.
-The presentation module does not duplicate permission policy or fetch data.
-Existing HTML escaping, date arithmetic, action hooks, and modal validation
-timing remain unchanged. Sensor tests cover escaped history data and both scope
-kinds with read-only and write access; the latter controls the install action
-while leaving history navigation available.
+The presentation module does not duplicate permission policy or fetch data. The
+presentation boundary preserves HTML escaping, date arithmetic, action hooks,
+and modal validation timing. Sensor tests cover escaped history data and both
+scope kinds with read-only and write access; the latter controls the install
+action while leaving history navigation available.

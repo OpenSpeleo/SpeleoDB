@@ -1,5 +1,8 @@
 # XSS Protection
 
+Agent Documentation & Practices for secure frontend rendering and server-side
+text sanitization.
+
 ## Rendering boundary
 
 User and API values must remain text when displayed. Escape at the function that
@@ -93,8 +96,8 @@ Names, notes, descriptions, tags, field names, filenames, author/status labels,
 errors, and resource text are all user/API-controlled. The function assembling
 the final markup owns their escaping, including helper return values accepted by
 modal builders. `forms/api_errors.ts` imports the shared escape helper and uses
-`.text()` where markup is unnecessary; templates no longer include the old
-executable error snippet.
+`.text()` where markup is unnecessary; templates provide inert controller
+context.
 
 The feedback controller joins API error messages in response order, then passes
 the result through `escapeHtml` before calling `FormModals.showError`. The modal

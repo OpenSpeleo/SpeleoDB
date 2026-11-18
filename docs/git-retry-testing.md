@@ -1,5 +1,7 @@
 # Git retry testing
 
+**Agent Documentation & Practices — maintained guidance for contributors.**
+
 Retry tests exercise actual failed operations, real waiting and the real clock.
 Never script exceptions or canned error responses to manufacture retries. Do not
 replace `time`, `sleep`, Django's clock, or subprocess timing. Do not
@@ -14,10 +16,11 @@ commit created before a timeout is not repeated. Native Git hooks and actual
 connection refusal provide failures without replacing Git commands.
 
 Live GitLab pool provisioning and lifecycle tests use the manager's actual
-lookup, bounded retries, elapsed waiting, creation and cleanup. Retry coverage
-must use an actual failed call, such as connection refusal or an unavailable
-local repository. Do not fabricate SDK outcomes or replace fake timers with long
-waits around scripted failures.
+lookup, bounded retries, elapsed waiting, creation and cleanup. An actual failed
+call is required before retrying; connection refusal and unavailable local
+repositories are appropriate for single-attempt error propagation checks, not
+manufactured recovery sequences. Do not fabricate SDK outcomes or replace fake
+timers with long waits around scripted failures.
 
 `BoundedGit.execute()` retains GitPython's positional and keyword parameter
 contract. It normalizes both forms into the existing deadline handling so

@@ -20,7 +20,7 @@ Django Backend
   │   Response: { success, data: [{ id, name, user_permission_level, ... }] }
   │   Stored in: Config._networks
   │
-  ├─ GET /api/v2/gps-tracks/                  → Config.loadGPSTracks()
+  ├─ GET /api/v2/gps_tracks/                  → Config.loadGPSTracks()
   │   Response: { success, data: [{ id, name, color, file, ... }] }
   │   Stored in: Config._gpsTracks
   │
@@ -28,7 +28,7 @@ Django Backend
   │   Response: readable metadata with one signed renderable `file` URL
   │   Stored in: Config._gisLayers
   │
-  └─ GET /api/v2/all-projects-geojson/        → API.getAllProjectsGeoJSON()
+  └─ GET /api/v2/projects/geojson/        → API.getAllProjectsGeoJSON()
       Response: { success, data: [{ id, geojson_file, ... }] }
       Used for: Config.filterProjectsByGeoJSON()
       Purpose: Identify which projects have GeoJSON data, prune the rest
@@ -42,36 +42,24 @@ After metadata is fetched, data is loaded in parallel for all projects:
 ```
 For each project in Config.projects (parallel via Promise.all):
 │
-├─ Stations: API.getProjectStations(projectId)
-│   → StationManager.loadStationsForProject()
-│   → Builds GeoJSON FeatureCollection from station records
-│   → Layers.addSubSurfaceStationLayer(projectId, geojson)
-│   → Features stored in State.allStations (Map by ID)
+├─ Stations: StationManager.loadStationsForProject(projectId)
+│   ├─ Ensure one shared API.getAllStationsGeoJSON() request/cache
+│   ├─ Filter cached features to this project after its read-access check
+│   ├─ Store normalized records in State.allStations
+│   └─ Layers.addSubSurfaceStationLayer(projectId, geojson)
 │
-└─ Survey GeoJSON: fetch(geojsonUrl)     ← URL from metadata phase
-    → Layers.addProjectGeoJSON(projectId, url)
-    │
-    ├─ fetch(url) → raw GeoJSON
-    ├─ processGeoJSON(projectId, rawData)
-    │   ├─ buildSectionDepthAverageMap()  Compute avg depth per section from Points
-    │   ├─ computeProjectDepthDomain()    Extract {min: 0, max} range
-    │   │   └─ State.projectDepthDomains.set(pid, domain)
-    │   ├─ Stamp depth_val and depth_norm on each LineString feature
-    │   └─ Force Z=0 on all coordinates
-    │
-    ├─ Geometry.cacheLineFeatures()       Extract start/end snap points
-    │   └─ snapPointsCache.set(pid, snapPoints[])
-    │
-    ├─ map.addSource('project-geojson-{id}', data)
-    ├─ map.addLayer('project-layer-{id}')       Survey lines
-    ├─ map.addLayer('project-labels-{id}')      Section name labels
-    ├─ map.addLayer('project-points-{id}')      Entry point stars (★)
-    │
-    ├─ computeGeoJSONBounds() → State.projectBounds.set()
-    │
-    └─ Layers.recomputeActiveDepthDomain()
-        └─ mergeDepthDomains() across visible projects
-        └─ Dispatch speleo:depth-domain-updated
+└─ Survey: Layers.addProjectGeoJSON(projectId, url)
+    ├─ fetch(url) → readViewerGeoJSON(response, { isCurrent })
+    ├─ Optional public geographic-bound transform
+    ├─ prepareProjectGeoJSON(data, { isCurrent })
+    │   ├─ Resolve section averages and line depths
+    │   ├─ Derive an immutable display copy with depth_val/depth_norm and Z=0
+    │   └─ Collect project domain, snap endpoints, and bounds cooperatively
+    ├─ Reject stale completion before publishing prepared state
+    ├─ Cache domain and Geometry.cachePreparedSnapPoints(projectId, snapPoints)
+    ├─ Reuse existing source with setData(), or add source and survey layers
+    ├─ Publish prepared bounds to State.projectBounds
+    └─ Schedule depth application from visible projects' cached domains
 ```
 
 ### `country` and `color` Field Flows
@@ -132,59 +120,31 @@ fetch /api/v2/gis-ogc/view/{gisToken}/geojson
 
 ## Startup Load Scheduling (Parallelism)
 
-### Why this exists
+### Scheduling and prerequisites
 
-The startup sequence used to be a chain of blocking `await`s: the three
-independent startup API calls (`/projects/`, `/surface-networks/`,
-`/gps-tracks/`) ran one after another, the Mapbox map was only initialized
-_after_ all three resolved, and the all-projects GeoJSON metadata fetch only
-started once the map `load` event fired. None of those steps actually depend on
-each other, so the critical path was dominated by latency that could overlap.
-
-A HAR capture of a real load showed map style/tile download not starting until
-~2.1s and the first project GeoJSON not starting until ~4.2s (~42% of total load
-was pure preamble).
-
-### The scheduling rules
-
-The entrypoints (`map_viewer/main.ts` and `gis_view_main.ts`) now schedule
-independent work concurrently. **No application logic changed** — same
-functions, same end state, same final layer z-order. Only _when_ requests are
-issued changed.
+Map style/tile loading, accessible metadata, and GeoJSON metadata are
+independent requests. Starting them together overlaps their latency while
+retaining explicit readiness gates before layer construction.
 
 ```mermaid
 flowchart TD
-    subgraph beforeFlow [Before serial]
-        b1["projects 1456ms"] --> b2["networks 105ms"]
-        b2 --> b3["gpsTracks 139ms"]
-        b3 --> b4["map.init + style"]
-        b4 --> b5["geojson metadata 1602ms"]
-        b5 --> b6["project GeoJSON ~4245ms"]
-    end
-    subgraph afterFlow [After parallel]
-        a0["map.init + style"]
-        a0 --> aLoad["map load"]
-        a1["projects 1456ms"]
-        a2["networks 105ms"]
-        a3["gpsTracks 139ms"]
-        a4["geojson metadata 1602ms"]
-        aLoad --> aWait["await configReady + metadata"]
-        a1 --> aWait
-        a2 --> aWait
-        a3 --> aWait
-        a4 --> aWait
-        aWait --> a6["project GeoJSON ~2000ms"]
-    end
+    map[Map initialization and style loading] --> ready[Map load]
+    projects[Projects, networks, GPS, GIS layers and geometries] --> config[configReady]
+    metadata[GeoJSON metadata prefetch] --> render[Layer loading]
+    ready --> render
+    config --> render
+    icons[Marker images] --> render
+    render --> order[Final layer order and initial camera]
 ```
 
 Private viewer (`main.ts`):
 
 - **Map init is decoupled from data.** `MapCore.init()` runs immediately, so the
-  Mapbox style/tiles download concurrently with the API calls instead of after
-  them.
+  selected provider style/tiles download concurrently with the API calls instead
+  of after them.
 - **Startup config loads run in parallel.** `Config.loadProjects()`,
-  `loadNetworks()`, and `loadGPSTracks()` are kicked off together as a single
-  `configReady = Promise.all([...])` rather than three sequential `await`s.
+  `loadNetworks()`, `loadGPSTracks()`, `loadGISLayers()`, and
+  `loadGISGeometries()` start together as `configReady = Promise.all([...])`.
 - **GeoJSON metadata is prefetched.** `loadGeoJSONMetadata()` starts during init
   (`metadataReady`) instead of inside the `map.on('load')` handler. Its caching
   is unchanged, so the source-change reload path still reuses the resolved
@@ -192,45 +152,40 @@ Private viewer (`main.ts`):
 - **`loadMapData` awaits readiness, then overlaps.** It `await`s `configReady`
   before reading `Config.projects`, downloads marker images and the metadata
   concurrently (`Promise.all([loadMarkerImages(), metadataReady])`), and runs
-  the previously-serial layer phases (project/station, surface stations,
-  landmarks, exploration leads, cylinder installs, GPS tracks) as one
+  the independent layer phases (project/station, surface stations, landmarks,
+  exploration leads, cylinder installs, and visible GPS/GIS overlays) as one
   `Promise.all`.
 
-Public viewer (`gis_view_main.ts`):
+Public viewer (`gis_view_main.ts` through `read_only_viewer.ts`):
 
-- The map already initialized before data. Additionally, the single GIS-View
-  GeoJSON request is now prefetched during init (`pendingViewData`) and consumed
-  by `loadPublicMapData`, so it overlaps map style/tile loading. Later reloads
-  reuse `Config.projects` unless the project list is empty or fresh project data
-  is explicitly requested.
+- The GIS-View metadata request starts during initialization (`pendingViewData`)
+  and is consumed by `loadPublicMapData`, overlapping map style/tile loading.
+  Later reloads retain the complete `sourceProjects` list separately from
+  `Config.projects`, which may contain only projects surviving a geographic
+  bound. Metadata is fetched again when source data is unavailable, an unbounded
+  list is empty, or the caller requests fresh data.
 
-### Invariants preserved
+### Scheduling invariants
 
-- **Single authoritative reorder.** Because the layer phases now run
-  concurrently, exactly one `Layers.reorderLayers()` runs after the
-  `Promise.all` to fix final z-order. The internal reorder calls inside
-  individual phases remain harmless.
+- **Single authoritative reorder.** Because the layer phases run concurrently,
+  exactly one `Layers.reorderLayers()` runs after the `Promise.all` to fix final
+  z-order. The internal reorder calls inside individual phases remain harmless.
 - **Markers ready before layers.** `loadMarkerImages()` still completes before
   any symbol layer is added (it is awaited before the layer `Promise.all`).
 - **Cached project metadata on reload.** `configReady` / `metadataReady` /
   `pendingViewData` resolve once. Reload paths reuse cached config; the public
-  viewer only re-fetches GIS-View project data when `Config.projects` is empty
-  or the caller explicitly requests fresh project data.
+  composition retains complete source metadata across clipping and style
+  changes, with the reload conditions described above.
 - **No unhandled rejections.** `Config.load*` and `loadGeoJSONMetadata` swallow
   their own errors internally; the public prefetch attaches a no-op `.catch()`
   while real error handling still happens where the promise is consumed.
-
-### Performance result
-
-Map style download moves from ~2.1s to ~0.4s, and the first project GeoJSON
-download moves from ~4.2s to ~2.0s, with post-map phases overlapping instead of
-serializing.
 
 ---
 
 ## CRUD Operation Flows
 
-All entity types follow the same pattern:
+Entity mutations share an API boundary, while each manager owns its refresh
+policy. The general flow is:
 
 ```
 User Action (UI)
@@ -240,31 +195,31 @@ User Action (UI)
   ├─ 2. User fills form → submit
   │
   ├─ 3. API call via api.ts
-  │     └─ apiRequest(url, method, body)
-  │         ├─ Attaches CSRF token from cookie
-  │         ├─ Sets Content-Type: application/json (or FormData)
-  │         └─ Throws on non-2xx response with error.data and error.status
+  │     └─ Generated @speleodb/api operation + browser session adapter
+  │         ├─ Resolves CSRF token at request time
+  │         ├─ Uses generated JSON/multipart encoding
+  │         └─ apiData unwraps documented success or throws ApiRequestError
   │
   ├─ 4. On success:
   │     ├─ Update State (e.g., State.allStations.set(id, data))
-  │     ├─ Dispatch refresh event (e.g., speleo:refresh-stations)
+  │     ├─ Refresh through the manager or its entity event
   │     └─ Show success notification via Utils.showNotification()
   │
   └─ 5. Refresh event handler in main.ts:
-        ├─ Re-fetch data from API (full reload for entity type)
-        ├─ Rebuild map layer with new data
+        ├─ Load through the owning manager's cache/fetch policy
+        ├─ Rebuild the affected map layer
         └─ Layers.reorderLayers()
 ```
 
 ### Subsurface Station CRUD
 
-| Action      | API Method | Endpoint                                 | Refresh Event             |
-| ----------- | ---------- | ---------------------------------------- | ------------------------- |
-| Create      | `POST`     | `/api/v2/projects/{projectId}/stations/` | `speleo:refresh-stations` |
-| Read        | `GET`      | `/api/v2/stations/{stationId}/`          | —                         |
-| Update      | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
-| Delete      | `DELETE`   | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
-| Move (drag) | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations` |
+| Action      | API Method | Endpoint                                 | Refresh behavior                                                  |
+| ----------- | ---------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| Create      | `POST`     | `/api/v2/projects/{projectId}/stations/` | `speleo:refresh-stations`                                         |
+| Read        | `GET`      | `/api/v2/stations/{stationId}/`          | —                                                                 |
+| Update      | `PATCH`    | `/api/v2/stations/{stationId}/`          | Details/label update in place                                     |
+| Delete      | `DELETE`   | `/api/v2/stations/{stationId}/`          | `speleo:refresh-stations`                                         |
+| Move (drag) | `PATCH`    | `/api/v2/stations/{stationId}/`          | Position update, then `speleo:refresh-stations` from confirmation |
 
 Move flow includes magnetic snap: `Geometry.findNearestSnapPointWithinRadius()`
 checks cached snap points within `MAGNETIC_SNAP_RADIUS` (default 10m). If
@@ -272,20 +227,20 @@ snapped, coordinates are adjusted to the nearest survey line vertex.
 
 ### Surface Station CRUD
 
-| Action | API Method | Endpoint                                 | Refresh Event                     |
-| ------ | ---------- | ---------------------------------------- | --------------------------------- |
-| Create | `POST`     | `/api/v2/networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
-| Update | `PATCH`    | `/api/v2/stations/{stationId}/`          | `speleo:refresh-surface-stations` |
-| Delete | `DELETE`   | `/api/v2/stations/{stationId}/`          | `speleo:refresh-surface-stations` |
+| Action | API Method | Endpoint                                         | Refresh behavior                  |
+| ------ | ---------- | ------------------------------------------------ | --------------------------------- |
+| Create | `POST`     | `/api/v2/surface-networks/{networkId}/stations/` | `speleo:refresh-surface-stations` |
+| Update | `PATCH`    | `/api/v2/stations/{stationId}/`                  | Details/label update in place     |
+| Delete | `DELETE`   | `/api/v2/stations/{stationId}/`                  | `speleo:refresh-surface-stations` |
 
 ### Landmark CRUD
 
-| Action      | API Method                                   | Endpoint                          | Refresh Event              |
-| ----------- | -------------------------------------------- | --------------------------------- | -------------------------- |
-| Create      | `POST`                                       | `/api/v2/landmarks/`              | `speleo:refresh-landmarks` |
-| Update      | `PATCH`                                      | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
-| Delete      | `DELETE`                                     | `/api/v2/landmarks/{landmarkId}/` | `speleo:refresh-landmarks` |
-| Move (drag) | `PATCH` via `LandmarkManager.moveLandmark()` | —                                 | Inline source update       |
+| Action      | API Method                                   | Endpoint                          | Refresh Event                     |
+| ----------- | -------------------------------------------- | --------------------------------- | --------------------------------- |
+| Create      | `POST`                                       | `/api/v2/landmarks/`              | Manager reload                    |
+| Update      | `PATCH`                                      | `/api/v2/landmarks/{landmarkId}/` | Manager reload                    |
+| Delete      | `DELETE`                                     | `/api/v2/landmarks/{landmarkId}/` | Manager reload                    |
+| Move (drag) | `PATCH` via `LandmarkManager.moveLandmark()` | —                                 | Manager reload; revert on failure |
 
 ### Exploration Lead CRUD
 
@@ -308,17 +263,21 @@ snapped, coordinates are adjusted to the nearest survey line vertex.
 
 ## Refresh Event System
 
-Five custom refresh events drive data reload. Each follows the same pattern:
-event dispatched → listener in `main.ts` re-fetches from API → layer rebuilt.
+Five custom refresh events drive layer refresh. Listeners in `main.ts` load
+through the entity owner and rebuild the affected layers. Station managers reuse
+their bulk GeoJSON cache until it is invalidated; dispatch alone does not force
+a network request.
 
 ### `speleo:refresh-stations`
 
 - **Payload**: `{ projectId }`
 - **Dispatched by**: `Layers.refreshStationsAfterChange(projectId)`, called
-  after station create/update/delete/move operations
+  after station create/delete and by the confirmed-drag handler in `main.ts`
 - **Handler**: Re-calls `StationManager.loadStationsForProject(projectId)`, then
   `Layers.addSubSurfaceStationLayer()`, then `Layers.reorderLayers()`
-- **Scope**: Single project — only re-fetches stations for the affected project
+- **Scope**: Redraws one project. After cache invalidation, the manager fetches
+  all readable subsurface stations once, then filters by project; otherwise it
+  reuses the cached collection.
 
 ### `speleo:refresh-surface-stations`
 
@@ -327,12 +286,14 @@ event dispatched → listener in `main.ts` re-fetches from API → layer rebuilt
 - **Handler**: Re-calls
   `SurfaceStationManager.loadStationsForNetwork(networkId)`, then
   `Layers.addSurfaceStationLayer()`, then `Layers.reorderLayers()`
-- **Scope**: Single network
+- **Scope**: Redraws one network. The manager filters its bulk surface-station
+  cache, fetching all surface stations only when that cache is invalidated.
 
 ### `speleo:refresh-landmarks`
 
 - **Payload**: (none)
-- **Dispatched by**: Landmark CRUD modules, GPX import
+- **Dispatched by**: Import and other callers requesting a global landmark
+  refresh; manager CRUD also reloads directly
 - **Handler**: Re-calls `LandmarkManager.loadAllLandmarks()`, then
   `Layers.addLandmarkLayer()`, then `Layers.reorderLayers()`
 - **Scope**: Global — re-fetches all landmarks
@@ -504,8 +465,8 @@ raster layers stay below overlays without inspecting the complete style.
 
 The preparation tests cover source immutability, depth parity, authoritative
 bounds, nested coordinates, antimeridian handling, cancellation, and yielding
-inside a 100,000-vertex line. Runtime traces should distinguish preparation
-slices from JSON parsing and renderer ingestion, which are separate work.
+within coordinate arrays. Runtime traces should distinguish preparation slices
+from JSON parsing and renderer ingestion, which are separate work.
 
 `readViewerGeoJSON(response, { isCurrent, yieldWork })` transfers downloaded
 buffers at or above `DEFAULTS.VIEWER_WORK.WORKER_PARSE_BYTES` to a Vite module

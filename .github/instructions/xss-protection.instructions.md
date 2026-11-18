@@ -1,8 +1,11 @@
 ---
-applyTo: "**/*.{js,html}"
+applyTo: "**/*.{ts,js,html}"
 ---
 
 # XSS Protection -- innerHTML Escaping
+
+**Agent Documentation & Practices.** Review guidance aligned with
+[the coding rules](../../docs/coding-rules.md#no-unescaped-user-data-in-html-sinks).
 
 Any `.innerHTML` assignment, jQuery `.html()` call, or `insertAdjacentHTML` that
 interpolates user-supplied data MUST escape that data. Flag violations as
@@ -56,7 +59,7 @@ el.innerHTML = Utils.safeHtml`${Utils.raw(`<span>${parentName}</span>`)}`;
 `<a href="${resource.file}">View</a>`;
 
 // GOOD -- sanitizeUrl blocks javascript: and other dangerous schemes
-`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
+Utils.safeHtml`<a href="${Utils.sanitizeUrl(resource.file)}">View</a>`;
 
 // BAD -- user-controlled color in style without validation
 `<span style="background-color: ${tag.color}">`;
@@ -76,7 +79,8 @@ el.innerHTML = Utils.safeHtml`${Utils.raw(`<span>${parentName}</span>`)}`;
 - Templates inside test files (`*.test.ts`)
 - CSS color values validated with `Utils.isValidCssColor()` or
   `Utils.safeCssColor()`
-- URL values validated with `Utils.sanitizeUrl()`
+- URL values validated with `Utils.sanitizeUrl()` and escaped with `safeHtml` or
+  `escapeHtml` when interpolated into HTML attributes
 
 ## User-supplied data fields to watch for
 

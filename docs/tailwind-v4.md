@@ -1,16 +1,22 @@
-# Tailwind CSS 4 Architecture
+# Tailwind CSS Architecture
 
 ## Intent
 
 SpeleoDB compiles CSS with `tailwindcss` and `@tailwindcss/vite` inside the Vite
-graph. Exact versions belong to the root manifest and lockfile. The migration is
-required to retain the rendered contract established by Tailwind 3.4.19; parity
-is a release condition, not an assumption. The private application is the
-visual/configuration reference. The public application intentionally converges
-on its typography tokens while retaining namespaced marketing components.
+graph. Exact versions belong to the root manifest and lockfile. The private
+application is the visual/configuration reference. The public application
+intentionally converges on its typography tokens while retaining namespaced
+marketing components.
 
-The supported browser floor is Tailwind v4's official floor: Chrome 111+, Safari
-16.4+, and Firefox 128+.
+The CSS browser floor follows Tailwind's documented minimum Chrome, Safari, and
+Firefox releases in its
+[browser support contract](https://tailwindcss.com/docs/compatibility#browser-support).
+Older browsers are unsupported. Compiler upgrades must not silently raise that
+floor; dependency versions are owned by `package.json` and `bun.lock`.
+
+Compiler and tooling changes must preserve the rendered product contract.
+Private pages permit no unexplained visual or computed-style differences;
+intentional design changes require their own product scope.
 
 ## Single-bundle ownership
 
@@ -32,10 +38,9 @@ contracts build a mirrored union tree and prove all supported public/private
 sentinels are present while unsupported nested trees remain absent.
 
 Runtime source directives select `.ts` at the original directory depth. The
-private theme and component reference stays intact, and previously scanned tests
-remain scanned. Type declarations live outside these source roots. Compare clean
-production CSS with the baseline. Historical watch sessions retained removed
-candidates and could not establish equivalence.
+private theme and component reference stays intact, and tests within the
+explicit source patterns are scanned. Type declarations live outside these
+source roots. Use clean production CSS when comparing the generated source set.
 
 The shared design system registers forms and typography once. The forms plugin
 uses its base strategy because SpeleoDB owns `.form-*` components. JavaScript
@@ -50,21 +55,25 @@ private components, and utility overrides in their established order. Namespaced
 public components join the components layer without redefining `.btn`, `.h*`, or
 `.form-*`.
 
-The migration-owned stylesheet order in the rendered templates is:
+The stylesheet order in the rendered templates is:
 
 1. Public pages: unified Tailwind, then public custom CSS.
 2. Private pages: unified Tailwind, then private custom CSS.
-3. Public GIS: unified Tailwind, public custom, private custom, shared modal,
-   map-viewer CSS, then Mapbox GL CSS.
-4. Private map: unified Tailwind, private custom, the base template's extracted
-   responsive style entry, Mapbox GL CSS, shared modal, then map-viewer CSS.
+3. Public GIS: unified Tailwind, public shell, private shell, shared modal, then
+   map-viewer CSS.
+4. Private map: unified Tailwind, private shell, the base template's extracted
+   responsive style entry, shared modal, map-viewer CSS, then geometry and
+   import styles.
+
+The map-viewer stylesheet imports MapLibre's CSS before its application rules;
+there is no separate Mapbox GL stylesheet. Route and included-template styles
+retain their template positions.
 
 Public GIS is the strongest cascade regression case because it combines both
-application custom layers even though Tailwind now loads once. Page-level static
-styles are Vite entries rendered at their former Django block location and
-participate in the ordinary cascade. A parity harness must use the rendered
-order, including Mapbox, even when external traffic is deterministically
-stubbed.
+application custom layers with one Tailwind asset. Page-level static styles are
+Vite entries rendered at their former Django block location and participate in
+the ordinary cascade. Inspect the actual rendered order, including renderer
+styles, when diagnosing a cascade issue.
 
 ## Public convergence boundary
 
@@ -75,17 +84,16 @@ public document separately requests Inter 800, so adding that weight does not
 change private font rendering. Public GIS map and welcome-modal controls retain
 the private `.btn` contract.
 
-The accepted public visual delta is limited to the private font-size,
-line-height, and letter-spacing values, resulting text reflow, and consistent
-public header components on GIS. Private pages permit no unexplained visual or
-computed-style difference.
+Public font-size, line-height, and letter-spacing derive from the private
+tokens. This convergence permits the resulting text reflow and consistent public
+header components on GIS, not unrelated layout or color changes. Public geometry
+and marketing components remain separately owned; changes to shared tokens
+require reviewing both public and private consumers.
 
 ## Design-system foundation
 
 `tailwind_css/shared/design-system.css` is shared, product-owned Tailwind CSS.
-Its original values were verified against the clean Tailwind 3.4.19 baseline,
-but their continuing owner is SpeleoDB's visual contract—not the previous
-compiler. It owns:
+Its values define SpeleoDB's visual contract. It owns:
 
 - the complete product RGB palette, including explicit sRGB-alpha tokens where
   Tailwind's default OKLab mixing changes rendered color;
@@ -97,12 +105,12 @@ compiler. It owns:
 - literal gradients, grid backgrounds, exact ring stacks, transform helpers, and
   transition surfaces required by the application.
 
-When Tailwind v4 core cannot express one of those contracts, the custom utility
+When Tailwind core cannot express one of those contracts, the custom utility
 gets a durable semantic name such as `srgb-*`, `flow-*`, `row-divide-*`, or
 `grid-pattern-*`. Production classes and variables must not carry a
 migration-version prefix.
 
-Class-controlled dark mode, unguarded v3 hover/group-hover behavior, and the
+Class-controlled dark mode, unguarded hover/group-hover behavior, and the
 private `sidebar-expanded` variant remain in the imported private reference.
 Feature selectors and stable project variables remain in their application
 stylesheet. Only compiler-facing utilities may couple to Tailwind's private
@@ -125,119 +133,47 @@ also retain the private/public root class distinction and unified stylesheet
 count and cascade checks. This keeps the theme contract independent of template
 formatter output.
 
-## Candidate migration rules
-
-Legacy opacity utilities, `flex-shrink`/`flex-grow`, ellipsis, decoration,
-important-prefix, gradient, radius, shadow, blur, and outline names were
-converted to supported v4 candidates. Order-sensitive stacks were reversed only
-where v4 changed nesting order. Processed `theme()` calls now use theme
-variables; the ordinary inline `theme(...)` in the welcome modal remains
-unchanged because v3 never processed it and the browser already used its
-fallback.
+## Utility and application CSS boundaries
 
 Handwritten CSS must use literal declarations or stable project variables.
 Application CSS and runtime JavaScript must not depend on Tailwind's private
 `--tw-*` implementation variables. In particular, permission colors, map rings,
-and public decorative gradients are owned by stable declarations. The
-Git-browser action surface is intended to use the native
-`bg-linear-to-b/srgb from-white to-gray-100` utility stack; `.git_btn` remains
-only as its responsive sizing hook. Verification must cover both rendered
-anchors after a clean build with checked served hashes, including breakpoint
-boundaries, DPR 1/2, default, hover, focus, focus-visible, active, and
-touch-hover states in Chromium, Firefox, and WebKit. The design-system
-stylesheet may set v4 internals only when it is implementing a compiler-facing
-utility.
+and public decorative gradients are owned by stable declarations.
 
-## Verification strategy
+The Git-browser action surface uses
+`bg-linear-to-b/srgb from-white to-gray-100`; `.git_btn` owns responsive sizing.
+The design-system stylesheet may use compiler internals only when implementing a
+compiler-facing utility.
 
-Tailwind 3.4.19 is the historical migration baseline. For a new change, compare
-a known baseline with the actual candidate and regenerate hashes, inventories,
-timings, and test results. Keep run-specific evidence in an external temporary
-directory. Historical handoff numbers and leftover generated artifacts are not
-evidence for a later revision.
+## Verification and performance
 
-Structural comparison covers selectors, at-rules, media queries, keyframes,
-plugin selectors, custom properties, and source candidate inventories. Raw
-selector text is expected to change because v4 emits native nesting, registered
-properties, and range media syntax; keyframe and breakpoint sets must remain
-behaviorally equivalent.
+Use a clean finite build when inspecting generated CSS. Stop the local webserver
+and its watcher before `bun run build` in the existing application container,
+then verify the asset manifest actually served by Django. Watch output can
+contain older hashed assets; its presence alone does not prove current delivery.
 
-The root manifest owns Playwright and `bun run test:browser`; the checked-in
-suite currently exercises viewer responsiveness in Chromium and WebKit. That
-suite is not a full migration-parity certificate. Run tests inside the existing
-application container, without starting a second stack. Temporary audit
-harnesses and artifacts belong outside the checkout.
+Compiler contracts cover explicit source inclusion, plugin selectors, theme
+metadata, and stylesheet count/order. Rendered Django tests protect dark-scheme
+metadata and the private/public root distinction. Relevant frontend tests
+protect application behavior. `make test` runs backend, frontend, and browser
+targets; see the Makefile and `tests/browser/README.md` for their execution
+boundaries. Browser tests protect complex UI/UX workflows, not static styling or
+exhaustive pixel comparisons. Do not introduce screenshot comparisons, GPU
+capture, or performance benchmarks as routine browser coverage.
 
-Parity evidence must use real Django-rendered pages and deterministic data and
-permission states. Verify served asset hashes, DOM alignment, production
-stylesheet order, computed styles including pseudo-elements, interactions,
-accessibility, responsive states, and deterministic pixels. Broad cross-engine
-claims require Chromium, Firefox, and WebKit evidence, even though the current
-viewer suite configures only two engines. Every serialization normalizer and
-screenshot mask requires a reproducible justification.
+For a visual change, inspect the real rendered page and affected responsive and
+interaction states. Raw template source or hand-built markup cannot reproduce
+Django inheritance, permissions, includes, and controller composition. Report
+only the routes, states, and browsers actually inspected. Keep task-specific
+captures, timings, and results outside the checkout.
 
-The original parity result is invalid as live-route evidence. Its broad capture
-script sanitized raw Django template source and injected it through
-`page.setContent`; Django inheritance, includes, conditionals, authentication,
-and runtime composition were not executed. The focused Git-button follow-up also
-used hand-written, pre-fix markup instead of both rendered controls, and read an
-ignored candidate stylesheet retained by a running Tailwind watcher. The old
-script did concatenate custom CSS, so the failure has not been shown to come
-from omitting `custom.css`. The proven causes are synthetic template rendering,
-hard-coded markup, and stale generated CSS.
+Automatic source discovery is disabled, bounding compilation to the explicit
+source set. The shared design system adds no runtime JavaScript or DOM scans. A
+generated stylesheet's size alone does not establish rendering performance; any
+separately authorized benchmark needs comparable builds and environments. Remove
+a custom rule only after identifying its consumers and verifying that the
+intended replacement preserves their behavior. Similar utility names do not
+establish equivalence.
 
-Before final browser verification, run a clean `bun run build` in the existing
-application container, and prove Django serves the expected fresh assets.
-Preserve baseline evidence separately without replacing the running
-application's data or starting another stack. A browser manifest must fail
-rather than skip a route, role, state, viewport, or engine that it claims to
-cover.
-
-Required repository gates remain the root builds, JavaScript lint/tests, Django
-template validation, pytest, pre-commit, a clean install on the `.bun-version`
-runtime and deployment build contracts.
-
-Historical live comparisons established focused Git-control parity and a
-representative public/private route subset. They did not certify every route,
-role, permission, interaction, accessibility state, animation, or map
-composition. Do not generalize that subset or the invalid raw-template capture
-total into exhaustive product parity. For each new change, state the actual
-coverage and its limits.
-
-## Performance and removal plan
-
-Automatic source discovery is disabled, which bounds the single compiler to the
-explicit union source set. The design-system foundation adds no runtime
-JavaScript or DOM scans. Measure compressed sizes, structural inventories, style
-recalculation, and runtime costs against the same revision's clean build; record
-the environment with the measurements outside the checkout.
-
-A real-route Chromium probe over 20 forced full-style passes found public-home
-style recalculation approximately flat (10.00→9.86 ms median for 292 nodes) and
-the private Git route increased from 15.06 to 23.56 ms for 488 nodes, about 0.43
-ms per forced pass. An in-transit ablation attributed the private increase to
-Tailwind 4's compiler-generated registered/custom-property surface, not
-application runtime work. Removing or postprocessing that compiler-owned
-cross-engine fallback would be a compatibility change and is not part of this
-migration. That historical probe did not establish representative map-page
-performance and is not a benchmark of the current dependency versions.
-
-Migration-era Tailwind watch mode retained a candidate after its sole template
-occurrence was deleted; a clean one-shot build removed it. The current workflow
-starts watched rebuilds with local Django through `bun run dev`. Stop the local
-webserver and its watcher before browser certification, which begins from a
-clean `bun run build` and a verified served manifest hash; refresh the browser
-after the build succeeds.
-
-Custom design-system rules may be removed only after all consumers of the
-affected product behavior have been intentionally redesigned and the same
-structural, computed-style, and pixel suites approve the change. Do not remove a
-rule just because a v4 utility has a similar name.
-
-## Candidate rewrite boundary
-
-Derive mechanical class-rewrite inputs from the entrypoints' explicit `@source`
-sets. Restrict rewrites to class-bearing sources in those sets; backend strings,
-fixtures, documentation, vendored files, and generated CSS are not blanket
-rewrite targets. Review changed filenames and scan for retired candidates after
-a rewrite to catch accidental changes outside compiler ownership.
+Contributor guidance:
+[CSS candidate rewrites](agent-practices.md#css-candidate-rewrites).

@@ -1,12 +1,9 @@
 # Bounded operational retries
 
-## Intent and confirmed failure
+## Intent
 
 A finite attempt count is insufficient when an individual call or retry sleep
-can wait indefinitely. CI run `34997387739` exposed that distinction: its stack
-dump stopped in python-gitlab's server-directed retry sleep during the first
-Compass upload test's project creation. The preceding exploration-lead tests had
-completed. The exact server status/header was not captured.
+can wait indefinitely.
 
 Operational failure recovery must have a finite budget, capped exponential
 delays, and bounded blocking calls where the application controls them. A
@@ -27,7 +24,7 @@ service lifecycle, not an automatic retry of a failed operation.
 | Export notification publication/delivery | Five combined attempts; 60/120/240/480-second delays                                                                 | Durable failed notification; explicit staff retry                            |
 | Artifact and orphan cleanup              | Five persisted attempts; 60/120/240/480-second delays                                                                | Error/counters retained; audited staff action resets budget                  |
 | Export browser refresh                   | Five failed refreshes; 5/10/20/30-second delays; 30-second request/JSON deadline                                     | Error message and no automatic network retry until explicit action/reload    |
-| GeoJSON cache contention                 | Seven cache rechecks; 0.1/0.2/0.4/0.8/1/1/1-second waits                                                             | Direct storage fallback; fewer cache operations than the previous 50 checks  |
+| GeoJSON cache contention                 | Seven cache rechecks; 0.1/0.2/0.4/0.8/1/1/1-second waits                                                             | Direct storage fallback                                                      |
 | FFmpeg thumbnail                         | One execution; 60-second process deadline, five-second cleanup                                                       | Existing thumbnail error path                                                |
 
 The shared retry helper validates finite delay parameters and positive attempt
@@ -100,22 +97,13 @@ cleanup outcomes wait for the fixed owner lease plus exponential cooldown;
 reported failures can schedule their cooldown immediately. All durable export
 delays cap at one hour.
 
-Job and attempt creation explicitly read Django's `timezone.now()`. The shared
-attempt-creation service assigns one instant to both `created_at` and
-`dispatch_after`, so new requests and automatic/manual retries are immediately
-eligible under that same clock. This avoids model default callbacks retaining a
-different clock during controlled-time tests. Lease boundaries and retry budgets
-remain unchanged, with no additional queries or schema migration. Regression
-tests check failed publications across a whole retry cycle and confirm stale
-publications remain queued just before their lease, then fail at the deadline
-without republishing.
-
-Migration `0002_attempt_cleanup_budget` adds the publication marker and
-per-object cleanup fields. Apply it before updated application/worker code.
+Attempt creation assigns the same current timestamp to `created_at` and
+`dispatch_after`, making a new attempt immediately eligible. Retry counts, due
+times, errors and ownership tokens remain persisted across worker restarts.
 Exhausted cleanup retains tracking rows instead of discarding evidence that
 objects still exist. Expired downloads remain unavailable even when deletion is
 failing. Staff can use **Retry exhausted artifact cleanup** in job
-administration; resets are recorded in Django's admin log.
+administration; resets are recorded in the permanent administrator audit.
 
 Healthy browser polling continues while an export is active. Only consecutive
 failures exhaust its budget. Successful refreshes, explicit submissions, and
@@ -130,7 +118,7 @@ process and hook hangs, descendant-held pipes, cleanup timeouts, broker and lock
 budgets, durable publication failures, lost workers, stale completion tokens,
 cleanup retention/admin recovery, and browser cancellation/body timeouts. Use
 real PostgreSQL and the isolated worker broker for database/worker recovery, and
-verify the additive migration path.
+verify persisted retry counts and recovery state.
 
 Beat regressions also cover a live PostgreSQL session whose lock was removed, a
 closed lock connection, retry callbacks rejecting stale ownership, and SIGTERM

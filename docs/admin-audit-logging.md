@@ -70,44 +70,35 @@ boundaries cannot distinguish administrator intent from its side effects.
 same transaction that creates its task/group results. Publication still happens
 after commit. `_create_task()` and `operation_execution()` do not write audit
 entries. Technical requester IDs remain in task metadata; audit attribution uses
-only the email snapshot. Removing worker audit writes also means deleting the
-requester cannot turn a successful task into an audit foreign-key failure.
+only the email snapshot. Deleting the requester cannot turn a successful task
+into an audit foreign-key failure because workers do not write audit entries.
 
 The application audit replaces Django's built-in admin log for all active admin
 readers and writers. Django still owns its installed table; it is not a runtime
 fallback and receives no dual writes from application auditing.
 
-## Migration and cutover
+## Historical audit records
 
-The additive migrations create the application table and copy all existing
-Django admin entries, including historical task noise. Preserve primary keys,
-timestamps, flags, object IDs/descriptions and original messages; reset the new
-primary-key sequence after copying. Existing missing content types remain
-unattributed rather than guessed. Actor emails are the linked accounts' emails
-at migration time, not reconstructed historical email addresses. Records already
-deleted from the source cannot be recovered by this migration.
+`users.0011_copy_admin_history` copies Django admin history into the application
+log, preserving primary keys, timestamps, flags, object IDs, target descriptions
+and original messages, then resets the destination primary-key sequence. Actor
+emails are snapshots from the linked accounts at copy time; missing content
+types remain unattributed. The migration cannot recover entries already deleted
+from the source table.
 
-The copy is a snapshot. Coordinate cutover without adding background recovery or
-synchronization infrastructure:
-
-1. Back up the database and pause administrator writes. Drain and stop old
-   operation workers so they cannot add source-table entries after the copy.
-2. Run the migrations and deploy matching web and worker code before resuming
-   writes. Preserve the existing lightweight worker admin setup.
-3. Compare source and destination counts and representative IDs, timestamps,
-   messages and email snapshots. Check a normal admin edit, a project operation
-   and a multi-project request, including their object history and dashboard.
-4. Verify worker completion adds no audit rows, then resume ordinary activity.
-
-Do not roll back by dropping newly accumulated audit history. The original
-Django table remains available for deliberate investigation, not as the current
-audit. No Railway service-configuration change is required for this application
-deployment.
+The retained Django table is available for deliberate investigation, not as a
+runtime fallback. Do not drop newly accumulated application audit history during
+rollback or maintenance. For a database that has not yet applied the copy, back
+up the database, pause administrator writes and drain old operation workers
+before migration. Deploy matching web and worker code, preserving the
+lightweight worker admin setup. Compare source and destination counts and
+representative records, check ordinary admin edits and operation requests, and
+verify that worker completion adds no audit rows before resuming activity.
 
 ## Optional historical cleanup
 
-Run the one-time cleanup only after migration and after reviewing its preview.
-From the deployed application's `/app` directory in the intended environment:
+Run historical cleanup only after reviewing its preview. From the deployed
+application's `/app` directory in the intended environment:
 
 ```sh
 python manage.py cleanup_admin_task_logs --dry-run

@@ -16,9 +16,14 @@ GitLab root password remains in the GitLab Railway service variables.
 
 ## Deployment
 
-- Project: `speleoDB` (`247e5ad5-c8c4-41c3-9205-3014cc65df86`).
-- Environment: `test` (`6d34d1bb-ba2e-4d36-ab57-216b936f8ce3`).
-- Service: `GitLab` (`6dcb6ffb-5767-4526-a42b-aaa7c629e2f3`).
+The settings below describe the service's operating configuration. The startup
+files are tracked locally; Railway owns the image, resources, domain, and update
+policy. Read back those settings when operating the service rather than treating
+this document as evidence of current live state.
+
+- Project: `speleoDB`.
+- Environment: `test`.
+- Service: `GitLab`.
 - Canonical URL: `https://gitlab-test.speleodb.org`.
 - Connected Docker image source: `gitlab/gitlab-ce:latest`.
 - Start command: `/bin/bash /data/speleodb/start`.
@@ -36,10 +41,9 @@ GitLab root password remains in the GitLab Railway service variables.
 
 The service pulls the official image directly from Docker Hub. Its source, start
 command, and update policy are configured in Railway. It does not require a
-GitHub repository or a custom image build. The original uploaded Dockerfile
-deployment could not receive Railway image-update checks; the connected image
-replaces that deployment path. Do not use `railway up` on this directory for
-normal updates, as that uploads another custom build.
+GitHub repository or a custom image build. Image-update checks depend on the
+connected image source. Do not use `railway up` on this directory for normal
+updates, as that uploads another custom build.
 
 The Railway-specific startup files live on the volume so official image updates
 retain them. Their environment variables are:
@@ -75,9 +79,8 @@ Railway's image-update policy is configured as:
 Patch-only updates avoid jumping over GitLab's required minor-version upgrade
 stops. Minor/major upgrades require checking the upgrade path and completed
 background migrations. Railway documents volume backups before automatic image
-updates. Configuration readback proves the policy is enabled; a future upstream
-release is needed to observe an actual automatic version update, including
-Railway's handling of GitLab's `-ce.0` suffix.
+updates. Verify the configured policy separately from an actual image update; a
+policy readback alone does not prove an upgrade completed.
 
 The repository's existing `.railway/railway.ts` manages production services. Do
 not apply that production partial to this environment.
@@ -127,45 +130,40 @@ credentials do not exempt callers from hosted GitLab quotas. Removing redundant
 project-creation requests and keeping retries bounded remain useful regardless
 of this instance policy.
 
-The user created the private CI group `github-ci` (ID `3`) and owns the active
-group token named `github CI` (ID `4`), created at 21:30:17 UTC. Its scopes are
-`api`, `read_repository`, and `write_repository`. The earlier agent-created CI
-token was revoked. The intended GitHub test configuration is:
-
-- `GITLAB_HTTP_PROTOCOL=https`
-- `GITLAB_HOST_URL=gitlab-test.speleodb.org`
-- `GITLAB_GROUP_NAME=github-ci`
-- `GITLAB_GROUP_ID=3`
-- `GITLAB_TOKEN` stored as the group-token secret
-
-The user updated the GitHub CI environment manually. GitHub secret metadata
-confirms host/group updates at 21:27 UTC and the token update at 21:30:43 UTC.
-The API does not return secret plaintext, and a GitHub Actions run against that
-effective configuration has not yet been independently verified. Metadata and a
-successful remote smoke test do not establish which values a job loaded.
-
 ## Verification and maintenance
 
-Store `GITLAB_GROUP_ID` as an Actions repository variable and read it with
-`${{ vars.GITLAB_GROUP_ID }}` in both CI and scheduled cleanup. The test group's
-ID is `3`; storing this ordinary identifier as a secret causes GitHub to mask
-that digit throughout logs, including pytest's `3%` and `13%` progress output.
-Keep the GitLab access token in Actions secrets. When migrating an existing
-configuration, create the variable, publish both workflow updates, then remove
-the obsolete group-ID secret so existing workflows never lose their namespace.
+Configure `GITLAB_HTTP_PROTOCOL=https`,
+`GITLAB_HOST_URL=gitlab-test.speleodb.org`, and the private CI group's name and
+ID as a consistent set. Store `GITLAB_GROUP_ID` as an Actions repository
+variable, read with `${{ vars.GITLAB_GROUP_ID }}` in CI and manual cleanup.
+Treating an ordinary numeric group ID as a secret can mask unrelated log digits.
+Keep `GITLAB_TOKEN` in Actions secrets, with `api`, `read_repository`, and
+`write_repository` scopes limited to the test group. Verify effective job
+configuration through authenticated preflight; secret metadata cannot establish
+which value a job loaded.
+
+When moving the group ID from a secret to a variable, create the variable first,
+publish both workflow consumers, and verify they read the variable before
+removing the obsolete secret. Workflows still reading the secret must retain
+their namespace configuration throughout the transition.
 
 Deployment completion requires Railway `SUCCESS`, valid HTTPS, authenticated API
 identity, project creation, and actual Git push/clone. Repeat those checks after
 redeployment to prove persistence of repositories and credentials. The public
 sign-in health check alone does not prove the CI token can write.
 
-CI additionally runs `manage.py check_gitlab` before pytest. It prints the host,
-authenticated username/ID and group path/ID, checks namespace consistency, then
-creates and deletes a uniquely named private project. Authentication failures,
-namespace mistakes, quota errors and missing write permissions stop the job. No
-token values are printed.
+CI runs `manage.py check_gitlab --read-only` before pytest. It prints the host,
+authenticated username/ID and group path/ID, and checks namespace consistency
+without creating a project. Authenticated create/delete verification belongs to
+pytest's `write-check` allocation within the nine-project budget. No token
+values are printed. See [real GitLab integration tests](ci-gitlab-testing.md).
 
-### Scheduled cleanup settings
+### Manual cleanup settings
+
+`.github/workflows/cleanup_gitlab.yml` runs only through `workflow_dispatch` and
+passes `--older-than-hours 24`. Preserve that age filter while branch jobs can
+overlap. Unrestricted `make wipe_gitlab_test` requires that no tests use the
+group; normal pytest cleanup owns only the current invocation's repositories.
 
 `GITLAB_HOST_URL` is a hostname, such as `gitlab-test.speleodb.org`, without a
 scheme or trailing slash. The client adds the protocol from Django settings.
@@ -176,9 +174,9 @@ cleanup protocol.
 
 Railway redirects HTTP to HTTPS with 301. Reads can appear to work, but
 python-gitlab rejects redirected writes, even after a DELETE received 202 from
-GitLab. Run 35033828799 hit exactly this configuration mismatch. Cleanup now
-reports a specific redirect instruction and includes exception type/HTTP status
-for API failures without printing tokens or raw server response bodies.
+GitLab. Cleanup reports a specific redirect instruction and includes exception
+type/HTTP status for API failures without printing tokens or raw server response
+bodies.
 
 Regression coverage invokes the actual Makefile target against a disposable
 subgroup, independently of the caller's Django settings. It checks deletion,
@@ -188,8 +186,6 @@ with HTTP 400 during the retention period. Verification never wipes the shared
 CI group. See
 [the SDK's redirect guidance](https://python-gitlab.readthedocs.io/en/stable/api-usage.html#gitlab-gitlab-class).
 
-An initial sample measured about 3.789 GB RAM and 0.603 GB of the 5 GB volume.
-These are observations before sustained CI load, not capacity guarantees.
 Monitor actual RAM/CPU and volume usage. Resource ceilings are not reservations;
 GitLab's baseline memory consumption dominates idle cost. Increase volume
 capacity before it fills, and keep test-project cleanup enabled. Before image
@@ -202,62 +198,3 @@ References:
 [GitLab project rate limits](https://docs.gitlab.com/rate_limits/api/projects/),
 [Railway image updates](https://docs.railway.com/deployments/image-auto-updates),
 [GitLab upgrade paths](https://docs.gitlab.com/update/upgrade_paths/).
-
-## Deployment evidence
-
-### Official image source migration
-
-The September 15 source migration created volume backup
-`2804168c-5d0e-4157-8e3c-7b3eaf971315`, then deployed the official Docker Hub
-image as deployment `8fd607fd-bfd5-43f7-b9f3-9bb2c0ac18e8`. Railway reported
-SUCCESS at 23:24:05 UTC. The source, start command, and daily patch-update
-window were read back from the live service configuration.
-
-HTTPS, the root password, CI group/token records, and an existing repository
-commit survived. A temporary token for the CI bot successfully authenticated,
-read the existing commit, created a disposable private project, read its README,
-and scheduled deletion. The temporary token was revoked. The persistent startup
-files matched their repository hashes, and both startup filesystem tests passed
-in Docker. The application production/staging services were unaffected.
-
-### Original provisioning
-
-Verified during the September 2026 setup:
-
-- Deployment `b011d7cb` reached Railway `SUCCESS`; HTTPS and authenticated API
-  access succeeded.
-- Actual HTTPS Git push and a fresh clone preserved project `2` at commit
-  `683c8420d5528ed23f158cd93ac4125cfbf700c6`.
-- A temporary private group and bot exercised GitLab's real project-creation
-  limiter. The first POST returned 201, then the bounded client received actual
-  429 responses: one request with `obey_rate_limit=False` and two requests with
-  a two-attempt budget. Response hooks verified the bot token on real requests.
-  No HTTP responses or SDK methods were substituted.
-- That probe changed `project_create_limit` to `1` and enabled
-  `namespace_create_rate_limit` only for its bot user. Recovery completed after
-  a cached feature-flag read delayed the first cleanup check. The explicit flag
-  is gone, the temporary bot token is revoked, and the instance creation quotas
-  are back at `0`. The temporary group follows GitLab's deletion retention.
-- The administrative bootstrap token was revoked with HTTP 204; reuse returned
-  HTTP 401. Its Railway variable was removed. The CI group token remains
-  separate from administrative credentials.
-
-Final deployment `3debd5be-5a0b-4299-af87-e00e6b0ad39a` reached `SUCCESS` at
-21:38:47 UTC. It contains the stale-PID cleanup and boot-time quota/retention
-settings. Root login and the private repository survived the redeploy. A fresh
-HTTPS clone after restart matched the original commit SHA and file bytes,
-verifying repository and credential persistence across this deployment.
-
-That final clone used a separate temporary verification group token, which was
-revoked with HTTP 204 afterward. The agent-owned smoke project was scheduled for
-deletion with HTTP 202. The user's active CI token was preserved.
-
-Full-suite validation remains pending. The local pytest run stalled around 77%
-with four failures and one error and is being interrupted to inspect the
-failures before targeted reruns. This is not a green full suite, and the
-successful deployment does not establish a verified GitHub Actions run.
-
-The rate-limit probe is a one-off administrative verification, not a recurring
-CI test. It does not establish the historical GitLab.com threshold, nor cover
-all possible HTTP 5xx or resource-lock conflict responses. See
-[real integration test boundaries](ci-gitlab-testing.md).

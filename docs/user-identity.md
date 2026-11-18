@@ -10,10 +10,8 @@ signup length requirements and API sanitization continue to apply.
 ## Why validation exists at several boundaries
 
 `blank=False` controls Django validation, not ordinary ORM saves. `null=False`
-rejects SQL NULL but permits an empty string. Previously the admin add form
-omitted name altogether, and the manager only required an email. Signup also
-saved the user before its custom hook assigned name/country. These paths could
-persist unnamed users despite the model field's required metadata.
+rejects SQL NULL but permits an empty string. Forms, manager calls, signup and
+database writes therefore need an explicit nonblank-name contract.
 
 `speleodb.utils.user_identity` owns the shared nonblank validator and fallback
 constant. Its explicit Unicode whitespace pattern avoids different meanings of
@@ -41,9 +39,9 @@ remain valid. Other serializers keep their existing behavior.
 
 ## Git compatibility boundary
 
-The September 15 supervised CLI commit change exposed invalid names previously
-accepted by GitPython's direct commit serialization. The CLI remains necessary
-to bound hooks and subprocesses. Retrying an invalid identity cannot repair it.
+Git commits use a supervised CLI process to bound hooks and subprocesses. Git
+identity formatting can reject a name that remains valid for display; retrying
+an invalid identity cannot repair it.
 
 `GitRepo._commit_project` substitutes `NO NAME` for absent/whitespace-only
 author names and names made only of characters Git discards from an identity.
@@ -55,7 +53,7 @@ migration.
 
 Historical Git commits and stored historical author metadata are not rewritten.
 
-## Migration and rollout
+## Name repair and database reversal
 
 Migration `users.0009_require_user_name` uses the historical model to update
 only blank/whitespace-only names to `NO NAME`, then adds the check constraint.
@@ -64,12 +62,16 @@ database-side update followed by constraint validation, not per-user saves or
 signals. Valid names, emails, permissions, passwords, and verification state are
 untouched.
 
-Quiesce account writes from old application processes while migrating, and
-resume with the new code. Old signup code attempts an initially nameless insert
-and is incompatible with the new constraint. Verify no invalid rows remain and
-smoke-test signup, admin creation, CLI creation, and an Ariane upload. Rollback
-removes the constraint but intentionally retains repaired names; it cannot
-recover which blank string a repaired account previously contained.
+The constraint requires signup to assign a validated name before the first
+insert. Application versions that insert unnamed users cannot write under this
+schema. Reversing the migration removes the constraint but intentionally retains
+repaired names; it cannot recover which blank string a repaired account
+previously contained.
+
+When applying this migration to a database still served by old signup code,
+quiesce account writes until compatible application processes are running.
+Verify that no blank names remain and check signup, admin and CLI account
+creation, plus an Ariane upload, before resuming ordinary writes.
 
 ## Verification
 

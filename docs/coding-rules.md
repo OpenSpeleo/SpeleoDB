@@ -1,5 +1,7 @@
 # Coding Rules
 
+**Agent Documentation & Practices — also applies to human contributors.**
+
 Hard rules for all code in this repository. Violations must be fixed before
 merging.
 
@@ -100,7 +102,7 @@ standalone scripts. Form/route modules import the ES exports from
 is not quote escaping: insert `sanitizeUrl()` results through `safeHtml`,
 `escapeHtml`, or a DOM property rather than raw quoted HTML interpolation.
 
-See `docs/xss-protection.md` for the full rationale and patterns.
+See [XSS protection](xss-protection.md) for the full rationale and patterns.
 
 ### Stable `data-*` hooks
 
@@ -218,9 +220,10 @@ boundaries narrow and explain upstream stub gaps.
 
 Include new untracked files in direct lint/type checks: Git-based hook
 inventories may omit them. Follow the controlled-test-boundaries guidance in
-`AGENTS.md`: use real objects and supported configuration, and substitute only
-unrelated work while preserving the behavior the test claims to prove. Keep
-setup outside `pytest.raises` so only the intended failing operation is covered.
+[AGENTS.md](../AGENTS.md): use real objects and supported configuration, and
+substitute only unrelated work while preserving the behavior the test claims to
+prove. Keep setup outside `pytest.raises` so only the intended failing operation
+is covered.
 
 Annotate a fixture that yields without a value as `Generator[None, None, None]`,
 not `None`. Give heterogeneous nested fixture mappings an explicit mapping type

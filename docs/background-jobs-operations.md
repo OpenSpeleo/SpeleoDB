@@ -69,12 +69,20 @@ Railway/container logs and process exits. Start Beat through
 management-command entrypoint: initializing the full application before Beat
 would defeat the small startup-memory contract.
 
+The lightweight runtime's operational goal is a whole Beat service footprint
+below 100 MB. The process RSS regression budget is separate: a passing local
+process test does not establish that production service usage meets the goal.
+Service accounting also includes page cache and container overhead, so verify
+the deployed service under real scheduling. This goal is not the configured
+Railway memory ceiling and does not call for periodic restarts to hide growth.
+
 `SchedulerLease` owns a dedicated raw psycopg connection and the existing
-PostgreSQL advisory lock `736735226`. Django's scheduler connections remain
-separate, so connection cleanup cannot release ownership. Acquisition allows six
-attempts with 5/10/20/40/80-second waits. Connection and statement timeouts are
-five seconds; TCP keepalives and the TCP user timeout bound detection of a dead
-lock connection. The lock session never reconnects or reacquires ownership.
+PostgreSQL advisory lock identified in `speleodb/background_jobs/lease.py`.
+Django's scheduler connections remain separate, so connection cleanup cannot
+release ownership. Acquisition allows six attempts with 5/10/20/40/80-second
+waits. Connection and statement timeouts are five seconds; TCP keepalives and
+the TCP user timeout bound detection of a dead lock connection. The lock session
+never reconnects or reacquires ownership.
 
 The scheduler checks ownership before and after each tick, before publication,
 during broker-connection backoff, and in Kombu's publication/declaration retry
@@ -108,7 +116,7 @@ option from the same lightweight housekeeping policy as the worker, without
 importing task implementations. Housekeeping explicitly publishes `True`;
 unregistered ordinary task names publish `None`, leaving result storage to the
 worker's task policy. Actual tasks keep results, including work published by
-Beat. No database schema change is needed.
+Beat.
 
 ### Worker runtime and execution-slot memory
 
@@ -123,8 +131,8 @@ autodiscovery, and excludes web-only debug toolbar, Silk, extensions, and
 development instrumentation. Application models, signals, tasks, templates,
 storage, email, result recording, and production observability remain available.
 The worker keeps prefork, concurrency one, prefetch one, both queues, and the
-existing task deadlines and recovery behavior. It no longer starts with
-`--events`; normal worker control and heartbeats remain available.
+existing task deadlines and recovery behavior. Task-event publication is
+disabled; normal worker control and heartbeats remain available.
 
 Before either Python process starts, the script defaults `OPENBLAS_NUM_THREADS`,
 `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `NUMEXPR_NUM_THREADS`,
@@ -136,110 +144,14 @@ worker internals. Benchmark representative conversion/export workloads before
 increasing them. No arbitrary worker recycling threshold hides retained
 application memory.
 
-### Memory measurements
-
-The October 2026 investigation found that the old Beat launcher kept two full
-Django runtimes resident: its lock supervisor and the scheduler child. Eager
-application imports loaded scientific/media libraries into both. Production
-reported approximately 425 MB for Beat, with 95 and 97 threads in those two
-Python processes. The minimal runtime removes both sources of overhead rather
-than imposing a memory limit or periodically restarting the scheduler.
-
-The new canonical Beat command completed a 15-minute run against a separate
-PostgreSQL database and Redis queue, publishing a real five-second schedule.
-Across 984 Linux process samples it had exactly one OS thread and no children:
-
-| Beat endurance measurement   |                     Result |
-| ---------------------------- | -------------------------: |
-| Peak RSS, including startup  | 81,780,736 bytes (81.8 MB) |
-| Peak PSS                     | 64,645,120 bytes (64.6 MB) |
-| Final RSS                    |           81,780,736 bytes |
-| Scheduled messages published |                        180 |
-| SIGTERM exit code            |                          0 |
-
-This meets the 100 MB **process RSS** regression budget in the local container.
-It is not a production whole-service measurement: the shared application
-container also hosted the test runner, and service accounting includes page
-cache and container overhead. Confirm the whole Beat service stays below 100 MB
-after releasing the code on Railway. Reproduce the endurance check with an
-isolated migrated Beat database, a five-second `PeriodicTask` on a unique queue,
-the canonical start script, and the `/proc` sampling described below; delete
-only those test-owned resources afterward.
-
-The worker comparison used the same ARM Linux application container, Python
-3.14.7, dependencies, prefork concurrency one, and test settings. Baseline
-configuration came from commit `6b1144c9`; the new profile skipped resident
-system-check imports and admin autodiscovery and applied the native thread
-defaults. Both registered the same nine application tasks. Decimal MB below
-means 1,000,000 bytes. PSS apportions shared pages between processes; summing
-RSS would double-count those pages.
-
-| Worker measurement                     | Baseline MB | New MB |
-| -------------------------------------- | ----------: | -----: |
-| Idle parent RSS                        |       279.0 |  254.7 |
-| Idle execution child RSS               |       209.2 |  184.9 |
-| Idle combined PSS                      |       231.8 |  206.7 |
-| After conversions: parent RSS          |       279.0 |  254.7 |
-| After conversions: execution child RSS |       248.5 |  226.9 |
-| After conversions: combined PSS        |       366.1 |  326.7 |
-
-The historical profile used the original, larger shapefile corpus; that fixture
-has since been reduced to two representative features for backend tests. These
-measurements do not describe the current small fixture.
-
-Each profile executed three real conversions of the checked-in `sample.mak`
-Compass survey plus `gis_layers/us_states/us_states_5m.zip`, using
-`Project.build_geojson()` and `compile_gis_layer_bytes()` in its prefork child.
-Compass geometry, feature count, datum and UTM metadata matched, and the
-2,197,492-byte shapefile conversion output matched byte for byte. Whole Compass
-JSON includes varying generated metadata, so geometry was compared separately.
-Median conversion time was 0.634 seconds before and 0.613 seconds after; three
-runs establish no statistical throughput claim. Sampled combined peak PSS was
-also 366.1 versus 326.7 MB, about 11% lower. Both profiles used one thread per
-process in this ARM container; the production native-thread reduction still
-requires deployment measurement.
-
-These native conversion measurements exclude network export, email and storage
-work; live integration tests cover those flows. They measure resident worker
-processes, excluding the separate startup preflight and container page cache.
-Production Sentry and workload size can change the footprint. Application code
-must be released before these savings can be verified on Railway.
-
-Historical verification of the earlier October 2026 runtime optimization passed
-the full local SQLite Python suite with 5,227 tests passed and 208 skipped, plus
-2,326 frontend tests. These results predate the monitoring removal and
-task-result policy changes; they are not validation of this release. The
-production asset build, development TypeScript/IaC check, Django system check,
-changed-file Ruff/format checks, and whole-project mypy check (790 Python files)
-passed. The full-suite GitLab audit recorded nine creations, ten creation
-requests, zero violations and no unresolved outcomes. All nine created
-repositories were confirmed marked for deletion by GitLab; asynchronous deletion
-is not reported as immediate physical removal.
-
-That earlier verification also passed all 74 focused checks in a separate
-PostgreSQL/isolated-Redis run, including real lock handover, all eight
-prefork-worker tests, archive/download/notification and expiry flows,
-Beat-published result recording, soft-timeout recovery, hard timeout child
-replacement, and worker-death recovery. This run created no GitLab repositories
-and recorded no audit violations. Its temporary Redis server was stopped after
-verification; the shared development Redis remained available.
-
-These scheduler, consumer, runtime, and worker-startup checks use real framework
-construction and supported configuration without mocks or monkeypatches. They
-include single-attempt connection failures, PostgreSQL session loss and process
-signals. Tests that manufactured outages or lock contention to force backoff
-sequences have been removed, including the full lock-wait exhaustion scenario.
-The disabled-retry tests exposed and fixed an implicit Kombu retry that mocked
-connection calls had not detected.
-
-## One-shot GeoJSON rebuild
+## GeoJSON rebuild
 
 Active superusers use **Background operations → Operations** to submit immediate
 history resets and GeoJSON recomputations. TaskResult records executions and
 GroupResult records batch membership. Publication is direct after commit, with
 one task per eligible project, and force defaults to off. See
 [Operations](admin-operations.md) for destructive confirmation, uncertain
-publication, manual reruns and coordinated rollout.
+publication, manual reruns and deployment verification.
 
 ## Bounded failure recovery
 
@@ -256,13 +168,9 @@ Cleanup records survive exhaustion; staff can explicitly restart cleanup in the
 job admin, with an audit entry. Download expiry remains enforced even when
 physical deletion fails.
 
-Migration `0002_attempt_cleanup_budget` adds publication tracking and cleanup
-counters, due times, errors, and ownership tokens. Apply it before starting the
-updated worker/web application; no new service is required. Notifications carry
-dispatch tokens, so drain old queued notification messages or deploy scheduler
-and worker together to avoid old workers receiving the new task argument. See
-[bounded retries](bounded-retries.md) for startup/transport limits and
-verification status.
+See [bounded retries](bounded-retries.md) for startup, transport and durable
+recovery limits. Notification tasks carry dispatch tokens; deploy matching
+publishers and workers when their task arguments change.
 
 ## Docker Compose and devcontainer
 
@@ -294,8 +202,7 @@ The worker and Beat wait for successful setup and Redis health. Setup retains
 local GitLab/storage provisioning, application migrations, periodic schedule
 installation, and the local superuser. It stops on failure. Running
 `python manage.py migrate` installs the existing `django_celery_results` tables
-on a fresh database; no new application migration or dependency is needed for
-the task-history interface.
+on a fresh database.
 
 ### Local configuration
 
@@ -379,16 +286,19 @@ Do not use `down --volumes` to troubleshoot bootstrap or dependency failures.
 
 ## Container-only verification and isolated live tests
 
-Run Python, JavaScript, lint, type checks, and builds inside the Django
-container:
+Run Python, JavaScript, lint, type checks, and builds inside the already-running
+Django container. `make test-py` runs the backend suite; `make test` runs
+backend, frontend and browser targets as declared in `Makefile`. Focused
+commands include:
 
 ```bash
-docker compose -f local.yml exec -T django uv sync --frozen --extra local
-docker compose -f local.yml exec -T django pytest compose/tests/
-docker compose -f local.yml exec -T django bun run test:frontend
-docker compose -f local.yml exec -T django bun run lint:frontend
-docker compose -f local.yml exec -T django bun run build
+docker exec -w /app speleodb-monorepo-django pytest compose/tests/
+docker exec -w /app speleodb-monorepo-django bun run test:frontend
+docker exec -w /app speleodb-monorepo-django bun run lint:frontend
 ```
+
+For a production asset build, stop the local webserver and its watcher first,
+then run `docker exec -w /app speleodb-monorepo-django bun run build`.
 
 Real-worker integrations run by default in `make test-py`. The normal Compose
 service graph includes the dedicated ephemeral `celery-test-redis` broker and
@@ -509,13 +419,6 @@ without `.env` or `.envs/test.env`, using the workflow's environment. This
 catches missing inputs that local credentials can hide. These settings affect
 test setup only and add no application runtime work.
 
-Earlier archive verification exercised a real ZIP containing a
-4,294,967,313-byte member through creation, S3 upload, download, and full SHA256
-verification, with approximately 405 MiB peak process memory. That historical
-measurement does not establish the footprint of every workload or the health of
-a new deployment. Production email and a real expiry cycle remain release
-verification requirements.
-
 ## Local development reloads
 
 For local development, generated repositories and scratch files under `.workdir`
@@ -634,12 +537,11 @@ pending-work age, application progress and error records, and retained task
 failures together. A missing result is not proof that a scheduled task did not
 run, and a recent Beat counter is not proof that it succeeded.
 
-Removing event consumers and task-event publication avoids maintaining another
-indexed history database. Updating one result row per actual execution and
-omitting frequent successful sweeps bounds routine writes; result retention
-still needs monitoring. Neither change caps PostgreSQL RAM or changes its
-resource limits. Existing worker heartbeats and control commands remain
-available without the removed task event stream.
+Updating one result row per actual execution and omitting frequent successful
+sweeps bounds routine writes; result retention still needs monitoring. This
+policy does not cap PostgreSQL RAM or change its resource limits. Worker
+heartbeats and control commands remain available with task-event publication
+disabled.
 
 Regression coverage uses real Celery publication/execution and the existing
 Django backend: actual tasks record STARTED/SUCCESS, retries and failures;
@@ -651,30 +553,26 @@ checks complement the existing domain retry, artifact and worker-loss tests.
 
 ## Railway deployment
 
-Use the Railway skill to inspect the actual production project/environment
-before mutation. `.railway/railway.ts` is the sole Railway service configuration
-for all eight active production services and their volumes. See
+Inspect the actual production project/environment before mutation.
+`.railway/railway.ts` is the sole Railway service configuration for all eight
+active production services and their volumes. See
 [production Railway configuration](railway-production.md) for the complete
 inventory and Redis replacement operations. Gogs and the Git backup job are
 declared in this same file; see
 [Git backup and Gogs operations](git-backup-operations.md) for their settings.
-The deprecated `railway.toml` was removed to avoid competing deployment
-settings. Preserve the existing named partial and its current web service; do
-not recreate legacy TOML/JSON service configuration or take ownership of
-unrelated services by importing/applying an incomplete whole-project graph.
-`railpack.json` separately owns image construction, including dependencies and
-frontend assets. Service configuration changes require a reviewed
-`railway config plan` and `railway config apply`; application Git pushes alone
-do not apply IaC edits. Consolidating these settings has no application runtime
-or performance effect.
+Preserve the existing named partial and its current web service. Do not add
+competing TOML/JSON service configuration or take ownership of unrelated
+services by applying an incomplete whole-project graph. `railpack.json`
+separately owns image construction, including dependencies and frontend assets.
+Service configuration changes require a reviewed `railway config plan` and
+`railway config apply`; application Git pushes alone do not apply IaC edits.
 
 The same partial also owns the existing `Postgres-Prod` service configuration:
-its PostgreSQL 16 image, build settings, region and replica count, private
-network endpoint, existing 5000 MB volume and mount, resource limits, image
-startup, PITR archive bucket, and variable map. Existing variable values and
-secrets are retained with `preserve()`. The CPU limit remains 1 and the memory
-ceiling remains 500,000,000 bytes; memory reduction comes from persistent
-PostgreSQL settings.
+its image, build settings, region and replica count, private network endpoint,
+existing 5000 MB volume and mount, resource limits, image startup, PITR archive
+bucket, and variable map. Existing variable values and secrets are retained with
+`preserve()`. The CPU limit remains 1 and the memory ceiling remains 500,000,000
+bytes; memory reduction comes from persistent PostgreSQL settings.
 
 PostgreSQL must use the image's own startup without an override so Railway can
 enable PITR. The entrypoint handles SSL, volume locking, WAL archiving and
@@ -689,20 +587,15 @@ See
 [PostgreSQL PITR and memory tuning](railway-production.md#postgresql-pitr-and-memory-tuning)
 for provisioning, recovery and backup verification requirements.
 
-The root JavaScript manifest and lockfile pin `railway@3.16.0`, TypeScript, and
-the tool's type definitions. `bun run typecheck:development` validates the
-authoring file and runs through pre-commit/CI. Its native IaC runner requires
-Railway CLI 5.42.1 or newer; the read-only production plan was checked with CLI
-5.57.1. The web service, worker, and Beat track the repository's `master`
-release branch with GitHub check suites enabled. Worker and Beat sources have no
-fixed commit SHA, and their unrestricted watch patterns allow every repository
-change to trigger a rebuild after checks pass. This keeps application tasks
-aligned with releases that update shared code, dependencies, or build
-configuration. Check the live web service's source branch and migration history
-before applying the prepared graph, and record the actual commit on each
-resulting deployment. After service creation, read back the worker and Beat
-source settings to confirm the `master` branch, absent commit pin, and enabled
-GitHub check suites were retained.
+The root JavaScript manifest and lockfile declare the Railway IaC tooling and
+TypeScript dependencies. `bun run typecheck:development` validates the authoring
+file through pre-commit/CI. Use a Railway CLI that supports the repository's IaC
+configuration. The web service, worker and Beat track the release branch
+declared in `.railway/railway.ts`, with GitHub check suites enabled and no fixed
+source commit pin. Their unrestricted watch patterns permit rebuilds after
+repository changes pass checks. Read back source settings after applying
+configuration and verify the actual source revision on each resulting
+deployment.
 
 Railway omits default values from its serialized configuration. The IaC source
 therefore omits unrestricted watch patterns, disabled application sleeping, and
@@ -717,13 +610,11 @@ four persistent volumes. Generate a fresh plan against `speleoDB` / `production`
 before applying. Reject unrelated changes or removals. A plan does not provision
 missing referenced values; verify prerequisites in the target environment.
 
-Before rollout, verify the existing Redis server has a persistent volume, AOF,
-and `noeviction`. Redis is managed with its existing image, variables, resource
-limits, TCP endpoint, and volume; adoption does not change its runtime policy.
-PostgreSQL is managed with the settings described above. The application
-database stores the result backend; do not provision a separate monitoring
-database. Moving the backup definitions into this file does not alter PostgreSQL
-settings or data.
+Before deployment, verify Redis has a persistent volume, AOF and `noeviction`.
+Redis image, variables, resource limits, TCP endpoint and volume are managed in
+`.railway/railway.ts`. PostgreSQL is managed with the settings described above.
+The application database stores the result backend; do not provision a separate
+monitoring database.
 
 This topology needs no environment-wide shared variables. Redis owns its
 connection settings. Consumers use Railway references so credential/address
@@ -782,10 +673,11 @@ termination grace so in-flight work can shut down cleanly. See
 
 Deployment order:
 
-1. Finish container tests, review, commit, and CI; record the release commit.
+1. Select the reviewed release after its required checks pass; record the
+   release revision.
 2. Inventory existing service configuration and preview the IaC plan. Reject
-   unrelated deletions or secret replacements. Reconcile legacy web-config
-   ownership before applying an IaC file that manages that service.
+   unrelated deletions or secret replacements. Preserve the named partial and
+   its service ownership.
 3. Validate durability and eviction settings on shared Redis and verify the
    existing Redis-owned broker references. Preserve shared infrastructure and
    databases; task history uses the application database.
@@ -815,14 +707,12 @@ preserving additive tables and history. Keep artifact cleanup and published
 downloads available where supported by that release. Review an older IaC file's
 service graph before applying it.
 
-The result-policy change adds no database migrations. Roll back the application
-publishers, worker and Beat together, preserving the advisory-lock identifier
-and schedule records. The canonical Beat launcher remains the lightweight Python
-module, not the retired management command. Coordinate a rollback's reviewed
-source revision and matching start command in the same deployment; neither
-revision may start with a command it does not support. Revert Railway
-configuration through a reviewed IaC plan/apply when a rollback requires a
-different start command or overlap policy.
+Keep application publishers, worker and Beat compatible during rollback,
+preserving the advisory-lock identifier, schedule records and audit history. The
+canonical Beat launcher is the lightweight Python module. A rollback must use a
+start command supported by its selected source revision. Review and apply
+Railway configuration when a rollback changes a managed start command or overlap
+policy.
 
 ### Production rollout verification
 
@@ -831,13 +721,10 @@ service variables after configuration apply, and verify the exact new
 application deployments and their real task results before claiming the release
 is live. A Git push alone does not apply IaC changes.
 
-Earlier runtime work verified Beat's zero-overlap settings and canonical worker
-and Beat launch commands. Preserve the 120-second shutdown grace and advisory
-lock. Recheck each deployment's process, queue consumption, scheduler ownership,
-result policy and application behavior for this release; historical successful
-deployments are not a current production health check. Review unrelated live
-configuration drift independently instead of silently applying it with the
-release.
+Preserve the configured shutdown grace and advisory lock. Check each
+deployment's process, queue consumption, scheduler ownership, result policy and
+application behavior. Review unrelated live configuration drift independently
+instead of silently applying it with the release.
 
 ## Sources
 
@@ -851,8 +738,7 @@ release.
 
 Eligible source uploads schedule their exact revision after push and SQL commit.
 Map scheduling failure does not reject a saved source. TaskResult is the sole
-execution status: the generation model, status API, journal and automatic retry
-workflow have been removed. Hard-killed uploads may leave orphaned objects until
-the next explicit full reset. See
-[background survey maps](project-geojson-background.md) and
-[Operations](admin-operations.md) for cleanup and manual recovery.
+execution status; generation has no separate status API, journal or automatic
+retry workflow. Hard-killed uploads may leave orphaned objects until the next
+explicit full reset. See [background survey maps](project-geojson-background.md)
+and [Operations](admin-operations.md) for cleanup and manual recovery.

@@ -1,4 +1,4 @@
-# AGENTS.md
+# Agent Documentation & Practices
 
 Guidance for AI/code agents working in the SpeleoDB repository.
 
@@ -33,7 +33,7 @@ required; this rule only specifies where an authorized commit must run.
   code.
 - **No Laziness**: Find root causes. No temporary fixes. Principal Engineer
   standards
-- **Minimat Impact**: Changes should only touch what's necessary. Avoid
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid
   introducing bugs or changing unrelated parts of the code.
 - **Readability & Maintainability**: Preserve product behavior while improving
   maintainability.
@@ -123,7 +123,7 @@ environment installation. Report missing prerequisites instead.
   conceal mismatches with unused compatibility arguments or wrappers. Preserve
   original exceptions through Celery serialization and task results. Use the
   shared `TaskResultStatus` enum for Celery/TaskResult state values; do not
-  scatter status string literals through code, tests or templates. dss
+  scatter status string literals through code, tests or templates.
 - Reuse existing admin/forms/assets and background execution infrastructure.
   Failed project operations are rerun explicitly; do not restore automatic
   generation retry/recovery or change the separate export-job lifecycle. Keep
@@ -235,7 +235,7 @@ files.
 - Skip this for simple, obvious fixes - don't over-engineer
 - Challenge your own work before presenting it
 
-### 6. Autonomous Bug Fizing
+### 6. Autonomous Bug Fixing
 
 - When given a bug report: just fix it. Don't ask for hand-holding
 - Point at logs, errors, failing tests - then resolve them
@@ -253,8 +253,11 @@ files.
   template-owned styles.
 - `frontend_private/static/private/ts/map_viewer/`: core map viewer modules.
 - `frontend_public/static/ts/gis_view_main.ts`: public viewer entrypoint.
-- `tailwind_css/`: Tailwind source styles and Tailwind configs.
-- `docs/`: agent-focused design and implementation docs.
+- `tailwind_css/`: Tailwind source styles and CSS-first configuration.
+- `docs/`: feature guides, architecture references, operations documentation,
+  and clearly labeled developer/agent practices. Feature guides describe the
+  feature; task plans, implementation journals, and review results belong in
+  external temporary files.
 - `tasks/lessons/` and `tasks/todos/`: historical references only; all new agent
   working files belong in the external temporary task directory.
 
@@ -566,8 +569,9 @@ failed replacement preservation, task outcomes and exception serialization.
   clearly; never add environment opt-ins, `skipif`, `importorskip`, or runtime
   skips. Explicit `--light`/`--offline`, `-m`, or `--ignore` exclusions are
   reported as deselection and do not replace complete validation. Invalid
-  parameter combinations belong outside the collected matrix. Browser tests
-  remain a separately invoked UI/UX layer.
+  parameter combinations belong outside the collected matrix. Browser tests use
+  their separate UI/UX harness; `make test` runs the backend, frontend, and
+  browser targets.
 - Backend behavior belongs in pytest, frontend logic in Vitest, and browser
   tests exclusively in UI/UX verification. Do not move backend assertions into
   browser tests to reduce pytest time.

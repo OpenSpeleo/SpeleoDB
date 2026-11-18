@@ -14,9 +14,10 @@ The web startup camera is application-owned: a wide globe centred on France
 camera is applied once after the first style installs the globe projection,
 avoiding Mercator viewport constraints during asynchronous startup. Existing URL
 destinations and loaded-project bounds then take precedence as before; later
-style loads do not reset navigation. This adds no data scans or requests. Unit
-and real-renderer browser tests cover foreign provider cameras, tall viewports,
-and preservation of subsequent navigation.
+style loads do not reset navigation. This adds no data scans or requests.
+Composition tests cover provider camera removal and preservation of subsequent
+navigation; manual renderer review can inspect startup framing in tall
+viewports.
 
 ## Globe presentation
 
@@ -61,9 +62,9 @@ separate map engine.
 
 Web, mobile and map-viewer use the
 [`DEKHTIARJonathan/maplibre-gl-js` hotpatch fork](https://github.com/DEKHTIARJonathan/maplibre-gl-js/tree/hotpatch),
-based on MapLibre 6.14.0. Map-core remains renderer-independent. The fork owns
-the engine source and distributable build, including the partial-pinch handoff
-correction
+with its exact revision selected by `package.json` and `bun.lock`. Map-core
+remains renderer-independent. The fork owns the engine source and distributable
+build, including the partial-pinch handoff correction
 ([upstream issue #8809](https://github.com/maplibre/maplibre-gl-js/issues/8809)).
 Ending a pinch with one finger still held can start zoom inertia; when that
 animation naturally ends, upstream camera cleanup resets the held touch handler.
@@ -78,9 +79,8 @@ with the live camera during render
 A `transformCameraUpdate` callback, including React map wrappers, can keep a
 requested camera whose globe/Mercator blend otherwise becomes stale while
 zooming. Web currently uses the engine directly, but shares this correction so
-the engine's behavior stays consistent across consumers. MapLibre 6.11.1 already
-fixed movement-event delivery through the camera; 6.14.0 uses that upstream
-cleanup without a local event correction.
+the engine's behavior stays consistent across consumers. Movement-event delivery
+uses the engine's camera cleanup.
 
 The application declares `github:DEKHTIARJonathan/maplibre-gl-js#hotpatch`; its
 frozen lock selects an exact fork revision containing the distributable build.
@@ -92,13 +92,13 @@ application callback or GeoJSON traversal is added. Engine upgrades, including a
 return to upstream once it contains both fixes, must pass those mouse and touch
 regressions.
 
-MapLibre changes the engine while preserving web providers. The default remains
-Mapbox Satellite Streets v12 when a token is present, with its real vector city
-and place labels. `normalizeMapboxRequest` maps the classic style, TileJSON,
-sprite (including retina suffixes) and glyph URLs to the documented Mapbox HTTPS
-APIs using MapLibre's `transformRequest`. Requests to other hosts and protocols
-are unchanged, so provider credentials cannot leak to application downloads or
-ESRI. Do not replace these labels with raster labels or silently drop layers.
+Renderer and provider ownership are separate. The default remains Mapbox
+Satellite Streets v12 when a token is present, with its real vector city and
+place labels. `normalizeMapboxRequest` maps the classic style, TileJSON, sprite
+(including retina suffixes) and glyph URLs to the documented Mapbox HTTPS APIs
+using MapLibre's `transformRequest`. Requests to other hosts and protocols are
+unchanged, so provider credentials cannot leak to application downloads or ESRI.
+Do not replace these labels with raster labels or silently drop layers.
 `MAPBOX_API_TOKEN` remains a provider credential. The provider's unmodified
 88×23 logo is retained as a control whenever the Mapbox base style is loaded in
 the normal private and public viewers; it remains present on ESRI switches
@@ -109,9 +109,9 @@ refresh. A DOM observer is scoped to that control and disconnected on removal;
 copyright credits and the native compact toggle are preserved without extra
 requests or changes to provider metadata. The historical viewer disables both
 attribution controls through the shared `showAttribution` option so its distance
-scales sit at the bottom edge. The logo artwork comes from the
-[Mapbox GL JS 3.12.0 stylesheet](https://api.mapbox.com/mapbox-gl-js/v3.12.0/mapbox-gl.css)
-and follows Mapbox's
+scales sit at the bottom edge. The logo artwork is retained in
+`frontend_private/static/private/media/mapbox-provider-logo.svg`, loaded by
+`map/mapbox_provider.ts`, and follows Mapbox's
 [attribution guidance](https://docs.mapbox.com/help/dive-deeper/attribution/).
 
 The ESRI Satellite, World Hillshade and dark hillshade choices keep their
@@ -182,12 +182,12 @@ Marker images are package assets. The shared runtime-context boundary resolves
 the complete icon catalog once for both map sprites and DOM menus, dialogs and
 panels, including the legacy `bone` and `cylinderOrange` keys. Nonempty context
 overrides remain possible; omitted or empty values use the bundled assets, so
-consumers never emit an `undefined` image URL. Django no longer needs to inject
-seven copies of asset paths. This normalization adds no network requests or
-per-feature processing. Unit tests cover defaults and overrides; browser tests
-exercise the actual menu and dialog image requests. The public viewer does not
-initialize private marker, measurement or editing workflows. Public zoom
-restrictions and preference isolation remain enforced by the public root.
+consumers never emit an `undefined` image URL. Django context can omit
+asset-path overrides. This normalization adds no network requests or per-feature
+processing. Unit tests cover defaults and overrides; asset availability is not a
+separate browser-test contract. The public viewer does not initialize private
+marker, measurement or editing workflows. Public zoom restrictions and
+preference isolation remain enforced by the public root.
 
 Dialog initialization belongs to the dialog instance: deferred `Modal.open`
 callbacks run only while that same element remains mounted. Closing or replacing
@@ -195,8 +195,8 @@ a dialog cannot initialize a later instance with stale form data. Cylinder
 close/backdrop listeners bind when the dialog opens, because the route can load
 after `DOMContentLoaded`; loading, empty-fleet and error states remain
 dismissible. Stable listener identities avoid duplicate handlers on reopening.
-Unit tests cover these lifecycles, and browser icon checks also close the real
-dialogs and reject uncaught page errors.
+Unit tests cover these lifecycles. Browser UI scenarios exercise complex dialog
+focus and tool-ownership interactions and reject uncaught page errors.
 
 Mutable web marker data is held in a WeakMap keyed by the actual GeoJSON source.
 `addOwnedSource` registers the input and mutation handlers retrieve the owned
@@ -219,21 +219,15 @@ verify source/record identity using registered app-owned data.
 The Playwright fixture observes `speleo:map-created` and actual rendered output
 without replacing MapLibre methods, and intercepts provider data at the network
 boundary. Small deterministic fixtures retain real rendering and native input.
-Private and public UI/UX scenarios cover basemap switching, visible attribution,
-tools, zoom restrictions, loading feedback and error recovery. Source identity,
-worker behavior and processing belong in the suites run by `make test`. Live
-provider verification additionally needs a valid Mapbox token and provider
-network access; deterministic fixtures alone do not establish live imagery and
-city-label availability.
+Private and public UI/UX scenarios cover visible-map changes, native gestures,
+tool ownership, loading feedback, focus/fullscreen interactions, and error
+recovery. Attribution artwork, source identity, worker behavior, and processing
+are verified at their owning lower-level boundaries. `make test` runs backend,
+frontend, and browser suites. Live provider verification additionally needs a
+valid Mapbox token and provider network access; deterministic fixtures alone do
+not establish live imagery and city-label availability.
 
-Run checks inside the running application container from `/app`:
-
-```sh
-bun run typecheck
-bun run lint:frontend
-bun run test:frontend
-bun run build
-```
+## Package distribution
 
 Standalone production builds consume exact npm releases of
 [`@speleodb/map-core`](https://www.npmjs.com/package/@speleodb/map-core) and
@@ -262,3 +256,6 @@ code stays independent of Django and application globals; browser scheduling
 uses explicit cancellable ports and detects animation-frame availability. See
 the monorepo TypeScript package documentation for packaging, local overlays and
 publication sequencing.
+
+Contributor guidance:
+[Shared map packages](../agent-practices.md#shared-map-packages).

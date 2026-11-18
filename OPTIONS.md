@@ -1,17 +1,39 @@
-# Server OPTIONS
+# GitLab connection settings
 
-Here are the OPTIONS that you need to declare in the database for the server to
-function
+SpeleoDB reads GitLab connection settings from environment variables in
+`config/settings/base.py`. They identify the server and group that own project
+repositories.
 
-- `GITLAB_HOST_URL="gitlab.com"`<br> The url to the GIT platform being used.
-  Either self-hosted or cloud service. No "https://" in front or trailing "/" at
-  the end.
+| Variable            | Meaning                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `GITLAB_HOST_URL`   | GitLab hostname, optionally including a port. Omit the URL scheme and trailing slash.        |
+| `GITLAB_TOKEN`      | API access token for the GitLab account used by SpeleoDB. This is a secret token, not a URL. |
+| `GITLAB_GROUP_NAME` | Full namespace path of the group that contains project repositories.                         |
+| `GITLAB_GROUP_ID`   | Numeric ID of that same group.                                                               |
 
-- `GITLAB_TOKEN="https://<git_host>.com"`<br> A token can be obtained at:
-  - <https://gitlab.com/-/user_settings/personal_access_tokens>>
+For an existing hosted or self-hosted GitLab instance, create an API token for
+the SpeleoDB account through that instance's access-token settings. Create or
+select the group that will own the repositories, then record that same group's
+full namespace and numeric ID. Store the token in the deployment's secret
+environment configuration; local Compose manages separate development and test
+credentials.
 
-- `GITLAB_GROUP_NAME=<group_name>`<br> Provide a GITLAB group to use as a common
-  place for all projects: <https://gitlab.com/groups/new>
+The settings module selects the HTTP protocol separately through
+`GITLAB_HTTP_PROTOCOL`. Production uses HTTPS; local development and test
+settings handle the local GitLab service.
 
-- `GITLAB_GROUP_ID=<group_id>`<br> Provide the GITLAB group ID:
-  <https://gitlab.com/groups/new>
+The local Compose setup provisions separate development and test groups and
+writes their connection settings to the corresponding ignored environment files.
+See [local services](docs/local-object-storage.md) and
+[GitLab testing](docs/ci-gitlab-testing.md) for their ownership and isolation.
+
+From the running application container, the read-only connection check verifies
+authentication and that the group ID and namespace identify the same group:
+
+```bash
+python manage.py check_gitlab --read-only
+```
+
+The command without `--read-only` also creates and deletes a repository. Test
+connections use `--settings config.settings.test` and the isolated test
+credentials.

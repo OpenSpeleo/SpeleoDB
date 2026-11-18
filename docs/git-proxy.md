@@ -138,10 +138,10 @@ Run focused checks in the already-running application container, followed by the
 full suite when changing proxy behavior:
 
 ```bash
-docker exec -w /app speleodb_local_django pytest -q speleodb/git_proxy/tests.py
-docker exec -w /app speleodb_local_django ruff check speleodb/git_proxy
-docker exec -w /app speleodb_local_django mypy speleodb/git_proxy
-docker exec -w /app speleodb_local_django make test-py
+docker exec -w /app speleodb-monorepo-django pytest -q speleodb/git_proxy/tests.py
+docker exec -w /app speleodb-monorepo-django ruff check speleodb/git_proxy
+docker exec -w /app speleodb-monorepo-django mypy speleodb/git_proxy
+docker exec -w /app speleodb-monorepo-django make test-py
 ```
 
 Operational verification should run `git ls-remote` through SpeleoDB and a

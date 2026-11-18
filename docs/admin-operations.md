@@ -117,33 +117,30 @@ private clone installation. The Celery task then calls
 `Project.build_geojsons()` shares historical conversion between CLI and workers.
 `replace_project_geojson()` owns validation, upload and atomic publication.
 
-## Coordinated rollout
+## Deployment verification
 
-Drain old GeoJSON executions and inspect pending generation records before
-removing their table. Finish unpublished-object cleanup with the old code and
-retain project/revision identifiers needed for manual resubmission. Apply the
-journal-removal migration, then deploy matching web and worker signatures and
-contract consumers together.
+For a database that has not applied `gis.0046_remove_projectgeojsongeneration`,
+stop new generation submissions and drain old executions before migration.
+Inspect pending generation records, finish unpublished-object cleanup with the
+old code, and retain project/revision identifiers for explicit resubmission. The
+migration deletes the journal table; it does not transfer pending work or its
+cleanup inventory to TaskResult. Apply it before resuming work with matching web
+and worker code. These precautions do not add a journal or automatic recovery to
+the current execution model.
 
-The owner confirmed there are no existing consumers requiring migration for the
-removed `geojson_status` upload-response field. SDK publication and
-native-client adoption therefore do not block this backend deployment. No
-compatibility response field is retained.
+Deploy matching web and worker code so task publishers and worker signatures
+agree. Verify a project recomputation, an isolated history reset and a small
+batch. Inspect task results, runtime logs, reconstructed history and stored
+artifacts. Implementation and schema generation do not authorize production
+execution or publication.
 
-Verify a project recomputation, an isolated history reset and a small batch.
-Inspect task results, runtime logs, reconstructed history and stored artifacts.
-Implementation and schema generation do not authorize production execution or
-publication. No Railway service-setting change is required.
-
-The administrator audit-table cutover has its own
-[migration and verification order](admin-audit-logging.md#migration-and-cutover).
-Pause administrator writes and drain old operation workers before copying the
-historical log; otherwise old processes could write entries after the snapshot.
+For audit-history imports and preservation requirements, see
+[historical audit records](admin-audit-logging.md#historical-audit-records).
 
 ## Fundraiser email operation
 
-**Manage fundraiser** opens campaign editing, read-only previews, test-address
-entry and explicit audience review/send. Campaign dates control dashboard
-visibility independently of sending. See
+**Manage fundraiser** opens campaign editing, test-address entry and explicit
+audience review/send. Admin does not provide email or modal previews. Campaign
+dates control dashboard visibility independently of sending. See
 [donation campaign](donation-campaign.md) and
 [delivery operations](donation-campaign-backend.md) for receipts and exclusions.

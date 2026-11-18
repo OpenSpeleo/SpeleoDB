@@ -13,7 +13,7 @@ deletion, and authenticated exports.
 `LandmarkCollection` follows the existing fleet and surface-network pattern: an
 active aggregate row, an opaque `gis_token`, creator metadata, and a separate
 `LandmarkCollectionUserPermission` table with READ, WRITE, and ADMIN levels.
-Collections now have a type: `PERSONAL` or `SHARED`. Personal collections have
+Collections have a type: `PERSONAL` or `SHARED`. Personal collections have
 exactly one `personal_owner`; shared collections have no personal owner.
 
 Collections also carry a model-backed `color` chosen from the same
@@ -49,7 +49,7 @@ collection management API. Personal collections can still regenerate their GIS
 token through the owner's ADMIN permission, but the private details page does
 not expose editable personal collection name, description, or color controls.
 
-## Migration compatibility
+## Database reversal and data preservation
 
 Migration `0037_landmark_collections` preserves creator-email provenance,
 assigns previously unassigned landmarks to each owner's personal collection, and
@@ -152,7 +152,7 @@ permissions page matches the established Project user-permission design for its
 responsive cards, desktop table, Grant Access button, modal, and edit/delete
 icon controls. It also uses the same permission ordering: ADMIN, then
 READ_AND_WRITE, then READ_ONLY, with email as the tie-breaker. Personal
-collections now appear in **My GIS Landmark Collections** and can open the
+collections appear in **My GIS Landmark Collections** and can open the
 details/table/export and GIS integration views, but do not show permission or
 danger-zone management. Shared collection details and create pages reuse the
 project color picker so WRITE users can select the collection color. Personal
@@ -182,28 +182,21 @@ registered `landmark-details` Vite controller, which lazily imports
 `details_main.ts`. Django serves the manifest-backed assets in both development
 and production.
 
-The shared `landmarks/forms.ts` module is the single source of truth for all
-landmark create/edit/delete/bulk-transfer/bulk-delete modal markup and
-validation. It is consumed by both the map viewer (`landmarks/ui.ts`) and the
-collection details page bundle (`details_main.ts`). The module uses direct
-`fetch` calls with CSRF headers and surfaces backend errors inline in the modal.
-Its transport intentionally returns `null` for HTTP 204, while the map API
-transport returns an `{ ok, status }` marker. Successful non-JSON bodies remain
-strings. Success callbacks are awaited inside the same modal error path,
-including a rejection after the modal closes. `LandmarkForms` remains a mutable
-facade containing the original function references. Domain declarations in
-`ts-types/domain/landmark-forms.ts` describe form options and payloads;
-untrusted transport results enter as `unknown`.
+The collection details page uses `landmarks/forms.ts` for create/edit/delete and
+bulk transfer/delete dialogs. Its generated SDK operations use the common
+browser adapter for authentication, CSRF and response handling. Backend errors
+are shown as text in the modal. Successful mutation callbacks let the caller
+refresh its table; callback failures remain in the modal's error path.
 
-Collection lookup, selection, payload reading, and coordinate/name validation
-live in `landmarks/form_model.ts`; escaped collection options and form/bulk
-markup live in `landmarks/form_presentation.ts`. `forms.ts` composes those
-functions with its modal and transport lifecycle and re-exports the original
-render/read/validate functions without wrapping them. Map and table callers
-therefore share the same function objects and writable-collection filtering. The
-separation adds no requests or feature rescans. Shared-form tests cover facade
-identity, locked collection selection, writable-only options, malformed
-coordinates, escaping, and the existing transport policies.
+The collection forms use `landmarks/form_model.ts` for collection lookup,
+payload reading and coordinate/name validation, and
+`landmarks/form_presentation.ts` for escaped markup. The map viewer shares the
+icon value reader, picker renderer and picker initializer from those modules.
+Its `landmarks/ui.ts` owns its collection selection, input checks, manager
+refresh and navigation lifecycle; a collection-form validation change alone does
+not change the map dialogs. Shared-form tests cover locked collection selection,
+writable-only options, malformed coordinates, escaping, typed HTTP requests and
+unexpected responses.
 
 The map Landmark manager loads collections, groups landmarks by collection in
 collapsed groups, exposes collection selectors when creating or importing
@@ -231,8 +224,8 @@ Coverage is split by ownership boundary:
   collection hydration, the details-page Landmark table, export links, read-only
   movement guard, details-page multi-select/bulk-bar behavior, and shared forms
   module (create/edit/delete/bulk-transfer/bulk-delete modals, inline
-  validation, CSRF headers, XSS escaping, facade identity, 204 and text
-  responses,\n callback rejection, and DELETE body/header omission).
+  validation, current CSRF headers, XSS escaping, documented response handling,
+  unexpected-response rejection, and DELETE body/header omission).
 - Color tests cover default generation, API validation/normalization, shared
   WRITE updates, shared view picker rendering, personal detail form hiding,
   Landmark GeoJSON `collection_color`, grouped Landmark manager rows, and map
@@ -261,11 +254,9 @@ Async image readiness updates only the marker layout, preserving collection
 filters, interaction IDs, visibility and layer ordering. Map coordinate
 creation, manual creation, editing, and collection forms share the picker
 renderer, initializer, and selected-value reader. The map keeps its existing
-manager mutation/refresh lifecycle. Browser tests inspect decoded CSS masks from
-the built bundles, including Vite's inlined SVG data URLs, and verify successful
-create/edit requests, persistence after reload, and preservation when editing
-other fields. The browser cases create isolated collections and geometries
-through the real API and remove only their own records during teardown.
+manager mutation/refresh lifecycle. Frontend tests cover the shared picker, icon
+preservation while changing collection colors, request serialization, and map
+image lifecycle. Backend coverage owns persistence and permissions.
 
 Authenticated JSON, private GeoJSON, both Landmark OGC services and backup
 GeoJSON expose `icon`. OGC validators include the representation version and

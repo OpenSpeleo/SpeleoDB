@@ -1,7 +1,7 @@
 # Map Viewer Features
 
-> Agent-focused documentation for the SpeleoDB map viewer feature set. Covers
-> engineering intent, module boundaries, and behavioral contracts.
+The SpeleoDB map viewer feature set, including engineering intent, module
+boundaries, and behavioral contracts.
 
 The private map viewer entrypoint is
 `frontend_private/static/private/ts/map_viewer/main.ts`. The public viewer
@@ -66,10 +66,9 @@ Mapbox style object, and switches ESRI sources by replacing one raster tile
 layer below all SpeleoDB overlays. It does not call `map.setStyle()` for ESRI
 switches, so survey/station/marker layers remain visible.
 
-To add another source, add one `MAP_SOURCES` entry with its id, label, source
-type, tile/style config, attribution, and token requirement. Do not add
-public/private entrypoint-specific provider logic. Raster tile URLs may include
-`{accessToken}` when a future provider needs a token.
+Each `MAP_SOURCES` entry declares its id, label, source type, tile/style
+configuration, attribution, and token requirement. Both viewers use the same
+registry. Raster tile URLs support an `{accessToken}` placeholder.
 
 Source changes dispatch `speleo:map-source-changed`. ESRI switches set
 `reloadRequired: false`; private and public entrypoints ignore those events
@@ -106,7 +105,8 @@ project and carries a UUID, lat/lng coordinates, and an optional
 | `geology`  | `-geology-icons`  | `geology`  |
 
 Plain sensor stations render as circles; the remaining types render as custom
-icon images loaded from `window.MAPVIEWER_CONTEXT.icons`.
+icon images resolved by `getRuntimeContext().icons`, using shared package assets
+with optional context overrides.
 
 #### Data loading strategy
 
@@ -128,11 +128,15 @@ client-side. The cache is invalidated on any create/delete mutation via
 | Delete    | `deleteStation(stationId)`          | `API.deleteStation`         | `DELETE`  |
 | Move      | `moveStation(stationId, coords)`    | (calls `updateStation`)     | `PATCH`   |
 
-After every mutation the manager invalidates its cache and calls
-`Layers.refreshStationsAfterChange(projectId)` to redraw the map layer.
-`moveStation` includes a visual-revert path: if the API call fails, the station
-is snapped back to its original coordinates on the map via
-`Layers.updateStationPosition`.
+Create and delete invalidate the manager cache and call
+`Layers.refreshStationsAfterChange(projectId)`. Updates merge the returned
+record into State; coordinate changes update the existing source position. The
+confirmed-drag handler in `main.ts` also dispatches the project refresh event
+after `moveStation` succeeds. Refresh reuses the bulk station cache unless it
+has been invalidated; it does not itself force a new download. Detail edits
+update the record and marker label in place. `moveStation` includes a
+visual-revert path: if the API call fails, the station is snapped back to its
+original coordinates on the map via `Layers.updateStationPosition`.
 
 #### Permission gating
 
@@ -332,10 +336,10 @@ overlays. Every layer defaults OFF. First activation refreshes the authenticated
 detail response and fetches its current signed GeoJSON. The standard Map Viewer
 State/Layers cache retains that original document; cooperative preparation
 derives bounds and a separate display copy for geometry-type filtering. GPS
-Tracks and GIS Layers share `toggleLazyOverlay` in `map/layers.ts`, which checks
-map generation, latest visibility intent, and metadata modification time, and
-aborts replaced requests. Only current results reach scheduled map installation.
-Polygon fill/outline, line, and point roles are created.
+Tracks and GIS Layers share `toggleLazyOverlay` in `map/layers/lazy_overlay.ts`,
+which checks map generation, latest visibility intent, and metadata modification
+time, and aborts replaced requests. Only current results reach scheduled map
+installation. Polygon fill/outline, line, and point roles are created.
 
 Clicking a row shows the layer if necessary and calls only `fitBounds` with its
 computed GeoJSON bounds. The toggle changes visibility without moving the
@@ -435,9 +439,10 @@ snapping: `['station', 'cylinder-install', 'exploration-lead']`.
 survey line endpoints for the nearest point within `MAGNETIC_SNAP_RADIUS`
 (default 10 meters). Distance is computed using the Haversine formula.
 
-Snap points are cached per project in `snapPointsCache`. The cache is populated
-by `Geometry.cacheLineFeatures(projectId, geojsonData)` which extracts start and
-end vertices of every `LineString` feature.
+Snap points are cached per project in `snapPointsCache`. Survey preparation
+extracts the start and end vertices of each `LineString`;
+`Geometry.cachePreparedSnapPoints(projectId, snapPoints)` publishes the
+endpoints when that prepared source is still current.
 
 The snap indicator (a visual dot on the map) is shown/hidden via
 `Geometry.showSnapIndicator(coords, map, isSnapped)` /
@@ -465,8 +470,8 @@ Drag initiation requires write access:
 
 - Stations, cylinder installs, exploration leads:
   `Config.hasScopedAccess('project', projectId, 'write')`
-- Landmarks: any authenticated user can drag their own landmarks (no
-  project-level check).
+- Landmarks: the backend-derived `can_write` flag must be true for their
+  collection access. Creator identity alone does not authorize dragging.
 
 ---
 
@@ -598,8 +603,8 @@ expose `aria-expanded`/`aria-controls` and keep keyboard focus visible.
 The public viewer reuses the same controller with its project panel only.
 Existing mobile availability is preserved: the three desktop menus remain hidden
 at 640px and below, while GIS Geometries stays available. Unit tests exercise
-menu ordering, disclosure, focus, teardown and repeated registration; browser
-checks verify intrinsic widths, wrapping and vertical overflow.
+menu ordering, disclosure, focus, teardown and repeated registration; manual
+browser review can verify intrinsic widths, wrapping and vertical overflow.
 
 #### Two-level visibility model
 
@@ -690,7 +695,9 @@ Landmark marker and label colors come directly from each GeoJSON feature's
 `collection_color` property, falling back to `FALLBACK_COLOR` if the property is
 missing.
 
-There is **no palette array in JS**. All color assignment is model-driven.
+Project, GPS Track, GIS Layer, and Landmark Collection colors are model-driven;
+they have no frontend assignment palette. Station tags have their separate
+server palette and local fallback described in Section 1.4.
 
 ### Palette source of truth
 
@@ -820,12 +827,6 @@ Map behavior:
 - API responses include `can_write` and `can_delete`; the frontend uses these
   server-derived flags instead of reimplementing collection permission logic.
 
-`MAP_SOURCES` order is part of the UI/default contract: it determines menu order
-and the first token-satisfied fallback. A registry reorder must update the
-order-sensitive available-source and tokenless-default expectations in
-`map/sources.test.ts` and the documented list together. Verify the intended
-default and manifest-owned output after a clean build.
-
 ## Station feature contracts
 
 Station feature declarations distinguish API records from display projections.
@@ -862,3 +863,5 @@ validates coordinate bounds. The details module owns family/parent context,
 clones tab controls during initialization, and retains the supplied navigation
 handler object. Tests exercise both families, absent DOM, permission-negative
 creation, malformed station types, submission values, and callback ordering.
+
+Contributor guidance: [Map providers](../agent-practices.md#map-providers).

@@ -145,9 +145,9 @@ moving a point. Curve sections outside that band are clipped instead of being
 flattened along the boundary. Distances retain their geographic meaning.
 
 Picking uses the public surface API and a projection/unprojection round trip.
-This extra check is necessary because the pinned MapLibre version can clamp sky
-coordinates to the globe horizon. Invalid preview positions hide the preview and
-preserve the start location.
+This extra check is necessary because the installed MapLibre engine can clamp
+sky coordinates to the globe horizon. Invalid preview positions hide the preview
+and preserve the start location.
 
 Meters/kilometers and feet/miles derive from the same raw value. Formatting uses
 at most one decimal for meters, whole feet, and two decimals for large units,
@@ -195,25 +195,9 @@ controls.
 
 ## Verification
 
-Run all tests in the already-running application container. Colocated tests
-cover pure geodesy, curve/formatting limits, real tool DOM/state, renderer
-lifecycle, dispatcher exclusivity, editor activity ordering, source
-preservation, and both viewer entrypoints. Use a minimal MapLibre boundary
-harness rather than mocking the measurement modules.
-
-Real authenticated Chromium verification uses the existing Playwright setup
-inside that container and the actual clean Vite build served by Django. Check
-multiple pairs, canceled drafts, right-click, mouse pan, touch tap/pinch/cancel,
-keyboard placement, dialogs, editor launch, source/style changes, globe edges,
-label contrast/collisions, fullscreen, small mobile and landscape layouts, 200%
-zoom, reduced motion, and repeated activation/teardown. Confirm the served
-manifest hash and inspect runtime errors. Record outcomes and remaining limits
-in external temporary verification notes; JSDOM results alone are not visual or
-gesture evidence.
-
-Future route length, snapping, editing, area measurement, persistence, or export
-must be designed as explicit product extensions. Keep their data contracts
-separate from this temporary point-to-point session.
+Colocated tests cover pure geodesy, curve/formatting limits, real tool
+DOM/state, renderer lifecycle, dispatcher exclusivity, editor activity ordering,
+source preservation, and both viewer entrypoints.
 
 `ts-types/domain/measurement.ts` separates completed measurements from an
 unfinished single endpoint and describes the small projection interface used by
@@ -222,3 +206,6 @@ geometry and measurement properties. Coordinates and sampled curves keep their
 existing copy and mutation behavior. The pure geometry suite covers antipodes,
 polar clipping, date-line splitting, exact endpoints, and formatting boundaries
 without adding map-feature scans or transport dependencies.
+
+Contributor guidance:
+[Measurement changes](../agent-practices.md#measurement-changes).

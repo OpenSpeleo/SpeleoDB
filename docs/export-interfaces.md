@@ -113,32 +113,3 @@ renderer for progress, partial results, escaping, download routes, and retry
 availability without replacing dependencies. The overall export integration
 suite must also verify actual object creation/download, real worker execution,
 notification delivery, and storage deletion.
-
-### Previous implementation verification
-
-Container checks passed: 51 API/admin/private URL tests, all 986 JavaScript
-tests (including nine export renderer tests), JavaScript lint, scoped Python
-Ruff and mypy, template lint, and a clean production Vite build. The development
-watcher was stopped before that build. An authenticated request to the running
-Django server returned the export page and history API successfully, and the
-served export controller, app script, and stylesheet matched the production
-manifest files byte for byte. The temporary local verification account and
-session were removed afterward. Browser automation was unavailable; these checks
-do not constitute a visual browser review.
-
-The single-list correction passed all 989 JavaScript tests (including 12 export
-renderer tests), 51 API/admin/private URL tests, and a clean production build
-inside Docker. Coverage includes linked-job merging, deduplication, freshness,
-focus, and retry availability. Each export renders once in the same list. An
-authenticated HTTP request verified one export list and no selected/recent
-sections. The served controller, app script, and stylesheet matched the clean
-production manifest byte for byte. Visual browser inspection remains unverified.
-
-The final email-copy/expiry correction passed all 1,003 JavaScript tests and 54
-focused API/admin/private URL/reloader checks inside Docker, plus all pre-commit
-hooks and a clean production build. Coverage includes expiration before API
-pagination, linked expired jobs, open-tab expiry timers, active retries with old
-artifacts, and a bounded return to page one when expiry invalidates a later
-page. The running server served the updated controller/app/CSS exactly as
-recorded in manifest
-`e5e95988de65790f32684f0d4a1878b90bd390f37dcff607e20312f1c21cfd0a`.

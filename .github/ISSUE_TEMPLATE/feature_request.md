@@ -8,53 +8,40 @@ labels: proposal
 assignees: DEKHTIARJonathan
 ---
 
-## What/Why
+## Proposed feature
 
-### What are you proposing?
+Describe the feature and its main capabilities.
 
-_In a few sentences, describe the feature and its core capabilities._
+## User need
 
-### What users have asked for this feature?
+Who would use it, and what problem would it solve? Include relevant requests,
+research, or examples of the current difficulty.
 
-_Highlight any research, proposals, requests or anecdotes that signal this is
-the right thing to build. Try to show why this feature matters and why it should
-be implemented._
+For example: when a situation arises, a user wants to do something to achieve a
+specific outcome.
 
-### What problems are you trying to solve?
+## Expected experience
 
-_Summarize the core use cases and user problems and needs you are trying to
-solve. Describe the most important user needs, pain points as expressed by the
-user asks above.
+Describe how someone would use the feature and how it would fit into the
+existing platform and tools.
 
-**Example:** When \<a situation arises> , a \<type of user> wants to \<do
-something>, so they can \<expected outcome>._
+## Security and privacy
 
-### What is the developer experience going to be?
+Could the feature expose private data or introduce new access requirements?
+Describe any relevant risks.
 
-Try to describe in as much detail as possible the ideal/perfect feature you wish
-to have. Go in as much detail as possible. How it works. How would use it ? How
-it interfaces with the rest of the platform & tools.
+## Compatibility
 
-### Are there any security considerations?
+Would existing workflows or integrations need to change? Explain the impact and
+why the benefit justifies it.
 
-Do you think this feature has a risk to expose private data ? Or be misused ? If
-yes describe how.
+## Alternatives and tradeoffs
 
-### Is it a breaking change ?
+What other approaches could address the same need? Describe their advantages and
+disadvantages. Include reasons someone might oppose this feature and how the
+proposal addresses those concerns.
 
-A breaking change means that "what used to work" will not work anymore. Instead
-of doing A now the user will have to do B.
+## Open questions
 
-If you confirm it is a breaking, please advocate in favor of why this is a
-desirable action to take despite having to break the current workflow.
-
-### Try to be the devil advocate - why not doing this ?
-
-What argument(s) could someone oppose to your proposal ? And how would you reply
-to them.
-
-### Any remaining open questions?
-
-_What are known enhancements to this feature? Any enhancements that may be out
-of scope but that we will want to track long term? List any other open questions
-that may need to be answered before proceeding with an implementation._
+List decisions that still need discussion. Distinguish the proposed scope from
+possible future additions.

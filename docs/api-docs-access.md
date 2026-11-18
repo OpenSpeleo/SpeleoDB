@@ -4,8 +4,8 @@
 
 SpeleoDB exposes API documentation and the generated schema as useful developer
 references. Staff and admin users should continue seeing those links, and
-selected non-staff users can now be granted the same private-menu visibility
-without receiving Django admin access.
+selected non-staff users can be granted the same private-menu visibility without
+receiving Django admin access.
 
 ## Access Flag
 
@@ -40,9 +40,9 @@ existing API docs and schema views.
 
 ## Verification
 
-Run the focused users/admin and private dashboard tests after applying the
-migration:
+Run the focused users/admin and private dashboard tests in the existing
+application container:
 
 ```bash
-docker exec -w /app speleodb_local_django pytest speleodb/users/tests/test_admin.py frontend_private/tests/test_dashboard_views.py
+docker exec -w /app speleodb-monorepo-django pytest speleodb/users/tests/test_admin.py frontend_private/tests/test_dashboard_views.py
 ```

@@ -27,10 +27,12 @@ Every step above can fail. The view preserves the appropriate client response
 Git failures to Sentry. Optional map bookkeeping uses its own savepoint after
 the successful push, preserving the source transaction even if bookkeeping
 fails. After SQL commit, an on-commit callback directly queues the generation
-task. Broker failure leaves durable work for the ten-minute maintenance pass.
-Conversion and artifact storage run in that worker and cannot change the upload
-response. See [background map generation](project-geojson-background.md) for
-ordering, status, and recovery.
+task. Unconfirmed broker publication remains visible in task metadata and
+requires explicit administrator recovery; project operations are not
+automatically retried. Conversion and artifact storage run in that worker and
+cannot change the upload response. See
+[background map generation](project-geojson-background.md) for ordering, status,
+and recovery.
 
 ---
 
@@ -46,7 +48,7 @@ If the view catches an internal exception and returns
 `Format.objects.get_or_create()`, `ProjectCommit` inserts, etc. — are persisted
 despite the logical failure.
 
-### The fix: `transaction.set_rollback(True)`
+### Rollback for handled upload failures
 
 `handle_exception()` in `file.py` calls `transaction.set_rollback(True)`
 unconditionally — for **all** status codes, not just 5xx. If we reach
@@ -103,12 +105,6 @@ patches `logging.Logger.callHandlers`; `propagate=False` does **not** prevent
 that capture. `DjangoIntegration` explicitly ignores `django.request` and
 `django.server` for logging events to avoid duplicate framework reports.
 
-Previously, upload `handle_exception()` explicitly captured only 5xx failures. A
-caught `BadZipFile` returned 400 and skipped that call. Its application ERROR
-log should still have produced an event when production's logging integration
-was active, so the status guard alone cannot establish why a particular
-production issue or alert was absent.
-
 ### Upload reporting policy
 
 HTTP status describes the client's outcome; it does not decide whether an
@@ -131,9 +127,8 @@ endpoints retain their existing policies.
   permission rejections are outside this processing policy.
 - Optional generation-bookkeeping failures are captured after their savepoint
   unwinds, without rejecting the source upload. The worker reports conversion
-  and storage failures separately and records bounded user-facing diagnostics. A
-  secondary Git cleanup failure is captured independently of the original upload
-  failure.
+  and storage failures separately and records the task outcome. A secondary Git
+  cleanup failure is captured independently of the original upload failure.
 - Normal no-op outcomes remain unchanged: duplicate or unchanged files, absent
   GPS anchors, empty surveys, excluded GeoJSON generation, and an incomplete
   Compass bundle without a MAK file. They do not become processing failures.
@@ -203,19 +198,11 @@ lock naturally.
 
 ---
 
-## Three-step protocol for all API views
+## API exception reporting
 
-Every `except` block in any API view that returns an `ErrorResponse` with
-status >= 500 **must** follow this protocol:
-
-1. **`logger.exception(...)`** — preserves the full traceback in console/Railway
-   logs.
-2. **`sentry_sdk.capture_exception(exc)`** — creates a Sentry event with
-   traceback, tags, and request context.
-3. **`transaction.set_rollback(True)`** — required **only** when ORM writes
-   (`create`, `save`, `get_or_create`, etc.) happen inside the `try` block
-   before the error. Tells Django's `ATOMIC_REQUESTS` to roll back the entire
-   transaction.
+The shared
+[API exception-handling practices](agent-practices.md#api-exception-handling)
+cover traceback logging, Sentry capture, and transaction rollback.
 
 For project uploads, the reporting policy above also applies to 4xx input and
 processing failures. Other endpoints retain their own expected-input-error
@@ -239,46 +226,8 @@ always rolls back.
 | `tools.py`            | `ToolDMPDoctor`               | Yes    | No       | wraps `mnemo_lib.correct_dmp_cmd`; returns 400 but captures because `correct_dmp_cmd` failures can be either corrupt user input or upstream bugs   |
 | `middleware.py`       | `DRFWrapResponseMiddleware`   | Yes    | No       | last-resort backstop (v1 only)                                                                                                                     |
 
-### Savepoint rule for catching `IntegrityError`
-
-Under PostgreSQL + `ATOMIC_REQUESTS`, a caught `IntegrityError` leaves the
-transaction in an aborted state unless a savepoint was used.
-
-**`get_or_create()` handles this automatically** — it creates its own savepoint
-around the `create()` call. Do not add a redundant wrapper:
-
-```python
-# GOOD — get_or_create manages its own savepoint
-try:
-    obj, created = MyModel.objects.get_or_create(...)
-except IntegrityError:
-    pass
-
-# BAD — redundant savepoint, unnecessary nesting
-try:
-    with transaction.atomic():
-        obj, created = MyModel.objects.get_or_create(...)
-except IntegrityError:
-    pass
-```
-
-**A raw `create()` does NOT create a savepoint.** If you catch `IntegrityError`
-around a plain `create()`, you MUST wrap it:
-
-```python
-# GOOD — savepoint protects the outer transaction
-try:
-    with transaction.atomic():
-        MyModel.objects.create(...)
-except IntegrityError:
-    pass
-
-# BAD — corrupts PostgreSQL transaction under ATOMIC_REQUESTS
-try:
-    MyModel.objects.create(...)
-except IntegrityError:
-    pass
-```
+Savepoint rules are documented in
+[API exception-handling practices](agent-practices.md#api-exception-handling).
 
 ---
 
@@ -290,11 +239,11 @@ and audit requirements in [the GitLab testing contract](ci-gitlab-testing.md).
 
 ```bash
 # Git retry tests (no DB, no network)
-docker exec -w /app speleodb_local_django pytest speleodb/git_engine/tests/test_git_retry.py -v
+docker exec -w /app speleodb-monorepo-django pytest speleodb/git_engine/tests/test_git_retry.py -v
 
 # Upload error-handling tests (requires DB and real GitLab)
-docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_file_upload_error_handling.py -v
+docker exec -w /app speleodb-monorepo-django pytest speleodb/api/v2/tests/test_file_upload_error_handling.py -v
 
 # All error-reporting tests (Sentry capture across all views)
-docker exec -w /app speleodb_local_django pytest speleodb/api/v2/tests/test_error_reporting.py -v
+docker exec -w /app speleodb-monorepo-django pytest speleodb/api/v2/tests/test_error_reporting.py -v
 ```

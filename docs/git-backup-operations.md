@@ -9,15 +9,15 @@ SDK to the backup repository.
 
 The file manages the existing `SpeleoDB Git Backup CronJob` and `Gogs` services
 and their volumes in `speleoDB` / `production`. The backup application still
-builds from its own `OpenSpeleo/SpeleoDB_Git_Backup_CronJob` repository. Moving
-its infrastructure definition does not change that source or application code.
+builds from its own `OpenSpeleo/SpeleoDB_Git_Backup_CronJob` repository. The
+infrastructure definition does not change that source or application code.
 Offline services not declared in this file remain outside its ownership. See
 [production Railway configuration](railway-production.md) for all eight active
 services, the PostgreSQL backup job, and Redis replacement operations. See
 [background job operations](background-jobs-operations.md#railway-deployment)
 for the application services and PostgreSQL settings.
 
-## Preserved settings
+## Service settings
 
 | Setting              | Value                        |
 | -------------------- | ---------------------------- |
@@ -126,17 +126,18 @@ uses its existing image; the backup retains its application build when only
 runtime settings change.
 
 When consolidating existing named partials, use `railway config partials list`
-and `railway config partials transfer` (CLI 5.67.1 or newer). Verify the linked
-environment, inspect `--dry-run`, and transfer only the intended service and
-volume addresses. This updates ownership metadata without restarting or
-recreating services. Remove the old authoring file so it cannot reclaim
-ownership, then confirm the consolidated plan has no effective changes. A
-source-only move with an empty plan requires no configuration apply or redeploy.
+and `railway config partials transfer` with a CLI that supports partial
+ownership transfer. Verify the linked environment, inspect `--dry-run`, and
+transfer only the intended service and volume addresses. This updates ownership
+metadata without restarting or recreating services. Remove the old authoring
+file so it cannot reclaim ownership, then confirm the consolidated plan has no
+effective changes. A source-only move with an empty plan requires no
+configuration apply or redeploy.
 
 ## Official references
 
 - [Infrastructure as Code and migration](https://docs.railway.com/infrastructure-as-code#migrating-from-config-as-code)
 - [TypeScript IaC reference](https://docs.railway.com/infrastructure-as-code/reference)
 - [Go garbage collection and soft memory limits](https://go.dev/doc/gc-guide)
-- [Gogs 0.14.3 configuration](https://github.com/gogs/gogs/blob/v0.14.3/conf/app.ini)
+- [Gogs configuration](https://github.com/gogs/gogs/blob/main/conf/app.ini)
 - [Git configuration](https://git-scm.com/docs/git-config)

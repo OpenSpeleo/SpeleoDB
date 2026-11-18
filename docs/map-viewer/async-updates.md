@@ -98,22 +98,22 @@ main-thread acknowledgment; the source payload and properties remain unchanged.
 Its contracts in `ts-types/domain/map-preparation.ts` describe cancellation
 options, portable bounds, and prepared snap endpoints. Project preparation
 preserves unchanged coordinate/property identities while flattening altitude and
-adding line depth annotations. Its tests retain the 100,000-coordinate workload
-and the shared CPU allowance across simultaneous loads.
+adding line depth annotations. Its tests cover cooperative traversal and the
+shared CPU allowance across simultaneous loads with small representative inputs.
 
 `map/project_visibility.ts` owns the individual and effective project visibility
-selectors beneath Layers and Geometry. Geometry no longer imports Layers, while
-Layers retains its singleton facade and receiver-based selector overrides.
-Selectors read current State containers, including replacements after reset,
-without storing another visibility cache. Layer request revision, generation,
-and intent checks remain distinct from scheduling. MapLibre declarations cover
-the actual source, layer, image, popup, and camera calls; domain records remain
-separate from imported GeoJSON properties. Layer tests verify source reuse and
-depth cache merging without scans. Both snapping queries use effective
-visibility, so country gates invalidate snap eligibility immediately without
-rebuilding or discarding cached endpoints. See [data flow](data-flow.md) for
-algorithms and measurement details. Renderer ingestion remains a distinct
-measured cost.
+selectors beneath Layers and Geometry. Geometry imports those selectors
+directly, while Layers retains its singleton facade and receiver-based selector
+overrides. Selectors read current State containers, including replacements after
+reset, without storing another visibility cache. Layer request revision,
+generation, and intent checks remain distinct from scheduling. MapLibre
+declarations cover the actual source, layer, image, popup, and camera calls;
+domain records remain separate from imported GeoJSON properties. Layer tests
+verify source reuse and depth cache merging without scans. Both snapping queries
+use effective visibility, so country gates invalidate snap eligibility
+immediately without rebuilding or discarding cached endpoints. See
+[data flow](data-flow.md) for algorithms and measurement details. Renderer
+ingestion remains a distinct measured cost.
 
 `map/layers/lazy_overlay.ts` owns shared GPS/GIS downloads, metadata revisions,
 latest-intent identities, and applied-source versions. Layers keeps its public
@@ -136,8 +136,8 @@ saved geometry rendering and applied-record identity. `stations.ts`,
 updates, custom images, and drag feedback. Narrow receiver contracts let these
 functions call facade overrides without importing Layers back into their
 implementation modules. Visibility preferences, cancellation sequencing, and
-layer ordering remain on the facade. Moving these owners adds no feature scans,
-requests, or asynchronous boundaries.
+layer ordering remain on the facade. The module boundaries preserve
+feature-scan, request, and asynchronous application behavior.
 
 `display_events.ts` publishes the finite display-event contract from
 `ts-types/domain/map-display-events.ts`. Pending/applied events have no detail;
@@ -162,29 +162,9 @@ or source geometry are added to display persistence.
 Vitest tests cover scheduler ordering, supersession, failures and cancellation;
 real layer setters and delayed API completions; stable control identity; shared
 camera intent; country gates before storage flush; cached depth work; immutable
-preparation and large coordinates; worker transfer, errors and cancellation. The
-asset graph test includes worker bundles so workers cannot silently fall out of
-the production graph.
+preparation and coordinate traversal; worker transfer, errors and cancellation.
+The asset graph test includes worker bundles so workers cannot silently fall out
+of the production graph.
 
-Run the complete JavaScript suite, lint, checked production build and browser
-tests inside the existing application container. `make test` owns application
-correctness through pytest and Vitest. Browser checks own UI/UX: real rendering,
-control state, interaction during a gated response, visible error/retry
-behavior, and the final displayed result. Use small deterministic surveys and
-overlays; large preparation and worker-transfer inputs remain in the lower-layer
-suites.
-
-The former repeated settings latency samples and large GPS browser workload are
-intentionally retired from default UI CI. This removes their real-browser
-scale/latency guarantee. Unit scheduling, cancellation and cooperative-yield
-tests remain valuable but do not provide an equivalent latency measurement. A
-separate performance benchmark requires explicit authorization and must remain
-opt-in.
-
-Wait for actual renderer readiness when projecting pointer targets or asserting
-visible map output. A controlled response gate exercises rapid input during
-loading without manufacturing delays or replacing renderer methods. Investigate
-individual browser executions over five seconds, preserve justified UI coverage,
-and keep one worker with zero retries. See
-[browser checks](../../tests/browser/README.md) for the durable boundary,
-fixtures and measurement procedure.
+Contributor guidance:
+[Asynchronous viewer changes](../agent-practices.md#asynchronous-viewer-changes).

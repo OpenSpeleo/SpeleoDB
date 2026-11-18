@@ -22,11 +22,11 @@ projects:
 Worker and development configurations extend the root browser configuration,
 then explicitly replace its libraries, ambient packages, source includes,
 exclusions and build-info path. There is no separate base or solution file and
-no project references. The aggregate typecheck command passes all three paths to
-the native compiler's build mode. Production and worker checks remain
-independent of development globals; tests and tools deliberately share one
-broader development environment. This reduces configuration overhead while
-protecting code delivered to browsers and workers.
+no project references. The aggregate typecheck command invokes the native
+compiler with `-p` for each project in sequence through `scripts/typecheck.ts`.
+Production and worker checks remain independent of development globals; tests
+and tools deliberately share one broader development environment. This reduces
+configuration overhead while protecting code delivered to browsers and workers.
 
 The root owns strict checking, unknown catch values, checked indexed access,
 exact optional properties, isolated modules, erased-only syntax and bundler
@@ -48,18 +48,17 @@ Browser source directories are `frontend_private/static/private/ts/`,
 `frontend_public/static/ts/`, and `frontend_errors/static/ts/`. The directory
 names identify the authored language; Vite does not compile beside those source
 files. It emits hashed JavaScript under `speleodb/common/static/speleodb/vite/`.
-The existing vendor subdirectories move with their owners, retaining their
-original JavaScript filenames and contents. Django serves those approved vendor
-files. Its standard `ignore_patterns` configuration excludes TypeScript inputs
-from collection; the small finder guards separately block direct source lookup
-during development.
+Vendor subdirectories retain their original JavaScript filenames and contents.
+Django serves those approved vendor files. Its standard `ignore_patterns`
+configuration excludes TypeScript inputs from collection; the small finder
+guards separately block direct source lookup during development.
 
 ## Checker and lint compatibility
 
-The authoritative checker is TypeScript 7.0.2, installed as `@typescript/native`
-via the `typescript` package alias. typescript-eslint 8.71.1 consumes the
-TypeScript 6 compiler API provided by
-`typescript: npm:@typescript/typescript6@6.0.2`. All checking scripts explicitly
+The authoritative checker is installed under `@typescript/native` through the
+package alias in `package.json`. Typed ESLint and source inspection consume the
+separate compiler API package installed as `typescript`. The manifest and lock
+own the exact package identities and versions. All checking scripts explicitly
 select the native checker so executable-bin collision order cannot select the
 compatibility implementation. Type-aware lint covers first-party TypeScript;
 vendor distributions remain outside authored-source compilation.
@@ -73,16 +72,9 @@ application project, and normal typecheck/lint commands check the complete
 source tree. Unit-test timeouts and browser performance budgets remain
 unchanged.
 
-This follows Microsoft's documented
-[side-by-side alias arrangement](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6-0):
-TypeScript 7.0 does not expose a programmatic compiler API. The package named
-`typescript` supplies that API for lint and source inspection, while every
-application checking command explicitly runs TypeScript 7.0.2. The compatibility
-package's API reports 6.0.3; it does not replace the authoritative checker.
-
-Literal translation retains existing `var` hoisting, declared `async` functions,
-unused bindings, and comments, so stylistic `no-var`, `prefer-const`, unused
-binding, and `require-await` rules are not migration requirements. Unsafe-value
+The lint configuration permits existing `var` hoisting, declared `async`
+functions, unused bindings, and comments. The disabled stylistic rules do not
+authorize changing application behavior during a typing-only edit. Unsafe-value
 and explicit-`any` rules remain enabled. Five named files (shared
 `security/html.ts`, map `config.ts`, map `utils.ts`, map `depth.ts`, and the
 experiment-data controller) retain their tested `String(unknown)` coercion
@@ -116,7 +108,7 @@ whose methods are already bound once in their constructors; lifecycle tests
 assert callback identity and duplicate initialization. The edge-alpha
 calculation uses explicit numeric coercion after `.toFixed(2)`, preserving the
 original rounded string's arithmetic result. These annotations and the coercion
-are part of the literal-translation contract, not a new animation lifecycle.
+preserve the animation lifecycle.
 
 The feedback click listener remains declared `async`; its local lint annotation
 preserves the existing event registration and internal error catch. Controller
@@ -145,21 +137,20 @@ registration. Those bridge declarations are not browser globals.
 
 Both production build commands check types and both ownership audits before Vite
 emits assets. `build` performs those checks before deleting existing output;
-`build:assets` applies the same checks without cleanup. The obsolete JavaScript
-command aliases are removed. `start` remains a finite alias for `bun run build`.
-`dev` runs the type checks and audits once, then watches source changes and
-rebuilds development assets. Browser refresh stays manual, and Django remains
-the only HTTP server. Local `compose/start` completes an initial checked build
-and starts `dev` alongside Django. Stop that local webserver and its watcher
-before production builds or final checks. See
+`build:assets` applies the same checks without cleanup. `start` remains a finite
+alias for `bun run build`. `dev` runs the type checks and audits once, then
+watches source changes and rebuilds development assets. Browser refresh stays
+manual, and Django remains the only HTTP server. Local `compose/start` completes
+an initial checked build and starts `dev` alongside Django. Stop that local
+webserver and its watcher before production builds or final checks. See
 [development builds](vite-assets.md#development-builds).
 
 Run installs and verification in the existing application container at `/app`.
 Verify frozen reinstall, compiler identities, typed-lint rejection, full unit
 discovery and an isolated production build. Compare registry and manifest
-entries, output graphs and clean CSS with the JavaScript baseline. Annotations
-and declarations add no browser runtime work; output comparisons protect that
-property.
+entries, output graphs and clean CSS against the intended application behavior.
+Annotations and declarations add no browser runtime work; output comparisons
+protect that property.
 
 ## Source ownership and executable-template audits
 
@@ -194,6 +185,11 @@ stems, command exit behavior, quoted HTML attributes, inert scripts, and real
 compiler parsing of generated markup. Their temporary repositories and files are
 created outside the checkout and removed after each test. Auditing adds no
 browser payload or runtime work.
+
+The separate template-snippet ownership suite guards unresolved dynamic includes
+and the finite dynamic inheritance provider contract. Executable-expression
+auditing alone does not establish that a fragment is unreachable. See
+[template reachability guidance](agent-practices.md#vite-entry-changes).
 
 The browser's Django URL contract contains twelve page-navigation routes. Its
 finite keys and argument tuples are checked against `url_config.json`, alongside
@@ -235,22 +231,6 @@ controller discovery, failure isolation, retry after failure and overlapping
 calls until success. Context JSON remains `unknown`, including primitive values;
 the loaded controller owns its context contract. Returned cleanup functions
 remain ignored. Common test setup and source-contract suites are TypeScript.
-
-The obsolete ajax-error, cylinder and sensor template script snippets were
-removed after source-contract tests proved there were no direct includes and no
-unresolved dynamic include names. The test also records the finite dynamic
-inheritance provider contract, so computed template names cannot silently make
-those fragments reachable again. The permanent template audit now passes with no
-executable first-party template expressions.
-
-The authenticated upload subprocess runs directly with Bun as TypeScript. It
-still reads its live-server URL and session cookie from stdin, writes the same
-JSON result to stdout and inherits the GitLab audit environment. JSDOM's native
-XHR carries generated multipart operations with progress; generated fetch
-operations cover list and decoding probes. The development project owns
-Playwright and its instrumented Window alongside unit tests, tools and the
-upload subprocess. Those evidence types never enter production or worker ambient
-environments.
 
 Literal numeric contracts retain JavaScript's native operand coercion. Date
 subtraction uses erased operand assertions instead of introducing calls to a
@@ -312,61 +292,24 @@ country-plus-project gates used by rendering and snapping. Feature renderers and
 display scheduling sit beneath the stable Layers facade; generation, revision
 and latest-intent checks remain with their owners.
 
-## Adding and changing contracts
-
-The workspace-root `ts-types/` directory holds contracts shared by frontend
-areas and declarations for browser, worker, tooling and test environments. Its
-name is a convention, not a Django or TypeScript discovery mechanism: imports
-and the owning `tsconfig` determine which files participate in each check.
-Keeping these compiler inputs outside `static/` avoids collecting or serving
-them. Types used by only one module belong in that module; feature-local shared
-types can live beside the feature in a descriptive `*.types.ts` file. Use
-ordinary `.ts` modules for exported application types and `.d.ts` files for
-declarations of existing globals and library extensions.
-
-Keep types beside their domain under `ts-types/domain/`, and controller contexts
-under `ts-types/controllers/`. Browser globals describe only calls made against
-existing CDN/vendor runtimes. Do not install runtime libraries solely to obtain
-types, merge production and test Window extensions, or replace a finite URL
-contract with an arbitrary callable map. Unknown network/JSON values use their
-owner's existing guards; erased assertions describe existing unchecked contracts
-without introducing new defaults or exceptions. Type-only class fields use
-`declare` to avoid changing constructed objects.
-
-For a new module, add a `.ts` source in its existing owning directory, use its
-explicit `.ts` extension in imports, and add a real behavior test. Register a
-new route controller in `entries.json`, define its context under
-`ts-types/controllers/`, and add an inert JSON declaration in the template.
-Exercise actual initialization, load timing, failure and repeated wiring; helper
-renderer tests alone do not cover the controller. The asset graph test must
-prove that the source is reachable from an approved entry or worker and absent
-from unrelated routes.
-
-For an event, keep the owning domain's target, payload and dispatch order
-explicit; Window and Document events are different contracts. For an endpoint,
-correct the Django/OpenAPI contract, regenerate `@speleodb/api`, and consume its
-operation and DTOs through the browser adapter. Keep Django URL declarations for
-page navigation only. See [the API client guide](typescript-api-client.md). For
-an external global, add only the used constructor/method signatures in
-`ts-types/browser/` and keep test fakes in the corresponding test environment.
-New runtime validation and product behavior changes require their own behavior
-specification and tests.
+Contributor guidance:
+[TypeScript contracts](agent-practices.md#typescript-contracts).
 
 ## CI, publication and rollback
 
 CI verifies frozen root installation, compiler identity and ambient isolation,
 source/template audits, strict checking, lint, unit tests and the guarded
 production build. The serial Django suite covers asset tags, source exclusion
-and the real upload subprocess. Its separate browser wrapper starts pytest's
-live server with a verified temporary login user and runs controller/viewer
-parity plus the unchanged Chromium/WebKit workloads after other CPU-heavy checks
-finish. Explicit database-only project and form fixtures provide
-writable/read-only contexts; the inherited GitLab audit remains active. Two
-test-only HTTP routes supply deterministic revision/tree presentation JSON for
-the generated asynchronous operations without reaching remote Git. The wrapper
-verifies those routes before launching browsers and never prepares a Git
-repository. CI retains the JSON browser report, attachments and failure
-screenshots.
+and session-authenticated uploads with storage readback. Its separate browser
+wrapper starts pytest's live server with a verified temporary login user and
+runs controller/viewer UI/UX workflows in Chromium and WebKit after other
+CPU-heavy checks finish. `make test-browser` invokes that wrapper; `make test`
+includes it along with backend and frontend tests. Database-only fixtures
+provide form permissions, public GIS metadata, and historical revision
+identities. Browser HTTP fixtures control external responses needed for UI/UX
+scenarios; the inherited GitLab audit remains active and the wrapper never
+prepares a Git repository. CI retains the JSON browser report, attachments and
+failure screenshots.
 
 Railpack remains Python-provider based, selects Bun through Mise, runs the
 checked root build, then removes `node_modules`. Railway predeploy retains

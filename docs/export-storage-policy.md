@@ -86,10 +86,10 @@ distribution.
 
 The identical, complete file is
 [`examples/production-export-bucket-policy.json`](examples/production-export-bucket-policy.json).
-This policy is based on the user's supplied snapshot; preserve any unrelated
-statements added by another operator since that snapshot.
+Compare the policy with the live bucket configuration before applying it, and
+preserve unrelated statements.
 
-The application statement adds only `s3:AbortMultipartUpload` and
+The application statement includes `s3:AbortMultipartUpload` and
 `s3:ListBucketMultipartUploads` for cleanup of interrupted uploads. Ordinary
 upload, read, and delete operations already use the existing grants. The
 CloudFront statement keeps `s3:GetObject`. These permissions apply to the same
@@ -121,20 +121,20 @@ objects retain their stored headers; generating a new archive after deployment
 writes the new cache metadata.
 
 Direct S3 downloads also use an ordinary signed file URL, containing only SigV4
-authentication parameters. Local Compose and CI pin RustFS `1.0.0`, whose
-ordinary GETs return the stored filename, content type, and cache headers. The
-provider's [GET cache-header fix](https://github.com/rustfs/rustfs/pull/5241)
-applies to every backend, including unsigned public files. No response-header
-overrides or metadata lookup are needed to generate a download URL.
+authentication parameters. Local Compose and CI select their RustFS image in
+`local.yml` and `.github/workflows/ci.yml`. Ordinary GETs return the stored
+filename, content type and cache headers, including for unsigned public files.
+No response-header overrides or metadata lookup are needed to generate a
+download URL.
 
 The existing private behavior must require signed URLs and trust the configured
 signing identity, as it does for other protected files. Keep the existing
 managed policies: `CachingOptimized`, `CORS-S3Origin`, and
-`CORS-with-preflight-and-SecurityHeadersPolicy`. The user accepts CloudFront
-caching; no custom cache policy or zero minimum TTL is required. New archives
-carry the shared one-day cache lifetime. CloudFront still validates the
-signature and expiry before serving cached content. Exports require no custom
-query forwarding or additional CloudFront permissions. See
+`CORS-with-preflight-and-SecurityHeadersPolicy`. No custom cache policy or zero
+minimum TTL is required. New archives carry the shared one-day cache lifetime.
+CloudFront still validates the signature and expiry before serving cached
+content. Exports require no custom query forwarding or additional CloudFront
+permissions. See
 [AWS cache duration rules](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Expiration.html),
 [AWS signed URLs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls.html)
 and
@@ -148,12 +148,9 @@ flat `exports/{filename}.zip` key, and historical nested keys remain usable. The
 application stores the key, filename, size, checksum, and expiry; it does not
 track or select S3 object versions.
 
-Migration `0003_remove_object_versions` removes the obsolete tracking fields
-from attempts and artifacts. It preserves the job records, object keys, and
-files. S3 bucket-level versioning is an external setting: if already enabled,
-AWS can retain old copies independently of overwriting the current key. This
-code does not configure that shared-bucket setting or operate on historical
-copies.
+S3 bucket-level versioning is an external setting: if enabled, AWS can retain
+old copies independently of overwriting the current key. The application does
+not configure that shared-bucket setting or operate on historical copies.
 
 ## Production setup command
 
@@ -225,11 +222,11 @@ all bucket objects would delete unrelated files. This lifecycle filter has no
 bearing on the shared access grants above.
 
 The application stops downloads 24 hours after readiness. Celery Beat schedules
-worker cleanup; there is no Railway cron job. The `SpeleoDBExportsRetention`
-fallback expires current objects and aborts incomplete multipart uploads after
-two days. S3 lifecycle processing is asynchronous. Object Lock-enabled buckets
-are refused by production setup because retention or legal holds can prevent
-cleanup.
+worker cleanup; export cleanup has no Railway cron job. The
+`SpeleoDBExportsRetention` fallback expires current objects and aborts
+incomplete multipart uploads after two days. S3 lifecycle processing is
+asynchronous. Object Lock-enabled buckets are refused by production setup
+because retention or legal holds can prevent cleanup.
 
 Object deletion and multipart abort only operate on the exact attempt-owned key;
 adjacent keys and unrelated lifecycle rules are preserved. Existing broader

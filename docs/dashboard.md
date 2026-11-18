@@ -8,8 +8,8 @@ profile editing form. The goal is to give users immediate insight into their
 survey work: project counts, commit activity, contribution patterns, and recent
 team activity.
 
-The previous profile editing form is now available at `/private/profile/` (URL
-name `private:user_profile`), accessible via the "Profile" sidebar item and the
+The profile editing form is available at `/private/profile/` (URL name
+`private:user_profile`), accessible via the "Profile" sidebar item and the
 header user dropdown.
 
 ## Dashboard Data
@@ -61,7 +61,7 @@ Returns a single JSON response with all dashboard data. See
 ```
 Login → /private/ → DashboardView → pages/dashboard.html
                                           ↓
-                                    jQuery AJAX GET
+                                    Generated API GET
                                           ↓
                               /api/v2/user/dashboard-stats/
                                           ↓
@@ -69,7 +69,7 @@ Login → /private/ → DashboardView → pages/dashboard.html
                                    (pure ORM queries)
 ```
 
-The old profile page lives at:
+The profile route is:
 
 ```
 /private/profile/ → ProfileView → pages/user/dashboard.html
@@ -90,70 +90,46 @@ stable on the first days of a month.
   calls.
 - `ProjectCommit` has a composite index on `(project, authored_date)` which
   makes time-range queries efficient.
-- Contribution calendar returns one ISO timestamp per commit (not per day). For
-  most users this is well under 1,000 entries per year.
-- Chart.js is loaded from CDN with caching, no impact on initial HTML paint.
+- Contribution calendar returns one ISO timestamp per commit (not per day).
+  Response size therefore grows with the user's annual commit count.
+- Chart.js is loaded from the CDN declared in the dashboard template.
 - Stat card numbers use CSS skeleton loading (animated placeholders) to prevent
   layout jitter while the API call is in flight.
 
 ## Frontend
 
-- **Chart.js 4.x** via cdnjs CDN for line and doughnut charts.
+- **Chart.js** via cdnjs CDN for line and doughnut charts.
 - **Contribution heatmap** is a `<table>` with `table-layout: fixed` (no
   library), GitHub-style with emerald color scale.
 - **Activity feed** uses `escapeHtml` for all user/API data to prevent XSS.
 - Template extends `base_private.html` directly (not the settings layout).
 
+Each chart canvas sits directly inside a relatively positioned, fixed-height
+container so responsive chart sizing remains bounded. The three activity-avatar
+loading placeholders are square, fully rounded skeletons.
+
 ## Testing
 
-Template checks follow the utility-based layout: all three activity avatar
-placeholders must be square, fully rounded skeletons, and each chart canvas must
-sit directly inside a relatively positioned, fixed-height container. Assert the
-current classes rather than historical inline styles; this preserves coverage
-when formatting changes without adding runtime work.
+The API suite `speleodb/api/v2/tests/test_user_dashboard_stats.py` covers
+access, summary counts, permission-scoped activity and calendar aggregation.
+`frontend_private/tests/test_dashboard_views.py` covers page access, routing,
+profile navigation and rendered templates. The frontend helper suite in
+`frontend_private/static/private/ts/tests/dashboard.test.ts` and controller
+suite `frontend_common/controllers/dashboard.test.ts` exercise real DOM
+rendering and HTTP responses, including empty/error states, date grouping and
+escaping.
 
-The backend, template, helper and controller suites cover the dashboard:
-
-| File                                                         | Scope                    | Tests                                                                                                                                  |
-| ------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `speleodb/api/v2/tests/test_user_dashboard_stats.py`         | Backend API              | ~50 tests: auth, empty state, summary counts, projects-by-level, commits-over-time, contribution calendar, recent activity, edge cases |
-| `frontend_private/tests/test_dashboard_views.py`             | Django views + templates | ~35 tests: page access, template structure, profile page, URL routing, sidebar navigation, responsive CSS                              |
-| `frontend_private/static/private/ts/tests/dashboard.test.ts` | JS unit tests            | ~25 tests: heatmap rendering, stat cards, activity feed XSS, time formatting, level thresholds                                         |
-
-## Adding New Metrics
-
-1. Add the query to `UserDashboardStatsView._build_summary()` in the API view.
-2. Add a stat card in `pages/dashboard.html` with a unique `id`.
-3. Add the ID to `populateStatCards()` in the registered Vite controller
-   `frontend_common/controllers/dashboard.ts`.
-4. Add corresponding tests in both the API and frontend test files.
+Contributor guidance: [Dashboard metrics](agent-practices.md#dashboard-metrics).
 
 ## Typed helper ownership
 
-`frontend_private/static/private/ts/dashboard-helpers.ts` owns the pure display,
+`frontend_private/static/private/ts/dashboard-helpers.ts` owns display,
 calendar, palette, and chart-configuration helpers. Dashboard records and chart
-tuples live in `ts-types/domain/dashboard.ts`; they do not add runtime
-dependencies or change the controller's request flow. Local date grouping and
-locale number formatting remain browser-owned. The exported avatar palette
-remains mutable, including the existing undefined color result if a caller
-empties it.
-
-`tests/dashboard.test.ts` exercises the real helpers and drives the dashboard
-controller through its AJAX success callback for every stat-card and activity
-case. The fixture supplies jQuery and finite URL stubs; it contains no duplicate
-rendering implementation. This catches changes in real date grouping, links,
-escaping and empty states. Chart and heatmap composition remain covered by the
-controller initialization suite. Literal edge characterization covers palette
-identity, untrimmed single-name initials, and invalid timestamp grouping. Strict
-checking uses erased assertions at the existing indexed/backend boundaries
-rather than adding validation or fallback behavior. This translation adds no
-per-item work.
-
-The typed controller keeps the immediate AJAX request, optional Chart global,
-calendar layout and partial rendering after missing-DOM failures. Its direct
-initialization suite exercises those boundaries and repeated initialization with
-the real jQuery runtime. Chart declarations describe only the existing
-constructor and configuration use; no Chart runtime package is bundled.
+tuples live in `ts-types/domain/dashboard.ts`. The controller calls
+`v2UserDashboardStatsRetrieve` through the shared browser API adapter and
+renders the returned summary, charts, heatmap and recent activity. Local date
+grouping and locale number formatting remain browser-owned. Chart.js remains a
+runtime dependency loaded by the template rather than a bundled chart package.
 
 ## Project software counts
 
@@ -169,7 +145,8 @@ maintained in JavaScript. Unknown software uses the canonical Other swatch. See
 ## Fundraiser invitation
 
 The dashboard can show a date-controlled fundraiser invitation and support card.
-Account-level dismissal suppresses the invitation for seven days from the latest
-dismissal, including after rescheduling. It returns only during the active
-campaign dates. See [donation campaign](donation-campaign.md) for the
-presentation and persistence contract.
+Account-level dismissal suppresses the invitation for the configured reminder
+interval from the latest dismissal, including after rescheduling. It returns
+only during the active campaign dates. See
+[donation campaign](donation-campaign.md) for the presentation and persistence
+contract.

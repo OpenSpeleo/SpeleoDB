@@ -3,12 +3,10 @@
 ## Intent and Ownership
 
 Local development and backend tests use RustFS as an S3-compatible object store.
-Local Compose and CI pin `rustfs/rustfs:1.0.0`. This release serves stored
-`Cache-Control` and `Content-Disposition` headers on ordinary object GETs. The
-upstream [GET cache-header fix](https://github.com/rustfs/rustfs/pull/5241) and
-[release notes](https://github.com/rustfs/rustfs/releases/tag/1.0.0) document
-the provider fixes; the release also includes the
-[file-metadata compatibility fix](https://github.com/rustfs/rustfs/pull/5689).
+The image pins in `local.yml` and `.github/workflows/ci.yml` are authoritative.
+The storage contract requires ordinary object GETs to serve stored
+`Cache-Control` and `Content-Disposition` headers; keep that behavior covered
+when changing the provider image.
 
 Django serves the private and public map viewers from `http://localhost:8000`,
 while RustFS serves signed GeoJSON and GPS-track URLs from
@@ -62,9 +60,9 @@ Local regression tests exercise every concrete S3 backend using actual `save()`
 and `upload_file()` calls, signed/unsigned browser GETs, stored response
 headers, exact-key overwrite, and ordinary deletion. They also cover abandoned
 multipart cleanup. CloudFront signature tests use ephemeral keys and verify the
-signatures without contacting AWS. The signing cases require the existing
-`production` dependency extra; local-only installs run the S3 cases and report
-explicit skips for those production cases.
+signatures without contacting AWS. The signing dependency is part of the default
+graph in `pyproject.toml`; these cases run without a production-extra opt-in.
+Missing prerequisites must fail clearly rather than silently skip coverage.
 
 ## Provisioning Contract
 
@@ -127,9 +125,8 @@ test resources from `.envs/test.env`. Both generated private files retain mode
 The test environment also supplies `GIT_CONFIG_COUNT=1`,
 `GIT_CONFIG_KEY_0=safe.directory`, and `GIT_CONFIG_VALUE_0=*`. Generated test
 repositories live under UUID paths on the bind-mounted work directory, where
-Docker Desktop can report transient ownership differences. The image's Git 2.39
-does not support a recursive `safe.directory` pattern, so this wildcard trust is
-scoped to test processes and their Git subprocesses. Do not copy it into the
+Docker Desktop can report transient ownership differences. This wildcard trust
+is scoped to test processes and their Git subprocesses. Do not copy it into the
 development environment or a global Git configuration; normal development keeps
 its explicit trusted workspace paths. Bootstrap tests verify this separation.
 

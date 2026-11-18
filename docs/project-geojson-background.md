@@ -38,8 +38,7 @@ and soft timeout. Workspace cleanup preserves active worker directories; later
 sweeps remove abandoned local directories. Hard kill cannot run cleanup. Without
 an upload journal it may also leave an orphaned object; the next explicit full
 history reset purges the project namespace. Ordinary failed unpublished uploads
-are cleaned immediately where possible. No hidden recovery journal replaces the
-removed model.
+are cleaned immediately where possible. There is no upload recovery journal.
 
 Artifact selection retains authored-date, source-record creation-date and SHA
 ordering, independent of task completion time. Force replacements retain retired
@@ -61,7 +60,6 @@ artifacts. Solver memory requirements are unchanged by disk-backed source
 workspaces. See [format-specific loop closure](survey-loop-closure.md) for the
 selected presets, anchor policies, and source-safety boundaries.
 
-Deploy matching web and worker code together, draining old generation work and
-cleaning journaled unpublished objects before table removal. The detailed
-migration, consumer coordination and runtime verification procedure is in
-[Operations](admin-operations.md).
+Deploy matching web and worker code together. See
+[Operations](admin-operations.md#deployment-verification) for runtime
+verification and explicit recovery actions.

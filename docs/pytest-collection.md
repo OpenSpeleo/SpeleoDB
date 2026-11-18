@@ -19,40 +19,16 @@ repository root for the default scope; a command targeting another directory
 intentionally chooses a different scope. File patterns remain `tests.py` and
 `test_*.py`. Permission matrices and parameterized cases remain intact.
 
-## Measured result (2026-09-15)
-
-Collection-only runs inside the existing Django Docker container measured:
-
-| Measurement                          |  Before |  After |
-| ------------------------------------ | ------: | -----: |
-| Startup through pytest configuration |  2.70 s | 1.74 s |
-| Collection                           | 36.80 s | 1.83 s |
-| Complete profiled invocation         | 39.87 s | 3.73 s |
-| Directory collectors                 |  59,776 |    149 |
-| Collected tests                      |   4,619 |  4,619 |
-
-The old configuration started at `/app` without `testpaths` and replaced
-`norecursedirs` with `.uv/*`. It visited 58,800 directories inside `.workdir`,
-costing 31.64 seconds. It also visited `node_modules` and `.git`. The revised
-configuration visits none of those trees.
-
-A temporary pytest plugin timed `pytest_make_collect_report`, grouped directory
-collectors by their top-level root, and recorded session node IDs. The before
-and after lists match in order and identity, with only the five existing
-`test_random_hashes_with_hashlib` parameter labels normalized because their
-inputs come from `os.urandom` during import. Their multiplicity remains five. An
-intermediate CLI-override run also collected the same tests in 1.96 seconds.
-
-Measurements were sequential after the competing test run stopped. These are
-local samples, not cold-cache guarantees; timings vary with Docker memory
-pressure and filesystem caching. No test bodies ran during this verification.
+`make test` runs `test-py`, `test-frontend`, and `test-browser`. The browser
+wrapper lives outside default `testpaths` and is invoked explicitly by
+`test-browser`; `make test-py` alone does not run it.
 
 ## Diagnosing future slowdowns
 
 Run collection independently of test execution inside the existing container:
 
 ```sh
-docker compose -f local.yml exec -T django pytest --collect-only -q
+docker exec -w /app speleodb-monorepo-django pytest --collect-only -q
 ```
 
 For a function-level profile, run these commands inside that container:
@@ -71,4 +47,5 @@ collection-only profiling to investigate the wait before collection completes.
 Once `collected ... items` is printed, fixture and test execution are separate
 costs. In particular, the existing `--create-db` option recreates the test
 database when database fixtures are requested; collection-only runs do not
-request those fixtures. This change does not alter database setup behavior.
+request those fixtures. Collection configuration does not alter database setup
+behavior.

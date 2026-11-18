@@ -1,8 +1,12 @@
 # Django template linting
 
+**Agent Documentation & Practices — maintained guidance for contributors.**
+
 HTML participates in pre-commit formatting and linting. djLint uses the existing
 Django profile in `pyproject.toml`; rules remain enabled globally. Templates
 keep the Vite asset registry and inert controller JSON contract.
+
+The following guidance applies when maintaining Django templates.
 
 ## Markup and behavior
 
@@ -37,8 +41,9 @@ inline style exception for mail clients.
 ## Verification and performance
 
 Review files individually against HEAD, check the relevant controller when
-markup or visibility changes, run djLint lint/format checks, then stage each
-reviewed file. Run checks in the existing application container:
+markup or visibility changes, and run djLint lint/format checks. Staging and
+commits require explicit authorization. Run checks in the existing application
+container:
 
 - `djlint <tracked HTML files> --check --lint`
 - `prek run djlint-reformat-django --all-files`
@@ -51,8 +56,8 @@ reviewed file. Run checks in the existing application container:
 Rendered Django tests cover permissions, team badges, and private navigation.
 DOM/controller tests cover native map toggles and modal visibility. Compile all
 Django templates and verify every logical asset entry in the clean Vite
-manifest. These changes add no database queries or map feature scans; native
-labels remove redundant click handling.
+manifest. Static markup changes should add no database queries or map feature
+scans; native labels avoid redundant click handling.
 
 Behavioral template contracts should inspect the relevant element's attributes,
 classes, and rendered dimensions rather than exact HTML serialization. Void-tag

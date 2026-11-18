@@ -1,167 +1,118 @@
-# Agent Documentation Index
+# SpeleoDB documentation
 
-This directory contains LLM/agent-focused technical documentation.
+Feature guides describe what SpeleoDB does and how its features behave.
+Architecture references explain the implementation and its contracts. Operations
+and development guides cover running and maintaining the application. Agent
+guidance is explicitly labeled **Agent Documentation & Practices**; feature
+guides are not task plans or implementation journals.
 
-Unlike product docs, these files prioritize:
+## Accounts and dashboard
 
-- engineering intent and invariants
-- architecture boundaries and extension points
-- expected test coverage
-- performance constraints and anti-patterns
+- [Dashboard](dashboard.md)
+- [Account names and Git authorship](user-identity.md)
+- [Application token copying](profile-token-copy.md)
+- [API documentation access](api-docs-access.md)
+- [Account exports](account-export-backup.md) and
+  [export page, API, and administration](export-interfaces.md)
+- [Donation campaigns](donation-campaign.md) and
+  [campaign backend](donation-campaign-backend.md)
 
-## Topics
+## Survey projects and data
 
-- [Email delivery](email-delivery.md): disposable Mailpit development inbox,
-  SMTP configuration, production boundaries, and verification.
-
-### Architecture and System Design
-
-- [Frontend dates](frontend-dates.md)
-  - Shared browser-local timestamps, calendar-date preservation, template
-    hydration, and private/public map presentation.
-
-- [Generated TypeScript API client](typescript-api-client.md)
-  - Browser session/CSRF policy, generated operations and DTOs, file transfers,
-    network boundaries, consumer upgrades, and verification.
-
-- [Production Railway configuration](railway-production.md)
-  - All eight active services, persistent volumes, variable ownership, exact
-    configuration adoption, and Redis replacement operations.
-- [Background jobs and task history](background-jobs-operations.md)
-  - Celery worker/Beat operations, read-only Django task results, housekeeping
-    result policy, retention, scheduler health, startup order, isolated tests,
-    and retired monitoring resources.
-- [Administrator audit history](admin-audit-logging.md)
-  - Explicit administrator actions, permanent email snapshots, Django admin
-    integration, historical migration, and optional task-noise cleanup.
-- [Git backup and Gogs operations](git-backup-operations.md)
-  - Shared Railway configuration, memory tuning, persistent storage, backup
-    verification, and configuration ownership.
-- `local-object-storage.md`
-  - local RustFS ownership, automatic `.env`/GitLab/bucket/superuser bootstrap,
-    isolated Compose projects, signed URL flow, production boundaries,
-    diagnostics, and regression coverage
-- [Shared map packages and MapLibre integration](map-viewer/shared-packages.md)
-- [Survey-derived exploration leads and directions](exploration-lead-import.md)
-
-- `map-viewer/architecture.md`
-  - module dependency graph, private vs public comparison, initialization
-    sequences, state management, layer system, event system, build pipeline
-- `map-viewer/data-flow.md`
-  - GeoJSON loading pipeline, CRUD operation flows, refresh event system,
-    caching strategies
-
-### Feature Documentation
-
-- [Donation campaign](donation-campaign.md)
-  - Date-based dashboard visibility, persistent dismissal, email delivery and
-    verification boundaries.
-
+- [Project listing](project-listing.md)
+- [Project editing and revision submission](project-edition-and-upload.md)
+- [Survey software and conversion capabilities](project-formats.md)
 - [Survey loop closure](survey-loop-closure.md)
-  - Shared solver configuration, conversion defaults, measurement provenance,
-    and source-preserving exports.
+- [Project and GPS track colors](project-colors.md)
+- [Exploration leads from survey comments](exploration-lead-import.md)
+- [GPS tracks](gps-tracks.md)
+- [Landmark collections](landmark-collections.md)
+- [Experiment field names](experiment-field-names.md)
+- [Experiment record editing](experiment-record-editing.md)
+- [Compass Sidecar release links](compass-sidecar-release-link.md)
 
-- [Project software and conversion capabilities](project-formats.md)
-  - Software choices, Stalagmight storage, exporter eligibility, retained maps,
-    schema/SDK ownership, and verification.
+## Maps and geographic data
 
-- [Shared frontend forms](frontend-forms.md)
-  - Reusable form APIs, Vite controller wiring, shared entity settings, and
-    integration boundaries.
+- [Map viewer features](map-viewer/features.md)
+- [Map viewer feature contracts](map-viewer/design-requirements.md)
+- [Permissions and access](map-viewer/permissions-and-access.md)
+- [Private map display settings](map-viewer/settings.md)
+- [Importing places and overlays](map-viewer/import.md)
+- [Distance ruler](map-viewer/measurement.md)
+- [Survey section coloring](map-viewer/shot-coloring.md)
+- [Depth coloring](map-viewer/map_viewer_depth_coloring.md)
+- [Depth domain updates](map-viewer/depth-domain-reactivity.md)
+- [GIS layers](gis-layers.md)
+- [GIS geometry editing](gis-geometries.md)
+- [Public GIS view geographic bounds](gis-view-geographic-bound.md)
 
-- [Map file import](map-viewer/import.md)
-  - Explicit editable-place versus single-overlay intent, shared KML/KMZ
-    inspection, compatibility reporting, publication, and verification.
-- `gis-geometries.md`
-  - private line/polygon authoring, shared access, map/GPS editing, 100-vertex
-    and 30 km² bounding-box limits, atomic saves, and verification
-- [GIS View Geographic Bound](gis-view-geographic-bound.md)
-  - Public GIS View polygon selection, browser clipping, lifecycle and
-    validation.
-- `gis-geometry-read-api.md`
-  - agent-facing GET-only integration specification: geometry contract,
-    authentication, metadata/detail/permission responses, transparency
-    constants, errors, caching, and acceptance criteria
-- `gps-tracks.md`
-  - GPS Track sharing permissions, soft-delete lifecycle, GPX export mapping,
-    API/UI contracts, performance boundaries, and verification strategy
-- `api-docs-access.md`
-  - user-level API Docs/API Schema menu visibility flag, admin ownership, and
-    permission boundaries
-- [Private map distance ruler](map-viewer/measurement.md)
-  - Temporary A–B measurement UX, native rendering, interaction ownership, and
-    verification.
-- `map-viewer/features.md`
-  - station/landmark/exploration lead/GPS track/cylinder management,
-    drag-and-drop, context menu, component library
-- `map-viewer/api-reference.md`
-  - frontend API client, backend endpoint inventory, OGC API endpoints,
-    authentication model
-- `map-viewer/design-requirements.md`
-  - canonical map viewer feature contracts and guardrails
+## APIs and architecture
 
-### Security
+- [API contract ownership](api-contract.md)
+- [Generated TypeScript API client](typescript-api-client.md)
+- [Map viewer API reference](map-viewer/api-reference.md)
+- [GIS geometry read API](gis-geometry-read-api.md)
+- [OGC URLs and geometry contracts](map-viewer/ogc-url-and-geometry-contract.md)
+- [Map viewer architecture](map-viewer/architecture.md)
+- [Map viewer data flow](map-viewer/data-flow.md)
+- [Responsive viewer updates](map-viewer/async-updates.md)
+- [Shared map packages](map-viewer/shared-packages.md)
+- [Survey GeoJSON artifacts](project-geojson-artifacts.md)
+- [Background survey map generation](project-geojson-background.md)
+- [Git Smart HTTP proxy](git-proxy.md)
+- [GitLab reliability](gitlab-reliability.md)
+- [Bounded operational retries](bounded-retries.md)
+- [Export storage and signed downloads](export-storage-policy.md)
+- [API error handling](upload-error-handling.md)
+- [HTML escaping and XSS protection](xss-protection.md)
 
-- `xss-protection.md`
-  - render-side HTML escaping strategy, `Utils.escapeHtml` / `Utils.safeHtml` /
-    `Utils.raw` API, attribute-context escaping, jQuery `.html()` patterns, ES
-    module helper alignment, CSS color validation
+## Administration and operations
 
-### Specialized Topics
+- [Administrator operations](admin-operations.md)
+- [Administrator audit history](admin-audit-logging.md)
+- [Background jobs and task history](background-jobs-operations.md)
+- [Project GeoJSON command](project-geojson-command.md)
+- [Email delivery and Mailpit](email-delivery.md)
+- [Production Railway configuration](railway-production.md)
+- [Git backup and Gogs operations](git-backup-operations.md)
+- [Persistent GitLab for CI](gitlab-test-railway.md)
 
-- `local-debugging.md`
-  - always-available Django Debug Toolbar with every panel disabled by default,
-    panel activation, performance rationale, and verification
-- `monorepo-native-dependencies.md`
-  - monorepo-only Rust toolchain boundary, editable `openspeleo_core` setup,
-    cache invalidation, and standalone-image behavior
-- `project-geojson-command.md`
-  - management-command modes, Git clone lifecycle, GeoJSON recomputation,
-    failure behavior, and performance boundaries
-- `project-geojson-artifacts.md`
-  - shot colors, stable artifact revisions, offline refresh and OGC cache
-    identity
-- `map-viewer/depth-domain-reactivity.md`
-  - depth color mode architecture, cache model, and performance rationale
-- `map-viewer/map_viewer_depth_coloring.md`
-  - markdown conversion of `docs/map_viewer_depth_coloring.rst` for agent usage
-- `map-viewer/permissions-and-access.md`
-  - centralized permission model and scope-routing behavior
+See also the top-level [Railway guide](../RAILWAY.md) and
+[GitLab connection settings](../OPTIONS.md).
 
-### Quality and Testing
+## Frontend implementation
 
-- [CodeRabbit reviews](coderabbit.md)
-  - Review profile, automation, repository guidance, and configuration
-    validation.
-
+- [TypeScript architecture](typescript-architecture.md)
 - [Vite assets](vite-assets.md)
-  - Logical entries, template/controller integration, live registry and asset
-    coherence, and production verification.
+- [Bun tooling](bun-tooling.md)
+- [Tailwind CSS architecture](tailwind-v4.md)
+- [Shared forms](frontend-forms.md)
+- [Dates and time zones](frontend-dates.md)
+- [Logo assets](logo-assets.md)
+- [Navigation icon styling](navigation-icon-styling.md)
 
-- `map-viewer/testing-and-quality.md`
-  - frontend test map, validation commands, and regression checklist
-- `bun-tooling.md`
-  - root Bun workspace and runtime constraints, DOM compatibility,
-    install-script approval policy, and verification commands
-- `dependency-updates.md`
-  - consolidated update workflow, resolver and lockfile ownership, compatibility
-    blocker policy, and release verification
-- `tailwind-v4.md`
-  - Tailwind 4 build ownership, v3 visual-compatibility layer, source and
-    variant contracts, browser floor, and parity-verification requirements
+## Development and testing
 
-### Coding Rules
+- [Local services and object storage](local-object-storage.md)
+- [Local debugging](local-debugging.md)
+- [Monorepo native dependencies](monorepo-native-dependencies.md)
+- [Dependency updates](dependency-updates.md)
+- [Real GitLab integration tests](ci-gitlab-testing.md)
+- [Git retry testing](git-retry-testing.md)
+- [Pytest collection](pytest-collection.md)
+- [Mypy cache ownership](mypy-cache.md)
+- [Django template linting](template-linting.md)
+- [Map viewer testing](map-viewer/testing-and-quality.md)
+- [Browser workflows](../tests/browser/README.md)
 
-- `coding-rules.md`
-  - JS constant centralization, Python import ordering, Django ORM rules (hard
-    rules, must not be violated)
+## Agent Documentation & Practices
 
-Repository-wide agent guardrails live at:
+- [Repository agent instructions](../AGENTS.md)
+- [Feature implementation and review practices](agent-practices.md)
+- [Coding rules for agents and contributors](coding-rules.md)
+- [CodeRabbit review guidance](coderabbit.md)
+- [Automated XSS review instructions](../.github/instructions/xss-protection.instructions.md)
 
-- `AGENTS.md`
-
-- [TypeScript architecture](typescript-architecture.md): strict environment
-  boundaries, compiler compatibility, and migration verification.
-
-- [Administrator operations](admin-operations.md): explicit history resets,
-  GeoJSON recomputation and manual task recovery.
+Agent-specific instructions live in clearly labeled practices guides. Temporary
+plans, review notes, and progress records belong outside the checkout, as
+described in the repository instructions.
