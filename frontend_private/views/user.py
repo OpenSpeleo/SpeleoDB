@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 from rest_framework.authtoken.models import Token
 
 from frontend_private.views.base import AuthenticatedTemplateView
+from speleodb.campaigns.models import DonationCampaign
 
 if TYPE_CHECKING:
     from django.http import HttpResponse
@@ -20,6 +22,23 @@ if TYPE_CHECKING:
 # ============ Dashboard ============ #
 class DashboardView(AuthenticatedTemplateView):
     template_name = "pages/dashboard.html"
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        campaign = (
+            DonationCampaign.objects.filter(
+                start_date__lte=today,
+                end_date__gte=today,
+            )
+            .order_by("-start_date", "-creation_date", "pk")
+            .first()
+        )
+        context["donation_campaign"] = campaign
+        context["campaign_should_invite"] = (
+            campaign.should_invite(self.request.user) if campaign else False
+        )
+        return context
 
 
 # ============ Setting Pages ============ #

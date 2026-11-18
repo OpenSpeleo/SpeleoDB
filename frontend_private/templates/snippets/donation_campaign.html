@@ -1,0 +1,24 @@
+{% csrf_token %}
+<section class="donation-card" aria-labelledby="campaign-card-title">
+  <div>
+    <h2 id="campaign-card-title">{{ donation_campaign.card_title }}</h2>
+    <p>{{ donation_campaign.resolved_card_summary }}</p>
+  </div>
+  <div class="donation-actions">
+    <a class="donation-primary"
+       data-campaign-donate
+       href="{{ donation_campaign.donation_url }}"
+       target="_blank"
+       rel="noopener noreferrer">{{ donation_campaign.donate_label }} <span class="sr-only">{{ donation_campaign.new_tab_label }}</span></a>
+    <button type="button" class="donation-secondary" data-campaign-open>{{ donation_campaign.about_label }}</button>
+  </div>
+</section>
+<p id="campaign-save-error" class="donation-notice" role="status" hidden>
+  {{ donation_campaign.dismissal_error }}
+  <button type="button" data-campaign-retry>{{ donation_campaign.retry_label }}</button>
+</p>
+<dialog id="donation-campaign"
+        class="donation-dialog"
+        aria-labelledby="campaign-heading">
+  {% include "snippets/donation_campaign_content.html" %}
+</dialog>

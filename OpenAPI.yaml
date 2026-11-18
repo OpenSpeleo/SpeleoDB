@@ -41293,6 +41293,75 @@ paths:
                 required:
                 - detail
                 additionalProperties: false
+  /api/v2/user/donation-campaigns/{campaign_id}/dismiss/:
+    post:
+      operationId: v2_user_donation_campaigns_dismiss_create
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        schema:
+          type: string
+        description: Required with authenticated cookie sessions unless the csrfmiddlewaretoken
+          form field supplies the CSRF token. Token and Bearer authentication do not
+          require it.
+      - in: path
+        name: campaign_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+        description: DRF machine-response renderer selection.
+      tags:
+      - v2
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          description: API request failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+                additionalProperties: false
+        '404':
+          description: API request failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+                additionalProperties: false
+        '406':
+          description: API request failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+                additionalProperties: false
   /api/v2/user/exports/:
     get:
       operationId: v2_user_exports_list

@@ -40,6 +40,9 @@ share the same hover and keyboard focus styles and transition timing. The View
 All Projects and Open Survey Map quick actions use the same icon shapes as their
 sidebar destinations, My Survey Projects and GIS Survey Map.
 
+The three header quick actions are hidden below the `sm` breakpoint to keep the
+mobile dashboard compact. They remain visible on larger screens.
+
 Stations, landmarks, and GPS track counts remain available in the API response
 but are not displayed as dashboard cards.
 
@@ -162,3 +165,11 @@ the canonical badge classes; the controller reads their computed background
 colors and passes them to `buildProjectsChartConfig`. No software palette is
 maintained in JavaScript. Unknown software uses the canonical Other swatch. See
 [project capabilities](project-formats.md) for the software choice contract.
+
+## Fundraiser invitation
+
+The dashboard can show a date-controlled fundraiser invitation and support card.
+Account-level dismissal suppresses the invitation for seven days from the latest
+dismissal, including after rescheduling. It returns only during the active
+campaign dates. See [donation campaign](donation-campaign.md) for the
+presentation and persistence contract.

@@ -17,8 +17,14 @@ from speleodb.api.v2.views.user_export import UserExportDetailView
 from speleodb.api.v2.views.user_export import UserExportDownloadView
 from speleodb.api.v2.views.user_export import UserExportListView
 from speleodb.api.v2.views.user_export import UserExportRetryView
+from speleodb.campaigns.views import CampaignDismissalView
 
 urlpatterns: list[URLPattern] = [
+    path(
+        "donation-campaigns/<uuid:campaign_id>/dismiss/",
+        CampaignDismissalView.as_view(),
+        name="donation-campaign-dismiss",
+    ),
     path("exports/", UserExportListView.as_view(), name="user-exports"),
     path(
         "exports/<uuid:id>/", UserExportDetailView.as_view(), name="user-export-detail"

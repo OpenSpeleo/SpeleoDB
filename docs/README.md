@@ -53,6 +53,10 @@ Unlike product docs, these files prioritize:
 
 ### Feature Documentation
 
+- [Donation campaign](donation-campaign.md)
+  - Date-based dashboard visibility, persistent dismissal, email delivery and
+    verification boundaries.
+
 - [Survey loop closure](survey-loop-closure.md)
   - Shared solver configuration, conversion defaults, measurement provenance,
     and source-preserving exports.

@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ campaign.headline }}</h1>
+  <p>Dashboard visibility: {{ campaign.start_date }} through {{ campaign.end_date }} (inclusive).</p>
+  <p>Sending email is independent of dashboard visibility. Confirm the campaign-only unsubscribe setup with your email provider before sending.</p>
+  {% if error %}
+    <p class="errornote">{{ error }}</p>
+  {% endif %}
+  <h2>Send test email</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ test_form.as_p }}
+    <button type="submit" name="action" value="test">Send test email</button>
+  </form>
+  <h2>Send to registered accounts</h2>
+  <p>{{ recipient_count }} unique addresses after existing update opt-outs. Provider suppressions may exclude more recipients.</p>
+  {% if campaign.launched_at %}
+    <p>Submitted {{ campaign.launched_at }}. Full-audience resend is disabled.</p>
+    {% if task_results_url %}
+      <a href="{{ task_results_url }}">View task results</a>
+    {% endif %}
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      {% if confirmation %}
+        <input type="hidden" name="confirmation" value="{{ confirmation }}" />
+        <button type="submit" name="action" value="send">Send to {{ recipient_count }} accounts</button>
+      {% else %}
+        <button type="submit" name="action" value="review">Review send</button>
+      {% endif %}
+    </form>
+  {% endif %}
+{% endblock content %}

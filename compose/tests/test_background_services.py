@@ -94,6 +94,7 @@ def test_background_services_start_after_migrations(
     for name in BACKGROUND_SERVICES:
         service: dict[str, Any] = services[name]
         assert service["depends_on"] == {
+            "mailpit": {"condition": "service_healthy"},
             "setup": {"condition": "service_completed_successfully"},
             "redis": {"condition": "service_healthy"},
         }
@@ -140,6 +141,7 @@ def test_task_history_uses_existing_application_infrastructure(
         "celery-beat",
         "celery-test-redis",
         "gitlab",
+        "mailpit",
         "rustfs",
         "setup",
     }

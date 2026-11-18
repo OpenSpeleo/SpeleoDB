@@ -58,3 +58,11 @@ the focused verification run. The settings subprocess supplies an explicit
 test-only `DJANGO_SECRET_KEY` with base/local dotenv loading disabled. This
 keeps the probe independent of developer secrets and the test-settings fallback,
 which does not populate the environment required by local settings.
+
+## Fundraiser email
+
+Campaign mail uses the existing backend with explicit admin review and test
+sends. It honors SpeleoDB-update opt-outs and does not use the account adapter’s
+silent failure policy. See
+[campaign backend operations](donation-campaign-backend.md) for delivery
+outcomes and the required same-domain unsubscribe verification.

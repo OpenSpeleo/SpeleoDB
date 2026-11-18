@@ -77,16 +77,22 @@ function changeSpeed(value: string) {
     control.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-beforeAll(async () => { server = await startApiServer(); });
-afterAll(async () => { await server.close(); });
-beforeEach(() => {
-    server.reset(); server.reply({ json: survey });
+beforeEach(async () => {
+    // Aborted fetches can still reach the server after teardown. Give each test
+    // its own origin so those requests cannot satisfy the next test's waits.
+    server = await startApiServer();
+    server.reply({ json: survey });
     setBrowserUrl(`${server.origin}/revisions/${initialSha}/`);
     markup();
     // JSDOM has no layout/scrolling implementation; native scrolling is covered in browser workflows.
     document.querySelectorAll<HTMLElement>('.historical-revision').forEach(element => { element.scrollIntoView = () => {}; });
 });
-afterEach(() => { stopPlayback?.(); stopPlayback = undefined; document.body.innerHTML = ''; });
+afterEach(async () => {
+    stopPlayback?.();
+    stopPlayback = undefined;
+    document.body.innerHTML = '';
+    await server.close();
+});
 
 it.each([
     { mapWidth: 1200, playerWidth: 760, open: true },
@@ -192,7 +198,7 @@ it('restores the displayed revision URL when a pending browser navigation is can
     server.handle(async () => { await gate; return { json: survey }; });
     try {
         history.back();
-        await vi.waitFor(() => expect(server.requests).toHaveLength(2));
+        await vi.waitFor(() => expect(server.requests.map(request => request.path)).toEqual(['/next.geojson', '/first.geojson']));
         expect(location.pathname).toBe(`/revisions/${initialSha}/`);
         button('revision-cancel').click();
         expect(location.pathname).toBe(`/revisions/${nextSha}/`);
@@ -235,9 +241,9 @@ it('preserves a newer browser navigation while canceling the previous pending de
     server.handle(async () => { await gate; return { json: survey }; });
     try {
         history.back();
-        await vi.waitFor(() => expect(server.requests).toHaveLength(3));
+        await vi.waitFor(() => expect(server.requests.map(request => request.path)).toEqual(['/next.geojson', '/last.geojson', '/next.geojson']));
         history.back();
-        await vi.waitFor(() => expect(server.requests).toHaveLength(4));
+        await vi.waitFor(() => expect(server.requests.map(request => request.path)).toEqual(['/next.geojson', '/last.geojson', '/next.geojson', '/first.geojson']));
         release();
         await Promise.all(viewer.pending);
         await vi.waitFor(() => expect(document.querySelector('[aria-current="page"]')!.getAttribute('data-commit-sha')).toBe(initialSha));

@@ -139,3 +139,11 @@ The administrator audit-table cutover has its own
 [migration and verification order](admin-audit-logging.md#migration-and-cutover).
 Pause administrator writes and drain old operation workers before copying the
 historical log; otherwise old processes could write entries after the snapshot.
+
+## Fundraiser email operation
+
+**Manage fundraiser** opens campaign editing, read-only previews, test-address
+entry and explicit audience review/send. Campaign dates control dashboard
+visibility independently of sending. See
+[donation campaign](donation-campaign.md) and
+[delivery operations](donation-campaign-backend.md) for receipts and exclusions.

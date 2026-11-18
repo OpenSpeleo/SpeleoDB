@@ -1,0 +1,83 @@
+<div data-campaign-overview>
+  <div class="donation-photo">
+    {% if donation_campaign.photo %}
+      <img src="{{ donation_campaign.photo_url }}"
+           alt="{{ donation_campaign.photo_alt }}"
+           width="1200"
+           height="800" />
+      {% if donation_campaign.photo_credit %}
+        <p class="donation-photo-credit">{{ donation_campaign.photo_credit_label }} {{ donation_campaign.photo_credit }}</p>
+      {% endif %}
+    {% endif %}
+    <button type="button"
+            class="donation-close"
+            data-campaign-dismiss
+            aria-label="{{ donation_campaign.close_label }}">×</button>
+  </div>
+  <div class="donation-content">
+    <p class="donation-eyebrow">{{ donation_campaign.tagline }}</p>
+    <h2 id="campaign-heading" tabindex="-1">{{ donation_campaign.headline }}</h2>
+    <p>{{ donation_campaign.popup_summary|linebreaksbr }}</p>
+    <p class="donation-goal">{{ donation_campaign.resolved_goal_message }}</p>
+    <p>{{ donation_campaign.ownership_promise }}</p>
+    <div class="donation-actions">
+      <a class="donation-primary"
+         data-campaign-donate
+         href="{{ donation_campaign.donation_url }}"
+         target="_blank"
+         rel="noopener noreferrer">{{ donation_campaign.donate_label }} <span class="sr-only">{{ donation_campaign.new_tab_label }}</span></a>
+      {% if donation_campaign.story_title %}
+        <button type="button"
+                class="donation-secondary"
+                data-campaign-story-open>{{ donation_campaign.story_label }}</button>
+      {% endif %}
+    </div>
+    {% if donation_campaign.recipient_name or donation_campaign.tax_deductibility_notice %}
+      <p class="donation-footnote">
+        {% if donation_campaign.recipient_name %}{{ donation_campaign.resolved_recipient_notice }}<br />{% endif %}
+        {{ donation_campaign.tax_deductibility_notice|linebreaksbr }}
+      </p>
+    {% endif %}
+    <button type="button"
+            class="donation-story-link"
+            data-campaign-dismiss>{{ donation_campaign.reminder_label }}</button>
+  </div>
+</div>
+{% if donation_campaign.story_title %}
+  <section class="donation-story-view" data-campaign-story hidden>
+    <div class="donation-story-nav">
+      <button type="button" class="donation-story-link" data-campaign-story-back>
+        <span aria-hidden="true">←</span> {{ donation_campaign.back_label }}
+      </button>
+      <button type="button"
+              class="donation-story-close"
+              data-campaign-dismiss
+              aria-label="{{ donation_campaign.close_label }}">×</button>
+    </div>
+    <div class="donation-impact">
+      <header class="donation-impact-header">
+        <span class="donation-impact-kicker">{{ donation_campaign.story_kicker }}</span>
+        <h2 id="campaign-story-heading" tabindex="-1">{{ donation_campaign.story_title|linebreaksbr }}</h2>
+        <p>{{ donation_campaign.story_summary }}</p>
+      </header>
+      <div class="donation-impact-grid">
+        {% for card in donation_campaign.story_cards %}
+          <article class="donation-impact-card donation-impact-{{ card.icon }}">
+            <div class="donation-impact-icon">
+              {% include "snippets/donation_campaign_icon.html" with icon=card.icon only %}
+            </div>
+            <div>
+              <h3>{{ card.title }}</h3>
+              <p>{{ card.description }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+      <div class="donation-impact-goal">
+        <div><span class="donation-impact-kicker">{{ donation_campaign.story_goal_label }}</span><strong>{{ donation_campaign.formatted_goal }}</strong></div>
+        <p>{{ donation_campaign.story_goal_text|linebreaksbr }}</p>
+      </div>
+      <p class="donation-impact-promise">{{ donation_campaign.story_promise }}</p>
+    </div>
+  </section>
+{% endif %}

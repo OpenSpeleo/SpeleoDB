@@ -7,6 +7,12 @@
 {% block content %}
   <p>Schedule immediate operations. Only active superusers can run these operations. Execution status is recorded in Celery task results.</p>
   <div class="operations-grid operations-actions">
+    <section class="operation-panel" aria-labelledby="campaign-title">
+      <h2 id="campaign-title">Send an email campaign</h2>
+      <p>Edit the fundraiser, send test emails, and review the audience before sending.</p>
+      <a class="button"
+         href="{% url 'admin:campaigns_donationcampaign_changelist' %}">Manage fundraiser</a>
+    </section>
     <section class="operation-panel" aria-labelledby="history-title">
       <h2 id="history-title">Rebuild Git history</h2>
       <p>Start from zero: remove stored history and all project GeoJSONs, clone afresh, and rebuild history and eligible maps. You will review the project and confirm before scheduling.</p>

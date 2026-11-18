@@ -53,7 +53,8 @@
     "style-template-frontend-private-templates-pages-user-feedback": "frontend_common/styles/templates/frontend-private-templates-pages-user-feedback.css",
     "style-template-frontend-private-templates-pages-user-password": "frontend_common/styles/templates/frontend-private-templates-pages-user-password.css",
     "style-template-frontend-private-templates-pages-user-preferences": "frontend_common/styles/templates/frontend-private-templates-pages-user-preferences.css",
-    "style-template-speleodb-templates-admin-experiment-field-widget": "frontend_common/styles/templates/speleodb-templates-admin-experiment-field-widget.css"
+    "style-template-speleodb-templates-admin-experiment-field-widget": "frontend_common/styles/templates/speleodb-templates-admin-experiment-field-widget.css",
+    "style-donation-campaign": "frontend_common/styles/donation-campaign.css"
   },
   "scripts": {
     "app": "frontend_common/app.ts",
@@ -92,6 +93,7 @@
     "controller-dmp2json": "frontend_common/controllers/dmp2json.ts",
     "controller-xls2dmp": "frontend_common/controllers/xls2dmp.ts",
     "controller-xls2compass": "frontend_common/controllers/xls2compass.ts",
-    "controller-admin-experiment-field": "frontend_common/controllers/admin-experiment-field.ts"
+    "controller-admin-experiment-field": "frontend_common/controllers/admin-experiment-field.ts",
+    "controller-donation-campaign": "frontend_common/controllers/donation-campaign.ts"
   }
 }

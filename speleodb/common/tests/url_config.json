@@ -1338,6 +1338,12 @@
   "decorators": ""
  },
  {
+  "url": "/api/v1/user/donation-campaigns/<uuid:campaign_id>/dismiss/",
+  "module": "speleodb.campaigns.views.CampaignDismissalView",
+  "name": "api:v1:donation-campaign-dismiss",
+  "decorators": ""
+ },
+ {
   "url": "/api/v1/user/exports/",
   "module": "speleodb.api.v2.views.user_export.UserExportListView",
   "name": "api:v1:user-exports",
@@ -2250,6 +2256,12 @@
   "decorators": ""
  },
  {
+  "url": "/api/v2/user/donation-campaigns/<uuid:campaign_id>/dismiss/",
+  "module": "speleodb.campaigns.views.CampaignDismissalView",
+  "name": "api:v2:donation-campaign-dismiss",
+  "decorators": ""
+ },
+ {
   "url": "/api/v2/user/exports/",
   "module": "speleodb.api.v2.views.user_export.UserExportListView",
   "name": "api:v2:user-exports",
@@ -2313,6 +2325,24 @@
   "url": "/apple-touch-icon.png",
   "module": "frontend_public.views.apple_touch_icon_redirect",
   "name": "apple_touch_icon",
+  "decorators": ""
+ },
+ {
+  "url": "/campaigns/<uuid:campaign_id>/photo/",
+  "module": "speleodb.campaigns.views.photo",
+  "name": "campaigns:photo",
+  "decorators": ""
+ },
+ {
+  "url": "/campaigns/unsubscribe/<str:token>/",
+  "module": "speleodb.campaigns.views.unsubscribe",
+  "name": "campaigns:unsubscribe",
+  "decorators": ""
+ },
+ {
+  "url": "/campaigns/unsubscribe/test/",
+  "module": "speleodb.campaigns.views.test_unsubscribe",
+  "name": "campaigns:test-unsubscribe",
   "decorators": ""
  },
  {

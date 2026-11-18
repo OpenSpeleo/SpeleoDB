@@ -17,6 +17,7 @@ urlpatterns = [
     path("", include("frontend_public.urls")),
     path("", include("frontend_errors.urls", namespace="errors")),
     path("", include("speleodb.urls")),
+    path("campaigns/", include("speleodb.campaigns.urls")),
     path("private/", include("frontend_private.urls", namespace="private")),
     # Admin Panel
     path(

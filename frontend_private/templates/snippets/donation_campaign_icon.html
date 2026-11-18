@@ -1,0 +1,33 @@
+{% if icon == "survey" %}
+  <svg viewBox="0 0 80 64"
+       fill="none"
+       stroke="currentColor"
+       stroke-width="2"
+       aria-hidden="true"
+       focusable="false">
+    <path d="M12 46 30 20 51 39 68 13M30 20 41 54 51 39" />
+    <circle cx="12" cy="46" r="4" /><circle cx="30" cy="20" r="5" />
+    <circle cx="51" cy="39" r="5" /><circle cx="68" cy="13" r="4" /><circle cx="41" cy="54" r="3" />
+  </svg>
+{% elif icon == "gis" %}
+  <svg viewBox="0 0 80 64"
+       fill="none"
+       stroke="currentColor"
+       stroke-width="2"
+       aria-hidden="true"
+       focusable="false">
+    <path d="m9 20 20-8 22 9 20-8v38l-20 8-22-9-20 8ZM29 12v38M51 21v38" />
+    <path d="M18 38c12-24 22 15 43-8" stroke-dasharray="4 4" />
+    <circle cx="61" cy="30" r="4" />
+  </svg>
+{% elif icon == "mobile" %}
+  <svg viewBox="0 0 80 64"
+       fill="none"
+       stroke="currentColor"
+       stroke-width="2"
+       aria-hidden="true"
+       focusable="false">
+    <rect x="23" y="5" width="34" height="54" rx="6" />
+    <path d="M34 12h12M36 52h8m-14-17 8 8 14-18" />
+  </svg>
+{% endif %}

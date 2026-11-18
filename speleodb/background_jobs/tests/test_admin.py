@@ -395,6 +395,17 @@ def test_export_staff_permissions_remain(staff_client: Client) -> None:
     )
     assert response.status_code == HTTPStatus.OK
     assert "Open Operations" not in response.content.decode()
+    operations_url = reverse("admin:operations")
+    assert f'href="{operations_url}"' not in response.content.decode()
+    index = staff_client.get(reverse("admin:index"))
+    assert index.status_code == HTTPStatus.OK
+    assert f'href="{operations_url}"' not in index.content.decode()
+    assert all(
+        model["object_name"] != "Operations"
+        for app in admin.site.get_app_list(index.wsgi_request)
+        for model in app["models"]
+    )
+    assert staff_client.get(operations_url).status_code == HTTPStatus.FORBIDDEN
     assert (
         staff_client.get(
             reverse("admin:django_celery_results_taskresult_changelist")

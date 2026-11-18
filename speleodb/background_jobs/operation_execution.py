@@ -59,7 +59,9 @@ def operation_execution(task_id: str) -> Iterator[OperationExecution | None]:
                 now
                 + timedelta(
                     seconds=(
-                        settings.GEOJSON_GENERATION_HARD_TIME_LIMIT
+                        int(metadata["time_limit"])
+                        if metadata.get("operation") == "campaign"
+                        else settings.GEOJSON_GENERATION_HARD_TIME_LIMIT
                         if metadata.get("operation") == "upload"
                         else settings.GEOJSON_REBUILD_HARD_TIME_LIMIT
                     )

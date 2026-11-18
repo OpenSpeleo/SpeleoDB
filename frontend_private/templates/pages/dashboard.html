@@ -3,6 +3,10 @@
 {% load static vite_assets project_types %}
 
 {% block extra_css %}
+  {% if donation_campaign %}
+    {% vite_preload 'controller-donation-campaign' %}
+    {% vite_styles 'style-donation-campaign' %}
+  {% endif %}
   {% vite_preload 'controller-dashboard' %}
   {% vite_styles 'style-template-frontend-private-templates-pages-dashboard' %}
 {% endblock extra_css %}
@@ -12,9 +16,11 @@
       <!-- Page Header + Quick Actions -->
       <div class="sm:flex sm:justify-between sm:items-center mb-8">
         <div class="mb-4 sm:mb-0">
-          <h1 class="text-2xl md:text-3xl text-slate-100 font-bold">Dashboard</h1>
+          <h1 id="dashboard-heading"
+              tabindex="-1"
+              class="text-2xl md:text-3xl text-slate-100 font-bold">Dashboard</h1>
         </div>
-        <div class="flex flex-col sm:flex-row flex-wrap gap-2">
+        <div class="hidden sm:flex flex-wrap gap-2">
           <a href="{% url 'private:project_new' %}" class="quick-action-btn">
             <svg class="w-5 h-5 text-indigo-400 shrink-0"
                  fill="none"
@@ -93,6 +99,9 @@
           </div>
         </div>
       </div>
+      {% if donation_campaign %}
+        {% include "snippets/donation_campaign.html" %}
+      {% endif %}
       <!-- Charts Row -->
       <div class="flex flex-col md:flex-row gap-6 mb-8">
         <!-- Contributions Over Time -->
@@ -219,6 +228,14 @@
   {% endif %}
 {% endblock extra_js %}
 {% block inline_extra_js %}
+  {% if donation_campaign %}
+    <script type="application/json" data-speleodb-controller="donation-campaign">
+      {
+        "campaignId": "{{ donation_campaign.pk }}",
+        "shouldInvite": {{ campaign_should_invite|yesno:"true,false" }}
+      }
+    </script>
+  {% endif %}
   <script type="application/json" data-speleodb-controller="dashboard">
     {}
   </script>
