@@ -75,6 +75,27 @@ should match the configured interval. New records contain no prefilled campaign
 prose. The tax notice displays the supplied wording; SpeleoDB does not verify an
 organization's tax status.
 
+### Donor thank-you page
+
+`/campaigns/thank-you/` is a public, fully static celebration of SpeleoDB's
+supporters. It works without a campaign record, account, or active campaign. Its
+copy and illustrated cave scene belong to the template and stylesheet; there is
+no campaign lookup, model field, or admin configuration.
+
+The page combines a thank-you message, three community impact highlights, and
+links to the dashboard and the people behind SpeleoDB. **Back to exploring**
+opens the dashboard, using its normal sign-in flow for visitors without a
+session. An optional cave high-five animates the illustration and announces a
+playful reply. The message and navigation remain usable without JavaScript;
+reduced-motion preferences suppress movement. Desktop uses a two-column
+composition; mobile stacks the introduction and illustration with full-width
+primary navigation and compact impact rows.
+
+Use the absolute URL on your SpeleoDB domain as the donation provider's return
+URL. The page does not verify a payment or record donations, dismissals, or
+email sends; payment-looking query parameters do not change its response.
+Configuring the provider's return URL is a separate operation.
+
 ### Campaign photo
 
 The optional image upload is shared by the dashboard and HTML email. Alternative

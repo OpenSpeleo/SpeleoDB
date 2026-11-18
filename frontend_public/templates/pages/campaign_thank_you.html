@@ -1,0 +1,160 @@
+{% load static vite_assets %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <meta name="robots" content="noindex, follow" />
+    <title>Thank you for keeping discovery alive · SpeleoDB</title>
+    <meta name="description"
+          content="Because of you, the next discovery has a home." />
+    <link rel="icon" href="{% static 'favicon/favicon-32x32.png' %}" />
+    {% vite_styles 'style-app' 'style-campaign-thank-you' %}
+    {% vite_preload 'app' 'controller-campaign-thank-you' %}
+  </head>
+  <body class="thanks-page">
+    <div class="thanks-topography" aria-hidden="true">
+      <svg viewBox="0 0 1440 1000"
+           fill="none"
+           preserveAspectRatio="xMidYMin slice">
+        <path d="M-150 160C200-100 290 360 700 210S1300-40 1580 260M-140 185C200-70 300 390 710 240S1310-10 1590 290M-130 210C200-40 310 420 720 270S1320 20 1600 320M-120 235C200-10 320 450 730 300S1330 50 1610 350M-110 260C200 20 330 480 740 330S1340 80 1620 380M-100 285C200 50 340 510 750 360S1350 110 1630 410M-90 310C200 80 350 540 760 390S1360 140 1640 440M-80 335C200 110 360 570 770 420S1370 170 1650 470M-70 360C200 140 370 600 780 450S1380 200 1660 500" />
+      </svg>
+    </div>
+    {% comment %}
+    <header class="thanks-header thanks-container">
+      <a href="{% url 'home' %}"
+         aria-label="Back to SpeleoDB"
+         class="thanks-brand">
+        <img src="{% static 'media/logo-sdb-dark.svg' %}"
+             width="160"
+             height="40"
+             alt="SpeleoDB" />
+      </a>
+      <a href="{% url 'home' %}" class="thanks-nav">
+        Back to SpeleoDB
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path d="M5 12h14m-6-6 6 6-6 6" />
+        </svg>
+      </a>
+    </header>
+    {% endcomment %}
+    <main>
+      <section class="thanks-hero thanks-container" aria-labelledby="thanks-title">
+        <div class="thanks-intro">
+          <p class="thanks-eyebrow">
+            <span class="thanks-spark" aria-hidden="true">✦</span>
+            YOU MAKE THE DIFFERENCE ❤️
+          </p>
+          <h1 id="thanks-title">
+            You rock.
+            <em>Like, literally.</em>
+          </h1>
+          <p class="thanks-lede">Because of you, the next discovery has a home.</p>
+          <p class="thanks-message">Your generosity helps keep SpeleoDB free, open, and built for the people who explore. That&#x27;s a pretty extraordinary thing to do.</p>
+          <div class="thanks-actions">
+            <a class="thanks-primary" href="{% url 'private:user_dashboard' %}">
+              Back to exploring
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </a>
+            <a href="{% url 'people' %}" class="thanks-secondary">Meet your fellow cave nerds</a>
+          </div>
+        </div>
+        <figure class="thanks-expedition">
+          <div class="thanks-scene">
+            {% include "snippets/campaign_thank_you_cave.html" %}
+            <span class="thanks-echo" data-thanks-echo aria-hidden="true">THANK YOU!</span>
+            <div class="thanks-scene-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 21S2 15 2 8a5.5 5.5 0 0 1 10-3 5.5 5.5 0 0 1 10 3c0 7-10 13-10 13Z" />
+              </svg>
+              <span>GOOD HUMAN. GREAT CAVE ENERGY.</span>
+            </div>
+          </div>
+          <figcaption>
+            <p class="thanks-scene-caption">A little light. A lot of possibility.</p>
+            <button class="thanks-high-five"
+                    type="button"
+                    data-thanks-high-five
+                    data-reply="High-five received. Slightly muddy."
+                    hidden>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                <path d="M9 13V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-12 5L4 14a2 2 0 0 1 3-2l2 2" />
+              </svg>
+              Send a cave high-five
+            </button>
+            <p class="thanks-high-five-status" role="status" data-thanks-status></p>
+          </figcaption>
+        </figure>
+      </section>
+      <section class="thanks-impact thanks-container"
+               aria-labelledby="thanks-impact-title">
+        <div class="thanks-section-heading">
+          <p class="thanks-eyebrow">LOOK WHAT YOU&#x27;RE PART OF</p>
+          <h2 id="thanks-impact-title">Small acts. Deep impact.</h2>
+        </div>
+        <div class="thanks-impact-grid">
+          <article class="thanks-impact-item">
+            <div class="thanks-impact-top">
+              <span class="thanks-impact-icon">
+                {% include "snippets/donation_campaign_icon.html" with icon="survey" only %}
+              </span>
+              <span class="thanks-impact-number" aria-hidden="true">01</span>
+            </div>
+            <h3>Discoveries, preserved.</h3>
+            <p>Hard-earned surveys, safe and ready for the next chapter of exploration.</p>
+          </article>
+          <article class="thanks-impact-item">
+            <div class="thanks-impact-top">
+              <span class="thanks-impact-icon">
+                {% include "snippets/donation_campaign_icon.html" with icon="gis" only %}
+              </span>
+              <span class="thanks-impact-number" aria-hidden="true">02</span>
+            </div>
+            <h3>A community, connected.</h3>
+            <p>Explorers sharing knowledge, joining the dots, and going further together.</p>
+          </article>
+          <article class="thanks-impact-item">
+            <div class="thanks-impact-top">
+              <span class="thanks-impact-icon">
+                {% include "snippets/donation_campaign_icon.html" with icon="mobile" only %}
+              </span>
+              <span class="thanks-impact-number" aria-hidden="true">03</span>
+            </div>
+            <h3>Better tools. For everyone.</h3>
+            <p>Free, open-source tools that grow with the community. No explorer left behind.</p>
+          </article>
+        </div>
+      </section>
+      <section class="thanks-signoff thanks-container"
+               aria-labelledby="thanks-signoff-title">
+        <svg class="thanks-heart"
+             viewBox="0 0 80 70"
+             fill="none"
+             aria-hidden="true"
+             focusable="false">
+          <path d="M40 57S11 42 11 23C11 7 31 4 40 20 49 4 69 7 69 23c0 19-29 34-29 34Z" />
+          <path d="m3 8 5 4M72 8l5-4M38 2v6" />
+        </svg>
+        <h2 id="thanks-signoff-title">From the bottom of our caves, <em>thank you.</em></h2>
+        <p class="thanks-signature">
+          With muddy boots &amp; full hearts,
+          <br />
+          The SpeleoDB crew
+        </p>
+      </section>
+    </main>
+    <footer class="thanks-footer thanks-container">
+      <p>Made for explorers. Kept alive by people like you.</p>
+      <p>Explore as One, Survey as Many</p>
+    </footer>
+    <script type="application/json" data-speleodb-controller="campaign-thank-you">
+      {}
+    </script>
+    {% vite_script 'app' %}
+  </body>
+</html>

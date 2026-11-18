@@ -96,9 +96,14 @@
   color: var(--body-quiet-color);
 }
 
-.operation-panel button {
+#content .operation-panel .button {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
   min-height: 44px;
   padding: 12px 18px;
+  font-size: 0.8125rem;
+  text-decoration: none;
   cursor: pointer;
 }
 

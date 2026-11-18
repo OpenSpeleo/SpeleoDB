@@ -1,4 +1,4 @@
-"""Authenticated campaign invitation preferences."""
+"""Public campaign pages and authenticated invitation preferences."""
 
 from __future__ import annotations
 
@@ -49,6 +49,11 @@ class CampaignDismissalView(APIView):
             defaults={"modified_date": timezone.now()},
         )
         return Response(status=204)
+
+
+@require_GET
+def thank_you(request: HttpRequest) -> TemplateResponse:
+    return TemplateResponse(request, "pages/campaign_thank_you.html")
 
 
 def unsubscribe(request: HttpRequest, token: str) -> HttpResponse:

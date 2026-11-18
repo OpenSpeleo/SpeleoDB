@@ -2334,6 +2334,12 @@
   "decorators": ""
  },
  {
+  "url": "/campaigns/thank-you/",
+  "module": "speleodb.campaigns.views.thank_you",
+  "name": "campaigns:thank-you",
+  "decorators": ""
+ },
+ {
   "url": "/campaigns/unsubscribe/<str:token>/",
   "module": "speleodb.campaigns.views.unsubscribe",
   "name": "campaigns:unsubscribe",
