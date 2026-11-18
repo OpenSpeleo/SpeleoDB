@@ -350,7 +350,7 @@ export const StationResources = {
                             </div>
 
                             <div>
-                                <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Description</label>
                                 <textarea name="description" id="resource-description" class="form-input form-textarea" rows="3" placeholder="Additional details about this resource..."></textarea>
                             </div>
 
@@ -359,7 +359,7 @@ export const StationResources = {
                                     <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                     </svg>
-                                    <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop</p>
+                                    <p class="text-slate-300 text-sm mb-2">Click to select file or drag and drop <span class="text-red-400">*</span></p>
                                     <input type="file" name="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.mp4,.mov,.avi,.webm">
                                     <p class="text-slate-400 text-xs">Max file size: 500MB • Images, videos, documents accepted</p>
                                 </div>
@@ -577,13 +577,13 @@ export const StationResources = {
                                     <p class="text-xs text-slate-400 mt-1">Type cannot be changed</p>
                                 </div>
                                 <div>
-                                    <label class="block text-slate-300 text-sm font-medium mb-2">Title</label>
+                                    <label class="block text-slate-300 text-sm font-medium mb-2">Title <span class="text-red-400">*</span></label>
                                     <input type="text" name="title" class="form-input" value="${resource.title || ''}" required>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-slate-300 text-sm font-medium mb-2">Description (optional)</label>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Description</label>
                                 <textarea name="description" class="form-input form-textarea" placeholder="Additional details...">${resource.description || ''}</textarea>
                             </div>
 
@@ -593,7 +593,7 @@ export const StationResources = {
                                         <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                         </svg>
-                                        <p class="text-slate-300 text-sm mb-2">Click to upload new file (optional)</p>
+                                        <p class="text-slate-300 text-sm mb-2">Click to upload new file</p>
                                         <input type="file" name="file" class="hidden" accept="${this.getFileAccept(resource.resource_type)}">
                                         <p class="text-slate-400 text-xs">Leave empty to keep current file</p>
                                         ${resource.file ? `<p class="text-sky-400 text-xs mt-2">Current file: ${Utils.escapeHtml(this.getFileName(resource.file))}</p>` : ''}
@@ -603,7 +603,7 @@ export const StationResources = {
 
                             ${Utils.raw(resource.resource_type === 'note' ? `
                                 <div>
-                                    <label class="block text-slate-300 text-sm font-medium mb-2">Content</label>
+                                    <label class="block text-slate-300 text-sm font-medium mb-2">Content <span class="text-red-400">*</span></label>
                                     <textarea name="text_content" class="form-input form-textarea" rows="6" required>${Utils.escapeHtml(resource.text_content || '')}</textarea>
                                 </div>
                             ` : '')}

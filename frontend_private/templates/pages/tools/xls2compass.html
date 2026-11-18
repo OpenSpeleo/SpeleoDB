@@ -50,14 +50,14 @@
       <hr class="border-slate-600 mt-6" />
       <div class="form-controls mt-6">
         <div class="form-group flex-1">
-          <label for="caveName">Cave Name <span class="text-[#ff8900]">*</span></label>
+          <label for="caveName">Cave Name <span class="text-rose-500">*</span></label>
           <input type="text"
                  id="caveName"
                  class="text-input"
                  placeholder="Enter cave name" />
         </div>
         <div class="form-group flex-1">
-          <label for="surveyName">Survey Name <span class="text-[#ff8900]">*</span></label>
+          <label for="surveyName">Survey Name <span class="text-rose-500">*</span></label>
           <input type="text"
                  id="surveyName"
                  class="text-input"
@@ -66,7 +66,7 @@
       </div>
       <div class="form-controls mt-4">
         <div class="form-group flex-1">
-          <label for="locationSearch">Location (Town/State) <span class="text-[#ff8900]">*</span></label>
+          <label for="locationSearch">Location (Town/State) <span class="text-rose-500">*</span></label>
           <div class="location-search-wrapper">
             <input type="text"
                    id="locationSearch"
@@ -88,11 +88,11 @@
           <div class="coordinate-display text-input" id="latDisplay">-</div>
         </div>
         <div class="form-group">
-          <label for="surveyDate">Survey Date <span class="text-[#ff8900]">*</span></label>
+          <label for="surveyDate">Survey Date <span class="text-rose-500">*</span></label>
           <input type="date" id="surveyDate" class="date-input" />
         </div>
         <div class="form-group">
-          <label>Survey Units<span class="text-[#ff8900]">*</span></label>
+          <label>Survey Units<span class="text-rose-500">*</span></label>
           <div class="unit-toggle">
             <span class="unit-label" id="metersLabel">Meters</span>
             <label class="switch">
@@ -105,7 +105,7 @@
       </div>
       <div class="form-controls mt-4">
         <div class="survey-notes-group form-group">
-          <label for="surveyTeam">Survey Team</label>
+          <label for="surveyTeamInput">Survey Team</label>
           <div id="surveyTeamContainer" class="tag-input-container">
             <input type="text"
                    id="surveyTeamInput"
@@ -114,7 +114,7 @@
           </div>
         </div>
         <div class="survey-notes-group form-group">
-          <label for="surveyComment">Comment (Optional)</label>
+          <label for="surveyComment">Comment</label>
           <textarea id="surveyComment"
                     class="textarea-input"
                     rows="3"
@@ -136,10 +136,10 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Station</th>
-              <th>Depth</th>
-              <th>Length</th>
-              <th>Azimuth</th>
+              <th>Station <span class="text-rose-500">*</span></th>
+              <th>Depth <span class="text-rose-500">*</span></th>
+              <th>Length <span class="text-rose-500" title="Required except on the final row">*</span></th>
+              <th>Azimuth <span class="text-rose-500" title="Required except on the final row">*</span></th>
               <th>Left</th>
               <th>Right</th>
               <th>Up</th>

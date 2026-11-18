@@ -38,7 +38,7 @@ function initSensorRows() {
                     </div>
                     <div class="flex-1">
                         <label class="block text-xs font-medium text-slate-400 mb-1">Notes</label>
-                        <textarea class="sensor-notes form-textarea w-full" rows="2" placeholder="Optional notes"></textarea>
+                        <textarea class="sensor-notes form-textarea w-full" rows="2"></textarea>
                     </div>
                     <div class="flex flex-col gap-2 mt-5 sm:mt-0">
                         <button type="button" class="remove-sensor-btn btn-sm bg-rose-500 hover:bg-rose-600 text-white">

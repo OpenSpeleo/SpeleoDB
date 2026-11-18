@@ -473,7 +473,7 @@ export const StationSensors = {
 
                         <form id="install-sensor-form" class="flow-y-6">
                             <div>
-                                <label class="form-label">Sensor Fleet *</label>
+                                <label class="form-label">Sensor Fleet <span class="text-red-400">*</span></label>
                                 <select id="sensor-fleet-select"
                                     class="form-input" required>
                                     <option value="">Select a fleet...</option>
@@ -484,26 +484,26 @@ export const StationSensors = {
                             </div>
 
                             <div>
-                                <label class="form-label">Sensor *</label>
+                                <label class="form-label">Sensor <span class="text-red-400">*</span></label>
                                 <select id="sensor-select" class="form-input" required disabled>
                                     <option value="">Select a fleet first...</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="form-label">Install Date *</label>
+                                <label class="form-label">Install Date <span class="text-red-400">*</span></label>
                                 <input type="date" id="install-date" class="form-input" value="${today}" required>
                                 <span id="install-date-error" class="form-error-message" style="display: none;"></span>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="form-label">Memory Expiry Date (Optional)</label>
+                                    <label class="form-label">Memory Expiry Date</label>
                                     <input type="date" id="expiracy-memory-date" class="form-input">
                                     <span id="expiracy-memory-date-error" class="form-error-message" style="display: none;"></span>
                                 </div>
                                 <div>
-                                    <label class="form-label">Battery Expiry Date (Optional)</label>
+                                    <label class="form-label">Battery Expiry Date</label>
                                     <input type="date" id="expiracy-battery-date" class="form-input">
                                     <span id="expiracy-battery-date-error" class="form-error-message" style="display: none;"></span>
                                 </div>
@@ -738,7 +738,7 @@ export const StationSensors = {
 
                         <form id="install-sensor-form" class="flow-y-6">
                             <div>
-                                <label class="form-label">Sensor Fleet *</label>
+                                <label class="form-label">Sensor Fleet <span class="text-red-400">*</span></label>
                                 <select id="sensor-fleet-select"
                                     class="form-input" required>
                                     <option value="">Select a fleet...</option>
@@ -751,7 +751,7 @@ export const StationSensors = {
                             </div>
 
                             <div>
-                                <label class="form-label">Sensor *</label>
+                                <label class="form-label">Sensor <span class="text-red-400">*</span></label>
                                 <select id="sensor-select" class="form-input" required>
                                     <option value="">Select a sensor...</option>
                                     ${availableSensors.map(sensor => `
@@ -763,19 +763,19 @@ export const StationSensors = {
                             </div>
 
                             <div>
-                                <label class="form-label">Install Date *</label>
+                                <label class="form-label">Install Date <span class="text-red-400">*</span></label>
                                 <input type="date" id="install-date" class="form-input" value="${installDate}" required>
                                 <span id="install-date-error" class="form-error-message" style="display: none;"></span>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="form-label">Memory Expiry Date (Optional)</label>
+                                    <label class="form-label">Memory Expiry Date</label>
                                     <input type="date" id="expiracy-memory-date" class="form-input" value="${expiracyMemoryDate}">
                                     <span id="expiracy-memory-date-error" class="form-error-message" style="display: none;"></span>
                                 </div>
                                 <div>
-                                    <label class="form-label">Battery Expiry Date (Optional)</label>
+                                    <label class="form-label">Battery Expiry Date</label>
                                     <input type="date" id="expiracy-battery-date" class="form-input" value="${expiracyBatteryDate}">
                                     <span id="expiracy-battery-date-error" class="form-error-message" style="display: none;"></span>
                                 </div>
@@ -832,7 +832,7 @@ export const StationSensors = {
 
                     <form id="retrieve-sensor-form" class="flow-y-6">
                         <div>
-                            <label class="form-label">Retrieval Date *</label>
+                            <label class="form-label">Retrieval Date <span class="text-red-400">*</span></label>
                             <input type="date" id="retrieval-date" class="form-input" value="${today}" required>
                         </div>
 

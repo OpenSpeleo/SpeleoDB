@@ -304,7 +304,7 @@ class Project(models.Model):
     )
 
     name = models.CharField(max_length=255, blank=False, null=False)
-    description = models.TextField(blank=False, null=False)
+    description = models.TextField(blank=True, null=False)
 
     country = CountryField(null=False, blank=False)
 

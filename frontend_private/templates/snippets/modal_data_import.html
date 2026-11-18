@@ -104,7 +104,7 @@
                  aria-hidden="true">
               <path d="M12 16V4m-4 4 4-4 4 4M4 15v5h16v-5" />
             </svg>
-            <p>Drop a GPX file here</p>
+            <p>Drop a GPX file here <span class="text-rose-500">*</span></p>
             <button type="button"
                     class="map-import-browse"
                     data-import-action="browse-gpx">Choose file</button>
@@ -120,8 +120,7 @@
                     aria-label="Remove GPX file">×</button>
           </div>
           <div class="map-import-gpx-destination">
-            <label class="map-import-label"
-                   for="gpx-landmark-collection">Landmark collection <span class="map-import-label-note">- Landmarks only</span></label>
+            <label class="map-import-label" for="gpx-landmark-collection">Landmark collection <span class="text-rose-500">*</span> <span class="map-import-label-note">- Landmarks only</span></label>
             <p id="gpx-collection-help">
               Used only if your file contains landmarks.
               <br />
@@ -231,7 +230,8 @@
               </ol>
             </details>
             <div id="kml-collection-field" hidden>
-              <label class="map-import-label" for="kml-landmark-collection">Landmark collection</label>
+              <label class="map-import-label"
+                     for="kml-landmark-collection">Landmark collection <span class="text-rose-500">*</span></label>
               <div class="map-import-select">
                 <select id="kml-landmark-collection" class="form-input">
                   <option value="">Loading collections…</option>
@@ -246,7 +246,8 @@
               </div>
             </div>
             <div id="kml-name-field" hidden>
-              <label class="map-import-label" for="kml-layer-name">Layer name</label>
+              <label class="map-import-label"
+                     for="kml-layer-name">Layer name <span class="text-rose-500">*</span></label>
               <input type="text"
                      id="kml-layer-name"
                      class="form-input"
@@ -265,7 +266,7 @@
                    aria-hidden="true">
                 <path d="M12 16V4m-4 4 4-4 4 4M4 15v5h16v-5" />
               </svg>
-              <p>Drop a KML or KMZ file here</p>
+              <p>Drop a KML or KMZ file here <span class="text-rose-500">*</span></p>
               <button type="button"
                       class="map-import-browse"
                       data-import-action="browse-kml">Choose file</button>

@@ -170,7 +170,7 @@ export function init(context: AdminExperimentFieldContext) {
 
                 <div class="options-container" style="margin-top: 12px; ${type === 'select' ? '' : 'display: none;'}">
                     <label>
-                        ${lockIcon}Options (comma-separated)
+                        ${lockIcon}Options (comma-separated) <span class="exp-required">*</span>
                     </label>
                     <input type="text" class="field-options" value="${escapeHtml(options)}"
                            placeholder="e.g., Low, Medium, High"

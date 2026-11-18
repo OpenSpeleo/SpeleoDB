@@ -249,7 +249,8 @@ export function openLandmarkBulkTransferModal({
                 to enable transfers.
             </div>`
         : Utils.safeHtml`
-            <select id="${selectId}" class="form-input w-full">
+            <label for="${selectId}" class="block text-sm font-medium text-slate-300 mb-2">Move them to: <span class="text-red-400" aria-hidden="true">*</span></label>
+            <select id="${selectId}" class="form-input w-full" required>
                 ${Utils.raw(getWritableCollectionOptions(writableTargets, writableTargets[0]!.id))}
             </select>`;
 
@@ -266,7 +267,6 @@ export function openLandmarkBulkTransferModal({
                 ${Utils.raw(renderSelectedLandmarksList(landmarks))}
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-2">Move them to:</label>
                 ${Utils.raw(targetSelectorHtml)}
             </div>
             <div id="${errorElId}" class="hidden text-red-400 text-sm p-2 bg-srgb-red-500-10 rounded-lg"></div>

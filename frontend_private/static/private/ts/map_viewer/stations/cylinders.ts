@@ -144,7 +144,7 @@ async function showInstallModal(coordinates: readonly unknown[], locationName: s
                         class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                 </div>
 
-                <!-- Distance from Entry (optional) -->
+                <!-- Distance from Entry -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">
@@ -152,8 +152,7 @@ async function showInstallModal(coordinates: readonly unknown[], locationName: s
                         </label>
                         <input type="number" id="install-distance"
                             min="0" step="1"
-                            class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
-                            placeholder="Optional">
+                            class="form-input w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">
@@ -167,14 +166,13 @@ async function showInstallModal(coordinates: readonly unknown[], locationName: s
                     </div>
                 </div>
 
-                <!-- Notes (optional) -->
+                <!-- Notes -->
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">
                         Notes
                     </label>
                     <textarea id="install-notes" rows="1"
-                        class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
-                        placeholder="Optional notes..."></textarea>
+                        class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"></textarea>
                 </div>
 
                 <!-- Action Buttons -->
@@ -792,8 +790,7 @@ function showAddPressureCheck(installId: EntityId) {
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                 <textarea id="new-check-notes" rows="1"
-                    class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
-                    placeholder="Optional notes..."></textarea>
+                    class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"></textarea>
             </div>
 
             <div class="flex justify-end gap-3">
@@ -909,8 +906,7 @@ async function editPressureCheck(installId: EntityId, checkId: EntityId) {
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                     <textarea id="edit-check-notes" rows="1"
-                        class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500"
-                        placeholder="Optional notes...">${Utils.escapeHtml(check.notes || '')}</textarea>
+                        class="form-textarea w-full bg-slate-700 border-slate-600 text-white rounded-lg focus:border-sky-500">${Utils.escapeHtml(check.notes || '')}</textarea>
                 </div>
 
                 <div class="flex justify-end gap-3">

@@ -34,7 +34,7 @@ describe('template layout contracts after inline style removal', () => {
         const markers = [...page.querySelectorAll('.form-group label span')]
             .filter(marker => marker.textContent === '*');
         expect(markers).toHaveLength(5);
-        expect(markers.every(marker => marker.classList.contains('text-[#ff8900]'))).toBe(true);
+        expect(markers.every(marker => marker.classList.contains('text-rose-500'))).toBe(true);
     });
 
     it('keeps the feedback midpoint label offset', () => {

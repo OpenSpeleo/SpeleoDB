@@ -12,6 +12,10 @@ verification. The browser adapter in `frontend_common/api/client.ts` provides
 `webApiOptions`, `apiData`, and `ApiRequestError`. Shared form helpers receive
 promise-returning callbacks, never URLs, HTTP methods, or jQuery AJAX options.
 
+Use a red asterisk beside each required field label. Leave optional fields
+unmarked, including in placeholders. For conditional fields, show the marker
+when the active form requires a value.
+
 ## Ownership and initialization
 
 `frontend_common/entries.json` and the Vite bootstrap resolve inert route

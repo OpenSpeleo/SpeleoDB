@@ -31,7 +31,7 @@ export const ExplorationLeadUI = {
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Description *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Description <span class="text-red-400">*</span></label>
                     <textarea id="lead-description" rows="2" required
                         class="form-input form-textarea"
                         placeholder="Describe the exploration lead..."></textarea>

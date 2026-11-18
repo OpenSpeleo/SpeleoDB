@@ -20220,7 +20220,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -20276,7 +20275,6 @@ paths:
                   nullable: true
               required:
               - country
-              - description
               - name
               - type
           application/x-www-form-urlencoded:
@@ -20565,7 +20563,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -20625,7 +20622,6 @@ paths:
                   x-drf-null-as-empty: true
               required:
               - country
-              - description
               - name
               - type
           multipart/form-data:
@@ -20914,7 +20910,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -20974,7 +20969,6 @@ paths:
                   x-drf-null-as-empty: true
               required:
               - country
-              - description
               - name
               - type
         required: true
@@ -21540,7 +21534,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -21596,7 +21589,6 @@ paths:
                   nullable: true
               required:
               - country
-              - description
               - name
               - type
           application/x-www-form-urlencoded:
@@ -21885,7 +21877,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -21945,7 +21936,6 @@ paths:
                   x-drf-null-as-empty: true
               required:
               - country
-              - description
               - name
               - type
           multipart/form-data:
@@ -22234,7 +22224,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -22294,7 +22283,6 @@ paths:
                   x-drf-null-as-empty: true
               required:
               - country
-              - description
               - name
               - type
         required: true
@@ -22707,7 +22695,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -23047,7 +23034,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -23391,7 +23377,6 @@ paths:
                   maxLength: 255
                 description:
                   type: string
-                  minLength: 1
                 color:
                   type: string
                   minLength: 1
@@ -55313,7 +55298,6 @@ components:
           maxLength: 255
         description:
           type: string
-          minLength: 1
         color:
           type: string
           minLength: 1
@@ -57088,7 +57072,6 @@ components:
           maxLength: 255
         description:
           type: string
-          minLength: 1
         color:
           type: string
           minLength: 1
@@ -57147,7 +57130,6 @@ components:
           x-drf-null-as-empty: true
       required:
       - country
-      - description
       - name
       - type
     ProjectRevisionsResponse:

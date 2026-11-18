@@ -280,9 +280,14 @@ export const GeometryEditor: GeometryEditorFacade = {
         header.append(heading, close);
         const body = element('div', 'gis-geometry-editor__body');
         const nameLabel = element('label', 'gis-geometry-editor__field');
-        nameLabel.append(element('span', '', 'Name'));
+        const nameCaption = element('span', '', 'Name ');
+        const requiredMarker = element('span', 'text-red-400', '*');
+        requiredMarker.setAttribute('aria-hidden', 'true');
+        nameCaption.append(requiredMarker);
+        nameLabel.append(nameCaption);
         const name = element('input');
         name.type = 'text';
+        name.required = true;
         name.maxLength = DEFAULTS.GIS_GEOMETRY.NAME_MAX_LENGTH;
         name.value = this.session!.name;
         name.placeholder = 'Give this geometry a name';
@@ -291,7 +296,7 @@ export const GeometryEditor: GeometryEditorFacade = {
         nameLabel.append(name);
         body.append(nameLabel);
         const aliasLabel = element('label', 'gis-geometry-editor__field');
-        aliasLabel.append(element('span', '', 'Map alias (optional)'));
+        aliasLabel.append(element('span', '', 'Map alias'));
         const alias = element('input');
         alias.type = 'text';
         alias.value = this.session!.alias;
@@ -300,7 +305,7 @@ export const GeometryEditor: GeometryEditorFacade = {
         aliasLabel.append(alias);
         body.append(aliasLabel);
         const descriptionLabel = element('label', 'gis-geometry-editor__field');
-        descriptionLabel.append(element('span', '', 'Description (optional)'));
+        descriptionLabel.append(element('span', '', 'Description'));
         const description = element('textarea');
         description.value = this.session!.description;
         description.rows = DEFAULTS.GIS_GEOMETRY.DESCRIPTION_ROWS;

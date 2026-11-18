@@ -144,13 +144,13 @@ export const StationTags = {
                     </div>
                     <div class="p-6 flow-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name <span class="text-red-400">*</span></label>
                             <input type="text" id="new-tag-name"
                                    class="w-full bg-slate-700 text-white rounded-lg p-2 border border-slate-600 focus:border-sky-500 focus:outline-hidden"
                                    placeholder="e.g., Active, Completed, High Priority">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">Color</label>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Color <span class="text-red-400">*</span></label>
                             <div class="tag-color-picker" id="tag-color-picker">
                                 ${State.tagColors.map(color => {
                                     const safe = Utils.safeCssColor(color);

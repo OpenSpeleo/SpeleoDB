@@ -14,6 +14,7 @@ import uuid
 
 import pytest
 from django.urls import reverse
+from parameterized.parameterized import parameterized
 from rest_framework import status
 
 from speleodb.api.v2.tests.base_testcase import BaseAPIProjectTestCase
@@ -49,6 +50,47 @@ class TestProjectDetailPatch(BaseAPIProjectTestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
         self.project.refresh_from_db()
         assert self.project.name == "Renamed"
+
+    @parameterized.expand(
+        [
+            ("put", "json"),
+            ("put", "multipart"),
+            ("patch", "json"),
+            ("patch", "multipart"),
+        ]
+    )
+    def test_optional_description_update(self, method: str, encoding: str) -> None:
+        update = getattr(self.client, method)
+        headers = {"authorization": self.auth}
+        payload = {"name": "Renamed", "country": "US", "type": self.project.type}
+        original = self.project.description
+        assert original
+
+        response = update(self.url, payload, format=encoding, headers=headers)
+        assert response.status_code == status.HTTP_200_OK, response.data
+        self.project.refresh_from_db()
+        assert self.project.description == original
+
+        response = update(
+            self.url, {**payload, "description": ""}, format=encoding, headers=headers
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data["description"] == ""
+        self.project.refresh_from_db()
+        assert self.project.description == ""
+
+    def test_null_description_rejected(self) -> None:
+        original = self.project.description
+        response = self.client.patch(
+            self.url,
+            {"description": None},
+            format="json",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "description" in response.data["errors"]
+        self.project.refresh_from_db()
+        assert self.project.description == original
 
     def test_patch_description(self) -> None:
         response = self.client.patch(

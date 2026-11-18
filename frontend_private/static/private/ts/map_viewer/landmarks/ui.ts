@@ -346,12 +346,12 @@ export const LandmarkUI = {
         const formHtml = `
             <form id="create-landmark-form" class="flow-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                     <input type="text" id="landmark-name" required class="form-input" placeholder="Enter name">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <textarea id="landmark-description" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
+                    <textarea id="landmark-description" rows="3" class="form-input form-textarea"></textarea>
                 </div>
                 ${this.getCollectionSelectHtml('landmark-collection')}
                 ${renderLandmarkIconPicker()}
@@ -398,22 +398,22 @@ export const LandmarkUI = {
         const formHtml = `
             <form id="create-landmark-manual-form" class="flow-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                     <input type="text" id="landmark-name-manual" required class="form-input" placeholder="Enter landmark name">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                    <textarea id="landmark-description-manual" rows="3" class="form-input form-textarea" placeholder="Optional description"></textarea>
+                    <textarea id="landmark-description-manual" rows="3" class="form-input form-textarea"></textarea>
                 </div>
                 ${this.getCollectionSelectHtml('landmark-collection-manual')}
                 ${renderLandmarkIconPicker()}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(e.g., 38.8977)</span></label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(e.g., 38.8977)</span></label>
                         <input type="number" id="landmark-latitude-manual" required step="any" min="-90" max="90" class="form-input" placeholder="Latitude (-90 to 90)">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude * <span class="text-xs text-slate-500">(e.g., -77.0365)</span></label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(e.g., -77.0365)</span></label>
                         <input type="number" id="landmark-longitude-manual" required step="any" min="-180" max="180" class="form-input" placeholder="Longitude (-180 to 180)">
                     </div>
                 </div>
@@ -498,7 +498,7 @@ export const LandmarkUI = {
         const formHtml = Utils.safeHtml`
             <form id="edit-landmark-form" class="flow-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                     <input type="text" id="edit-landmark-name" required value="${landmark.name}" class="form-input">
                 </div>
                 <div>
@@ -509,11 +509,11 @@ export const LandmarkUI = {
                 ${Utils.raw(renderLandmarkIconPicker(landmark.icon))}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-xs text-slate-500">(-90 to 90)</span></label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(-90 to 90)</span></label>
                         <input type="number" id="edit-landmark-latitude" step="any" min="-90" max="90" value="${Number(landmark.latitude).toFixed(7)}" class="form-input" placeholder="Latitude">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-xs text-slate-500">(-180 to 180)</span></label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(-180 to 180)</span></label>
                         <input type="number" id="edit-landmark-longitude" step="any" min="-180" max="180" value="${Number(landmark.longitude).toFixed(7)}" class="form-input" placeholder="Longitude">
                     </div>
                 </div>

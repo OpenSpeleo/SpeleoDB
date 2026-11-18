@@ -27,7 +27,6 @@ def test_project_admin_adds_and_filters_stalagmight(admin_client: Client) -> Non
         add_url,
         data={
             "name": "Stalagmight admin survey",
-            "description": "Added through Django admin",
             "country": "US",
             "type": "stalagmight",
             "color": "#0d9488",
@@ -37,6 +36,7 @@ def test_project_admin_adds_and_filters_stalagmight(admin_client: Client) -> Non
     )
     assert response.status_code == status.HTTP_302_FOUND
     project = Project.objects.get(name="Stalagmight admin survey")
+    assert project.description == ""
     assert project.type == ProjectType.STALAGMIGHT
     ProjectFactory.create(type=ProjectType.COMPASS, name="Unrelated Compass survey")
     filtered = admin_client.get(

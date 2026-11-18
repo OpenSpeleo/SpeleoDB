@@ -88,7 +88,7 @@ export const ExperimentFields = (function ($: JQueryStatic) {
 
                 <!-- Options section for Multiple Choices -->
                 <div class="field-options-container hidden mt-3 pt-3 border-t border-slate-600">
-                    <label class="block text-xs font-medium text-slate-400 mb-2">Available Options</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-2">Available Options<span class="text-rose-600"> *</span></label>
                     <div class="flex gap-2 mb-2">
                         <input type="text"
                                class="form-input flex-1 field-option-input text-sm"

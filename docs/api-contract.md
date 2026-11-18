@@ -16,6 +16,13 @@ explains its pinned generator, runtime transport, package versioning, standalone
 checks, and web/mobile updates. This document explains the backend half,
 including schema source ownership and the SHA-256 freshness check.
 
+## Project descriptions
+
+Project creation accepts an omitted or blank `description` and returns an empty
+string. On PUT and PATCH, omitting the field preserves the existing description.
+Send an empty string to clear it. Project responses always include the string,
+and JSON writes reject `null`.
+
 ## Scope and source ownership
 
 The composed contract contains current `/api/v2/` endpoints (including the four

@@ -261,10 +261,28 @@ describe('landmark generated operations and modal lifecycle', () => {
             sourceCollection: { id: 'source', name: 'Source' },
             collections: [{ id: 'target', name: 'Target', can_write: true }],
         });
+        const destination = document.querySelector<HTMLSelectElement>('#bulk-transfer-target')!;
+        expect(destination.labels?.[0]?.textContent).toContain('Move them to:');
         await click('bulk-transfer-confirm');
         expect(server.requests[0]).toMatchObject({ method: 'POST', path: '/api/v2/landmark-collections/source/landmarks/transfer/' });
         expect(server.requests[0]!.headers['x-csrftoken']).toBe(VALID_CSRF_TOKEN);
         expect(JSON.parse(server.requests[0]!.body)).toEqual({ landmark_ids: ['lm-1', 'lm-2'], target_collection: 'target' });
+    });
+    it('only shows the destination field when a writable transfer target exists', () => {
+        vi.stubGlobal('Urls', { 'private:landmark_collection_new': () => '/private/collection/new/' });
+        try {
+            openLandmarkBulkTransferModal({
+                landmarks: [{ id: 'lm-1', name: 'Alpha' }],
+                sourceCollection: { id: 'source', name: 'Source' },
+                collections: [{ id: 'other', name: 'Read only', can_write: false }],
+            });
+            const modal = document.getElementById('bulk-transfer-landmark-modal')!;
+            expect(modal.querySelector<HTMLButtonElement>('#bulk-transfer-confirm')!.disabled).toBe(true);
+            expect(modal.querySelector('a')?.textContent).toBe('Create a new collection');
+            expect(modal.textContent).not.toContain('Move them to:');
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
     it('posts bulk delete with its generated request body', async () => {
         server.reply({ json: { deleted: 2 } });

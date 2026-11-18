@@ -231,7 +231,7 @@ export const StationUI = {
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                     <input type="text" id="station-name" required class="form-input" placeholder="Enter station name">
                 </div>
                 <div>

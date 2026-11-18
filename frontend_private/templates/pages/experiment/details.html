@@ -30,7 +30,6 @@
                            name="code"
                            class="form-input max-w-full w-full"
                            type="text"
-                           placeholder="[Optional]"
                            value="{% if experiment.code %}{{ experiment.code }}{% endif %}" />
                   </div>
                   <div class="w-full lg:flex-1">
@@ -154,11 +153,14 @@
                             </svg>
                           </div>
                           <div class="flex-1">
-                            <label class="block text-xs font-medium text-slate-400 mb-1">
-                              Field Name
+                            <label class="block text-xs font-medium text-slate-400 mb-1"
+                                   for="experiment-field-name-{{ field_id }}">
+                              Field Name <span class="text-rose-600">*</span>
                               <span class="text-emerald-400">✏️ Editable</span>
                             </label>
                             <input type="text"
+                                   id="experiment-field-name-{{ field_id }}"
+                                   required
                                    value="{{ field_data.name }}"
                                    class="existing-field-name form-input w-full {% if not has_write_access %}bg-slate-600 opacity-60 cursor-not-allowed{% endif %}"
                                    {% if not has_write_access %}disabled{% endif %}

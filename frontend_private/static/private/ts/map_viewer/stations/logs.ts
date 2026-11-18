@@ -233,7 +233,7 @@ export const StationLogs = {
                                 <textarea id="log-notes" class="form-input form-textarea" rows="6" placeholder="Observations, measurements, methods, interpretation..." required></textarea>
                             </div>
                             <div>
-                                <label class="block text-slate-300 text-sm font-medium mb-2">Attachment (optional)</label>
+                                <label class="block text-slate-300 text-sm font-medium mb-2">Attachment</label>
                                 <div id="log-file-container" class="file-upload-area cursor-pointer">
                                     <div class="text-center" id="log-file-placeholder">
                                         <svg class="w-12 h-12 text-slate-400 center-x mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

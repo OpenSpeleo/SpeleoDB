@@ -38,3 +38,15 @@ it('selects the generated update operation from resource and entity identifier',
     expect(server.requests[0]).toMatchObject({ method: 'PUT', path: '/api/v2/surface-networks/network%20%2F1/' });
     expect(JSON.parse(server.requests[0]!.body)).toEqual({ name: 'Fleet', description: 'Description' });
 });
+
+it.each([undefined, 'project-id'])('submits an empty project description for %s', async entityId => {
+    page();
+    const description = document.querySelector<HTMLInputElement>('input[name="description"]')!;
+    description.value = '';
+    $('#entity').append('<input name="country" value="US"><input name="type" value="COMPASS"><input name="color" value="#377eb8"><input name="latitude"><input name="longitude">');
+    await init({ resource: 'project', ...(entityId ? { entityId } : {}), formId: 'entity' });
+    $('#btn_submit').trigger('click');
+    await vi.waitFor(() => expect(server.requests).toHaveLength(1));
+    expect(server.requests[0]!.method).toBe(entityId ? 'PUT' : 'POST');
+    expect(JSON.parse(server.requests[0]!.body)).toMatchObject({ description: '' });
+});

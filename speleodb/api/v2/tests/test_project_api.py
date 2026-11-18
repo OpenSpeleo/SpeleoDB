@@ -25,6 +25,7 @@ from speleodb.api.v2.tests.factories import UserProjectPermissionFactory
 from speleodb.api.v2.tests.utils import is_subset
 from speleodb.common.enums import PermissionLevel
 from speleodb.common.enums import ProjectType
+from speleodb.surveys.models import Project
 from speleodb.surveys.models import ProjectCommit
 
 if TYPE_CHECKING:
@@ -362,7 +363,41 @@ class TestProjectCreation(BaseAPITestCase):
             response.data
         )
 
-    @parameterized.expand(["name", "description", "country", "type"])
+    @parameterized.expand(
+        [
+            ("json", {}),
+            ("multipart", {}),
+            ("json", {"description": "   "}),
+            ("multipart", {"description": ""}),
+        ]
+    )
+    def test_optional_description(self, encoding: str, extra: dict[str, str]) -> None:
+        response = self.client.post(
+            reverse("api:v2:projects"),
+            {"name": "Survey", "country": "US", "type": ProjectType.COMPASS, **extra},
+            format=encoding,
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data["description"] == ""
+        assert Project.objects.get(pk=response.data["id"]).description == ""
+
+    def test_create_rejects_null_description(self) -> None:
+        response = self.client.post(
+            reverse("api:v2:projects"),
+            {
+                "name": "Survey",
+                "type": ProjectType.COMPASS,
+                "country": "US",
+                "description": None,
+            },
+            format="json",
+            headers={"authorization": self.auth},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "description" in response.data["errors"]
+
+    @parameterized.expand(["name", "country", "type"])
     def test_create_project_failure_with_missing_data(
         self, missing_param_key: str
     ) -> None:

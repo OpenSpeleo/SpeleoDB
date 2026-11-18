@@ -223,14 +223,14 @@ export const SurfaceStationUI = {
         const formHtml = `
             <form id="create-surface-station-form" class="flow-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Monitoring Network *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Monitoring Network <span class="text-red-400">*</span></label>
                     <select id="surface-station-network" required class="form-select w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-emerald-500 focus:outline-hidden" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e&quot;); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.25rem 1.25rem; padding-right: 2.5rem;">
                         <option value="">Select a network...</option>
                         ${networkOptionsHtml}
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                     <input type="text" id="surface-station-name" required class="form-input" placeholder="Enter station name">
                 </div>
                 <div>
@@ -239,11 +239,11 @@ export const SurfaceStationUI = {
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude *</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-red-400">*</span></label>
                         <input type="number" id="surface-station-latitude" required step="any" min="-90" max="90" class="form-input" placeholder="-90 to 90">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude *</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-red-400">*</span></label>
                         <input type="number" id="surface-station-longitude" required step="any" min="-180" max="180" class="form-input" placeholder="-180 to 180">
                     </div>
                 </div>

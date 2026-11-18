@@ -9,7 +9,7 @@
 {% endblock extra_css %}
 {% block entity_metadata_extra %}
   <section>
-    <label class="block text-sm font-medium mb-1" for="alias">Map alias (optional):</label>
+    <label class="block text-sm font-medium mb-1" for="alias">Map alias:</label>
     <input id="alias"
            name="alias"
            class="form-input max-w-full w-full"
@@ -42,7 +42,8 @@
     </p>
     <details id="geometry-json-disclosure" class="geometry-details__advanced mt-5">
       <summary class="cursor-pointer text-sm font-medium text-slate-200">
-        Advanced: GeoJSON <span id="geometry-json-status" class="text-slate-400"></span>
+        Advanced: GeoJSON <span class="text-rose-500">*</span> <span id="geometry-json-status"
+                                                                     class="text-slate-400"></span>
       </summary>
       <p id="geometry-json-help" class="text-sm text-slate-400 mt-3 mb-3">
         One {{ geometry_supported_types }}, with up to {{ geometry_max_vertices }} vertices and no holes. Polygon closure does not count as a vertex.

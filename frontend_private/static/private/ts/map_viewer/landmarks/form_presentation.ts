@@ -91,12 +91,12 @@ export function renderLandmarkFormHtml({
     return Utils.safeHtml`
         <form id="${formId}" class="flow-y-4" novalidate>
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-2">Name *</label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Name <span class="text-red-400">*</span></label>
                 <input type="text" id="${formId}-name" required value="${name}" class="form-input" placeholder="Landmark name">
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">Description</label>
-                <textarea id="${formId}-description" rows="3" class="form-input form-textarea" placeholder="Optional description">${description}</textarea>
+                <textarea id="${formId}-description" rows="3" class="form-input form-textarea">${description}</textarea>
             </div>
             ${Utils.raw(renderCollectionField({
                 id: `${formId}-collection`,
@@ -107,11 +107,11 @@ export function renderLandmarkFormHtml({
             ${Utils.raw(renderLandmarkIconPicker(landmark?.icon))}
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Latitude * <span class="text-xs text-slate-500">(-90 to 90)</span></label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Latitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(-90 to 90)</span></label>
                     <input type="number" id="${formId}-latitude" required step="any" min="-90" max="90" value="${lat}" class="form-input" placeholder="Latitude">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Longitude * <span class="text-xs text-slate-500">(-180 to 180)</span></label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Longitude <span class="text-red-400">*</span> <span class="text-xs text-slate-500">(-180 to 180)</span></label>
                     <input type="number" id="${formId}-longitude" required step="any" min="-180" max="180" value="${lon}" class="form-input" placeholder="Longitude">
                 </div>
             </div>

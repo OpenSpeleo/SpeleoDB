@@ -580,7 +580,7 @@ export const StationDetails = {
             <div class="tab-content active p-6">
                 <form id="edit-station-form" class="flow-y-6">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Station Name *</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Station Name <span class="text-red-400">*</span></label>
                         <input type="text" id="edit-station-name" value="${station.name}" required
                                class="w-full bg-slate-700 text-white rounded-lg p-3 border border-slate-600 focus:border-sky-500 focus:outline-hidden">
                     </div>
