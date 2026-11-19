@@ -451,6 +451,16 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#form-renderer
 FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
+# Campaign templates colocate static images; validate source files only.
+VALIDATE_TEMPLATES_IGNORES = [
+    ".DS_Store",
+    "*.swp",
+    "*~",
+    "*.jpg",
+    "*.jpeg",
+    "*.png",
+]
+
 # FIXTURES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#fixture-dirs

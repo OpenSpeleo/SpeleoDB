@@ -145,14 +145,27 @@ base URL is absolute and uses Django's configured static storage, including the
 existing S3 static storage in production. Normal deployment `collectstatic`
 publishes these colocated assets with the other static files. Database content
 remains escaped data. Only reviewed, application-owned files provide executable
-template source. Templates should contain their own full markup, rather than
-include mutable source from other files. The review digest includes selected
-file contents, and submission snapshots those contents for workers so edits
-cannot change queued mail. Only the selected email type's source is read; a
-removed optional reminder file cannot block main email snapshotting. Plain text
-is derived from the rendered HTML with explicit action and unsubscribe URLs.
-Tracking is disabled. Provider acceptance does not establish inbox delivery or a
-donation.
+template source. The shared `VALIDATE_TEMPLATES_IGNORES` setting excludes JPEG
+and PNG images from `validate_templates`, preserving its temporary-file
+exclusions so CI compiles template source without decoding binary assets. This
+does not change template rendering or static-file discovery and adds no request
+overhead. Command-level regression tests in
+`speleodb/common/tests/test_template_validation.py` cover colocated images and
+ensure malformed HTML and plain-text templates still fail validation. Templates
+should contain their own full markup, rather than include mutable source from
+other files. The review digest includes selected file contents, and submission
+snapshots those contents for workers so edits cannot change queued mail. Only
+the selected email type's source is read; a removed optional reminder file
+cannot block main email snapshotting. Plain text is derived from the rendered
+HTML with explicit action and unsubscribe URLs. Tracking is disabled. Provider
+acceptance does not establish inbox delivery or a donation.
+
+Photo rendering tests explicitly exercise both filesystem static storage and S3
+storage with a bucket path. Local debug startup selects filesystem storage,
+while CI selects S3; the tests resolve asset paths through Django's configured
+static storage instead of assuming a `/static/` URL prefix. Both configurations
+must discover and decode the bundled email and modal images through staticfiles,
+which also owns their publication through `collectstatic`.
 
 A missing reminder template is rejected before review or task creation,
 including direct requests to the reminder send page. Reminder delivery shares
