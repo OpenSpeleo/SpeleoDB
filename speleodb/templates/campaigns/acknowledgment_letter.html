@@ -1,0 +1,227 @@
+{% load letter_print %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <title>Donation acknowledgment</title>
+    <style>
+      @font-face {
+        font-family: "Liberation Sans";
+        src: url("LiberationSans-Regular.ttf");
+      }
+
+      body {
+        margin: 0;
+        color: #212a32;
+        font-family: "Liberation Sans";
+        font-size: 10pt;
+        line-height: 1.3;
+        text-align: justify;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      td,
+      th {
+        padding: 0;
+        vertical-align: top;
+        text-align: justify;
+      }
+
+      .letterhead {
+        border-bottom: 1pt solid #28394b;
+        padding-bottom: 13pt;
+        margin-bottom: 17pt;
+      }
+
+      .date {
+        text-align: right;
+        vertical-align: middle;
+      }
+
+      .role {
+        color: #505d69;
+      }
+
+      .address {
+        margin: 0 0 15pt;
+      }
+
+      .message {
+        font-size: 12pt;
+        line-height: 1.4;
+      }
+
+      p {
+        margin: 0 0 9pt;
+      }
+
+      .closing {
+        margin-bottom: 16pt;
+      }
+
+      .signatures {
+        margin: 0 0 18pt;
+      }
+
+      .signatures td {
+        width: 50%;
+        text-align: left;
+      }
+
+      .signatures .vice-president {
+        text-align: right;
+      }
+
+      .signatures img {
+        width: 111pt;
+        height: 34pt;
+      }
+
+      .receipt {
+        border-top: 1pt solid #28394b;
+        padding-top: 11pt;
+      }
+
+      h1 {
+        color: #233549;
+        font-size: 18pt;
+        font-weight: normal;
+        line-height: 1.15;
+        margin: 0 0 8pt;
+      }
+
+      .facts {
+        font-size: 10pt;
+        line-height: 1.2;
+      }
+
+      .facts th {
+        width: 198pt;
+        color: #485561;
+        font-weight: normal;
+      }
+
+      .facts th,
+      .facts td {
+        padding: 2pt 0;
+      }
+
+      .disclosure {
+        margin: 9pt 0 0;
+      }
+
+      .contact {
+        margin: 10pt 0 0;
+        border-top: 0.5pt solid #c8ced2;
+        padding-top: 7pt;
+        color: #47535d;
+        font-size: 9pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="letterhead">
+      <table role="presentation">
+        <tr>
+          <td>
+            <img src="logo-usah-light.png"
+                 width="277"
+                 height="45"
+                 alt="USAH Institute" />
+          </td>
+          <td class="date">{{ issue_date|date:"F j, Y" }}</td>
+        </tr>
+      </table>
+    </div>
+    <p class="address">
+      {{ letter.donor_name|receipt_wrap|linebreaksbr }}
+      {% if letter.donor_address %}<br />{{ letter.donor_address|receipt_wrap|linebreaksbr }}{% endif %}
+    </p>
+    <div class="message">
+      <p>Dear {{ letter.donor_name|receipt_wrap|linebreaksbr }},</p>
+      <p>
+        Imagine unfolding a cave map drawn a generation ago. Beside the last
+        survey station, someone has penciled two words. “Passage continues.”
+        You’ve never met the person who wrote them, but they’ve just shown you
+        where to begin...
+      </p>
+      <p>
+        Thank you for your generous donation of {{ amount_usd }} to the
+        <i>Underwater Speleological and Archaeological Heritage Institute, Inc.</i>
+        in support of the <i>SpeleoDB Project Fund</i>. You help explorers
+        preserve the maps, measurements, and field notes they carry home.
+      </p>
+      <p class="closing">With gratitude,</p>
+    </div>
+    <table class="signatures" role="presentation">
+      <tr>
+        <td>
+          <img src="alberto-nava.png" width="148" height="45" alt="" />
+          <br />
+          Alberto Nava
+          <br />
+          <span class="role">President</span>
+        </td>
+        <td class="vice-president">
+          <img src="jonathan-dekhtiar.png" width="148" height="45" alt="" />
+          <br />
+          Jonathan Dekhtiar
+          <br />
+          <span class="role">Vice-President</span>
+        </td>
+      </tr>
+    </table>
+    <div class="receipt">
+      <h1>Official donation acknowledgment</h1>
+      <table class="facts">
+        <tr>
+          <th scope="row">Amount received</th>
+          <td>{{ amount_usd }} USD</td>
+        </tr>
+        <tr>
+          <th scope="row">Gift effective date</th>
+          <td>{{ letter.gift_date|date:"F j, Y" }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Designation</th>
+          <td>SpeleoDB Project Fund</td>
+        </tr>
+        <tr>
+          <th scope="row">Payment method</th>
+          <td>{{ letter.payment_method|receipt_wrap|linebreaksbr }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Transaction reference</th>
+          <td>{{ letter.transaction_reference|receipt_wrap:32|linebreaksbr }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Charitable recipient</th>
+          <td>Underwater Speleological and Archaeological Heritage Institute, Inc.</td>
+        </tr>
+        <tr>
+          <th scope="row">Acknowledgment ID</th>
+          <td>{{ letter.pk }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Federal tax ID (EIN)</th>
+          <td>99-4725086</td>
+        </tr>
+      </table>
+      <p class="disclosure">No goods or services were provided in exchange for this contribution.</p>
+    </div>
+    <p class="contact">
+      UNDERWATER SPELEOLOGICAL AND ARCHAEOLOGICAL HERITAGE INSTITUTE, INC.
+      <br />
+      McLeod Drive, 3225, Suite 100, Las Vegas, NV 89121, UNITED STATES
+      <br />
+      <a href="mailto:contact@usahinstitute.org">contact@usahinstitute.org</a>
+    </p>
+  </body>
+</html>

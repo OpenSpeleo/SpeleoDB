@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block content %}
+  {% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+  <p>Issuing this letter archives the official PDF and emails it to the donor.</p>
+  <div class="module">
+    <table>
+      <tbody>
+        <tr>
+          <th scope="row">Recipient</th>
+          <td>{{ letter.donor_name }} &lt;{{ letter.donor_email }}&gt;</td>
+        </tr>
+        <tr>
+          <th scope="row">Gift</th>
+          <td>USD {{ letter.amount }} · {{ letter.gift_date }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Transaction</th>
+          <td>{{ letter.payment_method }} · {{ letter.transaction_reference }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Email subject</th>
+          <td>{{ letter.template.email_subject }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p><a href="{% url 'admin:letter_pdf' letter.pk %}">Preview PDF</a></p>
+  <form method="post" class="campaign-template-controls">
+    {% csrf_token %}
+    <input type="hidden" name="confirmation" value="{{ confirmation }}" />
+    <button type="submit" class="button">Issue &amp; send</button>
+    <a href="{{ change_url }}">Back to draft</a>
+  </form>
+{% endblock content %}

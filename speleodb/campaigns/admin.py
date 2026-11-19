@@ -11,7 +11,6 @@ from django.contrib import admin
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import HttpResponseNotAllowed
@@ -28,22 +27,25 @@ from import_export.admin import ImportExportModelAdmin
 
 from speleodb.background_jobs.operations import receipt_task_ids
 from speleodb.campaigns.forms import CampaignAudienceForm
-from speleodb.campaigns.forms import CampaignTemplateSelect
 from speleodb.campaigns.forms import DonationCampaignForm
 from speleodb.campaigns.forms import TestEmailForm
+from speleodb.campaigns.letter_admin import DonationThankYouLettersAdmin
+from speleodb.campaigns.letter_admin import DonationThankYouTemplateAdmin
 from speleodb.campaigns.models import DonationCampaign
 from speleodb.campaigns.models import DonationCampaignDismissal
 from speleodb.campaigns.models import DonationCampaignEmail
+from speleodb.campaigns.models import DonationThankYouLetters
+from speleodb.campaigns.models import DonationThankYouTemplate
 from speleodb.campaigns.operations import TASK_NAME
 from speleodb.campaigns.operations import audience
 from speleodb.campaigns.operations import review_digest
 from speleodb.campaigns.operations import schedule_campaign
+from speleodb.campaigns.preview_admin import SavePreviewAdmin
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from django import forms
     from django.db import models
 
 
@@ -97,12 +99,16 @@ class DonationCampaignEmailInline(admin.TabularInline):  # type: ignore[type-arg
 
 
 @admin.register(DonationCampaign)
-class DonationCampaignAdmin(ImportExportModelAdmin):
+class DonationCampaignAdmin(SavePreviewAdmin, ImportExportModelAdmin):
+    # Import-export infers None from its untyped default; Django sets the model.
+    model = DonationCampaign  # type: ignore[assignment]
+    preview_fields = ("email_main_template", "reminder_email_template")
     form = DonationCampaignForm
     resource_classes = [DonationCampaignResource]
     inlines = (DonationCampaignEmailInline,)
-    change_form_template = "admin/campaigns/change_form.html"
-    import_export_change_list_template = "admin/campaigns/change_list.html"
+    import_export_change_list_template = (
+        "admin/campaigns/donationcampaign/change_list.html"
+    )
     fieldsets = (
         (
             "Campaign",
@@ -159,71 +165,6 @@ class DonationCampaignAdmin(ImportExportModelAdmin):
         "send_reminder_email",
     )
 
-    def formfield_for_choice_field(
-        self, db_field: models.Field[Any, Any], request: HttpRequest, **kwargs: Any
-    ) -> forms.TypedChoiceField | None:
-        if db_field.name in {"email_main_template", "reminder_email_template"}:
-            kwargs["widget"] = CampaignTemplateSelect
-        return super().formfield_for_choice_field(db_field, request, **kwargs)
-
-    def changeform_view(
-        self,
-        request: HttpRequest,
-        object_id: str | None = None,
-        form_url: str = "",
-        extra_context: dict[str, Any] | None = None,
-    ) -> HttpResponse:
-        preview = request.method == "POST" and "_save_preview" in request.POST
-        if preview:
-            if not self.has_change_permission(request) or not isinstance(
-                request.user, User
-            ):
-                raise PermissionDenied
-            if request.POST["_save_preview"] not in {
-                "email_main_template",
-                "reminder_email_template",
-            }:
-                return JsonResponse(
-                    {"message": "Choose a valid preview template."}, status=400
-                )
-            try:
-                validate_email(request.user.email)
-            except ValidationError:
-                return JsonResponse(
-                    {"message": "Set a valid account email address first."},
-                    status=400,
-                )
-            if request.POST[
-                "_save_preview"
-            ] == "reminder_email_template" and not request.POST.get(
-                "reminder_email_template"
-            ):
-                return JsonResponse(
-                    {
-                        "message": "Select a reminder email template first.",
-                        "errors": {
-                            "reminder_email_template": [
-                                "Select a reminder email template."
-                            ]
-                        },
-                    },
-                    status=400,
-                )
-        # Native admin owns validation, save hooks, audit logging and the transaction.
-        response = super().changeform_view(request, object_id, form_url, extra_context)
-        if preview and isinstance(response, TemplateResponse) and response.context_data:
-            form = response.context_data["adminform"].form
-            return JsonResponse(
-                {
-                    "message": "Correct the form errors before requesting a preview.",
-                    "errors": {
-                        name: list(errors) for name, errors in form.errors.items()
-                    },
-                },
-                status=400,
-            )
-        return response
-
     def preview_response(
         self, request: HttpRequest, obj: DonationCampaign
     ) -> JsonResponse:
@@ -245,23 +186,6 @@ class DonationCampaignAdmin(ImportExportModelAdmin):
                 "task_results_url": self.task_results_url(receipt.task_ids),
             }
         )
-
-    def response_change(
-        self, request: HttpRequest, obj: DonationCampaign
-    ) -> HttpResponse:
-        if "_save_preview" in request.POST:
-            return self.preview_response(request, obj)
-        return super().response_change(request, obj)
-
-    def response_add(
-        self,
-        request: HttpRequest,
-        obj: DonationCampaign,
-        post_url_continue: str | None = None,
-    ) -> HttpResponse:
-        if "_save_preview" in request.POST:
-            return self.preview_response(request, obj)
-        return super().response_add(request, obj, post_url_continue)
 
     def has_import_permission(self, request: HttpRequest) -> bool:
         return self.has_change_permission(request)
@@ -564,3 +488,7 @@ class DonationCampaignEmailAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 
     def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
         return False
+
+
+admin.site.register(DonationThankYouTemplate, DonationThankYouTemplateAdmin)
+admin.site.register(DonationThankYouLetters, DonationThankYouLettersAdmin)

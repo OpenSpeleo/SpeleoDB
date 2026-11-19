@@ -18,6 +18,7 @@ from django.utils.http import content_disposition_header
 
 from speleodb.utils.s3_storages import AttachmentStorage
 from speleodb.utils.s3_storages import BrowserFacingS3Storage
+from speleodb.utils.s3_storages import DonationLetterStorage
 from speleodb.utils.s3_storages import ExportStorage
 from speleodb.utils.s3_storages import GeoJSONStorage
 from speleodb.utils.s3_storages import GISLayerStorage
@@ -34,6 +35,7 @@ BACKENDS: tuple[tuple[type[BrowserFacingS3Storage], str, bool], ...] = (
     (S3MediaStorage, "public, max-age=86400", False),
     (PersonPhotoStorage, "public, max-age=86400", True),
     (AttachmentStorage, "public, max-age=86400", False),
+    (DonationLetterStorage, "private, no-store", False),
     (GeoJSONStorage, "public, max-age=86400", False),
     (GPSTrackStorage, "private, no-store", False),
     (GISLayerStorage, "private, no-store", False),

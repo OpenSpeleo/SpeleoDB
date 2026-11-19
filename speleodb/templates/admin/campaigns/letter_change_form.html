@@ -1,0 +1,36 @@
+{% extends "admin/campaigns/change_form.html" %}
+
+{% block submit_buttons_bottom %}
+  {% if original.issued_at %}
+    <div class="campaign-template-controls">
+      <button type="submit"
+              class="button"
+              formaction="{% url 'admin:letter_regenerate' original.pk %}">Save &amp; regenerate PDF</button>
+    </div>
+  {% else %}
+    {{ block.super }}
+    {% if has_change_permission or add %}
+      <div class="campaign-template-controls">
+        <button type="submit" class="button" name="_preview_pdf" value="1">Save &amp; preview PDF</button>
+        <button type="submit" class="button" name="_review_letter" value="1">Review &amp; issue</button>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock submit_buttons_bottom %}
+{% block campaign_actions %}
+  {% if original.issued_at %}
+    <div class="module">
+      <h2>Issued acknowledgment</h2>
+      <p>
+        <a href="{% url 'admin:letter_pdf' original.pk %}">Download archived PDF</a>
+      </p>
+      <p>Resending emails the saved PDF to {{ adminform.form.initial.donor_email }}.</p>
+      <div class="campaign-template-controls">
+        <form method="post" action="{% url 'admin:letter_resend' original.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="button">Resend archived PDF</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock campaign_actions %}

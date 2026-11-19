@@ -16,6 +16,7 @@ guides are not task plans or implementation journals.
   [export page, API, and administration](export-interfaces.md)
 - [Donation campaigns](donation-campaign.md) and
   [campaign backend](donation-campaign-backend.md)
+- [Donation thank-you emails and acknowledgment letters](donation-acknowledgments.md)
 
 ## Survey projects and data
 

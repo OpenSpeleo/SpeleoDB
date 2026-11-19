@@ -37,6 +37,7 @@ from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_cleanup as retry_job_cleanup
 from speleodb.background_jobs.services import retry_export
 from speleodb.background_jobs.task_result_retry import retry_task_result
+from speleodb.campaigns.letter_operations import LETTER_TASK
 from speleodb.common.enums import TaskResultStatus
 from speleodb.users.models import User
 
@@ -356,6 +357,13 @@ class TaskResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryTaskResultAdmin):
     list_per_page = 50
     actions = ("retry_failed",)
     change_form_template = "admin/background_jobs/taskresult/change_form.html"
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[TaskResult]:
+        results = super().get_queryset(request)
+        # Letter tasks contain the addressed donor email and contribution details.
+        if not request.user.is_superuser:
+            return results.exclude(task_name=LETTER_TASK)
+        return results
 
     def has_retry_permission(self, request: HttpRequest) -> bool:
         return bool(request.user.is_active and request.user.is_superuser)

@@ -206,6 +206,15 @@ class S3MediaStorage(BaseS3Storage, PrivateS3Storage):
     default_acl = "private"
 
 
+class DonationLetterStorage(PrivateS3Storage):
+    """Official donation acknowledgments use signed URLs and private cache metadata."""
+
+    location = "donation-thank-you-letters"
+    default_acl = "private"
+    file_overwrite = False
+    object_parameters = _PRIVATE_OBJECT_PARAMETERS
+
+
 class PersonPhotoStorage(BaseS3Storage, PublicS3Storage):
     """
     Custom S3 storage for person photos.

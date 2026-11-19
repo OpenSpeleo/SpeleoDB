@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator
 from django.core.validators import validate_email
 from django.db import models
 from django.utils import timezone
+
+from speleodb.utils.s3_storages import DonationLetterStorage
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AnonymousUser
@@ -230,3 +234,80 @@ class DonationCampaignEmail(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_email_type_display()}: {self.subject}"
+
+
+THANK_YOU_TEMPLATES_DIR = EMAIL_TEMPLATES_DIR.parent / "thank_you_email_templates"
+DEFAULT_THANK_YOU_TEMPLATE = "2a6c1c0f-34c4-48a5-9ae9-fdf32048b183.html"
+
+
+def thank_you_template_choices() -> list[tuple[str, str]]:
+    return campaign_template_choices(THANK_YOU_TEMPLATES_DIR)
+
+
+class DonationThankYouTemplate(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+
+    email_subject = models.CharField(
+        max_length=200,
+        validators=[
+            RegexValidator(
+                r"[\r\n]", "Use one line for the subject.", inverse_match=True
+            )
+        ],
+    )
+    email_template = models.CharField(
+        max_length=41,
+        choices=thank_you_template_choices,
+        default=DEFAULT_THANK_YOU_TEMPLATE,
+    )
+
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def email_template_name(self) -> str:
+        if self.email_template not in dict(thank_you_template_choices()):
+            raise ValidationError("Select an available thank-you email template.")
+        return f"campaigns/thank_you_email_templates/{self.email_template}"
+
+
+class DonationThankYouLetters(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    template = models.ForeignKey(DonationThankYouTemplate, on_delete=models.PROTECT)
+    donor_name = models.CharField(max_length=180)
+    donor_email = models.EmailField()
+    donor_address = models.TextField(
+        "Donor mailing address", max_length=350, blank=True
+    )
+    amount = models.DecimalField(
+        "Amount received (USD)",
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    gift_date = models.DateField("Gift effective date")
+    payment_method = models.CharField(max_length=64)
+    transaction_reference = models.CharField(max_length=180, unique=True)
+    pdf = models.FileField(storage=DonationLetterStorage(), editable=False, blank=True)
+    issued_at = models.DateTimeField(null=True, blank=True, editable=False)
+    last_sent_at = models.DateTimeField(null=True, blank=True, editable=False)
+    last_task_id = models.UUIDField(null=True, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = "donation thank-you letter"
+        verbose_name_plural = "donation thank-you letters"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="letter_positive_amount"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(issued_at__isnull=True) | ~models.Q(pdf=""),
+                name="issued_letter_requires_pdf",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Acknowledgment {self.pk}"

@@ -3,6 +3,8 @@
   align-items: center;
   gap: 12px;
   max-width: 100%;
+  /* Match Django's form-row typography for controls outside a field row. */
+  font-size: 0.8125rem;
 }
 
 .campaign-template-controls select {

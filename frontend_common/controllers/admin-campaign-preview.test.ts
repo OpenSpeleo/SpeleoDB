@@ -215,3 +215,12 @@ it('initializes preview buttons through the app controller glob and inert JSON c
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     await vi.waitFor(() => expect(showModalMock).toHaveBeenCalledOnce());
 });
+
+it.each(['template', 'email_template'])('previews the selected thank-you %s field', async kind => {
+    mainButton.dataset.campaignSavePreview = kind;
+    statusFor(mainKind).dataset.campaignPreviewStatus = kind;
+    mainButton.click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect((fetchMock.mock.calls[0]![1]?.body as FormData).get('_save_preview')).toBe(kind);
+    await vi.waitFor(() => expect(mainButton.disabled).toBe(false));
+});

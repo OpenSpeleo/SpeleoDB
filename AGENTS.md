@@ -74,6 +74,14 @@ Do not install packages, browser binaries or system libraries without an
 explicit user request to install them. Test authorization does not authorize
 environment installation. Report missing prerequisites instead.
 
+### Test and preview email subjects
+
+Every test or preview email must use the exact subject of the corresponding live
+email. Never add `[TEST]`, `[PREVIEW]`, or any other automatic prefix or suffix.
+Preserve punctuation, capitalization, and tags the author entered. When changing
+a test or preview flow, compare the delivered subject with the configured
+subject in its mail delivery test.
+
 ### Keep the design proportional to the actual application
 
 - This is a low-traffic application with one administrator. Do not build

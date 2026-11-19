@@ -12,9 +12,11 @@
 {% endblock extrahead %}
 {% block content %}
   {{ block.super }}
-  {% if original %}
-    {% include "admin/campaigns/send_forms.html" with campaign=original only %}
-  {% endif %}
+  {% block campaign_actions %}
+    {% if original and opts.model_name == "donationcampaign" %}
+      {% include "admin/campaigns/send_forms.html" with campaign=original only %}
+    {% endif %}
+  {% endblock campaign_actions %}
   <dialog class="campaign-preview-dialog"
           data-campaign-preview-dialog
           aria-labelledby="campaign-preview-dialog-title">
@@ -28,7 +30,7 @@
   <script type="application/json"
           data-speleodb-controller="admin-campaign-preview">
     {
-      "formId": "donationcampaign_form"
+      "formId": "{{ opts.model_name }}_form"
     }
   </script>
   {% vite_script 'app' %}

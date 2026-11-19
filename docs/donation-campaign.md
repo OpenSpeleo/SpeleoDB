@@ -2,8 +2,10 @@
 
 Donation campaigns combine a dashboard invitation with an email appeal. Users
 follow the campaign's donation link to PayPal, which handles payments and
-reports donations. SpeleoDB displays the fundraising goal but does not track
-completed donations or calculate an amount raised.
+reports donations. The fundraiser displays its goal. An administrator can
+separately record verified gifts and issue
+[donation acknowledgments](donation-acknowledgments.md). These records do not
+feed an amount-raised counter.
 
 ## Managing the campaign
 

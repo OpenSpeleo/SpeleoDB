@@ -24,6 +24,16 @@ CONTENT_FIELDS = (
 )
 
 
+def plain_text_from_html(html: str) -> str:
+    # Head metadata and responsive email CSS do not belong in the text alternative.
+    body_html = html.split("</head>", 1)[-1]
+    return "\n".join(
+        line.strip()
+        for line in unescape(strip_tags(body_html)).splitlines()
+        if line.strip()
+    )
+
+
 def render_message(
     campaign: dict[str, Any], *, site_url: str, unsubscribe: str
 ) -> tuple[str, str]:
@@ -38,13 +48,7 @@ def render_message(
     # Render the reviewed source, so file edits cannot change queued messages.
     template = engines["django"].from_string(campaign["email_template_source"])
     html = template.render(context)
-    # Head metadata and responsive email CSS do not belong in the text alternative.
-    body_html = html.split("</head>", 1)[-1]
-    plain = "\n".join(
-        line.strip()
-        for line in unescape(strip_tags(body_html)).splitlines()
-        if line.strip()
-    )
+    plain = plain_text_from_html(html)
     plain += f"\n\n{campaign['donation_url']}\n\nUnsubscribe: {unsubscribe}\n"
     return plain, html
 
@@ -54,13 +58,28 @@ def send_message(
 ) -> dict[str, Any]:
     unsubscribe = urljoin(site_url, reverse("private:user_preferences"))
     plain, html = render_message(campaign, site_url=site_url, unsubscribe=unsubscribe)
+    return send_rendered_message(
+        subject=campaign["subject"], email=email, plain=plain, html=html
+    )
+
+
+def send_rendered_message(
+    *,
+    subject: str,
+    email: str,
+    plain: str,
+    html: str,
+    attachment: tuple[str, bytes, str] | None = None,
+) -> dict[str, Any]:
     message = EmailMultiAlternatives(
-        subject=campaign["subject"],
+        subject=subject,
         body=plain,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[email],
     )
     message.attach_alternative(html, "text/html")
+    if attachment is not None:
+        message.attach(*attachment)
     # Anymail supports these extension attributes on Django's native messages.
     message.track_clicks = False  # type: ignore[attr-defined]
     message.track_opens = False  # type: ignore[attr-defined]

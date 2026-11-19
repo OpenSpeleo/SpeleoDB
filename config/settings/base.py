@@ -453,12 +453,11 @@ FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 # Campaign templates colocate static images; validate source files only.
 VALIDATE_TEMPLATES_IGNORES = [
-    ".DS_Store",
-    "*.swp",
-    "*~",
     "*.jpg",
     "*.jpeg",
     "*.png",
+    "*.ttf",
+    "*.pdf",
 ]
 
 # FIXTURES

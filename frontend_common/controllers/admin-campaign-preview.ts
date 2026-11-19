@@ -28,8 +28,8 @@ export function init(context: AdminCampaignPreviewContext) {
     const requestPreview = async (button: HTMLButtonElement) => {
         if (pending) return;
         const kind = button.dataset.campaignSavePreview;
-        if (kind !== 'email_main_template' && kind !== 'reminder_email_template') return;
-        const status = form.querySelector<HTMLElement>(`[data-campaign-preview-status="${kind}"]`);
+        if (!kind) return;
+        const status = form.querySelector<HTMLElement>(`[data-campaign-preview-status="${CSS.escape(kind)}"]`);
         if (!status) return;
         const reminder = form.querySelector<HTMLSelectElement>('[name="reminder_email_template"]');
         const reminderRequired = reminder?.required;

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<!-- The explorer's headlamp finds the donor's heart. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <title>{{ template.email_subject }}</title>
+    <style>
+      @media only screen and (max-width: 480px) {
+        .letter-inset {
+          padding-left: 24px !important;
+          padding-right: 24px !important;
+        }
+
+        .letter-title {
+          font-size: 58px !important;
+        }
+
+        .letter-gift {
+          font-size: 20px !important;
+        }
+
+        .letter-caption {
+          font-size: 26px !important;
+        }
+      }
+    </style>
+  </head>
+  {# djlint:off H021 #}
+  <body style="margin:0;
+               padding:0;
+               background-color:#0b2020;
+               color:#fbf4dd;
+               font-family:Arial,Helvetica,sans-serif">
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all">Your donation acknowledgment is attached.</div>
+    <table role="presentation"
+           width="100%"
+           cellpadding="0"
+           cellspacing="0"
+           border="0"
+           bgcolor="#0B2020">
+      <tr>
+        <td align="center" style="padding:20px 0">
+          <!--[if mso]><table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+          <table role="presentation"
+                 width="620"
+                 cellpadding="0"
+                 cellspacing="0"
+                 border="0"
+                 bgcolor="#12332F"
+                 style="width:100%;
+                        max-width:620px;
+                        text-align:justify;
+                        background-color:#12332f">
+            {% if preview %}
+              <tr>
+                <td class="letter-inset"
+                    style="padding:12px 40px;
+                           color:#18352e;
+                           background-color:#ffd3a3;
+                           font-weight:bold">Administrator preview</td>
+              </tr>
+            {% endif %}
+            <tr>
+              <td class="letter-inset"
+                  style="padding:22px 40px 18px;
+                         border-bottom:1px solid #45655b;
+                         font-size:22px;
+                         font-weight:bold;
+                         color:#fbf4dd">
+                SpeleoDB<span style="color:#ffc38b">.</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset"
+                  style="padding:26px 40px 24px;
+                         color:#fbf4dd;
+                         word-break:break-word">
+                <h1 style="margin:0;
+                           font-family:Georgia,'Times New Roman',serif;
+                           font-size:30px;
+                           font-weight:normal;
+                           line-height:1.15">
+                  {{ letter.donor_name }},
+                  <br />
+                  <strong class="letter-title"
+                          style="font-size:72px;
+                                 letter-spacing:-2px;
+                                 color:#ffd1a0">you rock.</strong>
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img src="{{ email_assets_url }}explorer-heart.png"
+                     width="620"
+                     alt="A waving explorer lights up an amber heart on the far wall of a cave."
+                     style="display:block;
+                            width:100%;
+                            max-width:620px;
+                            height:auto;
+                            border:0;
+                            color:#fbf4dd" />
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset letter-caption"
+                  style="padding:24px 40px 16px;
+                         font:30px/1.18 Georgia,'Times New Roman',serif;
+                         color:#fbf4dd">
+                That little light in the dark? <em style="color:#ffd1a0">That’s you.</em>
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset"
+                  style="padding:0 40px 20px;
+                         text-align:justify;
+                         font-size:17px;
+                         line-height:1.55;
+                         color:#e4ece3">
+                A cave survey can take years to make. Your gift helps keep that work safe, so the next team can pick up where the last one left off.
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset"
+                  style="padding:0 40px 30px;
+                         font:italic 20px/1.35 Georgia,'Times New Roman',serif;
+                         color:#ffd1a0">
+                With muddy boots and full hearts,
+                <br />
+                <strong>The SpeleoDB crew</strong>
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset"
+                  bgcolor="#F8F2E4"
+                  style="padding:26px 40px 6px;
+                         background-color:#f8f2e4;
+                         color:#15362f;
+                         border-top:4px solid #ecb074;
+                         font-size:20px;
+                         font-weight:bold">Your gift acknowledgment</td>
+            </tr>
+            <tr>
+              <td class="letter-inset letter-gift"
+                  bgcolor="#F8F2E4"
+                  style="padding:4px 40px 10px;
+                         background-color:#f8f2e4;
+                         color:#15362f;
+                         font:24px/1.3 Georgia,'Times New Roman',serif">
+                {{ amount_usd }} USD · <span style="white-space:nowrap">{{ letter.gift_date|date:"F j, Y" }}</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="letter-inset"
+                  bgcolor="#F8F2E4"
+                  style="padding:0 40px 24px;
+                         text-align:justify;
+                         background-color:#f8f2e4;
+                         color:#293e36;
+                         font-size:15px;
+                         line-height:1.6">
+                The Underwater Speleological and Archaeological Heritage Institute, Inc. received your gift in support of the SpeleoDB Project Fund.
+                {% if preview %}A preview of the acknowledgment is attached as a PDF.{% else %}Your official donation acknowledgment is attached as a PDF.{% endif %}
+                Questions about your gift? Write to
+                <a href="mailto:contact@usahinstitute.org"
+                   style="color:#185c52;
+                          text-decoration:underline">contact@usahinstitute.org</a>.
+              </td>
+            </tr>
+          </table>
+          <!--[if mso]></td></tr></table><![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+  {# djlint:on #}
+</html>
