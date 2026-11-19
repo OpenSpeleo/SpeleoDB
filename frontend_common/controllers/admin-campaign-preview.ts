@@ -18,12 +18,66 @@ function sameOriginUrl(value: unknown): URL | null {
 export function init(context: AdminCampaignPreviewContext) {
     const form = document.getElementById(context.formId);
     if (!(form instanceof HTMLFormElement)) return;
-    const buttons = Array.from(form.querySelectorAll<HTMLButtonElement>('[data-campaign-save-preview]'));
+    const buttons = Array.from(form.querySelectorAll<HTMLButtonElement>('[data-campaign-save-preview], [name="_preview_pdf"]'));
     const dialog = document.querySelector<HTMLDialogElement>('[data-campaign-preview-dialog]');
     dialog?.querySelector<HTMLButtonElement>('[data-campaign-preview-close]')?.addEventListener('click', () => {
         dialog.close();
     });
     let pending = false;
+
+    // The PDF button remains a native submit control; these hooks report save errors.
+    form.addEventListener('submit', event => {
+        if (!(event.submitter instanceof HTMLButtonElement) || event.submitter.name !== '_preview_pdf') return;
+        event.preventDefault();
+        if (pending || !form.reportValidity()) return;
+        const status = form.querySelector<HTMLElement>('[data-campaign-pdf-status]');
+        if (!status) return;
+        // Open during the user gesture so browsers do not block the saved PDF tab.
+        const tab = window.open('about:blank', '_blank');
+        if (!tab) {
+            status.textContent = 'Allow pop-ups for this site, then try again.';
+            return;
+        }
+        tab.opener = null;
+        const body = new FormData(form);
+        body.set('_preview_pdf', '1');
+        const disabledStates = buttons.map(item => item.disabled);
+        pending = true;
+        buttons.forEach(item => { item.disabled = true; });
+        status.textContent = 'Saving and opening PDF…';
+        status.setAttribute('aria-busy', 'true');
+        void (async () => {
+            try {
+                const response = await fetch(form.action || window.location.href, {
+                    method: 'POST', body, credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                });
+                const payload: unknown = await response.json();
+                if (!payload || typeof payload !== 'object') throw new Error('Invalid save response');
+                const data = payload as Record<string, unknown>;
+                if (!response.ok) {
+                    const errors = data.errors && typeof data.errors === 'object'
+                        ? Object.values(data.errors).flat().filter(item => typeof item === 'string')
+                        : [];
+                    status.textContent = [typeof data.message === 'string' ? data.message : 'Could not save the draft.', ...errors].join(' ');
+                    tab.close();
+                    return;
+                }
+                const changeUrl = sameOriginUrl(data.change_url);
+                const pdfUrl = sameOriginUrl(data.pdf_url);
+                if (!changeUrl || !pdfUrl) throw new Error('Invalid save response');
+                if (!tab.closed) tab.location.replace(pdfUrl.href);
+                window.location.assign(changeUrl.href);
+            } catch {
+                tab.close();
+                status.textContent = 'Could not confirm the save. Your edits are still on this page.';
+            } finally {
+                pending = false;
+                buttons.forEach((item, index) => { item.disabled = disabledStates[index] ?? false; });
+                status.setAttribute('aria-busy', 'false');
+            }
+        })();
+    });
 
     const requestPreview = async (button: HTMLButtonElement) => {
         if (pending) return;
@@ -110,5 +164,7 @@ export function init(context: AdminCampaignPreviewContext) {
 
     buttons.forEach(button => {
         button.addEventListener('click', () => { void requestPreview(button); });
+        // The PDF submit must stay disabled until its interception is installed.
+        if (button.name === '_preview_pdf') button.disabled = false;
     });
 }

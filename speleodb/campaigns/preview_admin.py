@@ -75,7 +75,12 @@ class SavePreviewAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 )
         # Native admin owns validation, save hooks, audit logging and the transaction.
         response = super().changeform_view(request, object_id, form_url, extra_context)
-        if preview and isinstance(response, TemplateResponse) and response.context_data:
+        if (
+            request.method == "POST"
+            and (preview or "_preview_pdf" in request.POST)
+            and isinstance(response, TemplateResponse)
+            and response.context_data
+        ):
             form = response.context_data["adminform"].form
             return JsonResponse(
                 {

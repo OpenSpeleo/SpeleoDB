@@ -100,6 +100,13 @@ def test_admin_template_and_draft_previews_target_operator_only(
         ("donationthankyoutemplate", "email_template", template_data),
         ("donationthankyouletters", "template", donor_form),
     ):
+        if model_name == "donationthankyouletters":
+            add_page = admin_client.get(reverse(f"admin:campaigns_{model_name}_add"))
+            for action in ("add", "change", "delete", "view"):
+                assert f'id="{action}_id_template"' not in add_page.content.decode()
+            assert (
+                'data-campaign-save-preview="template"' not in add_page.content.decode()
+            )
         response = admin_client.post(
             reverse(f"admin:campaigns_{model_name}_add"),
             {
@@ -110,9 +117,17 @@ def test_admin_template_and_draft_previews_target_operator_only(
         )
         assert response.status_code == HTTPStatus.OK
         assert response.json()["task_results_url"]
-        assert (
-            admin_client.get(response.json()["change_url"]).status_code == HTTPStatus.OK
-        )
+        change_page = admin_client.get(response.json()["change_url"])
+        assert change_page.status_code == HTTPStatus.OK
+        if model_name == "donationthankyouletters":
+            for action in ("add", "change", "delete", "view"):
+                assert f'id="{action}_id_template"' not in change_page.content.decode()
+            assert '<select name="template"' in change_page.content.decode()
+            assert (
+                'data-campaign-save-preview="template"'
+                not in change_page.content.decode()
+            )
+            assert 'name="_preview_pdf"' in change_page.content.decode()
     assert [
         json.loads(row)["recipient"]
         for row in TaskResult.objects.values_list("task_kwargs", flat=True)
@@ -216,6 +231,10 @@ def test_confirmed_admin_issue_downloads_the_pdf_emailed_to_the_donor(
     assert sent.status_code == HTTPStatus.FOUND
     letter = DonationThankYouLetters.objects.get()
     assert letter.last_sent_at
+    task = TaskResult.objects.get(task_id=str(letter.last_task_id))
+    assert sent["Location"] == reverse(
+        "admin:django_celery_results_taskresult_change", args=[task.pk]
+    )
     assert client.get(sent["Location"]).status_code == HTTPStatus.OK
     with closing(client.get(reverse("admin:letter_pdf", args=[letter.pk]))) as archived:
         assert archived["Content-Type"] == "application/pdf"
@@ -298,3 +317,36 @@ def test_regenerate_issued_letter_under_same_id_then_explicitly_resend(
         [changes["donor_email"]],
     ]
     assert mailoutbox[-1].attachments[0].content == current_pdf
+
+
+@pytest.mark.django_db
+def test_save_pdf_preview_returns_saved_edit_and_pdf_urls(
+    admin_client: Client, donor_form: dict[str, str]
+) -> None:
+    add_url = reverse("admin:campaigns_donationthankyouletters_add")
+    response = admin_client.post(add_url, {**donor_form, "_preview_pdf": "1"})
+    assert response.status_code == HTTPStatus.OK
+    letter = DonationThankYouLetters.objects.get()
+    change_url = reverse(
+        "admin:campaigns_donationthankyouletters_change", args=[letter.pk]
+    )
+    assert response.json() == {
+        "change_url": change_url,
+        "pdf_url": reverse("admin:letter_pdf", args=[letter.pk]),
+    }
+    updated = admin_client.post(
+        change_url, {**donor_form, "donor_name": "Updated donor", "_preview_pdf": "1"}
+    )
+    assert updated.json() == response.json()
+    letter.refresh_from_db()
+    assert letter.donor_name == "Updated donor"
+    invalid = admin_client.post(
+        change_url, {**donor_form, "amount": "0", "_preview_pdf": "1"}
+    )
+    assert invalid.status_code == HTTPStatus.BAD_REQUEST
+    assert "amount" in invalid.json()["errors"]
+    letter.refresh_from_db()
+    assert letter.donor_name == "Updated donor"
+    assert letter.issued_at is None
+    assert not letter.pdf
+    assert not TaskResult.objects.exists()

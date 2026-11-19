@@ -8,6 +8,7 @@ from typing import Any
 
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.widgets import RelatedFieldWidgetWrapper
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
@@ -148,12 +149,15 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
         change: bool = False,
         **kwargs: Any,
     ) -> type[forms.ModelForm[Any]]:
-        if obj and obj.issued_at:
-            # The issued form offers a normal template selector and an explicit resend.
-            kwargs["formfield_callback"] = partial(
-                admin.ModelAdmin.formfield_for_dbfield, self, request=request
-            )
-        return super().get_form(request, obj, change=change, **kwargs)
+        # Letter forms use a normal selector; preview actions live in the footer.
+        kwargs["formfield_callback"] = partial(
+            admin.ModelAdmin.formfield_for_dbfield, self, request=request
+        )
+        form = super().get_form(request, obj, change=change, **kwargs)
+        template_field = form.base_fields["template"]
+        if isinstance(template_field.widget, RelatedFieldWidgetWrapper):
+            template_field.widget = template_field.widget.widget
+        return form
 
     def has_delete_permission(
         self, request: HttpRequest, obj: DonationThankYouLetters | None = None
@@ -202,7 +206,14 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
         self, request: HttpRequest, obj: DonationThankYouLetters
     ) -> HttpResponse | None:
         if "_preview_pdf" in request.POST:
-            return redirect("admin:letter_pdf", pk=obj.pk)
+            return JsonResponse(
+                {
+                    "change_url": reverse(
+                        "admin:campaigns_donationthankyouletters_change", args=[obj.pk]
+                    ),
+                    "pdf_url": reverse("admin:letter_pdf", args=[obj.pk]),
+                }
+            )
         if "_review_letter" in request.POST:
             return redirect("admin:letter_issue", pk=obj.pk)
         return super().saved_action_response(request, obj)
@@ -285,7 +296,7 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
                 digest = signing.loads(
                     request.POST.get("confirmation", ""), salt=salt, max_age=3600
                 )
-                issue_letter(
+                task_id = issue_letter(
                     letter,
                     requester=request.user,
                     site_url=request.build_absolute_uri("/"),
@@ -298,10 +309,10 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
             except ValueError as exc:
                 error = str(exc)
             else:
-                self.message_user(
-                    request, "Acknowledgment issued and delivery requested."
+                task_result = TaskResult.objects.get(task_id=task_id)
+                return redirect(
+                    "admin:django_celery_results_taskresult_change", task_result.pk
                 )
-                return redirect(url)
             letter.refresh_from_db()
         return TemplateResponse(
             request,

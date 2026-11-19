@@ -74,3 +74,14 @@
   gap: 16px;
   margin-top: 24px;
 }
+
+.admin-action-warning {
+  --button-bg: #f59e0b;
+  --button-fg: #1f2937;
+  --button-hover-bg: #d97706;
+}
+
+/* Override Django's content-link underline without changing link semantics. */
+#content .campaign-template-controls a.button {
+  text-decoration: none;
+}

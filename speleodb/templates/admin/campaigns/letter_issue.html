@@ -31,11 +31,14 @@
       </tbody>
     </table>
   </div>
-  <p><a href="{% url 'admin:letter_pdf' letter.pk %}">Preview PDF</a></p>
   <form method="post" class="campaign-template-controls">
     {% csrf_token %}
     <input type="hidden" name="confirmation" value="{{ confirmation }}" />
-    <button type="submit" class="button">Issue &amp; send</button>
-    <a href="{{ change_url }}">Back to draft</a>
+    <a href="{% url 'admin:letter_pdf' letter.pk %}"
+       class="button"
+       target="_blank"
+       rel="noopener">Review PDF</a>
+    <button type="submit" class="button admin-action-warning">Issue &amp; send</button>
+    <a href="{{ change_url }}" class="button">Back to draft</a>
   </form>
 {% endblock content %}

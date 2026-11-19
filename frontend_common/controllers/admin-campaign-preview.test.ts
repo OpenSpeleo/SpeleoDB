@@ -38,6 +38,8 @@ beforeEach(() => {
             <select name="reminder_email_template"><option value="">None</option><option value="reminder.html" selected>Reminder</option></select>
             <button type="button" class="button" data-campaign-save-preview="${reminderKind}">Save &amp; send preview</button>
             <span role="status" aria-live="polite" data-campaign-preview-status="${reminderKind}"></span>
+            <button type="submit" name="_preview_pdf" value="1" disabled>Save &amp; preview PDF</button>
+            <span role="status" data-campaign-pdf-status></span>
             <button type="submit" name="_save">Save</button>
         </form>
         <dialog data-campaign-preview-dialog>
@@ -223,4 +225,42 @@ it.each(['template', 'email_template'])('previews the selected thank-you %s fiel
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect((fetchMock.mock.calls[0]![1]?.body as FormData).get('_save_preview')).toBe(kind);
     await vi.waitFor(() => expect(mainButton.disabled).toBe(false));
+});
+
+
+// JSDOM cannot create browser tabs; substitute only that native window boundary.
+function pdfTab() {
+    const tab = { location: { replace: vi.fn() }, close: vi.fn(), opener: window, closed: false };
+    const openTab = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    return { tab, openTab };
+}
+
+it('opens a PDF tab during the click, saves once, and loads the returned PDF', async () => {
+    const { tab, openTab } = pdfTab();
+    fetchMock.mockResolvedValueOnce(response({ change_url: changeUrl, pdf_url: '/admin/letter/pdf/' }));
+    const pdfButton = form.querySelector<HTMLButtonElement>('[name="_preview_pdf"]')!;
+    expect(pdfButton.disabled).toBe(false);
+    pdfButton.click();
+    expect(openTab).toHaveBeenCalledWith('about:blank', '_blank');
+    expect(tab.opener).toBeNull();
+    await vi.waitFor(() => expect(tab.location.replace).toHaveBeenCalledWith(new URL('/admin/letter/pdf/', window.location.href).href));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect((fetchMock.mock.calls[0]![1]?.body as FormData).get('_preview_pdf')).toBe('1');
+});
+
+it('preserves form edits and closes the PDF tab when saving fails validation', async () => {
+    const { tab } = pdfTab();
+    fetchMock.mockResolvedValueOnce(response({ message: 'Correct the form errors.', errors: { amount: ['Must be positive.'] } }, 400));
+    form.querySelector<HTMLButtonElement>('[name="_preview_pdf"]')!.click();
+    await vi.waitFor(() => expect(tab.close).toHaveBeenCalledOnce());
+    expect(tab.location.replace).not.toHaveBeenCalled();
+    expect(form.querySelector<HTMLInputElement>('[name="email_main_subject"]')!.value).toBe('Edited subject');
+    expect(form.querySelector('[data-campaign-pdf-status]')!.textContent).toContain('Must be positive.');
+});
+
+it('does not save when the browser blocks the PDF tab', () => {
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    form.querySelector<HTMLButtonElement>('[name="_preview_pdf"]')!.click();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(form.querySelector('[data-campaign-pdf-status]')!.textContent).toContain('Allow pop-ups');
 });

@@ -31,15 +31,21 @@ date until issuance fixes the issue date.
    name, email, optional mailing address, positive USD amount, effective date,
    form of payment, and transaction reference. Use a unique bookkeeping
    reference for a gift received without a processor ID.
-2. Save the draft. **Save & preview PDF** opens a proof with the entered
-   details. **Save & send preview** sends the draft to the administrator's own
-   address.
+2. Save the draft. **Save & preview PDF** saves the entered details, opens the
+   PDF in a new tab, and returns the original tab to the saved edit form. If the
+   browser blocks the tab, allow pop-ups and try again. Validation errors keep
+   the edits on the current form. Letter add/edit forms use a plain template
+   selector without related-object edit, add, delete, or view icons; their
+   preview action is in the footer. The reusable template's own admin form
+   retains **Save & send preview**.
 3. Choose **Review & issue**, check the donor email and financial details, then
-   confirm **Issue & send**. Django archives the official PDF and submits one
+   use **Review PDF** to open the PDF in a new tab, then confirm the orange
+   **Issue & send** button. Django archives the official PDF and submits one
    transactional message with that PDF attached. The issue date and the gift's
    effective date appear separately. The receipt states the amount in USD.
-4. Inspect the delivery result in admin. Acceptance records the mail backend's
-   acknowledgment of the send. Inbox arrival depends on the receiving provider.
+4. After issuance, admin opens the delivery task directly so you can inspect its
+   result. Acceptance records the mail backend's acknowledgment of the send.
+   Inbox arrival depends on the receiving provider.
 
 Provide acknowledgments promptly. For an individual monetary contribution of
 $250 or more, the IRS requires a contemporaneous written acknowledgment for the
@@ -49,6 +55,11 @@ and
 [IRS guidance on timing](https://www.irs.gov/charities-non-profits/charitable-organizations/charitable-organizations-substantiation-and-disclosure-requirements).
 
 ## Regenerate or resend a letter
+
+The issued letter has one action row without a section heading: **Download
+archived PDF**, **Save & regenerate PDF**, and **Resend archived PDF**. Download
+opens in a separate tab. Regeneration saves the current form; resending uses a
+separate POST form so unsaved or invalid edits do not change the archived send.
 
 Open the issued letter, edit any donor or gift details, and choose **Save &
 regenerate PDF**. This updates the stored PDF under the same acknowledgment ID
@@ -89,3 +100,10 @@ preview isolation and live-content parity, receipt text, stored and emailed PDF
 bytes, delivery, and regeneration. For design changes, preview a long address
 and transaction reference, check both signatures on the printout, and inspect
 the delivered email in Mailpit with images enabled and blocked.
+
+PDF preview navigation uses the existing typed admin preview controller. The
+save action returns the saved edit URL and PDF URL after native form validation;
+the controller opens the tab during the click and navigates both tabs only after
+a successful save. No acknowledgment is issued by opening a preview. The review
+page groups **Review PDF**, **Issue & send**, and **Back to draft** in that
+order, using shared admin button styling with warning colors for issuance.
