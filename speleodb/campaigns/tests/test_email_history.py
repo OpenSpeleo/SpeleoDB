@@ -12,6 +12,8 @@ from speleodb.campaigns.models import DonationCampaign
 from speleodb.campaigns.models import DonationCampaignEmail
 from speleodb.campaigns.models import email_template_choices
 from speleodb.campaigns.operations import TASK_NAME
+from speleodb.campaigns.operations import review_digest
+from speleodb.campaigns.operations import schedule_campaign
 from speleodb.campaigns.operations import snapshot
 from speleodb.campaigns.tasks import send_campaign_email
 from speleodb.common.enums import TaskResultStatus
@@ -133,3 +135,40 @@ def test_preview_failed_and_newly_donating_recipients_do_not_enter_real_send_his
     else:
         assert task.status == TaskResultStatus.SUCCESS
         assert [message.to for message in mailoutbox] == [[recipient.email]]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("reminder", [False, True])
+def test_preview_and_live_campaign_content_match(
+    history_campaign: DonationCampaign, reminder: bool, mailoutbox: Any
+) -> None:
+    operator = UserFactory.create(is_superuser=True)
+    history_campaign.email_main_subject = "[Community] A preview of our impact!"
+    history_campaign.email_reminder_subject = "[Reminder] Thank you — join us!"
+    history_campaign.save()
+    for is_test in (True, False):
+        receipt = schedule_campaign(
+            str(history_campaign.pk),
+            requester=operator,
+            site_url="https://example.com/",
+            reminder=reminder,
+            test_emails=[operator.email] if is_test else None,
+            send_id=None if is_test else str(uuid4()),
+            digest=None
+            if is_test
+            else review_digest(history_campaign, reminder=reminder),
+        )
+        for row in TaskResult.objects.filter(task_id__in=receipt.task_ids):
+            send_campaign_email.apply(
+                args=json.loads(row.task_args), task_id=row.task_id, throw=True
+            )
+        assert DonationCampaignEmail.objects.count() == (0 if is_test else 1)
+    preview, live = mailoutbox
+    expected = (
+        history_campaign.email_reminder_subject
+        if reminder
+        else history_campaign.email_main_subject
+    )
+    assert preview.subject == live.subject == expected
+    assert preview.body == live.body
+    assert preview.alternatives == live.alternatives

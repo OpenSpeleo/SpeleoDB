@@ -18,6 +18,8 @@ from django.test import override_settings
 from django_celery_results.models import TaskResult
 
 from speleodb.campaigns import letter_operations
+from speleodb.campaigns.letter_rendering import example_letter
+from speleodb.campaigns.letter_rendering import render_letter_email
 from speleodb.campaigns.models import DonationThankYouLetters
 from speleodb.campaigns.models import DonationThankYouTemplate
 from speleodb.common.enums import TaskResultStatus
@@ -112,6 +114,8 @@ def test_draft_and_template_previews_only_reach_requester(
     mailoutbox: Any,
 ) -> None:
     operator = UserFactory.create(is_superuser=True)
+    gift.template.email_subject = "[Gift] Thank you — preview of our impact!"
+    gift.template.save(update_fields=["email_subject"])
     # Admin form input can omit the trailing zeros that the database restores.
     gift.amount = Decimal("425")
     gift.save(update_fields=["amount"])
@@ -122,6 +126,13 @@ def test_draft_and_template_previews_only_reach_requester(
             )
         )
     assert [message.to for message in mailoutbox] == [[operator.email]] * 2
+    for message, letter in zip(
+        mailoutbox, (example_letter(gift.template), gift), strict=True
+    ):
+        plain, html = render_letter_email(letter, site_url=SITE_URL)
+        assert message.body == plain
+        assert message.alternatives[0].content == html
+        assert "Your official donation acknowledgment is attached as a PDF." in plain
     assert [message.subject for message in mailoutbox] == [
         gift.template.email_subject,
         gift.template.email_subject,
@@ -137,6 +148,23 @@ def test_draft_and_template_previews_only_reach_requester(
     assert not gift.pdf
     assert gift.issued_at is None
     assert gift.last_sent_at is None
+    assert gift.last_task_id is None
+    preview_message = mailoutbox[-1]
+    deliver(letter_operations.issue_letter(gift, requester=operator, site_url=SITE_URL))
+    live_message = mailoutbox[-1]
+    assert live_message.to == [gift.donor_email]
+    assert (
+        live_message.subject == preview_message.subject == gift.template.email_subject
+    )
+    assert live_message.body == preview_message.body
+    assert live_message.alternatives == preview_message.alternatives
+    assert (
+        live_message.attachments[0].filename == preview_message.attachments[0].filename
+    )
+    with pymupdf.open(
+        stream=live_message.attachments[0].content, filetype="pdf"
+    ) as pdf:
+        assert "\n".join(page.get_text() for page in pdf) == content
 
 
 @pytest.mark.django_db

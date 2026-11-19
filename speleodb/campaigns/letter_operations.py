@@ -67,7 +67,7 @@ def _queue_letter(
     letter = example_letter(obj) if isinstance(obj, DonationThankYouTemplate) else obj
     recipient = requester.email if preview else letter.donor_email
     validate_email(recipient)
-    plain, html = render_letter_email(letter, site_url=site_url, preview=preview)
+    plain, html = render_letter_email(letter, site_url=site_url)
     task_id = str(uuid4())
     kwargs = {
         "recipient": recipient,

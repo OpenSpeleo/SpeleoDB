@@ -42,14 +42,13 @@ def example_letter(template: DonationThankYouTemplate) -> DonationThankYouLetter
 
 
 def render_letter_email(
-    letter: DonationThankYouLetters, *, site_url: str, preview: bool
+    letter: DonationThankYouLetters, *, site_url: str
 ) -> tuple[str, str]:
     html = render_to_string(
         letter.template.email_template_name,
         {
             "template": letter.template,
             "letter": letter,
-            "preview": preview,
             "amount_usd": f"${letter.amount:,.2f}",
             "site_url": site_url,
             "email_assets_url": urljoin(

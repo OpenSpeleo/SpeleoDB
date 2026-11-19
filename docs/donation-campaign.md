@@ -31,8 +31,10 @@ and offers a delivery-status link without reloading the page. Select a reminder
 template before using its preview button. Validation errors preserve the form's
 edits for correction. Previews use the existing background test-email operation,
 bypass recipient preferences for that explicit address, and never create
-real-send history. Normal **Save** continues to save without requesting an
-email.
+real-send history. For unchanged campaign content, preview, test, and live
+messages have identical subjects, plain text, HTML, and links. Preview status
+never adds labels or changes recipient-facing copy. Normal **Save** continues to
+save without requesting an email.
 
 ## Scheduling dashboard visibility
 

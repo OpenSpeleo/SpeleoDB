@@ -19,7 +19,11 @@ gift.
 Use **Save & send preview** next to the template selector to send a sample email
 and its attached PDF to your own admin account. The email uses the template's
 subject verbatim. The sample donor is fictional. A preview never creates an
-official acknowledgment.
+official acknowledgment. Preview and live emails use identical subjects, plain
+text, HTML, and PDF presentation for the same gift details. Preview handling
+only changes the recipient and delivery/issuance bookkeeping; it adds no
+banners, watermarks, or alternate wording. Draft PDFs show the current local
+date until issuance fixes the issue date.
 
 ## Record and issue a gift
 
@@ -61,10 +65,11 @@ email and gift amount, so only superusers can inspect acknowledgment tasks.
 
 `DonationThankYouTemplate` selects a UUID4-named HTML file from
 `speleodb/templates/campaigns/thank_you_email_templates/`. The email receives
-`letter`, `template`, `amount_usd`, `site_url`, `email_assets_url`, and
-`preview`. Use Django's normal HTML escaping. Keep essential text in the email
-body for image blocking and plain-text readers. The shipped illustration uses
-the existing collected campaign static-asset directory.
+`letter`, `template`, `amount_usd`, `site_url`, and `email_assets_url`.
+Renderers receive no preview flag. Use Django's normal HTML escaping. Keep
+essential text in the email body for image blocking and plain-text readers. The
+shipped illustration uses the existing collected campaign static-asset
+directory.
 
 `DonationThankYouLetters` holds one acknowledgment per gift, identified by a
 stable UUID and a unique transaction reference. The shared print template uses
@@ -80,7 +85,7 @@ contain only presentation artwork. The test environment exercises the same
 storage protocol against RustFS.
 
 Focused tests live with the campaign tests and cover donor input, access,
-preview isolation, receipt text, stored and emailed PDF bytes, delivery, and
-regeneration. For design changes, preview a long address and transaction
-reference, check both signatures on the printout, and inspect the delivered
-email in Mailpit with images enabled and blocked.
+preview isolation and live-content parity, receipt text, stored and emailed PDF
+bytes, delivery, and regeneration. For design changes, preview a long address
+and transaction reference, check both signatures on the printout, and inspect
+the delivered email in Mailpit with images enabled and blocked.

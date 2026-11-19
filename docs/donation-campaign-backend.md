@@ -52,8 +52,11 @@ saved change URL, and the native task-results URL. The controller opens a native
 success dialog after a successful response; validation and request failures
 remain visible beside the selector. Validation failures return JSON without
 saving or queuing mail. Preview requests require active superuser access and
-CSRF. Test and preview messages never create real-send history. Modal previews
-are not provided in admin.
+CSRF. Test and preview messages never create real-send history. All delivery
+modes use the same content snapshot and renderer; test status stays in task
+metadata and never alters subjects, bodies, or links. Delivered-content parity
+for main and reminder messages is covered by the campaign history tests. Modal
+previews are not provided in admin.
 
 The admin exposes separate **Send Email Campaign** and **Send Reminder Email
 Campaign** buttons. The main action uses `email_main_template`; the reminder

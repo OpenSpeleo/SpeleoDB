@@ -15,9 +15,7 @@ def test_thank_you_email_escapes_donor_and_explains_attachment_without_images() 
     letter = example_letter(DonationThankYouTemplate(email_subject="Your gift receipt"))
     letter.donor_name = "Atlas & <Crew>"
     letter.amount = Decimal("375.50")
-    plain, html = render_letter_email(
-        letter, site_url="https://example.org", preview=False
-    )
+    plain, html = render_letter_email(letter, site_url="https://example.org")
     assert "<title>Your gift receipt</title>" in html
     assert "Atlas &amp; &lt;Crew&gt;" in html
     assert "Atlas & <Crew>" in plain

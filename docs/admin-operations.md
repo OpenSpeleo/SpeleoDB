@@ -153,7 +153,9 @@ For audit-history imports and preservation requirements, see
 ## Fundraiser email operation
 
 **Manage fundraiser** opens campaign editing, test-address entry and explicit
-audience review/send. Admin does not provide email or modal previews. Campaign
-dates control dashboard visibility independently of sending. See
+audience review/send. Email template selectors offer **Save & send preview** to
+the signed-in administrator with the same content as live mail and no real-send
+history. Modal previews are not provided. Campaign dates control dashboard
+visibility independently of sending. See
 [donation campaign](donation-campaign.md) and
 [delivery operations](donation-campaign-backend.md) for receipts and exclusions.
