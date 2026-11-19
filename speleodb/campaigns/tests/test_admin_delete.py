@@ -56,7 +56,7 @@ def test_campaign_admin_deletion_requires_superuser(
             },
         )
         assert response.status_code == (
-            HTTPStatus.FOUND if superuser else HTTPStatus.OK
+            HTTPStatus.FOUND if superuser else HTTPStatus.FORBIDDEN
         )
     else:
         confirmation = client.get(delete_url)

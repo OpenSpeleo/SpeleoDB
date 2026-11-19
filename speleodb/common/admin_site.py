@@ -60,7 +60,7 @@ class SpeleoDBAdminSite(AdminSite):
 
     # Django annotates its own model here; all site consumers use ours.
     def get_log_entries(self, request: HttpRequest) -> QuerySet[LogEntry]:  # type: ignore[override]
-        return LogEntry.objects.all()
+        return LogEntry.for_admin_user(cast("User", request.user))
 
     def index(
         self, request: HttpRequest, extra_context: dict[str, Any] | None = None

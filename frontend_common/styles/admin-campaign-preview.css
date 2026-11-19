@@ -13,6 +13,8 @@
   flex: 1 1 auto;
 }
 
+#content .admin-action-tools a,
+.campaigns-donationthankyouletters .submit-row input[type="submit"],
 .submit-row .admin-action-button,
 .admin-action-button,
 .campaign-template-controls .button,
@@ -30,6 +32,8 @@
   flex: 0 0 auto;
 }
 
+#content .admin-action-tools a:hover,
+.campaigns-donationthankyouletters .submit-row input[type="submit"]:hover,
 .submit-row .admin-action-button:hover,
 .admin-action-button:hover,
 .campaign-template-controls .button:hover,
@@ -84,4 +88,9 @@
 /* Override Django's content-link underline without changing link semantics. */
 #content .campaign-template-controls a.button {
   text-decoration: none;
+}
+
+.admin-action-tools {
+  font-size: 0.8125rem;
+  font-weight: normal;
 }

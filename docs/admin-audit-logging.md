@@ -15,10 +15,13 @@ entries read-only, including to superusers. Explicit database maintenance
 remains an operator responsibility; this is not a tamper-proof external ledger.
 
 The dashboard shows the current email's ten most recent actions and links to the
-complete, paginated audit. Entries older than that preview remain searchable by
-email, target and message. An administrator who changes email can find earlier
-entries using the full history. Task results expire after 30 days and export
-history follows its existing separate policy; neither expires audit entries.
+complete, paginated audit. Campaign snapshots are visible only to superusers in
+both recent actions and the full audit, using `LogEntry.for_admin_user()`. This
+also applies after an administrator becomes staff. Other permitted history stays
+available. Entries older than that preview remain searchable by email, target
+and message. An administrator who changes email can find earlier entries using
+the full history. Task results expire after 30 days and export history follows
+its existing separate policy; neither expires audit entries.
 
 ## Recorded actions
 

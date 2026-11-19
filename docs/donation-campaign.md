@@ -11,10 +11,12 @@ feed an amount-raised counter.
 
 Open **Background operations → Operations → Manage fundraiser** in Django admin.
 Active superusers can edit campaign content, import or export it, and send
-emails. Staff with view permission have read-only access. The admin permits one
-campaign record. Only active superusers may delete it, individually or through
-the bulk delete action. Confirmation lists the related dismissal and email
-history records, which are deleted with the campaign.
+emails. The entire Campaigns admin app is visible and accessible only to active
+superusers, including direct URLs. Staff model or group permissions do not grant
+access. The admin permits one campaign record. Only active superusers may delete
+it, individually or through the bulk delete action. Confirmation lists the
+related dismissal and email history records, which are deleted with the
+campaign.
 
 The **Main email** and **Reminder email** sections each group their subject,
 template selector, and corresponding send action. Both selectors retain the

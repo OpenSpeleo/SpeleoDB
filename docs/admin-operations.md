@@ -152,6 +152,11 @@ For audit-history imports and preservation requirements, see
 
 ## Fundraiser email operation
 
+Only active superusers can see or access the Campaigns admin app, including
+campaign and acknowledgment records and delivery history. Staff model/group
+grants do not override this restriction. Campaign task/group results and audit
+snapshots are also hidden from staff.
+
 **Manage fundraiser** opens campaign editing, test-address entry and explicit
 audience review/send. Email template selectors offer **Save & send preview** to
 the signed-in administrator with the same content as live mail and no real-send

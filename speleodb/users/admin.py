@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
 from allauth.account.models import EmailAddress
@@ -329,6 +330,9 @@ class LogEntryAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     )
     fields = readonly_fields
     actions = None
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[LogEntry]:
+        return LogEntry.for_admin_user(cast("User", request.user))
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False

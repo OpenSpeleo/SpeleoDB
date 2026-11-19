@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 from typing import Any
 
 import django.contrib.admin.models
@@ -11,6 +12,9 @@ from django.db import models
 from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.utils import timezone
+
+if TYPE_CHECKING:
+    from speleodb.users.models import User
 
 
 class LogEntry(models.Model):
@@ -46,6 +50,14 @@ class LogEntry(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_action_flag_display()}: {self.object_repr}"
+
+    @classmethod
+    def for_admin_user(cls, user: User) -> models.QuerySet[LogEntry]:
+        """Keep campaign audit snapshots private across admin history surfaces."""
+        entries = cls.objects.all()
+        if not user.is_superuser:
+            entries = entries.exclude(model_label__startswith="campaigns.")
+        return entries
 
     @classmethod
     def record(

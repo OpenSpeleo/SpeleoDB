@@ -187,6 +187,12 @@ class DonationCampaignAdmin(SavePreviewAdmin, ImportExportModelAdmin):
             }
         )
 
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        return self.has_change_permission(request)
+
+    def has_view_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return self.has_change_permission(request, obj)
+
     def has_import_permission(self, request: HttpRequest) -> bool:
         return self.has_change_permission(request)
 

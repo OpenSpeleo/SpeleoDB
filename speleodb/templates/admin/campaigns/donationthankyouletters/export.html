@@ -1,0 +1,8 @@
+{% extends "admin/import_export/export.html" %}
+
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}

@@ -471,16 +471,20 @@ using the development broker or database.
 Open **Celery Results → Task results** in Django admin to inspect task IDs,
 names, status, start/update timestamps, workers, arguments, result payloads,
 tracebacks, and the periodic task name when present. Group results retain their
-existing diagnostic view. Both interfaces keep result fields read-only,
-including for superusers: no manual create, status edit or delete is available.
-Active superusers can use **RETRY** on a failed task's detail page or **RETRY
-selected failed tasks** in the list action menu. Both submit immediately with no
-confirmation page; successful and in-progress selections are excluded. Django's
-authenticated staff permissions protect this operational data; do not put
-credentials or unnecessary personal data in task arguments or return values.
-Application jobs and attempts link to their technical records. The task list
-labels `date_done` as **Last updated** because Celery also updates it during
-STARTED and RETRY; it is not exclusively a completion timestamp.
+existing diagnostic view. Staff cannot see campaign email/acknowledgment tasks
+or campaign groups; other technical/export results retain their existing access.
+Campaign groups remain private after task-result expiry because their group IDs
+are recorded in permanent campaign submission audit entries. Both interfaces
+keep result fields read-only, including for superusers: no manual create, status
+edit or delete is available. Active superusers can use **RETRY** on a failed
+task's detail page or **RETRY selected failed tasks** in the list action menu.
+Both submit immediately with no confirmation page; successful and in-progress
+selections are excluded. Django's authenticated staff permissions protect this
+operational data; do not put credentials or unnecessary personal data in task
+arguments or return values. Application jobs and attempts link to their
+technical records. The task list labels `date_done` as **Last updated** because
+Celery also updates it during STARTED and RETRY; it is not exclusively a
+completion timestamp.
 
 `CELERY_RESULT_BACKEND="django-db"`, `CELERY_RESULT_EXTENDED=True`, and STARTED
 tracking retain useful execution metadata. Task state transitions update one row

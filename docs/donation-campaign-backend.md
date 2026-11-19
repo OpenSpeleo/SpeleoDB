@@ -30,12 +30,14 @@ the included modal design. Modal selection adds no database query; Django's
 template loader renders the selected file. `test_modal_templates.py` covers
 directory separation, invalid or removed selections, selected content, and
 escaped campaign values; dashboard presentation tests retain the original design
-and dismissal coverage. Normal saving never sends email. Staff with campaign
-view permission can inspect campaigns read-only. Only active superusers may
-create/change campaigns, import/export, send test messages, review the audience,
-and explicitly submit a production send. Campaign deletion is restricted to
-active superusers, including bulk deletion. Django's native confirmation and
-cascade remove the campaign's dismissals and email history.
+and dismissal coverage. Normal saving never sends email. All five Campaigns
+admin models require active superuser access for navigation and reading as well
+as permitted writes. Direct or group model grants never let staff view campaign
+records, history, lookup popups, or recipient information. Only active
+superusers may create/change campaigns, import/export, send test messages,
+review the audience, and explicitly submit a production send. Campaign deletion
+is restricted to active superusers, including bulk deletion. Django's native
+confirmation and cascade remove the campaign's dismissals and email history.
 `DonationCampaignAdmin.get_deleted_objects()` permits that history cascade while
 keeping standalone email-history deletion disabled. This uses the existing
 foreign keys and admin permission hooks without additional queries or persistent
@@ -228,3 +230,29 @@ Normal Celery retention may remove those task rows or the group, in which case
 the permanent readonly delivery record remains but its task link is replaced
 with an unavailable notice. A fresh review can still submit a new batch. There
 is no custom campaign receipt endpoint or status page.
+
+## Admin privacy boundary
+
+Campaign management, acknowledgments, email history, dismissals, PDF downloads,
+and delivery actions are superuser-only in Django admin. Native model permission
+hooks enforce this on direct requests as well as menus. Existing read-only
+history and issued-letter restrictions still apply to superusers. Public
+fundraising presentation, the thank-you page, and a user's own invitation
+dismissal retain their separate product permissions.
+
+Staff task-result queries exclude the `speleodb.campaigns.` namespace. Campaign
+groups are excluded using the group IDs in permanent campaign submission audit
+entries, including test sends and groups whose tasks have expired. The group
+filter is one database subquery, excludes missing/null group IDs, and preserves
+unrelated export and technical results. No model fields or migrations support
+this restriction.
+
+`LogEntry.for_admin_user()` applies the same campaign audit visibility policy to
+the full audit admin and the dashboard's recent actions. A former administrator
+who becomes staff cannot see old campaign snapshots through those surfaces.
+Other permitted audit history remains available.
+
+`test_admin_permissions.py` verifies all five registered models with no grants,
+direct grants and group grants; custom send/preview/PDF/import routes; publisher
+role checks; superuser access; demotion; and unrelated task/group/audit
+preservation. Existing transfer/deletion tests enforce the same restriction.

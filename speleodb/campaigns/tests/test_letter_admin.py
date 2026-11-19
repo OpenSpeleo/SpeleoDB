@@ -5,21 +5,27 @@ from contextlib import closing
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
+from urllib.parse import urlencode
 
 import pymupdf
 import pytest
+from django import forms
+from django.contrib.auth.models import Group
+from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied
 from django.test import Client
 from django.urls import resolve
 from django.urls import reverse
 from django.utils import timezone
 from django_celery_results.models import TaskResult
+from tablib.core import Dataset
 
 from speleodb.campaigns.letter_rendering import example_letter
 from speleodb.campaigns.models import DEFAULT_THANK_YOU_TEMPLATE
 from speleodb.campaigns.models import DonationThankYouLetters
 from speleodb.campaigns.models import DonationThankYouTemplate
 from speleodb.users.models import User
+from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -350,3 +356,72 @@ def test_save_pdf_preview_returns_saved_edit_and_pdf_urls(
     assert letter.issued_at is None
     assert not letter.pdf
     assert not TaskResult.objects.exists()
+
+
+@pytest.mark.django_db
+def test_letters_export_native_csv_respects_search_and_preserves_state(
+    admin_client: Client, donor_form: dict[str, str]
+) -> None:
+    admin_client.post(
+        reverse("admin:campaigns_donationthankyouletters_add"), donor_form
+    )
+    letter = DonationThankYouLetters.objects.get()
+    other = example_letter(letter.template)
+    other.donor_name = "Another donor"
+    other.save()
+    before = list(DonationThankYouLetters.objects.order_by("pk").values())
+    export_url = reverse("admin:campaigns_donationthankyouletters_export")
+    listing = admin_client.get(
+        reverse("admin:campaigns_donationthankyouletters_changelist")
+    )
+    assert export_url in listing.content.decode()
+    assert export_url.replace("/export/", "/import/") not in listing.content.decode()
+    filtered_url = export_url + "?" + urlencode({"q": letter.donor_name})
+    selection = admin_client.get(filtered_url)
+    assert selection.status_code == HTTPStatus.OK
+    form = selection.context["form"]
+    format_field = form.fields["format"]
+    csv_format = next(
+        value for value, label in format_field.choices if str(label).casefold() == "csv"
+    )
+    data = {
+        name: "on"
+        for name, field in form.fields.items()
+        if isinstance(field, forms.BooleanField)
+    }
+    data.update(format=str(csv_format), resource="0")
+    exported = admin_client.post(filtered_url, data)
+    assert exported.status_code == HTTPStatus.OK
+    assert exported["Content-Type"].startswith("text/csv")
+    assert "attachment" in exported["Content-Disposition"]
+    rows = Dataset().load(exported.content.decode("utf-8-sig"), format="csv").dict
+    assert len(rows) == 1
+    assert rows[0]["id"] == str(letter.pk)
+    assert rows[0]["donor_email"] == letter.donor_email
+    assert rows[0]["amount"] == "380.00"
+    assert rows[0]["gift_date"] == letter.gift_date.isoformat()
+    assert rows[0]["transaction_reference"] == letter.transaction_reference
+    assert list(DonationThankYouLetters.objects.order_by("pk").values()) == before
+    assert not TaskResult.objects.exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("grant", ["direct", "group"])
+def test_letters_export_rejects_staff_with_model_permissions(
+    client: Client, grant: str
+) -> None:
+    staff = UserFactory.create(is_staff=True, is_superuser=False)
+    permissions = Permission.objects.filter(content_type__app_label="campaigns")
+    if grant == "direct":
+        staff.user_permissions.add(*permissions)
+    else:
+        group = Group.objects.create(name="Letter export grants")
+        group.permissions.add(*permissions)
+        staff.groups.add(group)
+    client.force_login(staff)
+    url = reverse("admin:campaigns_donationthankyouletters_export")
+    assert client.get(url).status_code == HTTPStatus.FORBIDDEN
+    assert (
+        client.post(url, {"format": "0", "resource": "0"}).status_code
+        == HTTPStatus.FORBIDDEN
+    )

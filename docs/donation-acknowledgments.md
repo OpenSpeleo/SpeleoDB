@@ -72,6 +72,15 @@ the task result, and, if acceptance is uncertain, reconcile the send with the
 provider before explicitly resending. The task details include the addressed
 email and gift amount, so only superusers can inspect acknowledgment tasks.
 
+## Export acknowledgment records
+
+The donation thank-you letter list offers django-import-export's **Export**
+action to active superusers. Choose a format and fields to download donor, gift,
+and issuance/delivery data. The export respects the list's search and filters.
+It exports stored record values; the PDF field contains its storage name rather
+than PDF bytes. Exporting never issues, regenerates, or sends a letter. Staff
+cannot access the export form or download, even with model/group permissions.
+
 ## Implementation and verification
 
 `DonationThankYouTemplate` selects a UUID4-named HTML file from

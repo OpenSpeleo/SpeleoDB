@@ -15,6 +15,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.db.models import Max
 from django.db.models import Min
+from django.db.models.fields.json import KeyTextTransform
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -37,8 +38,8 @@ from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_cleanup as retry_job_cleanup
 from speleodb.background_jobs.services import retry_export
 from speleodb.background_jobs.task_result_retry import retry_task_result
-from speleodb.campaigns.letter_operations import LETTER_TASK
 from speleodb.common.enums import TaskResultStatus
+from speleodb.users.models import LogEntry
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -360,9 +361,9 @@ class TaskResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryTaskResultAdmin):
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[TaskResult]:
         results = super().get_queryset(request)
-        # Letter tasks contain the addressed donor email and contribution details.
+        # Campaign tasks contain addressed recipients, message content and gift details.
         if not request.user.is_superuser:
-            return results.exclude(task_name=LETTER_TASK)
+            return results.exclude(task_name__startswith="speleodb.campaigns.")
         return results
 
     def has_retry_permission(self, request: HttpRequest) -> bool:
@@ -429,3 +430,16 @@ class TaskResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryTaskResultAdmin):
 @admin.register(GroupResult)
 class GroupResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryGroupResultAdmin):
     """Inspect Celery group results without granting mutation permissions."""
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[GroupResult]:
+        results = super().get_queryset(request)
+        if not request.user.is_superuser:
+            # Submission audit entries outlive the tasks and successful-send history.
+            campaign_groups = (
+                LogEntry.objects.filter(model_label="campaigns.donationcampaign")
+                .annotate(campaign_group_id=KeyTextTransform("group_id", "details"))
+                .filter(campaign_group_id__isnull=False)
+                .values("campaign_group_id")
+            )
+            return results.exclude(group_id__in=campaign_groups)
+        return results

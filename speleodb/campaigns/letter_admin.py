@@ -25,6 +25,7 @@ from django.urls import path
 from django.urls import reverse
 from django.utils.html import format_html
 from django_celery_results.models import TaskResult
+from import_export.admin import ExportMixin
 
 from speleodb.campaigns.letter_operations import issue_letter
 from speleodb.campaigns.letter_operations import letter_review_digest
@@ -97,8 +98,14 @@ class DonationThankYouTemplateAdmin(DonationAcknowledgmentAdmin):
     fields = ("name", "email_subject", "email_template")
 
 
-class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
+class DonationThankYouLettersAdmin(ExportMixin, DonationAcknowledgmentAdmin):
+    # Import-export infers None from its untyped default; Django sets the model.
+    model = DonationThankYouLetters  # type: ignore[assignment]
     preview_fields = ("template",)
+    import_export_change_list_template = (
+        "admin/campaigns/donationthankyouletters/change_list.html"
+    )
+    export_template_name = "admin/campaigns/donationthankyouletters/export.html"
     change_form_template = "admin/campaigns/letter_change_form.html"
     actions = None
     list_display = (
@@ -128,6 +135,9 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
             },
         ),
     )
+
+    def has_export_permission(self, request: HttpRequest) -> bool:
+        return self.has_view_permission(request)
 
     def get_fieldsets(
         self, request: HttpRequest, obj: DonationThankYouLetters | None = None
@@ -245,7 +255,8 @@ class DonationThankYouLettersAdmin(DonationAcknowledgmentAdmin):
                 self.admin_site.admin_view(self.resend_view),
                 name="letter_resend",
             ),
-            *super().get_urls(),
+            # django-import-export extends these URLs without type annotations.
+            *super().get_urls(),  # type: ignore[no-untyped-call]
         ]
 
     def get_letter(self, request: HttpRequest, pk: UUID) -> DonationThankYouLetters:

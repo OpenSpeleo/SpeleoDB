@@ -171,7 +171,7 @@ def test_campaign_import_rejects_invalid_changes(invalid_change: str) -> None:
 
 
 @pytest.mark.django_db
-def test_staff_campaign_view_is_read_only_even_with_change_permission(
+def test_staff_campaign_view_is_denied_even_with_change_permission(
     admin_client: Client,
 ) -> None:
     today = timezone.localdate()
@@ -192,10 +192,9 @@ def test_staff_campaign_view_is_read_only_even_with_change_permission(
     admin_client.force_login(staff)
     listing = reverse("admin:campaigns_donationcampaign_changelist")
     detail = reverse("admin:campaigns_donationcampaign_change", args=[campaign.pk])
-    assert admin_client.get(listing).status_code == HTTPStatus.OK
+    assert admin_client.get(listing).status_code == HTTPStatus.FORBIDDEN
     response = admin_client.get(detail)
-    assert response.status_code == HTTPStatus.OK
-    assert b'name="_save"' not in response.content
+    assert response.status_code == HTTPStatus.FORBIDDEN
     assert (
         admin_client.post(detail, {"email_main_subject": "Changed"}).status_code
         == HTTPStatus.FORBIDDEN
