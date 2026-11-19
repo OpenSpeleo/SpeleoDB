@@ -1,67 +1,27 @@
-"""Fixed campaign templates and account-bound unsubscribe links."""
+"""File-based campaign mail with links to account preferences."""
 
 from __future__ import annotations
 
+from html import unescape
 from typing import Any
 from urllib.parse import urljoin
 
 from django.conf import settings
-from django.core import signing
 from django.core.mail import EmailMultiAlternatives
 from django.core.mail import mailers
-from django.template.loader import render_to_string
+from django.template import engines
+from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.html import strip_tags
 
-UNSUBSCRIBE_SALT = "campaign-updates-unsubscribe"
 CONTENT_FIELDS = (
-    "brand_name",
-    "contact_email",
-    "website_url",
-    "tagline",
-    "card_title",
-    "card_summary",
-    "goal_currency_label",
-    "goal_message",
-    "ownership_promise",
-    "donate_label",
-    "about_label",
-    "story_label",
-    "reminder_label",
-    "back_label",
-    "close_label",
-    "new_tab_label",
-    "retry_label",
-    "dismissal_error",
-    "recipient_intro",
-    "support_label",
-    "sharing_message",
-    "unsubscribe_label",
-    "photo_credit_label",
-    "story_kicker",
-    "story_title",
-    "story_summary",
-    "story_goal_label",
-    "story_goal_text",
-    "story_promise",
-    "story_cards",
-    "reminder_days",
-    "recipient_name",
-    "tax_deductibility_notice",
-    "photo_alt",
-    "photo_credit",
-    "headline",
-    "subject",
-    "preheader",
-    "body",
-    "popup_summary",
+    "email_main_subject",
+    "email_reminder_subject",
     "goal_usd",
     "donation_url",
+    "email_main_template",
+    "reminder_email_template",
 )
-
-
-def unsubscribe_url(site_url: str, user_id: str, email: str) -> str:
-    token = signing.dumps({"user_id": user_id, "email": email}, salt=UNSUBSCRIBE_SALT)
-    return urljoin(site_url, reverse("campaigns:unsubscribe", args=[token]))
 
 
 def render_message(
@@ -70,39 +30,35 @@ def render_message(
     context = {
         "campaign": campaign,
         "site_url": site_url,
-        "photo_url": urljoin(site_url, campaign["photo_url"])
-        if campaign.get("photo_url")
-        else "",
+        "email_assets_url": urljoin(
+            site_url, static("campaigns/email_templates/assets/")
+        ),
         "unsubscribe_url": unsubscribe,
     }
-    return (
-        render_to_string("campaigns/email.txt", context),
-        render_to_string("campaigns/email.html", context),
+    # Render the reviewed source, so file edits cannot change queued messages.
+    template = engines["django"].from_string(campaign["email_template_source"])
+    html = template.render(context)
+    # Head metadata and responsive email CSS do not belong in the text alternative.
+    body_html = html.split("</head>", 1)[-1]
+    plain = "\n".join(
+        line.strip()
+        for line in unescape(strip_tags(body_html)).splitlines()
+        if line.strip()
     )
+    plain += f"\n\n{campaign['donation_url']}\n\nUnsubscribe: {unsubscribe}\n"
+    return plain, html
 
 
 def send_message(
-    campaign: dict[str, Any], *, email: str, site_url: str, user_id: str | None
+    campaign: dict[str, Any], *, email: str, site_url: str
 ) -> dict[str, Any]:
-    unsubscribe = (
-        unsubscribe_url(site_url, user_id, email)
-        if user_id
-        else urljoin(site_url, reverse("campaigns:test-unsubscribe"))
-    )
+    unsubscribe = urljoin(site_url, reverse("private:user_preferences"))
     plain, html = render_message(campaign, site_url=site_url, unsubscribe=unsubscribe)
-    headers = {}
-    if user_id:
-        headers = {
-            "List-Unsubscribe": f"<{unsubscribe}>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        }
     message = EmailMultiAlternatives(
-        subject=("" if user_id else "[TEST] ") + campaign["subject"],
+        subject=campaign["subject"],
         body=plain,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[email],
-        reply_to=[campaign["contact_email"]] if campaign.get("contact_email") else [],
-        headers=headers,
     )
     message.attach_alternative(html, "text/html")
     # Anymail supports these extension attributes on Django's native messages.
@@ -118,10 +74,7 @@ def send_message(
                 "track_opens": False,
                 "track_content": False,
             },
-            **({"list_unsubscribe": unsubscribe} if user_id else {}),
         }
-        # MailerSend's dedicated API field generates the RFC 8058 headers.
-        message.extra_headers = {}
     sent = mailers["default"].send_messages([message])
     status = getattr(message, "anymail_status", None)
     if status is not None:

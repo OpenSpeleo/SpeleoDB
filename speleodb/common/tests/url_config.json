@@ -1339,7 +1339,7 @@
  },
  {
   "url": "/api/v1/user/donation-campaigns/<uuid:campaign_id>/dismiss/",
-  "module": "speleodb.campaigns.views.CampaignDismissalView",
+  "module": "speleodb.campaigns.views.DonationCampaignDismissalView",
   "name": "api:v1:donation-campaign-dismiss",
   "decorators": ""
  },
@@ -2257,7 +2257,7 @@
  },
  {
   "url": "/api/v2/user/donation-campaigns/<uuid:campaign_id>/dismiss/",
-  "module": "speleodb.campaigns.views.CampaignDismissalView",
+  "module": "speleodb.campaigns.views.DonationCampaignDismissalView",
   "name": "api:v2:donation-campaign-dismiss",
   "decorators": ""
  },
@@ -2328,27 +2328,9 @@
   "decorators": ""
  },
  {
-  "url": "/campaigns/<uuid:campaign_id>/photo/",
-  "module": "speleodb.campaigns.views.photo",
-  "name": "campaigns:photo",
-  "decorators": ""
- },
- {
   "url": "/campaigns/thank-you/",
   "module": "speleodb.campaigns.views.thank_you",
   "name": "campaigns:thank-you",
-  "decorators": ""
- },
- {
-  "url": "/campaigns/unsubscribe/<str:token>/",
-  "module": "speleodb.campaigns.views.unsubscribe",
-  "name": "campaigns:unsubscribe",
-  "decorators": ""
- },
- {
-  "url": "/campaigns/unsubscribe/test/",
-  "module": "speleodb.campaigns.views.test_unsubscribe",
-  "name": "campaigns:test-unsubscribe",
   "decorators": ""
  },
  {

@@ -13,8 +13,10 @@ from django.urls import reverse
 from django.utils import timezone
 from tablib.core import Dataset
 
-from speleodb.campaigns.models import CampaignDismissal
 from speleodb.campaigns.models import DonationCampaign
+from speleodb.campaigns.models import DonationCampaignDismissal
+from speleodb.campaigns.models import DonationCampaignEmail
+from speleodb.campaigns.models import email_template_choices
 from speleodb.users.tests.factories import UserFactory
 
 if TYPE_CHECKING:
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.django_db
-def test_campaign_content_round_trip_preserves_launch_and_dismissals() -> None:
+def test_campaign_content_round_trip_preserves_email_history_and_dismissals() -> None:
     campaign_admin = cast(
         "DonationCampaignAdmin",
         admin.site._registry[DonationCampaign],  # noqa: SLF001 - registered admin contract
@@ -35,19 +37,23 @@ def test_campaign_content_round_trip_preserves_launch_and_dismissals() -> None:
     data = Dataset(
         [
             str(campaign_id),
-            "Support exploration",
             "Support SpeleoDB",
+            "Support our next chapter",
             "5000",
             "https://www.paypal.com/donate",
+            email_template_choices()[0][0],
+            email_template_choices()[0][0],
             str(today),
             str(today),
         ],
         headers=[
             "id",
-            "headline",
-            "subject",
+            "email_main_subject",
+            "email_reminder_subject",
             "goal_usd",
             "donation_url",
+            "email_main_template",
+            "reminder_email_template",
             "start_date",
             "end_date",
         ],
@@ -57,45 +63,47 @@ def test_campaign_content_round_trip_preserves_launch_and_dismissals() -> None:
     assert not DonationCampaign.objects.exists()
     resource.import_data(data, dry_run=False, raise_errors=True)
     campaign = DonationCampaign.objects.get(pk=campaign_id)
-    campaign.about_label = "About our custom appeal"
-    campaign.story_cards = [
-        {"title": "Custom card", "description": "Custom detail", "icon": "gis"}
-    ]
-    campaign.body = "First paragraph.\nSecond paragraph, with a comma."
-    campaign.photo = "campaigns/photos/cave.png"
-    campaign.photo_alt = "Cave passage"
-    campaign.photo_credit = "Photographer"
-    campaign.launched_at = timezone.now()
-    campaign.approved_snapshot = {"headline": "Approved copy", "group_id": "receipt"}
+    campaign.reminder_email_template = campaign.email_main_template
+    history = DonationCampaignEmail.objects.create(
+        campaign=campaign,
+        email_type=DonationCampaignEmail.EmailType.MAIN,
+        subject="Previously sent appeal",
+        recipients=["donor@example.com"],
+        template=campaign.email_main_template,
+    )
+    previous_history = DonationCampaignEmail.objects.values().get(pk=history.pk)
     campaign.save()
-    dismissal = CampaignDismissal.objects.create(
+    dismissal = DonationCampaignDismissal.objects.create(
         campaign=campaign, user=UserFactory.create()
     )
-    launched_at = campaign.launched_at
-    approved_snapshot = campaign.approved_snapshot
     exported = Dataset().load(resource.export().csv, format="csv")
     row = exported.dict[0]
-    assert row["body"] == campaign.body
-    assert row["photo"] == campaign.photo.name
-    assert row["photo_alt"] == campaign.photo_alt
-    assert row["photo_credit"] == campaign.photo_credit
-    assert row["launched_at"]
-    row.update(headline="Updated campaign", launched_at="", approved_snapshot="{}")
+    assert row["email_main_subject"] == campaign.email_main_subject
+    assert row["email_reminder_subject"] == campaign.email_reminder_subject
+    assert row["modal_template"] == campaign.modal_template
+    assert row["email_main_template"] == campaign.email_main_template
+    assert row["reminder_email_template"] == campaign.reminder_email_template
+    assert "launched_at" not in row
+    assert "approved_snapshot" not in row
+    row.update(
+        email_main_subject="Updated campaign",
+        email_reminder_subject="",
+        donors='["donor@example.com"]',
+        reminder_email_template="",
+    )
     updated = Dataset(headers=exported.headers)
     updated.append([row[header] for header in exported.headers])
     result = resource.import_data(updated, dry_run=False, raise_errors=True)
     assert result.totals["update"] == 1
     assert DonationCampaign.objects.count() == 1
     campaign.refresh_from_db()
-    assert campaign.headline == "Updated campaign"
-    assert campaign.body == row["body"]
-    assert campaign.about_label == "About our custom appeal"
-    assert campaign.story_cards == [
-        {"title": "Custom card", "description": "Custom detail", "icon": "gis"}
-    ]
-    assert campaign.launched_at == launched_at
-    assert campaign.approved_snapshot == approved_snapshot
-    assert CampaignDismissal.objects.filter(pk=dismissal.pk).exists()
+    assert campaign.email_main_subject == "Updated campaign"
+    assert campaign.email_reminder_subject == ""
+    assert campaign.donors == ["donor@example.com"]
+    assert campaign.email_main_template == row["email_main_template"]
+    assert campaign.reminder_email_template == ""
+    assert DonationCampaignEmail.objects.values().get(pk=history.pk) == previous_history
+    assert DonationCampaignDismissal.objects.filter(pk=dismissal.pk).exists()
 
 
 @pytest.mark.django_db
@@ -117,7 +125,17 @@ def test_campaign_transfer_requires_superuser(
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("invalid_change", ["second_campaign", "reversed_dates"])
+@pytest.mark.parametrize(
+    "invalid_change",
+    [
+        "modal_template",
+        "second_campaign",
+        "reversed_dates",
+        "email_main_template",
+        "reminder_email_template",
+        "missing_email_reminder_subject",
+    ],
+)
 def test_campaign_import_rejects_invalid_changes(invalid_change: str) -> None:
     campaign_admin = cast(
         "DonationCampaignAdmin",
@@ -126,8 +144,8 @@ def test_campaign_import_rejects_invalid_changes(invalid_change: str) -> None:
     resource = campaign_admin.get_import_resource_classes(None)[0]()
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support exploration",
-        subject="Support SpeleoDB",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support SpeleoDB",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -136,8 +154,13 @@ def test_campaign_import_rejects_invalid_changes(invalid_change: str) -> None:
     row = resource.export().dict[0]
     if invalid_change == "second_campaign":
         row["id"] = str(uuid.uuid4())
-    else:
+    elif invalid_change == "reversed_dates":
         row["end_date"] = str(today - timedelta(days=1))
+    elif invalid_change == "missing_email_reminder_subject":
+        row["reminder_email_template"] = campaign.email_main_template
+        row["email_reminder_subject"] = ""
+    else:
+        row[invalid_change] = "../email.html"
     data = Dataset(headers=list(row))
     data.append(list(row.values()))
     result = resource.import_data(data, dry_run=False)
@@ -153,8 +176,8 @@ def test_staff_campaign_view_is_read_only_even_with_change_permission(
 ) -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Unchanged campaign",
-        subject="Support",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Unchanged campaign",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -174,7 +197,7 @@ def test_staff_campaign_view_is_read_only_even_with_change_permission(
     assert response.status_code == HTTPStatus.OK
     assert b'name="_save"' not in response.content
     assert (
-        admin_client.post(detail, {"headline": "Changed"}).status_code
+        admin_client.post(detail, {"email_main_subject": "Changed"}).status_code
         == HTTPStatus.FORBIDDEN
     )
     for name in ("import", "export", "add", "delete"):
@@ -185,14 +208,15 @@ def test_staff_campaign_view_is_read_only_even_with_change_permission(
             ).status_code
             == HTTPStatus.FORBIDDEN
         )
-    assert (
-        admin_client.post(
-            reverse("admin:campaign_send", args=[campaign.pk]),
-            {"action": "test", "emails": "test@example.com"},
-        ).status_code
-        == HTTPStatus.FORBIDDEN
-    )
+    for route in ("admin:campaign_send", "admin:campaign_send_reminder"):
+        assert (
+            admin_client.post(
+                reverse(route, args=[campaign.pk]),
+                {"action": "test", "emails": "test@example.com"},
+            ).status_code
+            == HTTPStatus.FORBIDDEN
+        )
     campaign.refresh_from_db()
-    assert campaign.headline == "Unchanged campaign"
+    assert campaign.email_main_subject == "Unchanged campaign"
     admin_client.force_login(UserFactory.create(is_staff=True, is_superuser=True))
     assert b'name="_save"' in admin_client.get(detail).content

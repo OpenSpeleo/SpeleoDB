@@ -1,79 +1,42 @@
-from contextlib import closing
-from http import HTTPStatus
-from io import BytesIO
+import re
+from pathlib import Path
+from urllib.parse import urlsplit
 
-import pytest
-from django.core.files.base import ContentFile
-from django.core.files.storage import InMemoryStorage
-from django.http import FileResponse
+from django.contrib.staticfiles import finders
 from django.template.loader import render_to_string
-from django.test import Client
-from django.urls import reverse
-from django.utils import timezone
 from PIL import Image
 
 from speleodb.campaigns.mail import render_message
 from speleodb.campaigns.models import DonationCampaign
 from speleodb.campaigns.operations import snapshot
+from speleodb.campaigns.tests import EMAIL_TEMPLATE
 
 
-@pytest.mark.django_db(transaction=True)
-def test_uploaded_photo_is_public_and_used_in_email(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    field = DonationCampaign._meta.get_field("photo")  # noqa: SLF001 - Django field storage boundary
-    monkeypatch.setattr(field, "storage", InMemoryStorage())
-    with BytesIO() as buffer:
-        Image.new("RGB", (2, 2)).save(buffer, format="PNG")
-        data = buffer.getvalue()
-    today = timezone.localdate()
-    campaign = DonationCampaign.objects.create(
-        headline="Support exploration",
-        subject="Support SpeleoDB",
+def test_email_and_modal_render_valid_bundled_campaign_photos() -> None:
+    campaign = DonationCampaign(
+        email_main_subject="Support SpeleoDB",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
-        start_date=today,
-        end_date=today,
-        photo=ContentFile(data, name="cave.png"),
-        photo_alt="Cave passage",
-        photo_credit="Photographer <name>",
-        photo_credit_label="Image by",
+        email_main_template=EMAIL_TEMPLATE,
     )
-    url = reverse("campaigns:photo", args=[campaign.pk])
-    with closing(Client().get(url)) as response:
-        assert response.status_code == HTTPStatus.OK
-        assert isinstance(response, FileResponse)
-        assert b"".join(response.streaming_content) == data
-        assert response["Content-Type"] == "image/png"
-    plain, html = render_message(
+    _, email = render_message(
         snapshot(campaign),
         site_url="https://example.com/",
         unsubscribe="https://example.com/unsubscribe/",
     )
-    assert f"https://example.com{url}" in html
-    assert "Cave passage" in html
-    assert "Photographer" in plain
-    previous_url = snapshot(campaign)["photo_url"]
-    campaign.photo.save("replacement.png", ContentFile(data))
-    replacement_url = snapshot(campaign)["photo_url"]
-    assert replacement_url != previous_url
     modal = render_to_string(
-        "snippets/donation_campaign_content.html", {"donation_campaign": campaign}
+        campaign.modal_template_name, {"donation_campaign": campaign}
     )
-    assert replacement_url in modal
-    assert previous_url not in modal
-    assert "Image by Photographer &lt;name&gt;" in modal
-    campaign.photo = ""
-    campaign.save()
-    assert Client().get(url).status_code == HTTPStatus.NOT_FOUND
-    _, html = render_message(
-        snapshot(campaign),
-        site_url="https://example.com/",
-        unsubscribe="https://example.com/unsubscribe/",
-    )
-    assert "<img" not in html
-    modal = render_to_string(
-        "snippets/donation_campaign_content.html", {"donation_campaign": campaign}
-    )
-    assert "Image by" not in modal
-    assert "Photographer" not in modal
+    for html in (email, modal):
+        match = re.search(r'<img\s+src="([^"]+)"[^>]+alt="([^"]+)"', html)
+        assert match is not None
+        image_path = urlsplit(match[1]).path.removeprefix("/static/")
+        assert image_path.startswith("campaigns/email_templates/assets/")
+        assert "Marcelin Nebenhaus" in " ".join(html.split())
+        description = " ".join(match[2].casefold().split())
+        assert "cave diver" in description
+        assert "underwater passage" in description
+        asset = finders.find(image_path)
+        assert isinstance(asset, str)
+        with Image.open(Path(asset)) as image:
+            image.verify()

@@ -1,0 +1,109 @@
+{% load static %}
+
+<div data-campaign-overview>
+  <div class="donation-photo">
+    <img src="{% static 'campaigns/email_templates/assets/dcfb9c69-e9a3-42f4-82aa-91393afc39a3.png' %}"
+         alt="A cave diver explores an illuminated underwater passage"
+         width="1200"
+         height="800" />
+    <p class="donation-photo-credit">Photograph © Marcelin Nebenhaus</p>
+    <button type="button"
+            class="donation-close"
+            data-campaign-dismiss
+            aria-label="Close fundraiser invitation">×</button>
+  </div>
+  <div class="donation-content">
+    <p class="donation-eyebrow">Explore as One, Survey as Many</p>
+    <h2 id="campaign-heading" tabindex="-1">SpeleoDB should stay free...</h2>
+    <p>
+      Every survey represents hours of exploration, teamwork, and discovery.
+      Your support helps maintain SpeleoDB and improve survey collaboration, GIS
+      tools, and mobile access. Your data remains yours.
+    </p>
+    <p class="donation-goal">Help us raise {{ donation_campaign.formatted_goal }}.</p>
+    <p>Your data remains yours. SpeleoDB remains open source.</p>
+    <div class="donation-actions">
+      <a class="donation-primary"
+         data-campaign-donate
+         href="{{ donation_campaign.donation_url }}"
+         target="_blank"
+         rel="noopener noreferrer">Donate with PayPal</a>
+      <button type="button" class="donation-secondary" data-campaign-story-open>Read the campaign story</button>
+    </div>
+    <p class="donation-footnote">
+      Donations are made to Underwater Speleological and Archaeological Heritage
+      Institute.
+      <br />
+      A 501(c)(3) nonprofit organization. Donations are tax-deductible to the
+      extent permitted by U.S. law.
+    </p>
+    <button type="button" class="donation-story-link" data-campaign-dismiss>
+      Remind me in {{ donation_campaign.reminder_days }} days
+    </button>
+  </div>
+</div>
+<section class="donation-story-view" data-campaign-story hidden>
+  <div class="donation-story-nav">
+    <button type="button" class="donation-story-link" data-campaign-story-back>
+      <span aria-hidden="true">←</span> Back
+    </button>
+    <button type="button"
+            class="donation-story-close"
+            data-campaign-dismiss
+            aria-label="Close fundraiser invitation">×</button>
+  </div>
+  <div class="donation-impact">
+    <header class="donation-impact-header">
+      <span class="donation-impact-kicker">Built together. Free for everyone.</span>
+      <h2 id="campaign-story-heading" tabindex="-1">
+        More discovery.
+        <br />
+        Fewer barriers.
+      </h2>
+      <p>Your support keeps the tools behind every survey moving forward.</p>
+    </header>
+    <div class="donation-impact-grid">
+      <article class="donation-impact-card donation-impact-survey">
+        <div class="donation-impact-icon">
+          {% include "snippets/donation_campaign_icon.html" with icon="survey"
+            only %}
+        </div>
+        <div>
+          <h3>Connect your tools</h3>
+          <p>Ariane, Compass &amp; Stalagmight. One shared workspace.</p>
+        </div>
+      </article>
+      <article class="donation-impact-card donation-impact-gis">
+        <div class="donation-impact-icon">
+          {% include "snippets/donation_campaign_icon.html" with icon="gis" only
+            %}
+        </div>
+        <div>
+          <h3>See the bigger picture</h3>
+          <p>GIS connects your surveys, discoveries &amp; scientific work.</p>
+        </div>
+      </article>
+      <article class="donation-impact-card donation-impact-mobile">
+        <div class="donation-impact-icon">
+          {% include "snippets/donation_campaign_icon.html" with icon="mobile"
+            only %}
+        </div>
+        <div>
+          <h3>Take it underground</h3>
+          <p>Your survey data in your pocket. Available offline.</p>
+        </div>
+      </article>
+    </div>
+    <div class="donation-impact-goal">
+      <div>
+        <span class="donation-impact-kicker">Our community goal</span><strong>{{ donation_campaign.formatted_goal }}</strong>
+      </div>
+      <p>
+        Keep SpeleoDB free.
+        <br />
+        Keep building what comes next.
+      </p>
+    </div>
+    <p class="donation-impact-promise">Your data. Your access. Always open source.</p>
+  </div>
+</section>

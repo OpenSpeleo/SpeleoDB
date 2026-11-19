@@ -1,0 +1,70 @@
+.campaign-template-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.campaign-template-controls select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+.campaign-template-controls .button,
+.campaign-preview-dialog .button,
+.field-send_email .button,
+.field-send_reminder_email .button {
+  background: var(--button-bg);
+  color: var(--button-fg);
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.campaign-template-controls .button:hover,
+.campaign-preview-dialog .button:hover,
+.field-send_email .button:hover,
+.field-send_reminder_email .button:hover {
+  background: var(--button-hover-bg);
+}
+
+.campaign-template-controls .button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.campaign-preview-dialog {
+  box-sizing: border-box;
+  width: min(460px, calc(100% - 32px));
+  padding: 28px;
+  border: 1px solid var(--hairline-color);
+  border-radius: 8px;
+  background: var(--body-bg);
+  color: var(--body-fg);
+}
+
+.campaign-preview-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.campaign-preview-dialog h2 {
+  margin-top: 0;
+  color: var(--body-fg);
+}
+
+.campaign-preview-dialog p {
+  overflow-wrap: anywhere;
+}
+
+.campaign-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}

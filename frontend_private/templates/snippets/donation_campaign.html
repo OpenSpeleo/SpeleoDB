@@ -1,24 +1,24 @@
 {% csrf_token %}
 <section class="donation-card" aria-labelledby="campaign-card-title">
   <div>
-    <h2 id="campaign-card-title">{{ donation_campaign.card_title }}</h2>
-    <p>{{ donation_campaign.resolved_card_summary }}</p>
+    <h2 id="campaign-card-title">Keep SpeleoDB free</h2>
+    <p>Help our community reach its {{ donation_campaign.formatted_goal }} fundraising goal.</p>
   </div>
   <div class="donation-actions">
     <a class="donation-primary"
        data-campaign-donate
        href="{{ donation_campaign.donation_url }}"
        target="_blank"
-       rel="noopener noreferrer">{{ donation_campaign.donate_label }} <span class="sr-only">{{ donation_campaign.new_tab_label }}</span></a>
-    <button type="button" class="donation-secondary" data-campaign-open>{{ donation_campaign.about_label }}</button>
+       rel="noopener noreferrer">Donate with PayPal</a>
+    <button type="button" class="donation-secondary" data-campaign-open>About this fundraiser</button>
   </div>
 </section>
 <p id="campaign-save-error" class="donation-notice" role="status" hidden>
-  {{ donation_campaign.dismissal_error }}
-  <button type="button" data-campaign-retry>{{ donation_campaign.retry_label }}</button>
+  Your dismissal could not be saved.
+  <button type="button" data-campaign-retry>Try again</button>
 </p>
 <dialog id="donation-campaign"
         class="donation-dialog"
         aria-labelledby="campaign-heading">
-  {% include "snippets/donation_campaign_content.html" %}
+  {% include donation_campaign.modal_template_name %}
 </dialog>

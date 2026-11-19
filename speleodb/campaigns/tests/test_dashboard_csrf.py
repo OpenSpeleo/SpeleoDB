@@ -7,8 +7,9 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from speleodb.campaigns.models import CampaignDismissal
 from speleodb.campaigns.models import DonationCampaign
+from speleodb.campaigns.models import DonationCampaignDismissal
+from speleodb.campaigns.models import email_template_choices
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -17,8 +18,8 @@ from speleodb.users.tests.factories import UserFactory
 def test_dashboard_supplies_csrf_token_for_session_dismissal() -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support SpeleoDB",
-        subject="Support",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -41,7 +42,9 @@ def test_dashboard_supplies_csrf_token_for_session_dismissal() -> None:
         client.post(url, HTTP_X_CSRFTOKEN=token.group(1)).status_code
         == HTTPStatus.NO_CONTENT
     )
-    assert CampaignDismissal.objects.filter(campaign=campaign, user=user).exists()
+    assert DonationCampaignDismissal.objects.filter(
+        campaign=campaign, user=user
+    ).exists()
     assert not campaign.should_invite(user)
     assert (
         '"shouldInvite": false'

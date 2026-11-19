@@ -1,0 +1,11 @@
+{# Separate GET forms let email buttons navigate without submitting campaign edits. #}
+<form id="campaign-send-{{ campaign.pk }}"
+      action="{% url 'admin:campaign_send' campaign.pk %}"
+      method="get">
+</form>
+{% if campaign.reminder_email_template %}
+  <form id="campaign-send-reminder-{{ campaign.pk }}"
+        action="{% url 'admin:campaign_send_reminder' campaign.pk %}"
+        method="get">
+  </form>
+{% endif %}

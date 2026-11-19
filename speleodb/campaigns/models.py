@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
+from django.core.validators import validate_email
 from django.db import models
-from django.urls import reverse
 from django.utils import timezone
 
 if TYPE_CHECKING:
@@ -20,20 +20,35 @@ if TYPE_CHECKING:
     from speleodb.users.models import User
 
 
-def validate_story_cards(value: object) -> None:
-    if not isinstance(value, list):
-        raise ValidationError("Story cards must be a list.")
-    for card in value:
-        if (
-            not isinstance(card, dict)
-            or set(card) != {"title", "description", "icon"}
-            or not all(isinstance(item, str) and item.strip() for item in card.values())
-            or card["icon"] not in {"survey", "gis", "mobile"}
-        ):
-            raise ValidationError(
-                "Each story card needs text title and description, "
-                "and an icon: survey, gis, or mobile."
-            )
+EMAIL_TEMPLATES_DIR = (
+    Path(__file__).resolve().parent.parent / "templates/campaigns/email_templates"
+)
+MODAL_TEMPLATES_DIR = (
+    Path(__file__).resolve().parent.parent / "templates/campaigns/modal_templates"
+)
+DEFAULT_MODAL_TEMPLATE = "df63aaf1-de24-49d4-b695-315dee59441e.html"
+
+
+def campaign_template_choices(directory: Path) -> list[tuple[str, str]]:
+    choices: list[tuple[str, str]] = []
+    for path in sorted(directory.glob("*.html")):
+        if not path.is_file():
+            continue
+        try:
+            identifier = uuid.UUID(path.stem)
+        except ValueError:
+            continue
+        if identifier.version == 4 and str(identifier) == path.stem:  # noqa: PLR2004 - UUID4 filename contract.
+            choices.append((path.name, path.name))
+    return choices
+
+
+def email_template_choices() -> list[tuple[str, str]]:
+    return campaign_template_choices(EMAIL_TEMPLATES_DIR)
+
+
+def modal_template_choices() -> list[tuple[str, str]]:
+    return campaign_template_choices(MODAL_TEMPLATES_DIR)
 
 
 class DonationCampaign(models.Model):
@@ -44,87 +59,47 @@ class DonationCampaign(models.Model):
         primary_key=True,
     )
 
-    photo = models.ImageField(
-        upload_to="campaigns/photos/",
-        blank=True,
-        help_text="Publicly visible in campaign emails and dashboard invitations.",
-    )
-    photo_alt = models.CharField(max_length=250, blank=True)
-    photo_credit = models.CharField(max_length=250, blank=True)
+    start_date = models.DateField()
+    end_date = models.DateField()
 
-    headline = models.CharField(max_length=200)
-    subject = models.CharField(max_length=200)
-    preheader = models.CharField(max_length=250, blank=True)
-    body = models.TextField(blank=True)
-    popup_summary = models.TextField(blank=True)
-    goal_usd = models.PositiveIntegerField()
-    donation_url = models.URLField()
-    recipient_name = models.CharField(
-        "Donation recipient",
-        max_length=250,
-        blank=True,
-        help_text="Legal name of the organization receiving donations.",
-    )
-    tax_deductibility_notice = models.TextField(
-        blank=True,
-        help_text=(
-            "Public tax-status and deductibility statement "
-            "shown beside donation actions."
-        ),
-    )
-    brand_name = models.TextField(blank=True)
-    contact_email = models.EmailField(blank=True)
-    website_url = models.URLField(blank=True)
-    tagline = models.TextField(blank=True)
-    card_title = models.TextField(blank=True)
-    card_summary = models.TextField(
-        blank=True, help_text="Use {goal} for the formatted fundraising goal."
-    )
-    goal_currency_label = models.TextField(blank=True)
-    goal_message = models.TextField(
-        blank=True, help_text="Use {goal} for the formatted fundraising goal."
-    )
-    ownership_promise = models.TextField(blank=True)
-    donate_label = models.TextField(blank=True)
-    about_label = models.TextField(blank=True)
-    story_label = models.TextField(blank=True)
-    reminder_label = models.TextField(blank=True)
-    back_label = models.TextField(blank=True)
-    close_label = models.TextField(blank=True)
-    new_tab_label = models.TextField(blank=True)
-    retry_label = models.TextField(blank=True)
-    dismissal_error = models.TextField(blank=True)
-    recipient_intro = models.TextField(
-        blank=True, help_text="Use {recipient} for the donation recipient name."
-    )
-    support_label = models.TextField(blank=True)
-    sharing_message = models.TextField(blank=True)
-    unsubscribe_label = models.TextField(blank=True)
-    photo_credit_label = models.TextField(blank=True)
-    story_kicker = models.TextField(blank=True)
-    story_title = models.TextField(blank=True)
-    story_summary = models.TextField(blank=True)
-    story_goal_label = models.TextField(blank=True)
-    story_goal_text = models.TextField(blank=True)
-    story_promise = models.TextField(blank=True)
-    story_cards = models.JSONField(
-        default=list,
-        blank=True,
-        validators=[validate_story_cards],
-        help_text=(
-            'Ordered cards: [{"title": "…", "description": "…", "icon": "survey"}]. '
-            "Icons: survey, gis, mobile."
-        ),
-    )
+    # List of emails to NOT re-email again, they donated.
+    donors = models.JSONField(default=list, blank=True, editable=True)
+
+    donation_url = models.URLField("Campaign action URL")
+    goal_usd = models.PositiveIntegerField("Financial goal (USD)")
+
+    # Visual Remind People on Dashboard Connection
     reminder_days = models.PositiveSmallIntegerField(
         default=7, validators=[MinValueValidator(1)]
     )
 
-    start_date = models.DateField()
-    end_date = models.DateField()
+    modal_template = models.CharField(
+        "Modal template",
+        max_length=41,
+        choices=modal_template_choices,
+        default=DEFAULT_MODAL_TEMPLATE,
+    )
 
-    launched_at = models.DateTimeField(null=True, blank=True, editable=False)
-    approved_snapshot = models.JSONField(default=dict, editable=False)
+    # ---------------- Main Campaign Email ------------------ #
+    email_main_subject = models.CharField("Email subject", max_length=200)
+    email_main_template = models.CharField(
+        max_length=41,
+        choices=email_template_choices,
+    )
+
+    # ---------------- Reminder Campaign Email ------------------ #
+    email_reminder_subject = models.CharField(
+        "Reminder email subject",
+        max_length=200,
+        blank=True,
+        help_text="Required when a reminder email template is selected.",
+    )
+
+    reminder_email_template = models.CharField(
+        max_length=41,
+        choices=email_template_choices,
+        blank=True,
+    )
 
     creation_date = models.DateTimeField(auto_now_add=True, editable=False)
     modified_date = models.DateTimeField(auto_now=True, editable=False)
@@ -134,37 +109,61 @@ class DonationCampaign(models.Model):
             models.CheckConstraint(
                 condition=models.Q(end_date__gte=models.F("start_date")),
                 name="campaign_end_on_or_after_start",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(reminder_email_template="", email_reminder_subject="")
+                    | (
+                        ~models.Q(reminder_email_template="")
+                        & ~models.Q(email_reminder_subject="")
+                    )
+                ),
+                name="campaign_complete_reminder_email",
+            ),
         ]
 
     def __str__(self) -> str:
-        return self.headline
+        return self.email_main_subject
+
+    def clean(self) -> None:
+        super().clean()
+        self.email_reminder_subject = self.email_reminder_subject.strip()
+        if self.reminder_email_template and not self.email_reminder_subject:
+            raise ValidationError(
+                {"email_reminder_subject": "Enter a reminder email subject."}
+            )
+        if self.email_reminder_subject and not self.reminder_email_template:
+            raise ValidationError(
+                {"reminder_email_template": "Select a reminder email template."}
+            )
+        if not isinstance(self.donors, list) or not all(
+            isinstance(email, str) for email in self.donors
+        ):
+            raise ValidationError({"donors": "Enter a list of donor email addresses."})
+        addresses: dict[str, None] = {}
+        for email in self.donors:
+            address = email.strip().casefold()
+            try:
+                validate_email(address)
+            except ValidationError as error:
+                raise ValidationError({"donors": error.messages}) from error
+            addresses.setdefault(address, None)
+        self.donors = list(addresses)
 
     @property
     def formatted_goal(self) -> str:
-        return f"{self.goal_currency_label}{self.goal_usd:,}"
+        return f"US ${self.goal_usd:,}"
 
     @property
-    def resolved_goal_message(self) -> str:
-        return self.goal_message.replace("{goal}", self.formatted_goal)
+    def modal_template_name(self) -> str:
+        if self.modal_template not in dict(modal_template_choices()):
+            raise ValueError("Select an available campaign modal template.")
+        return f"campaigns/modal_templates/{self.modal_template}"
 
-    @property
-    def resolved_card_summary(self) -> str:
-        return self.card_summary.replace("{goal}", self.formatted_goal)
-
-    @property
-    def resolved_recipient_notice(self) -> str:
-        return self.recipient_intro.replace("{recipient}", self.recipient_name)
-
-    @property
-    def photo_url(self) -> str:
-        if not self.photo:
-            return ""
-        return (
-            reverse("campaigns:photo", args=[self.pk])
-            + "?"
-            + urlencode({"v": self.photo.name})
-        )
+    def email_template_source(self, filename: str) -> str:
+        if filename not in dict(email_template_choices()):
+            raise ValueError("Select an available campaign email template.")
+        return (EMAIL_TEMPLATES_DIR / filename).read_text(encoding="utf-8")
 
     def should_invite(self, user: User | AnonymousUser) -> bool:
         now = timezone.now()
@@ -172,7 +171,7 @@ class DonationCampaign(models.Model):
         return (
             user.is_authenticated
             and self.start_date <= today <= self.end_date
-            and not CampaignDismissal.objects.filter(
+            and not DonationCampaignDismissal.objects.filter(
                 campaign=self,
                 user_id=user.pk,
                 modified_date__gt=now - timedelta(days=self.reminder_days),
@@ -180,7 +179,7 @@ class DonationCampaign(models.Model):
         )
 
 
-class CampaignDismissal(models.Model):
+class DonationCampaignDismissal(models.Model):
     # Automatic fields
     id = models.UUIDField(
         default=uuid.uuid4,
@@ -202,3 +201,32 @@ class CampaignDismissal(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id}: {self.campaign_id}"
+
+
+class DonationCampaignEmail(models.Model):
+    # Automatic fields
+    id = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        primary_key=True,
+    )
+
+    class EmailType(models.TextChoices):
+        MAIN = "MAIN", "Main"
+        REMINDER = "REMINDER", "Reminder"
+
+    email_type = models.CharField(max_length=16, choices=EmailType.choices)
+
+    campaign = models.ForeignKey(
+        DonationCampaign, on_delete=models.CASCADE, editable=False
+    )
+
+    subject = models.CharField(max_length=200, blank=False, null=False, editable=False)
+    recipients = models.JSONField(default=list, editable=False)
+    template = models.CharField(max_length=41, blank=False, null=False, editable=False)
+
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_date = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"{self.get_email_type_display()}: {self.subject}"

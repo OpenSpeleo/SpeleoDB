@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!-- The next discovery starts with us: an opportunity-first campaign reminder. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
+    <title>{{ campaign.subject }}</title>
+    <style>
+      @media only screen and (max-width: 480px) {
+        .next-gutter {
+          padding-left: 24px !important;
+          padding-right: 24px !important;
+        }
+
+        .next-hero {
+          font-size: 38px !important;
+        }
+
+        .next-goal {
+          font-size: 40px !important;
+        }
+
+        .next-signature {
+          font-size: 28px !important;
+        }
+      }
+    </style>
+  </head>
+  <!-- Inline presentation is intentional for email-client compatibility. -->
+  {# djlint:off H021 #}
+  <body style="margin: 0;
+               padding: 0;
+               background-color: #03131d;
+               color: #f5f8f4;
+               font-family: Arial, Helvetica, sans-serif;
+               -webkit-text-size-adjust: 100%">
+    <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all">
+      Our campaign is coming to a close. Help keep the next discovery within
+      reach. U.S. tax-deductible giving, to the extent permitted by law.
+    </div>
+    <table role="presentation"
+           width="100%"
+           cellpadding="0"
+           cellspacing="0"
+           border="0"
+           bgcolor="#03131D"
+           style="width: 100%;
+                  background-color: #03131d">
+      <tr>
+        <td align="center" style="padding: 24px 0">
+          <!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+          <table role="presentation"
+                 width="640"
+                 cellpadding="0"
+                 cellspacing="0"
+                 border="0"
+                 bgcolor="#061B28"
+                 style="width: 100%;
+                        max-width: 640px;
+                        text-align: justify;
+                        line-height: 1.65;
+                        background-color: #061b28">
+            <tr>
+              <td class="next-gutter"
+                  style="padding: 28px 48px;
+                         color: #f5f8f4;
+                         font-size: 24px;
+                         line-height: 1.2;
+                         font-weight: 700;
+                         letter-spacing: -0.7px">
+                <a href="https://www.speleodb.org/"
+                   style="color: #f5f8f4;
+                          text-decoration: none">SpeleoDB<span style="color: #f6c469">.</span></a>
+              </td>
+            </tr>
+            <tr>
+              <td class="next-gutter"
+                  bgcolor="#fabc4c"
+                  style="padding: 36px 48px 40px;
+                         background-color: #fabc4c;
+                         color: #09212a">
+                <table role="presentation"
+                       width="100%"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       style="width: 100%">
+                  <tr>
+                    <td style="padding: 0 0 20px;
+                               color: #19363b;
+                               font-size: 16px;
+                               line-height: 1.5;
+                               font-weight: 700">Our campaign is coming to a close.</td>
+                  </tr>
+                  <tr>
+                    <td class="next-hero"
+                        style="padding: 0 0 24px;
+                               color: #09212a;
+                               font-size: 48px;
+                               line-height: 1.08;
+                               font-weight: 700;
+                               letter-spacing: -1.6px">
+                      The next discovery
+                      <br />
+                      starts with <span style="color: #0455aa">you</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 28px; color: #19363b; font-size: 18px">
+                      Before this campaign closes, we need your help to keep the
+                      tools behind our shared adventures free and open. We’re
+                      counting on our community to carry that possibility
+                      forward.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 24px 0 8px;
+                               border-top: 1px solid #b98228;
+                               color: #19363b;
+                               font-size: 15px;
+                               line-height: 1.5;
+                               font-weight: 700">One shared goal. More discoveries ahead.</td>
+                  </tr>
+                  <tr>
+                    <td class="next-goal"
+                        style="padding: 0 0 20px;
+                               color: #09212a;
+                               font-size: 48px;
+                               line-height: 1.1;
+                               font-weight: 700;
+                               letter-spacing: -1.6px">{{ campaign.formatted_goal }}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 8px;
+                               color: #09212a;
+                               font-size: 21px;
+                               line-height: 1.4;
+                               font-weight: 700">U.S. tax-deductible giving</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 24px;
+                               color: #19363b;
+                               font-size: 15px;
+                               line-height: 1.6">
+                      Donations are tax-deductible to the extent permitted by
+                      U.S. law.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td bgcolor="#09212A"
+                              style="background-color: #09212a;
+                                     border: 1px solid #09212a;
+                                     border-radius: 4px">
+                            <a href="{{ campaign.donation_url }}"
+                               style="display: inline-block;
+                                      padding: 17px 24px;
+                                      color: #f5f8f4;
+                                      font-size: 17px;
+                                      line-height: 1.2;
+                                      font-weight: 700;
+                                      text-decoration: none;
+                                      border-radius: 4px">Support the next discovery&nbsp; →</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px 0 0; color: #19363b; font-size: 16px">
+                      A donation of any size allows our community to stay free
+                      for another day.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img src="{{ email_assets_url }}cave-expedition-marcelin-nebenhaus.jpg"
+                     width="640"
+                     height="427"
+                     alt="A cave diver’s light illuminates an extraordinary underwater passage"
+                     style="display: block;
+                            width: 100%;
+                            height: auto;
+                            border: 0" />
+              </td>
+            </tr>
+            <tr>
+              <td class="next-gutter"
+                  style="padding: 12px 48px 0;
+                         color: #9db7ba;
+                         font-size: 12px;
+                         line-height: 1.5">
+                There is still so much to discover. Photograph © Marcelin
+                Nebenhaus
+              </td>
+            </tr>
+            <tr>
+              <td class="next-gutter" style="padding: 32px 48px 36px">
+                <h1 style="margin: 0 0 20px;
+                           color: #f5f8f4;
+                           font-size: 26px;
+                           line-height: 1.25;
+                           font-weight: 700;
+                           letter-spacing: -0.5px">SpeleoDB helps explorers around the world.</h1>
+                <table role="presentation"
+                       width="100%"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       style="width: 100%">
+                  <tr>
+                    <td style="padding: 0 0 28px;
+                               color: #cfdfdf;
+                               font-size: 17px;
+                               line-height: 1.75">
+                      Your support helps maintain SpeleoDB and improve the tools
+                      we explore with. Your survey work stays yours, you choose
+                      who can access it, and SpeleoDB’s code stays open.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding: 0 0 28px; text-align: center">
+                      <table role="presentation"
+                             align="center"
+                             cellpadding="0"
+                             cellspacing="0"
+                             border="0">
+                        <tr>
+                          <td bgcolor="#fabc4c"
+                              style="background-color: #fabc4c;
+                                     border: 1px solid #fabc4c;
+                                     border-radius: 4px">
+                            <a href="{{ campaign.donation_url }}"
+                               style="display: inline-block;
+                                      padding: 17px 24px;
+                                      color: #09212a;
+                                      font-size: 17px;
+                                      line-height: 1.2;
+                                      font-weight: 700;
+                                      text-decoration: none;
+                                      border-radius: 4px">SpeleoDB is awesome&nbsp; →</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center"
+                        style="text-align: center;
+                               padding: 28px 0 16px;
+                               border-top: 1px solid #294550;
+                               color: #f5f8f4;
+                               font-size: 19px;
+                               line-height: 1.6;
+                               font-weight: 700">Thank you for being part of what comes next.</td>
+                  </tr>
+                  <tr>
+                    <td class="next-signature"
+                        align="center"
+                        style="text-align: center;
+                               padding: 0 0 8px;
+                               color: #f6c469;
+                               font-family: Georgia, &quot;
+                               Times New Roman&quot;
+                               , serif;
+                               font-size: 30px;
+                               line-height: 1.25;
+                               font-style: italic">Explore as One, Survey as Many.</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="next-gutter"
+                  style="padding: 24px 48px 32px;
+                         border-top: 1px solid #294550;
+                         color: #a5bfc2;
+                         font-size: 12px;
+                         line-height: 1.75">
+                <table role="presentation"
+                       width="100%"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       style="width: 100%">
+                  <tr>
+                    <td style="padding: 0 0 12px">
+                      Donations are made to Underwater Speleological and
+                      Archaeological Heritage Institute.
+                      <br />
+                      A 501(c)(3) nonprofit organization. Donations are
+                      tax-deductible to the extent permitted by U.S. law.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <a href="{{ unsubscribe_url }}"
+                         style="color: #a7ddd4;
+                                text-decoration: underline">Email preferences / unsubscribe</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <!--[if mso]></td></tr></table><![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+  {# djlint:on H021 #}
+</html>

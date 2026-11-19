@@ -1,0 +1,14 @@
+{% extends "admin/import_export/change_list_import_export.html" %}
+
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block content %}
+  {{ block.super }}
+  {% for campaign in cl.result_list %}
+    {% include "admin/campaigns/send_forms.html" with campaign=campaign only %}
+  {% endfor %}
+{% endblock content %}

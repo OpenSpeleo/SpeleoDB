@@ -8,8 +8,9 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from speleodb.campaigns.models import CampaignDismissal
 from speleodb.campaigns.models import DonationCampaign
+from speleodb.campaigns.models import DonationCampaignDismissal
+from speleodb.campaigns.models import email_template_choices
 from speleodb.users.tests.factories import UserFactory
 
 
@@ -17,15 +18,15 @@ from speleodb.users.tests.factories import UserFactory
 def test_dismissal_survives_campaign_rescheduling() -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support exploration",
-        subject="Support SpeleoDB",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support SpeleoDB",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
         end_date=today,
     )
     user = UserFactory.create()
-    CampaignDismissal.objects.get_or_create(campaign=campaign, user=user)
+    DonationCampaignDismissal.objects.get_or_create(campaign=campaign, user=user)
     campaign.start_date = today + timedelta(days=1)
     campaign.end_date = today + timedelta(days=2)
     campaign.save()
@@ -44,8 +45,8 @@ def test_campaign_invitation_date_window(
 ) -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support exploration",
-        subject="Support SpeleoDB",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support SpeleoDB",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today + timedelta(days=start_offset),
@@ -59,8 +60,8 @@ def test_campaign_invitation_date_window(
 def test_campaign_rejects_reversed_dates() -> None:
     today = timezone.localdate()
     campaign = DonationCampaign(
-        headline="Support exploration",
-        subject="Support SpeleoDB",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support SpeleoDB",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -74,8 +75,8 @@ def test_campaign_rejects_reversed_dates() -> None:
 def test_dismiss_endpoint_is_account_scoped_and_keeps_one_record() -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support",
-        subject="Support",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -89,7 +90,10 @@ def test_dismiss_endpoint_is_account_scoped_and_keeps_one_record() -> None:
     client.force_authenticate(user)
     assert client.post(url).status_code == HTTPStatus.NO_CONTENT
     assert client.post(url).status_code == HTTPStatus.NO_CONTENT
-    assert CampaignDismissal.objects.filter(campaign=campaign, user=user).count() == 1
+    assert (
+        DonationCampaignDismissal.objects.filter(campaign=campaign, user=user).count()
+        == 1
+    )
     assert campaign.should_invite(other)
 
 
@@ -103,16 +107,16 @@ def test_weekly_reminder_requires_elapsed_week_and_active_campaign(
 ) -> None:
     day = timezone.localdate() + timedelta(days=campaign_offset)
     campaign = DonationCampaign.objects.create(
-        headline="Support",
-        subject="Support",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=day,
         end_date=day,
     )
     user = UserFactory.create()
-    dismissal = CampaignDismissal.objects.create(campaign=campaign, user=user)
-    CampaignDismissal.objects.filter(pk=dismissal.pk).update(
+    dismissal = DonationCampaignDismissal.objects.create(campaign=campaign, user=user)
+    DonationCampaignDismissal.objects.filter(pk=dismissal.pk).update(
         modified_date=timezone.now() - timedelta(days=days_ago)
     )
     assert campaign.should_invite(user) is expected
@@ -127,7 +131,10 @@ def test_weekly_reminder_requires_elapsed_week_and_active_campaign(
         )
         assert not campaign.should_invite(user)
         assert (
-            CampaignDismissal.objects.filter(campaign=campaign, user=user).count() == 1
+            DonationCampaignDismissal.objects.filter(
+                campaign=campaign, user=user
+            ).count()
+            == 1
         )
 
 
@@ -135,8 +142,8 @@ def test_weekly_reminder_requires_elapsed_week_and_active_campaign(
 def test_reminder_interval_comes_from_campaign() -> None:
     today = timezone.localdate()
     campaign = DonationCampaign.objects.create(
-        headline="Support",
-        subject="Support",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -144,8 +151,8 @@ def test_reminder_interval_comes_from_campaign() -> None:
         reminder_days=14,
     )
     user = UserFactory.create()
-    dismissal = CampaignDismissal.objects.create(campaign=campaign, user=user)
-    CampaignDismissal.objects.filter(pk=dismissal.pk).update(
+    dismissal = DonationCampaignDismissal.objects.create(campaign=campaign, user=user)
+    DonationCampaignDismissal.objects.filter(pk=dismissal.pk).update(
         modified_date=timezone.now() - timedelta(days=8)
     )
     assert not campaign.should_invite(user)

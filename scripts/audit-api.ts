@@ -9,8 +9,9 @@ const SOURCE_ROOTS = ['frontend_common/', 'frontend_private/static/private/ts/',
 const NETWORK_NAMES = new Set(['fetch', 'XMLHttpRequest', 'ajax', 'getJSON', 'getScript', 'axios', 'ky', 'superagent', 'apiRequest']);
 const TRANSPORT_IMPORTS = new Set(['axios', 'ky', 'superagent', 'node-fetch', 'cross-fetch', 'undici']);
 
-/** Each exception is a reviewed external, signed-storage, tile, or static-file boundary. */
+/** Each exception identifies a reviewed boundary outside the generated REST API. */
 export const NETWORK_EXCEPTIONS = [
+    { file: 'frontend_common/controllers/admin-campaign-preview.ts', argument: 'form.action || window.location.href', reason: 'CSRF-protected native Django admin form submission, including its save and validation hooks.' },
     { file: 'frontend_common/controllers/feedback.ts', argument: 'context.endpoint', reason: 'External Formspree feedback form.' },
     { file: 'frontend_common/controllers/xls2compass.ts', argument: 'nominatim', reason: 'External Nominatim location search.' },
     { file: 'frontend_private/static/private/ts/map_viewer/components/context_menu.ts', argument: 'iconUrl', reason: 'Static SVG icon asset.' },

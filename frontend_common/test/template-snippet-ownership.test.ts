@@ -93,7 +93,16 @@ describe('unreachable executable template snippets', () => {
     it('has no unresolved dynamic include that could select the obsolete fragments', () => {
         const includes = references.filter(reference => reference.kind === 'include');
         expect(includes.length).toBeGreaterThan(0);
-        expect(includes.filter(reference => reference.template === null)).toEqual([]);
+        // The campaign model validates UUID HTML choices and fixes the modal
+        // directory before inclusion; backend modal regressions cover traversal.
+        expect(includes.filter(reference => reference.template === null)).toEqual([{
+            kind: 'include',
+            expression: 'donation_campaign.modal_template_name',
+            template: null,
+            assignments: [],
+            file: 'snippets/donation_campaign.html',
+            root: 'frontend_private/templates',
+        }]);
     });
 
     it('has no direct include or inheritance edge to an obsolete fragment', () => {

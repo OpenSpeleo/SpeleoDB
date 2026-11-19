@@ -18,8 +18,9 @@ from django.utils import timezone
 from django_celery_results.models import TaskResult
 
 from speleodb.campaigns import forms
-from speleodb.campaigns.mail import unsubscribe_url
 from speleodb.campaigns.models import DonationCampaign
+from speleodb.campaigns.models import DonationCampaignEmail
+from speleodb.campaigns.models import email_template_choices
 from speleodb.campaigns.operations import audience
 from speleodb.campaigns.operations import review_digest
 from speleodb.campaigns.operations import schedule_campaign
@@ -36,9 +37,8 @@ if TYPE_CHECKING:
 def campaign() -> DonationCampaign:
     today = timezone.localdate()
     return DonationCampaign.objects.create(
-        headline="Support <exploration>",
-        subject="Support SpeleoDB",
-        body="Keep <surveys> safe.",
+        email_main_template=email_template_choices()[0][0],
+        email_main_subject="Support <exploration>",
         goal_usd=5000,
         donation_url="https://www.paypal.com/donate",
         start_date=today,
@@ -66,12 +66,12 @@ def test_test_recipient_validation_and_isolation(campaign: DonationCampaign) -> 
     }
     assert all(json.loads(row.task_args)[3] is None for row in rows)
     campaign.refresh_from_db()
-    assert campaign.launched_at is None
+    assert not DonationCampaignEmail.objects.exists()
     assert not forms.TestEmailForm({"emails": "bad-address"}).is_valid()
 
 
 @pytest.mark.django_db
-def test_review_change_and_repeat_submission_are_rejected(
+def test_review_change_and_replayed_submission_are_rejected(
     campaign: DonationCampaign,
 ) -> None:
     requester = UserFactory.create(is_superuser=True)
@@ -80,47 +80,41 @@ def test_review_change_and_repeat_submission_are_rejected(
     with pytest.raises(ValueError, match="changed"):
         schedule_campaign(
             str(campaign.pk),
+            send_id=str(uuid4()),
             requester=requester,
             site_url="https://speleodb.org/",
             digest=digest,
         )
     user.email_on_speleodb_updates = False
     user.save()
+    send_id = str(uuid4())
     receipt = schedule_campaign(
         str(campaign.pk),
+        send_id=send_id,
         requester=requester,
         site_url="https://speleodb.org/",
         digest=review_digest(campaign),
     )
     assert receipt.task_ids
     campaign.refresh_from_db()
-    assert campaign.approved_snapshot["subject"] == campaign.subject
+    assert not DonationCampaignEmail.objects.exists()
     with pytest.raises(ValueError, match="already"):
         schedule_campaign(
             str(campaign.pk),
+            send_id=send_id,
             requester=requester,
             site_url="https://speleodb.org/",
             digest=review_digest(campaign),
         )
-    assert all(recipient["user_id"] != str(user.pk) for recipient in audience())
-
-
-@pytest.mark.django_db
-def test_one_click_unsubscribe_requires_signed_post_and_preserves_account() -> None:
-    user = UserFactory.create()
-    client = Client(enforce_csrf_checks=True)
-    url = unsubscribe_url("https://speleodb.org", str(user.pk), user.email)
-    assert client.get(url).status_code == HTTPStatus.OK
-    user.refresh_from_db()
-    assert user.email_on_speleodb_updates
-    assert (
-        client.post(url, {"List-Unsubscribe": "One-Click"}).status_code == HTTPStatus.OK
+    assert all(recipient["user_id"] != str(user.pk) for recipient in audience(campaign))
+    repeat = schedule_campaign(
+        str(campaign.pk),
+        send_id=str(uuid4()),
+        requester=requester,
+        site_url="https://speleodb.org/",
+        digest=review_digest(campaign),
     )
-    assert client.post(url).status_code == HTTPStatus.OK
-    user.refresh_from_db()
-    assert not user.email_on_speleodb_updates
-    assert user.is_active
-    assert client.post(url + "tampered").status_code == HTTPStatus.NOT_FOUND
+    assert repeat.group_id != receipt.group_id
 
 
 @pytest.mark.django_db
@@ -130,6 +124,7 @@ def test_delivery_is_single_execution_and_preferences_rechecked(
     requester = UserFactory.create(is_superuser=True)
     receipt = schedule_campaign(
         str(campaign.pk),
+        send_id=str(uuid4()),
         requester=requester,
         site_url="https://speleodb.org/",
         digest=review_digest(campaign),
@@ -140,10 +135,19 @@ def test_delivery_is_single_execution_and_preferences_rechecked(
     send_campaign_email.apply(args=args, task_id=row.task_id, throw=True)
     assert len(mailoutbox) == 1
     message = mailoutbox[0]
-    assert "List-Unsubscribe" in message.extra_headers
-    assert "&lt;surveys&gt;" in message.alternatives[0].content
+    assert "List-Unsubscribe" not in message.extra_headers
+    assert "List-Unsubscribe-Post" not in message.extra_headers
+    assert (
+        'href="https://speleodb.org/private/preferences/"'
+        in message.alternatives[0].content
+    )
+    assert "Support &lt;exploration&gt;" in message.alternatives[0].content
     row.refresh_from_db()
     assert row.status == TaskResultStatus.SUCCESS
+    assert receipt.group_id is not None
+    history = DonationCampaignEmail.objects.get(pk=receipt.group_id)
+    assert history.recipients == message.to
+    assert history.subject == campaign.email_main_subject
 
 
 @pytest.mark.django_db
@@ -153,6 +157,7 @@ def test_opt_out_after_submission_skips_delivery(
     requester = UserFactory.create(is_superuser=True)
     receipt = schedule_campaign(
         str(campaign.pk),
+        send_id=str(uuid4()),
         requester=requester,
         site_url="https://speleodb.org/",
         digest=review_digest(campaign),
@@ -166,6 +171,7 @@ def test_opt_out_after_submission_skips_delivery(
     row.refresh_from_db()
     assert json.loads(row.result)["outcome"] == "skipped"
     assert not mailoutbox
+    assert not DonationCampaignEmail.objects.exists()
 
 
 @pytest.mark.django_db
@@ -207,7 +213,11 @@ def test_admin_review_send_opens_native_task_result(
     receipt = client.get(response["Location"])
     assert receipt.status_code == HTTPStatus.OK
     assert b"backend-accepted" in receipt.content
-    assert result_url.encode() in client.get(url).content
+    history = DonationCampaignEmail.objects.get(campaign=campaign)
+    history_url = reverse(
+        "admin:campaigns_donationcampaignemail_change", args=[history.pk]
+    )
+    assert result_url.encode() in client.get(history_url).content
     count = len(mailoutbox)
     with django_capture_on_commit_callbacks(execute=True):
         client.post(url, {"action": "send", "confirmation": confirmation})
@@ -223,10 +233,15 @@ def test_admin_review_send_opens_native_task_result(
 
 
 @pytest.mark.django_db
-def test_rollback_does_not_publish_or_keep_launch_marker(
+@pytest.mark.parametrize("reminder", [False, True])
+def test_rollback_does_not_publish_or_keep_send_history(
     campaign: DonationCampaign,
     django_capture_on_commit_callbacks: Any,
+    reminder: bool,
 ) -> None:
+    campaign.reminder_email_template = campaign.email_main_template
+    campaign.email_reminder_subject = "Before this campaign closes"
+    campaign.save()
     operator = UserFactory.create(is_superuser=True)
     with (
         django_capture_on_commit_callbacks(execute=True) as callbacks,
@@ -234,14 +249,15 @@ def test_rollback_does_not_publish_or_keep_launch_marker(
     ):
         schedule_campaign(
             str(campaign.pk),
+            send_id=str(uuid4()),
             requester=operator,
             site_url="https://speleodb.org/",
-            digest=review_digest(campaign),
+            digest=review_digest(campaign, reminder=reminder),
+            reminder=reminder,
         )
         transaction.set_rollback(True)
     campaign.refresh_from_db()
-    assert campaign.launched_at is None
-    assert not campaign.approved_snapshot
+    assert not DonationCampaignEmail.objects.exists()
     assert not TaskResult.objects.exists()
     assert not callbacks
 
@@ -277,11 +293,13 @@ def test_delivery_failure_preserves_exception_and_does_not_block_other_recipient
 
 
 @pytest.mark.django_db
-def test_audience_keeps_inactive_accounts_but_excludes_opt_outs() -> None:
+def test_audience_keeps_inactive_accounts_but_excludes_opt_outs(
+    campaign: DonationCampaign,
+) -> None:
     inactive = UserFactory.create(is_active=False)
     opted_out = UserFactory.create(email_on_speleodb_updates=False)
-    assert {row["user_id"] for row in audience()} == {str(inactive.pk)}
-    assert str(opted_out.pk) not in {row["user_id"] for row in audience()}
+    assert {row["user_id"] for row in audience(campaign)} == {str(inactive.pk)}
+    assert str(opted_out.pk) not in {row["user_id"] for row in audience(campaign)}
 
 
 @pytest.mark.django_db(transaction=True)
@@ -300,19 +318,19 @@ def test_worker_trace_sends_campaign_email_and_records_acceptance(
         task_kwargs="{}",
         content_type="application/json",
         content_encoding="utf-8",
-        meta=json.dumps({"operation": "campaign", "time_limit": 120}),
+        meta=json.dumps({"operation": "campaign", "is_test": True, "time_limit": 120}),
     )
     # Exercise Celery's worker trace: eager apply() omits automatic STARTED writes.
     trace = build_tracer(task_name, send_campaign_email, app=current_app, eager=False)
     trace(task_id, args, {}, {"id": task_id, "task": task_name})
     assert len(mailoutbox) == 1
     assert mailoutbox[0].to == ["preview@example.com"]
-    assert mailoutbox[0].subject.startswith("[TEST] ")
+    assert mailoutbox[0].subject == campaign.email_main_subject
     result = TaskResult.objects.get(task_id=task_id)
     assert result.status == TaskResultStatus.SUCCESS
     assert json.loads(result.result)["outcome"] == "backend-accepted"
     campaign.refresh_from_db()
-    assert campaign.launched_at is None
+    assert not DonationCampaignEmail.objects.exists()
 
 
 @pytest.mark.django_db
@@ -374,7 +392,7 @@ def test_duplicate_worker_delivery_preserves_original_failure(
         task_id=task_id,
         task_name=task_name,
         status=TaskResultStatus.PENDING,
-        meta=json.dumps({"operation": "campaign", "time_limit": 120}),
+        meta=json.dumps({"operation": "campaign", "is_test": True, "time_limit": 120}),
     )
     trace = build_tracer(task_name, send_campaign_email, app=current_app, eager=False)
     request = {"id": task_id, "task": task_name}
@@ -403,7 +421,7 @@ def test_duplicate_worker_delivery_does_not_complete_running_task(
         task_id=task_id,
         task_name=task_name,
         status=TaskResultStatus.STARTED,
-        meta=json.dumps({"operation": "campaign", "stage": "sending"}),
+        meta=json.dumps({"operation": "campaign", "is_test": True, "stage": "sending"}),
     )
     trace = build_tracer(task_name, send_campaign_email, app=current_app, eager=False)
     trace(
@@ -425,6 +443,7 @@ def test_send_page_survives_expired_task_group(
     operator = UserFactory.create(is_staff=True, is_superuser=True)
     receipt = schedule_campaign(
         str(campaign.pk),
+        send_id=str(uuid4()),
         requester=operator,
         site_url="https://speleodb.org/",
         digest=review_digest(campaign),
@@ -433,8 +452,8 @@ def test_send_page_survives_expired_task_group(
     current_app.backend.delete_group(receipt.group_id)
     response = admin_client.get(reverse("admin:campaign_send", args=[campaign.pk]))
     assert response.status_code == HTTPStatus.OK
-    assert b"Full-audience resend is disabled" in response.content
+    assert b"Full-audience resend is disabled" not in response.content
     assert b"View task results" not in response.content
-    assert b"Review send" not in response.content
+    assert b"Review send" in response.content
     campaign.refresh_from_db()
-    assert campaign.launched_at is not None
+    assert not DonationCampaignEmail.objects.exists()

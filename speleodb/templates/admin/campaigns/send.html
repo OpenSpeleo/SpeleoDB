@@ -1,34 +1,79 @@
 {% extends "admin/base_site.html" %}
 
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
 {% block content %}
-  <h1>{{ campaign.headline }}</h1>
+  <h1>{{ title }}</h1>
+  <h2>{{ email_subject }}</h2>
+  <p>Email template: {{ selected_template }}</p>
   <p>Dashboard visibility: {{ campaign.start_date }} through {{ campaign.end_date }} (inclusive).</p>
-  <p>Sending email is independent of dashboard visibility. Confirm the campaign-only unsubscribe setup with your email provider before sending.</p>
-  {% if error %}
-    <p class="errornote">{{ error }}</p>
-  {% endif %}
-  <h2>Send test email</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ test_form.as_p }}
-    <button type="submit" name="action" value="test">Send test email</button>
-  </form>
-  <h2>Send to registered accounts</h2>
-  <p>{{ recipient_count }} unique addresses after existing update opt-outs. Provider suppressions may exclude more recipients.</p>
-  {% if campaign.launched_at %}
-    <p>Submitted {{ campaign.launched_at }}. Full-audience resend is disabled.</p>
-    {% if task_results_url %}
-      <a href="{{ task_results_url }}">View task results</a>
-    {% endif %}
-  {% else %}
+  <p>Sending email is independent of dashboard visibility.</p>
+  {% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+  {% if not reminder_unconfigured %}
+    <h2>Send test email</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ test_form.as_p }}
+      <div class="campaign-template-controls">
+        <button type="submit" class="button" name="action" value="test">Send test email</button>
+      </div>
+    </form>
+    <h2>Send to registered accounts</h2>
+    <p>{{ recipient_count }} unique addresses after update opt-outs and donor exclusions{% if project_users_only %} and the project-access filter{% endif %}. Provider suppressions may exclude more recipients.</p>
     <form method="post">
       {% csrf_token %}
       {% if confirmation %}
         <input type="hidden" name="confirmation" value="{{ confirmation }}" />
-        <button type="submit" name="action" value="send">Send to {{ recipient_count }} accounts</button>
+        {% if project_users_only %}
+          <input type="hidden" name="project_users_only" value="1" />
+          <p>Only users with access to at least one project will receive this email.</p>
+        {% else %}
+          <p>All eligible accounts will receive this email, including users with no projects.</p>
+        {% endif %}
+        <p>Confirming this review submits a new email batch. Review again for another send.</p>
+        <div class="campaign-template-controls">
+          <button type="submit"
+                  class="button"
+                  name="action"
+                  value="send">Send to {{ recipient_count }} accounts</button>
+        </div>
       {% else %}
-        <button type="submit" name="action" value="review">Review send</button>
+        {{ audience_form.as_p }}
+        <div class="campaign-template-controls">
+          <button type="submit" class="button" name="action" value="review">Review send</button>
+        </div>
       {% endif %}
     </form>
+  {% endif %}
+  <h2>Email history</h2>
+  {% if send_history %}
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Sent</th>
+          <th scope="col">Subject</th>
+          <th scope="col">Recipients</th>
+          <th scope="col">Template</th>
+          <th scope="col">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in send_history %}
+          <tr>
+            <td>{{ item.creation_date }}</td>
+            <td>{{ item.subject }}</td>
+            <td>{{ item.recipients|length }}</td>
+            <td>{{ item.template }}</td>
+            <td><a href="{% url 'admin:campaigns_donationcampaignemail_change' item.pk %}">View history and task results</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No successful deliveries have been recorded for this email type.</p>
   {% endif %}
 {% endblock content %}

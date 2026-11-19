@@ -1,0 +1,10 @@
+<div class="campaign-template-controls">
+  {% include "django/forms/widgets/select.html" %}
+  <button type="button"
+          class="button"
+          data-campaign-save-preview="{{ widget.name }}">Save &amp; send preview</button>
+</div>
+<span class="help"
+      role="status"
+      aria-live="polite"
+      data-campaign-preview-status="{{ widget.name }}"></span>

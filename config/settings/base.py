@@ -371,7 +371,12 @@ VITE_MANIFEST_PATH = VITE_ASSET_ROOT / ".vite/manifest.json"
 VITE_ENTRY_REGISTRY_PATH = BASE_DIR / "frontend_common/entries.json"
 VITE_ALLOW_MISSING_MANIFEST = DEBUG
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
-# STATICFILES_DIRS = [str(APPS_DIR / "static")]
+STATICFILES_DIRS = [
+    (
+        "campaigns/email_templates/assets",
+        BASE_DIR / "speleodb/templates/campaigns/email_templates/assets",
+    ),
+]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
 STATICFILES_FINDERS = [
     "speleodb.common.staticfiles.SourceProtectedFileSystemFinder",

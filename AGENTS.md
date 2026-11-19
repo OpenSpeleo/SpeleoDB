@@ -46,6 +46,23 @@ required; this rule only specifies where an authorized commit must run.
   regressions. Test count and assertions about obvious implementation details
   are not quality goals.
 
+## Admin button appearance
+
+All Django admin action buttons must match the approved **Save & send preview**
+buttons. This applies to new buttons and changes to existing buttons, including
+campaign sends, previews, forms, dialogs, and list actions.
+
+- Reuse shared styles; do not create a different visual treatment per action.
+- Use the native admin `--button-bg`, `--button-fg`, and `--button-hover-bg`
+  tokens, inherited font, `10px 15px` padding, no border, and a `4px` radius.
+  The reference treatment lives in
+  `frontend_common/styles/admin-campaign-preview.css`.
+- Enabled peer actions must have identical colors and sizing. Only actually
+  disabled or pending actions may appear dimmed.
+- Do not assume `class="button"` alone provides the approved appearance. Verify
+  the shared stylesheet loads and that the rendered buttons retain their styling
+  after an asset-watcher rebuild.
+
 ## Mandatory owner directives
 
 These constraints apply to implementation, refactoring, tests, reviews and

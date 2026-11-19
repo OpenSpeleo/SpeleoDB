@@ -9,21 +9,76 @@ authenticated `POST /api/v2/user/donation-campaigns/{campaign_id}/dismiss/`
 operation returns 204 and creates or updates only the caller's dismissal,
 renewing that interval without adding duplicate rows.
 
-Django admin's Operations page links to the fundraiser. The grouped form edits
-persisted content, story cards, and action labels. New campaigns have no
-hardcoded content defaults; the owner supplies their copy and dates. Saving
-never sends email. Staff with campaign view permission can inspect campaigns
-read-only. Only active superusers may create/change campaigns, import/export,
-send test messages, review the audience, and explicitly submit a production
-send. Campaign deletion remains disabled. Email and modal previews are not
-provided in admin.
+Django admin's Operations page links to the fundraiser. The form edits the
+action URL, integer USD goal, main email subject, reminder email subject,
+required main email and modal selections, optional reminder selection, and
+operational dates/dismissal timing. Copy, images, labels, and story cards live
+in HTML. Main and reminder subjects, template selectors, and send actions are
+grouped in separate admin fieldsets. `email_reminder_subject` is optional until
+a reminder template is selected; model validation and the send boundary reject
+an empty reminder subject; either both reminder fields must be configured or
+both cleared. `snapshot()` freezes the selected type's subject under `subject`,
+so the delivery header and HTML title agree for real sends and previews. The
+campaign model stores separate main/reminder subjects and successful email
+batches. `modal_template` stores a UUID4 HTML filename selected from
+`speleodb/templates/campaigns/modal_templates/`; email choices come only from
+`speleodb/templates/campaigns/email_templates/`. Both use the same filename
+discovery rule with separate directories and choice callables. The dashboard
+includes the validated `modal_template_name` in its existing dialog shell, using
+the shared navigation and dismissal controller. New campaigns initially select
+the included modal design. Modal selection adds no database query; Django's
+template loader renders the selected file. `test_modal_templates.py` covers
+directory separation, invalid or removed selections, selected content, and
+escaped campaign values; dashboard presentation tests retain the original design
+and dismissal coverage. Normal saving never sends email. Staff with campaign
+view permission can inspect campaigns read-only. Only active superusers may
+create/change campaigns, import/export, send test messages, review the audience,
+and explicitly submit a production send. Campaign deletion is restricted to
+active superusers, including bulk deletion. Django's native confirmation and
+cascade remove the campaign's dismissals and email history.
+`DonationCampaignAdmin.get_deleted_objects()` permits that history cascade while
+keeping standalone email-history deletion disabled. This uses the existing
+foreign keys and admin permission hooks without additional queries or persistent
+state. Endpoint regressions in `test_admin_delete.py` cover individual and bulk
+deletion, cascades, and denial for staff even with model permissions.
+
+Both email template selectors expose **Save & send preview**. The typed admin
+controller posts the current form with `_save_preview` identifying the selected
+email type. Native Django admin validation, saving, audit logging, and its
+transaction remain in charge. Successful response hooks schedule the existing
+explicit-recipient test operation using only `request.user.email`; arbitrary
+recipient input is ignored. The JSON response provides inline feedback, the
+saved change URL, and the native task-results URL. The controller opens a native
+success dialog after a successful response; validation and request failures
+remain visible beside the selector. Validation failures return JSON without
+saving or queuing mail. Preview requests require active superuser access and
+CSRF. Test and preview messages never create real-send history. Modal previews
+are not provided in admin.
+
+The admin exposes separate **Send Email Campaign** and **Send Reminder Email
+Campaign** buttons. The main action uses `email_main_template`; the reminder
+action uses `reminder_email_template` and is disabled until that selection is
+saved. Both actions require active superuser access and preserve the explicit
+test/review/confirm workflow. Signed reviews bind the campaign and selected
+email type, so a main-email review cannot authorize reminder delivery.
 
 The audience is registered account email addresses, including inactive accounts,
-excluding existing SpeleoDB update opt-outs and empty addresses, deduplicated
-case-insensitively. Provider suppressions may reject additional recipients. Test
-addresses are entered explicitly and do not expand to account recipients. A
-signed review captures a content/audience fingerprint and expires after one
-hour. Changes require a fresh review. Each recipient gets a separate message.
+excluding existing SpeleoDB update opt-outs, empty addresses, and the campaign’s
+case-insensitive `donors` list, deduplicated case-insensitively. Provider
+suppressions may reject additional recipients. Test addresses are entered
+explicitly and do not expand to account recipients. A signed review captures a
+content/audience fingerprint and expires after one hour. Changes require a fresh
+review. Each recipient gets a separate message.
+
+Both real-send forms offer an optional `project_users_only` flag, off by
+default. When selected, eligibility requires at least one active direct project
+permission or an active team permission through an active membership, on an
+active project of any type. Web-viewer access counts. Filtering happens before
+case-insensitive email deduplication and preserves update opt-outs. The flag and
+resulting audience participate in the review digest and are captured in the send
+snapshot. Workers recheck the same eligibility at delivery. Explicit test
+recipients remain independent of this filter. The option is per send and adds no
+campaign model field, migration, or background schedule.
 
 The email task disables Celery’s automatic STARTED write because the shared
 execution guard must claim the pending result row first. Worker-trace coverage
@@ -32,45 +87,70 @@ task execution. When the guard refuses a duplicate task, the campaign task
 raises Celery `Ignore` so its worker cannot overwrite an existing running or
 failed result with a spurious success.
 
-Submission snapshots the approved content and records a permanent launch marker
-and Celery group identifier. Celery task results and groups provide detailed
-outcomes under the existing retention policy. Once detailed history expires, the
-campaign still cannot be submitted again through the full-audience action. Tasks
-recheck account/address/preferences before delivery. They use the existing
-single-execution guard, audit log and after-commit publisher on
-background_control, with a 90-second soft and 120-second hard execution limit.
-Failures retain their original exception and traceback. There are no automatic
-retries. Inspect provider records before attempting any separately authorized
-recovery of uncertain publication or delivery.
+Each real-send review receives a unique signed `send_id`, bound to the campaign,
+email type, and content/audience digest. A new review permits another send;
+replaying the same confirmation is rejected through the existing submission
+audit. Each newly confirmed review creates its own main or reminder batch. Tasks
+retain frozen content and recheck account/address/preferences, donor exclusions,
+and any selected project-access requirement before delivery.
 
-The fixed HTML/plain-text templates receive `campaign` (a content mapping),
-`site_url`, an absolute storage-resolved `photo_url`, and `unsubscribe_url`.
-Database content is plain text, never executable template source. Tracking is
-disabled. Provider acceptance does not establish inbox delivery or a donation.
+`DonationCampaignEmail` stores successful delivery batches, including the type,
+subject, template, and successfully accepted recipient addresses. Recipient
+workers lock the shared batch row inside the existing outcome transaction before
+appending an address. This keeps accepted recipients intact across worker
+replicas. Its UUID is the Celery group identifier, so the readonly admin detail
+links to native task results while they remain available. Failures and skips do
+not become successful recipients; an entirely unsuccessful batch creates no
+success record. The campaign form includes readonly history, and standalone
+history is restricted to active superusers with creation, editing, and deletion
+disabled. History remains available after detailed Celery results expire.
+Preview/test sends bypass the registered audience and never create real-send
+history. They use the existing single-execution guard, audit log and
+after-commit publisher on background_control, with a 90-second soft and
+120-second hard execution limit. Failures retain their original exception and
+traceback. There are no automatic retries. Inspect provider records before
+attempting any separately authorized recovery of uncertain publication or
+delivery. If a provider accepts a message but recording its successful delivery
+fails, the task fails and requires manual investigation against provider
+records. It is never retried automatically.
 
-Signed unsubscribe links are bound to the account and current email address. GET
-displays confirmation without mutation; POST changes only
-`email_on_speleodb_updates`. The signed token authorizes mailbox-provider
-one-click POST without a session/CSRF token. Repeated POST is harmless. Test
-emails link to an informational page that changes no preferences.
+Email templates receive `campaign` (selected subject, action URL, integer goal,
+and formatted goal), `site_url`, `email_assets_url`, and `unsubscribe_url`. The
+staticfiles prefix `campaigns/email_templates/assets/` exposes the colocated
+`email_templates/assets/` directory, including the campaign photo. The asset
+base URL is absolute and uses Django's configured static storage, including the
+existing S3 static storage in production. Normal deployment `collectstatic`
+publishes these colocated assets with the other static files. Database content
+remains escaped data. Only reviewed, application-owned files provide executable
+template source. Templates should contain their own full markup, rather than
+include mutable source from other files. The review digest includes selected
+file contents, and submission snapshots those contents for workers so edits
+cannot change queued mail. Only the selected email type's source is read; a
+removed optional reminder file cannot block main email snapshotting. Plain text
+is derived from the rendered HTML with explicit action and unsubscribe URLs.
+Tracking is disabled. Provider acceptance does not establish inbox delivery or a
+donation.
 
-## Production email prerequisite
+A missing reminder template is rejected before review or task creation,
+including direct requests to the reminder send page. Reminder delivery shares
+the main email's audience, worker, unsubscribe handling, and execution guard; it
+adds no schedule or automatic sending. `reminder_days` continues to control
+dashboard invitation eligibility only.
 
-MailerSend's [email API](https://developers.mailersend.com/api/v1/email) exposes
-`list_unsubscribe` for qualifying accounts. The
-[Anymail MailerSend backend](https://anymail.dev/en/stable/esps/mailersend/)
-passes `esp_extra` into that API. Campaign mail uses this dedicated field
-instead of assuming arbitrary extra headers survive delivery. Local SMTP/locmem
-mail uses standard List-Unsubscribe and List-Unsubscribe-Post headers. Anymail
-is a production-only dependency and is not imported by campaign code.
+Campaign email's `unsubscribe_url` resolves to the existing authenticated
+`private:user_preferences` route on the sending site's origin, for both real and
+test mail. Locally it points to `http://localhost:8000/private/preferences/`;
+production uses its own domain. GET only displays the normal preferences form
+(or sign-in first) and does not mutate preferences. Users update their own
+settings through the existing form. There are no campaign signed-unsubscribe or
+test-unsubscribe endpoints, automatic unsubscribe POSTs, or mailbox-bound
+tokens.
 
-Before sending production campaign mail, verify the existing account supports
-custom unsubscribe behavior, provider policy permits this application-managed
-flow, generated headers are present and signed correctly, and domain-wide
-suppression will not affect account mail. No provider-account verification or
-production send is performed by implementation tests. This prerequisite is an
-operational requirement, not a stored boolean. Existing transactional email code
-is unchanged.
+Campaign mail omits `List-Unsubscribe` and `List-Unsubscribe-Post` headers and
+MailerSend's `list_unsubscribe` field because those would advertise an automatic
+unsubscribe action that this workflow does not provide. MailerSend tracking
+settings remain disabled through the existing Anymail backend. Existing
+transactional email delivery is unchanged.
 
 ## Admin import and export
 
@@ -81,19 +161,18 @@ exported ID to update an existing campaign. An initial import can create the
 campaign; imports cannot create a second campaign. The standard import preview
 runs without persisting changes, followed by explicit confirmation.
 
-Campaign copy, dates, donation settings and photo metadata are editable through
-imports and undergo model validation. The `photo` column contains a storage
-path, not image bytes; transfer the referenced file separately when moving
-between storage environments. Launch time, approved send snapshot and audit
-timestamps are exported for reference and ignored during import. Existing launch
-history and account dismissals remain intact when updating a campaign. Importing
-never sends campaign email; sending still uses the explicit review/send
-workflow.
+Campaign dates, donor exclusions, donation settings and email template
+selections are editable through imports and undergo model validation. Missing
+template files and paths outside the UUID-named file choices are rejected.
+Templates and assets ship with the application; they are not imported as
+database content. Campaign email history belongs to separate readonly records
+and cannot be rewritten or deleted by a campaign import. Audit timestamps remain
+readonly.
 
 ### Dismissal history in admin
 
 Active superusers can inspect Campaign dismissals in Django admin, search by
-user email or campaign headline, and filter by campaign. Records are ordered by
+user email or campaign subject, and filter by campaign. Records are ordered by
 `modified_date`, the latest dismissal time; `creation_date` preserves the first
 dismissal. The view uses related-object loading and permits no add or edit
 operations. Only active superusers may delete dismissal records, including
@@ -104,9 +183,9 @@ again during the active campaign dates.
 
 Campaign sends redirect to Django’s existing Task result admin: a single
 recipient opens that result’s change/detail page, while multiple recipients open
-the task-results list filtered to their database IDs. The submitted campaign’s
-“View task results” link resolves its existing Celery group to the same native
-pages. No campaign receipt endpoint, template, or custom delivery-status table
-exists. Normal Celery retention can remove those task rows or the group; the
-send page then omits the history link while remaining available, and the
-permanent launch marker still prevents a full-audience resend.
+the task-results list filtered to their database IDs. Each email-history detail
+links its UUID to the matching Celery group and the same native task pages.
+Normal Celery retention may remove those task rows or the group, in which case
+the permanent readonly delivery record remains but its task link is replaced
+with an unavailable notice. A fresh review can still submit a new batch. There
+is no custom campaign receipt endpoint or status page.

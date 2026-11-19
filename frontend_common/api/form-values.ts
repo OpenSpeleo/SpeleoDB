@@ -1,10 +1,20 @@
-import { StationResourceRequestResourceType, PatchedStationResourceRequestResourceType, PatchedSensorInstallRequestStatus } from '@speleodb/api';
-import type { StationLogEntryRequest, V2StationsResourcesCreateBodyThree, PatchedStationResourceRequest, PatchedSensorInstallRequest, V2ImportGpxUpdateBody } from '@speleodb/api';
+import {
+  StationResourceRequestResourceType,
+  PatchedStationResourceRequestResourceType,
+  PatchedSensorInstallRequestStatus,
+} from "@speleodb/api";
+import type {
+  StationLogEntryRequest,
+  V2StationsResourcesCreateBodyThree,
+  PatchedStationResourceRequest,
+  PatchedSensorInstallRequest,
+  V2ImportGpxUpdateBody,
+} from "@speleodb/api";
 
 /** HTML form values become typed SDK inputs before the generator serializes them. */
 export function formText(data: FormData, key: string): string {
-    const value = data.get(key);
-    return typeof value === 'string' ? value : '';
+  const value = data.get(key);
+  return typeof value === "string" ? value : "";
 }
 
 export function formFile(data: FormData, key: string): File | undefined {
