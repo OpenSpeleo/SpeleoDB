@@ -1,0 +1,21 @@
+{% extends "admin/background_operations/change_form.html" %}
+
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block content %}
+  {{ block.super }}
+  {% if can_retry %}
+    <form id="task-result-retry-form"
+          method="post"
+          hidden
+          action="{% url 'admin:django_celery_results_taskresult_changelist' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="retry_failed" />
+      <input type="hidden" name="_selected_action" value="{{ original.pk }}" />
+    </form>
+  {% endif %}
+{% endblock content %}

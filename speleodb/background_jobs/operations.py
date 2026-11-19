@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import logging
 from dataclasses import dataclass
@@ -44,6 +45,17 @@ TASK_NAMES = {
 class OperationReceipt:
     task_ids: list[str]
     group_id: str | None = None
+
+
+def decode_task_arguments(value: str | None) -> Any:
+    # Precreated receipts store JSON containers; Celery's extended backend can
+    # instead store a JSON string containing Python's argsrepr/kwargsrepr.
+    # literal_eval accepts data only: never execute a stored task representation.
+    try:
+        decoded = json.loads(value or "null")
+        return ast.literal_eval(decoded) if isinstance(decoded, str) else decoded
+    except (ValueError, SyntaxError, TypeError) as error:
+        raise ValueError("The original task arguments are unavailable.") from error
 
 
 def eligible_projects() -> QuerySet[Project]:

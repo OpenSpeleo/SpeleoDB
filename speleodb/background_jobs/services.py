@@ -66,6 +66,11 @@ def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
         created_at=now,
         dispatch_after=now,
     )
+    _queue_attempt(job, attempt)
+    return attempt
+
+
+def _queue_attempt(job: BackgroundJob, attempt: JobAttempt) -> None:
     job.current_attempt_id = attempt.id
     job.state = JobState.QUEUED
     job.stage = "Queued"
@@ -80,7 +85,6 @@ def _new_attempt(job: BackgroundJob, *, cycle_attempt: int = 1) -> JobAttempt:
     job.notification_error = ""
     job.save()
     transaction.on_commit(partial(dispatch_attempt, attempt.id), robust=True)
-    return attempt
 
 
 def request_export(user: User) -> tuple[BackgroundJob, bool]:
@@ -108,7 +112,9 @@ def _lock_existing_job(job_id: uuid.UUID) -> BackgroundJob:
     return job
 
 
-def retry_export(job: BackgroundJob, user: User) -> BackgroundJob:
+def retry_export(
+    job: BackgroundJob, user: User, *, task_id: str | None = None
+) -> BackgroundJob:
     if not user.is_active or not (user.is_staff or job.requester_id == user.pk):
         raise PermissionDenied
     with transaction.atomic():
@@ -122,7 +128,38 @@ def retry_export(job: BackgroundJob, user: User) -> BackgroundJob:
             requester=owner, kind=job.kind, state__in=ACTIVE_STATES
         ).exists():
             raise ExportConflictError("This user already has an active export.")
-        _new_attempt(job)
+        if task_id is None:
+            _new_attempt(job)
+        else:
+            attempt = JobAttempt.objects.select_for_update().get(
+                job=job, task_id=task_id
+            )
+            if job.current_attempt_id != attempt.pk or attempt.state != JobState.FAILED:
+                raise ExportConflictError(
+                    "Only the current failed attempt can be retried."
+                )
+            if (
+                attempt.cleanup_token is not None
+                or JobArtifact.objects.filter(job=job).exists()
+            ):
+                raise ExportConflictError(
+                    "This attempt still has artifact cleanup or a published archive."
+                )
+            attempt.state = JobState.QUEUED
+            attempt.cycle_attempt = 1
+            attempt.dispatch_after = timezone.now()
+            attempt.dispatch_started_at = None
+            attempt.dispatched_at = None
+            attempt.started_at = None
+            attempt.deadline_at = None
+            attempt.finished_at = None
+            attempt.error = ""
+            attempt.object_deleted_at = None
+            attempt.cleanup_attempts = 0
+            attempt.cleanup_due_at = None
+            attempt.cleanup_error = ""
+            attempt.save()
+            _queue_attempt(job, attempt)
     return job
 
 
@@ -202,9 +239,10 @@ def claim_attempt(job_id: str, attempt_id: str, task_id: str) -> JobAttempt | No
         attempt.state = JobState.RUNNING
         attempt.started_at = now
         attempt.deadline_at = now + timedelta(seconds=settings.EXPORTS_HARD_TIME_LIMIT)
-        attempt.object_key = (
-            f"exports/speleodb-export-{now:%Y-%m-%dT%H-%M-%SZ}-{attempt.id}.zip"
-        )
+        if not attempt.object_key:
+            attempt.object_key = (
+                f"exports/speleodb-export-{now:%Y-%m-%dT%H-%M-%SZ}-{attempt.id}.zip"
+            )
         attempt.save()
         job.state = JobState.RUNNING
         job.stage = "Collecting accessible data"
@@ -363,7 +401,7 @@ def fail_notification(
         job.save()
 
 
-def dispatch_notification(job_id: uuid.UUID) -> None:
+def dispatch_notification(job_id: uuid.UUID, *, task_id: str | None = None) -> None:
     now = timezone.now()
     token = uuid.uuid4()
     with transaction.atomic():
@@ -387,11 +425,26 @@ def dispatch_notification(job_id: uuid.UUID) -> None:
             seconds=settings.EXPORTS_DISPATCH_LEASE_SECONDS
         )
         job.save()
+    # Same-ID retries claim inside the caller's transaction; only broker I/O
+    # waits for commit, so maintenance cannot take the pending job first.
+    if task_id is None:
+        _publish_notification(job_id, token, task_id=None)
+    else:
+        transaction.on_commit(
+            partial(_publish_notification, job_id, token, task_id=task_id),
+            robust=True,
+        )
+
+
+def _publish_notification(
+    job_id: uuid.UUID, token: uuid.UUID, *, task_id: str | None
+) -> None:
     try:
         dispatch_task(
             NOTIFICATION_TASK,
             args=[str(job_id), str(token)],
             queue="background_control",
+            task_id=task_id,
         )
     except Exception:  # noqa: BLE001 - Publication and delivery share a finite budget.
         fail_notification(

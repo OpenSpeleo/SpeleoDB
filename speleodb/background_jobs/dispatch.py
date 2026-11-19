@@ -34,5 +34,9 @@ def dispatch_task(
         task_id=task_id,
         queue=queue,
         headers=headers,
+        # TaskResult must retain complete inputs for an exact manual retry.
+        # Celery otherwise truncates the extended backend's argument previews.
+        argsrepr=repr(args),
+        kwargsrepr=repr(kwargs or {}),
         retry=False,
     )

@@ -1,5 +1,12 @@
 @import './admin-campaign-preview.css';
 
+.submit-row .task-result-retry-button {
+  box-sizing: content-box;
+  height: 0.9375rem;
+  line-height: 0.9375rem;
+  margin: 0;
+}
+
 .job-maintenance {
   display: flex;
   align-items: center;

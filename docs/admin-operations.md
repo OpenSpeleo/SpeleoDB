@@ -62,6 +62,18 @@ allocates a new ID, retains the recomputation force setting, and repeats
 destructive confirmation for history reset. Reset starts from zero; it has no
 resume engine. Task results retain the existing Celery retention policy.
 
+Failed task detail pages also offer **RETRY**, and the task-result list provides
+**RETRY selected failed tasks** for a batch. These superuser-only actions submit
+immediately without a confirmation page, requeue the same task ID and update its
+existing result row in place. The prior failure and traceback are cleared for
+the next execution; no new TaskResult is created. Export and notification
+retries retain their owning job lifecycle checks. Campaign retries reload
+current content and use the linked user's current email or the saved direct
+email address. Other operations preserve their inputs; unavailable inputs are
+reported instead of being guessed. The separate Operations **Run again** action
+retains its existing new-execution and destructive-confirmation behavior. See
+[task history](background-jobs-operations.md#task-history-and-scheduler-health).
+
 Conversion continues across independent revisions, reports processed, generated,
 existing, skipped and failed counts, logs conversion failure tracebacks, and
 fails the task if any revision failed. Missing supported sources, empty surveys
@@ -102,7 +114,8 @@ Execution failures log their original traceback before failure bookkeeping.
 Bookkeeping errors log their own traceback and leave the original exception to
 propagate to Celery. Workers perform no admin audit inserts. Deleting a
 requester preserves the submitted action's email snapshot without affecting
-execution. This adds no retry or recovery behavior.
+execution. Worker bookkeeping does not automatically retry or recover
+executions.
 
 Regression coverage uses small local Git histories for manifest materialization
 and mixed conversion outcomes, a sequential PostgreSQL execution after requester

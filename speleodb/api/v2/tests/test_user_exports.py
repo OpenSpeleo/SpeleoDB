@@ -466,7 +466,7 @@ class TestUserExports(BaseAPITestCase):
             assert "task-history-worker" in html
             assert "column-date_started" in html
             assert "column-last_updated" in html
-            assert 'name="action"' not in html
+            assert ('value="retry_failed"' in html) is is_superuser
 
             filtered = self.client.get(
                 history_url, {"status__exact": TaskResultStatus.FAILURE}

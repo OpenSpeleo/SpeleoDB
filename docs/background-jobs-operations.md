@@ -471,13 +471,16 @@ using the development broker or database.
 Open **Celery Results → Task results** in Django admin to inspect task IDs,
 names, status, start/update timestamps, workers, arguments, result payloads,
 tracebacks, and the periodic task name when present. Group results retain their
-existing diagnostic view. Both interfaces are read-only, including for
-superusers: no manual create, status edit, delete, or arbitrary replay action is
-available. Django's authenticated staff permissions protect this operational
-data; do not put credentials or unnecessary personal data in task arguments or
-return values. Application jobs and attempts link to their technical records.
-The task list labels `date_done` as **Last updated** because Celery also updates
-it during STARTED and RETRY; it is not exclusively a completion timestamp.
+existing diagnostic view. Both interfaces keep result fields read-only,
+including for superusers: no manual create, status edit or delete is available.
+Active superusers can use **RETRY** on a failed task's detail page or **RETRY
+selected failed tasks** in the list action menu. Both submit immediately with no
+confirmation page; successful and in-progress selections are excluded. Django's
+authenticated staff permissions protect this operational data; do not put
+credentials or unnecessary personal data in task arguments or return values.
+Application jobs and attempts link to their technical records. The task list
+labels `date_done` as **Last updated** because Celery also updates it during
+STARTED and RETRY; it is not exclusively a completion timestamp.
 
 `CELERY_RESULT_BACKEND="django-db"`, `CELERY_RESULT_EXTENDED=True`, and STARTED
 tracking retain useful execution metadata. Task state transitions update one row
@@ -511,9 +514,41 @@ recoverable error, store it in their durable job, and arrange a bounded retry
 before returning. Map conversion instead records aggregate failure in TaskResult
 when any revision fails. Consult Background jobs / Job attempts, notification
 fields, cleanup counters, and Operations receipts and task results for map
-outcomes. Use their authorized retry/resend/rebuild actions; changing or
-replaying technical result records bypasses domain ownership and is not a
-recovery procedure.
+outcomes. Task-result **RETRY** requeues the same task ID and updates the same
+TaskResult row in place. It clears the previous failure, traceback, worker and
+start time before publication, preserves the row identity and original creation
+time, and records the administrator's explicit retry in the permanent audit.
+Ordinary task retries retain their arguments, force settings and required
+operation metadata while resetting previous outcomes. Campaign email retries
+instead fetch the current campaign template, subject and other content. They
+retain the recipient user ID and use that user's current email, or retain the
+explicit email address for direct recipients. Older account receipts first use
+the user ID from intact stored arguments; only truncated receipts fall back to
+their saved email. The recovered user ID is retained for later retries. A
+missing linked user is reported rather than sending to an obsolete address. This
+path does not need the old email snapshot, so existing failed campaigns with
+truncated argument previews can retry. See
+[campaign delivery](donation-campaign-backend.md). Other task argument
+representations are decoded as data, never executed; complete representations
+are retained on publication. Unavailable arguments are reported per task so
+other selected failures can still be retried.
+
+Export generation retries use `retry_export(task_id=...)` to requeue the current
+failed domain attempt with its existing task ID. An older superseded attempt,
+active artifact cleanup or a published archive prevents rearming that attempt.
+The same object key is reused so a previous failed upload does not become
+untracked. Ordinary export API retries continue creating new attempts.
+Notification retries retain the task ID through the existing request/dispatch
+lifecycle, which issues a fresh delivery token. The retry transaction claims
+queued notification state and its token before commit; only broker publication
+is deferred, so periodic maintenance cannot substitute a new task ID. Ordinary
+notification dispatch keeps its existing behavior. Eligibility and expiry checks
+still apply. Other failed results return to PENDING and are published after
+commit through the existing operations publisher on `background_control`,
+including guarded GeoJSON and campaign executions. Retrying can repeat completed
+side effects such as email delivery; inspect the failure and correct its cause
+first. Publication uncertainty remains visible in result metadata. No automatic
+retry, scheduler or new persistent model is introduced.
 
 Results expire after 30 days. `install_background_schedules` owns the daily
 `celery.backend_cleanup` entry on `background_control`; an available Beat and
@@ -547,7 +582,8 @@ Regression coverage uses real Celery publication/execution and the existing
 Django backend: actual tasks record STARTED/SUCCESS, retries and failures;
 housekeeping records failures while omitting successful rows; Beat's minimal
 runtime applies the same message policy without importing application tasks.
-Admin tests check diagnostic metadata, permissions and rejected mutations;
+Admin tests check diagnostic metadata, permissions, rejected mutations, manual
+single/batch publication after real task failures and export attempt ownership;
 retention tests remove expired results while preserving recent rows. These
 checks complement the existing domain retry, artifact and worker-loss tests.
 

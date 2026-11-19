@@ -94,6 +94,29 @@ audit. Each newly confirmed review creates its own main or reminder batch. Tasks
 retain frozen content and recheck account/address/preferences, donor exclusions,
 and any selected project-access requirement before delivery.
 
+Failed email tasks expose the immediate **RETRY** action in task administration.
+A retry uses the same task ID and TaskResult row, but reloads the same
+campaign's current selected template, subject and content. It retains the
+main/reminder choice and project-user filter. Account recipients are resolved by
+their saved user ID and use their current email; direct/test recipients retain
+the saved email. New receipts retain user ID and site URL independently of the
+snapshot. Older account receipts prefer the user ID in intact stored arguments,
+so an email change or reassignment cannot retarget the task. Only receipts with
+truncated arguments resolve the stored recipient email once; the recovered user
+ID is then retained for later retries. A missing campaign or linked user leaves
+the failed result unchanged and reports why it cannot retry. The rebuilt
+snapshot is frozen for that new execution, and workers still recheck opt-outs,
+donor exclusions and account/project eligibility. The existing batch history
+remains the original send's summary; the task's updated payload records the
+exact content used for its retry.
+
+This adds one campaign read and, for linked recipients, one user read per retry,
+plus the selected template file read; it creates no new model or schedule.
+Regressions exercise actual email-header rejection followed by successful
+same-task delivery after campaign edits, user-email changes, and explicit-email
+or older-receipt resolution, including reminder subjects. No retry results or
+email backend behavior are mocked.
+
 `DonationCampaignEmail` stores successful delivery batches, including the type,
 subject, template, and successfully accepted recipient addresses. Recipient
 workers lock the shared batch row inside the existing outcome transaction before

@@ -65,6 +65,10 @@ def test_test_recipient_validation_and_isolation(campaign: DonationCampaign) -> 
         "second@example.com",
     }
     assert all(json.loads(row.task_args)[3] is None for row in rows)
+    assert all(json.loads(row.meta)["user_id"] is None for row in rows)
+    assert all(
+        json.loads(row.meta)["site_url"] == "https://speleodb.org/" for row in rows
+    )
     campaign.refresh_from_db()
     assert not DonationCampaignEmail.objects.exists()
     assert not forms.TestEmailForm({"emails": "bad-address"}).is_valid()
@@ -131,6 +135,8 @@ def test_delivery_is_single_execution_and_preferences_rechecked(
     )
     row = TaskResult.objects.get(task_id=receipt.task_ids[0])
     args = json.loads(row.task_args)
+    assert json.loads(row.meta)["user_id"] == args[3]
+    assert json.loads(row.meta)["site_url"] == args[2]
     send_campaign_email.apply(args=args, task_id=row.task_id, throw=True)
     send_campaign_email.apply(args=args, task_id=row.task_id, throw=True)
     assert len(mailoutbox) == 1

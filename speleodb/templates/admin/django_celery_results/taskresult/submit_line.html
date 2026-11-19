@@ -1,0 +1,10 @@
+{% extends "admin/submit_line.html" %}
+
+{% block submit-row %}
+  {{ block.super }}
+  {% if can_retry %}
+    <button type="submit"
+            form="task-result-retry-form"
+            class="button admin-action-button task-result-retry-button">RETRY</button>
+  {% endif %}
+{% endblock submit-row %}

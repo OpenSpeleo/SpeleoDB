@@ -11,6 +11,8 @@
   flex: 1 1 auto;
 }
 
+.submit-row .admin-action-button,
+.admin-action-button,
 .campaign-template-controls .button,
 .campaign-preview-dialog .button,
 .field-send_email .button,
@@ -26,6 +28,8 @@
   flex: 0 0 auto;
 }
 
+.submit-row .admin-action-button:hover,
+.admin-action-button:hover,
 .campaign-template-controls .button:hover,
 .campaign-preview-dialog .button:hover,
 .field-send_email .button:hover,

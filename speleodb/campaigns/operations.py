@@ -23,6 +23,7 @@ from django_celery_results.models import TaskResult
 
 from speleodb.background_jobs.operations import OperationReceipt
 from speleodb.background_jobs.operations import _publish
+from speleodb.background_jobs.operations import decode_task_arguments
 from speleodb.campaigns.mail import CONTENT_FIELDS
 from speleodb.campaigns.models import DonationCampaign
 from speleodb.common.enums import TaskResultStatus
@@ -111,6 +112,58 @@ def review_digest(
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
+def prepare_campaign_retry(result: TaskResult, *, site_url: str) -> None:
+    """Refresh retry inputs in memory; the caller owns saving and publication."""
+    metadata = json.loads(result.meta or "{}")
+    if not isinstance(metadata, dict):
+        raise TypeError("The campaign task metadata is unavailable.")
+    campaign_id = metadata.get("campaign_id")
+    if not isinstance(campaign_id, str):
+        raise TypeError("The campaign identity is unavailable.")
+    campaign = DonationCampaign.objects.filter(pk=campaign_id).first()
+    if campaign is None:
+        raise ValueError("The campaign is unavailable.")
+    if not isinstance(metadata.get("is_test"), bool):
+        raise TypeError("The campaign recipient type is unavailable.")
+    email = metadata.get("recipient")
+    user_id = metadata.get("user_id")
+    if user_id is None and not metadata["is_test"]:
+        # Older receipts retained the user ID only in their task arguments.
+        # Prefer that identity even when its email has changed or been reassigned.
+        try:
+            original_args = decode_task_arguments(result.task_args)
+            if isinstance(original_args, (list, tuple)):
+                user_id = original_args[3]
+        except ValueError, IndexError:
+            user_id = None
+    user: User | None = None
+    if user_id is not None:
+        user = User.objects.filter(pk=user_id).first()
+    elif not metadata["is_test"]:
+        # Truncated older receipts may retain only the account email.
+        # Resolve it once and retain the stable identity for later retries.
+        user = User.objects.filter(email__iexact=email).first()
+    if user_id is not None or not metadata["is_test"]:
+        if user is None:
+            raise ValueError("The campaign recipient user is unavailable.")
+        email = user.email
+        user_id = str(user.pk)
+    if not isinstance(email, str) or not email:
+        raise ValueError("The campaign recipient email is unavailable.")
+    original_site_url = metadata.get("site_url")
+    if isinstance(original_site_url, str) and original_site_url:
+        site_url = original_site_url
+    content = snapshot(
+        campaign,
+        reminder=metadata.get("is_reminder", False),
+        project_users_only=metadata.get("project_users_only", False),
+    )
+    metadata.update(recipient=email, user_id=user_id, site_url=site_url)
+    result.task_args = json.dumps([content, email, site_url, user_id])
+    result.task_kwargs = "{}"
+    result.meta = json.dumps(metadata)
+
+
 def schedule_campaign(
     campaign_id: str,
     *,
@@ -180,6 +233,8 @@ def schedule_campaign(
                         "is_reminder": reminder,
                         "project_users_only": project_users_only,
                         "recipient": recipient["email"],
+                        "user_id": recipient["user_id"],
+                        "site_url": site_url,
                         "publication": "unattempted",
                         "stage": "awaiting publication",
                         "time_limit": 120,

@@ -59,6 +59,7 @@
   },
   "scripts": {
     "app": "frontend_common/app.ts",
+    "controller-admin-campaign-preview": "frontend_common/controllers/admin-campaign-preview.ts",
     "controller-auth-form": "frontend_common/controllers/auth-form.ts",
     "controller-danger-zone": "frontend_common/controllers/danger-zone.ts",
     "controller-entity-crud": "frontend_common/controllers/entity-crud.ts",

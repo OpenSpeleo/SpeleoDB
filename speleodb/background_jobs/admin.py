@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import cast
+from typing import override
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.db.models import Max
 from django.db.models import Min
@@ -33,6 +36,8 @@ from speleodb.background_jobs.services import request_export
 from speleodb.background_jobs.services import request_notification
 from speleodb.background_jobs.services import retry_cleanup as retry_job_cleanup
 from speleodb.background_jobs.services import retry_export
+from speleodb.background_jobs.task_result_retry import retry_task_result
+from speleodb.common.enums import TaskResultStatus
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
@@ -40,6 +45,7 @@ if TYPE_CHECKING:
 
     from django.db.models import QuerySet
     from django.http import HttpRequest
+    from django.http import HttpResponse
 
 
 class JobAttemptInline(admin.TabularInline):  # type: ignore[type-arg]
@@ -314,7 +320,7 @@ class BackgroundJobAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 class ReadOnlyTechnicalResultAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     """Celery alone writes technical execution records, including for superusers."""
 
-    actions = None
+    actions: tuple[str, ...] | None = None
     change_list_template = "admin/background_operations/change_list.html"
     change_form_template = "admin/background_operations/change_form.html"
 
@@ -348,6 +354,51 @@ class TaskResultAdmin(ReadOnlyTechnicalResultAdmin, CeleryTaskResultAdmin):
     """Keep upstream task diagnostics and filters with application permissions."""
 
     list_per_page = 50
+    actions = ("retry_failed",)
+    change_form_template = "admin/background_jobs/taskresult/change_form.html"
+
+    def has_retry_permission(self, request: HttpRequest) -> bool:
+        return bool(request.user.is_active and request.user.is_superuser)
+
+    @override
+    def render_change_form(
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: TaskResult | None = None,
+    ) -> HttpResponse:
+        context["can_retry"] = (
+            self.has_retry_permission(request)
+            and obj is not None
+            and obj.status == TaskResultStatus.FAILURE
+        )
+        return super().render_change_form(request, context, add, change, form_url, obj)
+
+    @admin.action(description="RETRY selected failed tasks", permissions=["retry"])
+    def retry_failed(
+        self, request: HttpRequest, queryset: QuerySet[TaskResult]
+    ) -> None:
+        if not self.has_retry_permission(request) or not isinstance(request.user, User):
+            raise PermissionDenied
+        failed = queryset.filter(status=TaskResultStatus.FAILURE)
+        count = 0
+        for result in failed.iterator():
+            try:
+                retry_task_result(
+                    result,
+                    requester=request.user,
+                    site_url=request.build_absolute_uri("/"),
+                )
+            except (ValueError, TypeError) as error:
+                self.message_user(
+                    request, f"{result.task_id}: {error}", messages.WARNING
+                )
+            else:
+                count += 1
+        self.message_user(request, f"Requested retry for {count} failed task(s).")
 
     def get_list_display(self, request: HttpRequest) -> tuple[str, ...]:
         return (
