@@ -103,6 +103,7 @@ def test_application_configures_both_source_protected_finders() -> None:
     assert CompiledStaticFilesConfig.ignore_patterns == [
         *StaticFilesConfig.ignore_patterns,
         "*.ts",
+        "flags",
     ]
 
 
@@ -235,11 +236,15 @@ def test_emitted_scripts_workers_vendors_and_styles_remain_deliverable(
     ],
     ids=["source-lookup-guards", "standard-django-finders"],
 )
-def test_collectstatic_excludes_sources_but_retains_generated_and_vendor_assets(
+def test_collectstatic_skips_sources_and_country_flags_but_keeps_built_assets(
     static_locations: StaticLocations, finder_paths: list[str]
 ) -> None:
-    with override_settings(STATICFILES_FINDERS=finder_paths):
+    with override_settings(
+        INSTALLED_APPS=[*settings.INSTALLED_APPS, "django_countries"],
+        STATICFILES_FINDERS=finder_paths,
+    ):
         call_command("collectstatic", interactive=False, verbosity=0, stdout=StringIO())
+    assert not (static_locations.collected / "flags").exists()
     collected = {
         str(filename.relative_to(static_locations.collected))
         for filename in static_locations.collected.rglob("*")

@@ -84,7 +84,9 @@ inputs rather than downloadable static assets. `CompiledStaticFilesConfig` adds
 [`ignore_patterns`](https://docs.djangoproject.com/en/stable/ref/contrib/staticfiles/#customizing-the-ignored-pattern-list),
 retaining its default exclusions. Django owns collection traversal and matching;
 there is no custom collection filter. This excludes `.ts` and `.d.ts` files
-without changing deployment commands.
+without changing deployment commands. The same policy skips the unused `flags/`
+directory bundled by `django-countries`, including its GIFs and sprite sheets.
+Country fields and template tags use the package’s country data.
 
 The two finder subclasses in `speleodb.common.staticfiles` only reject direct
 `.ts` lookups. This separately protects development static responses: collection

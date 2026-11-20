@@ -8,9 +8,9 @@ from django.contrib.staticfiles.finders import FileSystemFinder
 
 
 class CompiledStaticFilesConfig(StaticFilesConfig):
-    """Use Django's standard collection exclusions for compiler inputs."""
+    """Skip compiler inputs and unused country flags during collection."""
 
-    ignore_patterns: list[str] = [*StaticFilesConfig.ignore_patterns, "*.ts"]
+    ignore_patterns: list[str] = [*StaticFilesConfig.ignore_patterns, "*.ts", "flags"]
 
 
 class SourceProtectedFileSystemFinder(FileSystemFinder):
