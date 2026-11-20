@@ -26,7 +26,8 @@ def test_revoke_invalidates_only_this_users_grants_for_one_app(client: Client) -
         name="Survey notebook",
         redirect_uris=(
             "https://survey.example:8443/auth/callback\n"
-            "https://SURVEY.example:8443/another/callback"
+            "https://SURVEY.example:8443/another/callback\n"
+            "org.karstunderwater.speleomap:/oauth/callback/issuer"
         ),
     )
     other_app = models.Client.objects.create(

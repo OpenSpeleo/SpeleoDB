@@ -25,9 +25,9 @@ def allow_public_client_origin(request: HttpRequest, **kwargs: object) -> bool:
         if request.method == "OPTIONS"
         else request.method
     )
-    path = request.path_info
-    if not allows_delegated_read(method, path) and not (
-        (method == "GET" and request.path == reverse("idp:oidc:userinfo"))
+    userinfo = request.path == reverse("idp:oidc:userinfo")
+    if not allows_delegated_read(method, request.path_info) and not (
+        (userinfo and method in {"GET", "POST"})
         or (
             method == "POST"
             and request.path in {reverse("idp:oidc:token"), reverse("idp:oidc:revoke")}
@@ -37,4 +37,8 @@ def allow_public_client_origin(request: HttpRequest, **kwargs: object) -> bool:
     apps = Client.objects.filter(
         type=Client.Type.PUBLIC, cors_origins__contains=origin
     ).only("cors_origins")
+    if request.method == "POST" and not userinfo:
+        if "Authorization" in request.headers:
+            return False
+        apps = apps.filter(pk=request.POST.get("client_id"))
     return any(origin in app.get_cors_origins() for app in apps)

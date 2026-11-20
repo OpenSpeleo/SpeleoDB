@@ -5,13 +5,10 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 from typing import Any
-from urllib.parse import urlsplit
 
 from allauth.idp.oidc import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator
 from django.shortcuts import redirect
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
@@ -19,6 +16,7 @@ from rest_framework.authtoken.models import Token
 from frontend_private.views.base import AuthenticatedTemplateView
 from speleodb.campaigns.models import DonationCampaign
 from speleodb.users.models import User
+from speleodb.users.oidc import registered_web_origins
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -70,27 +68,6 @@ class ProfileView(AccountSettingsView):
     template_name = "pages/user/dashboard.html"
 
 
-def _registered_site(redirect_uris: str) -> str | None:
-    """Link to the registered origin when the callbacks identify one website."""
-    origins = set()
-    validate = URLValidator(schemes=["https", "http"])
-    for uri in redirect_uris.splitlines():
-        try:
-            validate(uri)
-            parsed = urlsplit(uri)
-            port = parsed.port
-        except ValueError, ValidationError:
-            return None
-        host = parsed.hostname
-        if not host or parsed.username is not None:
-            return None
-        authority = f"[{host}]" if ":" in host else host
-        if port is not None and port != (443 if parsed.scheme == "https" else 80):
-            authority = f"{authority}:{port}"
-        origins.add(f"{parsed.scheme}://{authority}")
-    return origins.pop() if len(origins) == 1 else None
-
-
 class ConnectedAppsView(AccountSettingsView):
     template_name = "pages/user/connected_apps.html"
 
@@ -109,6 +86,7 @@ class ConnectedAppsView(AccountSettingsView):
         }
         connected_apps = []
         for app in applications:
+            origins = registered_web_origins(app["client__redirect_uris"])
             scopes = {
                 scope for grant in app["granted_scopes"] for scope in grant.split()
             }
@@ -116,7 +94,7 @@ class ConnectedAppsView(AccountSettingsView):
                 {
                     "id": app["client_id"],
                     "name": app["client__name"],
-                    "site": _registered_site(app["client__redirect_uris"]),
+                    "site": origins.pop() if len(origins) == 1 else None,
                     "permissions": [
                         labels.get(scope, scope) for scope in sorted(scopes)
                     ],

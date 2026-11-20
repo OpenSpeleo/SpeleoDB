@@ -6,6 +6,7 @@ import secrets
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
+from urllib.parse import urlsplit
 
 from allauth.account import app_settings
 from allauth.core.internal.httpkit import add_query_params
@@ -16,21 +17,59 @@ from allauth.idp.oidc.views import AuthorizationView
 from allauth.idp.oidc.views import RevokeView
 from allauth.idp.oidc.views import TokenView
 from django.conf import settings
+from django.core.exceptions import BadRequest
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
+from pydantic import HttpUrl
 
 from speleodb.users.models import User
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from typing import Literal
+
     from allauth.idp.oidc.forms import AuthorizationForm
+    from django.contrib.auth.base_user import AbstractBaseUser
     from django.http import HttpRequest
 
 DATA_READ_SCOPE = "data:read"
 OIDC_LOGIN_SESSION_KEY = "oidc_login_redirect"
+
+
+def callback_transport_allowed(uri: str) -> bool:
+    parsed = urlsplit(uri)
+    if parsed.scheme != "http":
+        return True
+    return bool(settings.SPELEODB_OIDC_ALLOW_HTTP) and parsed.hostname in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    }
+
+
+def _check_callback_transport(uri: str) -> None:
+    if not callback_transport_allowed(uri):
+        raise BadRequest("This HTTP callback URL is not allowed.")
+
+
+def registered_web_origins(redirect_uris: str) -> set[str]:
+    """Return browser-serialized origins for the registered web callbacks."""
+    origins: set[str] = set()
+    for uri in redirect_uris.splitlines():
+        if not uri.lower().startswith(("https://", "http://")):
+            continue
+        try:
+            parsed = urlsplit(str(HttpUrl(uri)))
+        except ValueError:
+            return set()
+        if parsed.username is not None:
+            return set()
+        origins.add(f"{parsed.scheme}://{parsed.netloc}")
+    return origins
 
 
 class SpeleoDBOIDCAdapter(DefaultOIDCAdapter):
@@ -49,6 +88,22 @@ class SpeleoDBOIDCAdapter(DefaultOIDCAdapter):
 
     def get_issuer(self) -> str:
         return getattr(settings, "SPELEODB_OIDC_ISSUER", "") or super().get_issuer()
+
+    def get_claims(
+        self,
+        purpose: Literal["id_token", "userinfo"],
+        user: AbstractBaseUser,
+        client: Client,
+        scopes: Iterable[str],
+        email: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        claims = super().get_claims(
+            purpose, user, client, scopes, email=email, **kwargs
+        )
+        if purpose == "userinfo":
+            claims["aud"] = client.pk
+        return claims
 
     def populate_server_metadata(self, data: dict[str, str | list[str]]) -> None:
         data.update(
@@ -75,6 +130,7 @@ class WebsiteAuthorizationView(AuthorizationView):
             return HttpResponseBadRequest(
                 "Unknown client or unregistered callback URL."
             )
+        _check_callback_transport(redirect_uris[0])
         if (
             not request.GET.get("code_challenge")
             or request.GET.get("code_challenge_method") != "S256"
@@ -103,9 +159,15 @@ class WebsiteAuthorizationView(AuthorizationView):
             }
         return response
 
+    def _respond_with_access_denied(self) -> HttpResponse:
+        # The signed consent form can outlive a change to the HTTP setting.
+        _check_callback_transport(self._request_info["redirect_uri"])
+        return super()._respond_with_access_denied()
+
     def form_valid(self, form: AuthorizationForm) -> HttpResponse:
         if "openid" in self._scopes and "openid" not in form.cleaned_data["scopes"]:
             return self._respond_with_access_denied()
+        _check_callback_transport(self._request_info["redirect_uri"])
         return super().form_valid(form)
 
 

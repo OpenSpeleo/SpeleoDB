@@ -148,6 +148,30 @@ def test_ordinary_login_keeps_dashboard_destination(client: Client) -> None:
     assert client.get(url)["Location"] == dashboard
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"), [(None, False), ("false", False), ("true", True)]
+)
+def test_http_callback_environment(value: str | None, expected: bool) -> None:
+    environment = os.environ | {"DJANGO_READ_DOT_ENV_FILE": "false"}
+    environment.pop("DJANGO_OIDC_ALLOW_HTTP", None)
+    if value is not None:
+        environment["DJANGO_OIDC_ALLOW_HTTP"] = value
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from config.settings.base import SPELEODB_OIDC_ALLOW_HTTP\n"
+            "print(SPELEODB_OIDC_ALLOW_HTTP)",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == str(expected)
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     ("client_type", "callback"),
@@ -155,12 +179,14 @@ def test_ordinary_login_keeps_dashboard_destination(client: Client) -> None:
         (models.Client.Type.CONFIDENTIAL, "https://atlas.example:65536/callback"),
         (models.Client.Type.CONFIDENTIAL, "org.example.atlas:/callback"),
         (models.Client.Type.PUBLIC, "http://atlas.example/callback"),
+        (models.Client.Type.CONFIDENTIAL, "http://localhost:8300/callback"),
         (models.Client.Type.PUBLIC, "org.example.atlas://unknown/callback"),
     ],
 )
 def test_admin_cannot_register_invalid_callback(
-    admin_client: Client, client_type: str, callback: str
+    admin_client: Client, client_type: str, callback: str, settings: Settings
 ) -> None:
+    settings.SPELEODB_OIDC_ALLOW_HTTP = True
     response = admin_client.post(
         reverse("admin:allauth_idp_oidc_client_add"),
         {"name": "Cave Atlas", "type": client_type, "redirect_uris": callback},
@@ -168,6 +194,64 @@ def test_admin_cannot_register_invalid_callback(
     assert response.status_code == HTTPStatus.OK
     assert "redirect_uris" in response.context["adminform"].form.errors
     assert not models.Client.objects.filter(name="Cave Atlas").exists()
+
+
+@pytest.mark.django_db
+def test_http_callback_registration_requires_opt_in_even_in_debug(
+    admin_client: Client, settings: Settings
+) -> None:
+    settings.DEBUG = True
+    settings.SPELEODB_OIDC_ALLOW_HTTP = False
+    response = admin_client.post(
+        reverse("admin:allauth_idp_oidc_client_add"),
+        {
+            "name": "Local map",
+            "type": models.Client.Type.PUBLIC,
+            "redirect_uris": "http://localhost:5173/callback",
+        },
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert "redirect_uris" in response.context["adminform"].form.errors
+    assert not models.Client.objects.filter(name="Local map").exists()
+
+
+@pytest.mark.django_db
+def test_disabling_http_blocks_registered_callback_and_pending_consent(
+    client: Client, settings: Settings
+) -> None:
+    settings.SPELEODB_OIDC_ALLOW_HTTP = True
+    client.force_login(VerifiedUserFactory.create())
+    callback = "http://localhost:5173/callback"
+    website = models.Client(type=models.Client.Type.PUBLIC, redirect_uris=callback)
+    website.set_scopes(["openid"])
+    website.set_grant_types(["authorization_code"])
+    website.save()
+    authorize = reverse("idp:oidc:authorization")
+    params = {
+        "client_id": website.pk,
+        "response_type": "code",
+        "redirect_uri": callback,
+        "scope": "openid",
+        "code_challenge_method": "S256",
+        "code_challenge": secrets.token_urlsafe(32),
+    }
+    consent = client.get(authorize, params, secure=True)
+    assert consent.status_code == HTTPStatus.OK
+    signed_request = consent.context["form"]["request"].value()
+
+    settings.SPELEODB_OIDC_ALLOW_HTTP = False
+    assert (
+        client.get(authorize, params, secure=True).status_code == HTTPStatus.BAD_REQUEST
+    )
+    for action in ("grant", "deny"):
+        decision = client.post(
+            authorize,
+            {"request": signed_request, "scopes": ["openid"], "action": action},
+            secure=True,
+        )
+        assert decision.status_code == HTTPStatus.BAD_REQUEST
+        assert "Location" not in decision
+    assert not models.Token.objects.filter(client=website).exists()
 
 
 @pytest.mark.django_db
@@ -182,6 +266,35 @@ def test_staff_cannot_register_an_oidc_app(client: Client) -> None:
     url = reverse("admin:allauth_idp_oidc_client_add")
     data = {"name": "Cave Atlas", "redirect_uris": "https://atlas.example/callback"}
     assert client.post(url, data).status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_public_origin_can_only_read_its_own_client_token_responses(
+    client: Client, settings: Settings
+) -> None:
+    settings.CORS_ALLOW_ALL_ORIGINS = False
+    origin = "https://atlas.example"
+    other_origin = "https://survey.example"
+    atlas = models.Client.objects.create(
+        type=models.Client.Type.PUBLIC, cors_origins=origin
+    )
+    models.Client.objects.create(
+        type=models.Client.Type.PUBLIC, cors_origins=other_origin
+    )
+    for endpoint, data in [
+        ("idp:oidc:token", {"grant_type": "refresh_token", "refresh_token": "expired"}),
+        ("idp:oidc:revoke", {"token": "expired"}),
+    ]:
+        url = reverse(endpoint)
+        params = {"client_id": atlas.pk, **data}
+        own = client.post(url, params, headers={"Origin": origin})
+        assert own["Access-Control-Allow-Origin"] == origin
+        other = client.post(url, params, headers={"Origin": other_origin})
+        assert "Access-Control-Allow-Origin" not in other
+        basic = client.post(
+            url, params, headers={"Origin": origin, "Authorization": "Basic dTpw"}
+        )
+        assert "Access-Control-Allow-Origin" not in basic
 
 
 @pytest.mark.django_db
@@ -260,28 +373,51 @@ def test_pending_code_is_discarded_when_owner_is_disabled() -> None:
 @pytest.mark.django_db
 @pytest.mark.usefixtures("oidc_public_key")
 @pytest.mark.parametrize(
-    ("client_type", "callback"),
+    ("client_type", "callback", "origin"),
     [
-        (models.Client.Type.CONFIDENTIAL, "https://atlas.example/callback"),
-        (models.Client.Type.PUBLIC, "https://atlas.example/oauth/callback/issuer"),
+        (
+            models.Client.Type.CONFIDENTIAL,
+            "https://atlas.example/callback",
+            "https://atlas.example",
+        ),
+        (
+            models.Client.Type.PUBLIC,
+            "https://ATLAS.example:443/oauth/callback/issuer",
+            "https://atlas.example",
+        ),
+        (
+            models.Client.Type.PUBLIC,
+            "http://localhost:5173/oauth/callback/issuer",
+            "http://localhost:5173",
+        ),
+        (
+            models.Client.Type.CONFIDENTIAL,
+            "http://127.0.0.1:8300/callback",
+            "http://127.0.0.1:8300",
+        ),
         (
             models.Client.Type.PUBLIC,
             "org.karstunderwater.speleomap:/oauth/callback/issuer",
+            "https://atlas.example",
         ),
     ],
 )
 def test_admin_registered_app_signs_in_and_reads_profile(
+    *,
     client: Client,
     admin_client: Client,
     client_type: str,
     callback: str,
+    origin: str,
     settings: Settings,
 ) -> None:
+    settings.DEBUG = False
+    settings.SPELEODB_OIDC_ALLOW_HTTP = callback.startswith("http://")
+    settings.SPELEODB_OIDC_ISSUER = "https://stage.speleodb.org"
     settings.CORS_ALLOW_ALL_ORIGINS = False
-    origin = "https://atlas.example"
     callbacks = (
         [callback]
-        if callback.startswith("https://")
+        if callback.startswith(("https://", "http://"))
         else [callback, f"{origin}/oauth/callback/issuer"]
     )
     registration = admin_client.post(
@@ -389,7 +525,7 @@ def test_admin_registered_app_signs_in_and_reads_profile(
         jwt.PyJWK.from_dict(jwks["keys"][0]).key,
         algorithms=["RS256"],
         audience=website.pk,
-        issuer="http://testserver",
+        issuer="https://stage.speleodb.org",
     )
     assert (
         claims["sub"],
@@ -406,8 +542,25 @@ def test_admin_registered_app_signs_in_and_reads_profile(
         == HTTPStatus.FORBIDDEN
     )
     bearer = {"Authorization": f"Bearer {tokens['access_token']}"}
+    userinfo_url = reverse("idp:oidc:userinfo")
+    userinfo = api.get(userinfo_url, headers=bearer)
+    assert userinfo.status_code == HTTPStatus.OK
+    assert userinfo.json()["aud"] == website.pk
+    assert userinfo.json()["sub"] == claims["sub"]
     profile_response = api.get(profile, headers=bearer | {"Origin": origin})
     if client_type == models.Client.Type.PUBLIC:
+        preflight = api.options(
+            userinfo_url,
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization",
+            },
+        )
+        assert preflight.get("Access-Control-Allow-Origin") == origin
+        posted = api.post(userinfo_url, headers=bearer | {"Origin": origin})
+        assert posted.get("Access-Control-Allow-Origin") == origin
+        assert posted.json() == userinfo.json()
         assert profile_response["Access-Control-Allow-Origin"] == origin
         preflight = api.options(
             profile,

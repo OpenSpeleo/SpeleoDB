@@ -8,7 +8,6 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from allauth.idp.oidc.models import Client
-from django.conf import settings
 from django.contrib.auth import forms as admin_forms
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -19,6 +18,7 @@ from django.forms import ModelForm
 from django.forms import TextInput
 
 from speleodb.users.models import User
+from speleodb.users.oidc import callback_transport_allowed
 from speleodb.utils.user_identity import validate_user_name
 
 if TYPE_CHECKING:
@@ -53,18 +53,21 @@ class OIDCClientForm(ModelForm):  # type: ignore[type-arg]
                 raise ValidationError(
                     "Register a callback URL with a valid port."
                 ) from exc
-            local_callback = settings.DEBUG and parsed.hostname in {"127.0.0.1", "::1"}
-            if client_type == Client.Type.PUBLIC and settings.DEBUG:
-                local_callback = local_callback or parsed.hostname == "localhost"
             if (
-                (parsed.scheme != "https" and not local_callback)
+                not callback_transport_allowed(url)
+                or (
+                    parsed.scheme == "http"
+                    and parsed.hostname == "localhost"
+                    and client_type != Client.Type.PUBLIC
+                )
                 or parsed.fragment
                 or parsed.username is not None
                 or "*" in url
             ):
                 raise ValidationError(
-                    "Register an exact HTTPS callback URL. Local development also "
-                    "allows HTTP loopback callbacks."
+                    "Register an exact HTTPS callback URL. HTTP loopback callbacks "
+                    "require DJANGO_OIDC_ALLOW_HTTP=true. For a confidential "
+                    "client, use a loopback IP address."
                 )
         return "\n".join(urls)
 

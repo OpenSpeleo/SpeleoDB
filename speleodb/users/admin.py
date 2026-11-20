@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
-from urllib.parse import urlsplit
 
 import allauth.idp.oidc.admin
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
@@ -32,6 +31,7 @@ from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
 from speleodb.users.oidc import DATA_READ_SCOPE
+from speleodb.users.oidc import registered_web_origins
 from speleodb.utils.admin_filters import SurveyTeamCountryFilter
 from speleodb.utils.admin_filters import UserCountryFilter
 
@@ -342,12 +342,7 @@ class OIDCClientAdmin(
             obj.set_scopes(["openid", "email", DATA_READ_SCOPE])
             obj.set_default_scopes(["openid"])
         if obj.type == Client.Type.PUBLIC:
-            origins = {
-                f"{parsed.scheme}://{parsed.netloc}"
-                for uri in obj.get_redirect_uris()
-                if (parsed := urlsplit(uri)).scheme in {"https", "http"}
-            }
-            obj.set_cors_origins(sorted(origins))
+            obj.set_cors_origins(sorted(registered_web_origins(obj.redirect_uris)))
             if not change:
                 obj.secret = make_password(None)
             # Allauth's admin generates and displays a secret for every new client.
