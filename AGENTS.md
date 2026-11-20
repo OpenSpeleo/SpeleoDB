@@ -542,10 +542,9 @@ For bug fixes and behavior changes, follow test-driven development:
 
 Tests must exercise consequential application behavior using the repository's
 established test boundaries. Record the observed failure and passing
-verification outside the checkout. Preserve the rules for real clocks, minimal
-mocking, and container execution. Missing prerequisites and stop requests must
-be reported; unrun checks cannot establish completion. Do not claim broader
-guarantees than the verified scenarios support.
+verification outside the checkout. Use real clocks and dependencies, and run
+tests inside the application container. Report missing prerequisites and stop
+requests. Limit completion claims to the scenarios actually verified.
 
 The owner's stop/resume directives take precedence over every test/check
 requirement in this file. When tests are authorized, run **every test inside the
@@ -611,6 +610,10 @@ failed replacement preservation, task outcomes and exception serialization.
   the concrete failure covered by a retained test. Similar names alone do not
   prove redundancy. Remove framework, factory-echo, source-formatting, and
   private-implementation assertions that provide no useful application contract.
+- For page rendering, request the actual route with representative data and
+  check the result a visitor receives. Do not assert template structure, CSS
+  classes, or presentational link attributes such as `target="_blank"`. Inspect
+  the served page in a browser when the question is visual.
 - Build the smallest object graph that exposes the regression. Use deterministic
   boundary cases; do not repeat randomized inputs or large fixtures without a
   failure they distinguish. A query-count regression must assert that the
@@ -671,16 +674,15 @@ and to new tests as well as changes to existing tests:
   inspect lower-layer coverage. Before removing an application-logic assertion,
   verify its pytest/Vitest replacement or add the missing test. Do not retain
   duplicate logic coverage in browsers to avoid this verification.
-- Use small deterministic fixtures and real HTTP fixtures where possible.
-  Control responses/loading gates only when necessary to produce a specific
-  external failure or ordering case. Keep real application functions and
-  renderer methods. Large processing inputs, worker/internal counters, repeated
-  timing samples, and source-configuration assertions belong outside default UI
-  CI.
+- Use small deterministic fixtures with real HTTP endpoints, application
+  functions and renderer methods. Large processing inputs, worker/internal
+  counters, repeated timing samples, and source-configuration assertions belong
+  outside default UI CI.
 - Minimal database/authentication fixtures may render real application pages.
   Seed editing independently. Do not use browser write/readback/reload chains to
-  prove backend persistence; intercept mutations and assert visible completion.
-  Reload/navigation remains valid when it is itself the UI behavior under test.
+  prove backend persistence. Exercise the real action and observe visible
+  completion. Reload/navigation remains valid when it is itself the UI behavior
+  under test.
 - Investigate executions over five seconds; five seconds is not a ceiling. Keep
   justified rendering and interaction costs, and do not weaken coverage to meet
   a number. Reduce unnecessary work before adding compute. Retain one worker,
@@ -709,29 +711,22 @@ database locks or real sleeps does not make that artificial scenario acceptable.
 Do not replace removed scenarios with shorter waits, patched delays or new
 backoff configuration. Preserve production recovery behavior.
 
-**No mocking, patching, stubbing or spying unless absolutely necessary.** This
-applies throughout backend, frontend, browser tests and shared fixtures.
+**Do not use mocks, patches, stubs or spies in tests.** This applies throughout
+backend, frontend, browser tests and shared fixtures.
 
 - Use real constructors, application functions, state/configuration objects,
   supported configuration, small real inputs, local repositories and actual HTTP
   fixtures. Reuse existing real composition coverage instead of creating suites
   that replace entire application modules and assert mock call counts.
-- A necessary substitute must be limited to the precise external/native
-  boundary: for example, a specific upstream failure that cannot be induced
-  reliably, or a browser/GPU capability unavailable in the test environment.
-  Explain the concrete necessity beside it. Convenience, speed and avoiding
-  fixture setup are not sufficient reasons.
-- Test the behavior claimed by the test with the real implementation. Assert
-  observable results, not values manufactured by the substitute. Keep real
-  native input, decoding and available renderer/library behavior.
-- Do not mute console output, fix randomness, override document state or mock
-  working vendor libraries merely to make tests convenient. Observe actual calls
-  without replacing behavior only when that observation is necessary.
+- Exercise native browser behavior in a real browser. If a required service or
+  capability is unavailable, report what could not be verified. Do not simulate
+  it with a fake window, intercepted request, or replacement method.
+- Assert observable results of the real operation. Do not install a spy to
+  record calls, mute console output or override document state.
 - Inspect the substitutions behind `restoreAllMocks`, `restore_all`, patch
   teardown and similar cleanup. Remove unnecessary substitutions and then
   redundant cleanup. Do not replace bulk restoration with renamed/manual
-  restoration to hide the same mocking. Restore any genuinely required
-  substitution so it cannot leak into other tests.
+  restoration to hide the same mocking.
 
 **Use real time and real waiting everywhere.** Do not patch clocks or sleeping,
 freeze `timezone.now()`/`Date.now()`, replace `monotonic`/`performance.now`,

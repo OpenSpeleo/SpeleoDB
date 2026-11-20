@@ -37,13 +37,16 @@ representative of shared form/table implementations. Additional browser variants
 need a distinct complex failure, rather than another icon, color, value or page
 using the same controller.
 
-Use small deterministic HTTP responses and loading gates. The map fixture has
-two small surveys, a short GPS line and tiny nested GIS geometry. Provider
-styles and ESRI tiles stay local while the actual renderer and raster decoding
-remain real. Never manufacture a loading delay with large inputs or fixed
-sleeps. Rendered feature visibility and renderer-idle checks support workflow
-assertions and native pointer targeting; private source counters are not browser
-evidence.
+Use the real page, browser APIs and application endpoints for new coverage. The
+testing rules in the [repository guide](../../AGENTS.md) prohibit mocks and
+spies, including request interception and replacement browser methods.
+
+The existing map fixture has two small surveys, a short GPS line and tiny nested
+GIS geometry. Provider styles and ESRI tiles stay local while the actual
+renderer and raster decoding remain real. Never manufacture a loading delay with
+large inputs or fixed sleeps. Rendered feature visibility and renderer-idle
+checks support workflow assertions and native pointer targeting; private source
+counters are not browser evidence.
 
 Viewer startup waits for the real map-created probe and `map.loaded()` before
 checking that the loading overlay is hidden. Static toolbar and overlay

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% load vite_assets %}
+
+{% block title %}Supporters{% endblock title %}
+{% block extra_css %}
+  {% vite_styles 'style-supporters' %}
+{% endblock extra_css %}
+{% block content %}
+  <div class="supporters-page">
+    <section class="supporters-hero" aria-labelledby="supporters-title">
+      <div class="supporters-frame supporters-opening">
+        <div class="supporters-intro">
+          <h1 id="supporters-title">
+            Meet SpeleoDB’s <em>supporters.</em>
+          </h1>
+          <p>These organizations and people help keep cave surveys safe, shared, and ready for the next team.</p>
+          {% if donation_url or organizations or people %}
+            <div class="supporters-actions">
+              {% if donation_url %}
+                <a class="supporters-donate-link"
+                   href="{{ donation_url }}"
+                   target="_blank"
+                   rel="noopener">Donate to SpeleoDB</a>
+              {% endif %}
+              {% if organizations or people %}
+                <a class="supporters-credits-link" href="#supporter-credits">View the credits</a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="supporters-illustration" aria-hidden="true">
+          <svg class="supporters-contours"
+               viewBox="0 0 600 480"
+               fill="none"
+               focusable="false">
+            <defs>
+            <path id="contour" d="M-80 337c84 44 117 25 174-27s58-164 137-195 77-89 168-100S523 55 690-48" />
+            </defs>
+            <g stroke="currentColor">
+            <use href="#contour" y="-42" />
+            <use href="#contour" y="-28" />
+            <use href="#contour" y="-14" />
+            <use href="#contour" />
+            <use href="#contour" y="14" />
+            <use href="#contour" y="28" />
+            <use href="#contour" y="42" />
+            <use href="#contour" y="56" />
+            </g>
+          </svg>
+          {% include "snippets/campaign_thank_you_cave.html" only %}
+          <svg class="supporters-compass"
+               viewBox="0 0 36 48"
+               fill="none"
+               focusable="false">
+            <path d="M16 9V2l5 7V2" stroke="currentColor" stroke-width="1.3" />
+            <path d="m18 13 7 26-7-5-7 5 7-26Z" stroke="currentColor" />
+            <path d="m18 13 7 26-7-5Z" fill="currentColor" />
+            <path d="M4 33h6m16 0h6" stroke="currentColor" />
+          </svg>
+        </div>
+      </div>
+    </section>
+    <div id="supporter-credits" class="supporters-register">
+      {% if organizations %}
+        <section id="organizations"
+                 class="supporters-category supporters-frame"
+                 aria-labelledby="organizations-title">
+          <h2 id="organizations-title">Supporting Organizations</h2>
+          <ul class="supporters-organizations">
+            {% for organization in organizations %}
+              <li>
+                <a class="supporters-organization"
+                   href="{{ organization.website }}"
+                   target="_blank"
+                   rel="noopener">
+                  <span class="supporters-mark">
+                    <img src="{{ organization.logo.url }}"
+                         alt=""
+                         loading="lazy"
+                         decoding="async" />
+                  </span>
+                  <span class="supporters-name">{{ organization.name }}</span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+      <div class="supporters-tribute">
+        {% if people %}
+          <section id="people"
+                   class="supporters-tribute-inner supporters-frame"
+                   aria-labelledby="people-title">
+            <div class="supporters-tribute-opening">
+              <h2 id="people-title">
+                Absolute <em>legends.</em>
+              </h2>
+              <p>You keep SpeleoDB free for the next dive team. This fist bump is for you.</p>
+              <div class="supporters-salute"
+                   role="img"
+                   aria-label="Two cave divers exchanging a fist bump underwater.">
+                <span class="supporters-salute-glint" aria-hidden="true"></span>
+              </div>
+            </div>
+            <ul class="supporters-people">
+              {% for person in people %}
+                <li>
+                  {% if person.website %}
+                    <a class="supporters-person"
+                       href="{{ person.website }}"
+                       target="_blank"
+                       rel="noopener">{{ person.name }}</a>
+                  {% else %}
+                    <span class="supporters-person">{{ person.name }}</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
+        <div class="supporters-closing supporters-frame">
+          {% if donation_url %}
+            <section id="donate" class="supporters-giving" aria-labelledby="donate-title">
+              <div>
+                <h2 id="donate-title">Help keep SpeleoDB <em>free.</em></h2>
+                <p>A cave survey can take years. Your gift helps keep that work safe so the next team can pick up where the last one left off.</p>
+              </div>
+              <a class="supporters-donate-link"
+                 href="{{ donation_url }}"
+                 target="_blank"
+                 rel="noopener">Donate to SpeleoDB</a>
+            </section>
+          {% endif %}
+          <div class="supporters-signoff">
+            <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+              <path d="M24 37S8 28 8 19c0-8 10-10 16-2 6-8 16-6 16 2 0 9-16 18-16 18Z" />
+              <path d="m2 10 5 3M40 10l5-4M24 3v5" />
+            </svg>
+            <div>
+              {% if organizations or people %}
+                <p>With muddy fins and full hearts,</p>
+              {% else %}
+                <p>To everyone who supports SpeleoDB, thank you.</p>
+              {% endif %}
+              <p>The SpeleoDB crew</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

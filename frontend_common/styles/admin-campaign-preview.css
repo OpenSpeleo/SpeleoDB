@@ -14,6 +14,7 @@
 }
 
 #content .admin-action-tools a,
+.frontend_public-personsupporter .submit-row input[type="submit"],
 .campaigns-donationthankyouletters .submit-row input[type="submit"],
 .submit-row .admin-action-button,
 .admin-action-button,
@@ -33,6 +34,7 @@
 }
 
 #content .admin-action-tools a:hover,
+.frontend_public-personsupporter .submit-row input[type="submit"]:hover,
 .campaigns-donationthankyouletters .submit-row input[type="submit"]:hover,
 .submit-row .admin-action-button:hover,
 .admin-action-button:hover,

@@ -7,7 +7,6 @@ import uuid
 from http import HTTPStatus
 from http.client import HTTPConnection
 from http.client import HTTPSConnection
-from io import StringIO
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 from unittest.mock import call
@@ -131,60 +130,6 @@ class TestCreateS3LocalBucketsCommand(TestCase):
 
     def tearDown(self) -> None:
         self.client_patcher.stop()
-
-    def test_static_buckets_receive_exact_policy_and_cors_rules(self) -> None:
-        output = StringIO()
-
-        call_command("create_s3_local_buckets", stdout=output)
-
-        expected_buckets = [
-            "speleodb-user-artifacts-dev",
-            "speleodb-user-artifacts-test",
-        ]
-        assert self.s3.head_bucket.call_args_list == [
-            call(Bucket=bucket_name) for bucket_name in expected_buckets
-        ]
-        self.s3.create_bucket.assert_not_called()
-        assert self.s3.put_bucket_cors.call_args_list == [
-            call(
-                Bucket=bucket_name,
-                CORSConfiguration=LOCAL_CORS_CONFIGURATION,
-            )
-            for bucket_name in expected_buckets
-        ]
-
-        assert self.s3.put_bucket_policy.call_count == len(expected_buckets)
-        for bucket_name, policy_call in zip(
-            expected_buckets,
-            self.s3.put_bucket_policy.call_args_list,
-            strict=True,
-        ):
-            assert policy_call.kwargs["Bucket"] == bucket_name
-            policy = json.loads(policy_call.kwargs["Policy"])
-            assert policy == {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Sid": "AllowPublicReadForPersonPhotos",
-                        "Effect": "Allow",
-                        "Principal": "*",
-                        "Action": "s3:GetObject",
-                        "Resource": (
-                            f"arn:aws:s3:::{bucket_name}/media/people/photos/*"
-                        ),
-                    }
-                ],
-            }
-
-        self.client_factory.assert_called_once_with(
-            "s3",
-            endpoint_url="http://localhost:9000",
-            aws_access_key_id="access_key",
-            aws_secret_access_key=TEST_SECRET_KEY,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-        )
 
     def test_missing_bucket_is_created(self) -> None:
         self.s3.head_bucket.side_effect = [
@@ -368,6 +313,22 @@ class TestCreateS3LocalBucketsCommand(TestCase):
 
 @pytest.mark.skip_if_lighttest
 class TestRustFSCORSIntegration(TestCase):
+    def test_only_photos_and_logos_are_public_in_both_local_buckets(self) -> None:
+        call_command("create_s3_local_buckets")
+        client = ExportStorage().connection.meta.client
+        for bucket in ("speleodb-user-artifacts-dev", "speleodb-user-artifacts-test"):
+            policy = json.loads(client.get_bucket_policy(Bucket=bucket)["Policy"])
+            (grant,) = policy["Statement"]
+            assert grant["Effect"] == "Allow"
+            assert grant["Principal"] == "*"
+            assert grant["Action"] == "s3:GetObject"
+            assert set(grant["Resource"]) == {
+                f"arn:aws:s3:::{bucket}/media/people/photos/*",
+                f"arn:aws:s3:::{bucket}/media/supporters/organizations/*",
+            }
+            cors = client.get_bucket_cors(Bucket=bucket)
+            assert cors["CORSRules"] == LOCAL_CORS_CONFIGURATION["CORSRules"]
+
     def test_setup_keeps_exports_private_and_person_photos_public(self) -> None:
         call_command("create_s3_local_buckets")
         export_storage: ExportStorage = ExportStorage()

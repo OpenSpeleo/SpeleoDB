@@ -5,14 +5,19 @@ import { ParticleAnimation } from './animation/particle-animation.ts';
 import { Highlighter } from './animation/highlighter.ts';
 import type { SwiperOptions } from '../../../ts-types/domain/public-shell.ts';
 import type { MockInstance } from 'vitest';
+import type {} from 'vitest/jsdom';
 
 type CarouselElement = HTMLElement & {
     swiper?: { initialized: boolean; params: SwiperOptions; destroy(deleteInstance: boolean, cleanStyles: boolean): void };
 };
 beforeAll(() => {
+    // JSDOM owns the vendor timers and cancels them when it closes the window.
+    const browserWindow = jsdom.window as typeof jsdom.window & Pick<typeof globalThis, 'AOS' | 'Swiper'>;
     for (const vendor of ['aos.js', 'swiper-bundle.min.js']) {
-        (0, eval)(readFileSync(resolve('frontend_public/static/ts/vendors', vendor), 'utf8'));
+        browserWindow.eval(readFileSync(resolve('frontend_public/static/ts/vendors', vendor), 'utf8'));
     }
+    globalThis.AOS = browserWindow.AOS;
+    globalThis.Swiper = browserWindow.Swiper;
 });
 let getContext: MockInstance<HTMLCanvasElement['getContext']>;
 function drawingContext() {

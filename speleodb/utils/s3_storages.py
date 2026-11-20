@@ -12,8 +12,13 @@ from boto3.s3.transfer import TransferConfig
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.base import File
+from PIL import Image
 from storages.backends.s3 import S3Storage
 from storages.utils import clean_name
+
+from speleodb.utils.image_processing import ImageProcessor
 
 _PRIVATE_OBJECT_PARAMETERS = {"CacheControl": "private, no-store"}
 # Boto accepts API field names; CloudFront forwards S3's HTTP query names.
@@ -191,12 +196,11 @@ class BaseS3Storage(BrowserFacingS3Storage):
         "CacheControl": "public, max-age=86400",
     }
 
+    def _unique_filename(self, name: str) -> str:
+        return f"{uuid.uuid4().hex}_{Path(name).name}"
+
     def get_available_name(self, name: str, max_length: int | None = None) -> Any:
-        """Generate unique filename to avoid conflicts."""
-        # Generate unique filename
-        path = Path(name)
-        unique_name = f"{uuid.uuid4().hex}_{path.name}"
-        return super().get_available_name(unique_name, max_length)  # type: ignore[no-untyped-call]
+        return super().get_available_name(self._unique_filename(name), max_length)  # type: ignore[no-untyped-call]
 
 
 class S3MediaStorage(BaseS3Storage, PrivateS3Storage):
@@ -224,6 +228,40 @@ class PersonPhotoStorage(BaseS3Storage, PublicS3Storage):
 
     location = "media/people/photos"
     default_acl: str | None = None  # No ACL - bucket policy handles public access
+
+
+class OrganizationLogoStorage(BaseS3Storage, PublicS3Storage):
+    """Public organization logos stored as media/supporters/organizations/{uuid}.ext."""
+
+    location = "media/supporters/organizations"
+    default_acl: str | None = None
+
+    def _unique_filename(self, name: str) -> str:
+        return f"{uuid.uuid4()}{Path(name).suffix.lower()}"
+
+    def _save(self, name: str, content: File[bytes]) -> str:
+        with Image.open(content) as source:
+            image_format = source.format
+
+        if image_format == "HEIF":
+            name = str(Path(name).with_suffix(".jpg"))
+            with (
+                ImageProcessor.process_image_for_web(content) as image,
+                ContentFile(b"", name=name) as jpeg,
+            ):
+                image.save(jpeg, format="JPEG", quality=90)
+                return cast("str", super()._save(name, jpeg))  # type: ignore[no-untyped-call]
+
+        suffix = {
+            "JPEG": ".jpeg" if name.endswith(".jpeg") else ".jpg",
+            "PNG": ".png",
+            "WEBP": ".webp",
+        }.get(image_format or "")
+        if suffix is None:
+            raise ValueError("Unsupported organization logo format.")
+        name = str(Path(name).with_suffix(suffix))
+        # Let S3 derive Content-Type from the verified format of the original bytes.
+        return cast("str", super()._save(name, File(content, name)))  # type: ignore[no-untyped-call]
 
 
 class AttachmentStorage(PrivateS3Storage):

@@ -319,7 +319,7 @@ class StationResource(models.Model):
 
         # If it's HEIC, we need to convert the main file to JPEG too
         if is_heic:
-            img = ImageProcessor.process_image_for_web(self.file)  # type: ignore[arg-type]
+            img = ImageProcessor.process_image_for_web(self.file)
 
             # Save as JPEG
             main_buffer = BytesIO()

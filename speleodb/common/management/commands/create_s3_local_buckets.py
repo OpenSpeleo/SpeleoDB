@@ -96,17 +96,19 @@ class Command(BaseCommand):
             "speleodb-user-artifacts-dev",
             "speleodb-user-artifacts-test",
         ]:
+            bucket_arn = f"arn:aws:s3:::{bucket_name}"
             policy_local_json: dict[str, Any] = {
                 "Version": "2012-10-17",
                 "Statement": [
                     {
-                        "Sid": "AllowPublicReadForPersonPhotos",
+                        "Sid": "AllowPublicReadForPhotosAndLogos",
                         "Effect": "Allow",
                         "Principal": "*",
                         "Action": "s3:GetObject",
-                        "Resource": (
-                            f"arn:aws:s3:::{bucket_name}/media/people/photos/*"
-                        ),
+                        "Resource": [
+                            f"{bucket_arn}/media/people/photos/*",
+                            f"{bucket_arn}/media/supporters/organizations/*",
+                        ],
                     }
                 ],
             }

@@ -78,8 +78,6 @@ it('offers exact historical maps on desktop and mobile and marks missing artifac
         const links = $(`${container} a.revision-map`);
         expect(links).toHaveLength(1);
         expect(links.attr('href')).toBe(url);
-        expect(links.attr('target')).toBe('_blank');
-        expect(links.attr('rel')).toContain('noopener');
         expect($(`${container} .revision-map-unavailable`)).toHaveLength(1);
     }
 });

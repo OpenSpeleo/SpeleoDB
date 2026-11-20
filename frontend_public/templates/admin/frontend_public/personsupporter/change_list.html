@@ -1,0 +1,15 @@
+{% extends "admin/import_export/change_list_import_export.html" %}
+
+{% load vite_assets %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {% vite_styles 'style-admin-background-jobs' %}
+{% endblock extrastyle %}
+{% block object-tools %}
+  <ul class="object-tools admin-action-tools">
+    {% block object-tools-items %}
+      {{ block.super }}
+    {% endblock object-tools-items %}
+  </ul>
+{% endblock object-tools %}

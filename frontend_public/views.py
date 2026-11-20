@@ -16,6 +16,8 @@ from urllib.parse import urlsplit
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.http import Http404
 from django.http.response import HttpResponse
@@ -33,6 +35,8 @@ from requests.exceptions import Timeout
 
 from frontend_public.models import BoardMember
 from frontend_public.models import ExplorerMember
+from frontend_public.models import OrganizationSupporter
+from frontend_public.models import PersonSupporter
 from frontend_public.models import ScientificMember
 from frontend_public.models import TechnicalMember
 from speleodb.gis.models import GISView
@@ -494,6 +498,24 @@ class PeoplePageView(TemplateView):
         context["scientific_members"] = ScientificMember.objects.all()
 
         return context
+
+
+class SupportersPageView(TemplateView):
+    template_name = "pages/supporters.html"
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        donation_url = settings.SPELEODB_DONATION_CAMPAIGN_URL.strip()
+        if donation_url:
+            try:
+                URLValidator(schemes=["https"])(donation_url)
+            except ValidationError:
+                donation_url = ""
+        return {
+            **super().get_context_data(**kwargs),
+            "organizations": OrganizationSupporter.objects.all(),
+            "people": PersonSupporter.objects.all(),
+            "donation_url": donation_url,
+        }
 
 
 class PublicGISViewMapViewer(TemplateView):

@@ -203,11 +203,11 @@ installation. Dependent services wait for setup to finish successfully.
 
 Local provisioning uses RustFS credentials and its explicit local endpoint. It
 creates/reconciles both development and test buckets, leaves anonymous reads
-limited to `media/people/photos/*`, installs GET/HEAD CORS, and merges the same
-export lifecycle fallback. Other stored files require signed URLs. It preserves
-unrelated lifecycle rules and transition settings, and skips unchanged lifecycle
-writes. Do not pass production IAM ARNs to RustFS or run the production policy
-command there.
+limited to `media/people/photos/*` and `media/supporters/organizations/*`,
+installs GET/HEAD CORS, and merges the same export lifecycle fallback. Other
+stored files require signed URLs. It preserves unrelated lifecycle rules and
+transition settings, and skips unchanged lifecycle writes. Do not pass
+production IAM ARNs to RustFS or run the production policy command there.
 
 The shared storage backend uses the container endpoint for uploads and cleanup,
 and `AWS_S3_BROWSER_ENDPOINT_URL` for browser-visible signed downloads. Public

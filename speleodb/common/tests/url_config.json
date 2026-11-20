@@ -2940,6 +2940,12 @@
   "decorators": ""
  },
  {
+  "url": "/supporters/",
+  "module": "frontend_public.views.SupportersPageView",
+  "name": "supporters",
+  "decorators": ""
+ },
+ {
   "url": "/terms_and_conditions/",
   "module": "django.views.generic.base.TemplateView",
   "name": "terms_and_conditions",

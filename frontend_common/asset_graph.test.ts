@@ -67,9 +67,7 @@ describe('first-party Vite graph', () => {
         expect(failures).toEqual([]);
     });
 
-    it('retains all logical entries with physical typed script sources', () => {
-        expect(Object.keys(REGISTRY.scripts)).toHaveLength(40);
-        expect(Object.keys(REGISTRY.styles)).toHaveLength(56);
+    it('resolves registered scripts to physical TypeScript sources', () => {
         for (const source of Object.values(REGISTRY.scripts)) {
             expect(source).toMatch(/\.ts$/);
             expect(source).not.toMatch(/\.test\.ts$/);

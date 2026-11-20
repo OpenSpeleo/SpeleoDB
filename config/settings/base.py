@@ -325,6 +325,9 @@ GITLAB_HTTP_PROTOCOL = "https"
 # ------------------------------------------------------------------------------
 MAPBOX_API_TOKEN = env("MAPBOX_API_TOKEN")
 
+# Public supporters page
+SPELEODB_DONATION_CAMPAIGN_URL = env.str("SPELEODB_DONATION_CAMPAIGN_URL", default="")
+
 
 # AWS S3 CONFIGURATION
 # ------------------------------------------------------------------------------

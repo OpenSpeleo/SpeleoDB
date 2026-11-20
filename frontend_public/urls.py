@@ -21,6 +21,7 @@ from frontend_public.views import PasswordResetView
 from frontend_public.views import PeoplePageView
 from frontend_public.views import PublicGISViewMapViewer
 from frontend_public.views import SignUpView
+from frontend_public.views import SupportersPageView
 from frontend_public.views import app_ads_txt
 from frontend_public.views import apple_touch_icon_redirect
 from frontend_public.views import favicon_redirect
@@ -84,6 +85,7 @@ urlpatterns = [
         PeoplePageView.as_view(),
         name="people",
     ),
+    path("supporters/", SupportersPageView.as_view(), name="supporters"),
     path(
         "roadmap/",
         TemplateView.as_view(template_name="pages/roadmap.html"),

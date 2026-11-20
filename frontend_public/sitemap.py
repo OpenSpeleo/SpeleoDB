@@ -21,8 +21,9 @@ class AboutSitemap(sitemaps.Sitemap):  # type: ignore[type-arg]
         return [
             "about",
             "people",
-            "roadmap",
-            "changelog",
+            "supporters",
+            # "roadmap",
+            # "changelog",
             "download",
         ]
 

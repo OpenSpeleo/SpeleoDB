@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from io import BytesIO
 from pathlib import Path
+from typing import IO
 from typing import BinaryIO
 
 from django.core.files.base import ContentFile
@@ -35,7 +36,7 @@ class ImageProcessor:
     }
 
     @staticmethod
-    def process_image_for_web(image_file: BinaryIO) -> Image.Image:
+    def process_image_for_web(image_file: IO[bytes]) -> Image.Image:
         """
         Convert image to RGB format suitable for web display.
 

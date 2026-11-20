@@ -14,6 +14,7 @@ guides are not task plans or implementation journals.
 - [API documentation access](api-docs-access.md)
 - [Account exports](account-export-backup.md) and
   [export page, API, and administration](export-interfaces.md)
+- [Public supporters directory and giving](supporters.md)
 - [Donation campaigns](donation-campaign.md) and
   [campaign backend](donation-campaign-backend.md)
 - [Donation thank-you emails and acknowledgment letters](donation-acknowledgments.md)

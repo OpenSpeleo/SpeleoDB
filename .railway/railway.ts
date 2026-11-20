@@ -229,6 +229,7 @@ export default defineRailway(() => {
       REDIS_URL: ref(redis, "REDIS_URL"),
       SENTRY_DSN: preserve(),
       SENTRY_ENVIRONMENT: "production",
+      SPELEODB_DONATION_CAMPAIGN_URL: preserve(),
       USE_DOCKER: "False",
       USE_S3: "True",
       WEB_CONCURRENCY: "2",

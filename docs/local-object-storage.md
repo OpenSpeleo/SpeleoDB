@@ -74,7 +74,8 @@ configuration. It:
 - provisions the two canonical buckets, `speleodb-user-artifacts-dev` and
   `speleodb-user-artifacts-test`;
 - creates buckets only after an S3 missing-bucket response;
-- grants anonymous reads only under `media/people/photos/*`;
+- grants anonymous reads only under `media/people/photos/*` and
+  `media/supporters/organizations/*`;
 - permits cross-origin `GET` and `HEAD` requests from any origin;
 - reapplies policy and CORS configuration safely when a bucket already exists;
 - merges the shared two-day `exports/` object-expiration and

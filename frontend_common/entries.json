@@ -55,7 +55,8 @@
     "style-template-frontend-private-templates-pages-user-preferences": "frontend_common/styles/templates/frontend-private-templates-pages-user-preferences.css",
     "style-template-speleodb-templates-admin-experiment-field-widget": "frontend_common/styles/templates/speleodb-templates-admin-experiment-field-widget.css",
     "style-donation-campaign": "frontend_common/styles/donation-campaign.css",
-    "style-campaign-thank-you": "frontend_common/styles/campaign-thank-you.css"
+    "style-campaign-thank-you": "frontend_common/styles/campaign-thank-you.css",
+    "style-supporters": "frontend_common/styles/supporters.css"
   },
   "scripts": {
     "app": "frontend_common/app.ts",
