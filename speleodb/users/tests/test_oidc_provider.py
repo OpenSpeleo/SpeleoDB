@@ -118,6 +118,9 @@ def test_public_discovery_and_signing_key(
         ("jwks_uri", "jwks"),
     ):
         assert metadata[field] == issuer + reverse(f"idp:oidc:{route}")
+    assert {"client_secret_basic", "none"} <= set(
+        metadata["token_endpoint_auth_methods_supported"]
+    )
     assert "data:read" in metadata["scopes_supported"]
     (jwk,) = client.get(metadata["jwks_uri"], secure=True).json()["keys"]
     public_key = jwt.PyJWK.from_dict(jwk).key
@@ -146,10 +149,21 @@ def test_ordinary_login_keeps_dashboard_destination(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_admin_cannot_register_callback_with_invalid_port(admin_client: Client) -> None:
+@pytest.mark.parametrize(
+    ("client_type", "callback"),
+    [
+        (models.Client.Type.CONFIDENTIAL, "https://atlas.example:65536/callback"),
+        (models.Client.Type.CONFIDENTIAL, "org.example.atlas:/callback"),
+        (models.Client.Type.PUBLIC, "http://atlas.example/callback"),
+        (models.Client.Type.PUBLIC, "org.example.atlas://unknown/callback"),
+    ],
+)
+def test_admin_cannot_register_invalid_callback(
+    admin_client: Client, client_type: str, callback: str
+) -> None:
     response = admin_client.post(
         reverse("admin:allauth_idp_oidc_client_add"),
-        {"name": "Cave Atlas", "redirect_uris": "https://atlas.example:65536/callback"},
+        {"name": "Cave Atlas", "type": client_type, "redirect_uris": callback},
     )
     assert response.status_code == HTTPStatus.OK
     assert "redirect_uris" in response.context["adminform"].form.errors
@@ -245,19 +259,45 @@ def test_pending_code_is_discarded_when_owner_is_disabled() -> None:
 
 @pytest.mark.django_db
 @pytest.mark.usefixtures("oidc_public_key")
+@pytest.mark.parametrize(
+    ("client_type", "callback"),
+    [
+        (models.Client.Type.CONFIDENTIAL, "https://atlas.example/callback"),
+        (models.Client.Type.PUBLIC, "https://atlas.example/oauth/callback/issuer"),
+        (
+            models.Client.Type.PUBLIC,
+            "org.karstunderwater.speleomap:/oauth/callback/issuer",
+        ),
+    ],
+)
 def test_admin_registered_app_signs_in_and_reads_profile(
-    client: Client, admin_client: Client
+    client: Client,
+    admin_client: Client,
+    client_type: str,
+    callback: str,
+    settings: Settings,
 ) -> None:
-    callback = "https://atlas.example/callback"
+    settings.CORS_ALLOW_ALL_ORIGINS = False
+    origin = "https://atlas.example"
+    callbacks = (
+        [callback]
+        if callback.startswith("https://")
+        else [callback, f"{origin}/oauth/callback/issuer"]
+    )
     registration = admin_client.post(
         reverse("admin:allauth_idp_oidc_client_add"),
-        {"name": "Cave Atlas", "redirect_uris": callback},
+        {
+            "name": "Cave Atlas",
+            "type": client_type,
+            "redirect_uris": "\n".join(callbacks),
+        },
         follow=True,
     )
-    (secret,) = html.fromstring(registration.content).xpath(
+    secrets_shown = html.fromstring(registration.content).xpath(
         '//li[contains(@class, "warning")]//input[@readonly]/@value'
     )
     website = models.Client.objects.get(name="Cave Atlas")
+    assert website.type == client_type
     verifier = secrets.token_urlsafe(48)
     scopes = ["openid", "email", "data:read"]
     params = {
@@ -307,16 +347,29 @@ def test_admin_registered_app_signs_in_and_reads_profile(
     assert query["state"] == [params["state"]]
     code = query["code"][0]
     token_endpoint = reverse("idp:oidc:token")
-    credentials = base64.b64encode(
-        f"{website.pk}:{quote_plus(secret)}".encode()
-    ).decode()
+    if client_type == models.Client.Type.PUBLIC:
+        assert not secrets_shown
+        headers = {"Origin": origin}
+        client_auth = {"client_id": website.pk}
+    else:
+        (secret,) = secrets_shown
+        credentials = base64.b64encode(
+            f"{website.pk}:{quote_plus(secret)}".encode()
+        ).decode()
+        headers = {"Authorization": f"Basic {credentials}"}
+        client_auth = {}
     exchange = {
         "grant_type": "authorization_code",
         "code": code,
         "code_verifier": verifier,
         "redirect_uri": callback,
     }
-    headers = {"Authorization": f"Basic {credentials}"}
+    exchange.update(client_auth)
+    if client_type == models.Client.Type.CONFIDENTIAL:
+        unauthenticated = client.post(
+            token_endpoint, exchange | {"client_id": website.pk}
+        )
+        assert unauthenticated.json()["error"] == "invalid_client"
     assert (
         client.post(
             token_endpoint,
@@ -327,6 +380,8 @@ def test_admin_registered_app_signs_in_and_reads_profile(
     )
     token_response = client.post(token_endpoint, exchange, headers=headers)
     assert token_response.status_code == HTTPStatus.OK
+    if client_type == models.Client.Type.PUBLIC:
+        assert token_response["Access-Control-Allow-Origin"] == origin
     tokens = token_response.json()
     jwks = client.get(reverse("idp:oidc:jwks")).json()
     claims = jwt.decode(
@@ -351,13 +406,30 @@ def test_admin_registered_app_signs_in_and_reads_profile(
         == HTTPStatus.FORBIDDEN
     )
     bearer = {"Authorization": f"Bearer {tokens['access_token']}"}
-    profile_response = api.get(profile, headers=bearer)
+    profile_response = api.get(profile, headers=bearer | {"Origin": origin})
+    if client_type == models.Client.Type.PUBLIC:
+        assert profile_response["Access-Control-Allow-Origin"] == origin
+        preflight = api.options(
+            profile,
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "authorization",
+            },
+        )
+        assert preflight["Access-Control-Allow-Origin"] == origin
+        unknown = api.get(profile, headers=bearer | {"Origin": origin + ".example"})
+        assert "Access-Control-Allow-Origin" not in unknown
+        assert "Access-Control-Allow-Origin" not in api.options(
+            profile, headers={"Origin": origin, "Access-Control-Request-Method": "POST"}
+        )
     assert profile_response.status_code == HTTPStatus.OK
     assert profile_response.json()["email"] == user.email
 
     refresh = {
         "grant_type": "refresh_token",
         "refresh_token": tokens["refresh_token"],
+        **client_auth,
     }
     renewed = client.post(token_endpoint, refresh, headers=headers)
     assert renewed.status_code == HTTPStatus.OK
@@ -372,7 +444,9 @@ def test_admin_registered_app_signs_in_and_reads_profile(
     bearer = {"Authorization": f"Bearer {rotated['access_token']}"}
     assert api.get(profile, headers=bearer).status_code == HTTPStatus.OK
     revoke = api.post(
-        reverse("idp:oidc:revoke"), {"token": rotated["refresh_token"]}, headers=headers
+        reverse("idp:oidc:revoke"),
+        {"token": rotated["refresh_token"], **client_auth},
+        headers=headers,
     )
     assert revoke.status_code == HTTPStatus.OK
     assert api.get(profile, headers=bearer).status_code == HTTPStatus.FORBIDDEN

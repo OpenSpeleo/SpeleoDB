@@ -1,8 +1,9 @@
-"""SpeleoDB's registration and consent policy for server-backed websites."""
+"""SpeleoDB's registration and consent policy for OIDC clients."""
 
 from __future__ import annotations
 
 import secrets
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -15,6 +16,7 @@ from allauth.idp.oidc.views import AuthorizationView
 from allauth.idp.oidc.views import RevokeView
 from allauth.idp.oidc.views import TokenView
 from django.conf import settings
+from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -26,7 +28,6 @@ from speleodb.users.models import User
 if TYPE_CHECKING:
     from allauth.idp.oidc.forms import AuthorizationForm
     from django.http import HttpRequest
-    from django.http import HttpResponse
 
 DATA_READ_SCOPE = "data:read"
 OIDC_LOGIN_SESSION_KEY = "oidc_login_redirect"
@@ -63,7 +64,7 @@ class WebsiteAuthorizationView(AuthorizationView):
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         # The library also accepts extra query parameters and variable loopback
-        # ports for native clients. Websites register one exact callback URL.
+        # ports for native clients. Require the registered callback verbatim.
         client = Client.objects.filter(pk=request.GET.get("client_id")).first()
         redirect_uris = request.GET.getlist("redirect_uri")
         if (
@@ -84,7 +85,10 @@ class WebsiteAuthorizationView(AuthorizationView):
             }
             if state := request.GET.get("state"):
                 params["state"] = state
-            return HttpResponseRedirect(add_query_params(redirect_uris[0], params))
+            return HttpResponse(
+                status=HTTPStatus.FOUND,
+                headers={"Location": add_query_params(redirect_uris[0], params)},
+            )
         response = super().get(request, *args, **kwargs)
         if request.user.is_authenticated:
             request.session.pop(OIDC_LOGIN_SESSION_KEY, None)

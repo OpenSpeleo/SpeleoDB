@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
+from urllib.parse import urlsplit
 
 import allauth.idp.oidc.admin
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
@@ -15,13 +16,14 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from import_export import resources
 from import_export.admin import ExportMixin
 from rest_framework.authtoken.admin import TokenAdmin as _TokenAdmin
 from rest_framework.authtoken.models import TokenProxy
 
-from speleodb.users.forms import OIDCWebsiteForm
+from speleodb.users.forms import OIDCClientForm
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import AccountEvent
@@ -309,16 +311,22 @@ class TokenAdmin(SuperuserCredentialAdminMixin, _TokenAdmin):
         return obj is None and request.user.is_superuser
 
 
-class OIDCWebsiteAdmin(
+class OIDCClientAdmin(
     SuperuserCredentialAdminMixin, allauth.idp.oidc.admin.ClientAdmin
 ):
-    form = OIDCWebsiteForm
+    form = OIDCClientForm
 
     def get_fields(
         self, request: HttpRequest, obj: Client | None = None
     ) -> tuple[str, ...]:
         # The ID is generated when the submitted form creates its instance.
-        return ("name", "id", "redirect_uris") if obj else ("name", "redirect_uris")
+        fields = ("name", "type", "redirect_uris")
+        return ("id", *fields) if obj else fields
+
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: Client | None = None
+    ) -> tuple[str, ...]:
+        return ("id", "type") if obj else ("id",)
 
     def save_model(
         self,
@@ -333,14 +341,25 @@ class OIDCWebsiteAdmin(
             )
             obj.set_scopes(["openid", "email", DATA_READ_SCOPE])
             obj.set_default_scopes(["openid"])
-        super().save_model(request, obj, form, change)
+        if obj.type == Client.Type.PUBLIC:
+            origins = {
+                f"{parsed.scheme}://{parsed.netloc}"
+                for uri in obj.get_redirect_uris()
+                if (parsed := urlsplit(uri)).scheme in {"https", "http"}
+            }
+            obj.set_cors_origins(sorted(origins))
+            if not change:
+                obj.secret = make_password(None)
+            # Allauth's admin generates and displays a secret for every new client.
+            admin.ModelAdmin.save_model(self, request, obj, form, change)
+        else:
+            super().save_model(request, obj, form, change)
 
 
 admin.site.register(
     Client,
-    OIDCWebsiteAdmin,
-    readonly_fields=("id",),
-    list_display=("name", "id", "created_at"),
+    OIDCClientAdmin,
+    list_display=("name", "id", "type", "created_at"),
     list_filter=(),
 )
 

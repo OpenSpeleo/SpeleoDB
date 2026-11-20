@@ -1,6 +1,7 @@
 # Sign in with SpeleoDB
 
-Registered websites can use SpeleoDB as an OpenID Connect provider.
+Registered websites, browser apps and native apps can use SpeleoDB as an OpenID
+Connect provider.
 
 ## Configure the provider signing key
 
@@ -9,10 +10,10 @@ checkout’s ignored `.env` when the setting is missing, empty, or still contain
 the template example. Subsequent runs reuse the same key. If the setup process
 already has `DJANGO_OIDC_PRIVATE_KEY` in its environment, it skips generation.
 
-CI needs no private-key secret: the `oidc_public_key` pytest fixture generates
-a fresh RSA signing key. Startup rejection tests supply their own invalid keys
-and a test-only Django secret so they reach signing-key validation without
-depending on a developer's environment or `.env` file.
+CI needs no private-key secret: the `oidc_public_key` pytest fixture generates a
+fresh RSA signing key. Startup rejection tests supply their own invalid keys and
+a test-only Django secret so they reach signing-key validation without depending
+on a developer's environment or `.env` file.
 
 For a manual setup or production deployment, generate an unencrypted 4096-bit
 RSA private key for the Django web server. Celery workers, Beat and client
@@ -36,23 +37,46 @@ For Railway, paste the multiline PEM directly into the web service variable
 without the surrounding quotes. Restart the web process to load the key. To
 check it separately, run `python manage.py check --deploy --tag oidc`.
 
-## Register a website
+## Configure the instance and register a client
 
-A SpeleoDB superuser creates an OpenID Connect client in Django admin with a
-display name and the website’s exact callback URL. Store the client ID and the
-secret shown at registration on the website’s backend.
+For a staging or self-hosted production installation, set `DJANGO_OIDC_ISSUER`
+on the Django web service to the instance’s canonical HTTPS origin, for example
+`https://stage.speleodb.org`. Production defaults to `https://www.speleodb.org`.
+Local settings derive the issuer from the request. Open the discovery document
+on that exact origin and verify its `issuer` and advertised endpoints.
+
+In Django admin, a superuser creates an OpenID Connect client with a display
+name and the exact callback URLs, one per line. Choose the type at creation.
+
+- **Confidential** is the default for a website with a backend. Store the
+  generated client ID and one-time secret on that backend.
+- **Public** is for a browser or installed app. Give users the generated client
+  ID. The app exchanges its authorization code with its client ID and PKCE
+  verifier. The registered HTTP(S) callbacks determine the permitted web origins
+  for cross-origin requests. An installed app can register an exact
+  reverse-domain URI such as `org.karstunderwater.speleomap:/oauth/callback/…`.
+  In local development, public clients can also register HTTP loopback
+  callbacks.
+
+For SpeleoMap, enter the instance URL in the app, copy its displayed
+issuer-specific callback URLs into the **Public** registration, then enter the
+generated **client ID** in SpeleoMap. Register the callback for each platform
+you use. If the browser map downloads GeoJSON from separate object storage,
+configure that storage to allow GET requests from the web app’s origin. SpeleoDB
+issues a signed download URL for each available artifact.
 
 ## Connect a sign-in button
 
 1. Configure an OIDC client library with the issuer `https://www.speleodb.org`,
-   the credentials and the registered callback. The public discovery document is
-   at `/.well-known/openid-configuration`.
+   the registered client ID, callback and client authentication method. The
+   public discovery document is at `/.well-known/openid-configuration`.
 2. Send the browser through the authorization code flow with S256 PKCE, state
    and nonce. Request `openid` for sign-in, `email` for email claims and
    `data:read` for optional API access.
 3. At the callback, have the library validate state, exchange the code and
-   validate the ID token. Identify the user by issuer and subject. Keep tokens
-   server-side and return the user to their original local page.
+   validate the ID token. Identify the user by issuer and subject. Confidential
+   clients keep tokens server-side. Native clients use OS-protected storage.
+   Return the user to their original local page.
 
 Send the access token as `Authorization: Bearer <access_token>`. With
 `data:read`, v2 GETs use the same handlers and user permissions as ordinary

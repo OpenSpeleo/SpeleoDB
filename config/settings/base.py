@@ -248,7 +248,7 @@ HEADLESS_FRONTEND_URLS = {
 # Password reauthentication uses SpeleoDB's browser login credentials.
 ACCOUNT_REAUTHENTICATION_METHODS = {"password"}
 IDP_OIDC_ADAPTER = "speleodb.users.oidc.SpeleoDBOIDCAdapter"
-IDP_OIDC_AUTH_METHODS = ["client_secret_basic"]
+IDP_OIDC_AUTH_METHODS = ["client_secret_basic", "none"]
 IDP_OIDC_REFRESH_TOKEN_EXPIRES_IN = 30 * 24 * 60 * 60
 IDP_OIDC_PRIVATE_KEY = env.str("DJANGO_OIDC_PRIVATE_KEY", default="")
 

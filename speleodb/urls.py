@@ -19,7 +19,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # needed for handling e.g. the OAuth handshake. The account views
     # can be disabled using `HEADLESS_ONLY = True`.
     path("allauth/", include("allauth.urls")),
-    # Apply the confidential website callback policy before allauth handles consent.
+    # Validate the registered callback and S256 PKCE before consent.
     path("identity/o/authorize", WebsiteAuthorizationView.as_view()),
     path("identity/o/api/token", WebsiteTokenView.as_view()),
     path("identity/o/api/revoke", WebsiteRevokeView.as_view()),

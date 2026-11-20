@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 from urllib.parse import urlsplit
@@ -24,17 +25,25 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
 
-class OIDCWebsiteForm(ModelForm):  # type: ignore[type-arg]
+class OIDCClientForm(ModelForm):  # type: ignore[type-arg]
     class Meta:
         model = Client
-        fields = ("name", "redirect_uris")
+        fields = ("name", "type", "redirect_uris")
 
     def clean_redirect_uris(self) -> str:
         value: str = self.cleaned_data["redirect_uris"]
         urls = [line.strip() for line in value.splitlines() if line.strip()]
         if not urls:
             raise ValidationError("Register at least one callback URL.")
+        client_type = self.cleaned_data.get("type", self.instance.type)
         for url in urls:
+            # RFC 8252 private-use redirects use a reverse-domain scheme and one
+            # slash. Only public clients can register them.
+            if client_type == Client.Type.PUBLIC and re.fullmatch(
+                r"[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+:/[a-zA-Z0-9._~%-][a-zA-Z0-9._~/%-]*",
+                url,
+            ):
+                continue
             URLValidator(schemes=["http", "https"])(url)
             parsed = urlsplit(url)
             try:
@@ -45,6 +54,8 @@ class OIDCWebsiteForm(ModelForm):  # type: ignore[type-arg]
                     "Register a callback URL with a valid port."
                 ) from exc
             local_callback = settings.DEBUG and parsed.hostname in {"127.0.0.1", "::1"}
+            if client_type == Client.Type.PUBLIC and settings.DEBUG:
+                local_callback = local_callback or parsed.hostname == "localhost"
             if (
                 (parsed.scheme != "https" and not local_callback)
                 or parsed.fragment

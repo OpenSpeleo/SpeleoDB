@@ -57,4 +57,5 @@ class UsersConfig(AppConfig):
     verbose_name = "Users"
 
     def ready(self) -> None:
+        import speleodb.users.oidc_cors  # noqa: PLC0415
         import speleodb.users.signals  # noqa: F401, PLC0415
