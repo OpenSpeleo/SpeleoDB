@@ -67,13 +67,14 @@ esac
             expect(result.error).toBeUndefined();
             expect(result.status).toBe(0);
             const commands = fs.readFileSync(trace, 'utf8').trim().split('\n');
-            expect(commands.slice(0, 4)).toEqual([
+            expect(commands.slice(0, -2)).toEqual([
+                'python manage.py check --deploy --tag oidc',
                 'python manage.py migrate',
                 'bun scripts/check-shared-package-pins.ts',
                 'bun install --frozen-lockfile',
                 'bun run build:assets --emptyOutDir=false',
             ]);
-            expect(commands.slice(4).sort()).toEqual([
+            expect(commands.slice(-2).sort()).toEqual([
                 'bun run dev',
                 'python manage.py runserver_plus 0000:8000',
             ]);

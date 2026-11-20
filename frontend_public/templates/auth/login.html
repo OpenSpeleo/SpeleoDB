@@ -59,7 +59,7 @@
     {
       "mode": "login",
       "formId": "login_form",
-      "successRedirect": "{% url 'private:user_dashboard' %}"
+      "successRedirect": "{{ success_redirect|escapejs }}"
     }
   </script>
 {% endblock inline_extra_js %}

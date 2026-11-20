@@ -65,6 +65,7 @@ def test_web_startup_rejects_blank_broker_url(broker_url: str) -> None:
     assert "ImproperlyConfigured: CELERY_BROKER_URL must not be blank." in result.stderr
 
 
+@pytest.mark.usefixtures("oidc_public_key")
 @pytest.mark.parametrize(
     ("broker_url", "hostname"),
     [
@@ -86,6 +87,7 @@ def test_web_startup_uses_configured_or_default_redis(
     }
 
 
+@pytest.mark.usefixtures("oidc_public_key")
 def test_stage_can_execute_immediately_without_a_broker() -> None:
     result: subprocess.CompletedProcess[str] = _web_startup("", eager=True)
     assert result.returncode == 0, result.stderr

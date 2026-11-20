@@ -13,6 +13,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from speleodb.api.schema import SpeleoDBSchemaGenerator
+from speleodb.api.schema import configured_auth_schema
 from speleodb.common.enums import InstallStatus
 from speleodb.gis.models import LandmarkCollection
 
@@ -37,6 +38,20 @@ def test_api_schema_generated_successfully(admin_client: Client) -> None:
     url = reverse("api-schema")
     response = admin_client.get(url)
     assert response.status_code == status.HTTP_200_OK, response.data  # type: ignore[attr-defined]
+
+
+def test_app_auth_documents_a_resolvable_session_token_header() -> None:
+    schema = configured_auth_schema()
+    operation = schema["paths"]["/_allauth/app/v1/auth/session"]["get"]
+    headers = [
+        schema["components"]["parameters"][parameter["$ref"].rsplit("/", 1)[1]]
+        for parameter in operation["parameters"]
+        if "$ref" in parameter
+    ]
+    assert any(
+        header["in"] == "header" and header["name"] == "X-Session-Token"
+        for header in headers
+    )
 
 
 @pytest.mark.django_db
@@ -101,6 +116,14 @@ def test_schema_exports_only_supported_paths_and_unique_operation_ids() -> None:
     assert not any(path.startswith("/api/v1/") for path in schema["paths"])
     assert any(path.startswith("/_allauth/app/v1/") for path in schema["paths"])
     assert any(path.startswith("/api/auth/app/v1/") for path in schema["paths"])
+
+    read_scope = {"speleodbOIDC": ["data:read"]}
+    projects = schema["paths"]["/api/v2/projects/"]
+    assert read_scope in projects["get"]["security"]
+    assert read_scope not in projects["post"]["security"]
+    assert (
+        read_scope not in schema["paths"]["/api/v2/user/auth-token/"]["get"]["security"]
+    )
 
     components: dict[str, Any] = schema["components"]["schemas"]
     for component_name in (

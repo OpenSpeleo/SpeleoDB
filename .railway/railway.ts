@@ -212,6 +212,7 @@ export default defineRailway(() => {
       DJANGO_FIELD_ENCRYPTION_KEY: preserve(),
       DJANGO_GIT_PROJECT_DIR: "/app/.workdir/git_projects/",
       DJANGO_HIJACK_URL: preserve(),
+      DJANGO_OIDC_PRIVATE_KEY: preserve(),
       DJANGO_SECRET_KEY: preserve(),
       DJANGO_SETTINGS_MODULE: "config.settings.production",
       DJANGO_SPECTALUR_SERVER: "https://www.speleodb.org",

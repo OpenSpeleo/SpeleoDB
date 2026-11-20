@@ -6,8 +6,11 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 
+import allauth.idp.oidc.admin
 from allauth.account.admin import EmailAddressAdmin as _EmailAddressAdmin
 from allauth.account.models import EmailAddress
+from allauth.idp.oidc.models import Client
+from allauth.idp.oidc.models import Token
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
@@ -18,6 +21,7 @@ from import_export.admin import ExportMixin
 from rest_framework.authtoken.admin import TokenAdmin as _TokenAdmin
 from rest_framework.authtoken.models import TokenProxy
 
+from speleodb.users.forms import OIDCWebsiteForm
 from speleodb.users.forms import UserAdminChangeForm
 from speleodb.users.forms import UserAdminCreationForm
 from speleodb.users.models import AccountEvent
@@ -25,6 +29,7 @@ from speleodb.users.models import LogEntry
 from speleodb.users.models import SurveyTeam
 from speleodb.users.models import SurveyTeamMembership
 from speleodb.users.models import User
+from speleodb.users.oidc import DATA_READ_SCOPE
 from speleodb.utils.admin_filters import SurveyTeamCountryFilter
 from speleodb.utils.admin_filters import UserCountryFilter
 
@@ -269,10 +274,11 @@ class AccountEventAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
 # ---------------------------------------------------------------------------
 
 admin.site.unregister(TokenProxy)
+admin.site.unregister(Client)
+admin.site.unregister(Token)
 
 
-@admin.register(TokenProxy)
-class TokenAdmin(_TokenAdmin):
+class SuperuserCredentialAdminMixin:
     def has_module_permission(self, request: HttpRequest) -> bool:
         return request.user.is_superuser
 
@@ -287,15 +293,56 @@ class TokenAdmin(_TokenAdmin):
     def has_change_permission(
         self, request: HttpRequest, obj: object | None = None
     ) -> bool:
-
-        if obj is not None:
-            return False
         return request.user.is_superuser
 
     def has_delete_permission(
         self, request: HttpRequest, obj: object | None = None
     ) -> bool:
         return request.user.is_superuser
+
+
+@admin.register(TokenProxy)
+class TokenAdmin(SuperuserCredentialAdminMixin, _TokenAdmin):
+    def has_change_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
+        return obj is None and request.user.is_superuser
+
+
+class OIDCWebsiteAdmin(
+    SuperuserCredentialAdminMixin, allauth.idp.oidc.admin.ClientAdmin
+):
+    form = OIDCWebsiteForm
+
+    def get_fields(
+        self, request: HttpRequest, obj: Client | None = None
+    ) -> tuple[str, ...]:
+        # The ID is generated when the submitted form creates its instance.
+        return ("name", "id", "redirect_uris") if obj else ("name", "redirect_uris")
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Client,
+        form: ModelForm[Any],
+        change: bool,
+    ) -> None:
+        if not change:
+            obj.set_grant_types(
+                [Client.GrantType.AUTHORIZATION_CODE, Client.GrantType.REFRESH_TOKEN]
+            )
+            obj.set_scopes(["openid", "email", DATA_READ_SCOPE])
+            obj.set_default_scopes(["openid"])
+        super().save_model(request, obj, form, change)
+
+
+admin.site.register(
+    Client,
+    OIDCWebsiteAdmin,
+    readonly_fields=("id",),
+    list_display=("name", "id", "created_at"),
+    list_filter=(),
+)
 
 
 @admin.register(LogEntry)

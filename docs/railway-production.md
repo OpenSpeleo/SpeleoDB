@@ -59,6 +59,15 @@ self-references in database URLs and service references in consumers. Declaring
 an environment map owns the whole map: a missing existing key can become a
 deletion. Update the inventory when adding variables.
 
+Set `DJANGO_OIDC_PRIVATE_KEY` on `SpeleoDB-Prod` before deploying. Web startup
+requires an unencrypted RSA private key of exactly 4096 bits. Scope it to the
+web service. Celery worker and Beat have no use for the signing key. Paste the
+complete multiline PEM into the Railway value field. See the
+[signing key setup](sign-in-with-speleodb.md#configure-the-provider-signing-key)
+for the OpenSSL command and local `.env` example. After deployment, check
+`/.well-known/openid-configuration`, `/.well-known/jwks.json`, and a registered
+client’s callback on the production hostname.
+
 Redis retains AOF and its existing RDB policy, without injecting settings into
 its running process or changing its persisted application configuration.
 

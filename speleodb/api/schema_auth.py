@@ -73,6 +73,13 @@ def adapt_auth_transport(
     ]
     schemes = components.setdefault("securitySchemes", {})
     if client == "app" and not disabled_phone:
+        components["parameters"]["SessionToken"] = {
+            "in": "header",
+            "name": "X-Session-Token",
+            "required": False,
+            "description": "Identifies an existing app session.",
+            "schema": {"type": "string"},
+        }
         parameters.append({"$ref": "#/components/parameters/SessionToken"})
         schemes["SessionToken"] = {
             "type": "apiKey",

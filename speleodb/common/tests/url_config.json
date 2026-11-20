@@ -24,6 +24,18 @@
   "decorators": ""
  },
  {
+  "url": "/.well-known/jwks.json",
+  "module": "allauth.idp.oidc.views.JwksView",
+  "name": "idp:oidc:jwks",
+  "decorators": ""
+ },
+ {
+  "url": "/.well-known/openid-configuration",
+  "module": "allauth.idp.oidc.views.ConfigurationView",
+  "name": "idp:oidc:configuration",
+  "decorators": ""
+ },
+ {
   "url": "/.well-known/passkey-endpoints",
   "module": "well_known.views.passkey_endpoints",
   "name": "well_known:passkey-endpoints",
@@ -126,6 +138,24 @@
   "decorators": ""
  },
  {
+  "url": "/_allauth/app/v1/auth/reauthenticate/code/confirm",
+  "module": "allauth.headless.account.views.ConfirmReauthenticationCodeView",
+  "name": "headless:app:account:confirm_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/_allauth/app/v1/auth/reauthenticate/code/request",
+  "module": "allauth.headless.account.views.RequestReauthenticationCodeView",
+  "name": "headless:app:account:request_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/_allauth/app/v1/auth/reauthenticate/code/resend",
+  "module": "allauth.headless.account.views.ResendReauthenticationCodeView",
+  "name": "headless:app:account:resend_reauthentication_code",
+  "decorators": ""
+ },
+ {
   "url": "/_allauth/app/v1/auth/session",
   "module": "allauth.headless.account.views.SessionView",
   "name": "headless:app:account:current_session",
@@ -222,6 +252,24 @@
   "decorators": ""
  },
  {
+  "url": "/_allauth/browser/v1/auth/reauthenticate/code/confirm",
+  "module": "allauth.headless.account.views.ConfirmReauthenticationCodeView",
+  "name": "headless:browser:account:confirm_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/_allauth/browser/v1/auth/reauthenticate/code/request",
+  "module": "allauth.headless.account.views.RequestReauthenticationCodeView",
+  "name": "headless:browser:account:request_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/_allauth/browser/v1/auth/reauthenticate/code/resend",
+  "module": "allauth.headless.account.views.ResendReauthenticationCodeView",
+  "name": "headless:browser:account:resend_reauthentication_code",
+  "decorators": ""
+ },
+ {
   "url": "/_allauth/browser/v1/auth/session",
   "module": "allauth.headless.account.views.SessionView",
   "name": "headless:browser:account:current_session",
@@ -247,7 +295,7 @@
  },
  {
   "url": "/account/confirm-email/<key>/",
-  "module": "allauth.account.views.ConfirmEmailView",
+  "module": "allauth.account.views._email_verification.ConfirmEmailView",
   "name": "account_confirm_email",
   "decorators": ""
  },
@@ -261,6 +309,12 @@
   "url": "/account/password/reset/<uidb36>-<key>/",
   "module": "frontend_public.views.PasswordResetFromKeyView",
   "name": "account_reset_password_from_key",
+  "decorators": ""
+ },
+ {
+  "url": "/account/reauthenticate/",
+  "module": "allauth.account.views._reauthenticate.ReauthenticateView",
+  "name": "account_reauthenticate",
   "decorators": ""
  },
  {
@@ -333,6 +387,24 @@
   "url": "/api/auth/app/v1/auth/reauthenticate",
   "module": "allauth.headless.account.views.ReauthenticateView",
   "name": "api:auth:app:account:reauthenticate",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/app/v1/auth/reauthenticate/code/confirm",
+  "module": "allauth.headless.account.views.ConfirmReauthenticationCodeView",
+  "name": "api:auth:app:account:confirm_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/app/v1/auth/reauthenticate/code/request",
+  "module": "allauth.headless.account.views.RequestReauthenticationCodeView",
+  "name": "api:auth:app:account:request_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/app/v1/auth/reauthenticate/code/resend",
+  "module": "allauth.headless.account.views.ResendReauthenticationCodeView",
+  "name": "api:auth:app:account:resend_reauthentication_code",
   "decorators": ""
  },
  {
@@ -429,6 +501,24 @@
   "url": "/api/auth/browser/v1/auth/reauthenticate",
   "module": "allauth.headless.account.views.ReauthenticateView",
   "name": "api:auth:browser:account:reauthenticate",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/browser/v1/auth/reauthenticate/code/confirm",
+  "module": "allauth.headless.account.views.ConfirmReauthenticationCodeView",
+  "name": "api:auth:browser:account:confirm_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/browser/v1/auth/reauthenticate/code/request",
+  "module": "allauth.headless.account.views.RequestReauthenticationCodeView",
+  "name": "api:auth:browser:account:request_reauthentication_code",
+  "decorators": ""
+ },
+ {
+  "url": "/api/auth/browser/v1/auth/reauthenticate/code/resend",
+  "module": "allauth.headless.account.views.ResendReauthenticationCodeView",
+  "name": "api:auth:browser:account:resend_reauthentication_code",
   "decorators": ""
  },
  {
@@ -2382,6 +2472,66 @@
   "decorators": ""
  },
  {
+  "url": "/identity/o/api/device/code",
+  "module": "allauth.idp.oidc.views.DeviceCodeView",
+  "name": "idp:oidc:device_code",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/api/revoke",
+  "module": "speleodb.users.oidc.WebsiteRevokeView",
+  "name": "",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/api/revoke",
+  "module": "allauth.idp.oidc.views.RevokeView",
+  "name": "idp:oidc:revoke",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/api/token",
+  "module": "speleodb.users.oidc.WebsiteTokenView",
+  "name": "",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/api/token",
+  "module": "allauth.idp.oidc.views.TokenView",
+  "name": "idp:oidc:token",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/api/userinfo",
+  "module": "allauth.idp.oidc.views.UserInfoView",
+  "name": "idp:oidc:userinfo",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/authorize",
+  "module": "speleodb.users.oidc.WebsiteAuthorizationView",
+  "name": "",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/authorize",
+  "module": "allauth.idp.oidc.views.AuthorizationView",
+  "name": "idp:oidc:authorization",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/device",
+  "module": "allauth.idp.oidc.views.DeviceAuthorizationView",
+  "name": "idp:oidc:device_authorization",
+  "decorators": ""
+ },
+ {
+  "url": "/identity/o/logout",
+  "module": "allauth.idp.oidc.views.LogoutView",
+  "name": "idp:oidc:logout",
+  "decorators": ""
+ },
+ {
   "url": "/login/",
   "module": "frontend_public.views.LoginView",
   "name": "account_login",
@@ -2389,7 +2539,7 @@
  },
  {
   "url": "/logout/",
-  "module": "allauth.account.views.LogoutView",
+  "module": "allauth.account.views._logout.LogoutView",
   "name": "account_logout",
   "decorators": ""
  },
@@ -2415,6 +2565,12 @@
   "url": "/private/auth-token/",
   "module": "frontend_private.views.user.AuthTokenView",
   "name": "private:user_authtoken",
+  "decorators": ""
+ },
+ {
+  "url": "/private/connected-apps/",
+  "module": "frontend_private.views.user.ConnectedAppsView",
+  "name": "private:user_connected_apps",
   "decorators": ""
  },
  {

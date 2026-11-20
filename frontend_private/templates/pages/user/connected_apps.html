@@ -1,0 +1,64 @@
+{% extends "pages/user/base.html" %}
+
+{% block account_welcome %}
+{% endblock account_welcome %}
+{% block account_heading %}Account Settings{% endblock account_heading %}
+{% block right_panel %}
+  <section class="min-w-0 grow p-5 sm:p-6 lg:p-8"
+           aria-labelledby="connected-apps-title">
+    <h2 id="connected-apps-title"
+        class="text-2xl font-bold tracking-tight text-slate-100">Connected apps</h2>
+    {% if connected_apps %}
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+        Review the access you’ve granted to each app. Revoking access disconnects the app from your SpeleoDB account.
+      </p>
+      <div class="mt-6 overflow-hidden rounded-lg border border-slate-700">
+        <table class="block w-full text-left sm:table">
+          <caption class="sr-only">Apps connected to your account and their granted permissions</caption>
+          <thead class="hidden bg-slate-900 sm:table-header-group">
+            <tr class="text-xs font-semibold text-slate-400">
+              <th scope="col" class="px-4 py-3">Application</th>
+              <th scope="col" class="px-4 py-3">Granted permissions</th>
+              <th scope="col" class="px-4 py-3"><span class="sr-only">Manage access</span></th>
+            </tr>
+          </thead>
+          <tbody class="block row-divide-y row-divide-slate-700 sm:table-row-group">
+            {% for app in connected_apps %}
+              <tr class="block p-4 align-top sm:table-row sm:p-0">
+                <th scope="row" class="block font-normal sm:table-cell sm:px-4 sm:py-5">
+                  <span class="block font-semibold text-slate-100 wrap-anywhere">{{ app.name }}</span>
+                  {% if app.site %}
+                    <a class="inline-block text-sm text-indigo-300 underline decoration-indigo-400 underline-offset-4 hover:text-indigo-200 focus-visible:outline-2 focus-visible:outline-offset-2 wrap-anywhere"
+                       href="{{ app.site }}"
+                       aria-label="Registered website for {{ app.name }}: {{ app.site }}"
+                       rel="external noreferrer">{{ app.site }}</a>
+                  {% endif %}
+                </th>
+                <td class="mt-3 block sm:table-cell sm:px-4 sm:py-5">
+                  <span class="text-xs font-semibold text-slate-400 sm:hidden">Granted permissions</span>
+                  <ul class="mt-1 flex flex-wrap gap-1.5 sm:mt-0">
+                    {% for permission in app.permissions %}
+                      <li class="rounded-sm bg-slate-700 px-2 py-1 text-xs font-medium text-slate-200">{{ permission }}</li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td class="mt-4 block sm:table-cell sm:px-4 sm:py-5 sm:text-right">
+                  <form method="post" action="{% url 'private:user_connected_apps' %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            name="revoke_client"
+                            value="{{ app.id }}"
+                            class="btn min-h-11 border-rose-600 bg-rose-950 px-4 text-rose-200 whitespace-nowrap hover:bg-rose-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300"
+                            aria-label="Revoke access for {{ app.name }}">Revoke Access</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="mt-3 text-sm text-slate-300">You have no connected apps.</p>
+    {% endif %}
+  </section>
+{% endblock right_panel %}

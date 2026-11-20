@@ -16,6 +16,12 @@ explains its pinned generator, runtime transport, package versioning, standalone
 checks, and web/mobile updates. This document explains the backend half,
 including schema source ownership and the SHA-256 freshness check.
 
+## Delegated read access
+
+Operations accepting `data:read` declare `speleodbOIDC: [data:read]` in OpenAPI.
+Registration, permissions, and the example client are documented in
+[Sign in with SpeleoDB](sign-in-with-speleodb.md).
+
 ## Project descriptions
 
 Project creation accepts an omitted or blank `description` and returns an empty

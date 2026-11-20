@@ -48,6 +48,7 @@ class TestProfilePageAccess(BaseUserTestCaseMixin, TestCase):
         assert "update_user_info_form" in html
         assert self.user.email in html
         assert '<select id="country"' in html
+        assert reverse("private:user_connected_apps") not in html
 
 
 # ------------------------------------------------------------------ #

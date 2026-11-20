@@ -9,6 +9,11 @@ License: Apache Software License 2.0
 
 ## Settings
 
+Before starting the Django web server, set `DJANGO_OIDC_PRIVATE_KEY` in the
+local `.env`. The
+[OIDC signing key guide](docs/sign-in-with-speleodb.md#configure-the-provider-signing-key)
+shows how to generate the required 4096-bit RSA key and paste its multiline PEM.
+
 Moved to
 [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).
 

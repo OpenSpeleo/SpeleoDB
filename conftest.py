@@ -7,6 +7,8 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings
 from django.core.cache import cache
 from django.core.management import call_command
@@ -29,6 +31,20 @@ pytest_plugins: tuple[str, ...] = (
     "speleodb.testing.pytest_gitlab",
     "speleodb.testing.gitlab_fixtures",
 )
+
+
+@pytest.fixture
+def oidc_public_key(monkeypatch: pytest.MonkeyPatch) -> rsa.RSAPublicKey:
+    """Configure Django and web startup subprocesses with a fresh signing key."""
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    pem = private_key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    ).decode("ascii")
+    monkeypatch.setattr(settings, "IDP_OIDC_PRIVATE_KEY", pem)
+    monkeypatch.setenv("DJANGO_OIDC_PRIVATE_KEY", pem)
+    return private_key.public_key()
 
 
 def _local_static_storage_backends() -> dict[str, Mapping[str, object]]:

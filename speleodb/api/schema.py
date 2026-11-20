@@ -19,6 +19,7 @@ from speleodb.api.schema_auto import drf_transport_parameters
 from speleodb.api.schema_auto import project_drf_responses
 from speleodb.api.schema_protocol import protocol_schema
 from speleodb.gis.ogc_openapi import OGC_OPENAPI_DOC
+from speleodb.users.oidc_authentication import DelegatedReadScheme
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -364,6 +365,7 @@ def ogc_schema() -> dict[str, Any]:
             parameters[(parameter["in"], parameter["name"], None)] = parameter
         operation["parameters"] = list(parameters.values())
         operation["security"] = [
+            *DelegatedReadScheme.requirements("GET", path),
             {"cookieAuth": []},
             {"tokenAuth": []},
             {"bearerAuth": []},

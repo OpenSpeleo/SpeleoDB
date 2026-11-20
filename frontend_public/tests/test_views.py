@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
+from html import unescape
 from io import BytesIO
 from time import sleep
 from unittest.mock import ANY
 from unittest.mock import call
 from unittest.mock import patch
 
+from allauth.idp.oidc.models import Client
+from django.core import mail
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
@@ -33,9 +37,81 @@ from frontend_public.views import CompassSidecarReleaseInfo
 from frontend_public.views import classify_mobile_platform
 from frontend_public.views import get_compass_sidecar_release_info
 from speleodb.users.tests.factories import UserFactory
+from speleodb.users.tests.factories import VerifiedUserFactory
 
 
 class ViewFunctionalityTest(TestCase):
+    @parameterized.expand(["account_signup", "account_reset_password"])
+    def test_oidc_login_resumes_after_account_help(self, route: str) -> None:
+        login = reverse("account_login")
+        website = Client(
+            name="Survey Atlas", redirect_uris="https://survey.example/callback"
+        )
+        website.set_grant_types([Client.GrantType.AUTHORIZATION_CODE])
+        website.set_scopes(["openid"])
+        website.save()
+        authorize = reverse(
+            "idp:oidc:authorization",
+            query={
+                "client_id": website.pk,
+                "redirect_uri": website.redirect_uris,
+                "response_type": "code",
+                "scope": "openid",
+                "state": "original",
+                "code_challenge": secrets.token_urlsafe(32),
+                "code_challenge_method": "S256",
+            },
+        )
+        page = self.client.get(authorize, follow=True)
+        link = re.search(
+            rf'href="({re.escape(reverse(route))}[^"]*)"', page.content.decode()
+        )
+        assert link is not None
+        self.client.get(unescape(link[1]))
+
+        email = "account-help@example.com"
+        password = secrets.token_urlsafe(32)
+        if route == "account_signup":
+            self.client.post(
+                reverse("headless:browser:account:signup"),
+                {
+                    "email": email,
+                    "name": "Survey Explorer",
+                    "country": "US",
+                    "password": password,
+                },
+                content_type="application/json",
+            )
+        else:
+            VerifiedUserFactory.create(email=email)
+            self.client.post(
+                reverse("headless:browser:account:request_password_reset"),
+                {"email": email},
+                content_type="application/json",
+            )
+        email_link = re.search(r"(/account/\S+)", str(mail.outbox[0].body))
+        assert email_link is not None
+        resumed = self.client.get(email_link[1], follow=True)
+        if route == "account_reset_password":
+            key = f"{resumed.context['uidb36']}-{resumed.context['key']}"
+            self.client.post(
+                reverse("headless:browser:account:reset_password"),
+                {"key": key, "password": password},
+                content_type="application/json",
+            )
+            resumed = self.client.get(login, follow=True)
+        assert resumed.context["success_redirect"] == authorize
+        signed_in = self.client.post(
+            reverse("headless:browser:account:login"),
+            {"email": email, "password": password},
+            content_type="application/json",
+        )
+        assert signed_in.status_code == status.HTTP_200_OK
+        consent = self.client.get(authorize)
+        self.assertContains(consent, website.name)
+        self.assertContains(consent, "Approve access")
+        self.assertRedirects(self.client.get(login), reverse("private:user_dashboard"))
+
     @parameterized.expand(
         [
             # General routes

@@ -4,6 +4,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+python manage.py check --deploy --tag oidc
 python manage.py migrate
 
 # Install the root asset workspace.

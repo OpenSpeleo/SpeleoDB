@@ -11,6 +11,7 @@ guides are not task plans or implementation journals.
 - [Dashboard](dashboard.md)
 - [Account names and Git authorship](user-identity.md)
 - [Application token copying](profile-token-copy.md)
+- [Sign in with SpeleoDB](sign-in-with-speleodb.md)
 - [API documentation access](api-docs-access.md)
 - [Account exports](account-export-backup.md) and
   [export page, API, and administration](export-interfaces.md)

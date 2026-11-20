@@ -131,6 +131,7 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "allauth.headless",
+    "allauth.idp.oidc",
     "django_celery_beat",
     "django_celery_results",
     # DRF
@@ -243,6 +244,13 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password_from_key": "/account/password/reset/{key}",
     "account_signup": "/signup",
 }
+
+# Password reauthentication uses SpeleoDB's browser login credentials.
+ACCOUNT_REAUTHENTICATION_METHODS = {"password"}
+IDP_OIDC_ADAPTER = "speleodb.users.oidc.SpeleoDBOIDCAdapter"
+IDP_OIDC_AUTH_METHODS = ["client_secret_basic"]
+IDP_OIDC_REFRESH_TOKEN_EXPIRES_IN = 30 * 24 * 60 * 60
+IDP_OIDC_PRIVATE_KEY = env.str("DJANGO_OIDC_PRIVATE_KEY", default="")
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
 LOGIN_REDIRECT_URL = "private:user_dashboard"
@@ -629,6 +637,7 @@ ACCOUNT_SIGNUP_FORM_CLASS = "speleodb.users.forms.SignupForm"
 # django-rest-framework - https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "speleodb.users.oidc_authentication.DelegatedReadAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "speleodb.api.v2.authentication.SDBTokenAuthentication",
         "speleodb.api.v2.authentication.BearerAuthentication",

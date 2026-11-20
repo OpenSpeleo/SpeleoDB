@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -46,6 +48,32 @@ print(json.dumps({
 """
 
 
+@pytest.mark.usefixtures("oidc_public_key")
+def test_dotenv_loads_literal_multiline_oidc_key(tmp_path: Path) -> None:
+    source = Path("config/settings/environment.py")
+    isolated = tmp_path / source
+    isolated.parent.mkdir(parents=True)
+    shutil.copyfile(REPOSITORY_ROOT / source, isolated)
+    pem = os.environ["DJANGO_OIDC_PRIVATE_KEY"]
+    (tmp_path / ".env").write_text(f"DJANGO_OIDC_PRIVATE_KEY='{pem}'\n")
+    environment = os.environ | {"DJANGO_READ_DOT_ENV_FILE": "true"}
+    environment.pop("DJANGO_OIDC_PRIVATE_KEY", None)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import hashlib; from environment import env; "
+            "print(hashlib.sha256(env.str('DJANGO_OIDC_PRIVATE_KEY').encode()).hexdigest())",
+        ],
+        cwd=isolated.parent,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == hashlib.sha256(pem.encode()).hexdigest()
+
+
 def settings_snapshot(
     settings_module: str, overrides: dict[str, str]
 ) -> dict[str, Any]:
@@ -55,6 +83,7 @@ def settings_snapshot(
             "DJANGO_SETTINGS_MODULE": settings_module,
             "DJANGO_READ_DOT_ENV_FILE": "false",
             "DJANGO_SECRET_KEY": "runtime-settings-tests-only",
+            "DJANGO_OIDC_PRIVATE_KEY": "",
             "CELERY_SKIP_CHECKS": "true",
             **overrides,
         }

@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 import requests
 from django.conf import settings
+from django.contrib.auth.views import RedirectURLMixin
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -22,9 +23,12 @@ from django.db import transaction
 from django.http import Http404
 from django.http.response import HttpResponse
 from django.http.response import HttpResponsePermanentRedirect
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.templatetags.static import static
+from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
@@ -40,6 +44,7 @@ from frontend_public.models import PersonSupporter
 from frontend_public.models import ScientificMember
 from frontend_public.models import TechnicalMember
 from speleodb.gis.models import GISView
+from speleodb.users.oidc import OIDC_LOGIN_SESSION_KEY
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -383,15 +388,24 @@ def app_ads_txt(request: HttpRequest) -> HttpResponse:
     )
 
 
-class LoginView(View):
+class LoginView(RedirectURLMixin, View):
+    next_page = "private:user_dashboard"
     template_name = "auth/login.html"
 
-    @redirect_authenticated_user
     def get(self, request: HttpRequest) -> HttpResponse:
-        return render(
-            request,
-            LoginView.template_name,
-        )
+        if not request.GET:
+            pending = request.session.pop(OIDC_LOGIN_SESSION_KEY, None)
+            if pending and pending["expires_at"] > timezone.now().timestamp():
+                return HttpResponseRedirect(pending["url"])
+        destination = self.get_redirect_url()
+        if urlsplit(destination).path not in (
+            reverse("idp:oidc:authorization"),
+            reverse("account_reauthenticate"),
+        ):
+            destination = self.get_default_redirect_url()
+        if request.user.is_authenticated:
+            return HttpResponseRedirect(destination)
+        return render(request, self.template_name, {"success_redirect": destination})
 
 
 class PasswordResetFromKeyView(View):

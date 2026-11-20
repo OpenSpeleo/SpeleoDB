@@ -138,6 +138,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -202,6 +204,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -449,6 +453,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -911,6 +917,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -1455,6 +1463,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -1585,6 +1595,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -1725,6 +1737,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -1848,6 +1862,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -2548,6 +2564,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -3093,6 +3111,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -4119,6 +4139,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -4428,6 +4450,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -4902,6 +4926,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -4994,6 +5020,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -6507,6 +6535,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -7107,6 +7137,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -8269,6 +8301,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -9027,6 +9061,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -9119,6 +9155,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -9840,6 +9878,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -9925,6 +9965,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -10404,6 +10446,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -11093,6 +11137,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -11819,6 +11865,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -12103,6 +12151,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -12452,6 +12502,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13184,6 +13236,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13297,6 +13351,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13368,6 +13424,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13485,6 +13543,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13583,6 +13643,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -13677,6 +13739,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -14160,6 +14224,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -14295,6 +14361,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -15745,6 +15813,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -15992,6 +16062,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -16757,6 +16829,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -16855,6 +16929,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -17132,6 +17208,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -17820,6 +17898,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -18231,6 +18311,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -19126,6 +19208,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -19217,6 +19301,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -19777,6 +19863,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -19840,6 +19928,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -21113,6 +21203,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -23792,6 +23884,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24040,6 +24134,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24279,6 +24375,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24402,6 +24500,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24794,6 +24894,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24890,6 +24992,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -24989,6 +25093,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -25148,6 +25254,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -26461,6 +26569,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -26552,6 +26662,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -26802,6 +26914,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -26919,6 +27033,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -27268,6 +27384,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -27585,6 +27703,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -27678,6 +27798,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -28430,6 +28552,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -28725,6 +28849,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -29187,6 +29313,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -29873,6 +30001,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -30126,6 +30256,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -30256,6 +30388,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -30396,6 +30530,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -30519,6 +30655,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -31070,6 +31208,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -31317,6 +31457,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -31869,6 +32011,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -31968,6 +32112,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -32860,6 +33006,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -33267,6 +33415,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -33578,6 +33728,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -34009,6 +34161,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -34447,6 +34601,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -34892,6 +35048,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35015,6 +35173,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35409,6 +35569,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35497,6 +35659,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35584,6 +35748,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35672,6 +35838,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -35758,6 +35926,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -36005,6 +36175,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -36467,6 +36639,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -37153,6 +37327,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -37466,6 +37642,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -37551,6 +37729,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -37796,6 +37976,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -38300,6 +38482,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -38391,6 +38575,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -40182,6 +40368,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -41076,6 +41264,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -41207,6 +41397,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -41371,6 +41563,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -41615,6 +41809,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -41731,6 +41927,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -42091,6 +42289,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -42359,6 +42559,8 @@ paths:
       tags:
       - v2
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -43499,6 +43701,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthVerifyEmail'
       responses:
@@ -43528,9 +43733,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_auth_email_verify_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/email/verify:
     get:
       tags:
@@ -43578,6 +43780,9 @@ paths:
         `False`, a 401 is returned when verifying as part of login/signup.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthVerifyEmail'
       responses:
@@ -43603,9 +43808,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_auth_email_verify_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /_allauth/browser/v1/auth/email/verify/resend:
     post:
       tags:
@@ -43622,6 +43824,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: |
@@ -43637,9 +43842,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_auth_email_verify_resend_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/email/verify/resend:
     post:
       tags:
@@ -43650,6 +43852,9 @@ paths:
         Requires `ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True`.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '409':
           description: |
@@ -43661,9 +43866,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_auth_email_verify_resend_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /_allauth/browser/v1/auth/phone/verify:
     post:
       tags:
@@ -43681,6 +43883,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -43702,9 +43907,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_auth_phone_verify_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/phone/verify:
     post:
       tags:
@@ -43715,6 +43917,8 @@ paths:
         of 401 does not imply failure. It merely indicates that the phone number
         verification was successful, yet, the user is still not signed in.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -43730,8 +43934,6 @@ paths:
                 required:
                 - status
       operationId: auth_app_auth_phone_verify_post
-      security:
-      - {}
   /_allauth/browser/v1/auth/phone/verify/resend:
     post:
       tags:
@@ -43748,6 +43950,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -43769,9 +43974,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_auth_phone_verify_resend_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/phone/verify/resend:
     post:
       tags:
@@ -43781,6 +43983,8 @@ paths:
         Requests a new phone number verification code.
         Requires `ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND = True`.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -43796,8 +44000,6 @@ paths:
                 required:
                 - status
       operationId: auth_app_auth_phone_verify_resend_post
-      security:
-      - {}
   /_allauth/browser/v1/auth/reauthenticate:
     post:
       tags:
@@ -43818,6 +44020,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthReauthenticate'
       responses:
@@ -43837,20 +44042,21 @@ paths:
                 type: string
                 minLength: 0
                 maxLength: 0
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
         '429':
           $ref: '#/components/responses/AuthTooManyRequests'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
-        '403':
-          description: Browser CSRF verification failed.
-          content:
-            text/html:
-              schema:
-                type: string
       operationId: auth_browser_auth_reauthenticate_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/reauthenticate:
     post:
       tags:
@@ -43865,6 +44071,9 @@ paths:
         password. This is the endpoint related towards that flow.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthReauthenticate'
       responses:
@@ -43884,6 +44093,8 @@ paths:
                 type: string
                 minLength: 0
                 maxLength: 0
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
         '429':
           $ref: '#/components/responses/AuthTooManyRequests'
         '410':
@@ -43891,9 +44102,286 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_app_auth_reauthenticate_post
+  /_allauth/browser/v1/auth/reauthenticate/code/request:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Request a reauthentication code
+      description: |
+        Send a reauthentication code to one of the verified email addresses or
+        the verified phone number listed on the `reauthenticate_by_code` flow.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthRequestReauthenticationCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+      operationId: auth_browser_auth_reauthenticate_code_request_post
+  /_allauth/app/v1/auth/reauthenticate/code/request:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Request a reauthentication code
+      description: |
+        Send a reauthentication code to one of the verified email addresses or
+        the verified phone number listed on the `reauthenticate_by_code` flow.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
       security:
       - AuthSessionToken: []
       - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthRequestReauthenticationCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+      operationId: auth_app_auth_reauthenticate_code_request_post
+  /_allauth/browser/v1/auth/reauthenticate/code/confirm:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Confirm a reauthentication code
+      description: |
+        Complete the pending `reauthenticate_by_code` flow using the code sent
+        to the selected email address or phone number.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthConfirmLoginCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthAuthenticatedByCode'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+      operationId: auth_browser_auth_reauthenticate_code_confirm_post
+  /_allauth/app/v1/auth/reauthenticate/code/confirm:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Confirm a reauthentication code
+      description: |
+        Complete the pending `reauthenticate_by_code` flow using the code sent
+        to the selected email address or phone number.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthConfirmLoginCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthAuthenticatedByCode'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+      operationId: auth_app_auth_reauthenticate_code_confirm_post
+  /_allauth/browser/v1/auth/reauthenticate/code/resend:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Resend a reauthentication code
+      description: |
+        Send a new code for the pending `reauthenticate_by_code` flow.
+        Requires `ACCOUNT_LOGIN_BY_CODE_SUPPORTS_RESEND` to be enabled.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending or can
+            no longer be resent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '400':
+          description: Malformed JSON, UTF-8 or non-object body.
+          content:
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+      operationId: auth_browser_auth_reauthenticate_code_resend_post
+  /_allauth/app/v1/auth/reauthenticate/code/resend:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Resend a reauthentication code
+      description: |
+        Send a new code for the pending `reauthenticate_by_code` flow.
+        Requires `ACCOUNT_LOGIN_BY_CODE_SUPPORTS_RESEND` to be enabled.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending or can
+            no longer be resent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+        '400':
+          description: Malformed JSON, UTF-8 or non-object body.
+          content:
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+      operationId: auth_app_auth_reauthenticate_code_resend_post
   /_allauth/browser/v1/auth/password/request:
     post:
       summary: Request password
@@ -44221,15 +44709,15 @@ paths:
       description: |
         Retrieves the list of email addresses of the account.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthEmailAddresses'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_browser_account_email_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     post:
       tags:
       - Authentication (browser)
@@ -44251,6 +44739,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44288,9 +44779,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_account_email_post
-      security:
-      - AuthBrowserSession: []
-      - {}
     put:
       tags:
       - Authentication (browser)
@@ -44307,6 +44795,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44341,9 +44832,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_browser_account_email_put
-      security:
-      - AuthBrowserSession: []
-      - {}
     patch:
       tags:
       - Authentication (browser)
@@ -44359,6 +44847,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthMarkPrimaryEmail'
       responses:
@@ -44389,9 +44880,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_account_email_patch
-      security:
-      - AuthBrowserSession: []
-      - {}
     delete:
       tags:
       - Authentication (browser)
@@ -44406,6 +44894,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44436,9 +44927,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_account_email_delete
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/account/email:
     get:
       tags:
@@ -44448,6 +44936,9 @@ paths:
         Retrieves the list of email addresses of the account.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthEmailAddresses'
@@ -44456,9 +44947,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_account_email_get
-      security:
-      - AuthSessionToken: []
-      - {}
     post:
       tags:
       - Authentication (app)
@@ -44474,6 +44962,9 @@ paths:
         In all cases, an email verification mail will be sent containing a link or code that needs to be verified.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44507,9 +44998,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_account_email_post
-      security:
-      - AuthSessionToken: []
-      - {}
     put:
       tags:
       - Authentication (app)
@@ -44520,6 +45008,9 @@ paths:
         email will not be sent.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44553,9 +45044,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_app_account_email_put
-      security:
-      - AuthSessionToken: []
-      - {}
     patch:
       tags:
       - Authentication (app)
@@ -44565,6 +45053,9 @@ paths:
         can be marked as primary.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthMarkPrimaryEmail'
       responses:
@@ -44591,9 +45082,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_app_account_email_patch
-      security:
-      - AuthSessionToken: []
-      - {}
     delete:
       tags:
       - Authentication (app)
@@ -44602,6 +45090,9 @@ paths:
         Used to remove an email address.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -44628,9 +45119,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_app_account_email_delete
-      security:
-      - AuthSessionToken: []
-      - {}
   /_allauth/browser/v1/account/phone:
     get:
       tags:
@@ -44640,6 +45128,9 @@ paths:
         Retrieves the phone number of the account, if any. Note that while the
         endpoint returns a list of phone numbers, at most one entry is returned.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -44655,9 +45146,6 @@ paths:
                 required:
                 - status
       operationId: auth_browser_account_phone_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     post:
       tags:
       - Authentication (browser)
@@ -44682,6 +45170,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -44703,9 +45194,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_account_phone_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/account/phone:
     get:
       tags:
@@ -44715,6 +45203,8 @@ paths:
         Retrieves the phone number of the account, if any. Note that while the
         endpoint returns a list of phone numbers, at most one entry is returned.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -44730,8 +45220,6 @@ paths:
                 required:
                 - status
       operationId: auth_app_account_phone_get
-      security:
-      - {}
     post:
       tags:
       - Authentication (app)
@@ -44749,6 +45237,8 @@ paths:
         verification endpoint to confirm the change of the phone number by
         posting the verification code.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -44764,8 +45254,6 @@ paths:
                 required:
                 - status
       operationId: auth_app_account_phone_post
-      security:
-      - {}
   /_allauth/browser/v1/auth/session:
     get:
       tags:
@@ -44776,15 +45264,15 @@ paths:
         Retrieve information about the authentication status for the current
         session.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthAuthenticated'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_browser_auth_session_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     delete:
       tags:
       - Authentication (browser)
@@ -44799,6 +45287,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '401':
           $ref: '#/components/responses/AuthUnauthenticated'
@@ -44817,9 +45308,6 @@ paths:
                 minLength: 0
                 maxLength: 0
       operationId: auth_browser_auth_session_delete
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/auth/session:
     get:
       tags:
@@ -44831,6 +45319,9 @@ paths:
         session.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthAuthenticated'
@@ -44839,9 +45330,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_auth_session_get
-      security:
-      - AuthSessionToken: []
-      - {}
     delete:
       tags:
       - Authentication (app)
@@ -44850,6 +45338,9 @@ paths:
         Logs out the user from the current session.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '401':
           $ref: '#/components/responses/AuthUnauthenticated'
@@ -44864,9 +45355,6 @@ paths:
                 minLength: 0
                 maxLength: 0
       operationId: auth_app_auth_session_delete
-      security:
-      - AuthSessionToken: []
-      - {}
   /_allauth/app/v1/tokens/refresh:
     post:
       tags:
@@ -44916,6 +45404,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthChangePassword'
       responses:
@@ -44941,9 +45432,6 @@ paths:
               schema:
                 type: string
       operationId: auth_browser_account_password_change_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /_allauth/app/v1/account/password/change:
     post:
       tags:
@@ -44956,6 +45444,9 @@ paths:
         that case, the current password is not required.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthChangePassword'
       responses:
@@ -44977,9 +45468,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_app_account_password_change_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/auth/browser/v1/config:
     get:
       summary: Get configuration
@@ -45332,6 +45820,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthVerifyEmail'
       responses:
@@ -45361,9 +45852,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_auth_email_verify_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/email/verify:
     get:
       tags:
@@ -45411,6 +45899,9 @@ paths:
         `False`, a 401 is returned when verifying as part of login/signup.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthVerifyEmail'
       responses:
@@ -45436,9 +45927,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_auth_email_verify_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/auth/browser/v1/auth/email/verify/resend:
     post:
       tags:
@@ -45455,6 +45943,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: |
@@ -45470,9 +45961,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_auth_email_verify_resend_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/email/verify/resend:
     post:
       tags:
@@ -45483,6 +45971,9 @@ paths:
         Requires `ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True`.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '409':
           description: |
@@ -45494,9 +45985,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_auth_email_verify_resend_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/auth/browser/v1/auth/phone/verify:
     post:
       tags:
@@ -45514,6 +46002,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -45535,9 +46026,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_auth_phone_verify_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/phone/verify:
     post:
       tags:
@@ -45548,6 +46036,8 @@ paths:
         of 401 does not imply failure. It merely indicates that the phone number
         verification was successful, yet, the user is still not signed in.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -45563,8 +46053,6 @@ paths:
                 required:
                 - status
       operationId: auth_alias_app_auth_phone_verify_post
-      security:
-      - {}
   /api/auth/browser/v1/auth/phone/verify/resend:
     post:
       tags:
@@ -45581,6 +46069,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -45602,9 +46093,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_auth_phone_verify_resend_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/phone/verify/resend:
     post:
       tags:
@@ -45614,6 +46102,8 @@ paths:
         Requests a new phone number verification code.
         Requires `ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND = True`.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -45629,8 +46119,6 @@ paths:
                 required:
                 - status
       operationId: auth_alias_app_auth_phone_verify_resend_post
-      security:
-      - {}
   /api/auth/browser/v1/auth/reauthenticate:
     post:
       tags:
@@ -45651,6 +46139,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthReauthenticate'
       responses:
@@ -45670,20 +46161,21 @@ paths:
                 type: string
                 minLength: 0
                 maxLength: 0
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
         '429':
           $ref: '#/components/responses/AuthTooManyRequests'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
-        '403':
-          description: Browser CSRF verification failed.
-          content:
-            text/html:
-              schema:
-                type: string
       operationId: auth_alias_browser_auth_reauthenticate_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/reauthenticate:
     post:
       tags:
@@ -45698,6 +46190,9 @@ paths:
         password. This is the endpoint related towards that flow.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthReauthenticate'
       responses:
@@ -45717,6 +46212,8 @@ paths:
                 type: string
                 minLength: 0
                 maxLength: 0
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
         '429':
           $ref: '#/components/responses/AuthTooManyRequests'
         '410':
@@ -45724,9 +46221,286 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_app_auth_reauthenticate_post
+  /api/auth/browser/v1/auth/reauthenticate/code/request:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Request a reauthentication code
+      description: |
+        Send a reauthentication code to one of the verified email addresses or
+        the verified phone number listed on the `reauthenticate_by_code` flow.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthRequestReauthenticationCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+      operationId: auth_alias_browser_auth_reauthenticate_code_request_post
+  /api/auth/app/v1/auth/reauthenticate/code/request:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Request a reauthentication code
+      description: |
+        Send a reauthentication code to one of the verified email addresses or
+        the verified phone number listed on the `reauthenticate_by_code` flow.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
       security:
       - AuthSessionToken: []
       - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthRequestReauthenticationCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+      operationId: auth_alias_app_auth_reauthenticate_code_request_post
+  /api/auth/browser/v1/auth/reauthenticate/code/confirm:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Confirm a reauthentication code
+      description: |
+        Complete the pending `reauthenticate_by_code` flow using the code sent
+        to the selected email address or phone number.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthConfirmLoginCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthAuthenticatedByCode'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+      operationId: auth_alias_browser_auth_reauthenticate_code_confirm_post
+  /api/auth/app/v1/auth/reauthenticate/code/confirm:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Confirm a reauthentication code
+      description: |
+        Complete the pending `reauthenticate_by_code` flow using the code sent
+        to the selected email address or phone number.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
+      requestBody:
+        $ref: '#/components/requestBodies/AuthConfirmLoginCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthAuthenticatedByCode'
+        '400':
+          description: An input error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponse'
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+      operationId: auth_alias_app_auth_reauthenticate_code_confirm_post
+  /api/auth/browser/v1/auth/reauthenticate/code/resend:
+    post:
+      tags:
+      - Authentication (browser)
+      summary: Resend a reauthentication code
+      description: |
+        Send a new code for the pending `reauthenticate_by_code` flow.
+        Requires `ACCOUNT_LOGIN_BY_CODE_SUPPORTS_RESEND` to be enabled.
+      parameters:
+      - in: header
+        name: X-CSRFToken
+        required: true
+        description: CSRF token corresponding to the browser's CSRF cookie. Required
+          even for an anonymous browser request.
+        schema:
+          type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          description: |
+            A forbidden response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthForbiddenResponse'
+            text/html:
+              schema:
+                type: string
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending or can
+            no longer be resent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '400':
+          description: Malformed JSON, UTF-8 or non-object body.
+          content:
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+      operationId: auth_alias_browser_auth_reauthenticate_code_resend_post
+  /api/auth/app/v1/auth/reauthenticate/code/resend:
+    post:
+      tags:
+      - Authentication (app)
+      summary: Resend a reauthentication code
+      description: |
+        Send a new code for the pending `reauthenticate_by_code` flow.
+        Requires `ACCOUNT_LOGIN_BY_CODE_SUPPORTS_RESEND` to be enabled.
+      parameters:
+      - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthStatusOK'
+        '401':
+          $ref: '#/components/responses/AuthAuthentication'
+        '403':
+          $ref: '#/components/responses/AuthForbidden'
+        '409':
+          description: |
+            Conflict. The reauthentication by code flow is not pending or can
+            no longer be resent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthConflictResponse'
+        '429':
+          $ref: '#/components/responses/AuthTooManyRequests'
+        '410':
+          $ref: '#/components/responses/AuthSessionGone'
+        '400':
+          description: Malformed JSON, UTF-8 or non-object body.
+          content:
+            text/html:
+              schema:
+                type: string
+                minLength: 0
+                maxLength: 0
+      operationId: auth_alias_app_auth_reauthenticate_code_resend_post
   /api/auth/browser/v1/auth/password/request:
     post:
       summary: Request password
@@ -46054,15 +46828,15 @@ paths:
       description: |
         Retrieves the list of email addresses of the account.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthEmailAddresses'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_browser_account_email_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     post:
       tags:
       - Authentication (browser)
@@ -46084,6 +46858,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46121,9 +46898,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_account_email_post
-      security:
-      - AuthBrowserSession: []
-      - {}
     put:
       tags:
       - Authentication (browser)
@@ -46140,6 +46914,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46174,9 +46951,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_browser_account_email_put
-      security:
-      - AuthBrowserSession: []
-      - {}
     patch:
       tags:
       - Authentication (browser)
@@ -46192,6 +46966,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthMarkPrimaryEmail'
       responses:
@@ -46222,9 +46999,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_account_email_patch
-      security:
-      - AuthBrowserSession: []
-      - {}
     delete:
       tags:
       - Authentication (browser)
@@ -46239,6 +47013,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46269,9 +47046,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_account_email_delete
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/account/email:
     get:
       tags:
@@ -46281,6 +47055,9 @@ paths:
         Retrieves the list of email addresses of the account.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthEmailAddresses'
@@ -46289,9 +47066,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_account_email_get
-      security:
-      - AuthSessionToken: []
-      - {}
     post:
       tags:
       - Authentication (app)
@@ -46307,6 +47081,9 @@ paths:
         In all cases, an email verification mail will be sent containing a link or code that needs to be verified.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46340,9 +47117,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_account_email_post
-      security:
-      - AuthSessionToken: []
-      - {}
     put:
       tags:
       - Authentication (app)
@@ -46353,6 +47127,9 @@ paths:
         email will not be sent.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46386,9 +47163,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_app_account_email_put
-      security:
-      - AuthSessionToken: []
-      - {}
     patch:
       tags:
       - Authentication (app)
@@ -46398,6 +47172,9 @@ paths:
         can be marked as primary.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthMarkPrimaryEmail'
       responses:
@@ -46424,9 +47201,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_app_account_email_patch
-      security:
-      - AuthSessionToken: []
-      - {}
     delete:
       tags:
       - Authentication (app)
@@ -46435,6 +47209,9 @@ paths:
         Used to remove an email address.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthEmail'
       responses:
@@ -46461,9 +47238,6 @@ paths:
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_app_account_email_delete
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/auth/browser/v1/account/phone:
     get:
       tags:
@@ -46473,6 +47247,9 @@ paths:
         Retrieves the phone number of the account, if any. Note that while the
         endpoint returns a list of phone numbers, at most one entry is returned.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -46488,9 +47265,6 @@ paths:
                 required:
                 - status
       operationId: auth_alias_browser_account_phone_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     post:
       tags:
       - Authentication (browser)
@@ -46515,6 +47289,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -46536,9 +47313,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_account_phone_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/account/phone:
     get:
       tags:
@@ -46548,6 +47322,8 @@ paths:
         Retrieves the phone number of the account, if any. Note that while the
         endpoint returns a list of phone numbers, at most one entry is returned.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -46563,8 +47339,6 @@ paths:
                 required:
                 - status
       operationId: auth_alias_app_account_phone_get
-      security:
-      - {}
     post:
       tags:
       - Authentication (app)
@@ -46582,6 +47356,8 @@ paths:
         verification endpoint to confirm the change of the phone number by
         posting the verification code.
       parameters: []
+      security:
+      - {}
       responses:
         '409':
           description: Phone management is not configured.
@@ -46597,8 +47373,6 @@ paths:
                 required:
                 - status
       operationId: auth_alias_app_account_phone_post
-      security:
-      - {}
   /api/auth/browser/v1/auth/session:
     get:
       tags:
@@ -46609,15 +47383,15 @@ paths:
         Retrieve information about the authentication status for the current
         session.
       parameters: []
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthAuthenticated'
         '401':
           $ref: '#/components/responses/AuthAuthentication'
       operationId: auth_alias_browser_auth_session_get
-      security:
-      - AuthBrowserSession: []
-      - {}
     delete:
       tags:
       - Authentication (browser)
@@ -46632,6 +47406,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       responses:
         '401':
           $ref: '#/components/responses/AuthUnauthenticated'
@@ -46650,9 +47427,6 @@ paths:
                 minLength: 0
                 maxLength: 0
       operationId: auth_alias_browser_auth_session_delete
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/auth/session:
     get:
       tags:
@@ -46664,6 +47438,9 @@ paths:
         session.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '200':
           $ref: '#/components/responses/AuthAuthenticated'
@@ -46672,9 +47449,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_auth_session_get
-      security:
-      - AuthSessionToken: []
-      - {}
     delete:
       tags:
       - Authentication (app)
@@ -46683,6 +47457,9 @@ paths:
         Logs out the user from the current session.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       responses:
         '401':
           $ref: '#/components/responses/AuthUnauthenticated'
@@ -46697,9 +47474,6 @@ paths:
                 minLength: 0
                 maxLength: 0
       operationId: auth_alias_app_auth_session_delete
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/auth/app/v1/tokens/refresh:
     post:
       tags:
@@ -46749,6 +47523,9 @@ paths:
           even for an anonymous browser request.
         schema:
           type: string
+      security:
+      - AuthBrowserSession: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthChangePassword'
       responses:
@@ -46774,9 +47551,6 @@ paths:
               schema:
                 type: string
       operationId: auth_alias_browser_account_password_change_post
-      security:
-      - AuthBrowserSession: []
-      - {}
   /api/auth/app/v1/account/password/change:
     post:
       tags:
@@ -46789,6 +47563,9 @@ paths:
         that case, the current password is not required.
       parameters:
       - $ref: '#/components/parameters/AuthSessionToken'
+      security:
+      - AuthSessionToken: []
+      - {}
       requestBody:
         $ref: '#/components/requestBodies/AuthChangePassword'
       responses:
@@ -46810,9 +47587,6 @@ paths:
         '410':
           $ref: '#/components/responses/AuthSessionGone'
       operationId: auth_alias_app_account_password_change_post
-      security:
-      - AuthSessionToken: []
-      - {}
   /api/v2/gis-ogc/view/{gis_token}:
     get:
       operationId: viewLandingPage
@@ -46878,6 +47652,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -46947,6 +47723,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47016,6 +47794,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47119,6 +47899,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47308,6 +48090,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47468,6 +48252,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47537,6 +48323,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47606,6 +48394,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47675,6 +48465,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47778,6 +48570,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -47967,6 +48761,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48127,6 +48923,8 @@ paths:
       x-deprecated-route-variant: Bare SHA collection_id (6 to 40 hexadecimal characters);
         canonical IDs append _points or _lines.
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48196,6 +48994,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48265,6 +49065,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48334,6 +49136,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48404,6 +49208,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48560,6 +49366,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48692,6 +49500,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48761,6 +49571,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48830,6 +49642,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48899,6 +49713,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -48969,6 +49785,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -49125,6 +49943,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -49257,6 +50077,8 @@ paths:
                   - detail
                   additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -49363,6 +50185,8 @@ paths:
                 - detail
                 additionalProperties: false
       security:
+      - speleodbOIDC:
+        - data:read
       - cookieAuth: []
       - tokenAuth: []
       - bearerAuth: []
@@ -61320,6 +62144,7 @@ components:
           - provider_signup
           - provider_token
           - reauthenticate
+          - reauthenticate_by_code
           - signup
           - verify_email
           - verify_phone
@@ -61334,6 +62159,12 @@ components:
           description: Matches `settings.MFA_SUPPORTED_TYPES`.
           items:
             $ref: '#/components/schemas/AuthAuthenticatorType'
+        recipients:
+          type: array
+          description: |
+            Verified destinations that can receive a reauthentication code.
+          items:
+            $ref: '#/components/schemas/AuthReauthenticationCodeRecipient'
       required:
       - id
     AuthAuthenticated:
@@ -61409,7 +62240,7 @@ components:
         - method
       - type: object
         title: |
-          Authenticated by confirming a code sent by email.
+          (Re)authenticated by confirming a code sent by email.
         properties:
           method:
             type: string
@@ -61419,13 +62250,17 @@ components:
             $ref: '#/components/schemas/AuthTimestamp'
           email:
             $ref: '#/components/schemas/AuthEmail'
+          reauthenticated:
+            type: boolean
+            enum:
+            - true
         required:
         - at
         - email
         - method
       - type: object
         title: |
-          Authenticated by confirming a code sent by phone.
+          (Re)authenticated by confirming a code sent by phone.
         properties:
           method:
             type: string
@@ -61435,6 +62270,10 @@ components:
             $ref: '#/components/schemas/AuthTimestamp'
           phone:
             $ref: '#/components/schemas/AuthPhone'
+          reauthenticated:
+            type: boolean
+            enum:
+            - true
         required:
         - at
         - method
@@ -61629,6 +62468,43 @@ components:
             $ref: '#/components/schemas/AuthEmail'
         required:
         - email
+    AuthRequestReauthenticationCode:
+      type: object
+      oneOf:
+      - title: Request reauthentication code by phone
+        type: object
+        properties:
+          phone:
+            $ref: '#/components/schemas/AuthPhone'
+        required:
+        - phone
+        additionalProperties: false
+      - title: Request reauthentication code by email
+        type: object
+        properties:
+          email:
+            $ref: '#/components/schemas/AuthEmail'
+        required:
+        - email
+        additionalProperties: false
+    AuthReauthenticationCodeRecipient:
+      oneOf:
+      - title: Email recipient
+        type: object
+        properties:
+          email:
+            $ref: '#/components/schemas/AuthEmail'
+        required:
+        - email
+        additionalProperties: false
+      - title: Phone recipient
+        type: object
+        properties:
+          phone:
+            $ref: '#/components/schemas/AuthPhone'
+        required:
+        - phone
+        additionalProperties: false
     AuthReauthenticate:
       type: object
       properties:
@@ -62506,20 +63382,23 @@ components:
       type: apiKey
       in: cookie
       name: sessionid
+    speleodbOIDC:
+      type: openIdConnect
+      openIdConnectUrl: /.well-known/openid-configuration
     tokenAuth:
       type: apiKey
       in: header
       name: Authorization
       description: Token-based authentication with required prefix "Token"
-    AuthBrowserSession:
-      type: apiKey
-      in: cookie
-      name: sessionid
     AuthSessionToken:
       type: apiKey
       in: header
       name: X-Session-Token
       description: App session identity; browser cookies are ignored.
+    AuthBrowserSession:
+      type: apiKey
+      in: cookie
+      name: sessionid
     gitBasicAuth:
       type: http
       scheme: basic
@@ -62807,6 +63686,9 @@ components:
             type: totp
           flows:
           - id: reauthenticate
+          - id: reauthenticate_by_code
+            recipients:
+            - email: email@domain.org
           - id: mfa_reauthenticate
         meta:
           is_authenticated: true
@@ -62951,6 +63833,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/AuthRequestLoginCode'
+    AuthRequestReauthenticationCode:
+      description: Request a reauthentication code.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthRequestReauthenticationCode'
     AuthSetupTOTP:
       content:
         application/json:
@@ -63112,14 +64001,6 @@ components:
         type: string
       required: true
       description: The password reset key
-    AuthSessionToken:
-      in: header
-      name: X-Session-Token
-      required: false
-      description: |
-        Session token. Only needed when `client` is equal to `app`.
-      schema:
-        type: string
     AuthPasswordLess:
       in: query
       name: passwordless
@@ -63130,6 +64011,13 @@ components:
       description: |
         When present (regardless of its value), enables passwordless sign-in via a WebAuthn credential (Passkey),
         which requires PIN, biometric, or equivalent user verification. Omit the parameter to disable.
+    AuthSessionToken:
+      in: header
+      name: X-Session-Token
+      required: false
+      description: Identifies an existing app session.
+      schema:
+        type: string
     OGCGisTokenParam:
       name: gis_token
       in: path
@@ -63479,6 +64367,9 @@ components:
                     type: totp
                   flows:
                   - id: reauthenticate
+                  - id: reauthenticate_by_code
+                    recipients:
+                    - email: email@domain.org
                   - id: mfa_reauthenticate
                 meta:
                   is_authenticated: true

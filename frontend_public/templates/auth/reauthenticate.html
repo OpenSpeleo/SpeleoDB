@@ -1,0 +1,12 @@
+{% extends "auth_base.html" %}
+
+{% block head_title %}Confirm your password{% endblock head_title %}
+{% block page_headline %}Confirm your password{% endblock page_headline %}
+{% block user_form %}
+  <form method="post" action="{% url 'account_reauthenticate' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    {{ redirect_field }}
+    <button class="site-btn bg-purple-500 text-white mt-6" type="submit">Continue</button>
+  </form>
+{% endblock user_form %}

@@ -116,6 +116,13 @@ urlpatterns = [
     path("webview/ariane/", ArianeWebView, name="webview_ariane"),
     # User Auth Management
     path("login/", LoginView.as_view(), name="account_login"),
+    path(
+        "account/reauthenticate/",
+        allauth_views.ReauthenticateView.as_view(
+            template_name="auth/reauthenticate.html"
+        ),
+        name="account_reauthenticate",
+    ),
     path("logout/", allauth_views.logout, name="account_logout"),
     path("signup/", SignUpView.as_view(), name="account_signup"),
     # path("inactive/", allauth_views.account_inactive, name="account_inactive"),

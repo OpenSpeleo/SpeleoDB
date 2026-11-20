@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from hashlib import sha256
 from io import StringIO
 from typing import TYPE_CHECKING
@@ -18,21 +19,20 @@ from speleodb.api.v2.views.user import UserAutocompleteView
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from pytest_django.fixtures import Settings
-
 
 MAX_SCHEMA_BYTES: int = 100_000
-urlpatterns = [path("api/v2/users/autocomplete/", UserAutocompleteView.as_view())]
 
 
 @pytest.fixture(autouse=True)
-def small_schema(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
+def small_schema(monkeypatch: pytest.MonkeyPatch) -> None:
     # File freshness needs real schema generation, but only one real endpoint.
     # test_swagger.py separately validates the complete application generator,
     # including its auth and protocol schemas.
-    settings.ROOT_URLCONF = __name__
+    patterns = [path("api/v2/users/autocomplete/", UserAutocompleteView.as_view())]
     monkeypatch.setattr(
-        spectacular_settings, "DEFAULT_GENERATOR_CLASS", SchemaGenerator
+        spectacular_settings,
+        "DEFAULT_GENERATOR_CLASS",
+        partial(SchemaGenerator, patterns=patterns),
     )
 
 

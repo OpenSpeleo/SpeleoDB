@@ -103,7 +103,7 @@
                   </a>
                 </li>
                 <!-- Profile -->
-                {% if request.url_name|is_in_list:"user_profile,user_password,user_authtoken,user_preferences,user_feedback,user_exports" %}
+                {% if request.url_name|is_in_list:"user_profile,user_password,user_authtoken,user_connected_apps,user_preferences,user_feedback,user_exports" %}
                   {% set stroke_color = "indigo" %}
                 {% else %}
                   {% set stroke_color = "slate" %}

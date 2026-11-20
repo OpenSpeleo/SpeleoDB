@@ -22,7 +22,10 @@ import os
 import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from django.core.wsgi import get_wsgi_application
+
+from speleodb.users.apps import check_oidc_signing_key
 
 # This allows easy placement of apps within the interior
 # speleodb directory.
@@ -33,6 +36,9 @@ sys.path.append(str(BASE_DIR / "speleodb"))
 # mod_wsgi daemon mode with each site in its own daemon process, or use
 # os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.production"
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
+
+if signing_key_errors := check_oidc_signing_key():
+    raise ImproperlyConfigured(str(signing_key_errors[0]))
 
 # This application object is used by any WSGI server configured to use this
 # file. This includes Django's development server, if the WSGI_APPLICATION

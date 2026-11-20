@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Authorize {{ client.name }}{% endblock title %}
+{% block content %}
+  <section class="center-x max-w-5xl px-4 pt-24 pb-12 sm:px-6 sm:pt-32 sm:pb-20"
+           aria-labelledby="consent-title">
+    <div class="grid overflow-hidden rounded-2xl border border-slate-700 bg-slate-800 md:grid-cols-[2fr_3fr]">
+      <header class="flex min-w-0 flex-col bg-slate-950">
+        <figure class="relative aspect-[2.25/1] overflow-hidden sm:aspect-[3/1] md:aspect-auto md:min-h-56 md:flex-1">
+          <img class="absolute inset-0 h-full w-full scale-105 object-cover object-[44%_42%] md:scale-125 md:object-[44%_45%]"
+               src="{% static 'media/ox-bel-ha-survey-alvaro-herrero.webp' %}"
+               alt="A cave diver surveying a line in Ox Bel Ha"
+               width="1600"
+               height="1067" />
+          <figcaption class="absolute inset-x-0 bottom-0 bg-linear-to-t from-slate-950 to-transparent px-6 pt-6 pb-1 text-right text-xs text-slate-200 sm:px-8">
+            Photo by Álvaro Herrero (Mekan)
+          </figcaption>
+        </figure>
+        <div class="px-6 pt-2 pb-6 sm:px-8 md:pt-4 md:pb-9">
+          <h1 class="text-3xl leading-tight font-bold tracking-tight text-white wrap-anywhere md:text-4xl"
+              id="consent-title">
+            <span class="block text-base leading-6 font-medium tracking-normal text-slate-200">Connect to</span>
+            {{ client.name }}
+          </h1>
+          <dl class="mt-4 border-l-2 border-purple-400 pl-3 md:mt-6">
+            <dt class="text-xs font-medium text-slate-300">SpeleoDB account</dt>
+            <dd class="mt-0.5 text-sm font-medium text-white wrap-anywhere">
+              {{ user.email }}
+            </dd>
+          </dl>
+        </div>
+      </header>
+      <form class="min-w-0 bg-slate-800 p-5 sm:p-8 lg:p-10"
+            method="post"
+            action="{% url 'idp:oidc:authorization' %}">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}
+          {{ hidden }}
+          {% if hidden.errors %}
+            <div role="alert" class="mb-3 text-sm text-rose-300">{{ hidden.errors }}</div>
+          {% endif %}
+        {% endfor %}
+        {% if form.non_field_errors %}
+          <div role="alert" class="mb-3 text-sm text-rose-300">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <fieldset class="min-w-0">
+          <legend class="text-2xl font-semibold tracking-tight text-white">Requested permissions</legend>
+          <p class="mt-1.5 text-sm leading-6 text-slate-300">Choose what this app can access.</p>
+          {% if form.scopes.errors %}
+            <div role="alert" class="mt-3 text-sm text-rose-300">{{ form.scopes.errors }}</div>
+          {% endif %}
+          <div class="mt-5 overflow-hidden rounded-lg border border-slate-600 bg-slate-900 row-divide-y row-divide-slate-700">
+            {% for scope in form.scopes %}
+              <label class="flex cursor-pointer items-start gap-3 px-4 py-3.5 hover:bg-slate-800 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-purple-300 [&_input]:mt-1 [&_input]:size-4 [&_input]:shrink-0 [&_input]:accent-purple-500"
+                     for="{{ scope.id_for_label }}">
+                {{ scope.tag }}
+                <span class="min-w-0">
+                  {% if scope.data.value == "openid" %}
+                    <strong class="block text-sm font-semibold text-white">Account ID</strong>
+                  {% elif scope.data.value == "email" %}
+                    <strong class="block text-sm font-semibold text-white">Email address</strong>
+                  {% elif scope.data.value == "data:read" %}
+                    <strong class="block text-sm font-semibold text-white">Read-only data access</strong>
+                  {% endif %}
+                  <span class="block text-sm leading-5 text-slate-300">{{ scope.choice_label }}</span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% if form.email %}
+          <div class="mt-4 [&_select]:mt-1.5 [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-slate-600 [&_select]:bg-slate-900 [&_select]:px-3 [&_select]:py-2.5 [&_select]:text-sm">
+            <label for="{{ form.email.id_for_label }}"
+                   class="block text-sm font-medium text-white">Email address to share</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+              <div role="alert" class="mt-2 text-sm text-rose-300">{{ form.email.errors }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+        <p class="mt-4 text-xs leading-5 text-slate-300">You can revoke access later in Account Settings under Connected apps.</p>
+        <div class="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-slate-600 pt-5">
+          <button class="site-btn min-h-11 bg-purple-600 px-6 text-white hover:bg-purple-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+                  type="submit"
+                  name="action"
+                  value="grant">Approve access</button>
+          <button class="site-btn min-h-11 border-slate-500 px-5 text-slate-100 hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300"
+                  type="submit"
+                  name="action"
+                  value="cancel">Decline</button>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
