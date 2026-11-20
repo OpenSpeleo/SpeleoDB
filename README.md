@@ -9,10 +9,10 @@ License: Apache Software License 2.0
 
 ## Settings
 
-Before starting the Django web server, set `DJANGO_OIDC_PRIVATE_KEY` in the
-local `.env`. The
+The local Compose setup job generates a 4096-bit RSA signing key in `.env` when
+one is missing and reuses it on subsequent starts. The
 [OIDC signing key guide](docs/sign-in-with-speleodb.md#configure-the-provider-signing-key)
-shows how to generate the required 4096-bit RSA key and paste its multiline PEM.
+shows how to supply your own multiline PEM.
 
 Moved to
 [settings](http://cookiecutter-django.readthedocs.io/en/latest/settings.html).

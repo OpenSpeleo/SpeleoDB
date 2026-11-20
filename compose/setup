@@ -6,11 +6,16 @@ set -o pipefail
 
 bash /app/compose/prepare_node_modules
 
-python -m compose.setup_local_gitlab \
-    --env-file /app/.env \
-    --env-template /app/.env.dist \
-    --test-env-file /app/.envs/test.env \
-    --test-env-template /app/.envs/test.env.dist
+(
+    # Both steps may rewrite the private .env through a temporary file.
+    umask 077
+    python -m compose.setup_local_gitlab \
+        --env-file /app/.env \
+        --env-template /app/.env.dist \
+        --test-env-file /app/.envs/test.env \
+        --test-env-template /app/.envs/test.env.dist
+    python -m compose.setup_local_oidc /app/.env
+)
 if [[ "$(id -u)" == "0" ]]; then
     chown --reference=/app /app/.env
     chown --reference=/app /app/.envs/test.env

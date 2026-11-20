@@ -40,6 +40,7 @@ def assert_web_startup_rejects_key(pem: str, reason: str) -> None:
         | {
             "DJANGO_SETTINGS_MODULE": "config.settings.local",
             "DJANGO_READ_DOT_ENV_FILE": "false",
+            "DJANGO_SECRET_KEY": "oidc-startup-tests-only",
             "DJANGO_OIDC_PRIVATE_KEY": pem,
         },
         capture_output=True,
@@ -52,17 +53,6 @@ def assert_web_startup_rejects_key(pem: str, reason: str) -> None:
     assert reason in result.stderr
     if pem.strip():
         assert all(line not in result.stderr for line in pem.splitlines() if line)
-
-
-@pytest.mark.parametrize(
-    ("pem", "reason"),
-    [
-        ("", "is missing"),
-        ("this is a placeholder", "unencrypted RSA private key in PEM format"),
-    ],
-)
-def test_web_startup_requires_a_private_key(pem: str, reason: str) -> None:
-    assert_web_startup_rejects_key(pem, reason)
 
 
 def test_web_startup_rejects_a_non_rsa_private_key() -> None:

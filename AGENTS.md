@@ -74,6 +74,14 @@ Do not install packages, browser binaries or system libraries without an
 explicit user request to install them. Test authorization does not authorize
 environment installation. Report missing prerequisites instead.
 
+### Keep implementations and tests in their owning subsystem
+
+Never add unrelated behavior or tests to a subsystem-specific file, even when
+two features share a configuration file, fixture, or startup sequence. Give each
+independent setup task its own module and matching test module. Use
+`compose/setup` to order the steps. OIDC signing-key provisioning belongs with
+OIDC, and GitLab provisioning belongs with GitLab.
+
 ### Test and preview email subjects
 
 Every test or preview email must use the exact subject of the corresponding live

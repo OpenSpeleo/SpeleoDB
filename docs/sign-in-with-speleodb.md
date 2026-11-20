@@ -4,8 +4,19 @@ Registered websites can use SpeleoDB as an OpenID Connect provider.
 
 ## Configure the provider signing key
 
-On the Django web server, generate an unencrypted 4096-bit RSA private key.
-Celery workers, Beat and client applications do not need the key.
+The devcontainer’s Compose setup job generates a 4096-bit RSA key in the web
+checkout’s ignored `.env` when the setting is missing, empty, or still contains
+the template example. Subsequent runs reuse the same key. If the setup process
+already has `DJANGO_OIDC_PRIVATE_KEY` in its environment, it skips generation.
+
+CI needs no private-key secret: the `oidc_public_key` pytest fixture generates
+a fresh RSA signing key. Startup rejection tests supply their own invalid keys
+and a test-only Django secret so they reach signing-key validation without
+depending on a developer's environment or `.env` file.
+
+For a manual setup or production deployment, generate an unencrypted 4096-bit
+RSA private key for the Django web server. Celery workers, Beat and client
+applications do not need the key.
 
 ```sh
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096
